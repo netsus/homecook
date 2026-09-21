@@ -619,20 +619,30 @@ grant select (role) on public.admin_members to authenticated;`,
       migrationBundlePath,
     ]);
 
-    const allowedSnapshotDigest = commandResult(path.join(postgresBin, "psql"), [
+    // Capture the historical replay's policy before either suite mutates it.
+    // Current release catalog parity is verified by the full catalog replay.
+    const fixturePolicy = JSON.parse(runRequired(path.join(postgresBin, "psql"), [
       ...connectionArgs,
       "-At",
       "-q",
       "-c",
-      `select private.youtube_extraction_policy_snapshot_digest(
-        extractor_mode,
-        pipeline_identity,
-        result_affecting_options,
-        policy_version
-      )
+      `select json_build_object(
+        'policyVersion', policy_version,
+        'extractorMode', extractor_mode,
+        'pipelineIdentity', pipeline_identity,
+        'resultAffectingOptions', result_affecting_options,
+        'fingerprintKeyVersion', fingerprint_key_version,
+        'snapshotDigest', private.youtube_extraction_policy_snapshot_digest(
+          extractor_mode, pipeline_identity, result_affecting_options, policy_version
+        )
+      )::text
       from private.youtube_extraction_current_policy
       where policy_key = 'primary';`,
-    ]).stdout.trim().split("\n").at(-1);
+    ]).stdout.trim().split("\n").at(-1));
+    const allowedSnapshotDigest = fixturePolicy.snapshotDigest;
+    if (fixturePolicy.policyVersion !== 1 || !/^[a-f0-9]{64}$/u.test(allowedSnapshotDigest)) {
+      throw new Error("Historical YouTube fixture policy differs from the replay baseline");
+    }
 
     const nowSeconds = Math.floor(Date.now() / 1000);
     const workerToken = signJwt({
@@ -738,6 +748,7 @@ grant select (role) on public.admin_members to authenticated;`,
         HOMECOOK_YTA_PGPORT: String(pgPort),
         HOMECOOK_YTA_PGDATABASE: database,
         HOMECOOK_YTA_MIGRATION_PATH: migrationBundlePath,
+        HOMECOOK_YTA_FIXTURE_POLICY: JSON.stringify(fixturePolicy),
         HOMECOOK_YTA_POSTGREST_INTEGRATION: postgrestStarted ? "1" : "0",
         HOMECOOK_YTA_POSTGREST_URL: `http://127.0.0.1:${postgrestPort}`,
         HOMECOOK_YTA_WORKER_JWT: workerToken,

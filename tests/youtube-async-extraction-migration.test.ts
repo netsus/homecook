@@ -13,6 +13,8 @@ const adminAclNormalizationPath =
   "supabase/migrations/20260826020000_youtube_extraction_admin_acl_normalization.sql";
 const truthfulProgressPath =
   "supabase/migrations/20260827010000_youtube_extraction_truthful_progress.sql";
+const ingredientSearchCatalogRepairPath =
+  "supabase/migrations/20260922000000_youtube_catalog_after_ingredient_search.sql";
 const previousCatalogFingerprint =
   "b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1";
 const currentCatalogFingerprint =
@@ -25,8 +27,29 @@ const adminAclNormalizedCatalogFingerprint =
   "1f452cdfb35031c2f9be5f8162f11878f443834d5d42265b64e77dceddc129e3";
 const truthfulProgressCatalogFingerprint =
   "06e3d277cbf5ae9199c21866567b141698385fa25c0429289c3b53002ca51e13";
+const ingredientSearchCatalogFingerprint =
+  "750a0236e57ebcfaa19dd720de9b29c686064ca608948453dbed805740e4e9ef";
 
 describe("YTASYNC-DB/SEC migration contract", () => {
+  it("binds the current release manifest to the reviewed ingredient-search catalog", () => {
+    const sql = readFileSync(ingredientSearchCatalogRepairPath, "utf8");
+    expect(sql.trimStart().startsWith("begin;")).toBe(true);
+    expect(sql.trimEnd().endsWith("commit;")).toBe(true);
+    expect(sql).toContain(truthfulProgressCatalogFingerprint);
+    expect(sql).toContain(ingredientSearchCatalogFingerprint);
+    expect(sql).toContain("public.read_youtube_extraction_enqueue_readiness()");
+    expect(sql).toContain("private.assert_youtube_extraction_catalog_ready()");
+    expect(sql).toContain("execute replace(v_definition, v_previous, v_current)");
+    expect(sql).toContain("using errcode = '55000'");
+    const expectedSchema = JSON.parse(readFileSync(
+      "scripts/manifests/youtube-extraction-expected-schema.json",
+      "utf8",
+    )) as { catalog_fingerprint?: unknown };
+    expect(expectedSchema.catalog_fingerprint).toBe(ingredientSearchCatalogFingerprint);
+    // Actual full replay parity and drift rejection are checked by
+    // youtube-extraction-current-catalog.integration.test.ts.
+  });
+
   it("re-attests the catalog after the internal scope function changes", () => {
     expect(existsSync(catalogRepairPath)).toBe(true);
     const sql = readFileSync(catalogRepairPath, "utf8").toLowerCase();
@@ -45,14 +68,6 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("v_current_occurrences");
     expect(sql).toContain("v_previous_occurrences = 0 and v_current_occurrences = 1");
     expect(sql).not.toMatch(/drop\s+(?:function|table|column|schema)/u);
-
-    const expectedSchema = JSON.parse(readFileSync(
-      "scripts/manifests/youtube-extraction-expected-schema.json",
-      "utf8",
-    )) as { catalog_fingerprint?: unknown };
-    expect(expectedSchema.catalog_fingerprint).toBe(
-      truthfulProgressCatalogFingerprint,
-    );
 
     const validator = readFileSync(
       "scripts/validate-security-function-authorization.mjs",
@@ -137,10 +152,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const expectedSchema = JSON.parse(readFileSync(
       "scripts/manifests/youtube-extraction-expected-schema.json",
       "utf8",
-    )) as { catalog_fingerprint?: unknown; tables?: unknown[] };
-    expect(expectedSchema.catalog_fingerprint).toBe(
-      truthfulProgressCatalogFingerprint,
-    );
+    )) as { tables?: unknown[] };
     expect(expectedSchema.tables).toContain("public.admin_members");
 
     const validator = readFileSync(
