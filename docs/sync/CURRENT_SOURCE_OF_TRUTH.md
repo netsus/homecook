@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-09-22 사용자 요청 — YouTube 추출 접수 복구
+
+재료 검색 변경으로 달라진 추출 RPC와 catalog 검증 기준을 함께 갱신한다. 실제 확인에서 발견한 `1/2 → 1` 수량 변환도 분수·대분수를 보존하도록 바로잡고 잘못된 분수는 검토 대상으로 남긴다. 기존 권한·소유권·lease 보호와 Sol low/low 정책은 유지한다. 새 migration은 검토한 catalog만 허용하며 worker artifact·descriptor·credential을 정렬한다. 최신 migration 전체를 격리 환경에서 검사하는 `pnpm verify:youtube-extraction:catalog`를 제공하고 CI는 추가하지 않는다. 원인·재발 조건·운영 결과는 `docs/engineering/youtube-catalog-repair-20260922.md`를 따른다.
+
 ## 2026-09-19 사용자 요청 — 사용 재료 영양·중복 정리
 
 영양 미연결360개 중 기존 레시피 참조30개를 우선 검토했다. 원자료 식품·상태·가식부100g이 확정된9개만 연결하고21개는 후보로 보류한다. 쌀밥의 건조밥 오연결을 정정하고, 같은 RDA1704에 해당하는 목심 두 ID는 신규 `ingredient_representative_links`에 대표 관계만 기록한다. 기존 재료·식사·요리 기록 ID와 과거 영양값은 보존하고 현재 레시피10개의 새 영양 snapshot만 추가한다. 자세한 source/후보/검증 범위는 `docs/engineering/ingredient-nutrition-curation-20260919.md`와 `data/ingredient-nutrition-*-20260919.json`을 따른다. 자동 테스트는 사용자 요청으로 생략하며 값 추정이나 모호한 재료 자동 병합을 하지 않는다.

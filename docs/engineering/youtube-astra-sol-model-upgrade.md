@@ -19,7 +19,9 @@ Pipeline identity는 worker EXACT 객체(CLI 포함)의 정렬된 canonical JSON
 clientVersion은 `codex-vision-keyframes-client-v20-structured-final`이다.
 영상 수집, 네 가지 소스, 프레임 선택, macOS OCR, 프롬프트와 단일 레시피 흐름을 유지한다.
 CLI `--output-schema`로 final 출력 형식을 강제하며 임의 JSON 보정이나 추가 모델 호출은 없다.
-API shape, `i031_codex_vision` mode, DB schema-v2와 catalog fingerprint는 유지한다.
+API shape, `i031_codex_vision` mode와 DB schema-v2는 유지한다.
+2026-09-22 재료 검색 RPC 변경의 catalog 기준은
+[추출 접수 복구 기록](youtube-catalog-repair-20260922.md)에 따라 갱신한다.
 모델은 pipeline identity에, 두 effort는 result-affecting policy options에 포함한다.
 
 ## 배포 상태 확인

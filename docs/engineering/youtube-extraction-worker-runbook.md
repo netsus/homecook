@@ -3,6 +3,20 @@
 Status: runnable artifact; guarded local-only worker install available
 Last updated: 2026-08-14
 
+## 2026-09-22 catalog compatibility check
+
+Before deploying a change to a YouTube extraction RPC or a catalog-attested DB
+object, run `pnpm verify:youtube-extraction:catalog`. It replays all current
+migrations in an owned disposable local database and checks the current manifest,
+the DB assertion, and rejection of unreviewed RPC drift. The older
+`test:youtube-async:postgres` suite uses a historical policy fixture and does not
+replace this check. No CI or automatic credential rotation is enabled.
+
+When the check detects an intended change, review its exact scope and ship the
+new migration, expected-schema manifest, immutable artifact and app descriptor
+together. Never accept an arbitrary live digest or overwrite an old artifact.
+See [the September catalog repair](youtube-catalog-repair-20260922.md).
+
 ## Scope
 
 This runbook covers deterministic standalone artifact build, runnable worker preflight, launchd plist rendering, credential metadata rehearsal, and the rollback-safe local-only install path for `com.homecook.youtube-extraction-worker`. The artifact polls only the restricted loopback PostgREST endpoint and executes i031.
