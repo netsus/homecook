@@ -3,10 +3,21 @@ import { readFileSync } from "node:fs";
 
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { YOUTUBE_ASYNC_POLICY } from "@/lib/server/youtube-async-extraction";
-
 const enabled =
   process.env.HOMECOOK_YTA_PG_INTEGRATION === "1";
+// The runner captures this non-secret snapshot immediately after the historical
+// migration bundle. Do not replace it with the current application's policy.
+const fixturePolicy = JSON.parse(process.env.HOMECOOK_YTA_FIXTURE_POLICY ?? "{}") as {
+  policyVersion: number;
+  extractorMode: string;
+  pipelineIdentity: string;
+  resultAffectingOptions: Record<string, unknown>;
+  fingerprintKeyVersion: string;
+  snapshotDigest: string;
+};
+if (enabled && (fixturePolicy.policyVersion !== 1 || !/^[a-f0-9]{64}$/u.test(fixturePolicy.snapshotDigest ?? ""))) {
+  throw new Error("The historical YouTube integration runner policy is required");
+}
 const host = process.env.HOMECOOK_YTA_PGHOST ?? "";
 const port = process.env.HOMECOOK_YTA_PGPORT ?? "";
 const database = process.env.HOMECOOK_YTA_PGDATABASE ?? "";
@@ -25,8 +36,17 @@ const expectedSchemaDocument = JSON.parse(readFileSync(
     set: boolean;
   }>;
   rpc_signatures: string[];
-  catalog_fingerprint: string;
 };
+// This reduced fixture replays only through 2026-08-27. Keep its reviewed digest
+// independent of the current release; full migration parity belongs to
+// youtube-extraction-current-catalog.integration.test.ts.
+const fixtureCatalogFingerprint = readFileSync(
+  "supabase/migrations/20260827010000_youtube_extraction_truthful_progress.sql",
+  "utf8",
+).match(/v_current_fingerprint\s+constant\s+text\s*:=\s*'([a-f0-9]{64})'/u)?.[1];
+if (!fixtureCatalogFingerprint) {
+  throw new Error("The 2026-08-27 fixture catalog fingerprint is missing");
+}
 const expectedSchema = {
   tables: expectedSchemaDocument.tables,
   roles: expectedSchemaDocument.roles,
@@ -296,11 +316,11 @@ function resetRuntimeState() {
         expires_at = null;
     update private.youtube_extraction_current_policy
     set enabled = false,
-        policy_version = ${YOUTUBE_ASYNC_POLICY.policyVersion},
-        extractor_mode = '${YOUTUBE_ASYNC_POLICY.extractorMode}',
-        pipeline_identity = '${YOUTUBE_ASYNC_POLICY.pipelineIdentity}',
-        result_affecting_options = ${sqlJson(YOUTUBE_ASYNC_POLICY.resultAffectingOptions)}::jsonb,
-        fingerprint_key_version = '${YOUTUBE_ASYNC_POLICY.fingerprintKeyVersion}',
+        policy_version = ${fixturePolicy.policyVersion},
+        extractor_mode = '${fixturePolicy.extractorMode}',
+        pipeline_identity = '${fixturePolicy.pipelineIdentity}',
+        result_affecting_options = ${sqlJson(fixturePolicy.resultAffectingOptions)}::jsonb,
+        fingerprint_key_version = '${fixturePolicy.fingerprintKeyVersion}',
         previous_fingerprint_key_version = null,
         previous_fingerprint_valid_until = null,
         updated_at = now()
@@ -497,7 +517,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       claim_index: true,
       enabled: false,
     });
-    expect(policySnapshotDigest()).toBe(YOUTUBE_ASYNC_POLICY.snapshotDigest);
+    expect(policySnapshotDigest()).toBe(fixturePolicy.snapshotDigest);
   });
 
   it("adds the truthful progress schema objects, five job columns, and schema-v2 credential identity", () => {
@@ -546,9 +566,9 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     const enqueued = runAsJson("authenticated", authenticatedClaims(ownerA), `
       select public.enqueue_youtube_extraction_job(
         'queuedProgress01',
-        ${YOUTUBE_ASYNC_POLICY.policyVersion},
+        ${fixturePolicy.policyVersion},
         '${snapshotDigest}',
-        '${YOUTUBE_ASYNC_POLICY.fingerprintKeyVersion}',
+        '${fixturePolicy.fingerprintKeyVersion}',
         repeat('a', 64),
         null,
         null,
@@ -3060,7 +3080,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       release_sha: workerReleaseSha,
       schema_identity: workerSchemaIdentity,
       policy_snapshot_digest: snapshotDigest,
-      catalog_fingerprint: expectedSchemaDocument.catalog_fingerprint,
+      catalog_fingerprint: fixtureCatalogFingerprint,
     });
     expect(own).toMatchObject({ id: "80000000-0000-4000-8000-000000000015" });
     expect(other).toEqual(null);
@@ -3112,7 +3132,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         select public.read_youtube_extraction_enqueue_readiness()::text;
       `);
       expect(readiness.ready).toBe(false);
-      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(readiness.catalog_fingerprint).not.toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         drop function if exists public.youtube_extraction_shadow_rpc();
@@ -3139,7 +3159,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         select public.read_youtube_extraction_enqueue_readiness()::text;
       `);
       expect(readiness.ready).toBe(false);
-      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(readiness.catalog_fingerprint).not.toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         alter table public.youtube_extraction_jobs owner to ${originalOwner};
@@ -3161,7 +3181,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         select public.read_youtube_extraction_enqueue_readiness()::text;
       `);
       expect(readiness.ready).toBe(false);
-      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(readiness.catalog_fingerprint).not.toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         revoke execute on function public.claim_youtube_extraction_job(text, text, integer)
@@ -3225,7 +3245,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     `);
     expect(readiness.ready).toBe(true);
     expect(readiness.catalog_fingerprint).toBe(
-      expectedSchemaDocument.catalog_fingerprint,
+      fixtureCatalogFingerprint,
     );
   });
 
@@ -3271,7 +3291,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       select public.read_youtube_extraction_enqueue_readiness()::text;
     `);
     expect(readiness.ready).toBe(true);
-    expect(readiness.catalog_fingerprint).toBe(expectedSchemaDocument.catalog_fingerprint);
+    expect(readiness.catalog_fingerprint).toBe(fixtureCatalogFingerprint);
   });
 
   it("fails readiness closed when any principal inherits a restricted worker role", () => {
@@ -3286,7 +3306,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         select public.read_youtube_extraction_enqueue_readiness()::text;
       `);
       expect(readiness.ready).toBe(false);
-      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(readiness.catalog_fingerprint).not.toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         revoke youtube_extraction_worker_rpc_owner from authenticated;
@@ -3325,7 +3345,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       expect(before.ready).toBe(true);
       expect(after.ready).toBe(true);
       expect(after.catalog_fingerprint).toBe(before.catalog_fingerprint);
-      expect(after.catalog_fingerprint).toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(after.catalog_fingerprint).toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         revoke select on table public.ingredients from supabase_admin;
@@ -3352,7 +3372,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         select public.read_youtube_extraction_enqueue_readiness()::text;
       `);
       expect(readiness.ready).toBe(false);
-      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(readiness.catalog_fingerprint).not.toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         alter table public.ingredients
@@ -3376,7 +3396,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         select public.read_youtube_extraction_enqueue_readiness()::text;
       `);
       expect(readiness.ready).toBe(false);
-      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(readiness.catalog_fingerprint).not.toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         create policy youtube_worker_catalog_ingredients_select on public.ingredients
@@ -3400,7 +3420,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         select public.read_youtube_extraction_enqueue_readiness()::text;
       `);
       expect(readiness.ready).toBe(false);
-      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+      expect(readiness.catalog_fingerprint).not.toBe(fixtureCatalogFingerprint);
     } finally {
       psql(`
         grant select on table public.ingredients
@@ -3546,7 +3566,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     expect(before.ready).toBe(true);
     expect(after.ready).toBe(true);
     expect(after.catalog_fingerprint).toBe(before.catalog_fingerprint);
-    expect(after.catalog_fingerprint).toBe(expectedSchemaDocument.catalog_fingerprint);
+    expect(after.catalog_fingerprint).toBe(fixtureCatalogFingerprint);
   });
 
   it("rejects worker preflight and claim when credential validity is at the 30 minute cutoff", () => {
