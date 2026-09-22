@@ -54,6 +54,26 @@ function createThenableQuery<T>(results: Array<QueryResult<T>>) {
   return query;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((complete) => { resolve = complete; });
+  return { promise, resolve };
+}
+
+function deferredQuery<T>() {
+  const result = deferred<QueryResult<T>>();
+  const started = deferred<void>();
+  const query = {
+    eq: vi.fn(() => query), gte: vi.fn(() => query), lte: vi.fn(() => query),
+    in: vi.fn(() => query), order: vi.fn(() => query),
+    then: vi.fn((success?: (value: QueryResult<T>) => unknown, failure?: (reason: unknown) => unknown) => {
+      started.resolve();
+      return result.promise.then(success, failure);
+    }),
+  };
+  return { query, started: started.promise, resolve: result.resolve };
+}
+
 async function importRoute() {
   return import("@/app/api/v1/planner/route");
 }
@@ -72,12 +92,14 @@ describe("GET /api/v1/planner", () => {
   });
 
   it("returns 401 when user is not authenticated", async () => {
-    createRouteHandlerClient.mockResolvedValue({
+    const client = {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: null } })),
       },
       from: vi.fn(),
-    });
+      rpc: vi.fn(),
+    };
+    createRouteHandlerClient.mockResolvedValue(client);
 
     const { GET } = await importRoute();
     const response = await GET(
@@ -93,6 +115,81 @@ describe("GET /api/v1/planner", () => {
         code: "UNAUTHORIZED",
       },
     });
+    expect(client.from).not.toHaveBeenCalled();
+    expect(client.rpc).not.toHaveBeenCalled();
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it("starts each independent read group together only after bootstrap, without waiting for a sibling result", async () => {
+    const bootstrap = deferred<void>();
+    const bootstrapStarted = deferred<void>();
+    ensureUserBootstrapState.mockImplementation(() => {
+      bootstrapStarted.resolve();
+      return bootstrap.promise;
+    });
+    const columns = deferredQuery<unknown[]>();
+    const meals = deferredQuery<unknown[]>();
+    const products = deferredQuery<unknown[]>();
+    const recipes = deferredQuery<unknown[]>();
+    const shopping = deferredQuery<unknown[]>();
+    const queries = new Map([
+      ["meal_plan_columns", columns], ["meals", meals],
+      ["recipes", recipes], ["shopping_lists", shopping],
+    ]);
+    const from = vi.fn((table: string) => ({ select: () => queries.get(table)!.query }));
+    const rpc = vi.fn(() => products.query);
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) }, from, rpc,
+    });
+    const { GET } = await importRoute();
+    const responsePromise = GET(new NextRequest("http://localhost/api/v1/planner?start_date=2026-03-01&end_date=2026-03-07"));
+    await bootstrapStarted.promise;
+    expect(from).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+    bootstrap.resolve();
+    await columns.started;
+    expect(meals.query.then).toHaveBeenCalledOnce();
+    expect(products.query.then).toHaveBeenCalledOnce();
+    expect(recipes.query.then).not.toHaveBeenCalled();
+    expect(shopping.query.then).not.toHaveBeenCalled();
+    expect(columns.query.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(meals.query.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(rpc).toHaveBeenCalledWith("list_product_planner_entries", expect.objectContaining({ p_user_id: "user-1" }));
+    columns.resolve({ data: [{ id: "column-1", name: "아침", sort_order: 0 }], error: null });
+    meals.resolve({ data: [{ id: "meal-1", recipe_id: "recipe-1", shopping_list_id: "shopping-1", plan_date: "2026-03-01", column_id: "column-1", planned_servings: 1, status: "registered", is_leftover: false }], error: null });
+    products.resolve({ data: [], error: null });
+    await recipes.started;
+    expect(shopping.query.then).toHaveBeenCalledOnce();
+    expect(recipes.query.in).toHaveBeenCalledWith("id", ["recipe-1"]);
+    expect(shopping.query.in).toHaveBeenCalledWith("id", ["shopping-1"]);
+    recipes.resolve({ data: [{ id: "recipe-1", title: "레시피", thumbnail_url: null }], error: null });
+    shopping.resolve({ data: [{ id: "shopping-1", title: "장보기" }], error: null });
+    const response = await responsePromise;
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.meals[0]).toMatchObject({ recipe_title: "레시피", shopping_list_title: "장보기" });
+  });
+
+  it.each(["meal_plan_columns", "meals", "products", "recipes", "shopping_lists"])("preserves the wrapped failure when the parallel %s read fails", async (failed) => {
+    const rows: Record<string, unknown[]> = {
+      meal_plan_columns: [],
+      meals: [{ id: "meal-1", recipe_id: "recipe-1", shopping_list_id: "shopping-1" }],
+      recipes: [], shopping_lists: [], products: [],
+    };
+    const result = (key: string) => ({ data: failed === key ? null : rows[key], error: failed === key ? { message: "read failed" } : null });
+    const from = vi.fn((table: string) => ({ select: () => createThenableQuery([result(table)]) }));
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
+      from, rpc: async () => result("products"),
+    });
+    const { GET } = await importRoute();
+    const response = await GET(new NextRequest("http://localhost/api/v1/planner?start_date=2026-03-01&end_date=2026-03-07"));
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ success: false, data: null, error: { code: "INTERNAL_ERROR", fields: [] } });
+    if (["meal_plan_columns", "meals", "products"].includes(failed)) {
+      expect(from.mock.calls.map(([table]) => table)).not.toContain("recipes");
+      expect(from.mock.calls.map(([table]) => table)).not.toContain("shopping_lists");
+    }
   });
 
   it("returns 422 when date range is invalid", async () => {

@@ -336,6 +336,7 @@ export async function GET(request: Request, context: RouteContext) {
       ingredientsResult,
       nutritionSnapshotResult,
       resolvedThumbnailUrl,
+      initialStepsResult,
     ] = await Promise.all([
       dbClient
         .from("recipe_sources")
@@ -349,16 +350,17 @@ export async function GET(request: Request, context: RouteContext) {
         .order("sort_order", { ascending: true }),
       readCurrentRecipeNutritionSnapshot(serviceClient ?? routeClient, id),
       imageReadPromise,
+      dbClient
+        .from("recipe_steps")
+        .select(RECIPE_STEP_SELECT_WITH_METHODS)
+        .eq("recipe_id", id)
+        .order("step_number", { ascending: true }),
     ]);
 
-    let stepsResult = await dbClient
-      .from("recipe_steps")
-      .select(RECIPE_STEP_SELECT_WITH_METHODS)
-      .eq("recipe_id", id)
-      .order("step_number", { ascending: true }) as {
-        data: Parameters<typeof normalizeRecipeSteps>[0];
-        error: unknown;
-      };
+    let stepsResult = initialStepsResult as {
+      data: Parameters<typeof normalizeRecipeSteps>[0];
+      error: unknown;
+    };
 
     if (stepsResult.error && isMissingStepCookingMethodsRelation(stepsResult.error)) {
       stepsResult = await dbClient
