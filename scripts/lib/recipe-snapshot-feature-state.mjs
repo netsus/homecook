@@ -1,5 +1,35 @@
+import { createHash } from "node:crypto";
+
 /** PostgreSQL connection defaults, never a browser/app feature override. */
 export const FEATURE_NAMES = ["homecook.personal_recipe_v2", "homecook.snapshot_v2_creation"];
+// Full-local Supabase reserves custom setting writes to its existing local
+// management role. Never grant this capability to postgres/app login roles.
+export const FEATURE_STATE_MANAGEMENT_ROLE = "supabase_admin";
+export const FEATURE_STATE_MANAGEMENT_SELECT = `select coalesce((
+  select jsonb_build_object('database', current_database(), 'role', rolname,
+    'can_login', rolcanlogin, 'is_superuser', rolsuper,
+    'can_set_features', jsonb_build_array(
+      has_parameter_privilege(oid, 'homecook.personal_recipe_v2', 'SET'),
+      has_parameter_privilege(oid, 'homecook.snapshot_v2_creation', 'SET')))
+  from pg_catalog.pg_roles where rolname = 'supabase_admin'), '{}'::jsonb)`;
+
+export function assertFeatureStateManagementRole(state) {
+  if (state.database !== "postgres" || state.role !== FEATURE_STATE_MANAGEMENT_ROLE
+    || state.can_login !== true || state.is_superuser !== true
+    || !Array.isArray(state.can_set_features) || state.can_set_features.length !== 2
+    || state.can_set_features.some((allowed) => allowed !== true)) {
+    throw new Error("Exact local feature-state management role is unavailable");
+  }
+}
+
+export function buildFeatureStateTargetIdentity(inventory) {
+  if (!Array.isArray(inventory.mounts)) throw new Error("Complete PostgreSQL mount inventory is required");
+  // Docker inspect can return the same mounts in a different order. Preserve
+  // every mount field (including Source/RW) and duplicate, but compare as a set
+  // of complete serialized entries instead of depending on Docker's ordering.
+  const mounts = inventory.mounts.map((mount) => JSON.stringify(mount)).sort();
+  return createHash("sha256").update(JSON.stringify({ ...inventory, mounts })).digest("hex");
+}
 
 export function parseFeatureStateArguments(argv) {
   const options = { command: "status", execute: false, config: null };

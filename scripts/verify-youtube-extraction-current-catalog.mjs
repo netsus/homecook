@@ -113,6 +113,22 @@ try {
       HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID: isolated.projectId,
     },
   });
+  if (verifyBetaFlowGaps) {
+    // This real PostgREST suite commits an isolated generation promotion. Run it
+    // after the rollback-only suites; never undo that protected state transition.
+    run("pnpm", [
+      "exec", "vitest", "run", "tests/recipe-snapshot-live-readers.integration.test.ts",
+      "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
+    ], {
+      label: "Snapshot activation PostgREST integration", cwd: repositoryRoot,
+      timeout: 120_000, inherit: true,
+      env: {
+        ...commandEnv,
+        HOMECOOK_ISOLATED_RUNTIME_DATABASE_URL: isolated.databaseUrl,
+        HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID: isolated.projectId,
+      },
+    });
+  }
 } finally {
   let cleaned = !started;
   if (started) {
