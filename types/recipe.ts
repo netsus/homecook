@@ -105,6 +105,8 @@ export interface RecipeTagListData {
 }
 
 export interface RecipeIngredient {
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
   id: string;
   ingredient_id: string;
   standard_name: string;
@@ -239,6 +241,8 @@ export interface RecipeNutrition {
 }
 
 export interface ManualRecipeIngredientInput {
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
   ingredient_id: string;
   standard_name: string;
   amount: number | null;

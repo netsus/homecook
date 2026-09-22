@@ -1,5 +1,13 @@
 # DB 설계 v1.3.38
 
+## 2026-09-22 사용자 요청 — 베타 핵심 흐름 보완
+
+구현 migration은 `20260922020000_recipe_product_selection.sql`, `20260922021000_recipe_product_nutrition.sql`, `20260922023000_meal_log_catalog_identity.sql`, `20260922024000_recipe_product_cook_mode_display.sql`이다. 새 사용자 테이블이나 과거 데이터 일괄 재작성 없이 기존 recipe ingredient product/version 열·승인 연결·영양 스냅샷을 재사용한다. manual recipe transaction은 제품 쌍을 원자적으로 검증·저장한다. 영양 입력 guard와 기여 출처 guard는 저장된 정확 제품 버전까지 포함하며 일반 재료 fallback을 금지한다. 정확 catalog ID 읽기는 기존 authenticated-self 소유권 검증을 사용하고 익명 실행을 허용하지 않는다. v2 요리 조회는 고정한 제품 이름·브랜드를 표시하고 현재 카탈로그 이름 변경으로 과거 요리 표시를 바꾸지 않는다. 운영 적용은 아직 별도다.
+
+이번 베타 흐름 보완은 기존 소유권·세션/계정 세대·고정 snapshot·중복 요청·원장 및 상태 전이 보호를 유지한다. 이 항목 자체는 새 테이블/column 또는 운영 capability 변경 승인이 아니다. 9월 19일 snapshot 읽기 scope 복구 migration은 이미 적용된 이력이며 재적용 대상으로 취급하지 않는다. 별도 DB 변경이 필요하면 실제 변경과 검증 범위를 실행 기록에 명시한다.
+
+이 항목은 승인된 작업 범위이며 구현·배포 완료 선언이 아니다. 실제 변경과 확인 결과는 [실행 기록](engineering/beta-flow-gaps-20260922.md)을 따른다. 신규 Stage/CI 조건을 추가하지 않는다.
+
 ## 2026-09-18 출시 전 복구 migration
 
 - `20260919000000_prelaunch_recipe_meal_log_repairs.sql`: 최신 내부 권한 wrapper를 보존하고 snapshot UI/context 읽기 두 경로만 추가한다. 이전 요리 기록의 수정·삭제·동일 요청 재생과 다먹은 뒤 과거 수정은 별도 분기, 실측 배치 원장은 기존 함수를 유지한다. 영양 추정 trigger는 snapshot/weight_status/batch_status가 모두 NULL인 이전 배치에만 적용한다.

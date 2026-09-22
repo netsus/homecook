@@ -1,7 +1,7 @@
 {
   "id": "cooking-meal-log-cross-slice-release-qa",
   "title": "Cooking meal log cross-slice release QA",
-  "summary": "F0와 #1~#13의 계정 세대, 검색·제품 연결, personal recipe/snapshot, cooking batch, meal log, planner와 legacy 계약을 exact repaired head의 verification-only final release gate로 묶는다.",
+  "summary": "[과거 workflow 기록; 2026-09-22 상태 보정] F0와 #1~#13의 계정 세대, 검색·제품 연결, personal recipe/snapshot, cooking batch, meal log, planner와 legacy 계약을 exact repaired head의 verification-only final release gate로 묶는다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -230,10 +230,10 @@
   "status": {
     "lifecycle": "in_progress",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 8,
-    "last_evaluator_result": "Stage 6 task 01a03507-fc40-7591-8244-e08bf96efc6c APPROVE P0/P1/P2 0/0/0 at 0fe74aa08ab94048fbdc6703217ed9f715ad8cd1; CML14-S6-P1-001 CLOSED; Ready/internal 6.5 pending",
+    "last_evaluator_result": "2026-08-25 retained automated/runtime QA merged-green: PR #1412, Stage 6 APPROVE 0/0/0, post-merge 13/13 success; docs/workpacks/cooking-meal-log-cross-slice-release-qa/omo-report.md. Broader lifecycle remains in_progress; no claim of fresh production end-to-end verification.",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -248,7 +248,7 @@
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "pending",
       "authority_reports": [
         "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md"
@@ -280,7 +280,8 @@
         "internal1.5 task 01a01f2e-ae07-7f42-88be-87727228702a APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
         "security/DB/operations task 01a01f2e-b2ed-7f32-bbaf-204b58613435 APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
         "five-axis task 01a01f2e-ba20-7022-8b3b-5b90d15572d0 APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
-        "design-authority-plan task 01a01f2e-bf69-7f23-9c7c-7982855195bc APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6"
+        "design-authority-plan task 01a01f2e-bf69-7f23-9c7c-7982855195bc APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
+        "2026-09-22 current interpretation: docs/engineering/beta-flow-gaps-20260922.md; retained automated/runtime merge is complete, historical workflow fields are not current release gates. 2026-09-21 read-only production account capability=generation_active; direct Postgres recipe mode=legacy_v1; app request override unverified."
       ]
     },
     "merge_gate_projection": {

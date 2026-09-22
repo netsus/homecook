@@ -24,12 +24,14 @@ describe("service guide content", () => {
     expect(SERVICE_GUIDE_FAQS).toHaveLength(8);
   });
 
-  it("explains actual intake separately from plans and does not promise unfinished detail editing", () => {
+  it("explains actual intake, available editing, and optional entry points", () => {
     const content = JSON.stringify([SERVICE_GUIDE_STEPS, SERVICE_GUIDE_FEATURES, SERVICE_GUIDE_GUIDES, SERVICE_GUIDE_FAQS]);
     expect(content).toContain("완성된 음식의 전체 무게");
     expect(content).toContain("g(그램)");
     expect(content).toContain("요리 계획에 담는 것만으로 식사 기록이 생기지는 않아요");
-    expect(content).toContain("식사 상세와 수정 기능은 준비 중");
+    expect(content).toContain("음식 상세에서 먹은 양을 확인·수정");
+    expect(content).toContain("모두 거치지 않아도");
+    expect(content).not.toContain("식사 상세와 수정 기능은 준비 중");
     expect(content).toContain("YouTube");
     expect(content).toContain("확인할 수 없는 값");
   });

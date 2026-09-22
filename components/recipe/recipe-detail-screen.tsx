@@ -942,8 +942,8 @@ export function RecipeDetailScreen({
               display_text: ingredient.display_text,
               component_label: ingredient.component_label ?? null,
               scalable: ingredient.scalable,
-              food_product_id: null,
-              food_product_nutrition_version_id: null,
+              food_product_id: ingredient.food_product_id ?? null,
+              food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id ?? null,
             })),
             steps: recipe.steps.map((step) => ({
               step_number: step.step_number,
@@ -2265,6 +2265,7 @@ export function RecipeDetailScreen({
       />
       {isPersonalEditorOpen && activePersonalEditorContext ? (
         <RecipeDetailPersonalEditor
+          ingredientNames={Object.fromEntries(recipe.ingredients.map((ingredient) => [ingredient.ingredient_id, ingredient.standard_name]))}
           editContext={activePersonalEditorContext}
           mode={personalEditorMode}
           onClose={() => {

@@ -1,3 +1,4 @@
+import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import {
@@ -326,11 +327,14 @@ export async function GET(request: Request, context: RouteContext) {
         )
       : Promise.resolve(legacyThumbnailUrl);
 
+    const authResult = await routeClient.auth.getUser();
+    const ingredientColumns = authResult.data.user
+      ? "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name), food_product_id, food_product_nutrition_version_id"
+      : "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)";
     const [
       sourceResult,
       ingredientsResult,
       nutritionSnapshotResult,
-      authResult,
       resolvedThumbnailUrl,
     ] = await Promise.all([
       dbClient
@@ -340,13 +344,10 @@ export async function GET(request: Request, context: RouteContext) {
         .maybeSingle(),
       dbClient
         .from("recipe_ingredients")
-        .select(
-          "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)",
-        )
+        .select(ingredientColumns)
         .eq("recipe_id", id)
         .order("sort_order", { ascending: true }),
       readCurrentRecipeNutritionSnapshot(serviceClient ?? routeClient, id),
-      routeClient.auth.getUser(),
       imageReadPromise,
     ]);
 
@@ -445,7 +446,14 @@ export async function GET(request: Request, context: RouteContext) {
       userStatus = mapRecipeUserStatus(likedResult.data, savedResult.data);
     }
 
-    const ingredients = normalizeRecipeIngredients(ingredientsResult.data);
+    // The public/authenticated select union has the same base row contract;
+    // PostgREST's type-level select parser cannot infer conditional projections.
+    const ingredientRows = (ingredientsResult.data ?? []) as unknown as NonNullable<
+      Parameters<typeof normalizeRecipeIngredients>[0]
+    >;
+    const ingredients = normalizeRecipeIngredients(user
+      ? await readRecipeProductLabels(dbClient, ingredientRows)
+      : ingredientRows);
     const steps = normalizeRecipeSteps(stepsResult.data);
     let viewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
     let planCount = recipeResult.data.plan_count;
@@ -612,6 +620,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       serviceClient as unknown as RecipeDraftNutritionClient,
       {
         recipeId,
+        ownerUserId: user.id,
         baseRecipeRevision: parsed.value.baseRecipeRevision,
         draft: parsed.value.draft,
       },

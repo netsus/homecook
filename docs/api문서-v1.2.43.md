@@ -1,5 +1,17 @@
 # API\_설계\_v1.2.43
 
+## 2026-09-22 사용자 요청 — 베타 핵심 흐름 보완
+
+기존 제품·재료 검색과 레시피 작성/편집, 식사기록·요리 완료 API의 화면 소비를 연결한다. 응답 `{ success, data, error }`, error `{ code, message, fields[] }`, 소유권·revision·idempotency·read-only 계약을 유지한다. 제품 검색 실패를 빈 성공 결과로 바꾸지 않으며 단위는 승인된 basis relation만 사용한다. 새 공개 endpoint는 추가하지 않으며 다음 additive 필드와 기존 endpoint의 정확 ID 조회 모드를 제공한다.
+
+- `GET /food-catalog/search`의 제품 항목에 nullable `recipe_ingredient_id`를 추가한다. 선택 가능한 대표 재료의 활성·승인 `represents` 관계가 있을 때만 값이 있다. 없으면 레시피 재료로 선택할 수 없다.
+- 같은 endpoint의 `source_type=ingredient|food_product&source_id=<uuid>`는 이름·검색 순위에 의존하지 않는 정확 ID 조회다. 두 필드만 허용하며 기존 `q/types/source/cursor/limit` 또는 중복 필드와 섞으면 `400 INVALID_SEARCH_FILTER`다. 로그인 사용자에게 현재 접근 가능한 항목만 `items` 0~1개로 반환하고 `next_cursor:null`, `has_next:false`다. 타인 private/삭제/숨김 항목은 존재를 구분해 노출하지 않는다.
+- 수동 `POST /recipes`의 각 재료에 nullable `food_product_id`와 `food_product_nutrition_version_id` 쌍을 허용한다. 둘 다 없으면 기존 일반 재료다. 한쪽만 있거나 UUID가 잘못되면 입력 오류이며, DB transaction에서 선택 제품·버전·소유권·현재 노출·승인 대표 재료의 일치를 재확인한다. 제품 쌍을 보존할 수 없는 legacy 경로는 저장 전에 거부하며 조용히 일반 재료로 바꾸지 않는다.
+- 최근 음식과 로그인 복원 초안은 정확 ID로 현재 단위·승인 환산 정보를 다시 읽는다. 이전 이름/양·단위를 검색 이름으로 바꾸거나 근거 없이 환산하지 않는다. transient 단위 목록은 로그인 초안의 영속 계약에 추가하지 않는다.
+- 제품 영양은 저장된 정확한 영양 버전의 공개 승인 출처·기준량·승인 환산으로 계산한다. 직접 입력 라벨 또는 출처 미승인 값은 부분값/계산 불가를 유지하며 일반 재료 영양으로 대체하지 않는다.
+
+이 항목은 승인된 작업 범위이며 구현·배포 완료 선언이 아니다. 실제 변경과 확인 결과는 [실행 기록](engineering/beta-flow-gaps-20260922.md)을 따른다. 신규 Stage/CI 조건을 추가하지 않는다.
+
 ## 2026-09-18 출시 전 복구·재료 검색 보완
 
 - `POST /recipes`의 수동 등록은 선택 `Idempotency-Key`를 지원한다. 키를 사용하는 새 클라이언트는 `X-Homecook-Draft-Owner` UUID도 보내며 인증 사용자와 다르면 `409 DRAFT_OWNER_CHANGED`다. 같은 사용자·계정 세대·키·본문은 기존 생성 결과를 반환하고 다른 본문은 `409 IDEMPOTENCY_KEY_REUSED`다. 기존 키 없는 요청은 호환한다.

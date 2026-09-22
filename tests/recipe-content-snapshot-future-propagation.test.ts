@@ -285,7 +285,13 @@ describe("recipe content snapshot future propagation public contract", () => {
       order: vi.fn(() => query),
       range: vi.fn(async () => ({ data: [], error: null })),
     };
-    const client = { from: vi.fn(() => query) };
+    const client = {
+      from: vi.fn(() => query),
+      rpc: vi.fn(async () => ({
+        data: [{ id: ingredientId, product_predecessor: null }],
+        error: null,
+      })),
+    };
     const { calculateRecipeDraftNutrition } = await import(
       "@/lib/server/recipe-content-snapshot-future-propagation"
     );
@@ -314,8 +320,10 @@ describe("recipe content snapshot future propagation public contract", () => {
         ingredient_id: ingredientId,
         food_product_id: productId,
         food_product_nutrition_version_id: selectedVersionId,
+        product_predecessor: null,
       }),
     ]);
+    expect(result.nutritionSnapshot.calculation_status).toBe("unavailable");
     expect(result.predecessorGuard.recipe_ingredients[0]).not.toMatchObject({
       food_product_id: null,
       food_product_nutrition_version_id: null,

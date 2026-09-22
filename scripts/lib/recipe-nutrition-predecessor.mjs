@@ -463,6 +463,9 @@ export function hydrateRecipeNutritionIngredients(ingredients, predecessors) {
       piece: selectedPiece,
       sizeCode,
     } = selectRecipeNutritionPredecessor(ingredient, predecessor);
+    const hasProductPin = Boolean(
+      ingredient.food_product_id || ingredient.food_product_nutrition_version_id,
+    );
     return {
       id: ingredient.id,
       ingredient_id: ingredient.ingredient_id,
@@ -470,11 +473,15 @@ export function hydrateRecipeNutritionIngredients(ingredients, predecessors) {
       unit: ingredient.unit,
       ingredient_type: ingredient.ingredient_type,
       scalable: ingredient.scalable,
-      preparation_state: selectedNutrition?.preparationState ?? null,
+      ...(hasProductPin ? {
+        food_product_id: ingredient.food_product_id ?? null,
+        food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id ?? null,
+      } : {}),
+      preparation_state: hasProductPin ? null : selectedNutrition?.preparationState ?? null,
       size_code: sizeCode,
-      nutrition: selectedNutrition?.nutrition,
-      conversion_assignment: selectedConversion?.assignment ?? null,
-      piece_weight: selectedPiece?.pieceWeight ?? null,
+      nutrition: hasProductPin ? undefined : selectedNutrition?.nutrition,
+      conversion_assignment: hasProductPin ? null : selectedConversion?.assignment ?? null,
+      piece_weight: hasProductPin ? null : selectedPiece?.pieceWeight ?? null,
     };
   });
 }

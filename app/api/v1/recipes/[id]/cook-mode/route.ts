@@ -1,3 +1,4 @@
+import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { fail, ok } from "@/lib/api/response";
 import {
   isUuid,
@@ -148,17 +149,22 @@ export async function GET(request: Request, context: RouteContext) {
       return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
     }
 
+    const user = (await routeClient.auth.getUser()).data.user;
+    const ingredientColumns = "ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)"
+      + (user ? ", food_product_id, food_product_nutrition_version_id" : "");
     const ingredientsResult = await dbClient
       .from("recipe_ingredients")
-      .select(
-        "ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)",
-      )
+      .select(ingredientColumns)
       .eq("recipe_id", recipeId)
       .order("sort_order", { ascending: true });
 
     if (ingredientsResult.error || !ingredientsResult.data) {
       return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
     }
+
+    const productIngredients = user
+      ? await readRecipeProductLabels(routeClient, ingredientsResult.data)
+      : ingredientsResult.data;
 
     let stepsResult = await dbClient
       .from("recipe_steps")
@@ -183,7 +189,7 @@ export async function GET(request: Request, context: RouteContext) {
         id: recipeResult.data.id,
         title: recipeResult.data.title,
         cooking_servings: cookingServings,
-        ingredients: ingredientsResult.data.map((row) =>
+        ingredients: productIngredients.map((row) =>
           toCookingModeIngredient({
             row,
             baseServings: recipeResult.data!.base_servings,

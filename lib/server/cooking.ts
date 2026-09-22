@@ -1,3 +1,4 @@
+import { recipeProductLabel } from "@/lib/server/recipe-product-labels";
 import type {
   CookingModeIngredient,
   CookingModeStep,
@@ -22,6 +23,10 @@ interface IngredientJoinRow {
 }
 
 export interface CookingIngredientRow {
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+  food_product_name?: string | null;
+  food_product_brand?: string | null;
   ingredient_id: string;
   amount: number | null;
   unit: string | null;
@@ -282,6 +287,7 @@ export function toCookingModeIngredient({
   cookingServings: number;
 }): CookingModeIngredient {
   const ingredient = firstJoin(row.ingredients) ?? {};
+  const name = recipeProductLabel(row) ?? ingredient.standard_name ?? "";
   const amount = scaleAmount({
     amount: row.amount,
     baseServings,
@@ -292,12 +298,12 @@ export function toCookingModeIngredient({
   const componentLabel = normalizeRecipeSectionLabel(row.component_label);
   const displayText =
     row.ingredient_type === "QUANT" && amountText && row.unit
-      ? `${ingredient.standard_name ?? ""} ${amountText}${row.unit}`
+      ? `${name} ${amountText}${row.unit}`
       : stripMatchingSectionPrefix(row.display_text, componentLabel);
 
   return {
     ingredient_id: row.ingredient_id,
-    standard_name: ingredient.standard_name ?? "",
+    standard_name: name,
     amount,
     unit: row.unit,
     display_text: displayText,

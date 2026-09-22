@@ -1,3 +1,4 @@
+import { recipeProductLabel } from "@/lib/server/recipe-product-labels";
 import type {
   RecipeIngredient,
   RecipeStep,
@@ -14,6 +15,10 @@ interface SavedBookRow {
 }
 
 interface RecipeIngredientsRow {
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+  food_product_name?: string | null;
+  food_product_brand?: string | null;
   id: string;
   ingredient_id: string;
   amount: number | string | null;
@@ -73,12 +78,16 @@ export function normalizeRecipeIngredients(
       return {
         id: item.id,
         ingredient_id: item.ingredient_id,
-        standard_name:
+        ...(item.food_product_id ? {
+          food_product_id: item.food_product_id,
+          food_product_nutrition_version_id: item.food_product_nutrition_version_id ?? null,
+        } : {}),
+        standard_name: recipeProductLabel(item) ?? (
           Array.isArray(item.ingredients) && item.ingredients[0]
             ? item.ingredients[0].standard_name ?? ""
             : !Array.isArray(item.ingredients)
               ? item.ingredients?.standard_name ?? ""
-              : "",
+              : ""),
         amount: item.amount === null ? null : Number(item.amount),
         unit: item.unit,
         ingredient_type: item.ingredient_type,

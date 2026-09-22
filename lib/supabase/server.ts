@@ -474,6 +474,7 @@ export function createServiceRoleClient() {
 const RECIPE_FUTURE_PROPAGATION_READ_TABLES = new Set([
   "ingredient_conversion_assignments",
   "ingredient_nutrition_profiles",
+  "piece_unit_weights",
 ]);
 
 const RECIPE_MEAL_WEIGHT_READ_TABLES = new Set([
