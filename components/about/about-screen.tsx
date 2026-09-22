@@ -89,10 +89,10 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
           <aside className="about-availability" aria-label="현재 이용 안내">
             <strong>천천히 둘러보고 시작해요</strong>
             <p>예시 화면은 로그인 없이 볼 수 있어요. 내 계획과 식사를 추가하려면 로그인해 주세요.</p>
-            <p>YouTube 레시피 추출과 식사 상세·수정은 준비 중이에요.</p>
+            <p>YouTube 링크로 레시피를 가져오고, 식사 상세에서 먹은 양을 확인·수정할 수 있어요.</p>
           </aside>
           <SectionHeading
-            description="만들 계획부터 실제 먹은 양까지, 다섯 단계로 이어져요."
+            description="필요한 기능부터 시작하세요. 모든 단계를 거치지 않아도 돼요."
             eyebrow="HOW IT WORKS"
             title="한 끼는 이렇게 이어져요"
           />

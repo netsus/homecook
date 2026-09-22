@@ -1,5 +1,11 @@
 # recipe-visibility-read-hardening
 
+## 2026-09-22 현재 상태와 기록 해석
+
+구현·검증은 PR #1228로 병합됐다. 아래 `docs/planned`와 F0 runtime 대기 표기는 초기 Stage 1 시점의 기록이다. 이미지 운영 전환·구경로 정리의 개별 완료 여부를 병합 사실만으로 판단하지 않는다.
+
+2026-09-21 22:37 KST 운영 DB 읽기 확인에서는 account capability가 `generation_active`였고, 직접 Postgres 연결의 recipe UI mode는 `legacy_v1`이었다. 앱 요청의 별도 설정은 확인하지 않았다. 과거 activation pending을 현재 F0 미활성으로 단정하지 않는다. [현재 실행 기록](../../engineering/beta-flow-gaps-20260922.md)을 함께 확인한다. 아래 Stage/CI 절차는 과거 기록이며 신규 작업에는 현재 `AGENTS.md`를 적용한다.
+
 > Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
 
 ## Goal

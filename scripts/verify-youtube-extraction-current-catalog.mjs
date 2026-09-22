@@ -19,12 +19,18 @@ import {
 } from "./lib/local-supabase-isolated-runtime.mjs";
 
 const repositoryRoot = process.cwd();
+const args = process.argv.slice(2);
+if (args.some((arg) => arg !== "--beta-flow-gaps") || args.length > 1) {
+  throw new Error("Supported option: --beta-flow-gaps");
+}
+const verifyBetaFlowGaps = args.includes("--beta-flow-gaps");
 // Preserve CLI-created ownership for historical migrations. Only these reviewed
 // production-admin changes require replacement rights over dedicated RPC owners.
 const adminMigrations = new Set([
   "20260919001000_ingredient_search_normalization.sql",
   "20260922000000_youtube_catalog_after_ingredient_search.sql",
   "20260922010000_youtube_fractional_quantity.sql",
+  "20260922021000_recipe_product_nutrition.sql",
 ]);
 const dockerTarget = readPinnedLocalDockerTarget({ ambient: process.env });
 const pinnedEnv = { ...process.env, DOCKER_HOST: dockerTarget.docker_host };
@@ -94,6 +100,10 @@ try {
   console.warn(JSON.stringify({ projectId: isolated.projectId, migrationCount: migrations.length, migrationSha256: isolated.migrationSha256 }));
   run("pnpm", [
     "exec", "vitest", "run", "tests/youtube-extraction-current-catalog.integration.test.ts",
+    ...(verifyBetaFlowGaps ? [
+      "tests/recipe-product-selection-postgres.integration.test.ts",
+      "tests/recipe-product-nutrition.integration.test.ts",
+    ] : []),
     "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
   ], {
     label: "Current catalog integration", cwd: repositoryRoot, timeout: 120_000, inherit: true,

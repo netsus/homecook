@@ -369,7 +369,7 @@ export function renderMealLogShell({
                 : { type: "ingredient", id: SOURCE_ID },
             display_name: recentCookedWithoutProjection ? "예전 카레" : catalogBadges ? "플레인 요거트" : "달걀",
             display_brand: catalogBadges ? "무먹식품" : null,
-            last_quantity: { amount: 2, unit: "개" },
+            last_quantity: { amount: 2, unit: recentCookedWithoutProjection || catalogBadges ? "개" : "g" },
             frequency: 3,
           }],
           next_cursor: paginatedSources ? "recent-cursor" : null,
@@ -451,6 +451,8 @@ export function renderMealLogShell({
                     ?? (paginatedSources && !cursor),
                 };
               })()
+            : path.includes("/food-catalog/search") && (url.searchParams.get("q") === "달걀" || url.searchParams.get("source_id") === SOURCE_ID)
+              ? { items: [{ type: "ingredient", id: SOURCE_ID, standard_name: "달걀", category: "기타", default_unit: "g" }], next_cursor: null, has_next: false }
             : path.includes("/food-catalog/search") && catalogBadges
               ? {
                   items: [

@@ -15,6 +15,7 @@ export interface FoodCatalogIngredientData {
 
 export type FoodCatalogProductData = FoodProductData & {
   type: "food_product";
+  recipe_ingredient_id?: string | null;
 };
 
 export type FoodCatalogSearchItem =
@@ -80,6 +81,15 @@ export async function fetchFoodCatalogSearch({
   if (source) params.set("source", source);
   if (cursor) params.set("cursor", cursor);
 
+  return requestFoodCatalog(params, signal);
+}
+
+export async function fetchFoodCatalogSource(type: FoodCatalogSearchType, id: string, signal?: AbortSignal) {
+  const result = await requestFoodCatalog(new URLSearchParams({ source_type: type, source_id: id }), signal);
+  return result.items.find((item) => item.type === type && item.id === id) ?? null;
+}
+
+async function requestFoodCatalog(params: URLSearchParams, signal?: AbortSignal) {
   const response = await fetch(
     `/api/v1/food-catalog/search?${params.toString()}`,
     withE2EAuthOverrideHeaders({ signal }),

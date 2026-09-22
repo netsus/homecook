@@ -1,7 +1,7 @@
 {
   "id": "legacy-product-compat",
   "title": "Legacy product compatibility",
-  "summary": "Legacy product pinned read/delete, v1 stable-key rollout, stored-version dispatch, seeded-v2 drain and fail-closed tombstone evidence를 공식 계약 안에서 잠근다.",
+  "summary": "[과거 workflow 기록; 2026-09-22 상태 보정] Legacy product pinned read/delete, v1 stable-key rollout, stored-version dispatch, seeded-v2 drain and fail-closed tombstone evidence를 공식 계약 안에서 잠근다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -190,7 +190,8 @@
         "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage4-frontend-implementation.md",
         "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-frontend-review.md",
         "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-finding-repair.md",
-        "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-final-review.md"
+        "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-final-review.md",
+        "2026-09-22 current interpretation: docs/engineering/beta-flow-gaps-20260922.md; retained automated/runtime merge is complete, historical workflow fields are not current release gates. 2026-09-21 read-only production account capability=generation_active; direct Postgres recipe mode=legacy_v1; app request override unverified."
       ]
     },
     "merge_gate_projection": {

@@ -8,6 +8,8 @@ import {
   RecipeEditorDiscardDialog,
   usePersonalRecipeEditorShell,
 } from "@/components/recipe/personal-recipe-editor-shell";
+import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
+import { changeRecipeIngredient, toRecipeEditIngredient } from "@/lib/recipe-editor-ingredients";
 import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { fetchUserProfile } from "@/lib/api/mypage";
@@ -21,6 +23,7 @@ import { useAuthGateStore } from "@/stores/ui-store";
 
 interface RecipeDetailPersonalEditorProps {
   editContext: RecipeEditContext;
+  ingredientNames?: Record<string, string>;
   mode: "edit" | "fork";
   onClose: () => void;
   onSaved: (result: { id: string; revision: number }) => void;
@@ -87,6 +90,7 @@ function toEditorShellDraft(
 
 export function RecipeDetailPersonalEditor({
   editContext,
+  ingredientNames = {},
   mode,
   onClose,
   onSaved,
@@ -103,6 +107,8 @@ export function RecipeDetailPersonalEditor({
     resumeContext?.draft ?? editContext.draft,
   ));
   const [impactDialogOpen, setImpactDialogOpen] = useState(false);
+  const [ingredientPicker, setIngredientPicker] = useState<number | "add" | null>(null);
+  const [ingredientError, setIngredientError] = useState<string | null>(null);
   const [isCreatingDerivedRecipe, setIsCreatingDerivedRecipe] = useState(false);
   const [createDerivedRecipeError, setCreateDerivedRecipeError] = useState<string | null>(null);
   const openAuthGate = useAuthGateStore((state) => state.open);
@@ -132,6 +138,12 @@ export function RecipeDetailPersonalEditor({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const fallbackOpenerRef = useRef<HTMLElement | null>(null);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(initialDraft);
+  const ingredientsValid = draft.ingredients.length > 0 && draft.ingredients.every((ingredient) =>
+    ingredient.ingredient_type === "TO_TASTE"
+      ? ingredient.amount === null && ingredient.unit === null
+      : ingredient.amount !== null && Number.isFinite(ingredient.amount)
+        && ingredient.amount > 0 && Boolean(ingredient.unit?.trim()),
+  );
   const controller = usePersonalRecipeEditorShell({
     accessState: "ready",
     cleanupState: "idle",
@@ -170,14 +182,14 @@ export function RecipeDetailPersonalEditor({
   }, [returnFocusRef]);
 
   useDialogBoundary({
-    active: !authGateOpen && !controller.isDiscardDialogOpen && !impactDialogOpen,
+    active: !authGateOpen && !controller.isDiscardDialogOpen && !impactDialogOpen && ingredientPicker === null,
     dialogRef,
     initialFocusRef: titleRef,
     onClose: controller.requestCancel,
   });
 
   const submitDerivedRecipe = async () => {
-    if (isCreatingDerivedRecipe || draft.title.trim() === "") {
+    if (isCreatingDerivedRecipe || draft.title.trim() === "" || !ingredientsValid) {
       return;
     }
 
@@ -309,7 +321,15 @@ export function RecipeDetailPersonalEditor({
             <section aria-labelledby="recipe-editor-ingredients" className="space-y-3">
               <h3 className="text-sm font-bold text-[var(--foreground)]" id="recipe-editor-ingredients">재료</h3>
               {draft.ingredients.map((ingredient, index) => (
-                <div className="grid grid-cols-[1fr_minmax(5rem,0.6fr)] gap-2" key={`${ingredient.ingredient_id}:${index}`}>
+                <div className="rounded-[var(--radius-control)] border border-[var(--line)] p-3" key={`${ingredient.ingredient_id}:${index}`}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold">{(ingredient.food_product_id ? ingredient.display_text : ingredientNames[ingredient.ingredient_id]) || ingredient.display_text || `재료 ${index + 1}`}</span>
+                    <div className="flex shrink-0 gap-2">
+                      <button className="min-h-11 px-2 text-sm font-bold" type="button" onClick={() => { setIngredientError(null); setIngredientPicker(index); }}>교체</button>
+                      <button aria-label={`${(ingredient.food_product_id ? ingredient.display_text : ingredientNames[ingredient.ingredient_id]) || ingredient.display_text || `재료 ${index + 1}`} 삭제`} className="min-h-11 px-2 text-sm text-[var(--danger)]" type="button" onClick={() => setDraft((current) => changeRecipeIngredient(current, index, null))}>삭제</button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[1fr_minmax(5rem,0.6fr)] gap-2">
                   <label className="space-y-1 text-xs font-semibold text-[var(--text-2)]">
                     <span>재료 {index + 1} 수량</span>
                     <input
@@ -318,7 +338,7 @@ export function RecipeDetailPersonalEditor({
                       onChange={(event) => setDraft((current) => ({
                         ...current,
                         ingredients: current.ingredients.map((item, itemIndex) => itemIndex === index
-                          ? { ...item, amount: event.target.value === "" ? null : Number(event.target.value) }
+                          ? { ...item, ingredient_type: "QUANT", amount: event.target.value === "" ? null : Number(event.target.value) }
                           : item),
                       }))}
                       type="number"
@@ -332,14 +352,20 @@ export function RecipeDetailPersonalEditor({
                       onChange={(event) => setDraft((current) => ({
                         ...current,
                         ingredients: current.ingredients.map((item, itemIndex) => itemIndex === index
-                          ? { ...item, unit: event.target.value === "" ? null : event.target.value }
+                          ? { ...item, ingredient_type: "QUANT", unit: event.target.value === "" ? null : event.target.value }
                           : item),
                       }))}
                       value={ingredient.unit ?? ""}
+                      readOnly={Boolean(ingredient.food_product_id)}
                     />
                   </label>
+                  </div>
                 </div>
               ))}
+              <button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line)] text-sm font-bold" type="button" onClick={() => { setIngredientError(null); setIngredientPicker("add"); }}>+ 재료 추가하기</button>
+              {ingredientError ? <p role="alert" className="text-sm text-[var(--danger)]">{ingredientError}</p> : null}
+              {!ingredientsValid && draft.ingredients.length > 0 ? <p role="status" className="text-sm text-[var(--danger)]">재료의 수량과 단위를 입력해 주세요.</p> : null}
+              <p className="text-xs text-[var(--text-2)]">재료를 교체하면 기존 양을 유지해요. 제품의 기준 단위가 다르면 양을 다시 입력해 주세요. 아래 만들기 설명도 확인해 주세요.</p>
             </section>
 
             <section aria-labelledby="recipe-editor-steps" className="space-y-3">
@@ -375,7 +401,7 @@ export function RecipeDetailPersonalEditor({
               <div className="space-y-3">
                 {!resumeSaveAsNew ? (
                   <RecipeFutureImpactSaveFlow
-                    actionDisabled={!hasChanges || draft.title.trim() === ""}
+                    actionDisabled={!hasChanges || draft.title.trim() === "" || !ingredientsValid}
                     baseRecipeRevision={saveContext.base_recipe_revision}
                     draft={draft}
                     enabled
@@ -397,7 +423,7 @@ export function RecipeDetailPersonalEditor({
                 ) : null}
                 <button
                   className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line)] bg-transparent px-4 font-semibold text-[var(--text-2)] disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={isCreatingDerivedRecipe || draft.title.trim() === ""}
+                  disabled={isCreatingDerivedRecipe || draft.title.trim() === "" || !ingredientsValid}
                   onClick={() => {
                     void submitDerivedRecipe();
                   }}
@@ -409,7 +435,7 @@ export function RecipeDetailPersonalEditor({
             ) : (
               <button
                 className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] px-4 font-bold text-[var(--text-inverse)] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isCreatingDerivedRecipe || draft.title.trim() === ""}
+                disabled={isCreatingDerivedRecipe || draft.title.trim() === "" || !ingredientsValid}
                 onClick={() => {
                   void submitDerivedRecipe();
                 }}
@@ -427,6 +453,27 @@ export function RecipeDetailPersonalEditor({
         onStay={controller.stay}
         open={controller.isDiscardDialogOpen}
       />
+      {ingredientPicker !== null ? <RecipeIngredientAddModal
+        enableProducts
+        excludedIngredientIds={draft.ingredients.filter((_, index) => index !== ingredientPicker).map((item) => item.ingredient_id)}
+        single={ingredientPicker !== "add"}
+        onClose={() => setIngredientPicker(null)}
+        onAdd={(items) => {
+          if (ingredientPicker !== "add" && items.length !== 1) {
+            setIngredientError("교체할 재료를 하나만 선택해 주세요."); return;
+          }
+          const excludedIndex = typeof ingredientPicker === "number" ? ingredientPicker : -1;
+          const existing = new Set(draft.ingredients.filter((_, index) => index !== excludedIndex).map((item) => item.ingredient_id));
+          if (items.some((item) => existing.has(item.ingredient_id))) {
+            setIngredientError("이미 들어 있는 재료예요. 기존 재료의 양을 수정해 주세요."); return;
+          }
+          setDraft((current) => {
+            return ingredientPicker === "add"
+              ? { ...current, ingredients: [...current.ingredients, ...items.map(toRecipeEditIngredient)] }
+              : changeRecipeIngredient(current, ingredientPicker, toRecipeEditIngredient(items[0]));
+          });
+        }}
+      /> : null}
     </div>
   );
 }

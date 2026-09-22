@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { renderMealLogShell } from "@/tests/fixtures/meal-log-ui-harness";
+
+function selectedDay() {
+  return within(screen.getByRole("region", { name: "8월 10일 월요일 식사 기록", hidden: true }));
+}
+async function openBreakfast(user: ReturnType<typeof userEvent.setup>) {
+  await screen.findByRole("region", { name: "8월 10일 월요일 식사 기록" });
+  await user.click(await selectedDay().findByRole("button", { name: "아침에 먹은 음식 추가" }));
+}
 
 describe("MEAL_LOG add sheet", () => {
   afterEach(cleanup);
@@ -13,7 +21,7 @@ describe("MEAL_LOG add sheet", () => {
     const user = userEvent.setup();
     renderMealLogShell();
 
-    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await openBreakfast(user);
     const dialog = screen.getByRole("dialog", { name: "먹은 음식 추가" });
     expect(dialog.className.split(" ")).toContain("h-[100dvh]");
     expect(screen.getByText("8월 10일 · 아침")).toBeTruthy();
@@ -34,7 +42,7 @@ describe("MEAL_LOG add sheet", () => {
     const user = userEvent.setup();
     renderMealLogShell();
 
-    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await openBreakfast(user);
     await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     await user.click(await screen.findByRole("button", { name: /달걀/u }));
     const save = screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement;
@@ -50,10 +58,9 @@ describe("MEAL_LOG add sheet", () => {
     const user = userEvent.setup();
     renderMealLogShell({ includeCookedBatch: true });
 
-    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await openBreakfast(user);
     expect(await screen.findByText(/8월 9일 조리/u)).toBeTruthy();
-    expect(screen.getByText(/완성 500g/u)).toBeTruthy();
-    expect(screen.getByText(/영양 계산 완료/u)).toBeTruthy();
+    expect(screen.getByText(/남은 양 80g/u)).toBeTruthy();
     await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
     const amount = screen.getByRole("spinbutton", { name: "실제 양" });
     await user.clear(amount);
@@ -67,7 +74,7 @@ describe("MEAL_LOG add sheet", () => {
   it("keeps cooked food quantities in grams instead of accepting an incompatible unit", async () => {
     const user = userEvent.setup();
     renderMealLogShell({ includeCookedBatch: true });
-    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await openBreakfast(user);
     await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
     const unit = screen.getByRole("textbox", { name: "단위" }) as HTMLInputElement;
     expect(unit.value).toBe("g");
@@ -79,7 +86,7 @@ describe("MEAL_LOG add sheet", () => {
     const user = userEvent.setup();
     const { fetchMock } = renderMealLogShell({ paginatedSources: true });
 
-    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await openBreakfast(user);
     await user.click(await screen.findByRole("button", { name: "요리한 음식 더 불러오기" }));
     expect(await screen.findByRole("button", { name: /카레/u })).toBeTruthy();
 
@@ -87,8 +94,7 @@ describe("MEAL_LOG add sheet", () => {
     await user.click(await screen.findByRole("button", { name: "최근 음식 더 불러오기" }));
     expect(await screen.findByRole("button", { name: /바나나/u })).toBeTruthy();
 
-    await user.type(screen.getByRole("textbox", { name: "제품·재료 검색" }), "시");
-    await user.click(screen.getByRole("button", { name: "검색" }));
+    await user.type(screen.getByRole("searchbox", { name: "제품·재료 검색" }), "시");
     expect(await screen.findByRole("button", { name: /시금치/u })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "제품·재료 더 불러오기" }));
     expect(await screen.findByRole("button", { name: /우유/u })).toBeTruthy();
@@ -106,25 +112,23 @@ describe("MEAL_LOG add sheet", () => {
       recentCookedWithoutProjection: true,
     });
 
-    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await openBreakfast(user);
     expect((await screen.findByRole("link", { name: /된장찌개 완성 중량 입력/u })).getAttribute("href"))
       .toBe("/leftovers");
-    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     const unmatched = await screen.findByRole("button", { name: /예전 카레/u });
     expect((unmatched as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText("현재 중량·잔량 상태를 확인할 수 없어 저장할 수 없어요.")).toBeTruthy();
+    expect(screen.getByText("현재 추가할 수 없는 음식이에요. 요리한 음식 탭에서 상태를 확인해 주세요.")).toBeTruthy();
   });
 
   it("shows the recent brand and the contracted catalog source badges", async () => {
     const user = userEvent.setup();
     renderMealLogShell({ catalogBadges: true });
 
-    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await openBreakfast(user);
     await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     expect(await screen.findByText("무먹식품 · 제품 · 최근 2개 · 3회 기록")).toBeTruthy();
 
-    await user.type(screen.getByRole("textbox", { name: "제품·재료 검색" }), "요거트");
-    await user.click(screen.getByRole("button", { name: "검색" }));
+    await user.type(screen.getByRole("searchbox", { name: "제품·재료 검색" }), "요거트");
     expect(await screen.findByText("공공브랜드 · 제품 · 공공 영양DB")).toBeTruthy();
     expect(screen.getByText("동네브랜드 · 제품 · 사용자 등록")).toBeTruthy();
   });

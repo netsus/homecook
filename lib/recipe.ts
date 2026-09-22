@@ -40,14 +40,16 @@ export function formatScaledIngredient(
   selectedServings: number,
 ) {
   if (
+    ingredient.ingredient_type === "TO_TASTE" ||
     ingredient.amount === null ||
-    ingredient.unit === null ||
-    !ingredient.scalable
+    ingredient.unit === null
   ) {
     return ingredient.display_text ?? ingredient.standard_name;
   }
 
-  const scaled = (ingredient.amount / baseServings) * selectedServings;
+  const scaled = ingredient.scalable
+    ? (ingredient.amount / baseServings) * selectedServings
+    : ingredient.amount;
   const normalized =
     Number.isInteger(scaled) || Number.isNaN(scaled)
       ? scaled.toString()

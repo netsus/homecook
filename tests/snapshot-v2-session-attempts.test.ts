@@ -251,6 +251,39 @@ describe("snapshot-v2 session attempts public contract", () => {
     );
   });
 
+  it("reads optional amount fields omitted by immutable personal-recipe snapshots", async () => {
+    setupAuthorizedRpc({ data: {
+      session_id: sessionId, contract_version: "snapshot_v2", mode: "standalone", status: "in_progress",
+      recipe: { id: recipeId, title: "적당량 요리", base_servings: 2, cooking_servings: 2,
+        ingredients: [{ ingredient_id: ingredientId, standard_name: "소금", ingredient_type: "TO_TASTE", scalable: false }],
+        steps: [] }, pantry_candidates: [],
+    }, error: null });
+    const { GET } = await importCookModeRoute();
+    const response = await GET(new Request(`http://localhost/api/v1/cooking/session-attempts/${sessionId}/cook-mode`), context());
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.recipe.ingredients[0]).toMatchObject({
+      standard_name: "소금", amount: null, unit: null, display_text: null,
+    });
+  });
+
+  it("preserves pinned product labels through the actual session-attempt cook-mode projector", async () => {
+    setupAuthorizedRpc({ data: {
+      session_id: sessionId, contract_version: "snapshot_v2", mode: "standalone", status: "in_progress",
+      recipe: { id: recipeId, title: "제품 요리", base_servings: 2, cooking_servings: 4,
+        ingredients: [{ ingredient_id: ingredientId, standard_name: "두부", amount: 100, unit: "g",
+          display_text: "브랜드 · 두부 100g", component_label: null, ingredient_type: "QUANT", scalable: true,
+          food_product_id: productId, food_product_nutrition_version_id: productVersionId,
+          food_product_name: "국산 두부", food_product_brand: "처음 브랜드" }], steps: [] },
+      pantry_candidates: [],
+    }, error: null });
+    const { GET } = await importCookModeRoute();
+    const response = await GET(new Request(`http://localhost/api/v1/cooking/session-attempts/${sessionId}/cook-mode`), context());
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.recipe.ingredients[0]).toMatchObject({
+      standard_name: "처음 브랜드 · 국산 두부", display_text: "처음 브랜드 · 국산 두부 200g", amount: 200,
+    });
+  });
+
   it("returns cook-mode from immutable session content with exact eight-field product provenance", async () => {
     const internalRecipe = {
       id: recipeId,
@@ -359,7 +392,7 @@ describe("snapshot-v2 session attempts public contract", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it("reuses the legacy CookingModeRecipe projection, scales 2 servings to 4, and strips internal snapshot food fields", async () => {
+  it("reuses CookingModeRecipe, scales product labels, and strips raw internal snapshot food fields", async () => {
     const { rpc } = setupAuthorizedRpc({
       data: {
         session_id: sessionId,
@@ -435,10 +468,10 @@ describe("snapshot-v2 session attempts public contract", () => {
           ingredients: [
             {
               ingredient_id: ingredientId,
-              standard_name: "두부",
+              standard_name: "내부 브랜드 · 내부 상품명",
               amount: 200,
               unit: "g",
-              display_text: "두부 200g",
+              display_text: "내부 브랜드 · 내부 상품명 200g",
               component_label: "메인",
               ingredient_type: "QUANT",
               scalable: true,

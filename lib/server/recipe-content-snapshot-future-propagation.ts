@@ -1,3 +1,4 @@
+import { addRecipeProductNutritionGuard, hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import { fail } from "@/lib/api/response";
 import {
   toCookingModeIngredient,
@@ -478,6 +479,7 @@ export async function calculateRecipeDraftNutrition(
     recipeId: string;
     baseRecipeRevision: number;
     draft: RecipeDraft;
+    ownerUserId?: string;
   },
 ) {
   const ingredients = input.draft.ingredients.map(draftNutritionIngredient);
@@ -516,20 +518,32 @@ export async function calculateRecipeDraftNutrition(
     throw new RecipeDraftNutritionInfrastructureError();
   }
 
+  let productHydration;
+  try {
+    productHydration = await hydrateRecipeProductNutrition(
+      client as unknown as RecipeProductNutritionClient,
+      validIngredients,
+      hydrateRecipeNutritionIngredients(validIngredients, predecessors),
+      input.ownerUserId,
+    );
+  } catch {
+    throw new RecipeDraftNutritionInfrastructureError();
+  }
   let calculation;
   try {
     calculation = calculateRecipeNutrition({
       recipe_id: input.recipeId,
       recipe_version: `revision:${input.baseRecipeRevision}`,
       base_servings: input.draft.base_servings,
-      ingredients: hydrateRecipeNutritionIngredients(validIngredients, predecessors),
+      ingredients: productHydration.ingredients,
     });
   } catch {
     throw new RecipeDraftNutritionValidationError();
   }
-  const currentGuard = buildRecipeNutritionInputGuard(
+  const currentGuard = addRecipeProductNutritionGuard(
+    buildRecipeNutritionInputGuard(validIngredients, predecessors),
     validIngredients,
-    predecessors,
+    productHydration.predecessors,
   ) as {
     recipe_ingredients: Array<Record<string, unknown>>;
   };
@@ -555,6 +569,8 @@ export async function calculateRecipeDraftNutrition(
         food_product_id: ingredient.food_product_id,
         food_product_nutrition_version_id:
           ingredient.food_product_nutrition_version_id,
+        ...(Object.hasOwn(guard, "product_predecessor")
+          ? { product_predecessor: guard.product_predecessor } : {}),
         nutrition_candidates: guard.nutrition_candidates,
         conversion_candidates: guard.conversion_candidates,
         selected_nutrition_link_id: guard.selected_nutrition_link_id,
@@ -727,9 +743,9 @@ function projectSnapshotV2CookModeIngredients(
       !isRecord(item)
       || !isUuid(item.ingredient_id)
       || typeof item.standard_name !== "string"
-      || (item.amount !== null && typeof item.amount !== "number")
-      || (item.unit !== null && typeof item.unit !== "string")
-      || (item.display_text !== null && typeof item.display_text !== "string")
+      || (item.amount !== undefined && item.amount !== null && typeof item.amount !== "number")
+      || (item.unit !== undefined && item.unit !== null && typeof item.unit !== "string")
+      || (item.display_text !== undefined && item.display_text !== null && typeof item.display_text !== "string")
       || (
         item.component_label !== undefined
         && item.component_label !== null
@@ -737,11 +753,19 @@ function projectSnapshotV2CookModeIngredients(
       )
       || (item.ingredient_type !== "QUANT" && item.ingredient_type !== "TO_TASTE")
       || typeof item.scalable !== "boolean"
+      || (item.food_product_id !== undefined && item.food_product_id !== null && !isUuid(item.food_product_id))
+      || (item.food_product_nutrition_version_id !== undefined && item.food_product_nutrition_version_id !== null && !isUuid(item.food_product_nutrition_version_id))
+      || (item.food_product_name !== undefined && item.food_product_name !== null && typeof item.food_product_name !== "string")
+      || (item.food_product_brand !== undefined && item.food_product_brand !== null && typeof item.food_product_brand !== "string")
     ) {
       return null;
     }
     rows.push({
       ingredient_id: item.ingredient_id,
+      food_product_id: item.food_product_id ?? null,
+      food_product_nutrition_version_id: item.food_product_nutrition_version_id ?? null,
+      food_product_name: item.food_product_name ?? null,
+      food_product_brand: item.food_product_brand ?? null,
       amount: item.amount ?? null,
       unit: item.unit ?? null,
       display_text: item.display_text ?? null,

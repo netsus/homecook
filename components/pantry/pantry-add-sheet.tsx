@@ -144,9 +144,7 @@ export function PantryAddSheet({
           q: normalizedQuery || undefined,
         }),
         normalizedQuery
-          ? fetchFoodProducts({ q: normalizedQuery, limit: 20 }).catch(() => ({
-              items: [] as FoodProductData[],
-            }))
+          ? fetchFoodProducts({ q: normalizedQuery, limit: 20 })
           : Promise.resolve({ items: [] as FoodProductData[] }),
       ]);
       if (
@@ -491,7 +489,7 @@ export function PantryAddSheet({
         ) : visibleSheetState === "error" ? (
           <div className="flex flex-col items-center py-8 text-center">
             <p className="text-sm font-semibold text-[var(--foreground)]">
-              재료 목록을 불러오지 못했어요
+              재료·제품 목록을 불러오지 못했어요
             </p>
             <button
               className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-[var(--text-inverse)]"
@@ -740,7 +738,7 @@ export function PantryAddSheet({
               </div>
             ) : visibleSheetState === "error" ? (
               <div className="web-modal-panel web-modal-panel-error">
-                <p className="web-modal-copy">재료 목록을 불러오지 못했어요</p>
+                <p className="web-modal-copy">재료·제품 목록을 불러오지 못했어요</p>
                 <WebButton
                   onClick={() => void loadIngredients(debouncedQuery)}
                   size="sm"

@@ -1,3 +1,4 @@
+import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/response";
@@ -311,6 +312,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           toCookingModeIngredient({
             row: {
               ingredient_id: row.ingredient_id,
+              food_product_id: row.food_product_id ?? null,
+              food_product_name: row.food_product_name ?? null,
+              food_product_brand: row.food_product_brand ?? null,
               amount: row.amount,
               unit: row.unit,
               display_text: row.display_text,
@@ -358,7 +362,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   const ingredientsResult = await dbClient
     .from("recipe_ingredients")
-    .select("ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)")
+    .select("ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, food_product_id, food_product_nutrition_version_id, ingredients(standard_name)")
     .eq("recipe_id", sessionMeal.recipe_id)
     .order("sort_order", { ascending: true });
 
@@ -384,13 +388,20 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
   }
 
+  let productIngredients;
+  try {
+    productIngredients = await readRecipeProductLabels(routeClient, ingredientsResult.data);
+  } catch {
+    return fail("INTERNAL_ERROR", "요리 재료의 제품 정보를 불러오지 못했어요.", 500);
+  }
+
   return ok<CookingSessionCookModeData>({
     session_id: sessionId,
     recipe: {
       id: recipeResult.data.id,
       title: recipeResult.data.title,
       cooking_servings: sessionMeal.cooking_servings,
-      ingredients: ingredientsResult.data.map((row) =>
+      ingredients: productIngredients.map((row) =>
         toCookingModeIngredient({
           row,
           baseServings: recipeResult.data!.base_servings,

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 import { CookModeWholeBoard } from "@/components/cooking/cook-mode-whole-board";
 import type { SnapshotV2CompleteData, SnapshotV2CookModeData } from "@/types/cooking";
@@ -11,6 +12,7 @@ interface SnapshotV2CookModeViewProps {
   data: SnapshotV2CookModeData;
   onCancel: () => void;
   onComplete?: () => void;
+  returnHref?: string;
 }
 
 export function SnapshotV2CookModeView({
@@ -19,8 +21,10 @@ export function SnapshotV2CookModeView({
   data,
   onCancel,
   onComplete,
+  returnHref,
 }: SnapshotV2CookModeViewProps) {
   const terminal = data.status !== "in_progress";
+  const fallbackHref = data.mode === "standalone" ? `/recipe/${data.recipe.id}` : "/planner";
 
   return (
     <div
@@ -40,7 +44,7 @@ export function SnapshotV2CookModeView({
       {terminal ? (
         completionResult ? (
           <section
-            className="mx-4 rounded-[16px] bg-[var(--surface-alpha-08)] p-4"
+            className="mx-4 rounded-[16px] bg-[var(--surface-alpha-08)] p-4 pr-14 sm:pr-4"
             role="status"
           >
             <strong className="block">저장된 완료 결과를 확인했어요.</strong>
@@ -48,12 +52,12 @@ export function SnapshotV2CookModeView({
               팬트리 항목 {completionResult.pantry_removed}개를 반영했어요.
             </span>
             <span className="mt-1 block text-sm">
-              완료 효과는 다시 실행하지 않아요.
+              먹은 양은 식사 기록에서 따로 남길 수 있어요.
             </span>
           </section>
         ) : (
           <p
-            className="mx-4 rounded-[16px] bg-[var(--surface-alpha-08)] p-4"
+            className="mx-4 rounded-[16px] bg-[var(--surface-alpha-08)] p-4 pr-14 sm:pr-4"
             role="status"
           >
             {data.status === "completed"
@@ -61,6 +65,36 @@ export function SnapshotV2CookModeView({
               : "취소된 요리 기록이에요. 읽기 전용으로 볼 수 있어요."}
           </p>
         )
+      ) : null}
+
+      {terminal ? (
+        <nav aria-label="요리 후 다음 행동" className="mx-4 mt-4 grid gap-2.5">
+          {data.status === "completed" ? (
+            <>
+              <Link
+                className="flex min-h-14 items-center justify-center rounded-[16px] bg-[var(--brand-primary)] px-4 text-center font-bold text-[var(--text-inverse)]"
+                href="/planner?segment=log"
+                prefetch={false}
+              >
+                먹은 음식 기록하기
+              </Link>
+              <Link
+                className="cook-mobile-whole-cancel-button flex min-h-12 items-center justify-center rounded-[16px] px-4 text-center font-bold"
+                href="/leftovers"
+                prefetch={false}
+              >
+                남은요리 보기
+              </Link>
+            </>
+          ) : null}
+          <Link
+            className="flex min-h-12 items-center justify-center rounded-[16px] border border-[var(--surface-alpha-24)] px-4 text-center font-bold"
+            href={returnHref ?? fallbackHref}
+            prefetch={false}
+          >
+            돌아가기
+          </Link>
+        </nav>
       ) : null}
 
       <main

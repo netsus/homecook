@@ -57,7 +57,8 @@ describe("AboutScreen", () => {
     expect(screen.getByAltText("나의 집밥 기록 타입 테스트").getAttribute("src")).toContain("og-share.png");
     expect(screen.getByAltText("웃고 있는 당근 친구")).toBeTruthy();
     expect(screen.getByText(/예시 화면은 로그인 없이/)).toBeTruthy();
-    expect(screen.getByText(/YouTube 레시피 추출과 식사 상세/)).toBeTruthy();
+    expect(screen.getByText(/YouTube 링크로 레시피를 가져오고, 식사 상세/)).toBeTruthy();
+    expect(screen.getByText(/모든 단계를 거치지 않아도/)).toBeTruthy();
   });
 
   it("uses real accordion buttons with connected ARIA panels", async () => {

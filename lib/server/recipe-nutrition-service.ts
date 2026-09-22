@@ -1,3 +1,4 @@
+import { addRecipeProductNutritionGuard, hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import {
   calculateRecipeNutrition,
 } from "@/lib/nutrition/recipe-nutrition-calculator";
@@ -12,6 +13,7 @@ interface RecipeNutritionRecipeRow {
   id: string;
   base_servings: number;
   updated_at: string;
+  created_by?: string | null;
 }
 
 interface RecipeNutritionIngredientRow {
@@ -22,6 +24,8 @@ interface RecipeNutritionIngredientRow {
   ingredient_type: "QUANT" | "TO_TASTE";
   scalable: boolean;
   sort_order: number;
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
 }
 
 interface MaybeSingleQuery<T> {
@@ -113,12 +117,12 @@ export async function recalculateRecipeNutritionSnapshot(
   const [recipeResult, ingredientsResult] = await Promise.all([
     dbClient
       .from("recipes")
-      .select("id, base_servings, updated_at")
+      .select("id, base_servings, updated_at, created_by")
       .eq("id", recipeId)
       .maybeSingle(),
     dbClient
       .from("recipe_ingredients")
-      .select("id, ingredient_id, amount, unit, ingredient_type, scalable, sort_order")
+      .select("id, ingredient_id, amount, unit, ingredient_type, scalable, sort_order, food_product_id, food_product_nutrition_version_id")
       .eq("recipe_id", recipeId)
       .order("sort_order", { ascending: true }),
   ]);
@@ -142,19 +146,31 @@ export async function recalculateRecipeNutritionSnapshot(
     throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
   }
 
+  let productHydration;
+  try {
+    productHydration = await hydrateRecipeProductNutrition(
+      dbClient as unknown as RecipeProductNutritionClient,
+      ingredientsResult.data,
+      hydrateRecipeNutritionIngredients(ingredientsResult.data, predecessors),
+      recipeResult.data.created_by,
+    );
+  } catch {
+    throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
+  }
   const calculation = calculateRecipeNutrition({
     recipe_id: recipeId,
     recipe_version: recipeResult.data.updated_at,
     base_servings: recipeResult.data.base_servings,
-    ingredients: hydrateRecipeNutritionIngredients(
-      ingredientsResult.data,
-      predecessors,
-    ),
+    ingredients: productHydration.ingredients,
   });
 
   return writeRecipeNutritionSnapshot(dbClient, recipeId, calculation, {
     ...options,
     expectedRecipeVersion: recipeResult.data.updated_at,
-    inputGuard: buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors),
+    inputGuard: addRecipeProductNutritionGuard(
+      buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors),
+      ingredientsResult.data,
+      productHydration.predecessors,
+    ),
   });
 }

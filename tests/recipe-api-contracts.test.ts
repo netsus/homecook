@@ -96,6 +96,8 @@ function createQuery<T>(result: QueryResult<T>) {
     limit: vi.fn(() => query),
     or: vi.fn(() => query),
     ilike: vi.fn(() => query),
+    like: vi.fn(() => query),
+    range: vi.fn(() => query),
     is: vi.fn(() => query),
     eq: vi.fn(() => query),
     gte: vi.fn(() => query),
@@ -487,12 +489,12 @@ describe("recipe API contracts", () => {
     });
     expect(ingredientsQuery.select).toHaveBeenCalledWith("id, standard_name, category, category_code");
     expect(ingredientsQuery.eq).toHaveBeenCalledWith("category", "채소");
-    expect(ingredientsQuery.ilike).toHaveBeenCalledWith("standard_name", "%양파%");
+    expect(ingredientsQuery.like).toHaveBeenCalledWith("search_name", "%양파%");
     expect(synonymsQuery.select).toHaveBeenCalledWith(
-      "ingredient_id, ingredients!inner(id, standard_name, category, category_code)",
+      "ingredient_id, synonym, ingredients!inner(id, standard_name, category, category_code)",
     );
     expect(synonymsQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
-    expect(synonymsQuery.ilike).toHaveBeenCalledWith("synonym", "%양파%");
+    expect(synonymsQuery.like).toHaveBeenCalledWith("search_name", "%양파%");
   });
 
   it("filters ingredient list by v2 category code without applying the v1 category query", async () => {
@@ -685,6 +687,7 @@ describe("recipe API contracts", () => {
       data: [
         {
           ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
+          synonym: "파",
           ingredients: {
             id: "550e8400-e29b-41d4-a716-446655440010",
             standard_name: "양파",
@@ -694,6 +697,7 @@ describe("recipe API contracts", () => {
         },
         {
           ingredient_id: "550e8400-e29b-41d4-a716-446655440011",
+          synonym: "대파",
           ingredients: {
             id: "550e8400-e29b-41d4-a716-446655440011",
             standard_name: "대파",
@@ -759,6 +763,7 @@ describe("recipe API contracts", () => {
       data: [
         {
           ingredient_id: ingredientId,
+          synonym,
           ingredients: {
             id: ingredientId,
             standard_name: canonicalName,
@@ -797,11 +802,11 @@ describe("recipe API contracts", () => {
         standard_name: synonym,
       }),
     ]);
-    expect(ingredientsQuery.ilike).toHaveBeenCalledWith("standard_name", `%${synonym}%`);
-    expect(synonymsQuery.ilike).toHaveBeenCalledWith("synonym", `%${synonym}%`);
+    expect(ingredientsQuery.like).toHaveBeenCalledWith("search_name", `%${synonym}%`);
+    expect(synonymsQuery.like).toHaveBeenCalledWith("search_name", `%${synonym}%`);
   });
 
-  it("falls back to standard-name matches when the synonym query fails", async () => {
+  it("reports a synonym-query failure rather than showing incomplete search results", async () => {
     const ingredientsQuery = createQuery({
       data: [
         {
@@ -832,17 +837,12 @@ describe("recipe API contracts", () => {
     );
     const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body.data.items).toEqual([
-      {
-        id: "550e8400-e29b-41d4-a716-446655440010",
-        standard_name: "양파",
-        category: "채소",
-        category_group_code: "vegetable_mushroom",
-        category_code: null,
-        category_label: "채소",
-      },
-    ]);
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
   });
 
   it("returns an empty wrapped recipe list when ingredient_ids contains no valid UUIDs", async () => {
@@ -2492,6 +2492,71 @@ describe("recipe API contracts", () => {
       created_by: "user-1",
       base_servings: 2,
     });
+  });
+
+  it("preserves the selected recipe product and nutrition version in atomic creation", async () => {
+    const { rpc } = setupManagedRecipeCreate();
+    const body = manualRecipeCreateBody();
+    const product = {
+      food_product_id: "550e8400-e29b-41d4-a716-446655440041",
+      food_product_nutrition_version_id: "550e8400-e29b-41d4-a716-446655440042",
+    };
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...body, ingredients: [{ ...body.ingredients[0], ...product }] }),
+    }));
+    expect(response.status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith("create_manual_recipe_with_managed_image",
+      expect.objectContaining({ p_ingredients: [expect.objectContaining(product)] }));
+  });
+
+  it.each([
+    { food_product_id: "550e8400-e29b-41d4-a716-446655440041" },
+    { food_product_nutrition_version_id: "550e8400-e29b-41d4-a716-446655440042" },
+    { food_product_id: 42, food_product_nutrition_version_id: false },
+    { food_product_id: "", food_product_nutrition_version_id: "" },
+  ])("rejects an incomplete or invalid recipe product pair: %j", async (product) => {
+    const { rpc } = setupManagedRecipeCreate();
+    const body = manualRecipeCreateBody();
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...body, ingredients: [{ ...body.ingredients[0], ...product }] }),
+    }));
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("does not silently drop product provenance through a legacy writer", async () => {
+    const { rpc } = setupManagedRecipeCreate();
+    readAccountGenerationCapability.mockResolvedValue({ ok: true, revision: 3, state: "legacy" });
+    const body = manualRecipeCreateBody();
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...body, ingredients: [{ ...body.ingredients[0],
+        food_product_id: "550e8400-e29b-41d4-a716-446655440041",
+        food_product_nutrition_version_id: "550e8400-e29b-41d4-a716-446655440042",
+      }] }),
+    }));
+    expect(response.status).toBe(409);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns validation feedback for a product whose approved link changed before saving", async () => {
+    setupManagedRecipeCreate({ data: null, error: { message: "RECIPE_PRODUCT_UNAVAILABLE" } });
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(manualRecipeCreateBody()),
+    }));
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
   });
 
   it("dispatches generation-active managed image creation through the session-bound transaction writer", async () => {

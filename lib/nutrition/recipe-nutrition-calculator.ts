@@ -46,6 +46,13 @@ export interface RecipeNutritionIngredientInput {
   scalable: boolean;
   preparation_state: string | null;
   size_code?: string | null;
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+  product_basis_relations?: Array<{
+    from: { amount: number; unit: string };
+    to: { amount: number; unit: string };
+  }>;
+
   nutrition?: {
     link: {
       id: string;
@@ -57,7 +64,7 @@ export interface RecipeNutritionIngredientInput {
     profile: {
       id: string;
       basis_amount: number;
-      basis_unit: "g" | "ml";
+      basis_unit: "g" | "ml" | "serving" | "package";
       review_status: string;
       is_active: boolean;
       values: Partial<Record<RecipeNutrientCode, RecipeNutritionInputValue | undefined>>;
@@ -288,12 +295,18 @@ function isApprovedNutrition(ingredient: RecipeNutritionIngredientInput) {
   const nutrition = ingredient.nutrition;
   return Boolean(
     nutrition &&
+      (!(ingredient.food_product_id || ingredient.food_product_nutrition_version_id)
+        || Boolean(ingredient.food_product_id && ingredient.food_product_nutrition_version_id
+          && ingredient.product_basis_relations)) &&
       nutrition.link.review_status === "approved" &&
       nutrition.link.is_active &&
       nutrition.link.is_primary &&
       nutrition.link.preparation_state === ingredient.preparation_state &&
       nutrition.profile.review_status === "approved" &&
-      nutrition.profile.is_active &&
+      // An immutable, approved label remains valid when a newer product
+      // version replaces it. Generic ingredient profiles still require active.
+      (nutrition.profile.is_active || Boolean(ingredient.food_product_id
+        && ingredient.food_product_nutrition_version_id && ingredient.product_basis_relations)) &&
       nutrition.source.review_status === "approved" &&
       nutrition.source.freshness_status === "current" &&
       nutrition.source.is_active &&
@@ -413,6 +426,34 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
   }
 
   const profile = nutrition.profile;
+  // A product pin must never borrow its representative ingredient's density or
+  // piece weight. Only the immutable label's own basis relations are evidence.
+  if (ingredient.food_product_id || ingredient.food_product_nutrition_version_id) {
+    if (!ingredient.food_product_id || !ingredient.food_product_nutrition_version_id
+      || !ingredient.product_basis_relations) return null;
+    const grams = massInGrams(amount, ingredient.unit);
+    const milliliters = volumeInMilliliters(amount, ingredient.unit);
+    const unit = grams !== null ? "g" : milliliters !== null ? "ml" : normalizedUnit(ingredient.unit);
+    const quantity = grams ?? milliliters ?? amount;
+    let factor: number | null = unit === profile.basis_unit
+      ? quantity / profile.basis_amount : null;
+    if (factor === null) {
+      const relations = ingredient.product_basis_relations.filter((relation) =>
+        (relation.from.unit === unit && relation.to.unit === profile.basis_unit)
+        || (relation.to.unit === unit && relation.from.unit === profile.basis_unit)
+      );
+      if (relations.length !== 1) return null;
+      const relation = relations[0];
+      if (!Number.isFinite(relation.from.amount) || relation.from.amount <= 0
+        || !Number.isFinite(relation.to.amount) || relation.to.amount <= 0) return null;
+      factor = quantity / profile.basis_amount * (relation.from.unit === unit
+        ? relation.to.amount / relation.from.amount
+        : relation.from.amount / relation.to.amount);
+    }
+    return Number.isFinite(factor) && factor > 0
+      ? { factor, quality: "direct", warning: null, measurementSource: null }
+      : null;
+  }
   const grams = massInGrams(amount, ingredient.unit);
   if (profile.basis_unit === "g" && grams !== null) {
     return {

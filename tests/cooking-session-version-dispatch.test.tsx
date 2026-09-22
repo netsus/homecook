@@ -14,6 +14,12 @@ const cookingApi = vi.hoisted(() => ({
   fetchSnapshotV2CookMode: vi.fn(),
 }));
 
+const navigation = vi.hoisted(() => ({ query: "" }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(navigation.query),
+}));
+
 vi.mock("@/lib/api/cooking", () => ({
   cancelSnapshotV2CookingSession: cookingApi.cancelSnapshotV2CookingSession,
   fetchSnapshotV2CookMode: cookingApi.fetchSnapshotV2CookMode,
@@ -53,6 +59,7 @@ const immutableSnapshot = {
 
 describe("cooking session version dispatch", () => {
   beforeEach(() => {
+    navigation.query = "";
     cookingApi.cancelSnapshotV2CookingSession.mockReset();
     cookingApi.fetchSnapshotV2CookMode.mockReset();
     cookingApi.fetchSnapshotV2CookMode.mockReturnValue(new Promise(() => undefined));
@@ -78,6 +85,36 @@ describe("cooking session version dispatch", () => {
     expect(screen.getByText(/완료된 요리 기록/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
     expect(screen.queryByRole("button", { name: "취소" })).toBeNull();
+    expect(screen.getByRole("link", { name: "먹은 음식 기록하기" }).getAttribute("href")).toBe("/planner?segment=log");
+    expect(screen.getByRole("link", { name: "남은요리 보기" }).getAttribute("href")).toBe("/leftovers");
+    expect(screen.getByRole("link", { name: "돌아가기" }).getAttribute("href")).toBe("/planner");
+  });
+
+  it("offers the originating meal after cancellation without creating a food record", async () => {
+    const returnTo = "/planner/2026-09-22/dinner?slot=저녁";
+    navigation.query = new URLSearchParams({ returnTo }).toString();
+    cookingApi.fetchSnapshotV2CookMode.mockResolvedValue({ ...immutableSnapshot, mode: "planner" });
+    cookingApi.cancelSnapshotV2CookingSession.mockResolvedValue({ status: "cancelled" });
+    render(<SnapshotV2CookModeScreen initialAuthenticated sessionId="snapshot-retry" />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "취소" }));
+
+    const back = await screen.findByRole("link", { name: "돌아가기" });
+    expect(decodeURI(back.getAttribute("href")!)).toBe(returnTo);
+    expect(screen.queryByRole("link", { name: "먹은 음식 기록하기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "취소" })).toBeNull();
+    expect(cookingApi.cancelSnapshotV2CookingSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns directly opened completed standalone sessions to their recipe and rejects external return paths", async () => {
+    navigation.query = new URLSearchParams({ returnTo: "https://example.com" }).toString();
+    cookingApi.fetchSnapshotV2CookMode.mockResolvedValue({ ...immutableSnapshot, status: "completed" });
+    render(<SnapshotV2CookModeScreen initialAuthenticated sessionId="snapshot-retry" />);
+
+    expect((await screen.findByRole("link", { name: "돌아가기" })).getAttribute("href")).toBe("/recipe/recipe-retry");
+    expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
+    expect(cookingApi.cancelSnapshotV2CookingSession).not.toHaveBeenCalled();
   });
 
   it("keeps snapshot loading inside the existing whole-board geometry", () => {

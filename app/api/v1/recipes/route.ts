@@ -349,6 +349,10 @@ function normalizeIngredient(row: Record<string, unknown>): ManualRecipeIngredie
   return {
     ingredient_id: typeof row.ingredient_id === "string" ? row.ingredient_id.trim() : "",
     standard_name: typeof row.standard_name === "string" ? row.standard_name.trim() : "",
+    ...(typeof row.food_product_id === "string"
+      ? { food_product_id: row.food_product_id.trim() } : {}),
+    ...(typeof row.food_product_nutrition_version_id === "string"
+      ? { food_product_nutrition_version_id: row.food_product_nutrition_version_id.trim() } : {}),
     amount: typeof row.amount === "number" ? row.amount : null,
     unit: normalizeNullableString(row.unit),
     ingredient_type: row.ingredient_type === "TO_TASTE" ? "TO_TASTE" : "QUANT",
@@ -563,6 +567,24 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
 
     if (ingredientType !== "QUANT" && ingredientType !== "TO_TASTE") {
       fields.push({ field: `ingredients[${index}].ingredient_type`, reason: "invalid_enum" });
+    }
+
+    if (isRecord(rawIngredient)) {
+      const productKeys = ["food_product_id", "food_product_nutrition_version_id"] as const;
+      for (const key of productKeys) {
+        const value = rawIngredient[key];
+        if (value !== undefined && value !== null
+          && (typeof value !== "string" || !isUuid(value.trim()))) {
+          fields.push({ field: `ingredients[${index}].${key}`, reason: "invalid_uuid" });
+        }
+      }
+      const hasProduct = rawIngredient.food_product_id !== undefined
+        && rawIngredient.food_product_id !== null;
+      const hasVersion = rawIngredient.food_product_nutrition_version_id !== undefined
+        && rawIngredient.food_product_nutrition_version_id !== null;
+      if (hasProduct !== hasVersion) {
+        fields.push({ field: `ingredients[${index}].food_product_id`, reason: "product_version_pair_required" });
+      }
     }
 
     validateIngredient(ingredient, index, fields);
@@ -1183,6 +1205,7 @@ function statusFromManualRecipeRpcError(code: string | undefined) {
 }
 
 const MANAGED_RECIPE_CREATE_ERROR_CODES = [
+  "RECIPE_PRODUCT_UNAVAILABLE",
   "ACCOUNT_LIFECYCLE_MAINTENANCE",
   "ACCOUNT_CUTOVER_QUARANTINED",
   "ACCOUNT_CUTOVER_UNCLASSIFIED",
@@ -1207,6 +1230,11 @@ function readManagedRecipeCreateErrorCode(error: QueryError | null) {
 }
 
 function failManagedRecipeCreate(code: string) {
+  if (code === "RECIPE_PRODUCT_UNAVAILABLE") {
+    return fail("VALIDATION_ERROR", "제품 연결이 변경됐거나 사용할 수 없어요. 재료를 다시 선택해 주세요.", 422, [
+      { field: "ingredients", reason: "product_reference_unavailable" },
+    ]);
+  }
   const messages: Record<string, string> = {
     ACCOUNT_LIFECYCLE_MAINTENANCE:
       "계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.",
@@ -1247,6 +1275,10 @@ function buildManualRecipeRpcPayload(
       display_text: ingredient.display_text,
       scalable: ingredient.scalable,
       sort_order: ingredient.sort_order,
+      ...(ingredient.food_product_id ? {
+        food_product_id: ingredient.food_product_id,
+        food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id,
+      } : {}),
     })),
     p_steps: parsed.steps.map((step) => ({
       step_number: step.step_number,
@@ -1858,6 +1890,7 @@ async function postRecipe(request: Request) {
         serviceClient as unknown as RecipeDraftNutritionClient,
         {
           recipeId: parsed.originRecipeId,
+          ownerUserId: user.id,
           baseRecipeRevision: parsed.baseRecipeRevision,
           draft: parsed.draft,
         },
@@ -1977,6 +2010,11 @@ async function postRecipe(request: Request) {
     }
     managedSession = verifiedSession.sessionAuthority;
   } else if (parsed.imageObjectId) {
+    return failManagedRecipeCreate("ACCOUNT_GENERATION_STALE");
+  }
+
+  if (parsed.ingredients.some((ingredient) => ingredient.food_product_id)
+    && (!managedSession || typeof dbClient.rpc !== "function")) {
     return failManagedRecipeCreate("ACCOUNT_GENERATION_STALE");
   }
 

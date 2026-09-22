@@ -147,6 +147,71 @@ describe("GET /api/v1/food-catalog/search", () => {
     }));
   });
 
+  it("returns the approved recipe identity and keeps unlinked products distinct", async () => {
+    const items = [
+      { type: "food_product", id: ITEM_ID, recipe_ingredient_id: USER_ID },
+      { type: "food_product", id: "unlinked", recipe_ingredient_id: null },
+    ];
+    const db = serviceClient({ data: { items, has_next: false }, error: null });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: USER_ID }));
+    createServiceRoleClient.mockReturnValue(db);
+    const route = await importRoute();
+    expect(route).not.toBeNull();
+    const response = await route!.GET(new Request("http://localhost/api/v1/food-catalog/search?q=milk&types=ingredient,food_product"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.items).toEqual(items);
+    expect(db.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads a recent source by its identity even when its name or search position changed", async () => {
+    const item = { type: "food_product", id: ITEM_ID, name: "새 이름", recipe_ingredient_id: null };
+    const db = serviceClient({ data: item, error: null });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: USER_ID }));
+    createServiceRoleClient.mockReturnValue(db);
+    const route = await importRoute();
+    const response = await route!.GET(new Request(
+      `http://localhost/api/v1/food-catalog/search?source_type=food_product&source_id=${ITEM_ID}`,
+    ));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({ items: [item], has_next: false, next_cursor: null });
+    expect(db.rpc).toHaveBeenCalledWith("read_food_catalog_source", {
+      p_actor_id: USER_ID, p_source_type: "food_product", p_source_id: ITEM_ID,
+    });
+    expect(db.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns no selectable source when a recent product is no longer visible", async () => {
+    const db = serviceClient({ data: null, error: null });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: USER_ID }));
+    createServiceRoleClient.mockReturnValue(db);
+    const route = await importRoute();
+    const response = await route!.GET(new Request(
+      `http://localhost/api/v1/food-catalog/search?source_type=ingredient&source_id=${ITEM_ID}`,
+    ));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({ items: [], has_next: false, next_cursor: null });
+  });
+
+  it.each([
+    "source_type=food_product",
+    `source_id=${ITEM_ID}`,
+    `source_type=unknown&source_id=${ITEM_ID}`,
+    "source_type=ingredient&source_id=invalid",
+    `source_type=food_product&source_id=${ITEM_ID}&q=milk`,
+    `source_type=food_product&source_id=${ITEM_ID}&cursor=old`,
+    `source_type=food_product&source_id=${ITEM_ID}&source_id=${ITEM_ID}`,
+    `source_type=food_product&source_id=${ITEM_ID}&visibility=public`,
+  ])("rejects invalid or mixed exact-source filters before querying: %s", async (query) => {
+    const db = serviceClient({ data: null, error: null });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: USER_ID }));
+    createServiceRoleClient.mockReturnValue(db);
+    const route = await importRoute();
+    const response = await route!.GET(new Request(`http://localhost/api/v1/food-catalog/search?${query}`));
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe("INVALID_SEARCH_FILTER");
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
   it("fails closed when the ranked RPC rejects the cursor or scope", async () => {
     const db = serviceClient({
       data: null,
