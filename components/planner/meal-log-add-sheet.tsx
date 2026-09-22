@@ -221,7 +221,6 @@ export function MealLogAddSheet({
   const [catalogHasNext, setCatalogHasNext] = useState(false);
   const [catalogSearching, setCatalogSearching] = useState(false);
   const [query, setQuery] = useState("");
-  const [composing, setComposing] = useState(false);
   const catalogRequestRef = useRef(0);
   const catalogAbortRef = useRef<AbortController | null>(null);
   const [selection, setSelection] = useState<MealLogSourceSelection | null>(initialSelection ?? null);
@@ -332,7 +331,7 @@ export function MealLogAddSheet({
     setCatalogCursor(null);
     setCatalogHasNext(false);
     setCatalogSearching(false);
-    if (tab !== "catalog" || composing) return;
+    if (tab !== "catalog") return;
     const normalizedQuery = query.trim();
     if (!normalizedQuery) return;
     const controller = new AbortController();
@@ -368,7 +367,7 @@ export function MealLogAddSheet({
       catalogAbortRef.current?.abort();
       catalogRequestRef.current += 1;
     };
-  }, [columnId, composing, onUnauthorized, query, tab]);
+  }, [columnId, onUnauthorized, query, tab]);
 
   async function loadMoreRecent() {
     if (!recentHasNext || !recentCursor || loadingMore) return;
@@ -411,7 +410,7 @@ export function MealLogAddSheet({
   }
 
   async function loadMoreCatalog() {
-    if (!catalogHasNext || !catalogCursor || loadingMore || composing) return;
+    if (!catalogHasNext || !catalogCursor || loadingMore) return;
     const requestId = catalogRequestRef.current;
     const controller = new AbortController();
     catalogAbortRef.current = controller;
@@ -773,8 +772,8 @@ export function MealLogAddSheet({
                   <input
                     className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal"
                     onChange={(event) => { cancelPendingSelection(); setQuery(event.target.value); }}
-                    onCompositionStart={() => { cancelPendingSelection(); setComposing(true); }}
-                    onCompositionEnd={(event) => { setQuery(event.currentTarget.value); setComposing(false); }}
+                    onCompositionStart={cancelPendingSelection}
+                    onCompositionEnd={(event) => setQuery(event.currentTarget.value)}
                     placeholder="입력하면 바로 검색돼요"
                     type="search"
                     value={query}

@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { fetchFoodCatalogSearch, type FoodCatalogSearchItem } from "@/lib/api/food-catalog-search";
+import { fetchFoodCatalogSearch, isFoodCatalogSearchApiError, type FoodCatalogSearchItem } from "@/lib/api/food-catalog-search";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import type { ManualRecipeIngredientInput } from "@/types/recipe";
 
 function itemKey(item: FoodCatalogSearchItem) { return `${item.type}:${item.id}`; }
 function itemName(item: FoodCatalogSearchItem) {
   return item.type === "ingredient" ? item.standard_name : [item.brand, item.name].filter(Boolean).join(" · ");
+}
+
+function searchErrorMessage(error: unknown) {
+  if (isFoodCatalogSearchApiError(error) && error.status === 503) {
+    return "지금은 검색을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.";
+  }
+  return error instanceof Error ? error.message : "검색 결과를 불러오지 못했어요.";
 }
 
 export function recipeIngredientFromCatalog(item: FoodCatalogSearchItem, sortOrder: number): ManualRecipeIngredientInput | null {
@@ -29,7 +36,6 @@ export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, exclud
   onAdd: (items: ManualRecipeIngredientInput[]) => void; onClose: () => void; single?: boolean; excludedIngredientIds?: string[];
 }) {
   const [query, setQuery] = useState("");
-  const [composing, setComposing] = useState(false);
   const [items, setItems] = useState<FoodCatalogSearchItem[]>([]);
   const [selected, setSelected] = useState<FoodCatalogSearchItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -47,8 +53,9 @@ export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, exclud
   useEffect(() => {
     const request = ++requestRef.current;
     setItems([]); setCursor(null); setHasNext(false); setLoading(true); setError(null);
-    if (composing) return;
     const controller = new AbortController();
+    // An IME can keep the final syllable composing after typing has paused.
+    // Search the visible value without changing the input or ending composition.
     const timer = window.setTimeout(() => {
       void fetchFoodCatalogSearch({ q: query, types: ["ingredient", "food_product"], signal: controller.signal })
         .then((result) => {
@@ -56,13 +63,13 @@ export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, exclud
           setItems(result.items); setCursor(result.next_cursor); setHasNext(result.has_next);
         }).catch((reason: unknown) => {
           if (request !== requestRef.current || controller.signal.aborted) return;
-          setError(reason instanceof Error ? reason.message : "검색 결과를 불러오지 못했어요.");
+          setError(searchErrorMessage(reason));
         }).finally(() => {
           if (request === requestRef.current && !controller.signal.aborted) setLoading(false);
         });
     }, 250);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [query, composing, retry]);
+  }, [query, retry]);
 
   async function loadMore() {
     if (!cursor || loading) return;
@@ -74,7 +81,7 @@ export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, exclud
       setItems((current) => [...current, ...result.items]);
       setCursor(result.next_cursor); setHasNext(result.has_next);
     } catch (reason) {
-      if (request === requestRef.current) setError(reason instanceof Error ? reason.message : "검색 결과를 불러오지 못했어요.");
+      if (request === requestRef.current) setError(searchErrorMessage(reason));
     } finally { if (request === requestRef.current) setLoading(false); }
   }
 
@@ -84,7 +91,6 @@ export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, exclud
       <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-extrabold">제품·재료 선택</h2><button type="button" className="min-h-11 px-3" onClick={onClose}>닫기</button></div>
       <label className="mt-3 text-sm font-bold">제품·재료 검색<input ref={searchRef} type="search" value={query}
         onChange={(event) => { ++requestRef.current; setQuery(event.target.value); }}
-        onCompositionStart={() => setComposing(true)} onCompositionEnd={() => setComposing(false)}
         placeholder="두부, 브랜드 제품 이름" className="mt-2 h-11 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 font-normal" /></label>
       <p className="my-2 text-xs text-[var(--text-2)]">사용 가능한 제품만 선택할 수 있어요. 찾는 제품이 없으면 일반 재료 이름으로 검색해 주세요.</p>
       <div className="min-h-0 overflow-y-auto">

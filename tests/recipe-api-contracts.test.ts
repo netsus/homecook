@@ -2641,6 +2641,39 @@ describe("recipe API contracts", () => {
     expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("sends only supported named arguments when creating a derived personal recipe", async () => {
+    const userId = "550e8400-e29b-41d4-a716-446655440001";
+    const sourceId = "550e8400-e29b-41d4-a716-446655440002";
+    const createdId = "550e8400-e29b-41d4-a716-446655440003";
+    const expectedKeys = [
+      "p_owner_uuid", "p_auth_identity_created_at_snapshot", "p_session_key_hash", "p_hmac_key_version", "p_session_issued_at",
+      "p_operation", "p_recipe_id", "p_source_recipe_id", "p_base_recipe_revision", "p_draft", "p_nutrition_snapshot",
+      "p_tags", "p_image_object_id", "p_expected_cleanup_generation", "p_idempotency_key",
+    ].sort();
+    const rpc = vi.fn(async (_name: string, args: Record<string, unknown>) =>
+      JSON.stringify(Object.keys(args).sort()) === JSON.stringify(expectedKeys)
+        ? { data: { success: true, data: { id: createdId, revision: 1 }, error: null }, error: null }
+        : { data: null, error: { code: "PGRST202", message: "Unsupported named arguments" } });
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: { id: userId, created_at: "2026-01-01T00:00:00Z" } } }) } });
+    createServiceRoleClient.mockReturnValue({ rpc, from: () => createQuery({ data: [], error: null }) });
+    readVerifiedAccountGenerationSession.mockResolvedValue({ ok: true, sessionAuthority: {
+      ownerUuid: userId, authIdentityCreatedAt: "2026-01-01T00:00:00Z", sessionKeyHash: "a".repeat(64), hmacKeyVersion: 1, sessionIssuedAt: "2026-01-02T00:00:00Z",
+    } });
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", {
+      method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": "550e8400-e29b-41d4-a716-446655440004" },
+      body: JSON.stringify({ origin_recipe_id: sourceId, base_recipe_revision: 1, image_object_id: null, draft: {
+        title: "내 레시피", base_servings: 2,
+        ingredients: [{ ingredient_id: manualIngredientId, amount: 100, unit: "g", ingredient_type: "QUANT", scalable: true }],
+        steps: [{ step_number: 1, instruction: "섞어요", cooking_method_id: manualMethodId, cooking_method_ids: [manualMethodId], ingredients_used: [] }],
+      } }),
+    }));
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ success: true, data: { id: createdId, revision: 1 }, error: null });
+    expect(rpc).toHaveBeenCalledWith("write_personal_recipe_core", expect.objectContaining({ p_operation: "fork", p_source_recipe_id: sourceId, p_base_recipe_revision: 1 }));
+    expect(Object.keys(rpc.mock.calls[0][1]).sort()).toEqual(expectedKeys);
+  });
+
   it("dispatches generation-active managed image creation through the session-bound transaction writer", async () => {
     const { routeClient, rpc } = setupManagedRecipeCreate();
 
