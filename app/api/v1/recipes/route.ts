@@ -1915,7 +1915,6 @@ async function postRecipe(request: Request) {
         p_base_recipe_revision: parsed.baseRecipeRevision,
         p_draft: parsed.draft,
         p_nutrition_snapshot: nutrition.nutritionSnapshot,
-        p_nutrition_predecessor_guard: nutrition.predecessorGuard,
         p_tags: null,
         p_image_object_id: parsed.imageObjectId,
         p_expected_cleanup_generation: parsed.imageObjectId

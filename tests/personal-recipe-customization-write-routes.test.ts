@@ -490,7 +490,6 @@ describe("personal recipe customization write routes", () => {
         p_base_recipe_revision: 12,
         p_draft: buildDerivedCreateBody().draft,
         p_nutrition_snapshot: { calculation_version: "v1" },
-        p_nutrition_predecessor_guard: { recipe_ingredients: [] },
         p_tags: null,
         p_image_object_id: managedImageObjectId,
         p_expected_cleanup_generation: 0,
