@@ -146,7 +146,7 @@ export function RecipeEditorIngredientList({
               className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
               role="group"
             >
-              {COOKING_UNIT_OPTIONS.map((option) => (
+              {(ingredient.food_product_id ? [ingredient.unit ?? "g"] : COOKING_UNIT_OPTIONS).map((option) => (
                 <button
                   key={option}
                   aria-label={`${ingredient.standard_name} ${option}`}

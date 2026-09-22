@@ -135,7 +135,22 @@ function parseReturnContext(value: unknown): MealLogReturnContext | null {
 }
 
 function saveReturnContext(context: MealLogReturnContext) {
-  try { window.sessionStorage.setItem(MEAL_LOG_RETURN_CONTEXT_KEY, JSON.stringify(context)); } catch { /* optional return aid */ }
+  // Persist the editable draft contract, not transient catalog conversion metadata.
+  const storedContext = context.action === "add" && context.draft
+    ? {
+        ...context,
+        draft: {
+          type: context.draft.type,
+          id: context.draft.id,
+          name: context.draft.name,
+          brand: context.draft.brand,
+          amount: context.draft.amount,
+          unit: context.draft.unit,
+          ...(context.draft.maxAmount !== undefined ? { maxAmount: context.draft.maxAmount } : {}),
+        },
+      }
+    : context;
+  try { window.sessionStorage.setItem(MEAL_LOG_RETURN_CONTEXT_KEY, JSON.stringify(storedContext)); } catch { /* optional return aid */ }
 }
 
 function readReturnContext() {
@@ -353,7 +368,7 @@ function EntryDialog({
   const entry = authorityEntry;
   const authorityColumnActive = entry.meal_plan_column_id !== null
     && day.active_columns.some((column) => column.id === entry.meal_plan_column_id);
-  const requiresColumnSelection = state.type === "edit" && !authorityColumnActive;
+  const requiresColumnSelection = state.type !== "delete" && !authorityColumnActive;
   const [columnId, setColumnId] = useState(state.type === "edit" && state.draft
     ? state.draft.columnId
     : authorityColumnActive ? entry.meal_plan_column_id ?? "" : "");
@@ -363,7 +378,7 @@ function EntryDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const operation = useRef<{ fingerprint: string; key: string } | null>(null);
-  const columnValid = state.type !== "edit"
+  const columnValid = state.type === "delete"
     || day.active_columns.some((column) => column.id === columnId);
   const { setReturnFocusTarget } = useDialogBoundary({
     closeOnEscape: !pending,
@@ -459,7 +474,7 @@ function EntryDialog({
           } else {
             setAuthorityEntry(latestEntry);
             setRevision(latestEntry.revision);
-            if (state.type === "edit") {
+            if (state.type !== "delete") {
               const latestColumnActive = latestEntry.meal_plan_column_id !== null
                 && latestDay.active_columns.some((column) => column.id === latestEntry.meal_plan_column_id);
               setColumnId(latestColumnActive ? latestEntry.meal_plan_column_id ?? "" : "");
@@ -498,6 +513,16 @@ function EntryDialog({
           <aside className="rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-5">
             <h3 className="font-extrabold">먹은 양</h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-2)]">처음 기록한 양을 바로 수정할 수 있어요.</p>
+            {requiresColumnSelection ? <>
+              <p className="mt-3 text-sm font-bold">기존 위치: 삭제된 끼니 {entry.slot_name_snapshot}</p>
+              <label className="mt-3 block text-sm font-bold">옮길 끼니 (필수)
+                <select className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => setColumnId(event.target.value)} ref={selectorRef} required value={columnId}>
+                  <option value="">선택해 주세요</option>
+                  {day.active_columns.map((column) => <option key={column.id} value={column.id}>{column.name}</option>)}
+                </select>
+              </label>
+              {day.active_columns.length === 0 ? <p className="mt-2 text-sm text-[var(--danger-strong)]" role="alert">옮길 수 있는 현재 끼니가 없어 저장할 수 없어요.</p> : null}
+            </> : null}
             <label className="mt-4 block text-sm font-bold">실제 양
               <span className="mt-1 flex min-h-11 items-center overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] focus-within:ring-2 focus-within:ring-[var(--brand)]">
                 <input aria-label="먹은 양" className="min-h-11 min-w-0 flex-1 px-3 font-normal outline-none" min="0.01" onChange={(event) => setAmount(Number(event.target.value))} step="any" type="number" value={amount} />

@@ -176,7 +176,7 @@ describe("15b cook standalone complete backend", () => {
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
-        getUser: vi.fn(),
+        getUser: vi.fn(async () => ({ data: { user: null } })),
       },
       from: vi.fn((table: string) => {
         if (table === "recipes") return { select: vi.fn(() => recipesQuery) };

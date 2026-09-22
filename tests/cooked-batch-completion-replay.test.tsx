@@ -7,6 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SnapshotV2CookModeScreen } from "@/components/cooking/snapshot-v2-cook-mode-screen";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const cookingApi = vi.hoisted(() => ({
   cancelSnapshotV2CookingSession: vi.fn(),
   completeSnapshotV2CookingSession: vi.fn(),
@@ -93,5 +98,8 @@ describe("cooked batch completion replay", () => {
     expect(screen.getByText("팬트리 항목 0개를 반영했어요.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "요리 완료" })).toBeNull();
+    expect(screen.getByRole("link", { name: "먹은 음식 기록하기" }).getAttribute("href")).toBe("/planner?segment=log");
+    expect(screen.getByRole("link", { name: "남은요리 보기" }).getAttribute("href")).toBe("/leftovers");
+    expect(screen.getByRole("link", { name: "돌아가기" }).getAttribute("href")).toBe(`/recipe/${snapshot.recipe.id}`);
   });
 });

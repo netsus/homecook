@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   fetchFoodCatalogSearch,
+  fetchFoodCatalogSource,
   isFoodCatalogSearchApiError,
 } from "@/lib/api/food-catalog-search";
 
@@ -12,6 +13,15 @@ afterEach(() => {
 });
 
 describe("prepared food unified search client", () => {
+  it("resolves a current source by identity without historical name or search filters", async () => {
+    const item = { type: "ingredient", id: "ingredient-1", standard_name: "새 재료 이름", category: "채소", default_unit: "g" };
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ success: true, data: { items: [item], next_cursor: null, has_next: false }, error: null })));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchFoodCatalogSource("ingredient", "ingredient-1")).resolves.toEqual(item);
+    const url = new URL(String(fetchMock.mock.calls[0]![0]), "http://localhost");
+    expect(Object.fromEntries(url.searchParams)).toEqual({ source_type: "ingredient", source_id: "ingredient-1" });
+  });
+
   it("keeps HOME recipe-only without mounting a food-product search consumer", () => {
     const homeSource = readFileSync("components/home/home-screen.tsx", "utf8");
 

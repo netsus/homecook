@@ -16,7 +16,7 @@ interface RpcError {
 
 interface FoodCatalogSearchDb {
   rpc(
-    name: "search_food_catalog_ranked",
+    name: "search_food_catalog_ranked" | "read_food_catalog_source",
     args: Record<string, unknown>,
   ): PromiseLike<{ data: unknown; error: RpcError | null }>;
 }
@@ -31,9 +31,41 @@ export async function GET(request: Request) {
   const user = authResult.data.user;
   if (!user) return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
 
-  const parsed = parseFoodCatalogSearchQuery(
-    new URL(request.url).searchParams,
-  );
+  const params = new URL(request.url).searchParams;
+  const db = routeClient as unknown as FoodCatalogSearchDb;
+  if (params.has("source_type") || params.has("source_id")) {
+    const sourceType = params.get("source_type");
+    const sourceId = params.get("source_id")?.trim().toLowerCase();
+    const fields: Array<{ field: string; reason: string }> = [];
+    for (const key of new Set(params.keys())) {
+      if (key !== "source_type" && key !== "source_id") {
+        fields.push({ field: key, reason: "unsupported_filter" });
+      }
+      if (params.getAll(key).length !== 1) {
+        fields.push({ field: key, reason: "duplicate_filter" });
+      }
+    }
+    if (sourceType !== "ingredient" && sourceType !== "food_product") {
+      fields.push({ field: "source_type", reason: "unsupported_type" });
+    }
+    if (!sourceId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(sourceId)) {
+      fields.push({ field: "source_id", reason: "invalid_uuid" });
+    }
+    if (fields.length > 0) {
+      return fail("INVALID_SEARCH_FILTER", "검색 조건을 확인해 주세요.", 400, fields);
+    }
+    const result = await db.rpc("read_food_catalog_source", {
+      p_actor_id: user.id, p_source_type: sourceType, p_source_id: sourceId,
+    });
+    if (result.error || (result.data !== null && (
+      !isRecord(result.data) || result.data.type !== sourceType || result.data.id !== sourceId
+    ))) {
+      return fail("INTERNAL_ERROR", "음식 정보를 불러오지 못했어요. 다시 시도해 주세요.", 500);
+    }
+    return ok({ items: result.data ? [result.data] : [], next_cursor: null, has_next: false });
+  }
+
+  const parsed = parseFoodCatalogSearchQuery(params);
   if (!parsed.ok) {
     return fail(
       parsed.code,
@@ -43,8 +75,6 @@ export async function GET(request: Request) {
     );
   }
 
-  const db = routeClient as unknown as
-    FoodCatalogSearchDb;
   const cursor = parsed.value.cursor;
   const result = await db.rpc("search_food_catalog_ranked", {
     p_actor_id: user.id,

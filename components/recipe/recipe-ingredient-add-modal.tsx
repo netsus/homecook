@@ -21,6 +21,7 @@ import {
   WebSkeleton,
   WebIconButton,
 } from "@/components/web";
+import { RecipeFoodCatalogPicker } from "@/components/recipe/recipe-food-catalog-picker";
 import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   ALL_INGREDIENT_CATEGORY,
@@ -35,6 +36,9 @@ import type {
 type IngredientListState = "loading" | "ready" | "empty" | "error";
 
 interface RecipeIngredientAddModalProps {
+  enableProducts?: boolean;
+  excludedIngredientIds?: string[];
+  single?: boolean;
   onClose: () => void;
   onAdd: (ingredients: ManualRecipeIngredientInput[]) => void;
   emptyActionLabel?: string;
@@ -98,7 +102,11 @@ function buildIngredientInput(
   };
 }
 
-export function RecipeIngredientAddModal({
+export function RecipeIngredientAddModal(props: RecipeIngredientAddModalProps) {
+  return props.enableProducts ? <RecipeFoodCatalogPicker onAdd={props.onAdd} onClose={props.onClose} single={props.single} excludedIngredientIds={props.excludedIngredientIds} /> : <IngredientOnlyAddModal {...props} />;
+}
+
+function IngredientOnlyAddModal({
   onClose,
   onAdd,
   emptyActionLabel,

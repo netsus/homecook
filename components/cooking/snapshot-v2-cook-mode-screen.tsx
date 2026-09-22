@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { CookedBatchCompletionSheet, type CookedBatchCompletionError } from "@/components/cooking/cooked-batch-completion-sheet";
 import { MobileCookModeLoadingBoard } from "@/components/cooking/cook-mode-loading-board";
 import { SnapshotV2CookModeView } from "@/components/cooking/snapshot-v2-cook-mode-view";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { cancelSnapshotV2CookingSession, completeSnapshotV2CookingSession, fetchSnapshotV2CookMode, isCookingApiError } from "@/lib/api/cooking";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import type { SnapshotV2CompleteBody, SnapshotV2CompleteData, SnapshotV2CookModeData } from "@/types/cooking";
@@ -22,6 +23,9 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   const completeInFlightRef = useRef(false);
   const requestIdRef = useRef(0);
   const recoveryFocusRef = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null);
+  const appReturn = useAppReturn({
+    fallback: data?.mode === "standalone" ? `/recipe/${data.recipe.id}` : "/planner",
+  });
 
   const loadSnapshot = useCallback(async () => {
     const requestId = ++requestIdRef.current;
@@ -128,6 +132,7 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
         data={data}
         onCancel={cancelCooking}
         onComplete={openCompletion}
+        returnHref={appReturn.href}
       />
       {completionOpen ? (
         <CookedBatchCompletionSheet

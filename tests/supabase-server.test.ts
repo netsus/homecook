@@ -407,6 +407,8 @@ describe("supabase server helpers", () => {
     );
     expect(() => recipeFutureClient?.from("ingredient_nutrition_profiles"))
       .not.toThrow();
+    expect(() => recipeFutureClient?.from("piece_unit_weights"))
+      .not.toThrow();
     expect(() => recipeMealWeightClient?.from("piece_unit_weights"))
       .not.toThrow();
     expect(() => recipeMealWeightClient?.from("recipes")).toThrow(

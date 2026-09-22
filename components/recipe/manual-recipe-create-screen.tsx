@@ -585,9 +585,11 @@ export function ManualRecipeCreateScreen({
       draftId: ingredient.tempId,
       ingredientType: ingredient.ingredient_type,
       sortOrder: index + 1,
-      source: {
-        ingredientId: ingredient.ingredient_id || null,
-        kind: "ingredient" as const,
+      source: ingredient.food_product_id ? {
+        kind: "product" as const, productId: ingredient.food_product_id,
+        productNutritionVersionId: ingredient.food_product_nutrition_version_id ?? null,
+      } : {
+        ingredientId: ingredient.ingredient_id || null, kind: "ingredient" as const,
       },
       standardName: ingredient.standard_name,
       unit: ingredient.unit,
@@ -834,8 +836,12 @@ export function ManualRecipeCreateScreen({
   );
 
   const handleRemoveIngredient = useCallback((tempId: string) => {
+    const removed = ingredients.find((item) => item.tempId === tempId);
     setIngredients((prev) => prev.filter((ing) => ing.tempId !== tempId));
-  }, []);
+    if (removed) setSteps((current) => current.map((step) => ({
+      ...step, ingredients_used: step.ingredients_used.filter((item) => item.ingredient_id !== removed.ingredient_id),
+    })));
+  }, [ingredients]);
 
   const handleAddStep = useCallback(
     (step: Omit<TempStep, "tempId" | "step_number">) => {
@@ -1446,6 +1452,7 @@ export function ManualRecipeCreateScreen({
               ingredient_id: ing.ingredient_id, standard_name: ing.standard_name,
               amount: ing.amount, unit: ing.unit, ingredient_type: ing.ingredient_type,
               display_text: ing.display_text, scalable: ing.scalable, sort_order: idx + 1,
+              ...(ing.food_product_id ? { food_product_id: ing.food_product_id, food_product_nutrition_version_id: ing.food_product_nutrition_version_id } : {}),
             })),
             steps: steps.map((step) => ({
               step_number: step.step_number, instruction: step.instruction,
@@ -1710,6 +1717,8 @@ export function ManualRecipeCreateScreen({
       />
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
+          enableProducts
+          excludedIngredientIds={ingredients.map((item) => item.ingredient_id)}
           onClose={() => setModalMode("none")}
           onAdd={handleAddIngredient}
           presentation="web"
@@ -1995,6 +2004,8 @@ export function ManualRecipeCreateScreen({
         />
         {modalMode === "ingredient-add" && (
           <RecipeIngredientAddModal
+          enableProducts
+          excludedIngredientIds={ingredients.map((item) => item.ingredient_id)}
             onClose={() => setModalMode("none")}
             onAdd={handleAddIngredient}
           />
