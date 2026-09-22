@@ -60,6 +60,13 @@ pnpm deploy:dev -- --verify-script test:product
 실제 정의된 키만 사용할 수 있다. 추가 셸 인수는 받지 않는다. test 명령은 OS 실행 기본값과 CI만 전달받아 NODE_ENV=test로 실행하고, verify/marketing 운영 검증은 실제 운영 환경을 유지한다.
 실제 외부 기능을 검사하는 스크립트는 그 스크립트의 준비 조건을 따른다.
 
+변경 범위에 맞는 테스트 묶음을 명시하려면 `--test-script <test 이름>`을 사용한다.
+대상 `package.json`에 정의된 `test` 또는 `test:*` 명령만 허용하고 실제 실행한다.
+지정하지 않으면 API 변경의 기존 기본값 `test:product`를 유지한다.
+`--verify-script`는 여전히 선택한 기본 테스트 뒤에 실행하는 추가 검증이다.
+두 옵션 모두 `--skip-automated-tests`와 함께 사용할 수 없다. 배포 기록에는
+선택한 기본 명령과 실행한 전체 검증 목록을 남기며 빌드·별도 포트·운영 GET 확인을 유지한다.
+
 ## 웹 보안키·환경 설정
 
 Git 저장소 밖의 실제 파일을 만들고 권한을 0600으로 설정한다. 값은 명령 인수나 PR에 넣지 않는다.
@@ -162,3 +169,32 @@ local-mac-production-release-promotion.md. 기존 정식 promotion kill switch�
 `--reviewed-repair-readiness`는 2026-09-18 복구 웹의 정확한 출발/도착 commit과 검토한 CSS·SQL에만 사용하는 한정된 재검증이다. 기존 readiness 승계 규칙을 일반적으로 완화하지 않는다. 실제 DB의 보존된 R2 권한 함수·마케팅 구조/함수와 기존 증거 해시를 대조하고, 기존 provider·ingress 검증 시각과 파일 해시를 보존한다. 새 소스 검토 기록은 release의 별도 `round2-source-review.json`에 남긴다. 적용 DB 확인 옵션이 필수다.
 
 운영 도구 변경은 이미 별도 고정 snapshot에 설치되어 있다. 웹은 `5d9c5b09624dff83b43d91983704cec3171087da`를 `--reviewed-ref`로 선택한다. 앱 코드가 master와 동일한지 대조하며 운영 도구를 웹 배포 과정에서 재실행하지 않는다.
+
+## 2026-09-22 — 베타 기능 웹의 한정된 R2 재검증
+
+`--reviewed-beta-readiness`는 운영 웹 `6fa49be6ac55d77a6537d097cf872dba785e0533`에서
+검토된 웹 후보 `3f1fc55038f7e172ec052cda2b8a802808e1d64e`로 바꾸는 한 쌍만 허용한다.
+일반 R2 승계 규칙·worker/Docker/runtime 변경 거부·추가형 SQL 판정을 완화하지 않는다.
+동적 SQL은 별도 대상·백업·검증 절차로 먼저 적용하고, 웹 명령에는
+`--already-applied-db --db-config <비공개 full-local 설정>`을 함께 지정해야 한다.
+
+후보의 전체 Git diff와 보호파일 9개의 이전/이후 SHA-256을 고정한다. 이 중
+`lib/supabase/server.ts`는 제품 영양의 개당 중량 조회 범위 한 줄,
+`package.json`은 실제 관련 테스트 묶음 한 키이며, SQL 7개는 이미 검토된 원본이다.
+전체 migration ledger를 실제 DB와 대조하고 원본 R2 proof·ingress proof 해시,
+동일 DB 자원, 기존 R2 receipt·권한, immutable scope 및 원래 마케팅 catalog를 재확인한다.
+새 제품 영양 wrapper는 격리된 전체 182개 migration 재현에서 얻은 정확한
+7개 함수의 이름·본문·owner·ACL·설정 hash 및 기존 delegate 연결로 검증한다.
+기존 운영에는 NULL/빈 scope를 더 엄격히 거부하는 블록과 호출되지 않는 과거
+owner-only 별칭 2개가 남아 있다. 오늘 변경 전의 인증된 플랫폼 백업에서 이
+3개 원문을 추출하고, 앞서 검증한 서명된 복원 manifest의 archive/schema hash와
+연결한 비공개 증거 파일 2개의 SHA를 고정했다. 실제 9개 전체 hash와 이 원문을
+대조한 뒤, 검증용 메모리 사본에서만 정확한 거부 블록과 별칭을 분리하면
+격리 기준 7개와 완전히 같아야 한다. 별칭을 호출하는 다른 public/private 함수나
+PostgREST DB 설정이 없어야 하며 owner-only 권한도 그대로 확인한다.
+기존 거부 블록·함수·권한을 운영에서 수정하거나, 운영에서 관측한 새 hash를
+자동으로 신뢰값에 넣지 않는다.
+
+검증은 준비 시와 웹 교체 직전에 반복한다. 원 provider/ingress 검증시각을 새 시각으로
+꾸미지 않고 보존하며 `round2-beta-source-review.json`에 이번 source/DB 확인을 별도로 남긴다.
+새 모드 활성화와 실제 저장 완주 확인은 웹 배포의 GET 확인과 별개다.

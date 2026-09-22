@@ -1,8 +1,57 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildFeatureStateMutation, parseFeatureStateArguments, parsePostgrestDatabaseTarget, resolvePostgrestDatabaseTarget, runFeatureStateOperation } from "../scripts/lib/recipe-snapshot-feature-state.mjs";
+import { assertFeatureStateManagementRole, buildFeatureStateMutation, buildFeatureStateTargetIdentity, parseFeatureStateArguments, parsePostgrestDatabaseTarget, resolvePostgrestDatabaseTarget, runFeatureStateOperation } from "../scripts/lib/recipe-snapshot-feature-state.mjs";
 const state = () => ({ database: "postgres", mode: "legacy_v1", effective_pair: [null, null], database_pair: [null, null], role_overrides: 0, generation_active: true, missing_meal_pins: 0, mismatched_meal_pins: 0, unmanaged_recipe_images: 0, invalid_private_image_refs: 0 });
 const args = (command = "enable", execute = false) => ({ command, execute });
 const adapter = (initial = state()) => ({ read: vi.fn().mockResolvedValue(initial), verifyBackup: vi.fn().mockResolvedValue(undefined), verifyTarget: vi.fn().mockResolvedValue(undefined), apply: vi.fn().mockResolvedValue(undefined) });
+describe("feature state existing local management role", () => {
+  const management = () => ({ database: "postgres", role: "supabase_admin", can_login: true, is_superuser: true, can_set_features: [true, true] });
+  it("accepts only the existing exact local login with both setting privileges", () => {
+    expect(() => assertFeatureStateManagementRole(management())).not.toThrow();
+  });
+  it.each([
+    {}, { database: "other" }, { role: "postgres" }, { can_login: false },
+    { is_superuser: false }, { can_set_features: [true, false] },
+    { can_set_features: [true] }, { can_set_features: undefined },
+  ])("rejects missing, changed or insufficient management authority", (changed) => {
+    const candidate = Object.keys(changed).length ? { ...management(), ...changed } : {};
+    expect(() => assertFeatureStateManagementRole(candidate)).toThrow("Exact local feature-state management role");
+  });
+});
+describe("feature state exact inventory identity", () => {
+  const inventory = () => ({
+    endpoint: "unix:///var/run/docker.sock",
+    resources: { postgresContainerId: "postgres-id", postgresVolumeName: "postgres-data" },
+    postgrestId: "postgrest-id",
+    postgrestEnvironment: ["PGRST_DB_URI=host=postgres dbname=postgres user=authenticator"],
+    scriptDigests: { "start-postgrest.sh": "script-digest" },
+    mounts: [
+      { Type: "volume", Name: "postgres-data", Source: "/volumes/data", Destination: "/var/lib/postgresql/data", RW: true },
+      { Type: "bind", Source: "/private/postgres.conf", Destination: "/etc/postgresql.conf", RW: false },
+    ],
+  });
+  it("ignores only mount order without mutating the inspected inventory", () => {
+    const before = inventory();
+    const original = structuredClone(before);
+    expect(buildFeatureStateTargetIdentity({ ...before, mounts: [...before.mounts].reverse() })).toBe(buildFeatureStateTargetIdentity(before));
+    expect(before).toEqual(original);
+  });
+  it.each(["Type", "Name", "Source", "Destination", "RW"])("retains exact mount %s changes", (field) => {
+    const before = inventory();
+    const mounts = before.mounts.map((mount, index) => index === 0 ? { ...mount, [field]: field === "RW" ? false : "changed" } : mount);
+    expect(buildFeatureStateTargetIdentity({ ...before, mounts })).not.toBe(buildFeatureStateTargetIdentity(before));
+  });
+  it("retains added, removed, duplicated and otherwise changed mount entries", () => {
+    const before = inventory();
+    for (const mounts of [before.mounts.slice(1), [...before.mounts, before.mounts[0]], before.mounts.map((mount) => ({ ...mount, Propagation: "changed" }))]) {
+      expect(buildFeatureStateTargetIdentity({ ...before, mounts })).not.toBe(buildFeatureStateTargetIdentity(before));
+    }
+    expect(() => buildFeatureStateTargetIdentity({ ...before, mounts: undefined })).toThrow("Complete PostgreSQL mount inventory");
+  });
+  it.each(["endpoint", "resources", "postgrestId", "postgrestEnvironment", "scriptDigests"])("retains non-mount %s changes", (field) => {
+    const before = inventory();
+    expect(buildFeatureStateTargetIdentity({ ...before, [field]: "changed" })).not.toBe(buildFeatureStateTargetIdentity(before));
+  });
+});
 describe("recipe snapshot operator state", () => {
   it("defaults to read-only and rejects execute on status/plan", () => {
     expect(parseFeatureStateArguments(["--config", "/private/config"])).toMatchObject({ command: "status", execute: false });

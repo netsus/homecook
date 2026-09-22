@@ -10,6 +10,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { classifyPrelaunchScope, assertRollbackTarget, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist, retargetRound2Release, inheritRound2Readiness, fetchPrelaunchLanding, prelaunchChangedFiles } from "./lib/prelaunch-web-deploy.mjs";
 
 import { reviewedRepairReadiness } from "./lib/prelaunch-repair-readiness.mjs";
+import { reviewedBetaReadiness } from "./lib/prelaunch-beta-readiness.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
@@ -54,14 +55,14 @@ function assertClean(cwd) {
     throw new DeploymentError("현재 웹 checkout에 수정한 추적 파일이 있어 배포를 중단합니다.");
   }
 }
-function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false) {
+function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
   git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
   const files = prelaunchChangedFiles((args) => command("git", ["-C", repository, ...args], { trimOutput: false }), live.ref, target);
   const manifest = (sha) => JSON.parse(git(["show", `${sha}:package.json`]));
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target));
-  const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests);
+  const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts };
 }
 function ownChild(child) {
@@ -103,7 +104,11 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
   const original = JSON.parse(readFileSync(source, "utf8"));
   const input = { readiness: original, previous: live.plist, next: plist, liveSha: live.ref, releaseSha: selection.target, files: selection.files, databaseDeployment };
   let readiness;
-  if (options.reviewedRepairReadiness) {
+  if (options.reviewedBetaReadiness) {
+    const reviewed = await reviewedBetaReadiness({ ...input, databasePlan, repositoryRoot: plist.WorkingDirectory, configPath: options.dbConfig });
+    readiness = reviewed.readiness;
+    atomicWrite(join(release, "round2-beta-source-review.json"), JSON.stringify(reviewed.review, null, 2));
+  } else if (options.reviewedRepairReadiness) {
     const reviewed = await reviewedRepairReadiness({ ...input, databasePlan, repositoryRoot: plist.WorkingDirectory, configPath: options.dbConfig });
     readiness = reviewed.readiness;
     atomicWrite(join(release, "round2-source-review.json"), JSON.stringify(reviewed.review, null, 2));
@@ -188,7 +193,7 @@ async function verifyAppliedDatabase(options, checkout) {
 async function deploy(options) {
   if (existsSync(recoveryPath)) throw new DeploymentError("이전 배포 복구가 남아 있습니다. status와 rollback을 먼저 실행하세요.");
   const live = current();
-  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests);
+  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript);
   const patch = readEnvironmentPatch(options.envFile, repository);
   const needsDatabase = selection.scope.database.length > 0 || Boolean(options.dbConfig);
   if (needsDatabase && !options.dbConfig) throw new DeploymentError("DB 변경이 포함되어 있습니다. --db-config <비공개 full-local 설정 파일>을 지정하세요. 웹은 변경하지 않았습니다.");
@@ -231,7 +236,7 @@ process.exit(result.status ?? 1);`;
       buildId = readFileSync(join(checkout, ".next/BUILD_ID"), "utf8").trim();
       if (buildId !== buildOptions.env.HOMECOOK_RELEASE_BUILD_ID) throw new DeploymentError("새 웹의 고유 빌드 ID가 일치하지 않습니다.");
       atomicWrite(backup, live.bytes);
-      state = { backup, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistHash: hash(live.bytes), checkout, ref: selection.target, buildId, targetPlistHash: hash(nextBytes), environmentKeys: Object.keys(patch).sort(), automatedTests: options.skipAutomatedTests ? "skipped_by_explicit_request" : "default", databaseVerification: databasePlan };
+      state = { backup, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistHash: hash(live.bytes), checkout, ref: selection.target, buildId, targetPlistHash: hash(nextBytes), environmentKeys: Object.keys(patch).sort(), automatedTests: options.skipAutomatedTests ? "skipped_by_explicit_request" : "default", primaryTestScript: options.testScript ?? null, verificationScripts: selection.verificationScripts, databaseVerification: databasePlan };
       if (needsDatabase && !options.alreadyAppliedDb) {
         say("DB 변경 검사 및 격리된 데이터베이스 검증 중");
         const database = await prepareDatabaseDeployment({
@@ -254,7 +259,7 @@ process.exit(result.status ?? 1);`;
         const finalPlan = await verifyAppliedDatabase(options, checkout);
         if (JSON.stringify(finalPlan) !== JSON.stringify(databasePlan)) throw new DeploymentError("준비 중 DB 이력이 바뀌었습니다.");
       }
-      if (options.reviewedRepairReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
+      if (options.reviewedRepairReadiness || options.reviewedBetaReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
       assertClean(live.cwd);
       if (!readFileSync(plistPath).equals(live.bytes)) throw new DeploymentError("준비 중 웹 설정이 바뀌었습니다.");
       atomicWrite(recoveryPath, JSON.stringify(state));
@@ -300,7 +305,7 @@ async function rollback() {
 async function main() {
   const { action, args } = parsePrelaunchArgs(process.argv.slice(2));
   if (action === "help" || action === "--help") {
-    say("추가 옵션: --skip-automated-tests (명시적 테스트 생략), --already-applied-db (checksum 이력만 대조), --reviewed-repair-readiness (20260918 복구본의 한정된 R2 재검증)\n출시 전 웹/API/환경/추가형 DB 빠른 배포\nplan | deploy [--ref <커밋, 기본 origin/master>] [--env-file <비공개 dotenv>] [--db-config <비공개 full-local 설정>] [--db-baseline <비공개 JSON>] [--db-compatible] [--verify-script <package.json 검증 명령>]\nstatus | rollback\nplan은 변경 파일과 환경 키 이름만 표시합니다. deploy는 설치·빌드·확인 후 웹을 교체합니다.\n환경 파일은 Git 저장소 밖 0600 권한이어야 합니다. 키 값은 명령 인수에 넣지 마세요.\nAPI 변경은 test:product를 자동 실행하며 --verify-script로 추가 검증을 지정할 수 있습니다.\nDB 변경은 격리 검증·백업·트랜잭션으로 반영하며, 웹 rollback으로 DB를 되돌리지 않습니다.\n검토한 긴급 수정은 --ref 대신 --reviewed-ref <현재 웹 후속 커밋 40자리 SHA>를 사용합니다.");
+    say("추가 옵션: --skip-automated-tests (명시적 테스트 생략), --already-applied-db (checksum 이력만 대조), --reviewed-repair-readiness (20260918 복구본의 한정된 R2 재검증), --reviewed-beta-readiness (20260922 베타 후보의 한정된 R2 재검증)\n출시 전 웹/API/환경/추가형 DB 빠른 배포\nplan | deploy [--ref <커밋, 기본 origin/master>] [--env-file <비공개 dotenv>] [--db-config <비공개 full-local 설정>] [--db-baseline <비공개 JSON>] [--db-compatible] [--test-script <package.json test 명령>] [--verify-script <추가 검증 명령>]\nstatus | rollback\nplan은 변경 파일과 환경 키 이름만 표시합니다. deploy는 설치·빌드·확인 후 웹을 교체합니다.\n환경 파일은 Git 저장소 밖 0600 권한이어야 합니다. 키 값은 명령 인수에 넣지 마세요.\nAPI 변경은 기본 test:product를 실행하며 --test-script로 관련 test 명령을 선택하고 --verify-script로 추가 검증을 지정할 수 있습니다.\nDB 변경은 격리 검증·백업·트랜잭션으로 반영하며, 웹 rollback으로 DB를 되돌리지 않습니다.\n검토한 긴급 수정은 --ref 대신 --reviewed-ref <현재 웹 후속 커밋 40자리 SHA>를 사용합니다.");
     return;
   }
   if (process.platform !== "darwin") throw new DeploymentError("macOS 웹 서버에서 실행해야 합니다.");
@@ -316,7 +321,7 @@ async function main() {
     return;
   }
   if (action === "plan") {
-    const selection = plan(options.ref, current(), options.refOption, options.verifyScript, options.skipAutomatedTests);
+    const selection = plan(options.ref, current(), options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript);
     const environmentKeys = Object.keys(readEnvironmentPatch(options.envFile, repository)).sort();
     say(JSON.stringify({ ...selection, environmentKeys, database: { required: selection.scope.database.length > 0 || Boolean(options.dbConfig), configProvided: Boolean(options.dbConfig), readOnly: Boolean(options.alreadyAppliedDb), requiresCompatibilityConfirmation: (selection.scope.database.length > 0 || Boolean(options.dbConfig)) && !options.dbCompatible && !options.alreadyAppliedDb, note: "DB 이력·현재 스키마·추가형 변경 여부는 배포 시 대상 커밋에서 검사합니다." } }, null, 2));
     return;

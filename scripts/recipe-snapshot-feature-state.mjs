@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { loadFullLocalBackupReadiness } from "./full-local-production-runtime.mjs";
 import { assertPrivateArtifactParent, assertRegularReadinessArtifact } from "./lib/full-local-backup-readiness.mjs";
 import { parseFullLocalProductionConfig, selectFullLocalProductionResources } from "./lib/full-local-production-resources.mjs";
-import { FEATURE_STATE_SELECT, parseFeatureStateArguments, resolvePostgrestDatabaseTarget, runFeatureStateOperation } from "./lib/recipe-snapshot-feature-state.mjs";
+import { FEATURE_STATE_MANAGEMENT_ROLE, FEATURE_STATE_MANAGEMENT_SELECT, FEATURE_STATE_SELECT, assertFeatureStateManagementRole, buildFeatureStateTargetIdentity, parseFeatureStateArguments, resolvePostgrestDatabaseTarget, runFeatureStateOperation } from "./lib/recipe-snapshot-feature-state.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const digest = (value) => createHash("sha256").update(value).digest("hex");
@@ -61,7 +61,7 @@ function localInventory(config) {
   }
   const { loginRole } = resolvePostgrestDatabaseTarget({ environment: rest[0].Config.Env ?? [], command: rest[0].Config.Cmd,
     entrypoint: rest[0].Config.Entrypoint, canonicalScriptsMatch }, resources.postgresContainerName);
-  return { resources, loginRole, identity: digest(JSON.stringify({ endpoint, resources, postgrestId: rest[0].Id, postgrestEnvironment: rest[0].Config.Env, scriptDigests, mounts: postgres.Mounts })) };
+  return { resources, loginRole, identity: buildFeatureStateTargetIdentity({ endpoint, resources, postgrestId: rest[0].Id, postgrestEnvironment: rest[0].Config.Env, scriptDigests, mounts: postgres.Mounts }) };
 }
 
 export async function main(argv = process.argv.slice(2)) {
@@ -80,8 +80,12 @@ export async function main(argv = process.argv.slice(2)) {
     verifyBackup: () => loadFullLocalBackupReadiness({ config }, target.resources),
     verifyTarget: () => {
       if (digest(configBytes) !== digest(privateConfig(options.config)) || localInventory(config).identity !== target.identity) throw new Error("Exact local target/config changed during preflight");
+      assertFeatureStateManagementRole(JSON.parse(query(`begin read only; ${FEATURE_STATE_MANAGEMENT_SELECT}; rollback;`).trim()));
     },
-    apply: (sql) => query(sql),
+    // Read/preflight/fresh-connection verification keep the ordinary postgres
+    // role. Only the guarded settings transaction uses the existing DDL role.
+    apply: (sql) => docker(["exec", "-i", target.resources.postgresContainerId,
+      "psql", "-X", "-v", "ON_ERROR_STOP=1", "-qAt", "-U", FEATURE_STATE_MANAGEMENT_ROLE, "-d", "postgres"], sql),
   });
   return { ...result, database_scope: "postgres/new_connections", postgrest_login_role: target.loginRole };
 }
