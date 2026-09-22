@@ -3,7 +3,7 @@ import { createHmac, randomBytes } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { readRecipeSnapshotForkContext } from "@/lib/server/recipe-snapshot-entrypoint";
 import { projectSnapshotV2CookModeData } from "@/lib/server/recipe-content-snapshot-future-propagation";
 
@@ -104,6 +104,7 @@ describe.skipIf(!project).sequential("snapshot readers through current PostgREST
     privateDir = mkdtempSync(join(tmpdir(), "hcg-reader-postgrest-"));
     const pgPassword = randomBytes(24).toString("hex");
     psql(`alter role authenticator password '${pgPassword}';`);
+    psql("alter role authenticator in database postgres set homecook.personal_recipe_v2='on'; alter role authenticator in database postgres set homecook.snapshot_v2_creation='on';");
     const envPath = join(privateDir, "postgrest.env");
     writeFileSync(envPath, [
       `PGRST_DB_URI=postgresql://authenticator:${encodeURIComponent(pgPassword)}@${db}:5432/postgres`,
@@ -251,5 +252,90 @@ describe.skipIf(!project).sequential("snapshot readers through current PostgREST
     expect(denied.status).not.toBe(200);
     const stale = await rpc({ ...rpcArgs, p_session_key_hash:"9".repeat(64) });
     expect(stale.status).not.toBe(200);
+  });
+
+  it("sends the real derived-create route's named arguments through PostgREST and preserves the public source", async () => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const methodId = output("select id from public.cooking_methods order by id limit 1;");
+    const sourceBefore = output(`select md5(to_jsonb(r)::text) from public.recipes r where id='${recipe}';`);
+    let legacyProbe: { status: number; code?: string } | undefined;
+    const calls: Array<Record<string, unknown>> = [];
+    const nutritionTables = new Set<string>();
+    const serviceClient = createClient(origin, token, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        headers: { "x-homecook-internal-scope": "recipe-future-propagation" },
+        fetch: async (input, init) => {
+          const request = new Request(input, init);
+          const target = new URL(request.url);
+          expect(target.origin).toBe(origin);
+          expect(target.pathname.startsWith("/rest/v1/")).toBe(true);
+          target.pathname = target.pathname.slice("/rest/v1".length);
+          if (request.method === "GET") nutritionTables.add(target.pathname);
+          if (target.pathname === "/rpc/write_personal_recipe_core") {
+            const args = await request.clone().json() as Record<string, unknown>;
+            calls.push(args);
+            if (!legacyProbe) {
+              // Reproduce the old wire shape against the real named-argument
+              // resolver. The rejected request must never enter the writer.
+              const legacy = await fetch(target, {
+                method: "POST", headers: request.headers,
+                body: JSON.stringify({ ...args, p_nutrition_predecessor_guard: { recipe_ingredients: [] } }),
+                signal: AbortSignal.timeout(5000),
+              });
+              const failure = await legacy.json();
+              legacyProbe = { status: legacy.status, code: failure.code };
+              expect(legacyProbe).toEqual({ status: 404, code: "PGRST202" });
+              expect(output(`select count(*) from public.recipes where created_by='${owner}' and visibility='private';`)).toBe("0");
+            }
+          }
+          return fetch(new Request(target, request));
+        },
+      },
+    });
+    // Cookie authentication and initial user bootstrap are supplied by this
+    // isolated fixture. Nutrition selects/calculation, RPC resolution and the
+    // writer's own session/owner/version checks use real code and PostgreSQL.
+    vi.resetModules();
+    vi.doMock("@/lib/supabase/server", () => ({
+      createRouteHandlerClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: owner, created_at: epoch } } }) } }),
+      createRecipeFuturePropagationInternalClient: () => serviceClient,
+      createRemoteCompatibilityServiceRoleClient: () => null,
+    }));
+    vi.doMock("@/lib/server/account-generation/session-authority", () => ({ readVerifiedAccountGenerationSession: async () => ({ ok: true, sessionAuthority: authority }) }));
+    vi.doMock("@/lib/server/user-bootstrap", () => ({ ensurePublicUserRow: async () => undefined, ensureUserBootstrapState: async () => undefined, formatBootstrapErrorMessage: (_error: unknown, fallback: string) => fallback }));
+    vi.doMock("@/lib/server/user-growth-activity", async () => ({
+      ...await vi.importActual<object>("@/lib/server/user-growth-activity"),
+      recordUserGrowthActivityEvent: async () => ({ recorded: false, duplicate: false, error: null }),
+    }));
+    try {
+      const { POST } = await import("@/app/api/v1/recipes/route");
+      const requestBody = { origin_recipe_id: recipe, base_recipe_revision: 1, image_object_id: null, draft: {
+        title: "실제 명명인자 복제", description: null, base_servings: 2,
+        ingredients: [{ ingredient_id: ingredient, amount: 100, unit: "g", ingredient_type: "QUANT", scalable: true }],
+        steps: [{ step_number: 1, instruction: "섞어요", cooking_method_id: methodId, cooking_method_ids: [methodId], ingredients_used: [] }],
+      } };
+      const requestKey = `8b000000-0000-4000-8000-${runId}08`;
+      const createRequest = () => new Request("http://localhost/api/v1/recipes", {
+        method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": requestKey }, body: JSON.stringify(requestBody),
+      });
+      const response = await POST(createRequest());
+      const result = await response.json();
+      expect(response.status, JSON.stringify(result)).toBe(201);
+      expect(result.success).toBe(true);
+      expect(legacyProbe).toEqual({ status: 404, code: "PGRST202" });
+      const declaredArguments = JSON.parse(output(`select to_json(proargnames) from pg_proc where oid='${coreSignature}'::regprocedure;`)) as string[];
+      expect(Object.keys(calls[0]).sort()).toEqual(declaredArguments.filter(name => name !== "p_now").sort());
+      expect(calls[0]).not.toHaveProperty("p_nutrition_predecessor_guard");
+      expect(nutritionTables).toEqual(new Set(["/ingredient_nutrition_profiles", "/ingredient_conversion_assignments", "/piece_unit_weights"]));
+      expect(output(`select md5(to_jsonb(r)::text) from public.recipes r where id='${recipe}';`)).toBe(sourceBefore);
+      expect(output(`select concat(visibility,':',origin_recipe_id,':',revision) from public.recipes where id='${result.data.id}';`)).toBe(`private:${recipe}:1`);
+      const replay = await POST(createRequest());
+      expect(replay.status).toBe(201);
+      expect((await replay.json()).data.id).toBe(result.data.id);
+      expect(output(`select count(*) from public.recipes where created_by='${owner}' and visibility='private';`)).toBe("1");
+    } finally {
+      for (const modulePath of ["@/lib/supabase/server", "@/lib/server/account-generation/session-authority", "@/lib/server/user-bootstrap", "@/lib/server/user-growth-activity"]) vi.doUnmock(modulePath);
+    }
   });
 });

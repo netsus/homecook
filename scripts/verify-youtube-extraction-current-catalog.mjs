@@ -20,10 +20,11 @@ import {
 
 const repositoryRoot = process.cwd();
 const args = process.argv.slice(2);
-if (args.some((arg) => arg !== "--beta-flow-gaps") || args.length > 1) {
-  throw new Error("Supported option: --beta-flow-gaps");
+if (args.some((arg) => !["--beta-flow-gaps", "--food-catalog-search"].includes(arg)) || args.length > 1) {
+  throw new Error("Supported options: --beta-flow-gaps or --food-catalog-search");
 }
 const verifyBetaFlowGaps = args.includes("--beta-flow-gaps");
+const verifyFoodCatalogSearch = args.includes("--food-catalog-search");
 // Preserve CLI-created ownership for historical migrations. Only these reviewed
 // production-admin changes require replacement rights over dedicated RPC owners.
 const adminMigrations = new Set([
@@ -104,6 +105,11 @@ try {
       "tests/recipe-product-selection-postgres.integration.test.ts",
       "tests/recipe-product-nutrition.integration.test.ts",
     ] : []),
+    ...(verifyFoodCatalogSearch ? [
+      "tests/food-catalog-search-candidates-postgres.integration.test.ts",
+      "tests/recipe-product-selection-postgres.integration.test.ts",
+      "tests/recipe-product-nutrition.integration.test.ts",
+    ] : []),
     "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
   ], {
     label: "Current catalog integration", cwd: repositoryRoot, timeout: 120_000, inherit: true,
@@ -113,6 +119,17 @@ try {
       HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID: isolated.projectId,
     },
   });
+  if (verifyFoodCatalogSearch) {
+    run("pnpm", [
+      "exec", "vitest", "run", "tests/food-catalog-search-cold-backend.integration.test.ts",
+      "--pool=forks", "--maxWorkers=1", "--testTimeout=45000",
+    ], {
+      label: "Cold search backend PostgREST integration", cwd: repositoryRoot,
+      timeout: 120_000, inherit: true,
+      env: { ...commandEnv, HOMECOOK_ISOLATED_RUNTIME_DATABASE_URL: isolated.databaseUrl,
+        HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID: isolated.projectId },
+    });
+  }
   if (verifyBetaFlowGaps) {
     // This real PostgREST suite commits an isolated generation promotion. Run it
     // after the rollback-only suites; never undo that protected state transition.

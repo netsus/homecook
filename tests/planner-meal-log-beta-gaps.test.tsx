@@ -76,20 +76,41 @@ describe("meal log beta source selection", () => {
     expect(screen.getByRole("alert")).toBeTruthy();
   });
 
-  it("suppresses IME intermediate text and searches 250ms after composition finishes", async () => {
+  it("searches paused Korean input after 250ms without compositionend or Enter", async () => {
     open(); await flush();
     fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
     const input = screen.getByRole("searchbox", { name: "제품·재료 검색" });
     fireEvent.compositionStart(input);
     fireEvent.change(input, { target: { value: "ㅇ" } });
-    await act(async () => vi.advanceTimersByTimeAsync(500));
-    expect(mocks.catalog).not.toHaveBeenCalled();
-    fireEvent.compositionEnd(input, { target: { value: "요거트" } });
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    fireEvent.change(input, { target: { value: "요거트" } });
     await act(async () => vi.advanceTimersByTimeAsync(249));
     expect(mocks.catalog).not.toHaveBeenCalled();
     await act(async () => vi.advanceTimersByTimeAsync(1));
     expect(mocks.catalog).toHaveBeenCalledTimes(1);
     expect(mocks.catalog).toHaveBeenLastCalledWith(expect.objectContaining({ q: "요거트" }));
+    expect(screen.getByRole("button", { name: /요거트/ })).toBeTruthy();
+    fireEvent.compositionEnd(input, { target: { value: "요거트" } });
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    expect(mocks.catalog).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels a pending recent selection on composition start and lets the composing search choose another food", async () => {
+    let finish!: (value: unknown) => void;
+    mocks.source.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    mocks.catalog.mockResolvedValue(page([{ ...product, id: "milk-1", name: "우유" }]));
+    const onSave = open(); await flush();
+    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
+    const input = screen.getByRole("searchbox", { name: "제품·재료 검색" });
+    fireEvent.compositionStart(input);
+    await act(async () => { finish(product); });
+    expect(screen.queryByRole("button", { name: "기록 저장" })).toBeNull();
+    fireEvent.change(input, { target: { value: "우유" } });
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    fireEvent.click(screen.getByRole("button", { name: /우유/ }));
+    fireEvent.click(screen.getByRole("button", { name: "기록 저장" })); await flush();
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ id: "milk-1", name: "우유" }), "col", "2026-09-22");
   });
   it("restores ingredient grams and kilograms from the fresh catalog", async () => {
     mocks.recent.mockResolvedValue(page([recent("ingredient", "ingredient-1", "쌀", "kg")]));
