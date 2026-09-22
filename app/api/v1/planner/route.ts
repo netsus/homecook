@@ -240,26 +240,33 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const columnsResult = await dbClient
-    .from("meal_plan_columns")
-    .select("id, name, sort_order")
-    .eq("user_id", user.id)
-    .order("sort_order", { ascending: true })
-    .order("id", { ascending: true });
+  const [columnsResult, mealsResult, productEntriesResult] = await Promise.all([
+    dbClient
+      .from("meal_plan_columns")
+      .select("id, name, sort_order")
+      .eq("user_id", user.id)
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true }),
+    dbClient
+      .from("meals")
+      .select("id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(title), plan_date, column_id, planned_servings, status, is_leftover, shopping_list_id, created_at")
+      .eq("user_id", user.id)
+      .gte("plan_date", dateRange.startDate)
+      .lte("plan_date", dateRange.endDate)
+      .order("plan_date", { ascending: true })
+      .order("column_id", { ascending: true })
+      .order("created_at", { ascending: true }),
+    dbClient.rpc("list_product_planner_entries", {
+      p_user_id: user.id,
+      p_start_date: dateRange.startDate,
+      p_end_date: dateRange.endDate,
+      p_column_id: null,
+    }),
+  ]);
 
   if (columnsResult.error || !columnsResult.data) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
-
-  const mealsResult = await dbClient
-    .from("meals")
-    .select("id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(title), plan_date, column_id, planned_servings, status, is_leftover, shopping_list_id, created_at")
-    .eq("user_id", user.id)
-    .gte("plan_date", dateRange.startDate)
-    .lte("plan_date", dateRange.endDate)
-    .order("plan_date", { ascending: true })
-    .order("column_id", { ascending: true })
-    .order("created_at", { ascending: true });
 
   if (mealsResult.error || !mealsResult.data) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
@@ -279,12 +286,6 @@ export async function GET(request: NextRequest) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
 
-  const productEntriesResult = await dbClient.rpc("list_product_planner_entries", {
-    p_user_id: user.id,
-    p_start_date: dateRange.startDate,
-    p_end_date: dateRange.endDate,
-    p_column_id: null,
-  });
   if (productEntriesResult.error || !Array.isArray(productEntriesResult.data)) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
@@ -303,35 +304,19 @@ export async function GET(request: NextRequest) {
   const recipeMap = new Map<string, RecipeRow>();
   const shoppingListMap = new Map<string, ShoppingListRow>();
 
-  if (recipeIds.length > 0) {
-    const recipesResult = await dbClient
-      .from("recipes")
-      .select("id, title, thumbnail_url")
-      .in("id", recipeIds);
-
-    if (recipesResult.error || !recipesResult.data) {
-      return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
-    }
-
-    recipesResult.data.forEach((recipe) => {
-      recipeMap.set(recipe.id, recipe);
-    });
+  const [recipesResult, shoppingListsResult] = await Promise.all([
+    recipeIds.length > 0
+      ? dbClient.from("recipes").select("id, title, thumbnail_url").in("id", recipeIds)
+      : Promise.resolve({ data: [], error: null }),
+    shoppingListIds.length > 0
+      ? dbClient.from("shopping_lists").select("id, title").in("id", shoppingListIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (recipesResult.error || !recipesResult.data || shoppingListsResult.error || !shoppingListsResult.data) {
+    return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
-
-  if (shoppingListIds.length > 0) {
-    const shoppingListsResult = await dbClient
-      .from("shopping_lists")
-      .select("id, title")
-      .in("id", shoppingListIds);
-
-    if (shoppingListsResult.error || !shoppingListsResult.data) {
-      return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
-    }
-
-    shoppingListsResult.data.forEach((shoppingList) => {
-      shoppingListMap.set(shoppingList.id, shoppingList);
-    });
-  }
+  recipesResult.data.forEach((recipe) => recipeMap.set(recipe.id, recipe));
+  shoppingListsResult.data.forEach((shoppingList) => shoppingListMap.set(shoppingList.id, shoppingList));
 
   const responseData: PlannerData = {
     columns: columnsResult.data.map((column) => ({

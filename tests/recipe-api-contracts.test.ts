@@ -111,6 +111,26 @@ function createQuery<T>(result: QueryResult<T>) {
   return query;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((complete) => { resolve = complete; });
+  return { promise, resolve };
+}
+
+function deferredDetailQuery() {
+  const result = deferred<QueryResult<unknown>>();
+  const started = deferred<void>();
+  const query = {
+    select: vi.fn(() => query), eq: vi.fn(() => query), order: vi.fn(() => query),
+    maybeSingle: vi.fn(() => query),
+    then: vi.fn((success?: (value: QueryResult<unknown>) => unknown, failure?: (reason: unknown) => unknown) => {
+      started.resolve();
+      return result.promise.then(success, failure);
+    }),
+  };
+  return { query, started: started.promise, resolve: result.resolve };
+}
+
 const manualIngredientId = "550e8400-e29b-41d4-a716-446655440010";
 const manualMethodId = "550e8400-e29b-41d4-a716-446655440020";
 const manualImageObjectId = "550e8400-e29b-41d4-a716-446655440030";
@@ -1728,6 +1748,68 @@ describe("recipe API contracts", () => {
       recipeId,
       sessionAuthority,
     });
+  });
+
+  it.each(["success", "legacy-fallback", "step-error"])("starts detail steps beside source/ingredients/nutrition and preserves %s", async (mode) => {
+    const recipeId = "550e8400-e29b-41d4-a716-446655440022";
+    const recipeQuery = createQuery({ data: {
+      id: recipeId, title: "김치찌개", description: null, thumbnail_url: null,
+      base_servings: 2, tags: [], source_type: "manual", created_by: null,
+      visibility: "public", deleted_at: null, revision: 1,
+      view_count: 0, like_count: 0, save_count: 0, plan_count: 0, cook_count: 0,
+    }, error: null });
+    const source = deferredDetailQuery();
+    const ingredients = deferredDetailQuery();
+    const nutrition = deferredDetailQuery();
+    const steps = deferredDetailQuery();
+    const legacySteps = deferredDetailQuery();
+    const auth = deferred<{ data: { user: null } }>();
+    const authStarted = deferred<void>();
+    let stepReads = 0;
+    const from = vi.fn((table: string) => {
+      if (table === "recipes") return recipeQuery;
+      if (table === "recipe_sources") return source.query;
+      if (table === "recipe_ingredients") return ingredients.query;
+      if (table === "recipe_nutrition_snapshots") return nutrition.query;
+      if (table === "recipe_steps") return stepReads++ === 0 ? steps.query : legacySteps.query;
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      from,
+      auth: { getUser: () => { authStarted.resolve(); return auth.promise; } },
+    });
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const responsePromise = GET(new Request(`http://localhost/api/v1/recipes/${recipeId}`), { params: Promise.resolve({ id: recipeId }) });
+    await authStarted.promise;
+    expect(from.mock.calls.map(([table]) => table)).toEqual(["recipes"]);
+    auth.resolve({ data: { user: null } });
+    await source.started;
+    expect(ingredients.query.then).toHaveBeenCalledOnce();
+    expect(nutrition.query.then).toHaveBeenCalledOnce();
+    expect(steps.query.then).toHaveBeenCalledOnce();
+    expect(legacySteps.query.then).not.toHaveBeenCalled();
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({ anonymousPublicReadScope: "recipe-detail" });
+    source.resolve({ data: null, error: null });
+    ingredients.resolve({ data: [], error: null });
+    nutrition.resolve({ data: null, error: null });
+    steps.resolve({ data: mode === "success" ? [] : null, error: mode === "success" ? null : {
+      message: mode === "legacy-fallback" ? "recipe_step_cooking_methods relationship missing" : "database unavailable",
+    } });
+    if (mode === "legacy-fallback") {
+      await legacySteps.started;
+      expect(steps.query.select).toHaveBeenCalledWith(expect.stringContaining("recipe_step_cooking_methods"));
+      expect(legacySteps.query.select).toHaveBeenCalledWith(expect.not.stringContaining("recipe_step_cooking_methods"));
+      legacySteps.resolve({ data: [], error: null });
+    }
+    const response = await responsePromise;
+    expect(response.status).toBe(mode === "step-error" ? 500 : 200);
+    const body = await response.json();
+    if (mode === "step-error") {
+      expect(body).toMatchObject({ success: false, data: null, error: { code: "INTERNAL_ERROR", fields: [] } });
+      expect(legacySteps.query.then).not.toHaveBeenCalled();
+    } else {
+      expect(body.data).toMatchObject({ id: recipeId, title: "김치찌개", steps: [], user_status: null });
+    }
   });
 
   it.each(["public", "hidden", "private", "deleted"])(
