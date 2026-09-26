@@ -86,6 +86,14 @@ function isActiveResolutionResult(
 function mapAccountGenerationRpcError(error: AccountGenerationRpcError | null) {
   const detail = `${error?.code ?? ""} ${error?.message ?? ""}`;
 
+  if (/\bACCOUNT_LIFECYCLE_MAINTENANCE\b/.test(detail)) {
+    return fail(
+      "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      "계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.",
+      503,
+    );
+  }
+
   if (/\bIDEMPOTENCY_KEY_REUSED\b/.test(detail)) {
     return fail(
       "IDEMPOTENCY_KEY_REUSED",
@@ -257,6 +265,9 @@ export async function executeAccountQuarantineResolution(input: {
     p_payload_hash: hashCanonicalPayload(canonicalPayload),
     p_action: input.action,
     p_nickname: input.nickname,
+    ...(input.sessionAuthority.fullLocalSessionRecord
+      ? { p_session_record: input.sessionAuthority.fullLocalSessionRecord }
+      : {}),
   });
 
   if (result.error) {

@@ -694,6 +694,7 @@ describe("full-local production runtime static contract", () => {
     expect(compose).toContain("GOTRUE_EXTERNAL_EMAIL_ENABLED=false");
     expect(compose).toContain("GOTRUE_EXTERNAL_PHONE_ENABLED=false");
     expect(compose).toContain("GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED=false");
+    expect(compose).toContain('GOTRUE_SECURITY_MANUAL_LINKING_ENABLED: "true"');
     expect(compose).toContain("REGION=FULL_LOCAL_STORAGE_REGION");
     expect(compose).toContain(
       "STORAGE_PUBLIC_URL: ${FULL_LOCAL_INTERNAL_GATEWAY_URL:?FULL_LOCAL_INTERNAL_GATEWAY_URL is required}/storage/v1",

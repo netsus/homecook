@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "slice": "full-local-account-quarantine-recovery",
+  "migrations": [
+    "supabase/migrations/20260926100000_full_local_account_quarantine_resolution.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.resolve_account_cutover_quarantine(uuid, timestamp with time zone, text, integer, uuid, text, text, text, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "auth",
+        "extensions",
+        "pg_temp"
+      ]
+    }
+  ]
+}

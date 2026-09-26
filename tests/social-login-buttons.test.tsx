@@ -64,6 +64,7 @@ describe("social login buttons", () => {
     startServerAuthFlow.mockReset();
     cancelServerAuthFlow.mockReset();
     window.localStorage.clear();
+    window.sessionStorage.clear();
     document.cookie = "homecook-post-auth-next=; Path=/; Max-Age=0";
     document.cookie = "homecook-auth-provider-attempt=; Path=/; Max-Age=0";
     isLocalDevAuthEnabled.mockReturnValue(false);
@@ -126,7 +127,7 @@ describe("social login buttons", () => {
           type: "save",
           recipeId: "mock-kimchi-jjigae",
           redirectTo: "/recipe/mock-kimchi-jjigae",
-          createdAt: 1,
+          createdAt: Date.now(),
         }}
       />,
     );
@@ -136,9 +137,10 @@ describe("social login buttons", () => {
     await waitFor(() => {
       expect(signInWithOAuth).toHaveBeenCalledTimes(1);
     });
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toContain(
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toContain(
       '"type":"save"',
     );
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("starts the server flow before OAuth and stores only the sanitized return path in a client cookie", async () => {

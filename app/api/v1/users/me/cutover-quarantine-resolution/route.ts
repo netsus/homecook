@@ -83,7 +83,11 @@ export async function POST(request: Request) {
     return parsedRequest.response;
   }
 
-  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  const verifiedSession = await readVerifiedAccountGenerationSession(
+    routeClient,
+    undefined,
+    { includeFullLocalSessionRecord: true },
+  );
   if (!verifiedSession.ok) {
     return failClosedQuarantineResolution({
       action: parsedRequest.action,

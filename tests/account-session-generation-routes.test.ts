@@ -1315,8 +1315,17 @@ describe("account session generation F0 routes", () => {
         p_hmac_key_version: 1,
         p_action: "activate",
         p_nickname: "집밥러",
+        p_session_record: expect.objectContaining({
+          p_owner_uuid: user.id,
+          p_identity_created_at: user.created_at,
+          p_session_id: "550e8400-e29b-41d4-a716-446655440099",
+          p_issuer: "https://auth.mumeok.kr/auth/v1",
+          p_hmac_key_version: 1,
+        }),
       }),
     );
+    expect(JSON.stringify(body)).not.toContain("p_session_record");
+    expect(JSON.stringify(body)).not.toContain(accessToken);
   });
 
   it("adapts an auth-present quarantine activate request into the protected RPC", async () => {
@@ -1360,6 +1369,33 @@ describe("account session generation F0 routes", () => {
       p_action: "activate",
       p_nickname: "집밥러",
     });
+  });
+
+  it("reports local authority maintenance instead of an unexplained recovery error", async () => {
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { code: "55000", message: "ACCOUNT_LIFECYCLE_MAINTENANCE" },
+    }));
+    const { executeAccountQuarantineResolution } = await importAccountGenerationActiveAdapter();
+    const response = await executeAccountQuarantineResolution({
+      action: "activate",
+      dbClient: { rpc },
+      idempotencyKey: "550e8400-e29b-41d4-a716-446655440010",
+      nickname: "무먹러",
+      request: new Request("http://localhost/api/v1/users/me/cutover-quarantine-resolution"),
+      sessionAuthority: {
+        ownerUuid: "550e8400-e29b-41d4-a716-446655440001",
+        authIdentityCreatedAt: "2026-07-23T00:00:00.000Z",
+        sessionKeyHash: "b".repeat(64),
+        hmacKeyVersion: 2,
+      },
+    });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      success: false,
+      error: { code: "ACCOUNT_LIFECYCLE_MAINTENANCE" },
+    });
+    expect(recordOperationalEvent).not.toHaveBeenCalled();
   });
 
   it("returns durable cleanup_pending for an auth-present quarantine delete", async () => {
