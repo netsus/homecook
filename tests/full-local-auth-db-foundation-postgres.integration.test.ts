@@ -377,6 +377,191 @@ describe("full-local PG catalog compatibility helpers", () => {
   });
 });
 
+run("full-local quarantine recovery", () => {
+  const recoveryOwner = "99000000-0000-4000-8000-000000000001";
+  const recoverySession = "99000000-0000-4000-8000-000000000002";
+  const recoveryAttempt = "99000000-0000-4000-8000-000000000003";
+  const recoveryKey = "99000000-0000-4000-8000-000000000004";
+  const sessionRecord = `jsonb_build_object(
+    'p_issuer', 'https://auth.mumeok.kr/auth/v1',
+    'p_owner_uuid', '${recoveryOwner}',
+    'p_identity_created_at', '2026-08-01T00:00:00Z',
+    'p_session_id', '${recoverySession}',
+    'p_session_key_hash', repeat('9', 64),
+    'p_hmac_key_version', 2,
+    'p_auth_cutover_epoch', 2,
+    'p_session_issued_at', date_trunc('second', now()) - interval '5 seconds',
+    'p_last_token_issued_at', date_trunc('second', now()) - interval '5 seconds',
+    'p_verified_at', now(),
+    'p_access_token_expires_at', now() + interval '30 minutes',
+    'p_binding_expires_at', now() + interval '30 minutes'
+  )`;
+  const fixture = `
+    begin;
+    ${serviceClaims}
+    insert into public.account_generation_cutover_attempts (id, state, capability_revision)
+    values ('${recoveryAttempt}', 'promoted', 1);
+    update public.account_generation_capability_state
+    set state = 'generation_active', current_cutover_attempt_id = '${recoveryAttempt}',
+        activated_at = now() - interval '10 minutes', revision = revision + 1;
+    update private.full_local_auth_control
+    set authority = 'local', local_issuer = 'https://auth.mumeok.kr/auth/v1',
+        cutover_epoch = 2, hmac_key_version = 2, flows_open = true,
+        cutover_started_at = now() - interval '6 minutes',
+        local_activated_at = now() - interval '5 minutes';
+    insert into auth.users (id, created_at, raw_app_meta_data, raw_user_meta_data)
+    values ('${recoveryOwner}', '2026-08-01T00:00:00Z',
+      '{"provider":"google"}', '{"sub":"quarantine-google-id"}');
+    create table if not exists auth.sessions (
+      id uuid primary key, user_id uuid not null references auth.users(id) on delete cascade
+    );
+    insert into auth.sessions (id, user_id) values ('${recoverySession}', '${recoveryOwner}');
+    create table if not exists auth.identities (
+      provider text not null, provider_id text not null,
+      user_id uuid not null references auth.users(id), primary key (provider, provider_id)
+    );
+    insert into auth.identities (provider, provider_id, user_id)
+    values ('google', 'verified-google-id', '${recoveryOwner}');
+    insert into public.user_account_lifecycles
+      (owner_uuid, account_generation, auth_identity_created_at_snapshot, origin, status)
+    values ('${recoveryOwner}', 1, '2026-08-01T00:00:00Z', 'cutover_auth_without_profile_quarantined', 'quarantined');
+  `;
+  const recoveryCall = (record = sessionRecord, payload = "repeat('a', 64)", action = "activate") => `
+    public.resolve_account_cutover_quarantine(
+      '${recoveryOwner}', '2026-08-01T00:00:00Z', repeat('9', 64), 2,
+      '${recoveryKey}', ${payload}, '${action}', '돌아온무먹러', ${record}
+    )`;
+
+  it("activates quarantine, binds the exact live session and durably replays without duplicating the profile", () => {
+    const result = psqlResult(`${fixture}
+      select ${recoveryCall()} ->> 'resolution_status';
+      select ${recoveryCall()} ->> 'resolution_status';
+      select concat_ws(':', u.nickname, l.status, b.auth_authority, b.binding_state,
+        b.expected_account_generation, u.social_id, b.session_identity_hash = encode(
+          extensions.digest(convert_to('${recoverySession}', 'UTF8'), 'sha256'), 'hex'))
+      from public.users u join public.user_account_lifecycles l on l.owner_uuid = u.id
+      join public.user_session_generation_bindings b on b.owner_uuid = u.id
+      where u.id = '${recoveryOwner}';
+      select ${buildV2RenewCall({
+        ownerUuid: recoveryOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: recoverySession,
+        sessionKeyHash: "repeat('9', 64)",
+        sessionIssuedAtSql: "date_trunc('second', now()) - interval '5 seconds'",
+        lastTokenIssuedAtSql: "date_trunc('second', now()) - interval '5 seconds'",
+        verifiedAtSql: "now()",
+        accessTokenExpiresAtSql: "now() + interval '30 minutes'",
+        bindingExpiresAtSql: "now() + interval '30 minutes'",
+      })} ->> 'binding_state';
+      rollback;
+    `);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual([
+      "active", "active", "돌아온무먹러:active:local:active:1:verified-google-id:t", "active",
+    ]);
+  });
+
+  it.each([
+    ["another owner", "'p_owner_uuid'", "to_jsonb('99000000-0000-4000-8000-000000000099'::text)"],
+    ["another session", "'p_session_id'", "to_jsonb('99000000-0000-4000-8000-000000000099'::text)"],
+    ["stale epoch", "'p_auth_cutover_epoch'", "'99'::jsonb"],
+    ["expired token", "'p_access_token_expires_at'", "to_jsonb(now() - interval '1 second')"],
+  ])("rejects %s without activating the account", (_label, field, value) => {
+    const result = psqlResult(`${fixture}
+      do $test$ begin
+        begin
+          perform ${recoveryCall(`(${sessionRecord} || jsonb_build_object(${field}, ${value}))`)};
+          raise exception 'expected failure';
+        exception when sqlstate '55000' then
+          if sqlerrm <> 'ACCOUNT_SESSION_STALE' then raise; end if;
+        end;
+      end $test$;
+      select concat_ws(':', status, (select count(*) from public.users where id = '${recoveryOwner}'),
+        (select count(*) from public.user_session_generation_bindings where owner_uuid = '${recoveryOwner}'))
+      from public.user_account_lifecycles where owner_uuid = '${recoveryOwner}';
+      rollback;
+    `);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim()).toBe("quarantined:0:0");
+  });
+
+  it("starts deletion once and durably replays one outbox result", () => {
+    const result = psqlResult(`${fixture}
+      select ${recoveryCall(sessionRecord, "repeat('a', 64)", "delete")} ->> 'deletion_status';
+      select ${recoveryCall(sessionRecord, "repeat('a', 64)", "delete")} ->> 'deletion_status';
+      select concat_ws(':', l.status,
+        (select count(*) from public.auth_identity_deletion_outbox where owner_uuid = l.owner_uuid))
+      from public.user_account_lifecycles l where owner_uuid = '${recoveryOwner}';
+      rollback;
+    `);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual([
+      "cleanup_pending", "cleanup_pending", "cleanup_pending:1",
+    ]);
+  });
+
+  it("keeps revoked sessions blocked and rolls back all profile writes when binding fails", () => {
+    const result = psqlResult(`${fixture}
+      -- An existing wrong local issuer is rejected by the real binding RPC,
+      -- after profile insertion and lifecycle activation have been attempted.
+      insert into public.user_session_generation_bindings (
+        session_key_hash, hmac_key_version, owner_uuid, expected_account_generation,
+        auth_identity_created_at_snapshot, auth_authority, binding_state,
+        local_issuer, local_verified_at, auth_cutover_epoch, session_issued_at,
+        last_token_issued_at, binding_expires_at
+      ) values (
+        repeat('9', 64), 2, '${recoveryOwner}', 1, '2026-08-01T00:00:00Z',
+        'local', 'active', 'https://other.invalid/auth/v1', now(), 2,
+        now() - interval '5 seconds', now() - interval '5 seconds', now() + interval '30 minutes'
+      );
+      do $test$ begin
+        begin
+          perform ${recoveryCall()};
+          raise exception 'expected binding failure';
+        exception when sqlstate '55000' then
+          if sqlerrm <> 'ACCOUNT_SESSION_STALE' then raise; end if;
+        end;
+      end $test$;
+      update public.user_session_generation_bindings set revoked_at = now()
+      where session_key_hash = repeat('9', 64);
+      do $test$ begin
+        begin
+          perform ${recoveryCall()};
+          raise exception 'expected revoked failure';
+        exception when sqlstate '55000' then
+          if sqlerrm <> 'ACCOUNT_SESSION_STALE' then raise; end if;
+        end;
+      end $test$;
+      select concat_ws(':', status, resolution_result_json is null,
+        (select count(*) from public.users where id = '${recoveryOwner}'))
+      from public.user_account_lifecycles where owner_uuid = '${recoveryOwner}';
+      rollback;
+    `);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim()).toBe("quarantined:t:0");
+  });
+
+  it("rejects changed-payload replay and non-service roles", () => {
+    const result = psqlResult(`${fixture}
+      select ${recoveryCall()} ->> 'resolution_status';
+      do $test$ begin
+        begin
+          perform ${recoveryCall(sessionRecord, "repeat('b', 64)")};
+          raise exception 'expected conflict';
+        exception when unique_violation then
+          if sqlerrm <> 'IDEMPOTENCY_KEY_REUSED' then raise; end if;
+        end;
+      end $test$;
+      select concat_ws(':',
+        has_function_privilege('anon', 'public.resolve_account_cutover_quarantine(uuid,timestamptz,text,integer,uuid,text,text,text,jsonb)', 'EXECUTE'),
+        has_function_privilege('authenticated', 'public.resolve_account_cutover_quarantine(uuid,timestamptz,text,integer,uuid,text,text,text,jsonb)', 'EXECUTE'));
+      rollback;
+    `);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim().split("\n")).toEqual(["active", "f:f"]);
+  });
+});
+
 run("full-local Auth isolated PostgreSQL foundation", () => {
   beforeAll(() => {
     expect(host).not.toBe("");

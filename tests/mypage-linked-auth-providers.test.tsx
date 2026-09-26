@@ -67,7 +67,7 @@ describe("LinkedAuthProviders", () => {
       options: expect.objectContaining({ redirectTo: expect.stringContaining("/auth/link/callback") }),
     }));
     await waitFor(() => expect(screen.getByRole("button", { name: "네이버 연결 중" }).hasAttribute("disabled")).toBe(true));
-    expect(screen.getByRole("button", { name: "카카오 연결" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "카카오 연결" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("does not call the provider SDK when the server link flow is unavailable", async () => {
@@ -78,7 +78,9 @@ describe("LinkedAuthProviders", () => {
     await userEvent.click(await screen.findByRole("button", { name: "네이버 연결" }));
 
     expect(linkIdentity).not.toHaveBeenCalled();
-    expect(await screen.findByText("연결 상태를 불러오지 못했어요.")).toBeTruthy();
+    expect(await screen.findByText("연결을 시작하지 못했어요. 아래 로그인 방법을 눌러 다시 시도해 주세요.")).toBeTruthy();
+    expect(screen.getByText("Google 연결됨")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "네이버 연결" })).toBeTruthy();
   });
 
   it("cancels the server flow when linkIdentity fails before redirect", async () => {
@@ -99,6 +101,40 @@ describe("LinkedAuthProviders", () => {
     await userEvent.click(await screen.findByRole("button", { name: "네이버 연결" }));
 
     await waitFor(() => expect(cancelServerAuthFlow).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps existing connections and lets the user retry a failed linking attempt", async () => {
+    getUserIdentities.mockResolvedValue({ data: { identities: [{ provider: "google" }] }, error: null });
+    linkIdentity.mockRejectedValueOnce(new Error("network error"));
+    linkIdentity.mockReturnValueOnce(new Promise(() => {}));
+    render(<LinkedAuthProviders />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "네이버 연결" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("연결을 시작하지 못했어요.");
+    expect(screen.getByText("Google 연결됨")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "네이버 연결" }));
+
+    expect(linkIdentity).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("recovers from an identity network exception without staying in loading", async () => {
+    getUserIdentities.mockRejectedValueOnce(new Error("network unavailable"));
+    getUserIdentities.mockResolvedValueOnce({ data: { identities: [{ provider: "google" }] }, error: null });
+    render(<LinkedAuthProviders />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "연결 상태 다시 불러오기" }));
+
+    expect(await screen.findByText("Google 연결됨")).toBeTruthy();
+    expect(getUserIdentities).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers login when the identity lookup session has expired", async () => {
+    getUserIdentities.mockResolvedValue({ data: null, error: { status: 401, code: "session_not_found" } });
+    render(<LinkedAuthProviders />);
+
+    expect(await screen.findByRole("link", { name: "로그인으로 이동" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "네이버 연결" })).toBeNull();
   });
 
   it("shows the backend linked result as a successful connection", async () => {

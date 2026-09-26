@@ -482,6 +482,11 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260821180000_full_local_missing_scope_fail_closed.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260926100000_full_local_account_quarantine_resolution.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [

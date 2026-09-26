@@ -1,5 +1,9 @@
 # DB 설계 v1.3.38
 
+## 2026-09-26 후속 — full-local 계정 복구
+
+계정 보호 해제는 검증된 full-local 세션 증거를 받는 내부 `resolve_account_cutover_quarantine` overload로 처리한다. 현재 소유자·identity 시각·issuer·epoch·세션 HMAC·실제 Auth 세션 liveness를 확인한 후 profile 복구, lifecycle 활성화, 세션 권한 등록을 한 트랜잭션에서 완료한다. 중복 요청의 저장된 결과와 다른 세션·payload 충돌 거부는 유지한다. 과거 서명과 anon/authenticated 직접 호출로 이 보호를 우회할 수 없다. 공개 테이블·응답 형식은 바꾸지 않는다. 상세 검증·반영 상태는 `docs/engineering/auth-repair-20260926.md`를 따른다.
+
 ## 2026-09-22 사용자 요청 — 베타 핵심 흐름 보완
 
 구현 migration은 `20260922020000_recipe_product_selection.sql`, `20260922021000_recipe_product_nutrition.sql`, `20260922023000_meal_log_catalog_identity.sql`, `20260922024000_recipe_product_cook_mode_display.sql`이다. 새 사용자 테이블이나 과거 데이터 일괄 재작성 없이 기존 recipe ingredient product/version 열·승인 연결·영양 스냅샷을 재사용한다. manual recipe transaction은 제품 쌍을 원자적으로 검증·저장한다. 영양 입력 guard와 기여 출처 guard는 저장된 정확 제품 버전까지 포함하며 일반 재료 fallback을 금지한다. 정확 catalog ID 읽기는 기존 authenticated-self 소유권 검증을 사용하고 익명 실행을 허용하지 않는다. v2 요리 조회는 고정한 제품 이름·브랜드를 표시하고 현재 카탈로그 이름 변경으로 과거 요리 표시를 바꾸지 않는다. 운영 적용은 아직 별도다.
