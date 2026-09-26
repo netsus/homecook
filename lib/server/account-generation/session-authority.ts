@@ -10,6 +10,7 @@ import { createSessionKeyHash } from
 import {
   prepareFullLocalSessionAuthority,
   readFullLocalSessionControl,
+  type FullLocalSessionRecord,
 } from "@/lib/server/full-local-auth/session-authority";
 
 import { verifyAccountDeleteReplayJwt } from "./jwt-replay";
@@ -69,6 +70,7 @@ export interface AccountGenerationSessionAuthority {
   authIdentityCreatedAt: string;
   sessionKeyHash: string;
   hmacKeyVersion: number;
+  fullLocalSessionRecord?: FullLocalSessionRecord;
 }
 
 export interface AccountGenerationBootstrapSessionAuthority
@@ -243,6 +245,7 @@ export function deriveVerifiedAccountGenerationSessionAuthority(input: {
 export async function readVerifiedAccountGenerationSession(
   routeClient: AccountGenerationRouteAuthClient,
   liveVerifiedUser?: VerifiedAuthUser,
+  options: { includeFullLocalSessionRecord?: boolean } = {},
 ): Promise<
   | {
       ok: true;
@@ -281,7 +284,12 @@ export async function readVerifiedAccountGenerationSession(
       return prepared.ok
         ? {
             ok: true,
-            sessionAuthority: prepared.accountBootstrap,
+            sessionAuthority: {
+              ...prepared.accountBootstrap,
+              ...(options.includeFullLocalSessionRecord
+                ? { fullLocalSessionRecord: prepared.record }
+                : {}),
+            },
           }
         : { ok: false };
     }
