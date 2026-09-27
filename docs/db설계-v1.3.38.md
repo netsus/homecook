@@ -1,5 +1,7 @@
 # DB 설계 v1.3.38
 
+> 운영 상태(2026-09-27): 이날까지 누적한 피드백 수정은 웹 `f8824662e90f`·DB 이력 197개에 반영됐다. 개별 항목의 이전 ‘미배포’ 표시는 구현 당시 상태다. [실제 배포 결과와 남은 확인](engineering/feedback-batch-release-20260927.md)을 기준으로 한다.
+
 ## 2026-09-27 후속 — 계획·요리 상태와 완료 화면
 
 Meal 진행 상태, shopping_list 연결, cooking_session 진행 상태, cooked batch 잔량, meal log 기록을 분리한다. 정확한 진행 중 세션 재개와 완료 후 새 시작을 보장한다. leftover_dishes.weight_source는 estimated/measured/null이며 기존 known 값은 읽을 때 measured로 해석해 운영 데이터를 일괄 변경하지 않는다. 추정 완료의 중복 요청 판별에는 원래 weigh_later/null 값을 유지하며 같은 완료 요청으로 음식이나 팬트리 차감을 중복 생성하지 않는다. [상태·수정 계약](engineering/planner-cooking-state-repair-20260927.md) 참조.

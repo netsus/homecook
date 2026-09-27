@@ -1,5 +1,7 @@
 # API\_설계\_v1.2.43
 
+> 운영 상태(2026-09-27): 이날까지 누적한 피드백 수정은 웹 `f8824662e90f`·DB 이력 197개에 반영됐다. 개별 항목의 이전 ‘미배포’ 표시는 구현 당시 상태다. [실제 배포 결과와 남은 확인](engineering/feedback-batch-release-20260927.md)을 기준으로 한다.
+
 ## 2026-09-27 후속 — 계획·요리 상태와 완료 화면
 
 snapshot-v2 시작은 동일 소유자·source·고정본·인분 및 계획 집합이 일치하는 진행 중 세션을 반환할 수 있다. 완료/취소는 재사용하지 않는다. 생성 실패가 단순404/500이라는 이유로 legacy 생성으로 전환하지 않으며 명시적 SNAPSHOT_V2_CREATION_DISABLED만 기존 대체 경로를 허용한다. 완료의 weigh_later/null 요청은 유지하고 서버가 고정 재료·요리 인분 기준 75% 추정을 수행한다. batch projection에 weight_source(estimated/measured/null)를 추가하고 기존 weight_status는 유지한다. 소비 전 추정 총량만 실제 무게로 교체 가능하며 소비 후에는 기존 잔량 조정을 사용한다.

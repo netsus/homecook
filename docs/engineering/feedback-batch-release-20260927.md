@@ -28,4 +28,23 @@
 
 ## 진행 상태
 
-현재 문서 작성 시점에는 운영 반영 전이다. 실제 적용·웹 교체 결과를 아래에 추가한다. 비공개 증거와 복구 파일은 `~/.homecook/operations/feedback-batch-20260927/`에 보존한다.
+운영 반영을 완료했다. 검증 및 반영 결과는 아래와 같다. 비공개 증거와 복구 파일은 `~/.homecook/operations/feedback-batch-20260927/`에 보존한다.
+
+
+## 운영 반영 결과
+
+- PR #1590을 master에 병합했다. 병합 commit은 `a5ca9b7b4d2afa83db7859f83f4b1b0abeb5e55b`다.
+- 운영에서 새 SQL 12개와 checksum 이력을 한 트랜잭션으로 반영해 ledger가 **197개**가 됐다. 기존 사용자·Auth·레시피·계획·장보기·요리·식사 기록 행의 의미상 해시와 관련 없는 권한·정책이 그대로임을 적용 전/후에 확인했다.
+- 별도 보호 SQL로 참조가 없는 중복 `두부조림` 한 건을 soft-delete하고 `양념장이 맛있는 두부조림` 및 내용·기록을 유지했다. 원문 SHA는 `e99be814a1fc280de27d20a465c3863dad782d4bb92e74ef34dbe50032ec0576`이며 사전 rollback 검증을 통과했다.
+- 웹 전용 후보 `f8824662e90f268b922962b1c6f3d3934aee1575`를 `pnpm deploy:dev -- --reviewed-ref ... --already-applied-db --reviewed-feedback-readiness --test-script test:feedback-batch:web`로 반영했다.
+- 배포 checkout에서 선택 회귀 **618개**를 다시 통과했고 production compile·타입·87개 정적 페이지 생성·별도 포트 확인·운영 build/static GET이 완료됐다. build ID는 **`prelaunch-f8824662e90f-jywZHQ`**다.
+- 새 테스트 runner는 검토한 실행 전용 보조 파일로 정확한 경로 한 개만 분류했다. worker/서버 runtime 파일의 거부 규칙은 유지한다.
+- HTTPS 검증: 홈/고유 build manifest 200, 돼지고기 제목·재료 통합 검색 5건, 돼지고기 재료 선택 검색 5건, 된장 재료 선택 2건, 두부조림 1건. 상세 조회수 7→8 증가 후 목록에서도 8을 확인했다.
+- 비로그인 계획 고정본 조회·직접 원본 공개 요청은 401, 실제 비공개 레시피의 익명 조회는 404다. 운영 확인으로 타인의 비공개 내용을 열거나 테스트용 레시피를 게시하지 않았다.
+- 웹 상태는 loaded=true, recoveryPending=false이며 이전 웹 복구 경로도 유지한다. 이는 DB를 자동으로 되돌린다는 의미가 아니다.
+
+### 남은 확인과 검증 한계
+
+실제 iPhone 키보드 체감과 로그인 사용자의 이미지 공개·완료 저장 등은 배포 사이트에서 이어서 확인할 수 있다. 이번 공개 HTTPS 확인은 읽기와 비로그인 거절 확인이며 사용자 계정의 실데이터를 임의로 생성하지 않았다.
+
+production build 과정에서 Next의 내장 lint가 `eslint-plugin-react-hooks`를 찾지 못한다는 설정 경고를 출력했다. 빌드 자체·타입 검사는 성공했고 변경 파일의 별도 ESLint 및 선택 테스트를 사용했다. 내장 lint 전체가 성공했다고 주장하지 않으며, 새 dependency나 무관한 lint 재구성은 이번 배포에 추가하지 않았다.
