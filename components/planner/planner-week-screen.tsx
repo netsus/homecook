@@ -316,6 +316,12 @@ export function PlannerWeekScreen({
         new URLSearchParams(searchParams.toString()),
         location,
       );
+      // Log data is loaded by week on the client. Updating its selected date
+      // must not trigger an RSC navigation/loading fallback and reset scrolling.
+      if (!pendingNavigation && activeSegment === "log" && location.segment === "log") {
+        window.history[method === "push" ? "pushState" : "replaceState"](null, "", href);
+        return;
+      }
       const navigation = {
         generation: ++navigationGenerationRef.current,
         href,
@@ -327,11 +333,15 @@ export function PlannerWeekScreen({
       pendingNavigationRef.current = navigation;
       router[method](href, { scroll: false });
     },
-    [router, searchParams, selectedDate],
+    [activeSegment, router, searchParams, selectedDate],
   );
   useEffect(() => {
     let frame = 0;
-    const allow = () => { allowScrollDateSyncRef.current = true; };
+    const allow = () => {
+      allowScrollDateSyncRef.current = true;
+      positionedSegmentsRef.current[activeSegment] = true;
+      pendingDateScrollRef.current = null;
+    };
     const stop = () => { allowScrollDateSyncRef.current = false; };
     const update = () => {
       frame = 0;
@@ -848,9 +858,9 @@ export function PlannerWeekScreen({
                   })
                 }
               >
-                <span>이번 주 장보기 기록 {shoppingLists.length}개</span>
-                <span aria-hidden="true" className="h-3 w-px bg-[var(--line-strong)]" />
                 <span className="text-[var(--ui-sky-700)]">캘린더 보기</span>
+                <span aria-hidden="true" className="h-3 w-px bg-[var(--line-strong)]" />
+                <span>이번 주 장보기 기록 {shoppingLists.length}개</span>
               </Link>
             ) : null}
           </div>

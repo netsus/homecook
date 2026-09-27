@@ -1,5 +1,13 @@
 # DB 설계 v1.3.38
 
+## 2026-09-28 추가 — 승인한 테스트 음식 정리
+
+사용자가 지정한 한 계정의 중량 없는 테스트 음식 9건과 연결 식사 기록 3건을 백업·대상/참조 검증·rollback 확인 후 삭제했다. 무게가 있는 9건은 보존했으며 다른 계정/원본 레시피 삭제와 스키마 변경은 없다. 기존 cleanup trigger·내부 writer 보호를 사용했다. [정리 증거와 코드 미배포 상태](engineering/feedback-library-cleanup-20260928.md) 참조.
+
+## 2026-09-28 후속 — 소진 음식의 최근 후보 제외
+
+신규 migration `20260928010000_meal_log_recent_available_batches.sql`은 get_recent_meal_log_sources의 본인 cooked_batch 존재 검사에 status=leftover 및 batch_status IS DISTINCT FROM depleted를 더한다. 소진 여부를 명확히 표시하지 못하는 옛 weight ledger NULL 음식도 eaten이면 제외한다. 기존 식사 기록/섭취량/영양 이력과 owner/account_generation 검사·권한은 변경하지 않는다. 저장 오류 수정은 웹 조회 경로/행 ID 생성 수정이며 DB 검증을 완화하지 않는다. [격리 DB 검증과 미배포 기록](engineering/feedback-followup-20260928.md) 참조.
+
 > 운영 상태(2026-09-27): 이날까지 누적한 피드백 수정은 웹 `f8824662e90f`·DB 이력 197개에 반영됐다. 개별 항목의 이전 ‘미배포’ 표시는 구현 당시 상태다. [실제 배포 결과와 남은 확인](engineering/feedback-batch-release-20260927.md)을 기준으로 한다.
 
 ## 2026-09-27 후속 — 계획·요리 상태와 완료 화면

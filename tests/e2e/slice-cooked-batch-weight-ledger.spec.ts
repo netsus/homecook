@@ -304,7 +304,7 @@ test.describe("cooked-batch-weight-ledger", () => {
     await expect(weight).toHaveValue("640");
     await dialog.getByRole("button", { name: "완료 저장" }).click();
 
-    await expect(page.getByText("저장된 완료 결과를 확인했어요.")).toBeVisible();
+    await expect(page.getByTestId("cooking-completion-notice")).toBeVisible();
     await expect(page.getByText("팬트리 항목 1개를 반영했어요.")).toBeVisible();
     await expect(page.getByRole("button", { name: "요리 완료" })).toHaveCount(0);
     await expect(page.getByRole("dialog", { name: "요리 완료" })).toHaveCount(0);

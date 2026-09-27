@@ -1,5 +1,7 @@
 "use client";
 
+import { AppBackIcon } from "@/components/shared/app-back-button";
+
 import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 
@@ -316,11 +318,11 @@ export function RecipeBookDetailPicker({
         <div className="web-picker-section-head">
           <button
             aria-label="레시피북 목록으로"
-            className="web-breadcrumb-link"
+            className="web-breadcrumb-link inline-flex items-center gap-1"
             onClick={onBack}
             type="button"
           >
-            ‹ 레시피북 목록
+            <AppBackIcon /> 레시피북 목록
           </button>
         </div>
         {content}

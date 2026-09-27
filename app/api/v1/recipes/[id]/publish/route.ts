@@ -34,7 +34,7 @@ export const POST = withHybridAuthorityRouteError("공개 등록을 완료하지
   if (!receipt || receipt.recipe_id !== id || typeof receipt.idempotency_key !== "string" || !isUuid(receipt.idempotency_key)) {
     return fail("RESOURCE_NOT_FOUND", "직접 등록한 내 레시피만 공개할 수 있어요.", 404);
   }
-  const prepared = await prepareRecipeNutritionSnapshot(client as unknown as RecipeNutritionServiceClient, id);
+  const prepared = await prepareRecipeNutritionSnapshot(client as unknown as RecipeNutritionServiceClient, id, rpcClient as unknown as RecipeNutritionServiceClient);
   const result = await publishManualRecipe({
     rpcClient, storageClient, authorityParams, recipeId: id,
     idempotencyKey: receipt.idempotency_key,

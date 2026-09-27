@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-// Release checks for the September feedback batch. Keep unrelated historical
+// Release checks for the September 28 feedback follow-up batch. Keep unrelated historical
 // image/UI fixtures out of this focused suite; their failures are documented.
 const files = [
   'account-quarantine-screen', 'auth-logout', 'login-screen',
@@ -19,12 +19,17 @@ const files = [
   'cooked-batch-completion-sheet', 'cooked-batch-completion-replay',
   'cooked-batch-pantry-row-selection', 'cooked-batch-lifecycle-actions',
   'mobile-keyboard-navigation', 'use-dialog-boundary', 'recipe-food-catalog-picker',
+  'recipe-content-snapshot-future-propagation', 'recipe-nutrition-service',
+  'account-delete-request', 'recipe-cooking-entry', 'recipe-books-route',
+  'leftovers.frontend', 'meal-log-add-sheet', 'meal-log-detail-actions',
+  'meal-log-ui', 'meal-log-ui-history', 'app-back-button', 'settings-screen',
 ];
 
 const groups = [
   files.map((file) => `tests/${file}.test`),
-  ['tests/manual-recipe-create-screen.test.tsx', '-t', 'cleared ingredient amount|pending publication|does not replay a pending POST|composition|callback identity'],
-  ['tests/planner-meal-screen.test.tsx', '-t', 'does not create a legacy session|snapshot-v2|only the selected shopping_done'],
+  ['tests/manual-recipe-create-screen.test.tsx', '-t', 'cleared ingredient amount|pending publication|does not replay a pending POST|composition|callback identity|history|Korean|save without image'],
+  ['tests/planner-meal-screen.test.tsx', '-t', 'does not create a legacy session|snapshot-v2|only the selected shopping_done|sole 식사 추가|opens the meal-add|renders the desktop meal screen as'],
+  ['tests/planner-week-screen.test.tsx', '-t', 'scroll|shopping history|distant selected'],
 ];
 for (const group of groups) {
   const result = spawnSync('pnpm', ['exec', 'vitest', 'run', ...group], {

@@ -27,7 +27,18 @@ for (const mode of ["planner", "standalone"] as const) {
         steps: [{ step_number: 1, instruction: "두부를 구워요", cooking_method: { code: "grill", label: "굽기", color_key: "brown" }, ingredients_used: [], heat_level: null, duration_seconds: null, duration_text: null }],
       }, pantry_candidates: candidates,
     };
-    await page.route(`**/api/v1/cooking/session-attempts/${sessionId}/cook-mode`, (route) => route.fulfill({ json: { success: true, data: snapshot, error: null } }));
+    let pantryReads = 0;
+    let pantryUpdated = false;
+    let sessionCreates = 0;
+    await page.route(`**/api/v1/cooking/session-attempts/${sessionId}/cook-mode`, (route) => { ++pantryReads; return route.fulfill({ json: { success: true, data: { ...snapshot, pantry_candidates: pantryUpdated ? candidates : [] }, error: null } }); });
+    if (mode === "standalone") {
+      await page.route(`**/api/v1/recipes/${recipeId}`, route => route.fulfill({ json: { success: true, data: { id: recipeId, revision: 4 }, error: null } }));
+      await page.route("**/api/v1/cooking/session-attempts", async route => {
+        ++sessionCreates;
+        expect(route.request().postDataJSON()).toEqual({ mode: "standalone", recipe_id: recipeId, expected_recipe_revision: 4, cooking_servings: 2 });
+        await route.fulfill({ json: { success: true, data: { session_id: sessionId, contract_version: "snapshot_v2", mode, status: "in_progress", content_summary: { recipe_id: recipeId, title: "두부 요리", cooking_servings: 2 } }, error: null } });
+      });
+    }
     const submissions: unknown[] = [];
     await page.route(`**/api/v1/cooking/session-attempts/${sessionId}/complete`, async (route) => {
       submissions.push(route.request().postDataJSON());
@@ -38,10 +49,16 @@ for (const mode of ["planner", "standalone"] as const) {
           weight_status: "known", weight_source: "estimated", batch_status: "available", depleted_reason: null, revision: 1, nutrition_calculation_status: "complete", current_unweighed_closure_event_id: null },
       } } });
     });
-    await page.goto(`/cooking/session-attempts/${sessionId}/cook-mode`);
+    await page.goto(mode === "standalone" ? `/cooking/recipes/${recipeId}/cook-mode?servings=2` : `/cooking/session-attempts/${sessionId}/cook-mode`);
+    await expect(page).toHaveURL(new RegExp(`/cooking/session-attempts/${sessionId}/cook-mode`));
+    await expect(page.getByRole("button", { name: "요리 완료", exact: true })).toBeVisible();
+    const readsBeforeCompletion = pantryReads;
+    pantryUpdated = true;
     await page.getByRole("button", { name: "요리 완료", exact: true }).click();
     const sheet = page.getByRole("dialog", { name: "요리 완료", exact: true });
     await expect(sheet).toBeVisible();
+    expect(pantryReads).toBeGreaterThan(readsBeforeCompletion);
+    if (mode === "standalone") expect(sessionCreates).toBe(1);
     await expect(sheet.getByRole("radio")).toHaveCount(0);
     await expect(sheet.getByRole("spinbutton")).toHaveCount(0);
     await expect(sheet.getByText("단단한 두부", { exact: true })).toHaveCount(1);
@@ -58,6 +75,6 @@ for (const mode of ["planner", "standalone"] as const) {
     await sheet.getByRole("button", { name: "완료 저장" }).click();
     await expect.poll(() => submissions.length).toBe(1);
     expect(submissions[0]).toEqual({ consumed_pantry_item_ids: [candidates[0].pantry_item_id], weight_action: "weigh_later", finished_weight_g: null });
-    await expect(page.getByRole("link", { name: "남은요리 보기" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "식사 기록하기" })).toBeVisible();
   });
 }

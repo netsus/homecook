@@ -108,6 +108,7 @@ vi.mock("next/navigation", () => ({
     refresh: mockRouterRefresh,
   }),
   useSearchParams: () => navigationMocks.searchParams(),
+  usePathname: () => "/meal",
 }));
 
 vi.mock("@/components/auth/social-login-buttons", () => ({
@@ -761,7 +762,8 @@ describe("MealScreen", () => {
     expect(within(firstCard).getByRole("group", { name: "인분 조절" })).toBeTruthy();
     expect(within(list).getAllByRole("button", { name: / 삭제$/ })).toHaveLength(2);
     const addCta = screen.getByTestId("meal-screen-add-cta");
-    expect(addCta.className).toContain("web-meal-add-link");
+    expect(screen.getByTestId("meal-screen-header").contains(addCta)).toBe(true);
+    expect(addCta.getAttribute("aria-label")).toBe("식사 추가");
   });
 
   it("keeps a single desktop meal card in one column of the two-column grid", async () => {
@@ -1120,7 +1122,7 @@ describe("MealScreen", () => {
 
   // ── Sticky CTA ───────────────────────────────────────────────────────────
 
-  it("renders the 식사 추가 CTA on ready state", async () => {
+  it("keeps the sole 식사 추가 action in the header on ready state", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal()] });
 
@@ -1129,6 +1131,9 @@ describe("MealScreen", () => {
     await waitFor(() => {
       expect(screen.getByTestId("meal-screen-add-cta")).toBeTruthy();
     });
+    expect(screen.getByTestId("meal-screen-header").contains(screen.getByRole("button", { name: "식사 추가" }))).toBe(true);
+    expect(screen.getAllByTestId("meal-screen-add-cta")).toHaveLength(1);
+    expect(screen.queryByText("+ 식사 추가")).toBeNull();
   });
 
   it("opens the meal-add option sheet from the app CTA instead of navigating to menu-add", async () => {

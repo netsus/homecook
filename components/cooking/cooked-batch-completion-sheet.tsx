@@ -129,15 +129,6 @@ export function CookedBatchCompletionSheet({
       titleRef={titleRef}
       titleTabIndex={-1}
     >
-      {submitting ? (
-        <div
-          className="rounded-[var(--radius-card)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm font-semibold leading-5 text-[var(--brand-primary-hover)]"
-          role="status"
-        >
-          완료 결과를 기다리는 중이에요. 버튼과 선택을 잠시 잠갔어요.
-        </div>
-      ) : null}
-
       {serverError ? (
         <div
           className="rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--surface-fill)] px-4 py-3 text-sm leading-5 text-[var(--danger-strong)] outline-none"
@@ -147,7 +138,6 @@ export function CookedBatchCompletionSheet({
           tabIndex={-1}
         >
           <strong className="block font-bold">{serverError.message}</strong>
-          <span className="mt-1 block text-[var(--wave1-text-2)]">선택한 항목은 유지했어요. 다시 시도해 주세요.</span>
         </div>
       ) : null}
 

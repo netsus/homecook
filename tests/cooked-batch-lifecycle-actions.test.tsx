@@ -33,105 +33,26 @@ function batch(
   };
 }
 
-const depletedReasons = [
-  ["consumed", "다 먹음"],
-  ["discarded", "모두 버림"],
-  ["mixed", "먹음·버림으로 소진"],
-  ["consumed_unweighed", "무게 없이 다 먹음"],
-  ["discarded_unweighed", "무게 없이 모두 버림"],
-  ["mixed_unweighed", "무게 없이 먹고 버림"],
-] as const;
-
 describe("cooked batch lifecycle presentation", () => {
   afterEach(cleanup);
 
-  it("shows only state-eligible #11 actions and all six terminal truths", () => {
-    const items = [
-      batch("10000000-0000-4000-8000-000000000001", {}),
-      batch("10000000-0000-4000-8000-000000000002", {
-        finished_weight_g: null,
-        remaining_weight_g: null,
-        weight_status: "missing",
-      }),
-      batch("10000000-0000-4000-8000-000000000003", {
-        finished_weight_g: null,
-        remaining_weight_g: null,
-        weight_status: "unrecoverable",
-      }),
-      batch("10000000-0000-4000-8000-000000000004", {
-        batch_status: null,
-        depleted_reason: null,
-        finished_weight_g: null,
-        nutrition_calculation_status: null,
-        remaining_weight_g: null,
-        revision: null,
-        weight_status: null,
-      }),
-      ...depletedReasons.map(([reason], index) => batch(
-        `20000000-0000-4000-8000-00000000000${index + 1}`,
-        {
-          batch_status: "depleted",
-          depleted_reason: reason,
-          remaining_weight_g: 0,
-        },
-      )),
-      batch("30000000-0000-4000-8000-000000000001", {
-        batch_status: "depleted",
-        current_unweighed_closure_event_id: "40000000-0000-4000-8000-000000000001",
-        depleted_reason: "mixed_unweighed",
-        finished_weight_g: null,
-        remaining_weight_g: null,
-        weight_status: "missing",
-      }),
-    ];
-
-    render(
-      <CookedBatchSection
-        error={null}
-        hasNext={false}
-        items={items}
-        onAction={() => undefined}
-        onLoadMore={() => undefined}
-        onRetry={() => undefined}
-        pagePending={false}
-        state="ready"
-      />,
-    );
-
-    const cards = screen.getAllByTestId("cooked-batch-card");
-    expect(within(cards[0]).getByRole("button", { name: /양 조정/ })).toBeTruthy();
-    expect(within(cards[0]).getByRole("button", { name: /버림/ })).toBeTruthy();
-    expect(within(cards[1]).getByRole("button", { name: /완성 중량 입력/ })).toBeTruthy();
-    expect(within(cards[2]).queryByRole("button", { name: /완성 중량 입력/ })).toBeNull();
-    expect(within(cards[3]).queryByRole("button")).toBeNull();
-
-    for (const [, label] of depletedReasons) {
-      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
-    }
-    for (const card of cards.slice(4, 10)) {
-      expect(within(card).queryByRole("button")).toBeNull();
-    }
-    expect(within(cards.at(-1)!).getByRole("button", { name: /방금 종료 취소/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /먹은 양 기록/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /다시 열기/ })).toBeNull();
-  });
-
-  it("labels estimated weights and permits a measured replacement only before consumption", async () => {
-    const onAction = vi.fn();
-    const untouched = batch("estimate-1", { weight_source: "estimated", revision: 1, remaining_weight_g: 800 });
-    render(<CookedBatchSection error={null} hasNext={false} items={[
-      untouched,
-      batch("estimate-2", { weight_source: "estimated", revision: 2 }),
-      batch("measured-3", { weight_source: "measured", revision: 1 }),
-    ]} onAction={onAction} onLoadMore={() => undefined} onRetry={() => undefined} pagePending={false} state="ready" />);
-    const cards = screen.getAllByTestId("cooked-batch-card");
-    expect(within(cards[0]).getAllByText("추정 800g")).toHaveLength(2);
-    await userEvent.click(within(cards[0]).getByRole("button", { name: /실제 무게 입력/ }));
-    expect(onAction).toHaveBeenCalledWith(untouched, "set_finished_weight");
-    expect(within(cards[1]).queryByRole("button", { name: /실제 무게 입력/ })).toBeNull();
-    expect(within(cards[1]).getByRole("button", { name: /양 조정/ })).toBeTruthy();
-    expect(within(cards[2]).queryByRole("button", { name: /실제 무게 입력/ })).toBeNull();
-    expect(within(cards[2]).queryByText(/추정/)).toBeNull();
+  it("shows one remaining-food card with recording and secondary management actions", async () => {
+    const onRecord = vi.fn(), onAction = vi.fn();
+    const known = batch("known-1", { weight_source: "estimated", revision: 1 });
+    render(<CookedBatchSection error={null} hasNext={false} items={[known,
+      batch("missing-2", { weight_status: "missing", finished_weight_g: null, remaining_weight_g: null }),
+      batch("gone-3", { status: "eaten", batch_status: "depleted", remaining_weight_g: 0 }),
+    ]} onAction={onAction} onRecord={onRecord} onLoadMore={() => undefined} onRetry={() => undefined} pagePending={false} state="ready" />);
+    expect(screen.getAllByTestId("cooked-batch-card")).toHaveLength(2);
+    expect(screen.queryByText("중량·잔량 기록")).toBeNull();
+    expect(screen.getByText("약 500g 남음")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "요리 1 식사 기록" }));
+    expect(onRecord).toHaveBeenCalledWith(known);
+    const card = screen.getAllByTestId("cooked-batch-card")[0];
+    expect(within(card).getByLabelText("요리 1 관리").getAttribute("aria-expanded")).toBe("false");
+    await userEvent.click(within(card).getByLabelText("요리 1 관리"));
+    await userEvent.click(within(card).getByRole("button", { name: "무게 수정" }));
+    expect(onAction).toHaveBeenCalledWith(known, "set_finished_weight");
   });
 
   it("requires a second discard confirmation with amount, reason, current, and result", async () => {
@@ -160,7 +81,7 @@ describe("cooked batch lifecycle presentation", () => {
     expect(within(summary).getByText("버릴 양").nextSibling?.textContent).toBe("120g");
     expect(within(summary).getByText("적용 후 안내").nextSibling?.textContent).toBe("380g");
     expect(within(summary).getByText("사유").nextSibling?.textContent).toBe("상해서");
-    expect(within(summary).getByText(/최종 잔량과 상태는 서버 응답으로 확정/)).toBeTruthy();
+    expect(within(summary).queryByText(/최종 잔량과 상태는 서버 응답으로 확정/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "버림 기록" }));
     expect(onSubmit).toHaveBeenCalledWith({
@@ -273,10 +194,10 @@ describe("cooked batch lifecycle presentation", () => {
 
     await user.click(screen.getByRole("radio", { name: "먹고 버림" }));
     expect(screen.getByText("선택한 종료 결과").nextSibling?.textContent).toBe("먹고 버림");
-    expect(screen.getByText(/그램 중량을 남기지 않아요/)).toBeTruthy();
-    expect(screen.getByText(/식사 영양을 계산하지 않아요/)).toBeTruthy();
-    expect(screen.getByText(/meal-log 식사 기록을 만들지 않아요/)).toBeTruthy();
-    await user.click(screen.getByRole("checkbox", { name: /그램 중량.*식사 영양.*meal-log 식사 기록/ }));
+    expect(screen.getByText("음식 목록만 정리하며 식사 기록은 남기지 않아요.")).toBeTruthy();
+
+
+    await user.click(screen.getByRole("checkbox", { name: "식사 기록 없이 정리할게요" }));
     await user.click(screen.getByRole("button", { name: "이 상태로 종료" }));
 
     expect(onSubmit).toHaveBeenCalledWith({

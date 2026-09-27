@@ -1,5 +1,8 @@
 "use client";
 
+import { COOKED_BATCH_CHANGED_EVENT, readChangedCookedBatchId } from "@/lib/cooked-batch-events";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import { DecimalInput } from "@/components/shared/decimal-input";
 
 import Image from "next/image";
@@ -7,6 +10,7 @@ import Link from "next/link";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useDialogViewport } from "@/components/shared/use-dialog-viewport";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { fetchFoodCatalogSearch, fetchFoodCatalogSource, type FoodCatalogSearchItem } from "@/lib/api/food-catalog-search";
 import { fetchCookedBatches, type CookedBatchListData } from "@/lib/api/cooking";
@@ -157,10 +161,10 @@ function isUnauthorized(error: unknown) {
 }
 
 function isAvailableCookedBatch(batch: CookedBatchProjection) {
-  return (batch.weight_status === null && batch.batch_status === null)
+  return batch.status !== "eaten" && ((batch.weight_status === null && batch.batch_status === null)
     || (batch.weight_status === "known"
       && batch.batch_status === "available"
-      && (batch.remaining_weight_g ?? 0) > 0);
+      && (batch.remaining_weight_g ?? 0) > 0));
 }
 
 async function findCookedBatch(
@@ -201,6 +205,7 @@ export function MealLogAddSheet({
   onUnauthorized,
 }: MealLogAddSheetProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const viewportStyle = useDialogViewport();
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const restoredCookedBatchId = initialSelection?.type === "cooked_batch"
@@ -222,6 +227,7 @@ export function MealLogAddSheet({
   const [catalogCursor, setCatalogCursor] = useState<string | null>(null);
   const [catalogHasNext, setCatalogHasNext] = useState(false);
   const [catalogSearching, setCatalogSearching] = useState(false);
+  const [catalogLoadedQuery, setCatalogLoadedQuery] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const catalogRequestRef = useRef(0);
   const catalogAbortRef = useRef<AbortController | null>(null);
@@ -238,6 +244,23 @@ export function MealLogAddSheet({
   const [checkingRecentId, setCheckingRecentId] = useState<string | null>(null);
   const [unavailableRecentBatchIds, setUnavailableRecentBatchIds] = useState<Set<string>>(new Set());
   const selectionRequestRef = useRef(0);
+  const batchGeneration = useRef(0);
+  const [batchRefresh, setBatchRefresh] = useState(0);
+  useEffect(() => {
+    const changed = (event: Event) => {
+      const id = readChangedCookedBatchId(event);
+      if (!id) return;
+      ++batchGeneration.current;
+      ++selectionRequestRef.current;
+      setCheckingRecentId(null);
+      setSelection(current => current?.type === "cooked_batch" && current.id === id ? null : current);
+      setBatches(current => current.filter(batch => batch.id !== id));
+      setUnavailableRecentBatchIds(current => new Set(current).add(id));
+      setBatchRefresh(current => current + 1);
+    };
+    window.addEventListener(COOKED_BATCH_CHANGED_EVENT, changed);
+    return () => window.removeEventListener(COOKED_BATCH_CHANGED_EVENT, changed);
+  }, []);
   const restoredSelectionPending = restoredSourcePending
     && selection?.type === initialSelection?.type
     && selection?.id === initialSelection?.id;
@@ -256,6 +279,8 @@ export function MealLogAddSheet({
 
   useEffect(() => {
     let active = true;
+    const generation = batchGeneration.current;
+    const isCurrent = () => active && generation === batchGeneration.current;
     const restorationRequest = selectionRequestRef.current;
     setLoading(true);
     Promise.all([
@@ -263,16 +288,24 @@ export function MealLogAddSheet({
       fetchCookedBatches({ availability: "all", limit: 20 }),
     ])
       .then(async ([recentData, batchData]) => {
-        if (!active) return;
+        if (!isCurrent()) return;
         setRecent(recentData.items);
         setRecentCursor(recentData.next_cursor);
         setRecentHasNext(recentData.has_next);
         setBatches(batchData.items);
+        setUnavailableRecentBatchIds(current => {
+          const next = new Set(current);
+          for (const batch of batchData.items) {
+            if (isAvailableCookedBatch(batch)) next.delete(batch.id);
+            else if (batch.status === "eaten" || batch.batch_status === "depleted") next.add(batch.id);
+          }
+          return next;
+        });
         setBatchCursor(batchData.next_cursor);
         setBatchHasNext(batchData.has_next);
         if (restoredCookedBatchId) {
-          const batch = await findCookedBatch(batchData, restoredCookedBatchId, () => active);
-          if (!active) return;
+          const batch = await findCookedBatch(batchData, restoredCookedBatchId, isCurrent);
+          if (!isCurrent()) return;
           setSelection((current) => {
             if (current?.type !== "cooked_batch" || current.id !== restoredCookedBatchId) return current;
             if (!batch || !isAvailableCookedBatch(batch)) return null;
@@ -288,7 +321,7 @@ export function MealLogAddSheet({
           const source = await fetchFoodCatalogSource(
             initialSelection.type, initialSelection.id,
           );
-          if (!active || restorationRequest !== selectionRequestRef.current) return;
+          if (!isCurrent() || restorationRequest !== selectionRequestRef.current) return;
           if (!source || !sourceUnitOptions(source).includes(initialSelection.unit)) {
             setSelection(null);
             setError("이 음식의 현재 정보나 단위를 확인할 수 없어요. 제품·재료 검색에서 다시 선택해 주세요.");
@@ -302,7 +335,7 @@ export function MealLogAddSheet({
         }
       })
       .catch((reason: unknown) => {
-        if (!active) return;
+        if (!isCurrent()) return;
         if (initialSelection && restorationRequest === selectionRequestRef.current) {
           setSelection((current) => current?.type === initialSelection.type
             && current.id === initialSelection.id ? null : current);
@@ -314,7 +347,7 @@ export function MealLogAddSheet({
         setError(reason instanceof Error ? reason.message : "음식 목록을 불러오지 못했어요.");
       })
       .finally(() => {
-        if (active) {
+        if (isCurrent()) {
           setLoading(false);
           setRestoredSourcePending(false);
         }
@@ -322,7 +355,7 @@ export function MealLogAddSheet({
     return () => {
       active = false;
     };
-  }, [columnId, initialSelection, onUnauthorized, restoredCookedBatchId]);
+  }, [batchRefresh, columnId, initialSelection, onUnauthorized, restoredCookedBatchId]);
 
   const selectedColumn = useMemo(
     () => columns.find((column) => column.id === columnId),
@@ -336,13 +369,14 @@ export function MealLogAddSheet({
     setCatalogCursor(null);
     setCatalogHasNext(false);
     setCatalogSearching(false);
+    setCatalogLoadedQuery(null);
     if (tab !== "catalog") return;
     const normalizedQuery = query.trim();
     if (!normalizedQuery) return;
+    setCatalogSearching(true);
     const controller = new AbortController();
     catalogAbortRef.current = controller;
     const timer = window.setTimeout(() => {
-      setCatalogSearching(true);
       setError(null);
       void fetchFoodCatalogSearch({
         q: normalizedQuery,
@@ -352,6 +386,7 @@ export function MealLogAddSheet({
         .then((result) => {
           if (controller.signal.aborted || requestId !== catalogRequestRef.current) return;
           setCatalog(result.items);
+          setCatalogLoadedQuery(normalizedQuery);
           setCatalogCursor(result.next_cursor);
           setCatalogHasNext(result.has_next);
         })
@@ -375,11 +410,13 @@ export function MealLogAddSheet({
   }, [columnId, onUnauthorized, query, tab]);
 
   async function loadMoreRecent() {
+    const generation = batchGeneration.current;
     if (!recentHasNext || !recentCursor || loadingMore) return;
     setLoadingMore("recent");
     setError(null);
     try {
       const result = await fetchMealLogRecent({ cursor: recentCursor });
+      if (generation !== batchGeneration.current) return;
       setRecent((current) => [...current, ...result.items]);
       setRecentCursor(result.next_cursor);
       setRecentHasNext(result.has_next);
@@ -395,11 +432,13 @@ export function MealLogAddSheet({
   }
 
   async function loadMoreBatches() {
+    const generation = batchGeneration.current;
     if (!batchHasNext || !batchCursor || loadingMore) return;
     setLoadingMore("batch");
     setError(null);
     try {
       const result = await fetchCookedBatches({ availability: "all", cursor: batchCursor, limit: 20 });
+      if (generation !== batchGeneration.current) return;
       setBatches((current) => [...new Map([...current, ...result.items].map((batch) => [batch.id, batch])).values()]);
       setBatchCursor(result.next_cursor);
       setBatchHasNext(result.has_next);
@@ -595,6 +634,7 @@ export function MealLogAddSheet({
             || unavailableRecentBatchIds.has(item.source.id)
             || Boolean(batch && !isAvailableCookedBatch(batch))
           );
+          if (item.source.type === "cooked_batch" && (unavailableRecentBatchIds.has(item.source.id) || batch?.status === "eaten" || batch?.batch_status === "depleted")) return null;
           return (
             <li key={`${item.source.type}-${item.source.id}`}>
               <button
@@ -608,7 +648,7 @@ export function MealLogAddSheet({
               </button>
               {unavailable ? <p className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 추가할 수 없는 음식이에요. 요리한 음식 탭에서 상태를 확인해 주세요.</p>
                 : checkingRecentId === item.source.id ? <p aria-live="polite" className="px-3 pb-3 text-xs text-[var(--text-2)]">음식의 현재 정보를 확인하고 있어요…</p>
-                  : item.source.type === "cooked_batch" && !batch ? <p className="px-3 pb-3 text-xs text-[var(--text-2)]">선택하면 현재 남은 양을 확인해요.</p> : null}
+                  : null}
             </li>
           );
         })}
@@ -622,16 +662,17 @@ export function MealLogAddSheet({
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--foreground-alpha-40)] lg:items-center lg:p-6">
+    <div className="fixed inset-x-0 z-50 flex items-end justify-center overflow-hidden bg-[var(--foreground-alpha-40)] lg:items-center lg:p-6"
+      style={{ ...viewportStyle, top: "var(--dialog-viewport-top, 0px)", height: "var(--dialog-viewport-height, 100dvh)" }}>
       <div
         aria-label="먹은 음식 추가"
         aria-modal="true"
-        className="fixed inset-0 flex h-[100dvh] max-h-[100dvh] w-full flex-col bg-[var(--surface)] outline-none lg:static lg:h-auto lg:min-h-0 lg:max-w-xl lg:rounded-[var(--radius-card)] lg:border lg:border-[var(--line-strong)]"
+        className="relative flex h-full max-h-full min-h-0 w-full flex-col bg-[var(--surface)] outline-none lg:max-h-[760px] lg:max-w-xl lg:rounded-[var(--radius-card)] lg:border lg:border-[var(--line-strong)]"
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
       >
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--line-strong)] px-4 py-3">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line-strong)] px-4 py-3">
           <div className="min-w-0">
             <h2 className="text-lg font-extrabold">먹은 음식 추가</h2>
             <p className="text-xs text-[var(--text-2)]">
@@ -649,7 +690,7 @@ export function MealLogAddSheet({
           </button>
         </header>
 
-        <div aria-label="음식 출처 선택" className="grid grid-cols-2 gap-1 border-b border-[var(--line-strong)] p-2" role="tablist">
+        <div aria-label="음식 출처 선택" className="grid shrink-0 grid-cols-2 gap-1 border-b border-[var(--line-strong)] p-2" role="tablist">
           {SOURCE_TABS.map(({ id, label }, index) => (
             <button
               aria-controls={`meal-log-source-${id}`}
@@ -687,20 +728,36 @@ export function MealLogAddSheet({
           ))}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 [scroll-padding-bottom:10rem]">
+        {tab === "catalog" ? (
+          <div className="shrink-0 border-b border-[var(--line)] px-4 py-3">
+            <label className="block text-sm font-bold">
+              <span className="sr-only">제품·재료 검색</span>
+              <input
+                className="h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-base font-normal"
+                onChange={(event) => { cancelPendingSelection(); setQuery(event.target.value); }}
+                onCompositionStart={cancelPendingSelection}
+                onCompositionEnd={(event) => setQuery(event.currentTarget.value)}
+                placeholder="제품·재료 이름을 입력해 주세요"
+                type="search"
+                value={query}
+              />
+            </label>
+          </div>
+        ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4" data-testid="meal-log-source-scroll">
           {error ? <p className="mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] p-3 text-sm" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
-          {loading ? <p aria-busy="true" className="py-8 text-center text-sm text-[var(--text-2)]">불러오는 중…</p> : null}
+          {loading && tab === "cooked" ? <div aria-busy="true" aria-label="음식 목록 불러오는 중" className="space-y-3 py-4" role="status"><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
 
           {tab === "cooked" ? (
             <section aria-labelledby="meal-log-source-cooked-tab" id="meal-log-source-cooked" role="tabpanel">
               {recentSection}
               <h3 className="mt-5 text-sm font-extrabold">요리한 음식 전체</h3>
               <ul className="divide-y divide-[var(--line-strong)]">
-                {batches.map((batch) => {
+                {batches.filter(batch => batch.status !== "eaten" && batch.batch_status !== "depleted").map((batch) => {
                   const selectable = batch.weight_status === "known"
                     && batch.batch_status === "available"
                     && (batch.remaining_weight_g ?? 0) > 0;
-                  const legacySelectable = batch.weight_status === null && batch.batch_status === null;
+                  const legacySelectable = batch.status !== "eaten" && batch.weight_status === null && batch.batch_status === null;
                   const weightEligible = batch.weight_status === "missing"
                     && batch.batch_status === "available"
                     && batch.revision !== null;
@@ -773,21 +830,15 @@ export function MealLogAddSheet({
             </section>
           ) : (
             <section aria-labelledby="meal-log-source-catalog-tab" id="meal-log-source-catalog" role="tabpanel">
-              <div>
-                <label className="min-w-0 flex-1 text-sm font-bold">
-                  제품·재료 검색
-                  <input
-                    className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal"
-                    onChange={(event) => { cancelPendingSelection(); setQuery(event.target.value); }}
-                    onCompositionStart={cancelPendingSelection}
-                    onCompositionEnd={(event) => setQuery(event.currentTarget.value)}
-                    placeholder="입력하면 바로 검색돼요"
-                    type="search"
-                    value={query}
-                  />
-                </label>
-                {catalogSearching ? <p aria-live="polite" className="mt-2 text-xs text-[var(--text-2)]">검색 중…</p> : null}
-              </div>
+              {catalogSearching ? (
+                <div aria-label="제품·재료 검색 중" aria-busy="true" className="space-y-3" role="status">
+                  {[0, 1, 2].map(index => <div aria-hidden="true" className="h-16 animate-pulse rounded-[var(--radius-card)] bg-[var(--surface-fill)]" key={index} />)}
+                </div>
+              ) : null}
+              {!catalogSearching && !error && catalogLoadedQuery === query.trim() && catalog.length === 0 ? (
+                <p className="py-5 text-sm text-[var(--text-2)]" role="status">검색 결과가 없어요. 다른 제품·재료 이름으로 찾아보세요.</p>
+              ) : null}
+              {query.trim() === "" ? <p className="mb-4 text-sm text-[var(--text-2)]">제품이나 재료 이름을 입력하면 검색할 수 있어요.</p> : null}
               {query.trim() === "" && catalog.length === 0 ? (
                 recentSection
               ) : (
@@ -814,9 +865,8 @@ export function MealLogAddSheet({
         </div>
 
         {selection ? (
-          <footer className="border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
+          <footer className="shrink-0 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
             <p className="font-bold">{selection.name}</p>
-            <p className="mt-1 text-sm text-[var(--text-2)]">{selection.unit === "g" ? "먹은 양을 g(그램) 단위로 입력해 주세요." : `먹은 양은 ${quantityUnitLabel(selection.unit)} 기준이에요. g 입력은 정확한 환산 정보가 있는 음식만 지원해요.`}</p>
             {selection.type === "cooked_batch" ? (
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <label className="text-sm font-bold">먹은 날짜<input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onChange={(event) => setTargetDate(event.target.value)} type="date" value={targetDate} /></label>

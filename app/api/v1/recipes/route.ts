@@ -1157,7 +1157,7 @@ async function finishManualRecipePublication(
   if (!row.id || row.created_by !== authority.ownerUuid || row.source_type !== "manual") {
     throw new Error("Invalid manual recipe receipt");
   }
-  const prepared = await prepareRecipeNutritionSnapshot(dbClient, row.id);
+  const prepared = await prepareRecipeNutritionSnapshot(dbClient, row.id, rpcClient as unknown as RecipeNutritionServiceClient);
   const storageClient = createRecipeImageInternalClient();
   if (!storageClient) throw new Error("Recipe image publication is unavailable");
   const published = await publishManualRecipe({

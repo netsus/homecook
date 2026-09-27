@@ -26,6 +26,7 @@ vi.mock("next/navigation", () => ({
     replace: navigationMocks.replace,
   }),
   useSearchParams: () => navigationMocks.searchParams(),
+  usePathname: () => "/planner",
 }));
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({

@@ -316,7 +316,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const itemsResult = await auth.dbClient
     .from("recipe_book_items")
-    .select("book_id")
+    .select("book_id, recipes!inner(id)")
     .eq("book_id", bookId);
 
   if (itemsResult.error || !itemsResult.data) {

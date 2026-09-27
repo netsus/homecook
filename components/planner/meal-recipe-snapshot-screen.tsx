@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ContentState } from "@/components/shared/content-state";
+import { AppBackButton } from "@/components/shared/app-back-button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fetchJson, isApiFetchError } from "@/lib/api/fetch-json";
 import { formatHeatLevelLabel } from "@/lib/heat-level";
 import type { MealRecipeSnapshotData } from "@/types/meal-recipe-snapshot";
@@ -25,11 +27,15 @@ export function MealRecipeSnapshotScreen({ mealId }: { mealId: string }) {
   }, [mealId, attempt]);
   return <div className="mx-auto max-w-3xl px-4 pb-4 pt-4">
     <header className="mb-6 flex items-center gap-3">
-      <button aria-label="이전 화면" className="min-h-11 min-w-11 rounded-full border border-[var(--line)] text-xl" onClick={() => window.history.length > 1 ? router.back() : router.push("/planner")} type="button">‹</button>
+      <AppBackButton ariaLabel="이전 화면" onClick={() => window.history.length > 1 ? router.back() : router.push("/planner")} />
       <p className="font-semibold">계획에 저장된 레시피</p>
     </header>
     {error ? <ContentState tone="error" showEyebrow={false} title={error.message} actionLabel={error.login ? "로그인" : "다시 시도"} onAction={() => error.login ? router.push(`/login?next=${encodeURIComponent(`/meal/${mealId}/recipe`)}`) : setAttempt((value) => value + 1)} />
-      : !data ? <ContentState tone="loading" title="레시피를 불러오는 중이에요" showEyebrow={false} />
+      : !data ? <div aria-busy="true" aria-label="계획 레시피 불러오는 중" className="space-y-6" role="status">
+        <Skeleton className="h-8 w-3/4 rounded-lg" />
+        <Skeleton className="h-4 w-28 rounded" />
+        <div className="space-y-4">{[0, 1, 2, 3].map((row) => <Skeleton className="h-12 w-full rounded-lg" key={row} />)}</div>
+      </div>
       : <>
         <h1 className="break-words text-2xl font-bold">{data.title}</h1>
         <p className="mt-2 text-sm text-[var(--text-2)]">이 계획에 저장한 내용 · {data.planned_servings}인분</p>

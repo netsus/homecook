@@ -1,9 +1,10 @@
 "use client";
 
+import { AppBackButton } from "@/components/shared/app-back-button";
+
 import { MealPinnedNutrition } from "@/components/planner/meal-pinned-nutrition";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -221,34 +222,15 @@ interface AppBarProps {
   titleFull: string;
   titleShort: string;
   onBack: () => void;
+  onAddMeal: () => void;
+  canAdd: boolean;
 }
 
-function AppBar({ titleFull, titleShort, onBack }: AppBarProps) {
+function AppBar({ titleFull, titleShort, onBack, onAddMeal, canAdd }: AppBarProps) {
   return (
-    <div className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
+    <div className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]" data-testid="meal-screen-header">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
-        <button
-          aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
-          onClick={onBack}
-          type="button"
-        >
-          <svg
-            fill="none"
-            height="20"
-            viewBox="0 0 20 20"
-            width="20"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 5L7 10L12 15"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            />
-          </svg>
-        </button>
+        <AppBackButton onClick={onBack} />
         <h1
           aria-label={titleFull}
           className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]"
@@ -257,8 +239,7 @@ function AppBar({ titleFull, titleShort, onBack }: AppBarProps) {
           <span className="hidden [@media(min-width:361px)]:inline">{titleFull}</span>
           <span className="[@media(min-width:361px)]:hidden">{titleShort}</span>
         </h1>
-        {/* Right spacer matching back button width */}
-        <div className="h-8 w-8 shrink-0" aria-hidden="true" />
+        <button aria-label="식사 추가" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--brand)] hover:bg-[var(--surface-fill)] disabled:opacity-40" data-testid="meal-screen-add-cta" disabled={!canAdd} onClick={onAddMeal} type="button"><PlusIcon /></button>
       </div>
     </div>
   );
@@ -613,7 +594,6 @@ function MealWebLoadingSkeleton({
 }
 
 function MealWebView({
-  addMealHref,
   authState,
   conflictErrors,
   errorMessage,
@@ -640,7 +620,6 @@ function MealWebView({
   totalServings,
   hasCookingStartPending,
 }: {
-  addMealHref: string;
   authState: AuthState;
   conflictErrors: Record<string, string>;
   errorMessage: string | null;
@@ -699,9 +678,9 @@ function MealWebView({
           <span className="web-breadcrumb-current">{breadcrumbCurrent}</span>
         </nav>
 
-        <div className="web-meal-page-head">
-          <p>끼니 화면</p>
-          <h1>{pageTitle}</h1>
+        <div className="web-meal-page-head grid-cols-[minmax(0,1fr)_auto] items-center" data-testid="meal-screen-header">
+          <div><p>끼니 화면</p><h1>{pageTitle}</h1></div>
+          <button aria-label="식사 추가" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--brand)] text-[var(--brand)] disabled:opacity-40" data-testid="meal-screen-add-cta" disabled={authState !== "authenticated"} onClick={onAddMeal} type="button"><PlusIcon /></button>
         </div>
 
         {nutritionSummary}
@@ -725,11 +704,6 @@ function MealWebView({
 
         {screenState === "empty" ? (
           <WebEmptyState
-            action={
-              <WebButton onClick={onAddMeal} data-testid="meal-screen-add-cta">
-                식사 추가
-              </WebButton>
-            }
             data-testid="meal-screen-empty"
             description="레시피 검색, 팬트리 기반 추천, 직접 등록으로 식사를 추가할 수 있어요."
             title="이 끼니에 등록된 식사가 없어요"
@@ -785,10 +759,6 @@ function MealWebView({
                   </div>
                 </div>
 
-                <Link className="web-meal-add-link" data-testid="meal-screen-add-cta" href={addMealHref}>
-                  <PlusIcon />
-                  식사 추가
-                </Link>
               </div>
             </aside>
           </div>
@@ -1711,6 +1681,8 @@ export function MealScreen({
           titleFull={titleFull}
           titleShort={titleShort}
           onBack={navigateToPlanner}
+          onAddMeal={openMealAddSheet}
+          canAdd={false}
         />
         <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-center">
           <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-5 shadow-[0_1px_3px_var(--shadow-color-subtle)]">
@@ -1735,7 +1707,6 @@ export function MealScreen({
       {shouldRenderWebView ? (
         <div className="hidden lg:block">
           <MealWebView
-            addMealHref={addMealHref}
             authState={authState}
             conflictErrors={conflictErrors}
             errorMessage={errorMessage}
@@ -1773,6 +1744,8 @@ export function MealScreen({
           titleFull={titleFull}
           titleShort={titleShort}
           onBack={navigateToPlanner}
+          onAddMeal={openMealAddSheet}
+          canAdd={authState === "authenticated"}
         />
 
         {/* Scrollable content area */}
@@ -1824,15 +1797,6 @@ export function MealScreen({
                   <p className="text-base text-[var(--text-3)]">
                     이 끼니에 등록된 식사가 없어요.
                   </p>
-                  {/* Inline prominent CTA for empty state */}
-                  <button
-                    className="mt-6 flex h-[var(--control-height-xl)] w-full max-w-xs items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand)]"
-                    data-testid="meal-screen-add-cta"
-                    onClick={openMealAddSheet}
-                    type="button"
-                  >
-                    + 식사 추가
-                  </button>
                 </div>
               ) : null}
 
@@ -1869,18 +1833,7 @@ export function MealScreen({
 
             </div>
           </div>
-          {screenState === "ready" ? (
-            <div className="shrink-0 border-t border-[var(--line-strong)] bg-[var(--surface)] p-4">
-              <button
-                className="flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand-primary-text)] bg-[var(--surface)] px-4 text-base font-semibold text-[var(--brand-primary-text)]"
-                data-testid="meal-screen-add-cta"
-                onClick={openMealAddSheet}
-                type="button"
-              >
-                + 식사 추가
-              </button>
-            </div>
-          ) : null}
+
         </div>
       </div>
       ) : null}

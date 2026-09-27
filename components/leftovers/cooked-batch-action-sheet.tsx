@@ -171,7 +171,7 @@ export function CookedBatchActionSheet({
       ariaLabelledBy="cooked-batch-action-title"
       bodyClassName="space-y-4"
       closeDisabled={pending}
-      description={`${batch.recipe_title} · 서버의 현재 기록을 기준으로 반영해요.`}
+      description={batch.recipe_title}
       footer={
         <div
           className={`${destructive ? "[--wave1-mint-contrast:var(--danger-strong)] [--wave1-mint-contrast-deep:var(--foreground)]" : "[--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)]"} [&_button]:text-base`}
@@ -195,15 +195,15 @@ export function CookedBatchActionSheet({
       titleRef={titleRef}
       titleTabIndex={-1}
     >
-      {pending ? <p className="rounded-[var(--radius-card)] bg-[var(--brand-primary-soft)] p-3 text-sm" role="status">서버 결과를 기다리는 중이에요. 창을 닫지 않고 입력을 유지해요.</p> : null}
-      {error ? <div className="rounded-[var(--radius-card)] border border-[var(--danger-border)] p-3 text-sm outline-none" id={ERROR_SUMMARY_ID} ref={errorRef} role="alert" tabIndex={-1}>{error.message}<span className="mt-1 block text-xs text-[var(--text-3)]">입력값은 유지했어요. 서버의 최신 상태를 확인한 뒤 다시 시도해 주세요.</span></div> : null}
+      {pending ? <p className="rounded-[var(--radius-card)] bg-[var(--brand-primary-soft)] p-3 text-sm" role="status">저장 중…</p> : null}
+      {error ? <div className="rounded-[var(--radius-card)] border border-[var(--danger-border)] p-3 text-sm outline-none" id={ERROR_SUMMARY_ID} ref={errorRef} role="alert" tabIndex={-1}>{error.message}</div> : null}
 
       {!isConfirmationStep && action === "set_finished_weight" ? (
         <>
           <label className="block text-sm font-bold">음식만의 원래 전체 중량(g)
             <input aria-describedby={amountInvalid ? ERROR_SUMMARY_ID : undefined} aria-invalid={amountInvalid || undefined} aria-label="음식만의 원래 전체 중량" className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base" disabled={pending} inputMode="decimal" min="0" onChange={(event) => setAmount(event.target.value)} type="number" value={amount} />
           </label>
-          <p className="text-sm leading-5 text-[var(--text-2)]">용기·그릇·접시를 제외한 요리 직후 음식 전체 무게예요. 현재 남은 양이 아니에요.</p>
+          <p className="text-sm leading-5 text-[var(--text-2)]">용기를 제외한, 먹기 전 전체 무게예요.</p>
         </>
       ) : null}
       {!isConfirmationStep && (action === "discard" || action === "adjust") ? (
@@ -214,7 +214,7 @@ export function CookedBatchActionSheet({
           <label className="block text-sm font-bold">사유
             <input aria-describedby={reasonInvalid ? ERROR_SUMMARY_ID : undefined} aria-invalid={reasonInvalid || undefined} className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base" disabled={pending} onChange={(event) => setReason(event.target.value)} value={reason} />
           </label>
-          <p className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm">현재 남은 양 {batch.remaining_weight_g?.toLocaleString("ko-KR") ?? "확인 불가"}g · 입력을 확인한 뒤 최종 제출해요.</p>
+          <p className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm">현재 남은 양 {batch.remaining_weight_g?.toLocaleString("ko-KR") ?? "확인 불가"}g</p>
         </>
       ) : null}
       {isConfirmationStep && resultingAmount !== null ? (
@@ -225,30 +225,25 @@ export function CookedBatchActionSheet({
             <div className="flex items-start justify-between gap-4"><dt className="text-[var(--text-3)]">적용 후 안내</dt><dd className="font-bold">{formatGrams(resultingAmount)}</dd></div>
             <div className="flex items-start justify-between gap-4"><dt className="text-[var(--text-3)]">사유</dt><dd className="max-w-[65%] break-words text-right font-bold">{reason.trim()}</dd></div>
           </dl>
-          <p className="text-xs leading-5 text-[var(--text-3)]">이 값은 제출 전 안내예요. 최종 잔량과 상태는 서버 응답으로 확정해요.</p>
         </section>
       ) : null}
       {action === "close" ? (
         <>
           <fieldset aria-describedby={closureReasonInvalid ? ERROR_SUMMARY_ID : undefined} aria-invalid={closureReasonInvalid || undefined} className="space-y-2"><legend className="mb-2 text-sm font-bold">종료 이유</legend>{(["consumed", "discarded", "mixed"] as const).map((value) => <label className="flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] border border-[var(--line)] px-3" key={value}><input checked={closureReason === value} disabled={pending} name="closure-reason" onChange={() => setClosureReason(value)} type="radio" /><span>{closureReasonLabels[value]}</span></label>)}</fieldset>
           {closureReason ? <p className="flex items-start justify-between gap-4 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm"><span className="text-[var(--text-3)]">선택한 종료 결과</span><strong>{closureReasonLabels[closureReason]}</strong></p> : null}
-          <ul className="space-y-2 rounded-[var(--radius-control)] border border-[var(--danger-border)] p-3 text-sm leading-5">
-            <li>그램 중량을 남기지 않아요.</li>
-            <li>식사 영양을 계산하지 않아요.</li>
-            <li>meal-log 식사 기록을 만들지 않아요.</li>
-          </ul>
+          <p className="text-sm">음식 목록만 정리하며 식사 기록은 남기지 않아요.</p>
         </>
       ) : null}
       {action === "mark_unrecoverable" ? <p className="text-sm leading-6">이 변경은 되돌릴 수 없어요. 이후에는 완성 중량 입력, g 영양 계산, g 식사 기록을 사용할 수 없고 0g으로 추정하지 않아요.</p> : null}
-      {action === "cancel_current" ? <p className="text-sm leading-6">서버가 현재 종료로 표시한 바로 그 기록만 취소해요. 과거 종료나 무게 확인 불가 표시는 되돌리지 않아요.</p> : null}
+      {action === "cancel_current" ? <p className="text-sm leading-6">방금 종료한 상태를 되돌려요.</p> : null}
 
       {!isConfirmationStep && action !== "discard" && action !== "adjust" ? (
         <label className="flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm leading-5">
           <input checked={confirmed} className="mt-0.5 h-5 w-5" disabled={pending} onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" />
           <span>{action === "set_finished_weight"
-            ? "이 음식을 먹거나 버린 적이 없고, 요리 직후 전체 무게가 맞아요"
+            ? "아직 먹거나 버리지 않은 전체 무게예요"
             : action === "close"
-              ? "그램 중량이 남지 않고, 식사 영양을 계산하지 않으며, meal-log 식사 기록을 만들지 않는 결과를 확인했어요"
+              ? "식사 기록 없이 정리할게요"
               : "표시된 결과와 되돌릴 수 없는 영향을 확인했어요"}</span>
         </label>
       ) : null}

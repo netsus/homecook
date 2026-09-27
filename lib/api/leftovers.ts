@@ -1,5 +1,6 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
+import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
 import type { ApiResponse } from "@/types/api";
 import type {
   LeftoverKeepData,
@@ -42,7 +43,7 @@ export async function fetchLeftovers(
   const params = new URLSearchParams({ status });
   const response = await fetch(
     `/api/v1/leftovers?${params.toString()}`,
-    withE2EAuthOverrideHeaders(),
+    withE2EAuthOverrideHeaders({ cache: "no-store" }),
   );
 
   let payload: ApiResponse<LeftoverListData> | null = null;
@@ -97,6 +98,7 @@ export async function eatLeftover(
   }
 
   notifyGamificationSourceAction();
+  notifyCookedBatchChanged(leftoverId);
 
   return payload.data;
 }
@@ -160,5 +162,6 @@ export async function uneatLeftover(
     });
   }
 
+  notifyCookedBatchChanged(leftoverId);
   return payload.data;
 }

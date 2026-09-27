@@ -1,5 +1,7 @@
 "use client";
 
+import { useMobileFullscreenPage } from "@/components/shared/use-mobile-fullscreen-page";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -78,6 +80,7 @@ export function CookModeScreen({
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const colorTheme = "dark";
   const isMobileViewport = useIsMobileViewport();
+  useMobileFullscreenPage(true, sessionId);
   const completePendingRef = useRef(false);
   const cancelPendingRef = useRef(false);
 
