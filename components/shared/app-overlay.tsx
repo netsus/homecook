@@ -11,6 +11,7 @@ import { ModalHeader } from "@/components/shared/modal-header";
 interface AppOverlayBaseProps {
   ariaLabelledBy: string;
   backdropLayerClassName?: string;
+  backdropStyle?: React.CSSProperties;
   badge?: React.ReactNode;
   bodyClassName?: string;
   children: React.ReactNode;
@@ -58,12 +59,14 @@ interface AppStepperProps {
 
 function AppOverlayBackdrop({
   backdropLayerClassName = "z-50",
+  style,
   children,
   onClose,
   variant,
 }: {
   children: React.ReactNode;
   backdropLayerClassName?: string;
+  style?: React.CSSProperties;
   onClose: () => void;
   variant: "bottom" | "center";
 }) {
@@ -77,6 +80,7 @@ function AppOverlayBackdrop({
           : "items-center justify-center p-4",
       ].join(" ")}
       onClick={onClose}
+      style={style}
     >
       {children}
     </div>
@@ -86,6 +90,7 @@ function AppOverlayBackdrop({
 export function AppBottomSheet({
   ariaLabelledBy,
   backdropLayerClassName,
+  backdropStyle,
   badge,
   bodyClassName,
   children,
@@ -107,7 +112,7 @@ export function AppBottomSheet({
   titleTabIndex,
 }: AppOverlayBaseProps) {
   return (
-    <AppOverlayBackdrop backdropLayerClassName={backdropLayerClassName} onClose={onClose} variant="bottom">
+    <AppOverlayBackdrop backdropLayerClassName={backdropLayerClassName} style={backdropStyle} onClose={onClose} variant="bottom">
       <div
         aria-labelledby={ariaLabelledBy}
         aria-modal="true"
@@ -122,6 +127,7 @@ export function AppBottomSheet({
         onClick={(event) => event.stopPropagation()}
         ref={panelRef}
         role="dialog"
+        tabIndex={-1}
       >
         <div className="flex justify-center pt-2">
           <div

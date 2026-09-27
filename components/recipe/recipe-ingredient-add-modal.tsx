@@ -8,6 +8,8 @@ import {
   AppModalFooterActions,
 } from "@/components/shared/app-overlay";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
+import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
+import { useDialogViewport } from "@/components/shared/use-dialog-viewport";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import {
   WebButton,
@@ -124,9 +126,16 @@ function IngredientOnlyAddModal({
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [listState, setListState] = useState<IngredientListState>("loading");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const viewportStyle = useDialogViewport();
   const isDesktopViewport = useDesktopViewport();
   const isWebPresentation =
     presentation === "web" || (presentation === "auto" && isDesktopViewport);
+  useDialogBoundary({
+    dialogRef,
+    initialFocusRef: isWebPresentation ? searchInputRef : dialogRef,
+    onClose,
+  });
   const requestCategory =
     !isWebPresentation && activeCategory !== ALL_INGREDIENT_CATEGORY
       ? activeCategory
@@ -219,10 +228,12 @@ function IngredientOnlyAddModal({
 
   if (isWebPresentation) {
     return (
-      <WebModal onBackdropClick={onClose}>
+      <WebModal className="ingredient-search-backdrop" style={viewportStyle} onBackdropClick={onClose}>
         <WebDialog
           aria-labelledby="ingredient-picker-title"
-          className="web-ingredient-picker-dialog"
+          className="web-ingredient-picker-dialog ingredient-search-panel"
+          ref={dialogRef}
+          tabIndex={-1}
           size="narrow"
         >
           <WebDialogHeader>
@@ -237,11 +248,10 @@ function IngredientOnlyAddModal({
               <CloseIcon />
             </WebIconButton>
           </WebDialogHeader>
-          <WebDialogBody>
+          <WebDialogBody className="ingredient-search-body">
             <label className="web-modal-search">
               <span className="visually-hidden">재료명으로 검색</span>
               <input
-                autoFocus
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="재료명으로 검색"
                 ref={searchInputRef}
@@ -266,7 +276,7 @@ function IngredientOnlyAddModal({
               ))}
             </div>
 
-            <div className="mt-5" data-testid="ingredient-list-region">
+            <div className="ingredient-search-results mt-4 min-h-0 flex-1 overflow-y-auto" data-testid="ingredient-list-region">
               {visibleListState === "loading" ? (
                 <div className="web-ingredient-modal-grid" aria-busy="true">
                   {Array.from({ length: 8 }).map((_, index) => (
@@ -353,6 +363,12 @@ function IngredientOnlyAddModal({
   return (
     <AppBottomSheet
       ariaLabelledBy="mobile-ingredient-picker-title"
+      backdropLayerClassName="z-[160] ingredient-search-backdrop"
+      backdropStyle={viewportStyle}
+      panelClassName="ingredient-search-panel recipe-ingredient-search-sheet"
+      panelRef={dialogRef}
+      bodyClassName="ingredient-search-results"
+      headerSlotClassName="mt-2"
       description={INGREDIENT_ADD_DESCRIPTION}
       footer={
         <AppModalFooterActions
@@ -366,18 +382,17 @@ function IngredientOnlyAddModal({
       }
       headerSlot={
         <>
-          <label className="app-field-search mt-3 flex min-h-[var(--control-height-md)] items-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow-1)] md:mt-4">
+          <label className="app-field-search flex min-h-[var(--control-height-md)] items-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow-1)]">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
-              autoFocus
-              className="w-full bg-transparent py-3 outline-none placeholder:text-[var(--muted)]"
+              className="w-full bg-transparent py-3 text-base outline-none placeholder:text-[var(--muted)]"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="재료명으로 검색"
               ref={searchInputRef}
               value={query}
             />
           </label>
-          <div className="mt-3 md:mt-4 md:flex-wrap md:overflow-visible md:pb-0">
+          <div className="mt-2 md:flex-wrap md:overflow-visible md:pb-0">
               <SelectionChipRail
                 ariaLabel="카테고리 선택"
                 chips={INGREDIENT_CATEGORY_GROUP_OPTIONS.map((category) => ({

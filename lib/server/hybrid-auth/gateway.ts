@@ -93,11 +93,29 @@ function failMaintenance(): never {
   throw new HybridLifecycleMaintenanceError();
 }
 
+/** Recognize transport errors without reclassifying database/auth denials. */
+export function isSessionAuthorityTransportFailure(error: unknown): boolean {
+  let current = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    const candidate = current as Record<string, unknown>;
+    const code = typeof candidate.code === "string" ? candidate.code : "";
+    if (/^(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|UND_ERR_CONNECT_TIMEOUT|UND_ERR_SOCKET)$/u.test(code)) return true;
+    if (code) return false;
+    if (["AbortError", "TimeoutError", "AuthRetryableFetchError"].includes(String(candidate.name))) return true;
+    if (/^(?:(?:TypeError|AbortError|TimeoutError): )?(?:fetch failed|Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.|The operation was aborted|The operation was aborted due to timeout)/u.test(String(candidate.message))) return true;
+    current = candidate.cause;
+  }
+  return false;
+}
+
 function toPublicAuthorityError(
   error: unknown,
 ): HybridSessionAuthorityError | HybridLifecycleMaintenanceError {
   if (error instanceof HybridSessionAuthorityError) {
     return error;
+  }
+  if (isSessionAuthorityTransportFailure(error)) {
+    return new HybridLifecycleMaintenanceError();
   }
   return error instanceof HybridLifecycleMaintenanceError
     ? error
@@ -176,7 +194,7 @@ async function readRemoteLiveUser({
   }
 
   if (!response.ok) {
-    if (response.status >= 500) {
+    if (response.status >= 500 || response.status === 408 || response.status === 429) {
       failMaintenance();
     }
     failClosed();
@@ -185,8 +203,8 @@ async function readRemoteLiveUser({
   let user: RemoteAuthUser;
   try {
     user = await response.json() as RemoteAuthUser;
-  } catch {
-    failClosed();
+  } catch (error) {
+    throw toPublicAuthorityError(error);
   }
 
   if (
@@ -230,12 +248,17 @@ async function readRemoteJwks({
   }
 
   if (!response.ok) {
-    if (response.status >= 500) {
+    if (response.status >= 500 || response.status === 408 || response.status === 429) {
       failMaintenance();
     }
     failClosed();
   }
-  const body = await response.arrayBuffer();
+  let body: ArrayBuffer;
+  try {
+    body = await response.arrayBuffer();
+  } catch (error) {
+    throw toPublicAuthorityError(error);
+  }
   if (body.byteLength === 0 || body.byteLength > 1_048_576) {
     failClosed();
   }

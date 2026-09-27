@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -72,6 +73,49 @@ describe("ACCOUNT_QUARANTINE screen", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    "auth-present", "auth-absent", "loading", "maintenance", "pending",
+    "replay", "cleanup-pending", "conflict", "unauthorized", "error",
+  ] as const)("always offers a session-clearing exit from %s", (gateState) => {
+    render(<AccountQuarantineScreen gateState={gateState} nextPath="//untrusted.example" />);
+    expect(screen.getByRole("link", { name: "다른 계정으로 로그인" }).getAttribute("href"))
+      .toBe("/auth/logout?reauthenticate=1&next=%2Fmypage");
+    expect(apiMocks.resolve).not.toHaveBeenCalled();
+  });
+
+  it("does not redirect a departing user when an in-flight recovery finishes", async () => {
+    let complete!: (value: { resolution_status: "active"; account_generation: number }) => void;
+    apiMocks.resolve.mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
+    const user = userEvent.setup();
+    render(<AccountQuarantineScreen gateState="auth-present" />);
+    await user.type(screen.getByLabelText("닉네임"), "무먹러");
+    await user.click(screen.getByRole("button", { name: "계정 복구" }));
+    const exit = screen.getByRole("link", { name: "다른 계정으로 로그인" });
+    exit.addEventListener("click", (event) => event.preventDefault());
+    await user.click(exit);
+    await act(async () => complete({ resolution_status: "active", account_generation: 3 }));
+    expect(navigationMocks.replace).not.toHaveBeenCalled();
+  });
+
+  it.each(["activate", "delete"] as const)("can leave after %s fails and after returning", async (action) => {
+    apiMocks.resolve.mockRejectedValue(new Error("request failed"));
+    const user = userEvent.setup();
+    const view = render(<AccountQuarantineScreen gateState="auth-present" />);
+    if (action === "activate") {
+      await user.type(screen.getByLabelText("닉네임"), "무먹러");
+      await user.click(screen.getByRole("button", { name: "계정 복구" }));
+    } else {
+      await user.click(screen.getByRole("button", { name: "계정 삭제" }));
+      await user.click(screen.getByRole("button", { name: "삭제 시작" }));
+    }
+    await screen.findByText("요청을 처리하지 못했어요");
+    expect(screen.getByRole("link", { name: "다른 계정으로 로그인" }).getAttribute("href"))
+      .toBe("/auth/logout?reauthenticate=1&next=%2Fmypage");
+    view.unmount();
+    render(<AccountQuarantineScreen gateState="auth-present" />);
+    expect(screen.getByRole("link", { name: "다른 계정으로 로그인" })).toBeTruthy();
+  });
+
   it("keeps recovery primary and delete behind a separate review step", async () => {
     const user = userEvent.setup();
     render(
@@ -81,32 +125,33 @@ describe("ACCOUNT_QUARANTINE screen", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "계정 보호 중" })).toBeTruthy();
-    expect(screen.getByText("일반 마이페이지는 열리지 않아요.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "계정 복구" })).toBeTruthy();
+    expect(screen.queryByText("일반 마이페이지는 열리지 않아요.")).toBeNull();
+    expect(screen.queryByText("안전 안내")).toBeNull();
     expect(screen.queryByText("ACCOUNT_QUARANTINE")).toBeNull();
     expect(screen.queryByText(/현재 계정 세대/)).toBeNull();
-    expect(screen.getByLabelText("복구할 계정의 닉네임")).toBeTruthy();
+    expect(screen.getByLabelText("닉네임")).toBeTruthy();
     expect(
-      screen.getByPlaceholderText("예: 무먹러"),
+      screen.getByPlaceholderText("닉네임 2~30자"),
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "계정 복구" })
         .getAttribute("data-variant"),
     ).toBe("primary");
     expect(
-      screen.getByRole("button", { name: "삭제 검토" })
+      screen.getByRole("button", { name: "계정 삭제" })
         .getAttribute("data-variant"),
     ).toBe("secondary");
     expect(screen.queryByRole("button", { name: "삭제 시작" })).toBeNull();
     expect(screen.queryByTestId("mypage-content")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "삭제 검토" }));
+    await user.click(screen.getByRole("button", { name: "계정 삭제" }));
 
     const dialog = screen.getByRole("dialog", {
       name: "정말 계정을 삭제할까요?",
     });
     expect(dialog).toBeTruthy();
-    expect(within(dialog).getByText(/공개한 사용자 등록 완제품/)).toBeTruthy();
+    expect(within(dialog).getByText(/공개 레시피·등록 식품/)).toBeTruthy();
     expect(within(dialog).getByText(/개인 레시피/)).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "취소" }));
@@ -124,7 +169,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
     );
 
     const background = screen.getByTestId("account-quarantine-background");
-    await user.click(screen.getByRole("button", { name: "삭제 검토" }));
+    await user.click(screen.getByRole("button", { name: "계정 삭제" }));
 
     expect(document.body.style.overflow).toBe("hidden");
     expect(background.getAttribute("aria-hidden")).toBe("true");
@@ -160,7 +205,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
     expect(screen.getByText("닉네임은 2~30자로 입력해 주세요.")).toBeTruthy();
     expect(apiMocks.resolve).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("복구할 계정의 닉네임"), {
+    fireEvent.change(screen.getByLabelText("닉네임"), {
       target: { value: "  집밥러  " },
     });
     await user.click(screen.getByRole("button", { name: "계정 복구" }));
@@ -170,7 +215,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
       idempotencyKey: INTENT_KEY,
       nickname: "집밥러",
     });
-    expect(screen.getByText("처리 중이에요. 잠시만 기다려 주세요.")).toBeTruthy();
+    expect(screen.getByText("처리 중이에요")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "처리 중" }).hasAttribute("disabled"),
     ).toBe(true);
@@ -197,7 +242,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "삭제 검토" }));
+    await user.click(screen.getByRole("button", { name: "계정 삭제" }));
     await user.click(screen.getByRole("button", { name: "삭제 시작" }));
 
     expect(apiMocks.resolve).toHaveBeenCalledWith({
@@ -205,7 +250,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
       idempotencyKey: INTENT_KEY,
     });
     expect(await screen.findByText(
-      "계정 정리를 시작했어요. 아직 완료되지 않았어요.",
+      "계정 삭제 중",
     )).toBeTruthy();
     expect(screen.queryByText("계정 삭제가 완료됐어요.")).toBeNull();
     expect(apiMocks.resolve).toHaveBeenCalledTimes(1);
@@ -220,7 +265,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
       />,
     );
 
-    const reviewButton = screen.getByRole("button", { name: "삭제 검토" });
+    const reviewButton = screen.getByRole("button", { name: "계정 삭제" });
     await user.click(reviewButton);
     const cancelButton = screen.getByRole("button", { name: "취소" });
     const confirmButton = screen.getByRole("button", { name: "삭제 시작" });
@@ -245,17 +290,17 @@ describe("ACCOUNT_QUARANTINE screen", () => {
 
     expect(screen.getByRole("heading", { name: "계정 확인이 필요해요" }))
       .toBeTruthy();
-    expect(screen.getByText(/자동 복구와 자동 삭제는 제공하지 않아요/))
+    expect(screen.getByText(/복구는 고객지원에 문의해 주세요/))
       .toBeTruthy();
     expect(screen.queryByRole("button", { name: "계정 복구" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "삭제 검토" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "계정 삭제" })).toBeNull();
     expect(apiMocks.createIntent).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["loading", "계정 상태를 확인하고 있어요"],
-    ["not-applicable", "계정 보호 화면이 필요하지 않아요"],
-    ["maintenance", "지금은 계정 전환 작업 중이에요"],
+    ["loading", "계정 확인 중"],
+    ["not-applicable", "계정 확인 완료"],
+    ["maintenance", "잠시 후 다시 시도해 주세요"],
   ] as const)("renders the %s state without mutation controls", (gateState, copy) => {
     render(
       <AccountQuarantineScreen
@@ -266,10 +311,10 @@ describe("ACCOUNT_QUARANTINE screen", () => {
 
     expect(screen.getByText(copy)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "계정 복구" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "삭제 검토" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "계정 삭제" })).toBeNull();
   });
 
-  it("maps stale sessions to login with the same quarantine return intent", async () => {
+  it("clears stale sessions before login while preserving the intended page", async () => {
     const user = userEvent.setup();
     apiMocks.resolve.mockRejectedValue(createApiError(
       409,
@@ -283,14 +328,14 @@ describe("ACCOUNT_QUARANTINE screen", () => {
         nextPath="/mypage?tab=saved"
       />,
     );
-    fireEvent.change(screen.getByLabelText("복구할 계정의 닉네임"), {
+    fireEvent.change(screen.getByLabelText("닉네임"), {
       target: { value: "집밥러" },
     });
     await user.click(screen.getByRole("button", { name: "계정 복구" }));
 
-    const login = await screen.findByRole("link", { name: "다시 로그인" });
+    const login = await screen.findByRole("link", { name: "다른 계정으로 로그인" });
     expect(login.getAttribute("href")).toBe(
-      "/login?next=%2Faccount-quarantine%3Fnext%3D%252Fmypage%253Ftab%253Dsaved",
+      "/auth/logout?reauthenticate=1&next=%2Fmypage%3Ftab%3Dsaved",
     );
     expect(screen.queryByTestId("mypage-content")).toBeNull();
   });
@@ -310,7 +355,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
         "ACCOUNT_LIFECYCLE_MAINTENANCE",
         "전환 작업 중이에요.",
       ),
-      "지금은 계정 전환 작업 중이에요",
+      "잠시 후 다시 시도해 주세요",
     ],
     [
       createApiError(
@@ -318,7 +363,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
         "IDEMPOTENCY_KEY_REUSED",
         "다른 요청에 사용된 키예요.",
       ),
-      "요청 내용이 달라서 처리할 수 없어요",
+      "다시 선택해 주세요",
     ],
     [
       createApiError(
@@ -326,7 +371,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
         "ACCOUNT_DELETING",
         "계정 정리 중이에요.",
       ),
-      "계정 정리를 시작했어요. 아직 완료되지 않았어요.",
+      "계정 삭제 중",
     ],
   ])("maps exact API errors without exposing normal MYPAGE", async (error, copy) => {
     const user = userEvent.setup();
@@ -337,7 +382,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
         nextPath="/mypage"
       />,
     );
-    fireEvent.change(screen.getByLabelText("복구할 계정의 닉네임"), {
+    fireEvent.change(screen.getByLabelText("닉네임"), {
       target: { value: "집밥러" },
     });
 
@@ -361,7 +406,7 @@ describe("ACCOUNT_QUARANTINE screen", () => {
         nextPath="/mypage"
       />,
     );
-    fireEvent.change(screen.getByLabelText("복구할 계정의 닉네임"), {
+    fireEvent.change(screen.getByLabelText("닉네임"), {
       target: { value: "집밥러" },
     });
 

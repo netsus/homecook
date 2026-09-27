@@ -92,7 +92,8 @@ function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
     return `${ingredient.standard_name} 약간`;
   }
 
-  const amount = ingredient.amount ?? 0;
+  if (ingredient.amount === null) return ingredient.standard_name;
+  const amount = ingredient.amount;
   const unit = ingredient.unit ?? "g";
   return `${ingredient.standard_name} ${amount}${unit}`;
 }
@@ -101,12 +102,12 @@ function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
   return {
     ...ingredient,
     ingredient_type: "QUANT",
-    amount: ingredient.amount ?? 0,
+    amount: ingredient.amount,
     unit: ingredient.unit ?? "g",
     display_text: formatIngredientDisplayText({
       ...ingredient,
       ingredient_type: "QUANT",
-      amount: ingredient.amount ?? 0,
+      amount: ingredient.amount,
       unit: ingredient.unit ?? "g",
     }),
   };
@@ -219,6 +220,9 @@ function getManualSaveRequirements({
   if (title.trim().length === 0) requirements.push("요리 이름");
   if (baseServings < 1) requirements.push("기준 인분");
   if (ingredients.length === 0) requirements.push("재료");
+  if (ingredients.some((ingredient) => ingredient.ingredient_type === "QUANT"
+    && (ingredient.amount === null || !Number.isFinite(ingredient.amount)
+      || ingredient.amount <= 0 || !ingredient.unit?.trim()))) requirements.push("재료 수량·단위");
   if (steps.length === 0) requirements.push("만들기");
 
   return requirements;
@@ -258,6 +262,7 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false, isRecovering = 
           {isSaving ? "저장 중..." : isRecovering ? "저장 결과 확인" : "저장"}
         </button>
       </div>
+      <p className="px-4 pb-2.5 text-[12px] leading-5 text-[var(--text-2)]">직접 등록한 레시피는 공개되어 검색·공유할 수 있어요.</p>
     </div>
   );
 }
@@ -289,6 +294,7 @@ function SuccessModal({
           <p className="mt-2 text-base text-[var(--text-2)]">
             &lsquo;{recipeTitle}&rsquo;가 등록됐어요
           </p>
+          <p className="mt-2 text-sm text-[var(--text-2)]">공개 레시피로 등록했어요. 검색하거나 링크로 공유할 수 있어요.</p>
         </div>
         {mealAddError && (
           <div
@@ -666,6 +672,8 @@ export function ManualRecipeCreateScreen({
 
     performExit();
   }, [performExit]);
+  const completeExitRef = useRef(completeExit);
+  completeExitRef.current = completeExit;
 
   const releaseHistoryGuard = useCallback((onReleased: () => void) => {
     if (historyGuardActiveRef.current) {
@@ -769,7 +777,7 @@ export function ManualRecipeCreateScreen({
         window.location.href,
       );
       if (createOutcomeUnknownRef.current) {
-        completeExit();
+        completeExitRef.current();
       } else {
         openDiscardDialogRef.current();
       }
@@ -801,7 +809,7 @@ export function ManualRecipeCreateScreen({
         }
       }
     };
-  }, [completeExit, hasDraftChanges]);
+  }, [hasDraftChanges]);
 
   const handleAddIngredient = useCallback(
     (newIngredients: ManualRecipeIngredientInput[]) => {
@@ -1426,9 +1434,12 @@ export function ManualRecipeCreateScreen({
       if (pending) {
         const recovered = await readManualRecipeCreateResult(pending.key, pending.ownerId);
         if (!recovered.success || !recovered.data) {
-          throw new Error(recovered.error?.message ?? "저장 결과를 확인하지 못했어요. 연결 후 다시 확인해 주세요.");
-        }
-        if (recovered.data.recipe) {
+          // This response confirms the same committed creation still needs its
+          // publication work. Only it authorizes replaying the original POST.
+          if (recovered.error?.code !== "RECIPE_PREPARATION_PENDING") {
+            throw new Error(recovered.error?.message ?? "저장 결과를 확인하지 못했어요. 연결 후 다시 확인해 주세요.");
+          }
+        } else if (recovered.data.recipe) {
           response = { success: true, data: recovered.data.recipe, error: null };
         }
       } else {
@@ -1476,7 +1487,8 @@ export function ManualRecipeCreateScreen({
       }
       const succeeded = Boolean(response.success && response.data);
       const unknown = !succeeded && (wasUnknown || response.error?.code === "NETWORK_ERROR"
-        || response.error?.code === "INVALID_RESPONSE");
+        || response.error?.code === "INVALID_RESPONSE"
+        || response.error?.code === "RECIPE_PREPARATION_PENDING");
       createOutcomeUnknownRef.current = unknown;
       if (!unknown) {
         pendingCreateRef.current = null;
@@ -1647,6 +1659,7 @@ export function ManualRecipeCreateScreen({
           onChange={handleUpdateIngredient}
           onRemove={handleRemoveIngredient}
         />
+        {showValidationErrors && saveRequirements.includes("재료 수량·단위") ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">재료 수량을 0보다 크게 입력하고 단위를 확인해 주세요.</p> : null}
         <WebButton
           className="web-manual-add-button"
           onClick={() => setModalMode("ingredient-add")}
@@ -1696,6 +1709,7 @@ export function ManualRecipeCreateScreen({
   ) : null;
   const desktopManualFooter = (
     <div className="web-manual-footer">
+      <p className="mb-2 text-[12px] leading-5 text-[var(--text-2)]">직접 등록한 레시피는 공개되어 검색·공유할 수 있어요.</p>
       <WebButton
         className="web-manual-save-button"
         disabled={isSaving || editorShell.isSubmitting || isUploading || !draftReady}
@@ -1831,7 +1845,7 @@ export function ManualRecipeCreateScreen({
       feedbackPlacement="consumer"
       presentation="integrated"
     >
-      <div className="flex h-screen flex-col overflow-hidden bg-[var(--surface-fill)] md:bg-[var(--background)]">
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-[var(--surface-fill)] md:bg-[var(--background)]">
         <AppBar
           onBack={handleBack}
           onSave={() => void editorShell.submit("save-private")}
@@ -1851,7 +1865,7 @@ export function ManualRecipeCreateScreen({
           </div>
         ) : null}
         <div
-          className="min-h-0 flex-1 scroll-pb-[96px] overflow-y-auto pb-[88px] md:px-4 md:pb-6 md:scroll-pb-6"
+          className="min-h-0 flex-1 scroll-pb-[calc(120px+env(safe-area-inset-bottom))] overflow-y-auto pb-[calc(120px+env(safe-area-inset-bottom))] lg:px-4 lg:pb-6 lg:scroll-pb-6"
           data-testid="manual-editor-scroll-region"
         >
           <fieldset disabled={isImageLifecycleLocked || !draftReady} className="mx-auto min-w-0 max-w-2xl space-y-2 md:space-y-6 md:py-4">
@@ -1943,6 +1957,7 @@ export function ManualRecipeCreateScreen({
               onChange={handleUpdateIngredient}
               onRemove={handleRemoveIngredient}
             />
+            {showValidationErrors && saveRequirements.includes("재료 수량·단위") ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">재료 수량을 0보다 크게 입력하고 단위를 확인해 주세요.</p> : null}
             <button
               className="mt-2 flex h-11 w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--brand-contrast)] hover:bg-[var(--brand-soft)]"
               onClick={() => setModalMode("ingredient-add")}

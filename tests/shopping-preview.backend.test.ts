@@ -550,7 +550,7 @@ describe("shopping stage2 backend", () => {
     expect(mealsQuery.is).toHaveBeenCalledWith("shopping_list_id", null);
   });
 
-  it("uses a content-pinned Meal title instead of the mutable current recipe title", async () => {
+  it.each([true, false])("uses a content-pinned Meal title even when the current source is deleted (source visible: %s)", async (sourceVisible) => {
     const mealsQuery = createArraySelectQuery([
       {
         data: [
@@ -574,13 +574,9 @@ describe("shopping stage2 backend", () => {
     ]);
     const recipesQuery = createArraySelectQuery([
       {
-        data: [
-          {
-            id: "recipe-1",
-            title: "편집된 현재 김치찌개",
-            thumbnail_url: "https://example.com/kimchi.jpg",
-          },
-        ],
+        data: sourceVisible ? [{
+          id: "recipe-1", title: "편집된 현재 김치찌개", thumbnail_url: "https://example.com/kimchi.jpg",
+        }] : [],
         error: null,
       },
     ]);

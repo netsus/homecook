@@ -1,3 +1,8 @@
+import { randomUUID } from "node:crypto";
+import { publishManualRecipe } from "@/lib/server/manual-recipe-publication";
+import { createRecipeNutritionSnapshotPayload } from "@/lib/server/recipe-nutrition-snapshot";
+import { recipeIngredientGroupKey } from "@/lib/recipe-editor-ingredients";
+import { isRecipeIngredientUnitAllowed } from "@/lib/recipe-ingredient-units";
 import { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/response";
@@ -11,7 +16,6 @@ import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   clampLimit,
   encodeRecipeListCursor,
-  filterRecipeIdsByIngredients,
   parseIngredientIds,
   parseRecipeListCursor,
   type RecipeListCursorRecipe,
@@ -35,6 +39,7 @@ import {
 } from "@/lib/server/account-generation/session-authority";
 import { parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
 import {
+  prepareRecipeNutritionSnapshot,
   recalculateRecipeNutritionSnapshot,
   type RecipeNutritionServiceClient,
 } from "@/lib/server/recipe-nutrition-service";
@@ -64,8 +69,10 @@ import {
 } from "@/lib/server/recipe-card-user-status";
 import {
   createRecipeFuturePropagationInternalClient,
+  createRecipeImageInternalClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
+import { createRecipeIngredientSearch, type RecipeIngredientSearchClient } from "@/lib/server/recipe-ingredient-search";
 import type {
   ManualRecipeCreateData,
   ManualRecipeIngredientInput,
@@ -76,11 +83,6 @@ import type {
   RecipeListQuery,
   RecipeSortKey,
 } from "@/types/recipe";
-
-interface RecipeIngredientMatchRow {
-  recipe_id: string;
-  ingredient_id: string;
-}
 
 interface RecipeListRow extends RecipeListCursorRecipe {
   title: string;
@@ -429,6 +431,8 @@ function validateIngredient(
 
     if (!ingredient.unit) {
       fields.push({ field: `ingredients[${index}].unit`, reason: "required" });
+    } else if (!isRecipeIngredientUnitAllowed(ingredient.unit)) {
+      fields.push({ field: `ingredients[${index}].unit`, reason: "unsupported_unit" });
     }
 
     return;
@@ -752,6 +756,7 @@ function parseStrictRecipeEditDraft(
   }
 
   const ingredientIds = new Set<string>();
+  const ingredientGroups = new Set<string>();
   const draftIngredients = Array.isArray(value.ingredients)
     ? value.ingredients.map((item, index) => {
         const fieldBase = `draft.ingredients[${index}]`;
@@ -792,10 +797,17 @@ function parseStrictRecipeEditDraft(
           fields.push({ field: `${fieldBase}.ingredient_id`, reason: "required" });
         } else if (!isUuid(ingredientId)) {
           fields.push({ field: `${fieldBase}.ingredient_id`, reason: "invalid_uuid" });
-        } else if (ingredientIds.has(ingredientId)) {
+        } else if (ingredientGroups.has(recipeIngredientGroupKey({
+          ingredient_id: ingredientId,
+          component_label: normalizeNullableString(item.component_label),
+        }))) {
           fields.push({ field: `${fieldBase}.ingredient_id`, reason: "duplicate" });
         } else {
           ingredientIds.add(ingredientId);
+          ingredientGroups.add(recipeIngredientGroupKey({
+            ingredient_id: ingredientId,
+            component_label: normalizeNullableString(item.component_label),
+          }));
         }
 
         const ingredientType = item.ingredient_type;
@@ -1135,6 +1147,39 @@ function toManualRecipeCreateData(row: ManualRecipeRow): ManualRecipeCreateData 
   };
 }
 
+async function finishManualRecipePublication(
+  dbClient: RecipeNutritionServiceClient,
+  rpcClient: NonNullable<ReturnType<typeof createRecipeFuturePropagationInternalClient>>,
+  authority: AccountGenerationBootstrapSessionAuthority,
+  key: string,
+  row: ManualRecipeCreateRpcData,
+) {
+  if (!row.id || row.created_by !== authority.ownerUuid || row.source_type !== "manual") {
+    throw new Error("Invalid manual recipe receipt");
+  }
+  const prepared = await prepareRecipeNutritionSnapshot(dbClient, row.id);
+  const storageClient = createRecipeImageInternalClient();
+  if (!storageClient) throw new Error("Recipe image publication is unavailable");
+  const published = await publishManualRecipe({
+    rpcClient, storageClient,
+    authorityParams: buildSessionAuthorityRpcArgs(authority),
+    idempotencyKey: key, recipeId: row.id,
+    expectedUpdatedAt: prepared.expectedRecipeVersion,
+    nutritionSnapshot: createRecipeNutritionSnapshotPayload(prepared.calculation),
+    inputGuard: prepared.inputGuard,
+  });
+  if (published.id !== row.id || published.visibility !== "public") {
+    throw new Error("Manual recipe publication is not ready");
+  }
+  return published as ManualRecipeCreateRpcData;
+}
+
+function manualRecipePreparationFailure(error: unknown) {
+  const authorityError = createHybridAuthorityRouteError(error);
+  if (authorityError) return authorityError;
+  return fail("RECIPE_PREPARATION_PENDING", "레시피가 저장됐지만 공개와 요리 준비를 마치지 못했어요. 입력 내용은 유지했으니 다시 시도해 주세요.", 503);
+}
+
 async function writeManualRecipeNutritionSnapshot(
   dbClient: RecipeNutritionServiceClient,
   recipeId: string,
@@ -1453,12 +1498,24 @@ async function readRecipeRows({
   limit: number;
   recipeIds: string[] | null;
   titleQuery: string | null;
-}) {
+}): Promise<{ rows: RecipeListRow[]; error: QueryError | null }> {
   if (recipeIds !== null && recipeIds.length === 0) {
     return {
       rows: [],
       error: null,
     };
+  }
+
+  // Keep PostgREST URLs bounded even when a broad ingredient matches many recipes.
+  if (recipeIds && recipeIds.length > 100) {
+    const rows: RecipeListRow[] = [];
+    for (let i = 0; i < recipeIds.length; i += 100) {
+      const result = await readRecipeRows({ dbClient, sort, cursor, limit,
+        recipeIds: recipeIds.slice(i, i + 100), titleQuery });
+      if (result.error) return result;
+      rows.push(...result.rows);
+    }
+    return { rows: mergeRecipeRows(rows, sort).slice(0, limit + 1), error: null };
   }
 
   let recipeQuery = dbClient
@@ -1479,7 +1536,7 @@ async function readRecipeRows({
   recipeQuery = applyRecipeListCursor(recipeQuery, sort, cursor);
 
   if (titleQuery) {
-    recipeQuery = recipeQuery.ilike("title", `%${titleQuery}%`);
+    recipeQuery = recipeQuery.ilike("title", `%${titleQuery.replace(/[\\%_]/gu, "\\$&")}%`);
   }
 
   const { data, error } = await recipeQuery;
@@ -1497,6 +1554,7 @@ async function readSearchRecipeRows({
   cursor,
   limit,
   baseRecipeIds,
+  ingredientRecipeIds,
 }: {
   dbClient: RecipeSearchDbClient;
   q: string;
@@ -1504,6 +1562,7 @@ async function readSearchRecipeRows({
   cursor: ReturnType<typeof parseRecipeListCursor>;
   limit: number;
   baseRecipeIds: string[] | null;
+  ingredientRecipeIds: string[];
 }) {
   const tagLookup = await findRecipeIdsByPublicTags({
     dbClient,
@@ -1518,7 +1577,7 @@ async function readSearchRecipeRows({
     };
   }
 
-  const tagRecipeIds = intersectRecipeIds(baseRecipeIds, tagLookup.recipeIds);
+  const tagRecipeIds = intersectRecipeIds(baseRecipeIds, [...new Set([...tagLookup.recipeIds, ...ingredientRecipeIds])]);
   const titleRowsResult = await readRecipeRows({
     dbClient,
     sort,
@@ -1603,6 +1662,16 @@ export async function GET(request: NextRequest) {
       if (!isRecord(result.data) || !("recipe" in result.data)) {
         return fail("INTERNAL_ERROR", "저장 결과를 확인하지 못했어요.", 500);
       }
+      if (isRecord(result.data.recipe)) {
+        if (result.data.recipe.visibility !== "public" || typeof result.data.recipe.id !== "string") {
+          return manualRecipePreparationFailure(null);
+        }
+        const readiness = await callFuturePropagationRpc(serviceClient, "read_owned_manual_recipe_publication_context", {
+          ...buildSessionAuthorityRpcArgs(authority.sessionAuthority), p_recipe_id: result.data.recipe.id,
+        });
+        if (!readiness.ok) return readiness.response;
+        if (!isRecord(readiness.data) || readiness.data.runtime_ready !== true) return manualRecipePreparationFailure(null);
+      }
       return ok(result.data, { headers: { "Cache-Control": "private, no-store" } });
     }
     const listQuery: RecipeListQuery = {
@@ -1629,33 +1698,21 @@ export async function GET(request: NextRequest) {
     const routeClient = await createRouteHandlerClient({
       anonymousPublicReadScope: "recipes",
     });
-    const supabase = routeClient;
     const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient;
-    let filteredRecipeIds: string[] | null = null;
-
-    if (listQuery.ingredient_ids?.length) {
-      const { data: ingredientMatches, error: ingredientError } = await supabase
-        .from("recipe_ingredients")
-        .select("recipe_id, ingredient_id")
-        .in("ingredient_id", listQuery.ingredient_ids);
-
-      if (ingredientError) {
-        const authorityError = createHybridAuthorityRouteError(ingredientError);
-        if (authorityError) {
-          return authorityError;
-        }
-        return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
-      }
-
-      filteredRecipeIds = filterRecipeIdsByIngredients(
-        (ingredientMatches ?? []) as RecipeIngredientMatchRow[],
-        listQuery.ingredient_ids,
-      );
-
-      if (filteredRecipeIds.length === 0) {
-        return ok(createEmptyRecipeList());
-      }
-    }
+    const ingredientSearch = listQuery.q || listQuery.ingredient_ids?.length
+      ? createRecipeIngredientSearch(
+          await createRouteHandlerClient({ anonymousPublicReadScope: "ingredients" }) as unknown as RecipeIngredientSearchClient,
+          routeClient as unknown as RecipeIngredientSearchClient,
+        )
+      : null;
+    const [ingredientFilterIds, ingredientQueryIds]: [string[] | null, string[]] = ingredientSearch
+      ? await Promise.all([
+          ingredientSearch.filter(listQuery.ingredient_ids ?? []),
+          listQuery.q ? ingredientSearch.search(listQuery.q) : Promise.resolve([]),
+        ])
+      : [null, []];
+    let filteredRecipeIds: string[] | null = ingredientFilterIds;
+    if (filteredRecipeIds?.length === 0) return ok(createEmptyRecipeList());
 
     if (listQuery.tag) {
       const tagLookup = await findRecipeIdsByPublicTags({
@@ -1687,6 +1744,7 @@ export async function GET(request: NextRequest) {
           cursor,
           limit,
           baseRecipeIds: filteredRecipeIds,
+          ingredientRecipeIds: ingredientQueryIds,
         })
       : await readRecipeRows({
           dbClient: recipeSearchDbClient,
@@ -2099,12 +2157,13 @@ async function postRecipe(request: Request) {
     tagSource,
   );
 
-  if (manualIdempotency?.ok && managedSession) {
+  if (managedSession) {
+    const creationKey = manualIdempotency?.ok ? manualIdempotency.key : randomUUID();
     const serviceClient = createRecipeFuturePropagationInternalClient();
     if (!serviceClient) return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
     const result = await serviceClient.rpc("create_manual_recipe_recoverable", {
       ...buildSessionAuthorityRpcArgs(managedSession),
-      p_idempotency_key: manualIdempotency.key,
+      p_idempotency_key: creationKey,
       p_request_body: body,
       p_create_payload: recipePayload,
     });
@@ -2123,7 +2182,14 @@ async function postRecipe(request: Request) {
       || row.created_by !== user.id || typeof row.base_servings !== "number") {
       return fail("INTERNAL_ERROR", "레시피 저장 결과를 확인하지 못했어요.", 500);
     }
-    await writeManualRecipeNutritionSnapshot(dbClient as unknown as RecipeNutritionServiceClient, row.id);
+    let published: ManualRecipeCreateRpcData;
+    try {
+      published = await finishManualRecipePublication(
+        dbClient as unknown as RecipeNutritionServiceClient, serviceClient, managedSession, creationKey, row,
+      );
+    } catch (error) {
+      return manualRecipePreparationFailure(error);
+    }
     try {
       await recordUserGrowthActivityEvent(dbClient, {
         userId: user.id, activityType: "recipe_registered", category: "recipe",
@@ -2133,35 +2199,16 @@ async function postRecipe(request: Request) {
     } catch {
       // The creation receipt is authoritative even when activity logging fails.
     }
-    return ok(toManualRecipeCreateData(row as ManualRecipeRow), { status: 201 });
+    return ok(toManualRecipeCreateData(published as ManualRecipeRow), { status: 201 });
   }
 
   if (typeof dbClient.rpc === "function") {
-    const recipeResult = managedSession
-      ? await dbClient.rpc("create_manual_recipe_with_managed_image", {
-          ...recipePayload,
-          p_owner_uuid: user.id,
-          p_auth_identity_created_at_snapshot:
-            managedSession.authIdentityCreatedAt,
-          p_session_key_hash: managedSession.sessionKeyHash,
-          p_hmac_key_version: managedSession.hmacKeyVersion,
-          p_image_object_id: parsed.imageObjectId,
-          p_expected_cleanup_generation: parsed.imageObjectId
-            ? INITIAL_IMAGE_CLEANUP_GENERATION
-            : null,
-        })
-      : await dbClient.rpc("create_manual_recipe", {
-          ...recipePayload,
-          p_user_id: user.id,
-        });
+    const recipeResult = await dbClient.rpc("create_manual_recipe", {
+      ...recipePayload,
+      p_user_id: user.id,
+    });
 
     if (recipeResult.error || !recipeResult.data) {
-      const managedErrorCode = managedSession
-        ? readManagedRecipeCreateErrorCode(recipeResult.error)
-        : null;
-      if (managedErrorCode) {
-        return failManagedRecipeCreate(managedErrorCode);
-      }
       const authorityError = createHybridAuthorityRouteError(recipeResult.error);
       if (authorityError) {
         return authorityError;

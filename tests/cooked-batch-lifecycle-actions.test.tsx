@@ -116,6 +116,24 @@ describe("cooked batch lifecycle presentation", () => {
     expect(screen.queryByRole("button", { name: /다시 열기/ })).toBeNull();
   });
 
+  it("labels estimated weights and permits a measured replacement only before consumption", async () => {
+    const onAction = vi.fn();
+    const untouched = batch("estimate-1", { weight_source: "estimated", revision: 1, remaining_weight_g: 800 });
+    render(<CookedBatchSection error={null} hasNext={false} items={[
+      untouched,
+      batch("estimate-2", { weight_source: "estimated", revision: 2 }),
+      batch("measured-3", { weight_source: "measured", revision: 1 }),
+    ]} onAction={onAction} onLoadMore={() => undefined} onRetry={() => undefined} pagePending={false} state="ready" />);
+    const cards = screen.getAllByTestId("cooked-batch-card");
+    expect(within(cards[0]).getAllByText("추정 800g")).toHaveLength(2);
+    await userEvent.click(within(cards[0]).getByRole("button", { name: /실제 무게 입력/ }));
+    expect(onAction).toHaveBeenCalledWith(untouched, "set_finished_weight");
+    expect(within(cards[1]).queryByRole("button", { name: /실제 무게 입력/ })).toBeNull();
+    expect(within(cards[1]).getByRole("button", { name: /양 조정/ })).toBeTruthy();
+    expect(within(cards[2]).queryByRole("button", { name: /실제 무게 입력/ })).toBeNull();
+    expect(within(cards[2]).queryByText(/추정/)).toBeNull();
+  });
+
   it("requires a second discard confirmation with amount, reason, current, and result", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

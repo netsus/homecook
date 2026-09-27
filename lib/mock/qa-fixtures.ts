@@ -4,6 +4,7 @@ import {
   getCookingMethodTaxonomyMetadata,
 } from "@/lib/cooking-method-taxonomy";
 import { getIngredientTaxonomyMetadata } from "@/lib/ingredient-categories";
+import { normalizeIngredientSearchName } from "@/lib/ingredient-search";
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 import { sortPlannerColumns } from "@/lib/planner/fixed-slots";
 import {
@@ -464,17 +465,18 @@ export function getMockRecipeList(
   query?: string | null,
   ingredientIds?: string[] | null,
 ): RecipeListData {
-  const normalized = query?.trim().toLowerCase() ?? "";
+  const normalized = normalizeIngredientSearchName(query ?? "");
+  const usedIngredients = new Set(fixtureData.recipe.ingredients.map((ingredient) => ingredient.ingredientId));
   const hasRequiredIngredients = !ingredientIds?.length
-    || ingredientIds.every((ingredientId) =>
-      fixtureData.recipe.recipeCardIngredientIds.includes(ingredientId),
-    );
+    || ingredientIds.every((ingredientId) => usedIngredients.has(ingredientId));
   const state = getQaFixtureState();
   const recipeCard = buildRecipeCardFromState(state);
   const matchesQuery =
     normalized.length === 0
-    || recipeCard.title.toLowerCase().includes(normalized)
-    || recipeCard.tags.some((tag) => tag.toLowerCase().includes(normalized));
+    || normalizeIngredientSearchName(recipeCard.title).includes(normalized)
+    || recipeCard.tags.some((tag) => normalizeIngredientSearchName(tag).includes(normalized))
+    || fixtureData.recipe.ingredients.some((ingredient) =>
+      normalizeIngredientSearchName(ingredient.standardName).includes(normalized));
 
   return {
     items: hasRequiredIngredients && matchesQuery ? [recipeCard] : [],

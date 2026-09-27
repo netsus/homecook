@@ -6,7 +6,8 @@ const createServiceRoleClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 
-vi.mock("@/lib/supabase/server", () => ({ createRouteHandlerClient, createServiceRoleClient }));
+vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: () => null, createRouteHandlerClient, createServiceRoleClient }));
 vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,

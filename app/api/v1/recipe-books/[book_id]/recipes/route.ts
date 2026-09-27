@@ -14,7 +14,8 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { resolveAuthorizedRecipeImageUrls } from "@/lib/server/recipe-image-read";
+import { createRecipeImageInternalClient, createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipeBookRecipeListData, RecipeBookType } from "@/types/recipe";
 
 interface RouteContext {
@@ -45,6 +46,7 @@ interface RecipeSourceRow {
 
 interface RecipeRow {
   id: string;
+  created_by: string | null;
   title: string;
   thumbnail_url: string | null;
   tags: string[] | null;
@@ -315,7 +317,7 @@ async function readBookSourceRows({
   if (book.book_type === "my_added") {
     let recipesQuery = recipeReaderClient
       .from("recipes")
-      .select("id, title, thumbnail_url, tags, view_count, base_servings, created_at")
+      .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings, created_at")
       .eq("created_by", userId)
       .in("source_type", ["youtube", "manual"])
       .order("created_at", { ascending: false })
@@ -344,6 +346,13 @@ async function readBookSourceRows({
   const itemsResult = await itemsQuery;
 
   return itemsResult;
+}
+
+async function hydrateRecipeImages<T extends RecipeRow>(rows: T[]): Promise<T[]> {
+  const client = createRecipeImageInternalClient();
+  if (!client || rows.length === 0) return rows;
+  const urls = await resolveAuthorizedRecipeImageUrls({ client, recipes: rows });
+  return rows.map(row => ({ ...row, thumbnail_url: urls.get(row.id) ?? null }));
 }
 
 async function mapUserRecipeRows(
@@ -484,12 +493,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   if (bookResult.data.book_type === "my_added") {
-    return ok(await mapUserRecipeRows(
-      recipeReaderClient,
-      itemsResult.data as UserRecipeRow[],
-      cursor,
-      limit,
-    ));
+    try {
+      return ok(await mapUserRecipeRows(
+        recipeReaderClient,
+        await hydrateRecipeImages(itemsResult.data as UserRecipeRow[]),
+        cursor,
+        limit,
+      ));
+    } catch {
+      return fail("INTERNAL_ERROR", "레시피북 이미지를 불러오지 못했어요.", 500);
+    }
   }
 
   const { pageRows: pagedRows, hasNext, nextCursor } = paginateRows(
@@ -505,7 +518,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const recipeIds = [...new Set(pagedRows.map((row) => row.recipe_id))];
   const recipesResult = await recipeReaderClient
     .from("recipes")
-    .select("id, title, thumbnail_url, tags, view_count, base_servings")
+    .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings")
     .in("id", recipeIds);
 
   if (recipesResult.error || !recipesResult.data) {
@@ -513,9 +526,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const recipeMap = new Map<string, RecipeRow>();
-  recipesResult.data.forEach((recipe) => {
-    recipeMap.set(recipe.id, recipe);
-  });
+  try {
+    const recipes = await hydrateRecipeImages(recipesResult.data);
+    recipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
+  } catch {
+    return fail("INTERNAL_ERROR", "레시피북 이미지를 불러오지 못했어요.", 500);
+  }
   const visibleRows = pagedRows.filter((row) => recipeMap.has(row.recipe_id));
   const visibleRecipeIds = [...new Set(visibleRows.map((row) => row.recipe_id))];
   const durationMap = await readDurationMap(recipeReaderClient, visibleRecipeIds);

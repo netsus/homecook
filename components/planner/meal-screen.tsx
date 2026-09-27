@@ -685,7 +685,7 @@ function MealWebView({
         rightSlot={<MealWebProfileButton isAuthenticated={authState === "authenticated"} />}
       />
       <div className="web-screen web-meal-screen">
-        <nav aria-label="식사 경로" className="web-breadcrumb">
+        <nav aria-label="식사 경로" className="mb-4 flex min-h-11 items-center gap-2 text-sm">
           <button
             aria-label="플래너로 돌아가기"
             className="web-breadcrumb-link"
@@ -953,7 +953,7 @@ export function MealScreen({
 }: MealScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const appReturn = useAppReturn({ fallback: "/planner" });
+  const appReturn = useAppReturn({ fallback: `/planner?${new URLSearchParams({ date: planDate })}` });
   const isDesktopViewport = useDesktopViewport();
 
   const [authState, setAuthState] = useState<AuthState>(
@@ -1270,11 +1270,7 @@ export function MealScreen({
         } catch (snapshotError) {
           if (
             !isCookingApiError(snapshotError)
-            || snapshotError.status === 401
-            || (
-              snapshotError.status === 409
-              && snapshotError.code !== "SNAPSHOT_V2_CREATION_DISABLED"
-            )
+            || snapshotError.code !== "SNAPSHOT_V2_CREATION_DISABLED"
           ) {
             throw snapshotError;
           }
@@ -1305,11 +1301,9 @@ export function MealScreen({
 
       setMealActionError(
         meal.id,
-        isCookingApiError(error) && error.status === 409
-          ? "이미 다른 상태로 변경된 식사가 있어요. 새로고침 후 다시 시도해 주세요."
-          : isCookingApiError(error)
-            ? error.message
-            : "요리 세션을 만들지 못했어요. 다시 시도해 주세요.",
+        isCookingApiError(error)
+          ? error.message
+          : "요리 세션을 만들지 못했어요. 다시 시도해 주세요.",
       );
     } finally {
       pendingCookingMealIdsRef.current.delete(meal.id);
@@ -1697,8 +1691,14 @@ export function MealScreen({
   const shouldRenderAppView = !isDesktopViewport;
   const isLoading = authState === "checking" || screenState === "loading";
   const navigateToPlanner = useCallback(() => {
+    const destination = new URL(appReturn.href, "http://homecook.local");
+    if (destination.pathname === "/planner" && !destination.searchParams.get("date")) {
+      destination.searchParams.set("date", planDate);
+      router.replace(`${destination.pathname}${destination.search}${destination.hash}`);
+      return;
+    }
     appReturn.goBack();
-  }, [appReturn]);
+  }, [appReturn, planDate, router]);
 
   // ── Unauthorized gate ─────────────────────────────────────────────────────
   if (authState === "unauthorized") {
@@ -1746,7 +1746,7 @@ export function MealScreen({
             onBack={navigateToPlanner}
             onCreateShopping={(meal) => void createShoppingForMeal(meal)}
             onDelete={(meal) => handleDeleteTap(meal.id)}
-            onRecipeClick={(meal) => router.push(`/recipe/${meal.recipe_id}`)}
+            onRecipeClick={(meal) => router.push(`/meal/${meal.id}/recipe`)}
             onRetry={() => void loadMeals()}
             onStartCook={(meal) => void startMealCooking(meal)}
             onStepDown={(meal) => handleStepperTap(meal, -1)}
@@ -1847,7 +1847,7 @@ export function MealScreen({
                       nutrition={initialMealNutrition[meal.id]}
                       onCreateShopping={() => void createShoppingForMeal(meal)}
                       onDelete={() => handleDeleteTap(meal.id)}
-                      onRecipeClick={() => router.push(`/recipe/${meal.recipe_id}`)}
+                      onRecipeClick={() => router.push(`/meal/${meal.id}/recipe`)}
                       onStartCook={() => void startMealCooking(meal)}
                       onStepDown={() => handleStepperTap(meal, -1)}
                       onStepUp={() => handleStepperTap(meal, 1)}

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 
@@ -36,7 +36,28 @@ function DialogHarness({
   );
 }
 
+afterEach(cleanup);
+
 describe("useDialogBoundary", () => {
+  it("does not close on Escape while a Korean composition is active", () => {
+    const onClose = vi.fn();
+    render(<DialogHarness onClose={onClose} />);
+    fireEvent.keyDown(document, { key: "Escape", isComposing: true });
+    fireEvent.keyDown(document, { key: "Escape", keyCode: 229 });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("focuses after locking the background without scrolling the page", () => {
+    const calls: Array<{ options?: FocusOptions; overflow: string }> = [];
+    const original = HTMLElement.prototype.focus;
+    const spy = vi.spyOn(HTMLElement.prototype, "focus").mockImplementation(function (this: HTMLElement, options?: FocusOptions) {
+      calls.push({ options, overflow: document.body.style.overflow });
+      original.call(this, options);
+    });
+    render(<DialogHarness onClose={vi.fn()} />);
+    expect(calls[0]).toEqual({ options: { preventScroll: true }, overflow: "hidden" });
+    spy.mockRestore();
+  });
   it("closes on Escape by default", async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();

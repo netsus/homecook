@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createCookedBatchInternalClient = vi.fn();
+const readCookedWeightEstimate = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 const projectUserGamificationAfterProgressEvent = vi.fn();
 const projectUserGamificationAfterActivityEvent = vi.fn();
@@ -9,7 +10,9 @@ const projectUserGamificationAfterActivityEvent = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createCookedBatchInternalClient,
+  createRecipeMealWeightReadInternalClient: () => null,
 }));
+vi.mock("@/lib/server/cooked-batch-weight-estimate", () => ({ readCookedWeightEstimate }));
 
 vi.mock("@/lib/server/account-generation/session-authority", () => ({
   readVerifiedAccountGenerationSession,
@@ -39,6 +42,7 @@ describe("POST /cooking/session-attempts/{id}/complete", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createCookedBatchInternalClient.mockReset();
+    readCookedWeightEstimate.mockReset().mockResolvedValue(null);
     readVerifiedAccountGenerationSession.mockReset();
     projectUserGamificationAfterProgressEvent.mockReset();
     projectUserGamificationAfterActivityEvent.mockReset();
@@ -187,7 +191,8 @@ describe("POST /cooking/session-attempts/{id}/complete", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("delegates the whole completion to one RPC and returns the exact eight-key data", async () => {
+  it.each([null, 375])("delegates completion with the server-derived weight %s to one RPC", async (estimatedWeight) => {
+    readCookedWeightEstimate.mockResolvedValueOnce(estimatedWeight);
     const cookedBatch = {
       id: "550e8400-e29b-41d4-a716-446655440814",
       recipe_id: "550e8400-e29b-41d4-a716-446655440815",
@@ -196,9 +201,10 @@ describe("POST /cooking/session-attempts/{id}/complete", () => {
       status: "leftover",
       cooked_at: "2026-08-08T10:00:00.000Z",
       cooking_servings: 4,
-      finished_weight_g: null,
-      remaining_weight_g: null,
-      weight_status: "missing",
+      finished_weight_g: estimatedWeight,
+      remaining_weight_g: estimatedWeight,
+      weight_status: estimatedWeight === null ? "missing" : "known",
+      weight_source: estimatedWeight === null ? null : "estimated",
       batch_status: "available",
       depleted_reason: null,
       revision: 1,
@@ -258,8 +264,8 @@ describe("POST /cooking/session-attempts/{id}/complete", () => {
         p_session_id: sessionId,
         p_idempotency_key: key,
         p_consumed_pantry_item_ids: [],
-        p_weight_action: "weigh_later",
-        p_finished_weight_g: null,
+        p_weight_action: "estimate_from_ingredients",
+        p_finished_weight_g: estimatedWeight,
       }),
     );
   });

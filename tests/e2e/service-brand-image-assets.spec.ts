@@ -28,7 +28,7 @@ async function openHome(
   const page = await context.newPage();
   await installDiscoveryRoutes(page);
   await page.goto(`${BASE_URL}/`);
-  await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
+  await expect(page.getByPlaceholder("제목·재료 검색")).toBeVisible();
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -72,7 +72,7 @@ async function geometry(page: Page, kind: "desktop" | "mobile") {
       nav: rect(surface === "desktop" ? ".web-topnav" : "header.sticky"),
       overflowX:
         document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      search: rect('input[placeholder="레시피 제목 검색"]'),
+      search: rect('input[placeholder="제목·재료 검색"]'),
       viewport: { height: window.innerHeight, width: window.innerWidth },
     };
   }, kind);

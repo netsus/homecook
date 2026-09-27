@@ -1,3 +1,4 @@
+import strawberryPuddingDraft from "./fixtures/strawberry-milk-pudding-fork.json";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fail } from "@/lib/api/response";
@@ -420,6 +421,31 @@ describe("personal recipe customization write routes", () => {
     expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
     expect(calculateRecipeDraftNutrition).not.toHaveBeenCalled();
     expect(callFuturePropagationRpc).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("preserves grouped strawberry pudding ingredients (same-group duplicate: %s)", async (duplicateWithinGroup) => {
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user } })) } });
+    createRecipeFuturePropagationInternalClient.mockReturnValue({});
+    calculateRecipeDraftNutrition.mockResolvedValue({ nutritionSnapshot: {}, predecessorGuard: {} });
+    callFuturePropagationRpc.mockResolvedValue({ ok: true, data: { id: recipeId, revision: 1 } });
+    const draft = structuredClone(strawberryPuddingDraft);
+    if (duplicateWithinGroup) draft.ingredients.push({ ...draft.ingredients[0] });
+    const { POST } = await importCreateRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes", {
+      method: "POST",
+      headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ ...buildDerivedCreateBody(), draft }),
+    }));
+    const body = await response.json();
+    if (duplicateWithinGroup) {
+      expect(response.status).toBe(422);
+      expect(body.error.fields).toContainEqual({ field: "draft.ingredients[12].ingredient_id", reason: "duplicate" });
+      expect(callFuturePropagationRpc).not.toHaveBeenCalled();
+    } else {
+      expect(response.status, JSON.stringify(body)).toBe(201);
+      expect(calculateRecipeDraftNutrition).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ draft }));
+      expect(callFuturePropagationRpc).toHaveBeenCalledWith(expect.anything(), "write_personal_recipe_core", expect.objectContaining({ p_draft: draft }));
+    }
   });
 
   it("delegates public fork or owner save-as-new POST through session, nutrition, and write_personal_recipe_core", async () => {

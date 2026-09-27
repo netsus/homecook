@@ -105,10 +105,9 @@ function isValidIngredient(row: RecipeNutritionIngredientRow) {
     isNonEmptyText(row.unit);
 }
 
-export async function recalculateRecipeNutritionSnapshot(
+export async function prepareRecipeNutritionSnapshot(
   dbClient: RecipeNutritionServiceClient,
   recipeId: string,
-  options: { calculatedAt?: string } = {},
 ) {
   if (!isNonEmptyText(recipeId)) {
     throw new RecipeNutritionServiceError("INVALID_RECIPE_NUTRITION_INPUT");
@@ -164,13 +163,26 @@ export async function recalculateRecipeNutritionSnapshot(
     ingredients: productHydration.ingredients,
   });
 
-  return writeRecipeNutritionSnapshot(dbClient, recipeId, calculation, {
-    ...options,
+  return {
+    calculation,
     expectedRecipeVersion: recipeResult.data.updated_at,
     inputGuard: addRecipeProductNutritionGuard(
       buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors),
       ingredientsResult.data,
       productHydration.predecessors,
     ),
+  };
+}
+
+export async function recalculateRecipeNutritionSnapshot(
+  dbClient: RecipeNutritionServiceClient,
+  recipeId: string,
+  options: { calculatedAt?: string } = {},
+) {
+  const prepared = await prepareRecipeNutritionSnapshot(dbClient, recipeId);
+  return writeRecipeNutritionSnapshot(dbClient, recipeId, prepared.calculation, {
+    ...options,
+    expectedRecipeVersion: prepared.expectedRecipeVersion,
+    inputGuard: prepared.inputGuard,
   });
 }

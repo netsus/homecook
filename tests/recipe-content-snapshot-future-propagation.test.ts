@@ -1,3 +1,4 @@
+import strawberryPuddingDraft from "./fixtures/strawberry-milk-pudding-fork.json";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -23,6 +24,14 @@ vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
 vi.mock("@/lib/server/account-generation/session-authority", () => ({
   readVerifiedAccountGenerationSession,
 }));
+
+function emptyNutritionQuery() {
+  const query = {
+    select: () => query, in: () => query, eq: () => query, order: () => query,
+    range: async () => ({ data: [], error: null }),
+  };
+  return query;
+}
 
 const migrationsDir = join(process.cwd(), "supabase/migrations");
 const previewRoutePath = join(
@@ -328,6 +337,50 @@ describe("recipe content snapshot future propagation public contract", () => {
       food_product_id: null,
       food_product_nutrition_version_id: null,
     });
+  });
+
+  it("calculates every actual pudding component row without merging ingredient quantities", async () => {
+    const client = { from: vi.fn(emptyNutritionQuery) };
+    const { calculateRecipeDraftNutrition, RecipeDraftNutritionValidationError } = await import("@/lib/server/recipe-content-snapshot-future-propagation");
+    const result = await calculateRecipeDraftNutrition(client, { recipeId, baseRecipeRevision: 1, draft: strawberryPuddingDraft });
+    expect(result.predecessorGuard.recipe_ingredients).toHaveLength(12);
+    expect(result.predecessorGuard.recipe_ingredients.map((row) => row.amount)).toEqual(strawberryPuddingDraft.ingredients.map((row) => row.amount));
+    expect(result.nutritionSnapshot.target_ingredient_count).toBe(12);
+    expect(result.nutritionSnapshot.calculation_status).toBe("unavailable");
+    await expect(calculateRecipeDraftNutrition(client, { recipeId, baseRecipeRevision: 1, draft: {
+      ...strawberryPuddingDraft, ingredients: [...strawberryPuddingDraft.ingredients, strawberryPuddingDraft.ingredients[0]],
+    } })).rejects.toBeInstanceOf(RecipeDraftNutritionValidationError);
+  });
+
+  it("keeps two product pins for the same ingredient in different components separate", async () => {
+    const ingredient = strawberryPuddingDraft.ingredients[0];
+    const products = ["550e8400-e29b-41d4-a716-446655440401", "550e8400-e29b-41d4-a716-446655440402"];
+    const versions = ["550e8400-e29b-41d4-a716-446655440501", "550e8400-e29b-41d4-a716-446655440502"];
+    const predecessors = [100, 300].map((energy, index) => ({
+      nutrition: {
+        link: { id: `link-${index}`, review_status: "approved", is_active: true, is_primary: true, preparation_state: "raw" },
+        profile: { id: `profile-${index}`, basis_amount: 100, basis_unit: "g", review_status: "approved", is_active: true,
+          values: Object.fromEntries(["energy_kcal", "carbohydrate_g", "protein_g", "fat_g", "sodium_mg"].map((code) => [code, { amount: code === "energy_kcal" ? energy : 10, value_status: "observed" }])) },
+        source: { id: `source-${index}`, provider: "MFDS", dataset: "label", source_version: "1", data_basis_date: null, license: "Open", source_url: "https://example.test/label", review_status: "approved", freshness_status: "current", is_active: true },
+      }, basis_relations: [],
+    }));
+    const client = {
+      from: vi.fn(emptyNutritionQuery),
+      rpc: vi.fn(async (_name: string, args: { p_ingredients: Array<{ id: string }> }) => ({
+        data: args.p_ingredients.map((pin, index) => ({ id: pin.id, product_predecessor: predecessors[index] })), error: null,
+      })),
+    };
+    const { calculateRecipeDraftNutrition } = await import("@/lib/server/recipe-content-snapshot-future-propagation");
+    const result = await calculateRecipeDraftNutrition(client, { recipeId, baseRecipeRevision: 1, draft: {
+      ...strawberryPuddingDraft,
+      ingredients: ["푸딩", "콩포트"].map((component_label, index) => ({ ...ingredient, component_label, amount: index ? 50 : 100,
+        food_product_id: products[index], food_product_nutrition_version_id: versions[index] })),
+    } });
+    expect(result.nutritionSnapshot.scalable_values.energy_kcal).toBe(250);
+    expect(result.predecessorGuard.recipe_ingredients.map((row) => row.food_product_nutrition_version_id)).toEqual(versions);
+    expect(result.predecessorGuard.recipe_ingredients.map((row) => row.product_predecessor)).toEqual(predecessors);
+    const pins = client.rpc.mock.calls[0][1].p_ingredients;
+    expect(new Set(pins.map((pin) => pin.id)).size).toBe(2);
   });
 
   it("keeps preview and PATCH on one shared canonicalizer and one-RPC final authority", () => {

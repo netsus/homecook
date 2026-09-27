@@ -114,6 +114,33 @@ describe("auth logout route", () => {
     expect(response.headers.get("location")).toBe("https://app.mumeok.kr/planner");
   });
 
+  it("clears a protected session before showing alternative login methods", async () => {
+    const { GET } = await import("@/app/auth/logout/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/logout?reauthenticate=1&next=%2Fmypage",
+      { headers: { cookie: "sb-local-auth-token=protected-session" } },
+    ));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/mypage");
+    expect(location.searchParams.get("authError")).toBe("ACCOUNT_SESSION_STALE");
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+  });
+
+  it.each(["client", "logout"])("still removes browser cookies when %s throws", async (failure) => {
+    if (failure === "client") createRouteHandlerClient.mockRejectedValueOnce(new Error("unavailable"));
+    else executeHybridLogout.mockRejectedValueOnce(new Error("unavailable"));
+    const { GET } = await import("@/app/auth/logout/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/logout?reauthenticate=1&next=%2Fmypage",
+      { headers: { cookie: "sb-local-auth-token=protected-session; sb-local-auth-token.0=chunk" } },
+    ));
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.0")?.maxAge).toBe(0);
+    expect(response.cookies.get("__Host-homecook-auth-flow")?.maxAge).toBe(0);
+  });
+
   it("fails closed to login when hybrid revoke rejects the session", async () => {
     executeHybridLogout.mockResolvedValueOnce({
       ok: false,

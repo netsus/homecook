@@ -38,6 +38,17 @@ describe("personal recipe ingredient correction", () => {
   it("rejects duplicate canonical ingredient replacement", () => {
     const draft = fixture(); expect(changeRecipeIngredient(draft, 0, ingredient("onion"))).toBe(draft);
   });
+  it.each([false, true])("keeps references in other components and unlabelled steps intact (remove: %s)", (remove) => {
+    const draft = fixture();
+    draft.ingredients = [{ ...ingredient("old"), component_label: "푸딩" }, { ...ingredient("old"), component_label: "콩포트" }];
+    draft.steps = ["푸딩", "콩포트", null].map((component_label, index) => ({ ...draft.steps[0], step_number: index + 1, component_label }));
+    const next = changeRecipeIngredient(draft, 0, remove ? null : ingredient("new"));
+    expect(next.steps[0].ingredients_used.map((item) => item.ingredient_id)).toEqual(remove ? [] : ["new"]);
+    expect(next.steps[1]).toEqual(draft.steps[1]);
+    expect(next.steps[2]).toEqual(draft.steps[2]);
+    expect(next.ingredients.at(-1)).toEqual(draft.ingredients[1]);
+  });
+
   it("preserves the chosen product and exact nutrition version", () => {
     expect(toRecipeEditIngredient({ ingredient_id: "soy", standard_name: "간장", amount: 10, unit: "g", ingredient_type: "QUANT", display_text: null, scalable: true, sort_order: 1, food_product_id: "product", food_product_nutrition_version_id: "version" })).toMatchObject({ ingredient_id: "soy", food_product_id: "product", food_product_nutrition_version_id: "version" });
   });

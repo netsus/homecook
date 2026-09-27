@@ -199,7 +199,7 @@ function isPositiveInteger(value: unknown): value is number {
 }
 
 function isExactCookedBatchProjection(value: unknown): value is CookedBatchProjection {
-  if (!isRecord(value) || !hasExactKeys(value, COOKED_BATCH_KEYS)) return false;
+  if (!isRecord(value) || !hasExactKeys(value, [...COOKED_BATCH_KEYS, ...(Object.hasOwn(value, "weight_source") ? ["weight_source"] : [])])) return false;
   return typeof value.id === "string"
     && UUID_PATTERN.test(value.id)
     && typeof value.recipe_id === "string"
@@ -214,6 +214,7 @@ function isExactCookedBatchProjection(value: unknown): value is CookedBatchProje
     && isNullableFiniteNumber(value.finished_weight_g)
     && isNullableFiniteNumber(value.remaining_weight_g)
     && (value.weight_status === null || ["known", "missing", "unrecoverable"].includes(String(value.weight_status)))
+    && (value.weight_source === undefined || value.weight_source === null || ["estimated", "measured"].includes(String(value.weight_source)))
     && (value.batch_status === null || ["available", "depleted"].includes(String(value.batch_status)))
     && (value.depleted_reason === null || ["consumed", "discarded", "mixed", "consumed_unweighed", "discarded_unweighed", "mixed_unweighed"].includes(String(value.depleted_reason)))
     && (value.revision === null || isPositiveInteger(value.revision))
@@ -260,9 +261,12 @@ function isExactSnapshotV2CompleteData(
     ? batch.weight_status === "known"
       && batch.finished_weight_g === request.body.finished_weight_g
       && batch.remaining_weight_g === request.body.finished_weight_g
-    : batch.weight_status === "missing"
+    : (batch.weight_status === "missing"
       && batch.finished_weight_g === null
-      && batch.remaining_weight_g === null;
+      && batch.remaining_weight_g === null)
+      || (batch.weight_status === "known" && batch.weight_source === "estimated"
+        && typeof batch.finished_weight_g === "number" && batch.finished_weight_g > 0
+        && batch.remaining_weight_g === batch.finished_weight_g);
   if (
     typeof batch.id !== "string"
     || !UUID_PATTERN.test(batch.id)

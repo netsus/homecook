@@ -59,21 +59,19 @@ describe("cooked batch pantry row selection", () => {
     );
 
     const rows = screen.getAllByRole("checkbox");
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     expect(rows.every((row) => row.getAttribute("aria-checked") === "false")).toBe(true);
     expect(screen.getByText("닭가슴살 오리지널")).toBeTruthy();
-    expect(screen.getByText("하림 · 제품 팬트리 항목 1")).toBeTruthy();
+    expect(screen.getByText("하림")).toBeTruthy();
     expect(screen.getByText("담백 닭가슴살")).toBeTruthy();
-    expect(screen.getByText("무브랜드 · 제품 팬트리 항목 2")).toBeTruthy();
-    expect(screen.getByText("일반 재료 · 팬트리 항목 1")).toBeTruthy();
-    expect(screen.getByText(/실제로 사용한 팬트리 항목만 선택/)).toBeTruthy();
+    expect(screen.getAllByText("양파")).toHaveLength(1);
+    expect(screen.queryByText(/같은 원재료/)).toBeNull();
     expect(document.body.textContent).not.toContain(candidates[0].pantry_item_id);
 
     await user.click(screen.getByRole("checkbox", { name: /닭가슴살 오리지널.*하림/ }));
     expect(screen.getByRole("checkbox", { name: /닭가슴살 오리지널.*하림/ }).getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByRole("checkbox", { name: /담백 닭가슴살.*무브랜드/ }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("checkbox", { name: /담백 닭가슴살/ }).getAttribute("aria-checked")).toBe("false");
 
-    await user.click(screen.getByRole("radio", { name: "나중에 입력" }));
     await user.click(screen.getByRole("button", { name: "완료 저장" }));
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -83,7 +81,7 @@ describe("cooked batch pantry row selection", () => {
     });
   });
 
-  it("keeps an empty candidate list as an explicit empty array and enables completion after a weight action", async () => {
+  it("keeps an empty candidate list as an explicit empty array and enables completion without extra input", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
 
@@ -99,9 +97,8 @@ describe("cooked batch pantry row selection", () => {
 
     const empty = screen.getByTestId("cooked-batch-pantry-empty");
     expect(within(empty).getByText("사용할 팬트리 항목이 없어요")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "완료 저장" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "완료 저장" }).hasAttribute("disabled")).toBe(false);
 
-    await user.click(screen.getByRole("radio", { name: "나중에 입력" }));
     expect(screen.getByRole("button", { name: "완료 저장" }).hasAttribute("disabled")).toBe(false);
     await user.click(screen.getByRole("button", { name: "완료 저장" }));
 

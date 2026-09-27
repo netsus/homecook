@@ -216,7 +216,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
     );
 
     await expect(
-      page.getByRole("heading", { name: "계정 보호 중" }),
+      page.getByRole("heading", { name: "계정 복구" }),
     ).toBeVisible();
     await expect(page.getByTestId("mypage-profile")).toHaveCount(0);
     await expect(page).toHaveURL(/\/mypage\?restore=recipebook-tab$/);
@@ -244,10 +244,10 @@ test.describe("account-session-generation-foundation quarantine", () => {
     await expect(
       page.getByRole("heading", { name: "계정 확인이 필요해요" }),
     ).toBeVisible();
-    await expect(page.getByText(/Manual Only/)).toBeVisible();
+    await expect(page.getByText(/고객지원/)).toBeVisible();
     await expect(page.getByRole("button", { name: "계정 복구" }))
       .toHaveCount(0);
-    await expect(page.getByRole("button", { name: "삭제 검토" }))
+    await expect(page.getByRole("button", { name: "계정 삭제" }))
       .toHaveCount(0);
   });
 
@@ -255,10 +255,10 @@ test.describe("account-session-generation-foundation quarantine", () => {
     page,
   }) => {
     const cases = [
-      ["replay", "이전 요청 결과를 다시 보여드려요"],
-      ["maintenance", "지금은 계정 전환 작업 중이에요"],
-      ["cleanup-pending", "계정 정리를 시작했어요. 아직 완료되지 않았어요."],
-      ["unauthorized", "세션이 바뀌었어요. 다시 로그인해 주세요."],
+      ["replay", "처리 결과를 확인했어요"],
+      ["maintenance", "잠시 후 다시 시도해 주세요"],
+      ["cleanup-pending", "계정 삭제 중"],
+      ["unauthorized", "다시 로그인해 주세요"],
     ] as const;
 
     for (const [state, title] of cases) {
@@ -266,11 +266,11 @@ test.describe("account-session-generation-foundation quarantine", () => {
       await expect(page.getByText(title, { exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "계정 복구" }))
         .toHaveCount(0);
-      await expect(page.getByRole("button", { name: "삭제 검토" }))
+      await expect(page.getByRole("button", { name: "계정 삭제" }))
         .toHaveCount(0);
     }
 
-    await expect(page.getByRole("link", { name: "다시 로그인" }))
+    await expect(page.getByRole("link", { name: "다른 계정으로 로그인" }))
       .toBeVisible();
   });
 
@@ -308,7 +308,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
       "auth-present",
       "/account-quarantine?next=%2Fmypage%3Frestore%3Drecipebook-tab",
     );
-    await page.getByLabel("복구할 계정의 닉네임").fill("집밥러");
+    await page.getByLabel("닉네임").fill("집밥러");
     await page.evaluate((cookieName) => {
       document.cookie =
         `${cookieName}=; path=/; Max-Age=0; SameSite=Lax`;
@@ -344,7 +344,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
     );
     await openQuarantine(page, "auth-present");
 
-    await page.getByRole("button", { name: "삭제 검토" }).click();
+    await page.getByRole("button", { name: "계정 삭제" }).click();
     const dialog = page.getByRole("dialog", {
       name: "정말 계정을 삭제할까요?",
     });
@@ -352,7 +352,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
     await dialog.getByRole("button", { name: "삭제 시작" }).click();
 
     await expect(page.getByText(
-      "계정 정리를 시작했어요. 아직 완료되지 않았어요.",
+      "계정 삭제 중",
     )).toBeVisible();
     expect(requestCount).toBe(1);
   });
@@ -382,7 +382,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
           name: "계정 복구",
         });
         await expectTextContrast(recoveryButton);
-        await expectTextContrast(page.getByText("계정 보호", { exact: true }));
+        await expectTextContrast(page.getByRole("heading", { name: "계정 복구", exact: true }));
         const recoveryBox = await recoveryButton.boundingBox();
         expect(recoveryBox).not.toBeNull();
         expect(
@@ -407,7 +407,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
       state: "auth-present",
       viewport: { width: 390, height: 844 },
       prepare: async (page) => {
-        await page.getByRole("button", { name: "삭제 검토" }).click();
+        await page.getByRole("button", { name: "계정 삭제" }).click();
         await expect(page.getByRole("dialog")).toBeVisible();
       },
     });
@@ -418,7 +418,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
       state: "auth-present",
       viewport: { width: 320, height: 568 },
       prepare: async (page) => {
-        await page.getByRole("button", { name: "삭제 검토" }).click();
+        await page.getByRole("button", { name: "계정 삭제" }).click();
         const dialog = page.getByRole("dialog", {
           name: "정말 계정을 삭제할까요?",
         });
@@ -459,7 +459,7 @@ test.describe("account-session-generation-foundation quarantine", () => {
           : async (page) => {
               await expectTextContrast(
                 page.getByRole("button", {
-                  name: state === "error" ? "다시 시도" : "다시 검토",
+                  name: state === "error" ? "다시 시도" : "다시 선택",
                 }),
               );
             },

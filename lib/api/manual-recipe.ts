@@ -275,6 +275,9 @@ export async function createManualRecipe(
       return invalidResponse();
     }
 
+    if (response.status === 503 && payload.error?.code === "RECIPE_PREPARATION_PENDING") {
+      return { success: false, data: null, error: payload.error };
+    }
     if (response.status >= 500) {
       return networkError("저장 결과를 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요.");
     }

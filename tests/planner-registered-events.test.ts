@@ -10,6 +10,7 @@ const recordUserGrowthActivityEvent = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: () => null,
   createRouteHandlerClient,
   createServiceRoleClient,
   createFutureMealWriteInternalClient,

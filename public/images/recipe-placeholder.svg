@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="675" viewBox="0 0 900 675">
+  <rect width="900" height="675" fill="#f4f6f7"/>
+  <g fill="none" stroke="#a9b4bc" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="450" cy="310" r="85"/><circle cx="450" cy="310" r="63"/>
+    <path d="M315 229v59q0 18 18 18t18-18v-59m-18 0v185m252-185v185m0-185q-33 38-33 84h33"/>
+  </g>
+  <text x="450" y="472" fill="#667680" font-family="sans-serif" font-size="28" text-anchor="middle">레시피 사진</text>
+</svg>

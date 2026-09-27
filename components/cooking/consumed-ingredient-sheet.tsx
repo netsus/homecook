@@ -6,7 +6,6 @@ import { useIsMobileViewport } from "@/components/cooking/cook-mode-mobile-ui";
 import { formatIngredientAmountOnly } from "@/components/cooking/cook-mode-step-model";
 import {
   AppBottomSheet,
-  AppModalFooterActions,
 } from "@/components/shared/app-overlay";
 import type { CookingModeIngredient } from "@/types/cooking";
 
@@ -18,12 +17,16 @@ interface ConsumedIngredientSheetProps {
   onSkip: () => void;
 }
 
+function consumedAmountText(ingredient: CookingModeIngredient) {
+  const amount = formatIngredientAmountOnly(ingredient);
+  return amount.trim() === ingredient.standard_name.trim() ? "" : amount;
+}
+
 export function ConsumedIngredientSheet({
   ingredients,
   recipeTitle,
   onClose,
   onConfirm,
-  onSkip,
 }: ConsumedIngredientSheetProps) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -93,17 +96,13 @@ export function ConsumedIngredientSheet({
       <AppBottomSheet
         ariaLabelledBy="consumed-sheet-title"
         closeButtonRef={closeButtonRef}
-        description="체크된 재료는 팬트리에서 자동으로 빠져요."
-        descriptionClassName="mt-1 text-[13px] font-normal leading-[1.5] text-[var(--wave1-text-2)]"
         footer={
-          <AppModalFooterActions
-            cancelLabel="건너뛰기"
-            cancelTestId="consumed-skip-button"
-            confirmLabel={`요리 완료 (${checked.size}개 차감)`}
-            confirmTestId="consumed-confirm-button"
-            onCancel={onSkip}
-            onConfirm={handleConfirm}
-          />
+          <button
+            className="flex min-h-12 w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-base font-bold text-[var(--text-inverse)]"
+            data-testid="consumed-confirm-button"
+            onClick={handleConfirm}
+            type="button"
+          >요리 완료</button>
         }
         onClose={onClose}
         headerSlot={
@@ -118,7 +117,7 @@ export function ConsumedIngredientSheet({
         }
         headerSlotClassName="mt-2"
         testId="consumed-ingredient-sheet"
-        title="소진된 재료를 확인해 주세요"
+        title="요리 완료"
       >
         {selectionToolbar}
         <div
@@ -135,7 +134,7 @@ export function ConsumedIngredientSheet({
                 key={`${ingredient.ingredient_id}-${index}`}
                 onClick={() => toggleIngredient(ingredient.ingredient_id)}
                 aria-checked={isChecked}
-                aria-label={`${ingredient.standard_name} ${formatIngredientAmountOnly(ingredient)} 소진 재료 선택`}
+                aria-label={`${ingredient.standard_name} ${consumedAmountText(ingredient)} 소진 재료 선택`}
                 role="checkbox"
                 type="button"
               >
@@ -158,7 +157,7 @@ export function ConsumedIngredientSheet({
                     {ingredient.standard_name}
                   </span>
                   <span className="shrink-0 text-right text-[12px] font-semibold leading-[1.35] text-[var(--wave1-text-2)]">
-                    {formatIngredientAmountOnly(ingredient)}
+                    {consumedAmountText(ingredient)}
                   </span>
                 </span>
               </button>
@@ -188,7 +187,7 @@ export function ConsumedIngredientSheet({
               className="text-xl font-bold tracking-[-0.3px] text-[var(--foreground)]"
               id="consumed-sheet-title"
             >
-              소진한 재료를 확인해 주세요
+              요리 완료
             </h3>
             <button
               aria-label="닫기"
@@ -213,10 +212,7 @@ export function ConsumedIngredientSheet({
               </svg>
             </button>
           </div>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            체크한 재료가 팬트리에서 제거돼요.
-            {recipeTitle ? ` 요리: ${recipeTitle}` : null}
-          </p>
+          {recipeTitle ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{recipeTitle}</p> : null}
         </div>
 
         <div
@@ -230,7 +226,7 @@ export function ConsumedIngredientSheet({
             return (
               <button
                 aria-checked={isChecked}
-                aria-label={`${ing.standard_name} ${formatIngredientAmountOnly(ing)} 소진 재료 선택`}
+                aria-label={`${ing.standard_name} ${consumedAmountText(ing)} 소진 재료 선택`}
                 className="mb-2 flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-left last:mb-0"
                 data-testid={`consumed-check-${ing.ingredient_id}`}
                 key={`${ing.ingredient_id}-${index}`}
@@ -253,7 +249,7 @@ export function ConsumedIngredientSheet({
                   {ing.standard_name}
                 </span>
                 <span className="min-w-0 max-w-[44%] break-words text-right text-xs text-[var(--muted)]">
-                  {formatIngredientAmountOnly(ing)}
+                  {consumedAmountText(ing)}
                 </span>
               </button>
             );
@@ -261,21 +257,14 @@ export function ConsumedIngredientSheet({
         </div>
 
         <div className="flex gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-6 py-4">
-          <button
-            className="flex min-h-[var(--control-height-md)] min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--line)] bg-transparent px-3 text-sm font-semibold text-[var(--muted)]"
-            data-testid="consumed-skip-button"
-            onClick={onSkip}
-            type="button"
-          >
-            건너뛰기
-          </button>
+
           <button
             className="flex min-h-[var(--control-height-md)] min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-[var(--text-inverse)]"
             data-testid="consumed-confirm-button"
             onClick={handleConfirm}
             type="button"
           >
-            확인 ({checked.size}개)
+            요리 완료
           </button>
         </div>
       </div>
@@ -283,13 +272,15 @@ export function ConsumedIngredientSheet({
   );
 }
 
-function ConsumedSelectionToolbar({
+export function ConsumedSelectionToolbar({
   allSelected,
   onToggleAll,
   partiallySelected,
   selectedCount,
   totalCount,
   variant,
+  disabled = false,
+  selectionLabel = "소진 재료",
 }: {
   allSelected: boolean;
   onToggleAll: () => void;
@@ -297,6 +288,8 @@ function ConsumedSelectionToolbar({
   selectedCount: number;
   totalCount: number;
   variant: "desktop" | "mobile";
+  disabled?: boolean;
+  selectionLabel?: string;
 }) {
   let ariaChecked: "false" | "mixed" | "true" = "false";
   if (allSelected) {
@@ -324,8 +317,8 @@ function ConsumedSelectionToolbar({
       : "mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5";
   const buttonClass =
     variant === "mobile"
-      ? "flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-3 text-[13px] font-extrabold text-[var(--wave1-ink)] disabled:opacity-45"
-      : "flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] font-bold text-[var(--foreground)] disabled:opacity-45";
+      ? "flex min-h-11 shrink-0 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-3 text-[13px] font-extrabold text-[var(--wave1-ink)] disabled:opacity-45"
+      : "flex min-h-11 shrink-0 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] font-bold text-[var(--foreground)] disabled:opacity-45";
   const summaryClass =
     variant === "mobile"
       ? "min-w-0 text-[13px] font-bold text-[var(--wave1-text-2)]"
@@ -336,11 +329,11 @@ function ConsumedSelectionToolbar({
       <button
         aria-checked={ariaChecked}
         aria-label={
-          allSelected ? "소진 재료 전체 해제" : "소진 재료 전체 선택"
+          `${selectionLabel} ${allSelected ? "전체 해제" : "전체 선택"}`
         }
         className={buttonClass}
         data-testid="consumed-bulk-toggle"
-        disabled={totalCount === 0}
+        disabled={disabled || totalCount === 0}
         onClick={onToggleAll}
         role="checkbox"
         type="button"

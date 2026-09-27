@@ -36,6 +36,23 @@ function accessToken(overrides: Record<string, unknown> = {}) {
 }
 
 describe("hybrid callback/refresh authority bootstrap", () => {
+  it.each(["refresh-body", "user-body", "bootstrap"])("keeps %s network failure distinct from invalid authentication", async (stage) => {
+    const bodyFailure = () => new Response(new ReadableStream({
+      start(controller) { controller.error(new DOMException("timed out", "TimeoutError")); },
+    }));
+    const remoteFetch = vi.fn()
+      .mockImplementationOnce(async () => stage === "refresh-body" ? bodyFailure() : Response.json({ access_token: accessToken() }))
+      .mockImplementationOnce(async () => stage === "user-body" ? bodyFailure() : Response.json({ id: OWNER_UUID, created_at: "2026-07-28T00:00:00.000Z" }));
+    const bootstrap = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    const authorityFetch = createRemoteRefreshAuthorityFetch({
+      auth: { url: "http://127.0.0.1:54321", publishableKey: "local-publishable" }, remoteFetch, bootstrap,
+    });
+    const response = await authorityFetch("http://127.0.0.1:54321/auth/v1/token?grant_type=refresh_token", { method: "POST" });
+    expect(response.status).toBe(503);
+    expect(remoteFetch).toHaveBeenCalledTimes(stage === "refresh-body" ? 1 : 2);
+    if (stage !== "bootstrap") expect(bootstrap).not.toHaveBeenCalled();
+  });
+
   it("records the exact remote identity epoch and HMAC session binding after remote callback verification", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: { binding_state: "active" },

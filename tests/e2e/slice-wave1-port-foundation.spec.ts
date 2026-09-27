@@ -14,7 +14,7 @@ test.describe("wave1 port foundation", () => {
 
     await page.goto("/");
     await expect(
-      page.locator('input[placeholder="레시피 제목 검색"]:visible').first(),
+      page.locator('input[placeholder="제목·재료 검색"]:visible').first(),
     ).toBeVisible();
 
     if (isMobileViewport(page)) {

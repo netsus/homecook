@@ -27,7 +27,7 @@ export function AppHeader({
 
   return (
     <header
-      className="sticky top-0 z-20 border-b border-[var(--wave1-border)] bg-[var(--wave1-surface)]"
+      className="border-b border-[var(--wave1-border)] bg-[var(--wave1-surface)]"
       style={{ borderBottomWidth: "0.5px" }}
     >
       <div className="mx-auto flex min-h-[var(--control-height-xl)] max-w-6xl items-center justify-between gap-3 px-4 md:min-h-[56px] md:px-6">

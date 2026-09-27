@@ -26,10 +26,15 @@ export async function GET(request: Request) {
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
   const cookieStore = await cookies();
   const authStorageKey = getSupabaseAuthStorageKey(getAuthSupabaseEnv().url);
-  const supabase = await createAuthRouteHandlerClient();
-
-  const logoutResult = await executeHybridLogout(supabase);
-  if (!logoutResult.ok || requestUrl.searchParams.get("reauthenticate") === "1") {
+  let loggedOut = false;
+  try {
+    const supabase = await createAuthRouteHandlerClient();
+    loggedOut = (await executeHybridLogout(supabase)).ok;
+  } catch {
+    // Still clear this browser's cookies if the Auth service is unavailable.
+    // Do not claim that the server session was successfully revoked.
+  }
+  if (!loggedOut || requestUrl.searchParams.get("reauthenticate") === "1") {
     return expireAuthFlowCookie(
       expireSupabaseAuthCookies(
         NextResponse.redirect(buildReauthenticationRedirectUrl(requestUrl, nextPath)),

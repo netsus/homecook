@@ -10,6 +10,7 @@ import {
   HybridLifecycleMaintenanceError,
   HybridSessionAuthorityError,
   createHybridAuthorityErrorResponse,
+  isSessionAuthorityTransportFailure,
 } from "./gateway";
 
 interface BootstrapDbClient {
@@ -42,6 +43,7 @@ function boundedSignal(signal: AbortSignal | null | undefined, timeoutMs: number
 }
 
 function bootstrapFailureReason(error: unknown): "maintenance" | "stale" {
+  if (isSessionAuthorityTransportFailure(error)) return "maintenance";
   if (!error || typeof error !== "object") {
     return "stale";
   }
@@ -112,7 +114,7 @@ export function createRemoteRefreshAuthorityFetch({
       return maintenanceResponse();
     }
     if (!refreshResponse.ok) {
-      return refreshResponse.status >= 500
+      return refreshResponse.status >= 500 || refreshResponse.status === 408 || refreshResponse.status === 429
         ? maintenanceResponse()
         : staleResponse();
     }
@@ -129,8 +131,8 @@ export function createRemoteRefreshAuthorityFetch({
         return staleResponse();
       }
       accessToken = refreshBody.access_token;
-    } catch {
-      return staleResponse();
+    } catch (error) {
+      return isSessionAuthorityTransportFailure(error) ? maintenanceResponse() : staleResponse();
     }
 
     let userResponse: Response;
@@ -151,7 +153,7 @@ export function createRemoteRefreshAuthorityFetch({
       return maintenanceResponse();
     }
     if (!userResponse.ok) {
-      return userResponse.status >= 500
+      return userResponse.status >= 500 || userResponse.status === 408 || userResponse.status === 429
         ? maintenanceResponse()
         : staleResponse();
     }
@@ -171,8 +173,8 @@ export function createRemoteRefreshAuthorityFetch({
         id: candidate.id,
         created_at: createdAtValue,
       };
-    } catch {
-      return staleResponse();
+    } catch (error) {
+      return isSessionAuthorityTransportFailure(error) ? maintenanceResponse() : staleResponse();
     }
 
     try {
@@ -182,8 +184,8 @@ export function createRemoteRefreshAuthorityFetch({
         : result.reason === "maintenance"
           ? maintenanceResponse()
           : staleResponse();
-    } catch {
-      return staleResponse();
+    } catch (error) {
+      return isSessionAuthorityTransportFailure(error) ? maintenanceResponse() : staleResponse();
     }
   };
 }

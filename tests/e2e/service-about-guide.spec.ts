@@ -85,7 +85,7 @@ test.describe("service about guide", () => {
       expect(geometry.nextCardVisibleWidth).toBeLessThan(geometry.cardWidth);
     }
 
-    const titleSearch = page.getByRole("textbox", { name: "레시피 제목 검색" });
+    const titleSearch = page.getByRole("textbox", { name: "제목·재료 검색" });
     await titleSearch.fill("김치");
     await expect(quickLinks).toBeHidden();
     await expect(rail).toBeHidden();

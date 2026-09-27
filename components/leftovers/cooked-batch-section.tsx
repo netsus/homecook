@@ -83,6 +83,8 @@ function CookedBatchCard({
   onAction: CookedBatchSectionProps["onAction"];
 }) {
   const actions = getCookedBatchActions(batch);
+  const labels = { ...actionLabels, set_finished_weight: batch.weight_source === "estimated" ? "실제 무게 입력" : actionLabels.set_finished_weight };
+  const weightPrefix = batch.weight_source === "estimated" ? "추정 " : "";
   const isLegacyUnknown = batch.batch_status === null || batch.weight_status === null;
 
   return (
@@ -124,8 +126,8 @@ function CookedBatchCard({
         </p>
       ) : batch.weight_status === "known" ? (
         <div className="mt-3 grid grid-cols-2 gap-2 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3">
-          <p className="text-xs text-[var(--text-3)]">완성 중량<strong className="mt-1 block text-base text-[var(--foreground)]">{grams(batch.finished_weight_g)}</strong></p>
-          <p className="text-xs text-[var(--text-3)]">남은 양<strong className="mt-1 block text-base text-[var(--foreground)]">{grams(batch.remaining_weight_g)}</strong></p>
+          <p className="text-xs text-[var(--text-3)]">완성 중량<strong className="mt-1 block text-base text-[var(--foreground)]">{weightPrefix}{grams(batch.finished_weight_g)}</strong></p>
+          <p className="text-xs text-[var(--text-3)]">남은 양<strong className="mt-1 block text-base text-[var(--foreground)]">{weightPrefix}{grams(batch.remaining_weight_g)}</strong></p>
         </div>
       ) : (
         <p className="mt-3 text-sm leading-5 text-[var(--text-2)]">
@@ -141,7 +143,7 @@ function CookedBatchCard({
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {actions.map((action) => (
             <button
-              aria-label={`${batch.recipe_title} ${actionLabels[action]}`}
+              aria-label={`${batch.recipe_title} ${labels[action]}`}
               className={[
                 "min-h-[var(--control-height-md)] rounded-[var(--radius-control)] border px-4 text-sm font-bold",
                 action === "set_finished_weight"
@@ -156,7 +158,7 @@ function CookedBatchCard({
               onClick={() => onAction(batch, action)}
               type="button"
             >
-              {actionLabels[action]}
+              {labels[action]}
             </button>
           ))}
         </div>

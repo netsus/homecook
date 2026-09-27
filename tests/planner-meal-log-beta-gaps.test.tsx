@@ -40,10 +40,10 @@ describe("meal log beta source selection", () => {
     fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(mocks.source).toHaveBeenCalledWith("food_product", "product-1");
-    expect((screen.getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("2");
+    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("2");
     expect((screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(screen.getByRole("combobox", { name: "단위" }), { target: { value: "g" } });
-    expect((screen.getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("300");
+    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("300");
     fireEvent.click(screen.getByRole("button", { name: "기록 저장" })); await flush();
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ amount: 300, unit: "g", id: "product-1" }), "col", "2026-09-22");
   });
@@ -119,7 +119,7 @@ describe("meal log beta source selection", () => {
     fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
     fireEvent.click(screen.getByRole("button", { name: /쌀/ })); await flush();
     fireEvent.change(screen.getByRole("combobox", { name: "단위" }), { target: { value: "g" } });
-    expect((screen.getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("2000");
+    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("2000");
   });
 
   it("finds a renamed recent source by identity without searching its historical name", async () => {
@@ -190,7 +190,7 @@ describe("meal log beta source selection", () => {
     expect((screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => { finish(product); });
     fireEvent.change(screen.getByRole("combobox", { name: "단위" }), { target: { value: "g" } });
-    expect((screen.getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("300");
+    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("300");
     expect((screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(false);
   });
 

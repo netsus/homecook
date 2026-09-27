@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +11,7 @@ import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   cancelRecipeImage,
   createManualRecipe,
+  readManualRecipeCreateResult,
   uploadRecipeImage,
 } from "@/lib/api/manual-recipe";
 import { suggestRecipeTags } from "@/lib/api/recipe";
@@ -24,6 +25,7 @@ const navigationMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/menu/add/manual",
   useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));
@@ -36,9 +38,22 @@ vi.mock("@/lib/api/ingredients", () => ({
   fetchIngredients: vi.fn(),
 }));
 
+vi.mock("@/lib/api/mypage", () => ({
+  fetchUserProfile: vi.fn(async () => ({ id: "550e8400-e29b-41d4-a716-446655440001" })),
+}));
+
+vi.mock("@/lib/api/food-catalog-search", () => ({
+  fetchFoodCatalogSearch: vi.fn(async () => ({
+    items: [{ type: "ingredient", id: "ing-onion", standard_name: "양파", category: "채소", default_unit: "g" }],
+    has_next: false,
+    next_cursor: null,
+  })),
+}));
+
 vi.mock("@/lib/api/manual-recipe", () => ({
   cancelRecipeImage: vi.fn(),
   createManualRecipe: vi.fn(),
+  readManualRecipeCreateResult: vi.fn(),
   uploadRecipeImage: vi.fn(),
 }));
 
@@ -118,6 +133,7 @@ async function fillMinimumManualRecipe(
 
 describe("ManualRecipeCreateScreen", () => {
   beforeEach(() => {
+    window.sessionStorage.clear();
     installMatchMedia(false);
     mockRouterReplace.mockReset();
     mockRouterPush.mockReset();
@@ -135,6 +151,7 @@ describe("ManualRecipeCreateScreen", () => {
       error: null,
     });
     vi.mocked(createManualRecipe).mockReset();
+    vi.mocked(readManualRecipeCreateResult).mockReset();
     vi.mocked(uploadRecipeImage).mockReset();
     vi.mocked(suggestRecipeTags).mockReset();
     vi.mocked(compressRecipeImageFile).mockReset();
@@ -434,6 +451,24 @@ describe("ManualRecipeCreateScreen", () => {
     });
   });
 
+  it("keeps the history guard stable while Korean composition and parent callback identities change", async () => {
+    const historyBack = vi.spyOn(window.history, "back").mockImplementation(() => undefined);
+    const historyPush = vi.spyOn(window.history, "pushState");
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} onRequestClose={() => undefined} />);
+    const title = await screen.findByPlaceholderText("예: 김치찌개");
+    await waitFor(() => expect(title.closest("fieldset")?.disabled).toBe(false));
+    fireEvent.compositionStart(title);
+    fireEvent.change(title, { target: { value: "ㄱ" } });
+    await waitFor(() => expect(historyPush).toHaveBeenCalledTimes(1));
+    view.rerender(<ManualRecipeCreateScreen {...DEFAULT_PROPS} onRequestClose={() => undefined} />);
+    fireEvent.change(title, { target: { value: "김" } });
+    fireEvent.compositionEnd(title, { data: "김" });
+    expect(historyBack).not.toHaveBeenCalled();
+    expect(historyPush).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog", { name: "변경사항을 버릴까요?" })).toBeNull();
+    expect((title as HTMLInputElement).value).toBe("김");
+  });
+
   it("does not show a non-interactive default step placeholder", async () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
@@ -509,7 +544,7 @@ describe("ManualRecipeCreateScreen", () => {
     ).toBeTruthy();
   });
 
-  it("requires choosing a cooking method before adding an inline cooking step", async () => {
+  it("requires choosing a cooking method when the instruction has no clear action", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchCookingMethods).mockResolvedValue({
       success: true,
@@ -530,7 +565,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await screen.findByRole("button", { name: "볶기" });
-    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
+    await user.type(screen.getByLabelText("만들기 1 설명"), "재료를 준비해요");
     await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 
     expect(screen.getByText("조리법을 선택해 주세요.")).toBeTruthy();
@@ -585,8 +620,9 @@ describe("ManualRecipeCreateScreen", () => {
     await user.type(screen.getByLabelText("만들기 2 설명"), "물을 붓고 끓여요");
     await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 
-    expect(screen.getByText("조리법을 선택해 주세요.")).toBeTruthy();
-    expect(screen.queryByText("2.")).toBeNull();
+    expect(screen.queryByText("조리법을 선택해 주세요.")).toBeNull();
+    expect(screen.getByText("물을 붓고 끓여요")).toBeTruthy();
+    expect(screen.getByLabelText("만들기 3 설명")).toBeTruthy();
   });
 
   it("lets selected ingredient chips deselect from the summary under categories", async () => {
@@ -1681,6 +1717,56 @@ describe("ManualRecipeCreateScreen", () => {
       expect(cancelRecipeImage).not.toHaveBeenCalled();
     },
   );
+
+  it("does not submit a cleared ingredient amount as zero", async () => {
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await fillMinimumManualRecipe(user, "빈 수량 확인");
+    const amount = screen.getByLabelText("양파 수량");
+    await user.clear(amount);
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    expect(await screen.findByText("재료 수량을 0보다 크게 입력하고 단위를 확인해 주세요.")).toBeTruthy();
+    expect((amount as HTMLInputElement).value).toBe("");
+    expect(createManualRecipe).not.toHaveBeenCalled();
+  });
+
+  it("finishes a pending publication with the original POST key and body after GET confirms pending", async () => {
+    const pending = { success: false as const, data: null, error: { code: "RECIPE_PREPARATION_PENDING", message: "공개 등록을 마무리하고 있어요.", fields: [] } };
+    vi.mocked(createManualRecipe).mockResolvedValueOnce(pending).mockResolvedValueOnce({
+      success: true, data: { id: "created-once", title: "공개 마무리 재시도", source_type: "manual", created_by: "550e8400-e29b-41d4-a716-446655440001", base_servings: 2 }, error: null,
+    });
+    vi.mocked(readManualRecipeCreateResult).mockResolvedValue(pending);
+    const historyBack = vi.spyOn(window.history, "back").mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await fillMinimumManualRecipe(user, "공개 마무리 재시도");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    const retry = await screen.findByRole("button", { name: "저장 결과 확인" });
+    expect(screen.queryByText("레시피 등록 완료")).toBeNull();
+    const [originalBody, originalOptions] = vi.mocked(createManualRecipe).mock.calls[0];
+    await user.click(retry);
+    await waitFor(() => expect(createManualRecipe).toHaveBeenCalledTimes(2));
+    expect(readManualRecipeCreateResult).toHaveBeenCalledWith(originalOptions?.idempotencyKey, originalOptions?.expectedOwnerId);
+    expect(vi.mocked(createManualRecipe).mock.calls[1]).toEqual([originalBody, originalOptions]);
+    await waitFor(() => expect(historyBack).toHaveBeenCalledOnce());
+    await act(async () => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    expect(await screen.findAllByRole("heading", { name: "레시피 등록 완료" })).toHaveLength(1);
+    expect(screen.getByText("공개 레시피로 등록했어요. 검색하거나 링크로 공유할 수 있어요.")).toBeTruthy();
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it.each(["NETWORK_ERROR", "UNAUTHORIZED", "INVALID_RESPONSE"])("does not replay a pending POST when the result lookup returns %s", async (code) => {
+    vi.mocked(createManualRecipe).mockResolvedValue({ success: false, data: null, error: { code: "RECIPE_PREPARATION_PENDING", message: "공개 준비 중", fields: [] } });
+    vi.mocked(readManualRecipeCreateResult).mockResolvedValue({ success: false, data: null, error: { code, message: "결과 조회 실패", fields: [] } });
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await fillMinimumManualRecipe(user, "공개 결과 조회 보호");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await user.click(await screen.findByRole("button", { name: "저장 결과 확인" }));
+    await screen.findByText("결과 조회 실패");
+    expect(createManualRecipe).toHaveBeenCalledOnce();
+    expect(window.sessionStorage.length).toBeGreaterThan(0);
+  });
 
   it("save without image works and does not include image identity fields", async () => {
     vi.mocked(createManualRecipe).mockResolvedValue({

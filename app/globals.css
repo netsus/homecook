@@ -1107,7 +1107,7 @@
 
 .home-mobile-discovery-search {
   position: sticky;
-  top: var(--control-height-xl);
+  top: 0;
   z-index: 19;
   display: flex;
   flex-direction: column;
@@ -3436,6 +3436,10 @@ button {
 
   body:has(.web-topnav .service-prelaunch-notice-desktop) .web-page {
     padding-top: calc(var(--web-nav-h) + var(--web-prelaunch-notice-h));
+  }
+
+  body .web-shell:has(.web-topnav-flow) .web-page {
+    padding-top: 0;
   }
 
   body > .service-prelaunch-notice-mobile {
@@ -17649,4 +17653,87 @@ body:has(.mdv2-root) {
 
 body:has(.mdv2-root) [aria-label^="YouTube 추출"] {
   display: none !important;
+}
+
+/* Avoid iPhone focus zoom without disabling the user's pinch zoom. */
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]),
+  textarea,
+  select {
+    /* Override compact per-screen fields and Tailwind text-size utilities. */
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* Ingredient pickers keep one result scroller inside a stable, keyboard-aware frame. */
+.ingredient-search-backdrop {
+  position: fixed;
+  inset: var(--dialog-viewport-top, 0px) 0 auto;
+  display: flex;
+  height: var(--dialog-viewport-height, 100dvh);
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  overscroll-behavior: none;
+  padding: 8px 0 0;
+}
+
+.ingredient-search-panel {
+  width: 100%;
+  max-width: 600px;
+  height: calc(var(--dialog-viewport-height, 100dvh) - 8px);
+  max-height: calc(var(--dialog-viewport-height, 100dvh) - 8px);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+}
+
+.web-modal-backdrop.ingredient-search-backdrop > div {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  justify-content: center;
+}
+
+.ingredient-search-panel .ingredient-search-body {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ingredient-search-panel .ingredient-search-body > :not(.ingredient-search-results),
+.recipe-ingredient-search-sheet > :not(.ingredient-search-results),
+.ingredient-search-panel .web-dialog-header,
+.ingredient-search-panel .web-dialog-footer {
+  flex-shrink: 0;
+}
+
+.ingredient-search-results {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ingredient-search-panel input[type="search"],
+.ingredient-search-panel .web-modal-search input,
+.ingredient-search-panel .app-field-search input {
+  font-size: 16px;
+}
+
+@media (min-width: 1024px) {
+  .ingredient-search-backdrop {
+    align-items: center;
+    padding: 32px;
+  }
+
+  .ingredient-search-panel,
+  .web-ingredient-picker-dialog.ingredient-search-panel {
+    width: min(600px, calc(100vw - 64px));
+    height: min(720px, calc(var(--dialog-viewport-height, 100dvh) - 64px));
+    max-height: calc(var(--dialog-viewport-height, 100dvh) - 64px);
+    border-radius: var(--radius-card);
+  }
 }

@@ -590,7 +590,7 @@ for (const viewport of [
         const rect = element.getBoundingClientRect();
         return { height: rect.height, width: rect.width, x: rect.x, y: rect.y };
       })),
-      page.getByPlaceholder("레시피 제목 검색").first().boundingBox(),
+      page.getByPlaceholder("제목·재료 검색").first().boundingBox(),
       page.getByRole("button", { name: "재료로 검색" }).first().boundingBox(),
       viewport.width === 1440
         ? Promise.resolve(null)
@@ -670,7 +670,7 @@ for (const viewport of [
 
       const [growthBox, searchAfterBox, filterAfterBox, navAfterBox] = await Promise.all([
         growthToast.boundingBox(),
-        page.getByPlaceholder("레시피 제목 검색").first().boundingBox(),
+        page.getByPlaceholder("제목·재료 검색").first().boundingBox(),
         page.getByRole("button", { name: "재료로 검색" }).first().boundingBox(),
         page.getByRole("navigation", { name: "홈 하단 탭" }).boundingBox(),
       ]);
@@ -1164,7 +1164,7 @@ test("desktop toast remains clear of discovery controls", async ({ page }, testI
   expect(rectanglesAreDisjoint(bellBox, toastCloseBox)).toBe(true);
   const toastBox = await page.getByTestId("youtube-notification-toast-stack").boundingBox();
   for (const control of [
-    page.getByPlaceholder("레시피 제목 검색"),
+    page.getByPlaceholder("제목·재료 검색"),
     page.getByRole("button", { name: "재료로 검색" }),
   ]) {
     const controlBox = await control.boundingBox();

@@ -60,6 +60,7 @@ export interface CookedBatchProjection {
   finished_weight_g: number | null;
   remaining_weight_g: number | null;
   weight_status: "known" | "missing" | "unrecoverable" | null;
+  weight_source?: "estimated" | "measured" | null;
   batch_status: "available" | "depleted" | null;
   depleted_reason: typeof DEPLETED_REASONS[number] | null;
   revision: number | null;
@@ -229,6 +230,7 @@ export function projectCookedBatch(value: unknown): CookedBatchProjection | null
     || !isNullableNumber(value.finished_weight_g)
     || !isNullableNumber(value.remaining_weight_g)
     || (value.weight_status !== null && !includes(WEIGHT_STATUSES, value.weight_status))
+    || (value.weight_source !== undefined && value.weight_source !== null && !["estimated", "measured"].includes(String(value.weight_source)))
     || (value.batch_status !== null && !includes(BATCH_STATUSES, value.batch_status))
     || (value.depleted_reason !== null && !includes(DEPLETED_REASONS, value.depleted_reason))
     || (value.revision !== null && !isPositiveInteger(value.revision))
@@ -250,6 +252,7 @@ export function projectCookedBatch(value: unknown): CookedBatchProjection | null
     finished_weight_g: value.finished_weight_g as number | null,
     remaining_weight_g: value.remaining_weight_g as number | null,
     weight_status: value.weight_status as CookedBatchProjection["weight_status"],
+    ...(value.weight_source !== undefined ? { weight_source: value.weight_source as CookedBatchProjection["weight_source"] } : {}),
     batch_status: value.batch_status as CookedBatchProjection["batch_status"],
     depleted_reason: value.depleted_reason as CookedBatchProjection["depleted_reason"],
     revision: value.revision as number | null,

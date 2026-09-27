@@ -25,6 +25,7 @@ import {
   normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
+  validateManagedRecipeImageReadTarget,
 } from "@/lib/server/recipe-image-read";
 import {
   isMissingStepCookingMethodsRelation,
@@ -49,8 +50,11 @@ import {
 import { readRecipeSnapshotEntrypointContext } from
   "@/lib/server/recipe-snapshot-entrypoint";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
+import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
 import {
   createRecipeFuturePropagationInternalClient,
+  createRecipeImageInternalClient,
+  createRecipeViewInternalClient,
   createRemoteCompatibilityServiceRoleClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
@@ -60,11 +64,6 @@ interface RouteContext {
   params: Promise<{
     id: string;
   }>;
-}
-
-interface RecipeViewCountIncrementRow {
-  id: string;
-  view_count: number;
 }
 
 const RECIPE_IMAGE_READ_URL_TTL_SECONDS = 300;
@@ -129,6 +128,7 @@ function projectRecipeNutritionSnapshot(value: unknown) {
 }
 
 function isUsableImageUrl(value: string, { allowDataUri = false } = {}) {
+  if (/^\/api\/v1\/recipes\/[0-9a-f-]{36}\/image$/i.test(value)) return true;
   if (allowDataUri && value.startsWith("data:image/")) {
     return true;
   }
@@ -216,55 +216,6 @@ function buildRecipePhotos(
   return photos;
 }
 
-async function incrementRecipeViewCountWithFallback(
-  serviceClient: NonNullable<
-    ReturnType<typeof createRemoteCompatibilityServiceRoleClient>
-  >,
-  recipeId: string,
-  initialViewCount: number,
-) {
-  let currentViewCount = initialViewCount;
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const nextViewCount = currentViewCount + 1;
-    const fallbackViewCountResult = await serviceClient
-      .from("recipes")
-      .update({ view_count: nextViewCount })
-      .eq("id", recipeId)
-      .eq("view_count", currentViewCount)
-      .select("id, view_count")
-      .maybeSingle() as {
-        data: RecipeViewCountIncrementRow | null;
-        error: unknown;
-      };
-
-    if (typeof fallbackViewCountResult.data?.view_count === "number") {
-      return fallbackViewCountResult.data.view_count;
-    }
-
-    if (fallbackViewCountResult.error) {
-      return nextViewCount;
-    }
-
-    const refreshedViewCountResult = await serviceClient
-      .from("recipes")
-      .select("id, view_count")
-      .eq("id", recipeId)
-      .maybeSingle() as {
-        data: RecipeViewCountIncrementRow | null;
-        error: unknown;
-      };
-
-    if (typeof refreshedViewCountResult.data?.view_count !== "number") {
-      return nextViewCount;
-    }
-
-    currentViewCount = refreshedViewCountResult.data.view_count;
-  }
-
-  return currentViewCount + 1;
-}
-
 export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
@@ -293,14 +244,17 @@ export async function GET(request: Request, context: RouteContext) {
     const recipeResult = await routeClient
       .from("recipes")
       .select(
-        "id, title, description, thumbnail_url, base_servings, tags, source_type, created_by, visibility, deleted_at, revision, view_count, like_count, save_count, plan_count, cook_count",
+        "id, title, description, thumbnail_url, base_servings, tags, source_type, created_by, visibility, origin_recipe_id, deleted_at, revision, view_count, like_count, save_count, plan_count, cook_count",
       )
       .eq("id", id)
       .maybeSingle();
 
+    if (recipeResult.error) {
+      return createHybridAuthorityRouteError(recipeResult.error)
+        ?? fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요. 다시 시도해 주세요.", 500);
+    }
     if (
-      recipeResult.error
-      || !recipeResult.data
+      !recipeResult.data
       || (recipeResult.data.deleted_at !== null
         && recipeResult.data.deleted_at !== undefined)
     ) {
@@ -310,21 +264,30 @@ export async function GET(request: Request, context: RouteContext) {
     const serviceClient = createRemoteCompatibilityServiceRoleClient();
     const dbClient = routeClient;
     const legacyThumbnailUrl = recipeResult.data.thumbnail_url;
-    const imageReadPromise = serviceClient
+    const imageClient = createRecipeImageInternalClient();
+    const imageReadPromise = imageClient
       ? readRecipeImageProjection({
-          client: serviceClient,
+          client: imageClient,
           recipeId: id,
-        }).then((projection) =>
-          projection
+        }).then((projection) => {
+          if (projection?.image_object_id) {
+            validateManagedRecipeImageReadTarget({
+              projection,
+              expectedOwnerUuid: recipeResult.data?.created_by ?? null,
+              expectedReferenceType: "recipe_thumbnail",
+            });
+            return `/api/v1/recipes/${id}/image`;
+          }
+          return projection
             ? resolveRecipeImageReadUrl({
-                client: serviceClient,
+                client: imageClient,
                 expectedOwnerUuid: recipeResult.data?.created_by ?? null,
                 expectedStorageOrigin: readExpectedStorageOrigin(),
                 projection,
                 signedUrlTtlSeconds: RECIPE_IMAGE_READ_URL_TTL_SECONDS,
               })
-            : legacyThumbnailUrl
-        )
+            : legacyThumbnailUrl;
+        })
       : Promise.resolve(legacyThumbnailUrl);
 
     const authResult = await routeClient.auth.getUser();
@@ -391,13 +354,15 @@ export async function GET(request: Request, context: RouteContext) {
     let entrypointContext: Awaited<ReturnType<
       typeof readRecipeSnapshotEntrypointContext
     >> | null = null;
-    const isOwnerPrivate = Boolean(
+    const canReadOwnerEditContext = Boolean(
       user
       && recipeResult.data.created_by === user.id
-      && recipeResult.data.visibility === "private"
+      && (recipeResult.data.visibility === "private"
+        || (recipeResult.data.visibility === "public" && recipeResult.data.source_type === "manual"
+          && recipeResult.data.origin_recipe_id === null))
       && recipeResult.data.deleted_at === null,
     );
-    if (isOwnerPrivate && user) {
+    if (canReadOwnerEditContext && user) {
       const verifiedSession = await readVerifiedAccountGenerationSession(
         routeClient,
         user,
@@ -457,7 +422,7 @@ export async function GET(request: Request, context: RouteContext) {
       ? await readRecipeProductLabels(dbClient, ingredientRows)
       : ingredientRows);
     const steps = normalizeRecipeSteps(stepsResult.data);
-    let viewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
+    let viewCount = recipeResult.data.view_count;
     let planCount = recipeResult.data.plan_count;
 
     if (user) {
@@ -478,24 +443,18 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
-    if (serviceClient) {
-      const viewCountResult = await serviceClient
-        .rpc("increment_recipe_view_count", {
-          p_recipe_id: id,
-        })
-        .maybeSingle() as {
-          data: RecipeViewCountIncrementRow | null;
-          error: unknown;
-        };
-
-      if (typeof viewCountResult.data?.view_count === "number") {
-        viewCount = viewCountResult.data.view_count;
-      } else {
-        viewCount = await incrementRecipeViewCountWithFallback(
-          serviceClient,
-          id,
-          recipeResult.data.view_count,
-        );
+    if (recipeResult.data.visibility === "public") {
+      try {
+        const viewClient = createRecipeViewInternalClient();
+        const result = await viewClient?.increment(id);
+        const recorded = result?.data;
+        if (!result?.error && isRecord(recorded) && recorded.id === id
+          && typeof recorded.view_count === "number"
+          && Number.isSafeInteger(recorded.view_count) && recorded.view_count >= 0) {
+          viewCount = recorded.view_count;
+        }
+      } catch {
+        // Telemetry failure must not block reading or invent a successful increment.
       }
     }
 
@@ -512,6 +471,8 @@ export async function GET(request: Request, context: RouteContext) {
       base_servings: recipeResult.data.base_servings,
       tags: recipeResult.data.tags ?? [],
       source_type: recipeResult.data.source_type,
+      visibility: recipeResult.data.visibility as "public" | "private",
+      origin_recipe_id: recipeResult.data.origin_recipe_id,
       source: sourceResult.data
         ? {
             youtube_url: sourceResult.data.youtube_url,
@@ -539,6 +500,8 @@ export async function GET(request: Request, context: RouteContext) {
 
     return ok(detail);
   } catch (error) {
+    const authorityError = createHybridAuthorityRouteError(error);
+    if (authorityError) return authorityError;
     return fail(
       "INTERNAL_ERROR",
       formatBootstrapErrorMessage(error, "레시피 상세를 불러오지 못했어요."),

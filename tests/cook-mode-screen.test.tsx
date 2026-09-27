@@ -79,6 +79,7 @@ vi.mock("@/lib/api/mypage", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/cooking/sessions/test/cook-mode",
   useRouter: () => ({ push: mockRouterPush }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));
@@ -1076,7 +1077,7 @@ describe("CookModeScreen", () => {
       "3개 선택됨",
     );
     expect(screen.getByTestId("consumed-confirm-button").textContent).toBe(
-      "확인 (3개)",
+      "요리 완료",
     );
 
     await user.click(bulkToggle);
@@ -1087,7 +1088,7 @@ describe("CookModeScreen", () => {
       "0개 선택됨",
     );
     expect(screen.getByTestId("consumed-confirm-button").textContent).toBe(
-      "확인 (0개)",
+      "요리 완료",
     );
 
     await user.click(screen.getByTestId("consumed-check-ing-1"));
@@ -1617,7 +1618,7 @@ describe("CookModeScreen", () => {
       expect(screen.getByTestId("consumed-ingredient-sheet")).toBeTruthy();
     });
 
-    const helperText = screen.getByText(/체크된 재료는 팬트리에서 자동으로 빠져요/);
+    expect(screen.queryByText(/체크된 재료는 팬트리에서 자동으로 빠져요/)).toBeNull();
     const recipeTitle = screen.getByTestId("consumed-sheet-recipe-title");
     const ingredientList = screen.getByTestId("consumed-ingredient-list");
     const firstIngredient = screen.getAllByTestId("consumed-ingredient-item")[0]!;
@@ -1627,8 +1628,6 @@ describe("CookModeScreen", () => {
     const bulkToggle = screen.getByTestId("consumed-bulk-toggle");
     const firstCheck = screen.getByTestId("consumed-check-ing-1");
 
-    expect(helperText.className).toContain("text-[13px]");
-    expect(helperText.className).toContain("font-normal");
     expect(recipeTitle.className).toContain("truncate");
     expect(bulkToggle.textContent).toContain("전체 해제");
     expect(bulkToggle.getAttribute("role")).toBe("checkbox");
