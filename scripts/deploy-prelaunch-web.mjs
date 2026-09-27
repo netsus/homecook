@@ -271,7 +271,7 @@ process.exit(result.status ?? 1);`;
         const finalPlan = await verifyAppliedDatabase(options, checkout);
         if (JSON.stringify(finalPlan) !== JSON.stringify(databasePlan)) throw new DeploymentError("준비 중 DB 이력이 바뀌었습니다.");
       }
-      if (options.reviewedRepairReadiness || options.reviewedBetaReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
+      if (options.reviewedRepairReadiness || options.reviewedBetaReadiness || options.reviewedFeedbackReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
       assertClean(live.cwd);
       if (!readFileSync(plistPath).equals(live.bytes)) throw new DeploymentError("준비 중 웹 설정이 바뀌었습니다.");
       atomicWrite(recoveryPath, JSON.stringify(state));

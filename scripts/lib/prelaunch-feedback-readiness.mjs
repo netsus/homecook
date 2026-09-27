@@ -11,7 +11,7 @@ import { BETA_ALIASES_UNROUTED_SQL, BETA_CANONICAL_POSTIMAGE_SQL, BETA_WRAPPERS_
 export const FEEDBACK_LIVE_SHA = "5d05a180b6c0850dc4e87bfe0945a609ff450e90";
 // Fill only after the source pair, before/after DB evidence, and manifest bytes
 // have been reviewed. Neither CLI arguments nor environment may override pins.
-export const FEEDBACK_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const FEEDBACK_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/feedback-batch-20260927/readiness-review.final.json", sha256: "016cfce504f47af4bd4b5f8055a37d9932d81780422107a277a2b8e7857c0170" });
 const SHA = /^[a-f0-9]{64}$/u;
 const REF = /^[a-f0-9]{40}$/u;
 const PROOFS = ["db_authority", "db_migration", "operator_approval", "privacy_consent", "retention_runbook", "turnstile_live"];
