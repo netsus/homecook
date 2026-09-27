@@ -61,6 +61,17 @@ function validCookModeData(sessionId = UUID, mode: "planner" | "standalone" = "s
 describe("snapshot v2 cooking API", () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it("accepts explicitly estimated completion without changing the client's weigh-later payload", async () => {
+    const valid = validCompleteData();
+    const estimated = { ...valid, cooked_batch: { ...valid.cooked_batch, weight_source: "estimated" } };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() => response(estimated));
+    const body = { consumed_pantry_item_ids: [RECIPE_UUID], weight_action: "weigh_later" as const, finished_weight_g: null };
+    await expect(completeSnapshotV2CookingSession(UUID, body, BATCH_UUID, "standalone")).resolves.toEqual(estimated);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(body);
+    fetchMock.mockImplementationOnce(() => response({ ...valid, cooked_batch: { ...valid.cooked_batch, weight_source: "measured" } }));
+    await expect(completeSnapshotV2CookingSession(UUID, body, BATCH_UUID, "standalone")).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
+
   it("sends the same explicit UUID idempotency key for cancel replays", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(() => response({ session_id: UUID, contract_version: "snapshot_v2", mode: "planner", status: "cancelled" }));
 

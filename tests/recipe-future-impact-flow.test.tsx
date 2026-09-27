@@ -110,6 +110,26 @@ describe("recipe future impact save flow", () => {
     expect(patchRecipeWithFutureStrategy).not.toHaveBeenCalled();
   });
 
+  it.each(["INTERNAL_ERROR", "ACCOUNT_SESSION_STALE"])("preserves the draft after PATCH %s", async (code) => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    const onUnauthorized = vi.fn();
+    vi.mocked(fetchRecipeFutureImpact).mockResolvedValue(impact);
+    vi.mocked(patchRecipeWithFutureStrategy).mockRejectedValue(Object.assign(new Error("저장 실패"), { code }));
+    render(<RecipeFutureImpactSaveFlow baseRecipeRevision={12} draft={draft} enabled imageObjectId={null}
+      onSaved={onSaved} onUnauthorized={onUnauthorized} recipeId="recipe-id" />);
+    await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
+    await user.click(await screen.findByRole("radio", { name: /기존 계획 유지/ }));
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    if (code === "ACCOUNT_SESSION_STALE") {
+      await waitFor(() => expect(onUnauthorized).toHaveBeenCalledWith({ base_recipe_revision: 12, draft, image_object_id: null }));
+    } else {
+      expect(await screen.findByText(/저장하지 못했어요. 수정한 내용은 유지/)).toBeTruthy();
+      expect(screen.queryByText(/영향을 확인하지 못했어요/)).toBeNull();
+    }
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it("stays completely dark when the capability boundary is off", () => {
     render(<RecipeFutureImpactSaveFlow baseRecipeRevision={12} draft={draft} enabled={false} imageObjectId={null} onSaved={vi.fn()} recipeId="recipe-id" />);
     expect(screen.queryByRole("button")).toBeNull();

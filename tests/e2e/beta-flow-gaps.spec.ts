@@ -208,6 +208,7 @@ test.describe("beta flow gaps — local fixture UI", () => {
   });
 
   test("D01 personal recipe ingredients keep names and support replace add delete", async ({ page }, testInfo) => {
+    await page.setViewportSize(testInfo.project.name === "mobile-chrome" ? { width: 375, height: 812 } : { width: 1440, height: 1000 });
     const draft: RecipeEditDraft = {
       title: "QA 개인 양파요리", description: null, base_servings: 2,
       ingredients: [{ ingredient_id: ONION, amount: 100, unit: "g", ingredient_type: "QUANT", display_text: null, component_label: null, scalable: true, food_product_id: null, food_product_nutrition_version_id: null }],
@@ -223,14 +224,15 @@ test.describe("beta flow gaps — local fixture UI", () => {
     await page.getByRole("button", { name: "편집", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "레시피 편집", exact: true });
     await expect(editor.getByText("QA 양파", { exact: true })).toBeVisible();
+    await expect(editor.getByRole("combobox", { name: "재료 1 단위" })).toHaveValue("g");
     await capture(page, testInfo, "d01-original-ingredient-name");
-    await editor.getByRole("spinbutton", { name: "재료 1 수량", exact: true }).fill("250");
+    await editor.getByRole("textbox", { name: "재료 1 수량", exact: true }).fill("250");
     await editor.getByRole("button", { name: "교체", exact: true }).click();
     const picker = page.getByRole("dialog", { name: "제품·재료 선택" });
     await picker.getByRole("checkbox", { name: "QA 두부", exact: true }).check();
     await picker.getByRole("button", { name: "이 재료로 교체" }).click();
     await expect(editor.getByText("QA 두부", { exact: true })).toBeVisible();
-    await expect(editor.getByRole("spinbutton", { name: "재료 1 수량", exact: true })).toHaveValue("250");
+    await expect(editor.getByRole("textbox", { name: "재료 1 수량", exact: true })).toHaveValue("250");
     await expect(editor.getByText("QA 양파", { exact: true })).toHaveCount(0);
     await editor.getByRole("button", { name: "+ 재료 추가하기", exact: true }).click();
     await expect(picker.getByRole("checkbox", { name: "QA · QA 미연결 제품" })).toBeDisabled();
@@ -239,9 +241,15 @@ test.describe("beta flow gaps — local fixture UI", () => {
     await expect(editor.getByText("QA · QA 양조간장", { exact: true })).toBeVisible();
     await editor.getByRole("button", { name: "QA 두부 삭제", exact: true }).click();
     await expect(editor.getByText("QA 두부", { exact: true })).toHaveCount(0);
-    await expect(editor.getByRole("spinbutton", { name: "재료 1 수량", exact: true })).toHaveValue("15");
-    await expect(editor.getByRole("textbox", { name: "단위", exact: true })).toHaveAttribute("readonly", "");
+    await expect(editor.getByRole("textbox", { name: "재료 1 수량", exact: true })).toHaveValue("15");
+    await expect(editor.getByRole("combobox", { name: "재료 1 단위" })).toBeDisabled();
+    await expect(editor.getByRole("button", { name: "QA 두부 삭제 취소" })).toBeVisible();
     await capture(page, testInfo, "d01-replaced-added-deleted");
+    await editor.getByRole("button", { name: "QA 두부 삭제 취소" }).click();
+    await expect(editor.getByRole("textbox", { name: "재료 1 수량", exact: true })).toHaveValue("250");
+    await expect(editor.getByRole("combobox", { name: "재료 1 단위" })).toBeEnabled();
+    await expect(editor.getByRole("combobox", { name: "재료 2 단위" })).toBeDisabled();
+    await capture(page, testInfo, "d01-restored-ingredient");
   });
 
   test("D02 manual recipe uses an approved product and keeps its unit", async ({ page }, testInfo) => {
@@ -255,9 +263,45 @@ test.describe("beta flow gaps — local fixture UI", () => {
     await picker.getByRole("checkbox", { name: "QA · QA 양조간장" }).check();
     await capture(page, testInfo, "d02-product-picker");
     await picker.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
-    await expect(page.getByRole("spinbutton", { name: "QA · QA 양조간장 수량", exact: true })).toHaveValue("15");
+    await expect(page.getByRole("textbox", { name: "QA · QA 양조간장 수량", exact: true })).toHaveValue("15");
     await expect(page.getByRole("button", { name: "QA · QA 양조간장 g", exact: true })).toHaveCount(0);
     await capture(page, testInfo, "d02-product-added");
+  });
+
+  test("D08 manual Korean input stays open and cooking instructions suggest a method above mobile tabs", async ({ page }, testInfo) => {
+    await page.setViewportSize(testInfo.project.name === "mobile-chrome" ? { width: 375, height: 812 } : { width: 1440, height: 1000 });
+    await installMenuAddVisualRoutes(page);
+    await page.goto(MANUAL_CREATE_VISUAL_PATH);
+    const title = page.getByPlaceholder("예: 김치찌개");
+    await expect(title).toBeEnabled();
+    await title.dispatchEvent("compositionstart");
+    await title.fill("ㄱ");
+    await title.fill("김치볶음");
+    await title.dispatchEvent("compositionend", { data: "김치볶음" });
+    await expect(title).toHaveValue("김치볶음");
+    await expect(page.getByRole("dialog", { name: "변경사항을 버릴까요?" })).toHaveCount(0);
+    await expect(page.getByText("직접 등록한 레시피는 공개되어 검색·공유할 수 있어요.")).toBeVisible();
+    const instruction = page.getByLabel("만들기 1 설명");
+    await instruction.fill("양파를 볶아요");
+    await expect(page.getByRole("button", { name: "볶기", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByText("볶기 자동 선택")).toBeVisible();
+    const add = page.getByRole("button", { name: "+ 만들기 추가", exact: true });
+    if (testInfo.project.name === "mobile-chrome") {
+      await page.getByTestId("manual-editor-scroll-region").evaluate((element) => { element.scrollTop = element.scrollHeight; });
+      const buttonBox = await add.boundingBox();
+      const tabsBox = await page.getByRole("navigation", { name: "직접 등록 화면 하단 내비게이션" }).boundingBox();
+      expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(tabsBox!.y);
+    } else {
+      await add.scrollIntoViewIfNeeded();
+    }
+    await capture(page, testInfo, "d08-manual-step-suggestion-visible");
+    await page.screenshot({ path: testInfo.outputPath("d08-step-viewport.png"), fullPage: false, scale: "css" });
+    await add.click();
+    await expect(page.getByLabel("만들기 2 설명")).toBeVisible();
+    await page.getByRole("button", { name: "끓이기", exact: true }).click();
+    await page.getByLabel("만들기 2 설명").fill("재료를 다시 볶아요");
+    await expect(page.getByRole("button", { name: "끓이기", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("dialog", { name: "변경사항을 버릴까요?" })).toHaveCount(0);
   });
 
   test("D03 D04 recent foods appear by source and convert only approved units", async ({ page }, testInfo) => {
@@ -274,16 +318,16 @@ test.describe("beta flow gaps — local fixture UI", () => {
     await expect(dialog.getByRole("button", { name: /최근 QA 양파/ })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /최근 QA 두유/ })).toBeVisible();
     await dialog.getByRole("button", { name: /최근 QA 양파/ }).click();
-    await expect(dialog.getByRole("spinbutton", { name: "실제 양" })).toHaveValue("0.25");
+    await expect(dialog.getByRole("textbox", { name: "실제 양" })).toHaveValue("0.25");
     await expect(dialog.getByRole("button", { name: "기록 저장" })).toBeDisabled();
     await dialog.getByRole("combobox", { name: "단위", exact: true }).selectOption("g");
-    await expect(dialog.getByRole("spinbutton", { name: "실제 양" })).toHaveValue("250");
+    await expect(dialog.getByRole("textbox", { name: "실제 양" })).toHaveValue("250");
     await expect(dialog.getByRole("button", { name: "기록 저장" })).toBeEnabled();
     await capture(page, testInfo, "d03-recent-ingredient-converted");
     await dialog.getByRole("button", { name: /최근 QA 두유/ }).click();
     await expect(dialog.getByRole("combobox", { name: "단위", exact: true })).toHaveValue("package");
     await dialog.getByRole("combobox", { name: "단위", exact: true }).selectOption("g");
-    await expect(dialog.getByRole("spinbutton", { name: "실제 양" })).toHaveValue("200");
+    await expect(dialog.getByRole("textbox", { name: "실제 양" })).toHaveValue("200");
     await expect(dialog.getByRole("combobox", { name: "단위", exact: true }).locator("option")).toHaveText(["g", "팩"]);
     expect(exactReads).toContainEqual({ type: "ingredient", id: ONION });
     expect(exactReads).toContainEqual({ type: "food_product", id: PRODUCT });

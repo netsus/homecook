@@ -1,5 +1,7 @@
 "use client";
 
+import { buildReturnHref } from "@/lib/navigation/return-context";
+
 import Image from "next/image";
 import Link from "next/link";
 import React, { type CSSProperties } from "react";
@@ -33,7 +35,10 @@ function WeekMeal({
   nutrition?: PlannerMealNutritionViewMap[string];
   onMealOpen?: (meal: PlannerMealData) => void;
 }) {
-  const detailHref = `/planner/${meal.plan_date}/${meal.column_id}?slot=${encodeURIComponent(column.name)}`;
+  const detailHref = buildReturnHref(`/planner/${meal.plan_date}/${meal.column_id}?slot=${encodeURIComponent(column.name)}`, {
+    returnSurface: "planner.week",
+    returnTo: `/planner?${new URLSearchParams({ date: meal.plan_date })}`,
+  });
   const values = Number.isFinite(meal.planned_servings) && meal.planned_servings > 0 && nutrition?.plannedServings === meal.planned_servings
     ? nutrition.values
     : undefined;

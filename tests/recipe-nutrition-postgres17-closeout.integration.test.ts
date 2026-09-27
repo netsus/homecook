@@ -28,6 +28,7 @@ const mealRouteState = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: () => null,
   createRouteHandlerClient: vi.fn(async () => ({
     auth: {
       getUser: vi.fn(async () => ({ data: { user: mealRouteState.authUser } })),

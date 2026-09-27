@@ -57,6 +57,7 @@ vi.mock("@/lib/api/meal", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/mypage/recipe-books/book-1",
   useRouter: () => ({
     replace: mockRouterReplace,
   }),
@@ -749,6 +750,68 @@ describe("RecipeBookDetailScreen", () => {
     );
     expect(recipeReturnUrl.searchParams.get("returnTo")).toContain("type=my_added");
     expect(recipeReturnUrl.searchParams.get("restore")).toBe("recipebook-tab");
+  });
+
+  it.each([true, false])("opens recipe details and restores the selected book page on mobile=%s", async (mobile) => {
+    installMatchMedia(mobile);
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ readerRecipe: "recipe-2", readerMode: "book" }));
+    render(<RecipeBookDetailScreen bookId="book-my" bookName="내가 추가한 레시피" bookType="my_added" initialAuthenticated />);
+
+    const card = await screen.findByTestId("recipe-item-recipe-2");
+    expect(screen.queryByTestId("recipe-item-recipe-1")).toBeNull();
+    const detailLink = within(card).getByRole("link", { name: "레시피 상세" });
+    const detailUrl = new URL(detailLink.getAttribute("href")!, "https://homecook.test");
+    const returnUrl = new URL(detailUrl.searchParams.get("returnTo")!, "https://homecook.test");
+    expect(detailUrl.pathname).toBe("/recipe/recipe-2");
+    expect(detailUrl.searchParams.get("returnSurface")).toBe("mypage.recipebooks");
+    expect(detailUrl.searchParams.get("restore")).toBe("recipebook-tab");
+    expect(returnUrl.pathname).toBe("/mypage/recipe-books/book-my");
+    expect(returnUrl.searchParams.get("type")).toBe("my_added");
+    expect(returnUrl.searchParams.get("readerRecipe")).toBe("recipe-2");
+    expect(returnUrl.searchParams.get("readerMode")).toBe("book");
+    expect(returnUrl.hash).toBe("#recipebook-recipe-recipe-2");
+  });
+
+  it.each([true, false])("keeps list-card navigation and restores list mode on mobile=%s", async (mobile) => {
+    installMatchMedia(mobile);
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ readerRecipe: "recipe-2", readerMode: "list" }));
+    render(<RecipeBookDetailScreen bookId="book-my" bookName="내가 추가한 레시피" bookType="my_added" initialAuthenticated />);
+
+    const card = await screen.findByTestId(mobile ? "recipebook-mobile-list-card-recipe-2" : "recipe-item-recipe-2");
+    expect(screen.getByTestId(mobile ? "recipebook-mobile-list-card-recipe-1" : "recipe-item-recipe-1")).toBeTruthy();
+    const detailLink = within(card).getByRole("link");
+    const detailUrl = new URL(detailLink.getAttribute("href")!, "https://homecook.test");
+    const returnUrl = new URL(detailUrl.searchParams.get("returnTo")!, "https://homecook.test");
+    expect(returnUrl.searchParams.get("readerMode")).toBe("list");
+    expect(returnUrl.searchParams.get("readerRecipe")).toBe("recipe-2");
+  });
+
+  it.each([true, false])("returns safely to a remaining recipe when the previous recipe was deleted on mobile=%s", async (mobile) => {
+    installMatchMedia(mobile);
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ readerRecipe: "deleted-recipe", readerMode: "book" }));
+    render(<RecipeBookDetailScreen bookId="book-my" bookName="내가 추가한 레시피" bookType="my_added" initialAuthenticated />);
+    expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
+    expect(screen.queryByTestId("recipe-item-deleted-recipe")).toBeNull();
+  });
+
+  it.each([true, false])("restores a selected recipe from a subsequent authorized page on mobile=%s", async (mobile) => {
+    installMatchMedia(mobile);
+    globalThis.IntersectionObserver = class implements IntersectionObserver {
+      root = null;
+      rootMargin = "0px";
+      thresholds = [0];
+      disconnect = vi.fn();
+      observe = vi.fn();
+      takeRecords = vi.fn(() => []);
+      unobserve = vi.fn();
+    };
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ readerRecipe: "recipe-2", readerMode: "book" }));
+    mockFetchRecipeBookRecipes.mockResolvedValueOnce({ ...MOCK_ITEMS, data: { items: MOCK_ITEMS.data.items.slice(0, 1), has_next: true, next_cursor: "second-page" } });
+    mockFetchRecipeBookRecipes.mockResolvedValueOnce({ ...MOCK_ITEMS, data: { items: MOCK_ITEMS.data.items.slice(1), has_next: false, next_cursor: null } });
+    render(<RecipeBookDetailScreen bookId="book-my" bookName="내가 추가한 레시피" bookType="my_added" initialAuthenticated />);
+    expect(await screen.findByTestId("recipe-item-recipe-2")).toBeTruthy();
+    expect(mockFetchRecipeBookRecipes).toHaveBeenCalledWith("book-my", { cursor: "second-page", limit: 20 });
+    expect(mockFetchRecipeBookRecipes).toHaveBeenCalledTimes(2);
   });
 
   // ─── Empty ──────────────────────────────────────────────────────────────────

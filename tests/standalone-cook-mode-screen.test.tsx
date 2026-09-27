@@ -66,6 +66,7 @@ vi.mock("@/lib/api/mypage", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/cooking/sessions/test/cook-mode",
   useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));

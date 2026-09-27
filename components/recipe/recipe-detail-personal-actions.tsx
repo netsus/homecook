@@ -52,25 +52,23 @@ export function RecipeDetailPersonalActions({
 
   if (accessState === "owner-private") {
     return (
-      <div className="space-y-3">
+      <div className="flex items-center gap-2">
         <Button
+          className="flex-1"
           data-action-level="secondary"
-          fullWidth
           onClick={onEdit}
           variant="secondary"
         >
           편집
         </Button>
-        <div className="border-t border-[var(--line)] pt-3">
-          <Button
-            className="w-full"
-            data-action-level="destructive-tertiary"
-            onClick={onDelete}
-            variant="destructive"
-          >
-            삭제
-          </Button>
-        </div>
+        <Button
+          className="flex-1"
+          data-action-level="destructive-tertiary"
+          onClick={onDelete}
+          variant="destructive"
+        >
+          삭제
+        </Button>
       </div>
     );
   }

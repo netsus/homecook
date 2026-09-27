@@ -28,11 +28,11 @@ export function SnapshotV2CookModeView({
 
   return (
     <div
-      className="cook-mobile-whole-screen relative mx-auto flex min-h-dvh max-w-[430px] flex-col overflow-hidden"
+      className="cook-mobile-whole-screen relative mx-auto flex h-dvh min-h-0 max-w-[430px] flex-col overflow-hidden"
       data-cook-theme="dark"
       data-testid="snapshot-v2-cook-mode"
     >
-      <header className="px-4 py-4">
+      <header className="shrink-0 px-4 pb-4 pt-[calc(16px+env(safe-area-inset-top))]">
         <h1 className="cook-mobile-whole-title text-xl font-extrabold">
           {data.recipe.title}
         </h1>
@@ -41,10 +41,16 @@ export function SnapshotV2CookModeView({
         </p>
       </header>
 
+      <main
+        aria-label="요리 내용"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-4"
+        style={terminal ? { paddingBottom: "calc(16px + env(safe-area-inset-bottom))" } : undefined}
+        tabIndex={0}
+      >
       {terminal ? (
         completionResult ? (
           <section
-            className="mx-4 rounded-[16px] bg-[var(--surface-alpha-08)] p-4 pr-14 sm:pr-4"
+            className="rounded-[16px] bg-[var(--surface-alpha-08)] p-4 pr-14 sm:pr-4"
             role="status"
           >
             <strong className="block">저장된 완료 결과를 확인했어요.</strong>
@@ -57,7 +63,7 @@ export function SnapshotV2CookModeView({
           </section>
         ) : (
           <p
-            className="mx-4 rounded-[16px] bg-[var(--surface-alpha-08)] p-4 pr-14 sm:pr-4"
+            className="rounded-[16px] bg-[var(--surface-alpha-08)] p-4 pr-14 sm:pr-4"
             role="status"
           >
             {data.status === "completed"
@@ -68,7 +74,7 @@ export function SnapshotV2CookModeView({
       ) : null}
 
       {terminal ? (
-        <nav aria-label="요리 후 다음 행동" className="mx-4 mt-4 grid gap-2.5">
+        <nav aria-label="요리 후 다음 행동" className="mt-4 grid gap-2.5">
           {data.status === "completed" ? (
             <>
               <Link
@@ -97,16 +103,11 @@ export function SnapshotV2CookModeView({
         </nav>
       ) : null}
 
-      <main
-        aria-label="요리 내용"
-        className="min-h-0 flex-1 overflow-y-auto px-4 pb-24"
-        tabIndex={0}
-      >
-        <CookModeWholeBoard density="mobile" recipe={data.recipe} />
+        <CookModeWholeBoard className={terminal ? "mt-4" : undefined} density="mobile" recipe={data.recipe} />
       </main>
 
       {!terminal ? (
-        <footer className="cook-mobile-whole-bottom-bar fixed inset-x-0 bottom-0 mx-auto flex max-w-[430px] gap-2.5 p-4">
+        <footer className="cook-mobile-whole-bottom-bar flex shrink-0 gap-2.5 px-4 pt-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
           <button
             className="cook-mobile-whole-cancel-button min-h-14 flex-1 rounded-[16px] border-0 font-bold"
             disabled={cancelling}

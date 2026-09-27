@@ -1,5 +1,25 @@
 # DB 설계 v1.3.38
 
+## 2026-09-27 후속 — 계획·요리 상태와 완료 화면
+
+Meal 진행 상태, shopping_list 연결, cooking_session 진행 상태, cooked batch 잔량, meal log 기록을 분리한다. 정확한 진행 중 세션 재개와 완료 후 새 시작을 보장한다. leftover_dishes.weight_source는 estimated/measured/null이며 기존 known 값은 읽을 때 measured로 해석해 운영 데이터를 일괄 변경하지 않는다. 추정 완료의 중복 요청 판별에는 원래 weigh_later/null 값을 유지하며 같은 완료 요청으로 음식이나 팬트리 차감을 중복 생성하지 않는다. [상태·수정 계약](engineering/planner-cooking-state-repair-20260927.md) 참조.
+
+## 2026-09-27 후속 — 직접 등록 공개·모바일 입력·요리 준비
+
+직접 등록 publication은 검증된 생성 영수증과 소유자·원본 여부를 사용한다. 공개 이미지 사본과 public_shared 참조, public 상태 및 owner-null 영양/content snapshot을 원자적으로 확정하며 기존 private 고정 내용은 임의로 공개하지 않는다. 원본 직접 등록 public 소유자 편집·삭제와 타인 fork 경계를 구분한다. 관련 후속 migration은 로컬 준비 상태이며 운영 미적용이다. [세부 계약](engineering/manual-recipe-authoring-repair-20260927.md) 참조.
+
+## 2026-09-27 후속 — 삭제된 개인 원본의 고정 계획 장보기
+
+20260927120300 후속 migration은 장보기 writer의 원본 존재 검증을 본인 private soft-deleted 원본의 기존 계획 pin에 한해 보완한다. 세션·계획/컬럼 소유자·등록/미연결 상태·snapshot recipe/owner 일치를 유지한다. 운영 적용은 보류한다.
+
+## 2026-09-27 후속 — 개인 레시피 writer 복구
+
+새 테이블 없이 개인 사본의 private/owner/origin/revision 계약을 유지한다. 후속 migration은 태그 source를 실제 constraint의 user_reviewed로 정렬하고 장보기 reconcile의 실제 필드·상태 보존을 복구한다. 검증된 원본의 공개 대표 이미지 상속과 지원 단위 검증을 writer에 추가한다. meals의 기존 content snapshot pin은 계획 읽기의 기준이며 기존 snapshot에 이미지를 임의 backfill하지 않는다. 관련 SQL은 격리 검증 후 묶음 반영 대상이며 운영 DB에는 아직 적용하지 않았다. [설계 기록](engineering/personal-recipe-redesign-20260927.md) 참조.
+
+## 2026-09-27 후속 — 공개 조회수 writer
+
+`increment_recipe_view_count(uuid)`는 service_role의 정확한 `recipe-view` POST 경로에서만 호출한다. 공개·미삭제·공개 가능한 소유자 조건을 만족하는 행의 view_count만 원자적으로 증가한다. 기존 내부 scope 검사는 predecessor로 보존하고 anon/authenticated 실행 권한은 주지 않는다. 계정 세대·권한·소유권 보호 및 view_count 단독 telemetry 예외는 유지한다. migration은 `20260927010000_recipe_view_count_local_scope.sql`이며 아직 운영 미반영이다. 개인 복제의 구성별 재료 행은 기존 recipe_ingredients/recipe_steps의 component_label을 재사용하므로 새 스키마를 만들지 않는다.
+
 ## 2026-09-26 후속 — full-local 계정 복구
 
 계정 보호 해제는 검증된 full-local 세션 증거를 받는 내부 `resolve_account_cutover_quarantine` overload로 처리한다. 현재 소유자·identity 시각·issuer·epoch·세션 HMAC·실제 Auth 세션 liveness를 확인한 후 profile 복구, lifecycle 활성화, 세션 권한 등록을 한 트랜잭션에서 완료한다. 중복 요청의 저장된 결과와 다른 세션·payload 충돌 거부는 유지한다. 과거 서명과 anon/authenticated 직접 호출로 이 보호를 우회할 수 없다. 공개 테이블·응답 형식은 바꾸지 않는다. 상세 검증·반영 상태는 `docs/engineering/auth-repair-20260926.md`를 따른다.

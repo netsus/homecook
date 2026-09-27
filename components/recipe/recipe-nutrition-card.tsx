@@ -60,6 +60,8 @@ export function RecipeNutritionCard({
   }
 
   const display = buildRecipeNutritionDisplay(nutrition, selectedServings);
+  const hasIncompleteNutrition = nutrition.calculation_status !== "complete"
+    || Object.values(nutrition.values).some((value) => value.status !== "complete");
   return (
     <section
       aria-label="레시피 영양성분"
@@ -78,7 +80,7 @@ export function RecipeNutritionCard({
         selectedServings={selectedServings}
       />
 
-      {display.optionalNutrients.length > 0 ? (
+      {display.optionalNutrients.length > 0 || hasIncompleteNutrition ? (
         <details className="group mt-2 text-[12px] text-[var(--text-2)]">
           <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]">
             <span>영양성분 더 보기</span>
@@ -90,11 +92,18 @@ export function RecipeNutritionCard({
               ⌄
             </span>
           </summary>
-          <NutritionTable
-            label="추가 영양성분"
-            nutrients={display.optionalNutrients}
-            selectedServings={selectedServings}
-          />
+          {hasIncompleteNutrition ? (
+            <p className="leading-5">
+              일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요.
+            </p>
+          ) : null}
+          {display.optionalNutrients.length > 0 ? (
+            <NutritionTable
+              label="추가 영양성분"
+              nutrients={display.optionalNutrients}
+              selectedServings={selectedServings}
+            />
+          ) : null}
         </details>
       ) : null}
 
@@ -130,17 +139,17 @@ function NutritionGraph({
 
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3">
-      <div className="flex items-end justify-between gap-2">
-        <div className="flex min-w-0 items-baseline gap-2">
+      <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-2">
           <span className="shrink-0 rounded-[var(--radius-full)] bg-[var(--brand-primary-soft)] px-2 py-1 text-[11px] font-extrabold leading-none text-[var(--brand-primary-text)]">
             {selectedServings}인분
           </span>
-          <strong className="min-w-0 truncate text-[22px] font-extrabold leading-none tabular-nums text-[var(--brand-primary-text)]">
+          <strong className="min-w-0 break-words text-[22px] font-extrabold leading-tight tabular-nums text-[var(--brand-primary-text)]">
             {energyDisplay?.selectedTotalText ?? (energy === null ? "정보 준비 중" : `${formatNutritionNumber(energy, "kcal")} kcal`)}
           </strong>
         </div>
         {energyDisplay ? (
-          <span className="shrink-0 text-right text-[12px] font-bold text-[var(--text-2)]">
+          <span className="min-w-0 break-words text-[12px] font-bold text-[var(--text-2)] sm:text-right">
             1인분 {energyDisplay.perServingText}
           </span>
         ) : null}

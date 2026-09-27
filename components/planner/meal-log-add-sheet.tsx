@@ -1,8 +1,10 @@
 "use client";
 
+import { DecimalInput } from "@/components/shared/decimal-input";
+
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
@@ -224,6 +226,9 @@ export function MealLogAddSheet({
   const catalogRequestRef = useRef(0);
   const catalogAbortRef = useRef<AbortController | null>(null);
   const [selection, setSelection] = useState<MealLogSourceSelection | null>(initialSelection ?? null);
+  const [amount, setAmount] = useState<number | null>(initialSelection?.amount ?? null);
+  useLayoutEffect(() => setAmount(selection?.amount ?? null), [selection?.id, selection?.type, selection?.unit, selection?.amount]);
+  const amountInvalid = amount === null || !Number.isFinite(amount) || amount < 0.01;
   const [restoredSourcePending, setRestoredSourcePending] = useState(Boolean(initialSelection));
   const [suggestionConfirmed, setSuggestionConfirmed] = useState(initialSuggestionConfirmed);
   const [loading, setLoading] = useState(true);
@@ -552,24 +557,26 @@ export function MealLogAddSheet({
 
   async function submit() {
     if (!selection
+      || saving
+      || amount === null
       || !mutationEnabled
       || !columnId
       || restoredSelectionPending
-      || selection.amount <= 0
+      || amountInvalid
       || !suggestionConfirmed
-      || (selection.maxAmount !== undefined && selection.amount > selection.maxAmount)
+      || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount)
       || !selection.unit.trim()) return;
     setSaving(true);
     setError(null);
     try {
       await onSave(
-        selection,
+        { ...selection, amount },
         selection.type === "cooked_batch" ? targetColumnId : columnId,
         selection.type === "cooked_batch" ? targetDate : date,
       );
     } catch (reason) {
       if (isMealLogApiError(reason) && reason.status === 401) {
-        onUnauthorized(selection, columnId);
+        onUnauthorized({ ...selection, amount }, columnId);
         return;
       }
       setError(reason instanceof Error ? reason.message : "식사 기록을 저장하지 못했어요.");
@@ -818,11 +825,11 @@ export function MealLogAddSheet({
             ) : null}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-sm font-bold">실제 양
-                <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onChange={(event) => { setSelection({ ...selection, amount: Number(event.target.value) }); setSuggestionConfirmed(true); }} step="any" type="number" value={selection.amount} />
+                <DecimalInput key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
               </label>
               <label className="text-sm font-bold">단위
                 {(selection.unitOptions?.length ?? 0) > 1 ? (
-                  <select className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => { const unit = event.target.value; const amount = convertSelectionAmount(selection, unit); if (amount === null || !Number.isFinite(amount)) { setError("이 단위로 바꿀 수 있는 환산 정보가 없어요."); return; } setSelection({ ...selection, amount, unit }); setSuggestionConfirmed(true); }} value={selection.unit}>
+                  <select disabled={saving || amountInvalid} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => { if (amount === null) return; const unit = event.target.value; const nextAmount = convertSelectionAmount({ ...selection, amount }, unit); if (nextAmount === null || !Number.isFinite(nextAmount)) { setError("이 단위로 바꿀 수 있는 환산 정보가 없어요."); return; } setSelection({ ...selection, amount: nextAmount, unit }); setSuggestionConfirmed(true); }} value={selection.unit}>
                     {selection.unitOptions?.map((unit) => <option key={unit} value={unit}>{quantityUnitLabel(unit)}</option>)}
                   </select>
                 ) : (
@@ -831,11 +838,11 @@ export function MealLogAddSheet({
               </label>
             </div>
             {!suggestionConfirmed ? <p className="mt-2 text-sm font-bold">제안된 양을 확인해 주세요.</p> : null}
-            {selection.maxAmount !== undefined && selection.amount > selection.maxAmount ? (
+            {selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount ? (
               <p className="mt-2 text-sm font-bold text-[var(--danger-strong)]" role="alert">남은 양 {selection.maxAmount}g 이하로 입력해 주세요.</p>
             ) : null}
             <div className="mt-3 grid gap-2 min-[360px]:grid-cols-2">
-              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || restoredSelectionPending || !suggestionConfirmed || selection.amount <= 0 || (selection.maxAmount !== undefined && selection.amount > selection.maxAmount) || !selection.unit.trim() || (selection.type === "cooked_batch" && (!targetDate || !targetColumnId))} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
+              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || restoredSelectionPending || !suggestionConfirmed || amountInvalid || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount) || !selection.unit.trim() || (selection.type === "cooked_batch" && (!targetDate || !targetColumnId))} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
               <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={saving} onClick={onClose} type="button">취소</button>
             </div>
           </footer>

@@ -2,7 +2,6 @@ import { PrelaunchNotice, ServiceNotificationBoundary } from "@/components/share
 import type { Metadata } from "next";
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import { ProviderMemorySync } from "@/components/auth/provider-memory-sync";
-import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
 import {
   GlobalToastPresentationProvider,
   GlobalToastPresentationSlot,
@@ -97,7 +96,6 @@ export default function RootLayout({
           />
         </GlobalToastPresentationProvider>
         </ServiceNotificationBoundary>
-        <QaFixtureToolbar />
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import {
   HybridSessionAuthorityError,
   createHybridAuthorityMarker,
   createHybridAuthorityFetch,
+  isSessionAuthorityTransportFailure,
 } from "@/lib/server/hybrid-auth/gateway";
 import {
   createRemoteRefreshAuthorityFetch,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/server/hybrid-auth/route-error-context";
 import {
   readSessionAuthorityFailureReason,
+  SESSION_AUTHORITY_REASON_MARKER,
   type SessionAuthorityFailureReason,
 } from "@/lib/server/hybrid-auth/session-observability";
 import {
@@ -153,7 +155,7 @@ function createAssertSessionAuthority(
     const rpc = authorityClient.rpc as (
       functionName: string,
       args: Record<string, unknown>,
-    ) => PromiseLike<{ error: unknown }>;
+    ) => PromiseLike<{ error: unknown; status?: number }>;
     const localAuthority = getAuthAuthority() === "local";
     if (
       localAuthority
@@ -165,7 +167,7 @@ function createAssertSessionAuthority(
     ) {
       throw new HybridSessionAuthorityError("auth_unavailable");
     }
-    const { error } = await rpc.call(
+    const { error, status } = await rpc.call(
       authorityClient,
       localAuthority
         ? "assert_and_renew_full_local_session_authority_v2"
@@ -193,16 +195,19 @@ function createAssertSessionAuthority(
             p_hmac_key_version: binding.hmac_key_version,
           },
     );
-    if (error) {
-      const message = String(
-        (error as { message?: unknown; details?: unknown; hint?: unknown })
-          ?.message
-          ?? (error as { details?: unknown })?.details
-          ?? (error as { hint?: unknown })?.hint
-          ?? "",
-      );
+    if (error || (status !== undefined && status >= 500)) {
+      const fields = error && typeof error === "object" ? error as Record<string, unknown> : {};
+      const message = [fields.code, fields.message, fields.details, fields.hint]
+        .filter((value): value is string => typeof value === "string").join("\n");
+      // Explicit revocation/stale-session evidence takes precedence over a
+      // generic HTTP 5xx or a transport-looking detail on the same response.
+      if (message.includes("ACCOUNT_SESSION_STALE") || message.includes(SESSION_AUTHORITY_REASON_MARKER)) {
+        throw new HybridSessionAuthorityError(readSessionAuthorityFailureReason(error));
+      }
       if (
-        message.includes(
+        (status !== undefined && status >= 500)
+        || isSessionAuthorityTransportFailure(error)
+        || message.includes(
           createHybridAuthorityMarker(new HybridLifecycleMaintenanceError()),
         )
         || message.includes("ACCOUNT_LIFECYCLE_MAINTENANCE")
@@ -250,6 +255,7 @@ function createGuardedLocalFetch({
           }>;
         });
         if (!result.ok) {
+          if (result.reason === "maintenance") throw new HybridLifecycleMaintenanceError();
           throw new HybridSessionAuthorityError();
         }
         const keyVersion = result.control.hmac_key_version;
@@ -414,6 +420,7 @@ type LocalInternalScope =
   | "recipe-image"
   | "recipe-meal-weight"
   | "recipe-save"
+  | "recipe-view"
   | "request-authority"
   | "session-observability"
   | "session-logout"
@@ -508,6 +515,16 @@ export function createRecipeMealWeightReadInternalClient() {
 
 export function createRecipeSaveInternalClient() {
   return createScopedInternalRpcClient("recipe-save");
+}
+
+export function createRecipeViewInternalClient() {
+  const client = createScopedDataServiceRoleClient("recipe-view");
+  if (!client) return null;
+  return {
+    increment: (recipeId: string) => client
+      .rpc("increment_recipe_view_count", { p_recipe_id: recipeId })
+      .maybeSingle(),
+  };
 }
 
 function createScopedInternalRpcClient(scope: LocalInternalScope) {

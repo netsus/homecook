@@ -283,6 +283,29 @@ interface SnapshotWriterClient {
   }>;
 }
 
+export function createRecipeNutritionSnapshotPayload(
+  calculation: RecipeNutritionCalculation,
+  calculatedAt = new Date().toISOString(),
+) {
+  validateRecipeNutritionSnapshot(calculation);
+  return {
+    base_servings: calculation.base_servings,
+    input_hash: calculation.input_hash,
+    calculation_version: calculation.calculation_version,
+    scalable_values: calculation.scalable_values,
+    fixed_values: calculation.fixed_values,
+    nutrient_status: calculation.values,
+    calculation_status: calculation.calculation_status,
+    calculation_quality: calculation.calculation_quality,
+    reflected_ingredient_count: calculation.reflected_ingredient_count,
+    target_ingredient_count: calculation.target_ingredient_count,
+    missing_reasons: calculation.missing_reasons,
+    warnings: calculation.warnings,
+    sources: calculation.sources,
+    calculated_at: calculatedAt,
+  };
+}
+
 export async function writeRecipeNutritionSnapshot(
   dbClient: SnapshotWriterClient,
   recipeId: string,
@@ -303,22 +326,7 @@ export async function writeRecipeNutritionSnapshot(
     p_recipe_id: recipeId,
     p_expected_recipe_updated_at: options.expectedRecipeVersion,
     p_input_guard: options.inputGuard,
-    p_snapshot: {
-      base_servings: calculation.base_servings,
-      input_hash: calculation.input_hash,
-      calculation_version: calculation.calculation_version,
-      scalable_values: calculation.scalable_values,
-      fixed_values: calculation.fixed_values,
-      nutrient_status: calculation.values,
-      calculation_status: calculation.calculation_status,
-      calculation_quality: calculation.calculation_quality,
-      reflected_ingredient_count: calculation.reflected_ingredient_count,
-      target_ingredient_count: calculation.target_ingredient_count,
-      missing_reasons: calculation.missing_reasons,
-      warnings: calculation.warnings,
-      sources: calculation.sources,
-      calculated_at: calculatedAt,
-    },
+    p_snapshot: createRecipeNutritionSnapshotPayload(calculation, calculatedAt),
   });
 
   if (result.error || !result.data) {

@@ -589,6 +589,17 @@ describe("MealScreen", () => {
     await waitFor(() => expect(mockRouterPush).toHaveBeenCalledTimes(1));
   });
 
+  it.each([503, 409])("does not create a legacy session when snapshot start fails (%s)", async (status) => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [buildMeal({ status: "shopping_done", revision: 3 })] });
+    createSnapshotV2CookingSession.mockRejectedValue(Object.assign(new Error("요리 연결을 다시 확인해 주세요."), { status, code: status === 503 ? "ACCOUNT_LIFECYCLE_MAINTENANCE" : "RECIPE_IMPACT_STALE" }));
+    render(<MealScreen {...DEFAULT_PROPS} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "김치찌개 요리하기" }));
+    expect(await screen.findByText("요리 연결을 다시 확인해 주세요.")).toBeTruthy();
+    expect(createCookingSession).not.toHaveBeenCalled();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
   it("uses only the selected shopping_done meal servings when the same recipe appears more than once", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({

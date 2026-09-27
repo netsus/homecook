@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React from "react";
 
+import { useSoftKeyboardOpen } from "@/components/shared/use-soft-keyboard-open";
 import { PRIMARY_MOBILE_TAB_ITEMS, type PrimaryMobileTabId } from "@/lib/navigation/app-nav";
 
 type Wave1MobileBottomTabId = PrimaryMobileTabId;
@@ -39,6 +40,9 @@ export function Wave1MobileBottomTab({
   onTabClick,
   plannerDate,
 }: Wave1MobileBottomTabProps) {
+  const keyboardOpen = useSoftKeyboardOpen();
+  if (keyboardOpen) return null;
+
   return (
     <nav
       aria-label={ariaLabel}

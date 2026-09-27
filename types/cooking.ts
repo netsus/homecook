@@ -150,6 +150,7 @@ export interface CookedBatchProjection {
   finished_weight_g: number | null;
   remaining_weight_g: number | null;
   weight_status: "known" | "missing" | "unrecoverable" | null;
+  weight_source?: "estimated" | "measured" | null;
   batch_status: "available" | "depleted" | null;
   depleted_reason:
     | "consumed"

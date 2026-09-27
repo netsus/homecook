@@ -24,6 +24,7 @@ interface RecipeFutureImpactSaveFlowProps {
 }
 
 function readErrorCode(error: unknown) {
+  if (error instanceof Error && "code" in error && error.code === "ACCOUNT_SESSION_STALE") return "UNAUTHORIZED";
   return error instanceof Error && "code" in error && typeof error.code === "string"
     ? error.code
     : "IMPACT_PREVIEW_FAILED";
@@ -46,6 +47,7 @@ export function RecipeFutureImpactSaveFlow({
   const [submitting, setSubmitting] = useState(false);
   const [impact, setImpact] = useState<RecipeFutureImpact | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [errorPhase, setErrorPhase] = useState<"preview" | "save">("preview");
   const patchKeyRef = useRef<string | null>(null);
   const previewDraftRef = useRef<RecipeFutureDraft | null>(null);
   const resumeAttemptedRef = useRef(false);
@@ -60,6 +62,7 @@ export function RecipeFutureImpactSaveFlow({
     const previewDraft = JSON.parse(JSON.stringify(draft)) as RecipeFutureDraft;
     updateOpen(true);
     setLoading(true);
+    setErrorPhase("preview");
     setImpact(null);
     setErrorCode(null);
     patchKeyRef.current = null;
@@ -94,6 +97,7 @@ export function RecipeFutureImpactSaveFlow({
     const previewDraft = previewDraftRef.current;
     if (!impact || !previewDraft || submitting) return;
     setSubmitting(true);
+    setErrorPhase("save");
     setErrorCode(null);
     const idempotencyKey = patchKeyRef.current ?? crypto.randomUUID();
     patchKeyRef.current = idempotencyKey;
@@ -125,7 +129,7 @@ export function RecipeFutureImpactSaveFlow({
 
   return <>
     <button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] px-4 font-bold text-[var(--text-inverse)] disabled:cursor-not-allowed disabled:opacity-50" disabled={actionDisabled} onClick={() => void preview()} type="button">변경사항 저장</button>
-    {open ? <RecipeFutureImpactDialog errorCode={errorCode} impact={impact} loading={loading} onClose={() => { if (!submitting) updateOpen(false); }} onLogin={() => {
+    {open ? <RecipeFutureImpactDialog errorCode={errorCode} errorPhase={errorPhase} impact={impact} loading={loading} onClose={() => { if (!submitting) updateOpen(false); }} onLogin={() => {
       const previewDraft = previewDraftRef.current;
       if (!previewDraft) return;
       onUnauthorized?.({

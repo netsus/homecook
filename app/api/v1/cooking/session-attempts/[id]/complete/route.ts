@@ -1,4 +1,7 @@
 import { fail, ok } from "@/lib/api/response";
+import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
+import { createRecipeMealWeightReadInternalClient } from "@/lib/supabase/server";
+import { readCookedWeightEstimate, type CookingWeightSessionClient } from "@/lib/server/cooked-batch-weight-estimate";
 import {
   callCookedBatchRpc,
   isUuid,
@@ -24,13 +27,26 @@ export async function POST(request: Request, context: RouteContext) {
   if (!body.ok) return body.response;
   const parsed = parseSnapshotV2CompleteRequest(body.value);
   if (!parsed.ok) return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
+  let estimatedWeight: number | null = null;
+  if (parsed.value.weightAction === "weigh_later") {
+    try {
+      estimatedWeight = await readCookedWeightEstimate({
+        client: authorized.routeClient as unknown as CookingWeightSessionClient,
+        weightClient: createRecipeMealWeightReadInternalClient(),
+        ownerId: authorized.user.id, sessionId: id,
+      });
+    } catch (error) {
+      return createHybridAuthorityRouteError(error)
+        ?? fail("INTERNAL_ERROR", "요리 중량을 확인하지 못했어요. 다시 시도해 주세요.", 500);
+    }
+  }
   const result = await callCookedBatchRpc(authorized.client, "complete_snapshot_v2_cooking_session", {
     ...authorized.authorityArgs,
     p_session_id: id,
     p_idempotency_key: key.key,
     p_consumed_pantry_item_ids: parsed.value.consumedPantryItemIds,
-    p_weight_action: parsed.value.weightAction,
-    p_finished_weight_g: parsed.value.finishedWeightG,
+    p_weight_action: parsed.value.weightAction === "weigh_later" ? "estimate_from_ingredients" : parsed.value.weightAction,
+    p_finished_weight_g: parsed.value.weightAction === "weigh_later" ? estimatedWeight : parsed.value.finishedWeightG,
   });
   if (!result.ok) return result.response;
   await projectCookedBatchGamification(

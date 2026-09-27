@@ -237,7 +237,8 @@
     "test:marketing-round2:frontend": "vitest run --config vitest.product.config.ts tests/marketing-round2-view.test.tsx tests/marketing-round2-landing.test.tsx tests/marketing-round2-client.test.ts tests/marketing-round2-client-storage.test.ts tests/marketing-round2-page.test.ts tests/marketing-round2-page-route.test.tsx tests/marketing-round2-path-guard.test.ts tests/marketing-round2-provider-boundary.test.tsx tests/marketing-round2-widget.test.tsx tests/marketing-round2-ui-isolated.test.ts",
     "test:marketing-round2:client-browser": "R2_CLIENT_BROWSER=1 vitest run --config vitest.product.config.ts tests/marketing-round2-client.test.ts tests/marketing-round2-client-storage.test.ts tests/marketing-round2-session.test.ts",
     "test:e2e:marketing-round2": "HOMECOOK_ROUND2_PREVIEW_E2E=1 playwright test --config=playwright.marketing-round2.config.ts",
-    "verify:marketing-round2:ui-isolated": "node scripts/verify-marketing-round2-ui-isolated.mjs"
+    "verify:marketing-round2:ui-isolated": "node scripts/verify-marketing-round2-ui-isolated.mjs",
+    "test:feedback-batch:web": "node scripts/run-feedback-batch-tests.mjs"
   },
   "dependencies": {
     "@radix-ui/react-icons": "1.3.2",

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -16,6 +16,30 @@ async function openBreakfast(user: ReturnType<typeof userEvent.setup>) {
 
 describe("MEAL_LOG add sheet", () => {
   afterEach(cleanup);
+
+  it("keeps a cleared quantity empty, rejects zero and below-minimum amounts, and saves 12.5 once", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderMealLogShell();
+    await openBreakfast(user);
+    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.click(await screen.findByRole("button", { name: /달걀/u }));
+    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "실제 양" });
+    const save = screen.getByRole<HTMLButtonElement>("button", { name: "기록 저장" });
+    await user.clear(amount);
+    expect(amount.value).toBe(""); expect(save.disabled).toBe(true);
+    await user.click(save);
+    expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes("/meal-log/entries") && init?.method === "POST").map(([url, init]) => [String(url), init?.body])).toEqual([]);
+    for (const invalid of ["0", "0.001"]) {
+      await user.clear(amount); await user.type(amount, invalid);
+      expect(save.disabled).toBe(true);
+    }
+    await user.clear(amount); await user.type(amount, "12.");
+    expect(amount.value).toBe("12.");
+    await user.type(amount, "5"); await user.click(save);
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes("/meal-log/entries") && init?.method === "POST")).toHaveLength(1));
+    const post = fetchMock.mock.calls.find(([url, init]) => String(url).includes("/meal-log/entries") && init?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body)).quantity.amount).toBe(12.5);
+  });
 
   it("opens the contracted recent, cooked-batch, and search sources", async () => {
     const user = userEvent.setup();
@@ -49,7 +73,7 @@ describe("MEAL_LOG add sheet", () => {
     expect(save.disabled).toBe(true);
     expect(screen.getByText("제안된 양을 확인해 주세요.")).toBeTruthy();
 
-    await user.click(screen.getByRole("spinbutton", { name: "실제 양" }));
+    await user.click(screen.getByRole("textbox", { name: "실제 양" }));
     await user.tab();
     expect(save.disabled).toBe(false);
   });
@@ -62,7 +86,7 @@ describe("MEAL_LOG add sheet", () => {
     expect(await screen.findByText(/8월 9일 조리/u)).toBeTruthy();
     expect(screen.getByText(/남은 양 80g/u)).toBeTruthy();
     await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
-    const amount = screen.getByRole("spinbutton", { name: "실제 양" });
+    const amount = screen.getByRole("textbox", { name: "실제 양" });
     await user.clear(amount);
     await user.type(amount, "81");
 

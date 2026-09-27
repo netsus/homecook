@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   prepareFullLocalSessionAuthority,
   recordFullLocalSessionAuthority,
+  readFullLocalSessionControl,
 } from "@/lib/server/full-local-auth/session-authority";
 import {
   readVerifiedAccountGenerationSession,
@@ -30,6 +31,14 @@ function jwt(claims: Record<string, unknown>) {
 }
 
 describe("full-local session authority", () => {
+  it.each([
+    [{ code: "", message: "TypeError: fetch failed" }, "maintenance"],
+    [{ code: "55000", message: "ACCOUNT_SESSION_STALE" }, "stale"],
+  ])("distinguishes control lookup transport failure from a denied authority", async (error, reason) => {
+    await expect(readFullLocalSessionControl({ rpc: vi.fn().mockResolvedValue({ data: null, error }) }))
+      .resolves.toEqual({ ok: false, reason });
+  });
+
   afterEach(() => {
     createSessionAuthorityInternalRpcClient.mockReset();
     delete process.env.AUTH_SUPABASE_EXPECTED_ISSUER;

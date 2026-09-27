@@ -17,6 +17,8 @@ const createQaFixtureMeal = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: () => null,
+  createRecipeFuturePropagationInternalClient: () => null,
   createRouteHandlerClient,
   createServiceRoleClient,
   createFutureMealWriteInternalClient,
@@ -60,6 +62,8 @@ function createQuery<T>(result: QueryResult<T>) {
     order: vi.fn(() => query),
     limit: vi.fn(() => query),
     ilike: vi.fn(() => query),
+    like: vi.fn(() => query),
+    range: vi.fn(() => query),
     eq: vi.fn(() => query),
     is: vi.fn(() => query),
     in: vi.fn(() => query),
@@ -164,13 +168,11 @@ describe("08a meal add search backend target", () => {
       error: null,
     });
 
-    createRouteHandlerClient.mockResolvedValue({
-      rpc: vi.fn(async () => ({
-        data: [],
-        error: null,
-      })),
-      from: vi.fn(() => listQuery),
-    });
+    const emptyCatalogQuery = createQuery({ data: [], error: null });
+    createRouteHandlerClient.mockImplementation(async (options?: { anonymousPublicReadScope?: string }) => ({
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn(() => options?.anonymousPublicReadScope === "ingredients" ? emptyCatalogQuery : listQuery),
+    }));
 
     const { GET } = await import("@/app/api/v1/recipes/route");
     const response = await GET(

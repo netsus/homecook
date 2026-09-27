@@ -1,3 +1,4 @@
+import { recipeIngredientGroupKey } from "@/lib/recipe-editor-ingredients";
 import { addRecipeProductNutritionGuard, hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import { fail } from "@/lib/api/response";
 import {
@@ -445,6 +446,8 @@ function draftNutritionIngredient(
     || (amount !== null && (typeof amount !== "number" || !Number.isFinite(amount)))
     || (unit !== null && typeof unit !== "string")
     || typeof scalable !== "boolean"
+    || (value.component_label !== undefined && value.component_label !== null
+      && typeof value.component_label !== "string")
     || (
       value.food_product_id !== undefined
       && value.food_product_id !== null
@@ -462,6 +465,7 @@ function draftNutritionIngredient(
   return {
     id: value.ingredient_id,
     ingredient_id: value.ingredient_id,
+    component_label: typeof value.component_label === "string" ? value.component_label.trim() || null : null,
     amount,
     unit,
     ingredient_type: ingredientType,
@@ -486,13 +490,26 @@ export async function calculateRecipeDraftNutrition(
   if (ingredients.some((ingredient) => ingredient === null)) {
     throw new RecipeDraftNutritionValidationError();
   }
-  const validIngredients = ingredients.filter(
+  const validRows = ingredients.filter(
     (ingredient): ingredient is NonNullable<typeof ingredient> => ingredient !== null,
   );
-  if (new Set(validIngredients.map((ingredient) => ingredient.ingredient_id)).size
-    !== validIngredients.length) {
+  if (new Set(validRows.map(recipeIngredientGroupKey)).size
+    !== validRows.length) {
     throw new RecipeDraftNutritionValidationError();
   }
+
+  // The same catalog ingredient may have separate portions in different
+  // components. Give those rows distinct calculation/product-pin identities.
+  const ingredientCounts = new Map<string, number>();
+  for (const ingredient of validRows) {
+    ingredientCounts.set(ingredient.ingredient_id, (ingredientCounts.get(ingredient.ingredient_id) ?? 0) + 1);
+  }
+  const validIngredients = validRows.map((ingredient) => ({
+    ...ingredient,
+    id: ingredientCounts.get(ingredient.ingredient_id)! > 1
+      ? `${ingredient.ingredient_id}:row:${ingredient.sort_order}`
+      : ingredient.ingredient_id,
+  }));
 
   let predecessors;
   let synchronousReadFailed = false;
@@ -547,15 +564,15 @@ export async function calculateRecipeDraftNutrition(
   ) as {
     recipe_ingredients: Array<Record<string, unknown>>;
   };
-  const guardByIngredientId = new Map(
+  const guardByRowId = new Map(
     currentGuard.recipe_ingredients.map((ingredient) => [
-      ingredient.ingredient_id,
+      ingredient.id,
       ingredient,
     ]),
   );
   const predecessorGuard = {
     recipe_ingredients: validIngredients.map((ingredient) => {
-      const guard = guardByIngredientId.get(ingredient.ingredient_id);
+      const guard = guardByRowId.get(ingredient.id);
       if (!guard) {
         throw new RecipeDraftNutritionValidationError();
       }

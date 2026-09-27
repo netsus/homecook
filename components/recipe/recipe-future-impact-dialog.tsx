@@ -22,8 +22,9 @@ function dateLabel(value: string | null) {
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "numeric", day: "numeric", timeZone: "Asia/Seoul" }).format(new Date(`${value}T12:00:00+09:00`));
 }
 
-export function RecipeFutureImpactDialog({ errorCode, impact, loading = false, onClose, onLogin, onRecheck, onSave, submitting = false }: {
+export function RecipeFutureImpactDialog({ errorCode, errorPhase = "preview", impact, loading = false, onClose, onLogin, onRecheck, onSave, submitting = false }: {
   errorCode?: string | null;
+  errorPhase?: "preview" | "save";
   impact: RecipeFutureImpact | null;
   loading?: boolean;
   submitting?: boolean;
@@ -51,7 +52,7 @@ export function RecipeFutureImpactDialog({ errorCode, impact, loading = false, o
       <div className="min-h-0 overflow-y-auto p-4" id="future-impact-copy">
         {loading ? <p role="status">영향을 확인하고 있어요.</p> : null}
         {unauthorized ? <div role="alert"><p>로그인이 만료됐어요. 다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onLogin} ref={loginRef} type="button">로그인하고 저장 계속하기</button></div> : null}
-        {needsRecheck ? <div role="alert"><p>영향을 확인하지 못했어요. 최신 내용으로 다시 확인해 주세요.</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onRecheck} ref={recheckRef} type="button">{errorCode === "RECIPE_IMPACT_STALE" || errorCode === "MEAL_COOKING_ALREADY_STARTED" ? "최신 영향 다시 확인" : "다시 확인"}</button></div> : null}
+        {needsRecheck ? <div role="alert"><p>{errorPhase === "save" ? "저장하지 못했어요. 수정한 내용은 유지했으니 다시 확인한 뒤 저장해 주세요." : "영향을 확인하지 못했어요. 최신 내용으로 다시 확인해 주세요."}</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onRecheck} ref={recheckRef} type="button">{errorCode === "RECIPE_IMPACT_STALE" || errorCode === "MEAL_COOKING_ALREADY_STARTED" ? "최신 영향 다시 확인" : "다시 확인"}</button></div> : null}
         {!loading && !errorCode && impact ? <>
           <section className="rounded-[16px] bg-[var(--surface-fill)] p-4" aria-label="영향 요약">
             <p className="font-bold">미래 계획 {impact.future_meal_count}개</p>

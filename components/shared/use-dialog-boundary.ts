@@ -65,14 +65,14 @@ export function useDialogBoundary({
       ariaHidden: string | null;
     }> = [];
 
+    document.body.style.overflow = "hidden";
     const initialTarget = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
-    initialTarget.focus();
+    initialTarget.focus({ preventScroll: true });
     const focusGuardFrame = requestAnimationFrame(() => {
       if (!dialog.isConnected || dialog.contains(document.activeElement)) return;
       const target = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
-      target.focus();
+      target.focus({ preventScroll: true });
     });
-    document.body.style.overflow = "hidden";
 
     let branch: HTMLElement = dialog;
     while (branch.parentElement) {
@@ -93,6 +93,7 @@ export function useDialogBoundary({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (event.isComposing || event.keyCode === 229) return;
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
@@ -138,7 +139,7 @@ export function useDialogBoundary({
           const target = requestedTarget?.isConnected
             ? requestedTarget
             : returnTarget?.isConnected ? returnTarget : fallbackFocusTarget;
-          target?.focus();
+          target?.focus({ preventScroll: true });
           invokerFocusRef.current = null;
         }
       });

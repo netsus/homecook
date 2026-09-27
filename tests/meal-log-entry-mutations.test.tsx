@@ -138,8 +138,8 @@ describe("MEAL_LOG entry mutations", () => {
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
     await screen.findByRole("alert");
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
-    await user.clear(within(dialog).getByRole("spinbutton", { name: "실제 양" }));
-    await user.type(within(dialog).getByRole("spinbutton", { name: "실제 양" }), "3");
+    await user.clear(within(dialog).getByRole("textbox", { name: "실제 양" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "실제 양" }), "3");
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
 
     expect(keys[0]).toBe(keys[1]);
@@ -157,7 +157,7 @@ describe("MEAL_LOG entry mutations", () => {
 
     expect((await within(dialog).findByRole("alert")).textContent).toContain("최신 기록을 반영했어요");
     expect(within(dialog).getByRole("option", { name: "저녁" })).toBeTruthy();
-    const amount = within(dialog).getByRole("spinbutton", { name: "실제 양" });
+    const amount = within(dialog).getByRole("textbox", { name: "실제 양" });
     expect((amount as HTMLInputElement).value).toBe("2");
     await user.clear(amount);
     await user.type(amount, "3");
@@ -221,7 +221,7 @@ describe("MEAL_LOG entry mutations", () => {
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
     const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
-    const amount = within(dialog).getByRole("spinbutton", { name: "실제 양" });
+    const amount = within(dialog).getByRole("textbox", { name: "실제 양" });
     await user.clear(amount);
     await user.type(amount, "3");
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));

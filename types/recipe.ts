@@ -667,6 +667,8 @@ export interface RecipeDetail {
   base_servings: number;
   tags: string[];
   source_type: "system" | "youtube" | "manual";
+  visibility?: "public" | "private";
+  origin_recipe_id?: string | null;
   source: {
     youtube_url: string | null;
     youtube_video_id: string | null;

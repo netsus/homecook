@@ -4,6 +4,7 @@ import {
   normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
+  resolveAuthorizedRecipeImageUrls,
   type RecipeImageReadRpcClient,
   type RecipeImageReadProjection,
   type RecipeImageReadStorageClient,
@@ -61,6 +62,31 @@ function storageClient(overrides: {
 }
 
 describe("recipe image registry-aware read adapter", () => {
+  it("maps authorized managed images to same-origin routes and preserves legacy thumbnails", async () => {
+    const secondId = "44444444-4444-4444-8444-444444444444";
+    const rpc = vi.fn(async () => ({ error: null, data: [
+      projection({ image_object_id: OBJECT_ID, bucket_id: "recipe-images", object_path: `shared/${OBJECT_ID}.webp`, visibility: "public_shared", state: "attached_public_shared", reference_type: "recipe_thumbnail" }),
+      projection({ recipe_id: secondId, legacy_thumbnail_url: "https://i.ytimg.com/vi/abc/hqdefault.jpg" }),
+    ] }));
+    const urls = await resolveAuthorizedRecipeImageUrls({ client: { rpc }, recipes: [
+      { id: RECIPE_ID, created_by: OWNER_ID, thumbnail_url: null },
+      { id: secondId, created_by: OWNER_ID, thumbnail_url: null },
+    ] });
+    expect(urls.get(RECIPE_ID)).toBe(`/api/v1/recipes/${RECIPE_ID}/image`);
+    expect(urls.get(secondId)).toBe("https://i.ytimg.com/vi/abc/hqdefault.jpg");
+    expect(rpc).toHaveBeenCalledWith("read_recipe_image_projections", { p_recipe_ids: [RECIPE_ID, secondId] });
+  });
+
+  it("rejects duplicate or foreign recipe projection evidence instead of attaching another user's image", async () => {
+    const rpc = vi.fn(async () => ({ error: null, data: [projection({ recipe_id: OWNER_ID })] }));
+    await expect(resolveAuthorizedRecipeImageUrls({ client: { rpc }, recipes: [{ id: RECIPE_ID, created_by: OWNER_ID, thumbnail_url: null }] })).rejects.toThrow("evidence is invalid");
+  });
+
+  it("does not request registry authority for an empty authorized recipe list", async () => {
+    const rpc = vi.fn();
+    expect(await resolveAuthorizedRecipeImageUrls({ client: { rpc }, recipes: [] })).toEqual(new Map());
+    expect(rpc).not.toHaveBeenCalled();
+  });
   it("allows HTTP only for loopback local Supabase origins", () => {
     expect(normalizeExpectedRecipeImageStorageOrigin(
       "http://127.0.0.1:54321",

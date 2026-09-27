@@ -100,7 +100,7 @@ function isAllowedBrightBrandContrastNode(
 }
 
 function visibleSearchInput(page: Page) {
-  return page.locator('input[placeholder="레시피 제목 검색"]:visible').first();
+  return page.locator('input[placeholder="제목·재료 검색"]:visible').first();
 }
 
 function visibleTextButton(page: Page, text: string | RegExp) {

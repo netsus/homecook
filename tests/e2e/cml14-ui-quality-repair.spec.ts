@@ -57,7 +57,7 @@ test.describe("#14 Stage 4 UI quality repair", () => {
     await installRecipeDetailRoutes(page);
 
     await page.goto("/");
-    await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
+    await expect(page.getByPlaceholder("제목·재료 검색")).toBeVisible();
     await expectNoSeriousOrCriticalAxe(page);
 
     if (isMobile(page)) {

@@ -495,7 +495,10 @@ export function PlannerWeekScreen({
     setMealAddMode(null);
     if (target) {
       router.push(
-        `/planner/${target.dateKey}/${target.columnId}?slot=${encodeURIComponent(target.slotName)}`,
+        buildReturnHref(`/planner/${target.dateKey}/${target.columnId}?slot=${encodeURIComponent(target.slotName)}`, {
+          returnSurface: "planner.week",
+          returnTo: `/planner?${new URLSearchParams({ date: target.dateKey })}`,
+        }),
       );
     }
   }

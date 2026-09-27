@@ -14,6 +14,7 @@ import {
   createHybridAuthorityMarker,
   createHybridAuthorityFetch,
   isHybridAuthorityFailureResponse,
+  isSessionAuthorityTransportFailure,
 } from "@/lib/server/hybrid-auth/gateway";
 import { verifyHybridRequestAttestation } from "@/lib/server/hybrid-auth/session-authority";
 import {
@@ -81,6 +82,30 @@ async function expectAuthorityError(
 }
 
 describe("loopback session-authority gateway", () => {
+  it("recognizes PostgREST network failures without overriding explicit auth or database errors", () => {
+    expect(isSessionAuthorityTransportFailure({ code: "", message: "TypeError: fetch failed" })).toBe(true);
+    expect(isSessionAuthorityTransportFailure({ code: "55000", message: "ACCOUNT_SESSION_STALE", details: "fetch failed" })).toBe(false);
+    expect(isSessionAuthorityTransportFailure({ code: "session_not_found", name: "AuthApiError" })).toBe(false);
+  });
+  it.each(["auth-body", "authority-rpc", "jwks-body"])("maps %s transport failure to 503 without allowing the request", async (stage) => {
+    const bodyFailure = () => new Response(new ReadableStream({
+      start(controller) { controller.error(new DOMException("timed out", "TimeoutError")); },
+    }));
+    const localUpstreamFetch = vi.fn();
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => accessToken(),
+      remoteLivenessFetch: vi.fn().mockImplementation(async () => stage === "authority-rpc"
+        ? Response.json({ id: OWNER_UUID, created_at: "2026-07-28T00:00:00.000Z" }) : bodyFailure()),
+      ...(stage === "jwks-body" ? {} : { loadRemoteJwks: async () => ({ keys: [REMOTE_JWK] }) }),
+      assertSessionAuthority: vi.fn().mockRejectedValue(new TypeError("fetch failed")),
+      localUpstreamFetch,
+      auth: { issuer: ISSUER, url: "http://127.0.0.1:54321", publishableKey: "local-publishable" },
+      attestationSecret: SECRET, sessionBindingSecret: SECRET, nowSeconds: () => 1_800_000_100,
+    });
+    await expectAuthorityError(await authorityFetch("http://127.0.0.1:8000/rest/v1/users"), "ACCOUNT_LIFECYCLE_MAINTENANCE");
+    expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
   it("normalizes access-token read failures to maintenance without reaching upstream", async () => {
     const localUpstreamFetch = vi.fn();
     const authorityFetch = createHybridAuthorityFetch({

@@ -134,6 +134,7 @@ export function YoutubeExtractionNotificationTrigger({
 }: {
   placement?: "global" | "header";
 } = {}) {
+  const pathname = usePathname();
   const authenticated = useYoutubeExtractionStore((state) => state.authenticated);
   const items = useYoutubeExtractionStore((state) => state.items);
   const setOpen = useYoutubeExtractionStore((state) => state.setOpen);
@@ -142,7 +143,7 @@ export function YoutubeExtractionNotificationTrigger({
     ? `YouTube 추출 알림 ${unseenCount}개`
     : "YouTube 추출 알림 없음";
 
-  if (!authenticated) return null;
+  if (!authenticated || (pathname !== "/" && pathname !== "/planner")) return null;
 
   return (
     <button
@@ -355,7 +356,6 @@ function YoutubeExtractionNotificationRuntime({
   const [seenMutationError, setSeenMutationError] = useState(false);
   const [hiddenToastIds, setHiddenToastIds] = useState<string[]>([]);
   const [retryingId, setRetryingId] = useState<string | null>(null);
-  const [hasHeaderTrigger, setHasHeaderTrigger] = useState(false);
   const [activeJobs, setActiveJobs] = useState<YoutubeExtractionJobData[]>([]);
   const [activeJobsError, setActiveJobsError] = useState<string | null>(null);
   const [unseenNextCursor, setUnseenNextCursor] = useState<string | null>(null);
@@ -464,23 +464,6 @@ function YoutubeExtractionNotificationRuntime({
     };
     window.addEventListener(HOMECOOK_APP_ACTION_NOTIFICATION_EVENT, onAppActionNotification);
     return () => window.removeEventListener(HOMECOOK_APP_ACTION_NOTIFICATION_EVENT, onAppActionNotification);
-  }, []);
-
-  useEffect(() => {
-    const update = () => setHasHeaderTrigger(
-      Array.from(document.querySelectorAll<HTMLElement>("[data-youtube-extraction-trigger='header']")).some((trigger) => {
-        for (let element: HTMLElement | null = trigger; element; element = element.parentElement) {
-          const style = window.getComputedStyle(element);
-          if (style.display === "none" || style.visibility === "hidden") return false;
-        }
-        return true;
-      }),
-    );
-    update();
-    const observer = new MutationObserver(update);
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("resize", update);
-    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
   }, []);
 
   const refresh = useCallback(async (
@@ -968,11 +951,6 @@ function YoutubeExtractionNotificationRuntime({
 
   return (
     <>
-      {!hasHeaderTrigger ? (
-        <div className="fixed right-3 top-[calc(env(safe-area-inset-top)+68px)] z-[110] rounded-full bg-[var(--surface)] shadow-sm sm:right-[80px] sm:top-[calc(env(safe-area-inset-top)+16px)]">
-          <YoutubeExtractionNotificationTrigger placement="global" />
-        </div>
-      ) : null}
       <GlobalToastPortal
         enabled={presentationMode === "shared"}
         slotId={GLOBAL_TOAST_YOUTUBE_SLOT_ID}

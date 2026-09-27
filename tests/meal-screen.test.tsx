@@ -14,6 +14,7 @@ const navigationMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/planner/2026-04-18/column-breakfast",
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
@@ -159,6 +160,26 @@ describe("MealScreen", () => {
     Reflect.deleteProperty(window, "matchMedia");
   });
 
+  it.each([false, true])("returns to the meal's week and date even without explicit return context (desktop: %s)", async (desktop) => {
+    setDesktopViewport(desktop);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [createMealItem()] });
+    render(<MealScreen {...DEFAULT_PROPS} planDate="2026-11-19" />);
+    await screen.findByTestId("meal-recipe-link-meal-1");
+    await userEvent.click(screen.getByRole("button", { name: desktop ? "플래너로 돌아가기" : "뒤로 가기" }));
+    expect(mockRouterReplace).toHaveBeenCalledWith("/planner?date=2026-11-19");
+  });
+
+  it("repairs an older planner return link that omitted its date", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ returnTo: "/planner" }));
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [createMealItem()] });
+    render(<MealScreen {...DEFAULT_PROPS} planDate="2026-11-19" />);
+    await screen.findByTestId("meal-recipe-link-meal-1");
+    await userEvent.click(screen.getByRole("button", { name: "뒤로 가기" }));
+    expect(mockRouterReplace).toHaveBeenCalledWith("/planner?date=2026-11-19");
+  });
+
   it("renders a stable loading skeleton that matches the meal card structure", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockReturnValue(new Promise(() => {}));
@@ -190,29 +211,18 @@ describe("MealScreen", () => {
     const user = userEvent.setup();
     await user.click(recipeLink);
 
-    expect(mockRouterPush).toHaveBeenCalledWith("/recipe/recipe-1");
+    expect(mockRouterPush).toHaveBeenCalledWith("/meal/meal-1/recipe");
   });
 
-  it("opens the web profile summary from the top avatar without linking to mypage", async () => {
+  it("links the top avatar to mypage", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
-    fetchMeals.mockResolvedValue({
-      items: [createMealItem()],
-    });
-
-    const user = userEvent.setup();
-    const { container } = render(<MealScreen {...DEFAULT_PROPS} />);
-
+    fetchMeals.mockResolvedValue({ items: [createMealItem()] });
+    render(<MealScreen {...DEFAULT_PROPS} />);
     await screen.findByText("김치찌개");
-    const profileTrigger = screen.getByTestId("web-profile-summary-button");
-
-    expect(profileTrigger.tagName).toBe("BUTTON");
-    expect(container.querySelector('a.web-profile-button[href="/mypage"]')).toBeNull();
-
-    await user.click(profileTrigger);
-
-    expect(await screen.findByRole("dialog", { name: "마이페이지 요약" })).toBeTruthy();
-    expect(mockRouterPush).not.toHaveBeenCalledWith("/mypage");
+    const profileLink = screen.getByTestId("web-profile-summary-button");
+    expect(profileLink.tagName).toBe("A");
+    expect(profileLink.getAttribute("href")).toBe("/mypage");
   });
 
   it("renders a trash icon button for delete instead of text button (Wave1)", async () => {
@@ -239,7 +249,7 @@ describe("MealScreen", () => {
     expect(deleteBtn.className).toContain("text-[var(--danger)]");
   });
 
-  it("renders meal status tags without status selectors", async () => {
+  it("offers the action for each meal status without status selectors", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [
@@ -253,9 +263,12 @@ describe("MealScreen", () => {
     await screen.findByText("김치찌개");
     await screen.findByText("파스타");
 
-    expect(screen.getByText("등록")).toBeTruthy();
-    expect(screen.getByText("장보기 완료")).toBeTruthy();
-    expect(screen.queryByText("요리 완료")).toBeNull();
+    const registered = within(screen.getByRole("article", { name: "김치찌개 식사 카드" }));
+    const ready = within(screen.getByRole("article", { name: "파스타 식사 카드" }));
+    expect(registered.getByRole("button", { name: "장보기" })).toBeTruthy();
+    expect(registered.queryByRole("button", { name: "김치찌개 요리하기" })).toBeNull();
+    expect(ready.getByRole("button", { name: "파스타 요리하기" })).toBeTruthy();
+    expect(ready.queryByRole("button", { name: "장보기" })).toBeNull();
     // No status dropdown/selector
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByLabelText("상태 변경")).toBeNull();
@@ -324,11 +337,11 @@ describe("MealScreen", () => {
     const secondRecipeLink = screen.getByTestId("meal-recipe-link-meal-2");
 
     await user.click(secondRecipeLink);
-    expect(mockRouterPush).toHaveBeenCalledWith("/recipe/recipe-2");
+    expect(mockRouterPush).toHaveBeenCalledWith("/meal/meal-2/recipe");
 
     mockRouterPush.mockClear();
     await user.click(firstRecipeLink);
-    expect(mockRouterPush).toHaveBeenCalledWith("/recipe/recipe-1");
+    expect(mockRouterPush).toHaveBeenCalledWith("/meal/meal-1/recipe");
   });
 
   it("shows meal card with relative positioning for absolute trash icon (Wave1)", async () => {

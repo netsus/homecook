@@ -1,5 +1,7 @@
 "use client";
 
+import { DecimalInput } from "@/components/shared/decimal-input";
+
 import Image from "next/image";
 import { showActionConfirmation } from "@/stores/ui-store";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -372,7 +374,8 @@ function EntryDialog({
   const [columnId, setColumnId] = useState(state.type === "edit" && state.draft
     ? state.draft.columnId
     : authorityColumnActive ? entry.meal_plan_column_id ?? "" : "");
-  const [amount, setAmount] = useState(state.type === "edit" && state.draft ? state.draft.amount : entry.quantity.amount);
+  const [amount, setAmount] = useState<number | null>(state.type === "edit" && state.draft ? state.draft.amount : entry.quantity.amount);
+  const amountInvalid = amount === null || !Number.isFinite(amount) || amount < 0.01;
   const [unit, setUnit] = useState(state.type === "edit" && state.draft ? state.draft.unit : entry.quantity.unit);
   const [revision, setRevision] = useState(entry.revision);
   const [pending, setPending] = useState(false);
@@ -400,7 +403,7 @@ function EntryDialog({
   }, [state.type, requiresColumnSelection]);
 
   async function mutate() {
-    if (!mutationEnabled || (state.type !== "delete" && (!columnValid || amount <= 0 || !unit.trim()))) return;
+    if (pending || !mutationEnabled || (state.type !== "delete" && (!columnValid || amountInvalid || !unit.trim()))) return;
     setPending(true);
     setError(null);
     try {
@@ -411,6 +414,7 @@ function EntryDialog({
         }
         await deleteMealLogEntry(entry.id, revision, operation.current.key);
       } else {
+        if (amount === null) return;
         const input = {
           consumedAt: entry.consumed_at,
           consumedLocalDate: entry.consumed_local_date,
@@ -457,12 +461,11 @@ function EntryDialog({
       onClose();
     } catch (reason) {
       if (isMealLogApiError(reason) && reason.status === 401) {
-        onUnauthorized(state.type === "delete" ? {
-          version: 1, action: "delete", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-delete",
-        } : {
-          version: 1, action: "edit", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-edit",
-          draft: { amount, columnId, unit },
-        });
+        if (state.type === "delete") {
+          onUnauthorized({ version: 1, action: "delete", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-delete" });
+        } else if (amount !== null) {
+          onUnauthorized({ version: 1, action: "edit", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-edit", draft: { amount, columnId, unit } });
+        }
         return;
       }
       if (isMealLogApiError(reason) && reason.status === 409) {
@@ -525,12 +528,12 @@ function EntryDialog({
             </> : null}
             <label className="mt-4 block text-sm font-bold">실제 양
               <span className="mt-1 flex min-h-11 items-center overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] focus-within:ring-2 focus-within:ring-[var(--brand)]">
-                <input aria-label="먹은 양" className="min-h-11 min-w-0 flex-1 px-3 font-normal outline-none" min="0.01" onChange={(event) => setAmount(Number(event.target.value))} step="any" type="number" value={amount} />
+                <DecimalInput disabled={pending} aria-label="먹은 양" className="min-h-11 min-w-0 flex-1 px-3 font-normal outline-none" min="0.01" onValueChange={setAmount} step="any" value={amount} />
                 <span className="shrink-0 border-l border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[var(--text-2)]">{unit}</span>
               </span>
             </label>
             {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
-            <button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending || !columnValid || amount <= 0 || !unit.trim()} onClick={() => void mutate()} type="button">{pending ? "수정 중…" : "먹은 양 수정"}</button>
+            <button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending || !columnValid || amountInvalid || !unit.trim()} onClick={() => void mutate()} type="button">{pending ? "수정 중…" : "먹은 양 수정"}</button>
           </aside>
         </div>
       </div>
@@ -562,7 +565,7 @@ function EntryDialog({
             {requiresColumnSelection && day.active_columns.length === 0 ? <p className="text-sm text-[var(--danger-strong)]" role="alert">옮길 수 있는 현재 끼니가 없어 저장할 수 없어요.</p> : null}
             <p className="text-sm text-[var(--text-2)]">{entry.quantity.unit === "g" ? "먹은 양을 g(그램) 단위로 입력해 주세요." : `먹은 양은 ${entry.quantity.unit} 기준이에요. g 입력은 정확한 환산 정보가 있는 음식만 지원해요.`}</p>
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-sm font-bold">실제 양<input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" min="0.01" onChange={(event) => setAmount(Number(event.target.value))} step="any" type="number" value={amount} /></label>
+              <label className="text-sm font-bold">실제 양<DecimalInput disabled={pending} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" min="0.01" onValueChange={setAmount} step="any" value={amount} /></label>
               <label className="text-sm font-bold">단위<input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onChange={(event) => setUnit(event.target.value)} readOnly={entry.source.type === "cooked_batch"} value={unit} /></label>
             </div>
           </div>
@@ -570,7 +573,7 @@ function EntryDialog({
         {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
         <div className="mt-5 grid gap-2 min-[360px]:grid-cols-2">
           <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={pending} onClick={onClose} ref={cancelRef} type="button">취소</button>
-          <button className={`min-h-11 rounded-[var(--radius-control)] px-4 font-bold disabled:opacity-50 ${state.type === "delete" ? "text-[var(--danger-strong)]" : "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]"}`} disabled={!mutationEnabled || pending || (state.type === "edit" && (!columnValid || amount <= 0 || !unit.trim()))} onClick={() => void mutate()} type="button">{pending ? "처리 중…" : state.type === "delete" ? "삭제" : "수정 저장"}</button>
+          <button className={`min-h-11 rounded-[var(--radius-control)] px-4 font-bold disabled:opacity-50 ${state.type === "delete" ? "text-[var(--danger-strong)]" : "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]"}`} disabled={!mutationEnabled || pending || (state.type === "edit" && (!columnValid || amountInvalid || !unit.trim()))} onClick={() => void mutate()} type="button">{pending ? "처리 중…" : state.type === "delete" ? "삭제" : "수정 저장"}</button>
         </div>
       </div>
     </div>
