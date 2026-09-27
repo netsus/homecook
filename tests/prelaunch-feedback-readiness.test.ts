@@ -22,7 +22,7 @@ type ScopeEvidence = Omit<ReturnType<typeof scope>, "source"> & { bodySha256: st
 const proofNames = ["db_authority", "db_migration", "operator_approval", "privacy_consent", "retention_runbook", "turnstile_live", "direct_access_denial", "header_overwrite", "launch_binding"];
 function review() {
   return {
-    schema: "homecook.prelaunch-feedback-review.v1", from: FEEDBACK_LIVE_SHA, to: "b".repeat(40), migrationSourceRef: "c".repeat(40), migrationCount: 197,
+    schema: "homecook.prelaunch-feedback-review.v1", from: FEEDBACK_LIVE_SHA, to: "b".repeat(40), migrationSourceRef: "c".repeat(40), migrationCount: 198,
     originalReadinessSha256: sha("original readiness"), proofDigests: Object.fromEntries(proofNames.map(key => [key, sha(key)])),
     files: { "app/globals.css": [sha("before"), sha("after")], "components/recipe/example.tsx": [null, sha("new")] }, protectedSources: ["app/globals.css"],
     preApplyProof: { path: "/private/review/db-before.json", sha256: sha("before DB") },
@@ -62,13 +62,13 @@ describe("reviewed feedback rollout boundaries", () => {
     const manifest = review();
     expect(() => assertFeedbackReview({ ...manifest, files: { "infra/runtime.yml": [null, sha("infra")] } })).toThrow("web-only");
     expect(() => assertFeedbackReview({ ...manifest, files: { "supabase/migrations/new.sql": [null, sha("SQL")] } })).toThrow("web-only");
-    expect(() => assertFeedbackReview({ ...manifest, migrationCount: 196 })).toThrow("197-entry");
+    expect(() => assertFeedbackReview({ ...manifest, migrationCount: 197 })).toThrow("198-entry");
     expect(() => assertFeedbackReview({ ...manifest, proofDigests: {} })).toThrow("proof pins");
     expect(() => assertFeedbackReview({ ...manifest, protectedSources: ["unreviewed.ts"] })).toThrow("protected source");
   });
 
-  it("requires all 197 real ledger entries with the reviewed bytes and ordering", () => {
-    const source = Array.from({ length: 197 }, (_, i) => ({ filename: `${String(i).padStart(14, "0")}_reviewed.sql`, sha256: sha(String(i)) }));
+  it("requires all 198 real ledger entries with the reviewed bytes and ordering", () => {
+    const source = Array.from({ length: 198 }, (_, i) => ({ filename: `${String(i).padStart(14, "0")}_reviewed.sql`, sha256: sha(String(i)) }));
     expect(() => assertFeedbackAppliedLedger(source, structuredClone(source))).not.toThrow();
     expect(() => assertFeedbackAppliedLedger(source, source.slice(0, -1))).toThrow("ledger differs");
     expect(() => assertFeedbackAppliedLedger(source, [...source, source[0]])).toThrow("ledger differs");

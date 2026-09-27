@@ -8,10 +8,10 @@ import { inheritRound2Readiness } from "./prelaunch-web-deploy.mjs";
 import { createRecordingDockerAdapter, privatePath, IMMUTABLE_SCOPE_SQL, LEDGER_VALID_SQL } from "./marketing-round2-controlled-deploy.mjs";
 import { BETA_ALIASES_UNROUTED_SQL, BETA_CANONICAL_POSTIMAGE_SQL, BETA_WRAPPERS_SQL } from "./prelaunch-beta-readiness.mjs";
 
-export const FEEDBACK_LIVE_SHA = "5d05a180b6c0850dc4e87bfe0945a609ff450e90";
+export const FEEDBACK_LIVE_SHA = "f8824662e90f268b922962b1c6f3d3934aee1575";
 // Fill only after the source pair, before/after DB evidence, and manifest bytes
 // have been reviewed. Neither CLI arguments nor environment may override pins.
-export const FEEDBACK_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/feedback-batch-20260927/readiness-review.final.json", sha256: "016cfce504f47af4bd4b5f8055a37d9932d81780422107a277a2b8e7857c0170" });
+export const FEEDBACK_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/feedback-batch-20260928/readiness-review.v2.json", sha256: "12ebf26292879ec7226bb00af75cccb52decfa4e828471ba41ab19f2f995383a" });
 const SHA = /^[a-f0-9]{64}$/u;
 const REF = /^[a-f0-9]{40}$/u;
 const PROOFS = ["db_authority", "db_migration", "operator_approval", "privacy_consent", "retention_runbook", "turnstile_live"];
@@ -39,7 +39,7 @@ export function assertFeedbackReview(review) {
   requireValue(review?.schema === "homecook.prelaunch-feedback-review.v1", "invalid review manifest");
   requireValue(review.from === FEEDBACK_LIVE_SHA && REF.test(review.to ?? "")
     && REF.test(review.migrationSourceRef ?? ""), "unreviewed source pair");
-  requireValue(review.migrationCount === 197, "exact reviewed 197-entry ledger required");
+  requireValue(review.migrationCount === 198, "exact reviewed 198-entry ledger required");
   requireValue(SHA.test(review.originalReadinessSha256 ?? "")
     && isDeepStrictEqual(sorted(Object.keys(review.proofDigests ?? {})), sorted([...PROOFS, ...PROXY_PROOFS]))
     && Object.values(review.proofDigests).every(value => SHA.test(value)), "original readiness/proof pins required");
@@ -80,7 +80,7 @@ async function readPreApplyProof(review) {
   const proof = JSON.parse(bytes);
   requireValue(proof.schema === "homecook.prelaunch-feedback-db-before.v1"
     && typeof proof.observedAt === "string" && Number.isFinite(Date.parse(proof.observedAt))
-    && Array.isArray(proof.ledger) && proof.ledger.length === 185
+    && Array.isArray(proof.ledger) && proof.ledger.length === 197
     && SHA.test(proof.receiptSha256 ?? "") && SHA.test(proof.immutableScope ?? "")
     && SHA.test(proof.marketingPostimage ?? "") && SHA.test(proof.rowsSha256 ?? "")
     && Array.isArray(proof.scopeFunctions), "invalid pre-apply proof");
@@ -126,11 +126,11 @@ export function assertFeedbackSource({ review, liveSha, releaseSha, files, actua
 }
 
 export function assertFeedbackAppliedLedger(source, applied) {
-  requireValue(Array.isArray(source) && source.length === 197 && isDeepStrictEqual(applied, source), "actual migration ledger differs from reviewed source");
+  requireValue(Array.isArray(source) && source.length === 198 && isDeepStrictEqual(applied, source), "actual migration ledger differs from reviewed source");
 }
 
 /** Unlike the normal path, SQL belongs to the separately reviewed source ref,
- * not the web-only candidate. The complete real ledger must match all 197 files. */
+ * not the web-only candidate. The complete real ledger must match all 198 files. */
 export async function verifyFeedbackAppliedDatabase({ repositoryRoot, configPath, releaseSha }) {
   const review = await loadFeedbackReview();
   requireValue(releaseSha === review.to, "unreviewed database candidate");
@@ -150,7 +150,7 @@ export async function reviewedFeedbackReadiness({ readiness, previous, next, liv
   const review = await loadFeedbackReview();
   requireValue(hash(JSON.stringify(readiness)) === review.originalReadinessSha256, "original readiness changed");
   requireValue(databaseDeployment === false && databasePlan?.baselineRequired === false && databasePlan.pending?.length === 0
-    && databasePlan.applied?.length === 197 && databasePlan.migrationSourceRef === review.migrationSourceRef, "verified separately applied database required");
+    && databasePlan.applied?.length === 198 && databasePlan.migrationSourceRef === review.migrationSourceRef, "verified separately applied database required");
   const git = gitAt(repositoryRoot);
   requireValue(git(["status", "--porcelain", "--untracked-files=no"]).length === 0, "candidate tracked files changed");
   git(["merge-base", "--is-ancestor", liveSha, releaseSha]);

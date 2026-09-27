@@ -8,6 +8,7 @@ const INCLUDED_RELATIONS = new Set([
   "marketing_round2_deploy.receipt",
   "private.full_local_auth_control",
   "private.manual_recipe_create_receipts",
+  "private.manual_recipe_publication_images",
   "private.full_local_session_observability",
   "private.remote_auth_identity_epochs",
   "private.youtube_extraction_current_policy",
