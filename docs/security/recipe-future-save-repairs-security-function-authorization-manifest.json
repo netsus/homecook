@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-future-save-repairs",
+  "migrations": [
+    "supabase/migrations/20260927120000_recipe_future_save_repairs.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "private.reconcile_recipe_shopping_lists_from_date(uuid, uuid, date)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}

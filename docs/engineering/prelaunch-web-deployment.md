@@ -198,3 +198,58 @@ PostgREST DB 설정이 없어야 하며 owner-only 권한도 그대로 확인한
 검증은 준비 시와 웹 교체 직전에 반복한다. 원 provider/ingress 검증시각을 새 시각으로
 꾸미지 않고 보존하며 `round2-beta-source-review.json`에 이번 source/DB 확인을 별도로 남긴다.
 새 모드 활성화와 실제 저장 완주 확인은 웹 배포의 GET 확인과 별개다.
+
+## 2026-09-27 — 피드백 수정의 exact source 재검증
+
+`--reviewed-feedback-readiness`는 실행 웹 `5d05a180b6c0850dc4e87bfe0945a609ff450e90`에서
+검토한 웹 전용 후속 commit 하나로 배포하기 위한 별도 경로다. 기존 일반 승계,
+beta/repair의 고정 source pair, 서버 구성 변경 거부는 유지한다.
+`scripts/lib/prelaunch-feedback-readiness.mjs`의 `FEEDBACK_REVIEW_PIN`이 비어 있으면
+웹 준비를 시작하기 전에 중단한다. CLI나 환경 변수로 승인 대상을 바꾸지 않는다.
+
+운영자는 다음 증거를 준비하고 검토한 뒤 manifest의 절대 경로와 SHA-256을 코드에 고정한다.
+
+1. 최종 통합 코드 commit과 현재 실행 웹을 부모로 하는 웹 전용 후보 commit을 확정한다.
+   웹 후보의 모든 변경 파일에 이전/이후 byte SHA-256을 기록하고 보호 파일을 명시적으로 검토한다.
+   `app/components/lib/stores/types/hooks/public` 변경은 통합 코드 commit과 byte가 같아야 한다.
+2. **SQL 적용 전** 새 외부 0700 작업 디렉터리에서 `createRecordingDockerAdapter`와
+   `captureFeedbackDatabaseBefore(adapter)`를 사용해 읽기 전용 증거를 수집하고 0600/create-only
+   JSON으로 저장한다. 결과는 대상 identity, 185개 기존 ledger, R2 receipt·catalog·불변 권한·
+   마케팅 데이터 hash, 기존 scope 함수별 body hash·owner·ACL·설정이다. 사용자 데이터 원문은
+   이 증거에 넣지 않는다. 실제 DB 변경 직전에는 별도 새 논리 백업을 만들고 확인한다.
+3. 새 SQL의 검토된 격리 실행에서 예상 scope 함수 목록과 각 body·owner·ACL·설정을 확정한다.
+   운영에 적용한 결과를 그대로 새 신뢰값으로 채택하지 않는다. 기존 active 함수가 새 이름으로
+   위임되는 경우에도 그 본문·권한은 그대로 남아야 하며, 기존 이름의 delegate도 유지한다.
+4. 현재 R2 readiness의 `JSON.stringify` 결과 SHA-256, 원본 proof 6개와 proxy proof 3개의
+   SHA-256을 manifest에 넣는다. provider 검증 시각을 새 시각으로 바꾸지 않는다.
+
+manifest 형식은 `homecook.prelaunch-feedback-review.v1`이며 다음 필드를 가진다.
+
+- `from`, `to`: 현재 실행 SHA와 검토한 웹 후보 SHA.
+- `migrationSourceRef`, `migrationCount`: 테스트한 통합 코드 SHA와 정확히 `197`.
+- `files`: 전체 변경 파일별 `[이전 SHA 또는 null, 이후 SHA 또는 null]`.
+- `protectedSources`: 위 파일 중 별도 검토한 보호 파일 목록. 미기재 보호 파일은 일반 승계에서 거부한다.
+- `originalReadinessSha256`, `proofDigests`: 변경되지 않은 원본 readiness와 9개 증거의 hash.
+- `preApplyProof`: SQL 적용 전 저장한 JSON의 `path`, `sha256`.
+- `expectedScopeFunctions`: 격리 실행·검토로 확정한 함수별 `name`, `bodySha256`, `owner`, `acl`,
+  `securityDefiner`, `config`. 수집 형식은 `feedbackScopeEvidence`를 재사용한다.
+
+이번 SQL은 별도 통제 절차로 한 번 적용한다. 웹 전용 후보에 SQL 파일을 섞지 않으며,
+이 플래그의 읽기 전용 DB 확인은 `migrationSourceRef`의 **197개 SQL 전체**와 실제 ledger를
+대조한다. 후보에 없는 SQL을 허용하는 일반 예외가 아니라 고정된 source·count·predecessor
+증거를 요구하는 이 rollout 전용 검증이다. 일반 `--already-applied-db` 동작은 바뀌지 않는다.
+
+```bash
+pnpm deploy:dev -- \
+  --reviewed-ref <검토한 웹 후보의 40자리 SHA> \
+  --already-applied-db \
+  --db-config <기존 비공개 full-local 설정> \
+  --reviewed-feedback-readiness \
+  --test-script <이번 변경에 맞는 기존 test 명령>
+```
+
+준비 시와 웹 교체 직전에 전체 source·실제 ledger·원본 증거·R2 catalog/행/권한·scope 위임을
+다시 확인한다. 검증 기록은 release의 `round2-feedback-source-review.json`에 남긴다.
+이 경로가 SQL을 적용하거나 플랫폼 백업/복원·CI·전체 제품 테스트를 새로 강제하지 않는다.
+기존 유효한 백업 증거와 해당 변경 직전 논리 백업을 사용하고 `/beta`·build·정적 파일 확인 및
+실제 변경 사용자 흐름 검증은 유지한다.

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { MumeokHorizontalLogo } from "@/components/brand/mumeok-horizontal-logo";
@@ -38,8 +39,9 @@ export function WebTopNav({
   plannerSegment = "plan",
   onPlannerSegmentSelect,
 }: WebTopNavProps) {
+  const pathname = usePathname();
   return (
-    <header className={cn("web-topnav", className)}>
+    <header className={cn("web-topnav", (pathname === "/" || pathname === "/planner") && "web-topnav-flow", className)}>
       <div className="web-topnav-inner">
         <Link
           aria-label="무먹, 무엇을 먹든"

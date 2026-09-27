@@ -76,7 +76,7 @@ describe("personal recipe api", () => {
         error: {
           code: "ACCOUNT_SESSION_STALE",
           message: "세션이 만료되었어요.",
-          fields: [],
+          fields: [{ field: "draft.ingredients[7].ingredient_id", reason: "duplicate" }],
         },
       }),
     }));
@@ -97,6 +97,7 @@ describe("personal recipe api", () => {
     ).rejects.toSatisfy((error: unknown) =>
       isPersonalRecipeApiError(error)
       && error.status === 409
-      && error.code === "ACCOUNT_SESSION_STALE");
+      && error.code === "ACCOUNT_SESSION_STALE"
+      && error.fields[0]?.field === "draft.ingredients[7].ingredient_id");
   });
 });

@@ -231,29 +231,15 @@ export async function resolveRecipeImageReadUrl({
   });
 }
 
-export async function resolveManagedRecipeImageReadUrl({
-  client,
+export function validateManagedRecipeImageReadTarget({
   expectedOwnerUuid,
   expectedReferenceType,
-  expectedStorageOrigin,
   projection,
-  signedUrlTtlSeconds,
 }: {
-  client: RecipeImageReadStorageClient;
   expectedOwnerUuid?: string | null;
   expectedReferenceType: "recipe_thumbnail" | "recipe_book_cover";
-  expectedStorageOrigin: string;
   projection: ManagedRecipeImageReadProjection;
-  signedUrlTtlSeconds: number;
 }) {
-  const expectedOrigin =
-    normalizeExpectedRecipeImageStorageOrigin(expectedStorageOrigin);
-  if (
-    !Number.isSafeInteger(signedUrlTtlSeconds)
-    || signedUrlTtlSeconds <= 0
-  ) {
-    throw new Error("managed recipe image read configuration is invalid");
-  }
   if (
     typeof projection.image_object_id !== "string"
     || !UUID_PATTERN.test(projection.image_object_id)
@@ -290,17 +276,7 @@ export async function resolveManagedRecipeImageReadUrl({
       throw new Error("managed recipe image read evidence is invalid");
     }
 
-    try {
-      const result = await client.storage
-        .from(projection.bucket_id)
-        .createSignedUrl(projection.object_path, signedUrlTtlSeconds);
-      if (result.error) {
-        throw new Error();
-      }
-      return assertExpectedReadUrl(result.data?.signedUrl, expectedOrigin);
-    } catch {
-      throw new Error("managed recipe image read URL is unavailable");
-    }
+    return { bucketId: projection.bucket_id, objectPath: projection.object_path, visibility: "private" as const };
   }
 
   if (
@@ -315,16 +291,74 @@ export async function resolveManagedRecipeImageReadUrl({
     if (pathMatch?.[1].toLowerCase() !== projection.image_object_id.toLowerCase()) {
       throw new Error("managed recipe image read evidence is invalid");
     }
+    return { bucketId: projection.bucket_id, objectPath: projection.object_path, visibility: "public_shared" as const };
+  }
+  throw new Error("managed recipe image read evidence is invalid");
+}
 
-    try {
-      const result = client.storage
-        .from(projection.bucket_id)
-        .getPublicUrl(projection.object_path);
-      return assertExpectedReadUrl(result.data?.publicUrl, expectedOrigin);
-    } catch {
-      throw new Error("managed recipe image read URL is unavailable");
+export async function resolveManagedRecipeImageReadUrl({
+  client, expectedOwnerUuid, expectedReferenceType, expectedStorageOrigin,
+  projection, signedUrlTtlSeconds,
+}: {
+  client: RecipeImageReadStorageClient;
+  expectedOwnerUuid?: string | null;
+  expectedReferenceType: "recipe_thumbnail" | "recipe_book_cover";
+  expectedStorageOrigin: string;
+  projection: ManagedRecipeImageReadProjection;
+  signedUrlTtlSeconds: number;
+}) {
+  const expectedOrigin = normalizeExpectedRecipeImageStorageOrigin(expectedStorageOrigin);
+  if (!Number.isSafeInteger(signedUrlTtlSeconds) || signedUrlTtlSeconds <= 0) {
+    throw new Error("managed recipe image read configuration is invalid");
+  }
+  const target = validateManagedRecipeImageReadTarget({ expectedOwnerUuid, expectedReferenceType, projection });
+  try {
+    if (target.visibility === "private") {
+      const result = await client.storage.from(target.bucketId).createSignedUrl(target.objectPath, signedUrlTtlSeconds);
+      if (result.error) throw new Error();
+      return assertExpectedReadUrl(result.data?.signedUrl, expectedOrigin);
+    }
+    const result = client.storage.from(target.bucketId).getPublicUrl(target.objectPath);
+    return assertExpectedReadUrl(result.data?.publicUrl, expectedOrigin);
+  } catch {
+    throw new Error("managed recipe image read URL is unavailable");
+  }
+}
+
+/** Called only for recipe rows already authorized through the caller's RLS client. */
+export async function resolveAuthorizedRecipeImageUrls({ client, recipes }: {
+  client: RecipeImageReadRpcClient;
+  recipes: Array<{ id: string; created_by: string | null; thumbnail_url: string | null }>;
+}): Promise<Map<string, string | null>> {
+  const urls = new Map(recipes.map(recipe => [recipe.id, recipe.thumbnail_url]));
+  for (let offset = 0; offset < recipes.length; offset += 100) {
+    const batch = recipes.slice(offset, offset + 100);
+    const ids = batch.map(recipe => recipe.id);
+    if (ids.some(id => !UUID_PATTERN.test(id)) || new Set(ids).size !== ids.length) {
+      throw new Error("managed recipe image projection input is invalid");
+    }
+    const result = await client.rpc("read_recipe_image_projections", { p_recipe_ids: ids });
+    if (isRecipeImageProjectionAuthorityMissing(result.error)) continue;
+    if (result.error || !Array.isArray(result.data) || result.data.length !== batch.length) {
+      throw new Error("managed recipe image projection is unavailable");
+    }
+    const projections = new Map<string, RecipeImageReadProjection>();
+    for (const value of result.data) {
+      const projection = parseProjection(value);
+      if (!ids.includes(projection.recipe_id) || projections.has(projection.recipe_id)) {
+        throw new Error("managed recipe image read evidence is invalid");
+      }
+      projections.set(projection.recipe_id, projection);
+    }
+    for (const recipe of batch) {
+      const projection = projections.get(recipe.id)!;
+      if (projection.image_object_id === null) {
+        urls.set(recipe.id, legacyUrl(projection));
+      } else {
+        validateManagedRecipeImageReadTarget({ projection, expectedOwnerUuid: recipe.created_by, expectedReferenceType: "recipe_thumbnail" });
+        urls.set(recipe.id, `/api/v1/recipes/${recipe.id}/image`);
+      }
     }
   }
-
-  throw new Error("managed recipe image read evidence is invalid");
+  return urls;
 }

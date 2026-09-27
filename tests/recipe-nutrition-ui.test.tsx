@@ -145,7 +145,7 @@ describe("recipe nutrition display", () => {
     expect(within(optionalTable).queryByRole("row", { name: /식이섬유/ })).toBeNull();
   });
 
-  it("keeps partial values truthful in the graph and detail table", async () => {
+  it("keeps partial amounts and explains missing information in details without repeating prefixes", async () => {
     renderCard(
       buildNutrition({
         calculation_status: "partial",
@@ -183,13 +183,31 @@ describe("recipe nutrition display", () => {
     );
 
     expect(screen.queryByText("환산값 포함 · 예상치")).toBeNull();
-    expect(screen.getByText("최소 900 kcal")).toBeTruthy();
-    expect(screen.getByText(/1인분 최소 250 kcal/)).toBeTruthy();
+    expect(screen.getByText("900 kcal")).toBeTruthy();
+    expect(screen.getByText(/1인분 250 kcal/)).toBeTruthy();
+    expect(screen.queryByText(/최소/)).toBeNull();
 
     await userEvent.click(screen.getByText("영양성분 더 보기"));
     const sodium = screen.getByRole("row", { name: /나트륨/ });
-    expect(within(sodium).getByText("최소 365 mg")).toBeTruthy();
-    expect(within(sodium).getByText("최소 1,410 mg")).toBeTruthy();
+    expect(screen.getByText("일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요.").closest("details")?.open).toBe(true);
+    expect(within(sodium).getByText("365 mg")).toBeTruthy();
+    expect(within(sodium).getByText("1,410 mg")).toBeTruthy();
+  });
+
+  it("keeps incomplete-nutrition details available without optional nutrients and leaves unknown values unfilled", async () => {
+    renderCard(buildNutrition({
+      calculation_status: "partial",
+      values: {
+        energy_kcal: { amount: null, known_amount: 500, status: "partial", display_mode: "minimum" },
+        protein_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+      },
+    }));
+
+    expect(screen.getAllByText("정보 준비 중").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/최소/)).toBeNull();
+    await userEvent.click(screen.getByText("영양성분 더 보기"));
+    expect(screen.getByText("일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요.")).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "추가 영양성분" })).toBeNull();
   });
 
   it("does not render the old explanatory warning copy", () => {

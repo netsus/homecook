@@ -808,6 +808,21 @@ const describeIf = enabled ? describe : describe.skip;
 
 describeIf("recipe content snapshot future propagation PostgreSQL", () => {
   beforeAll(() => {
+    if (process.env.HOMECOOK_ESTIMATED_WEIGHT_PG_REGRESSION === "1") {
+      // The shared harness predates the already-shipped 202609220300 reader
+      // volatility repair. Match production metadata without replacing its body.
+      psql("alter function public.read_snapshot_v2_cook_mode(uuid,timestamptz,text,integer,timestamptz,uuid,timestamptz) volatile;");
+    }
+    if (process.env.HOMECOOK_MANUAL_PUBLIC_RUNTIME_REGRESSION === "1") {
+      const tagSource = readFileSync(join(process.cwd(), "supabase/migrations/20260617090000_36b_recipe_tags_model.sql"), "utf8");
+      psql(tagSource.slice(tagSource.indexOf("create or replace function public.normalize_recipe_tag_key("),
+        tagSource.indexOf("create or replace function public.set_recipe_tags(")));
+    }
+    if (process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION === "1") {
+      psql(`alter table public.recipe_tags add constraint recipe_tags_source_check
+        check (source in ('system_suggested','user_reviewed','provider','backfill','admin'));`);
+    }
+
     psql(`
       insert into auth.users (id, created_at, email)
       values
@@ -1204,6 +1219,10 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
   });
 
   it("keeps every Meal pin, then replace-all repins only eligible future Meals and preserves completed shopping/history", () => {
+    if (process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION === "1") {
+      psql("alter table public.ingredients rename column name to standard_name;");
+    }
+
     const completedBefore = psql(`
       select jsonb_build_object(
         'list', to_jsonb(list_row),
@@ -1251,6 +1270,13 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       ),
     );
     expect(replace.data).toEqual({ id: recipeId, revision: 3 });
+    const replay = JSON.parse(psql(patchSql({
+      title: "replace-current", revision: 2, strategy: "replace_all",
+      impactToken: replacePreview.data.impact_token,
+      key: "96000000-0000-4000-8000-000000000011",
+    })));
+    expect(replay).toEqual(replace);
+
     const currentContent = psql(`
       select id::text from public.recipe_content_snapshots
       where recipe_id = '${recipeId}' order by created_at desc, id desc limit 1;
@@ -1282,6 +1308,409 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     expect(
       psql(`select count(*)::text from public.recipe_tags where recipe_id = '${recipeId}';`),
     ).toBe("1");
+  });
+
+  it.skipIf(process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION !== "1")("rejects arbitrary units while retaining a source row's existing legacy unit", () => {
+    const originalDraft = JSON.parse(draft("unit guard"));
+    const changedDraft = structuredClone(originalDraft);
+    changedDraft.ingredients[0].unit = "injected-unit";
+    const writeCall = (value: unknown, key: string) => `
+      select public.write_personal_recipe_core(
+        ${authArgs()}, 'update', '${recipeId}'::uuid, null::uuid, 3,
+        ${jsonSql(value)}, '${nutritionSnapshot()}'::jsonb, '[]'::jsonb,
+        null::uuid, null::bigint, '${key}'::uuid, '2026-08-02T02:00:00Z'::timestamptz
+      );`;
+    const before = domainDigest();
+    expectSqlFailure(`begin; set local homecook.personal_recipe_v2 = 'on';
+      set local request.jwt.claim.role = 'service_role';
+      ${writeCall(changedDraft, "96000000-0000-4000-8000-000000000201")}`, /VALIDATION_ERROR/);
+    expect(domainDigest()).toBe(before);
+    // Model an already-existing legacy catalog unit, preserving it only for
+    // this authorized source ingredient/component. Roll back the fixture edit.
+    const preserved = psqlResult(`begin;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      update public.recipe_ingredients set unit='injected-unit'
+      where recipe_id='${recipeId}' and ingredient_id='${genericIngredient}';
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+      set local homecook.personal_recipe_v2 = 'on';
+      set local request.jwt.claim.role = 'service_role';
+      ${writeCall(changedDraft, "96000000-0000-4000-8000-000000000202")}
+      rollback;`);
+    expect(preserved.status, preserved.stderr).toBe(0);
+    expect(domainDigest()).toBe(before);
+  });
+
+  it.skipIf(process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION !== "1")("aggregates component portions without losing existing shopping checks", () => {
+    const groupedDraft = JSON.parse(draft("grouped portions"));
+    groupedDraft.ingredients[0].component_label = "푸딩";
+    groupedDraft.ingredients.push({ ...groupedDraft.ingredients[0], amount: 50, display_text: "일반 재료 50g", component_label: "콩포트" });
+    const groupedSql = jsonSql(groupedDraft);
+    const previewResult = JSON.parse(psql(`begin; set local request.jwt.claim.role='service_role';
+      select public.preview_recipe_future_plan_impact(${authArgs()}, '${recipeId}', 3, ${groupedSql}, '2026-08-02T02:02:00Z'); commit;`));
+    const result = JSON.parse(psql(`begin; set local homecook.personal_recipe_v2='on'; set local request.jwt.claim.role='service_role';
+      select public.write_recipe_future_plan_change(${authArgs()}, '${recipeId}', 3, ${groupedSql},
+        '${nutritionSnapshot([genericIngredient, productIngredient, genericIngredient])}'::jsonb,
+        public.build_recipe_draft_nutrition_predecessor_guard(${groupedSql}), 'replace_all',
+        '${previewResult.data.impact_token}', null,
+        '96000000-0000-4000-8000-000000000203', '2026-08-02T02:03:00Z'); commit;`));
+    expect(result.data.revision).toBe(4);
+    const rows = JSON.parse(psql(`select jsonb_agg(jsonb_build_object(
+      'checked', is_checked, 'excluded', is_pantry_excluded,
+      'amount', (select sum((portion->>'amount')::numeric) from jsonb_array_elements(amounts_json) portion)
+    )) from public.shopping_list_items
+    where shopping_list_id='${incompleteShopping}' and ingredient_id='${genericIngredient}';`));
+    expect(rows).toEqual([{ checked: true, excluded: false, amount: 150 }]);
+  });
+
+  it.skipIf(process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION !== "1")("uses Korean midnight consistently for preview and replacement", () => {
+    const yesterdayMeal = "93000000-0000-4000-8000-000000000120";
+    const todayMeal = "93000000-0000-4000-8000-000000000121";
+    psql(`begin; select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      insert into public.meals (id,user_id,recipe_id,plan_date,column_id,planned_servings,status)
+      values ('${yesterdayMeal}','${owner}','${recipeId}','2026-08-02','${plannerColumn}',2,'registered'),
+        ('${todayMeal}','${owner}','${recipeId}','2026-08-03','${plannerColumn}',2,'registered');
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false); commit;`);
+    const priorPin = psql(`select recipe_content_snapshot_id::text from public.meals where id='${yesterdayMeal}';`);
+    const expected = Number(psql(`select count(*) from public.meals where user_id='${owner}' and recipe_id='${recipeId}'
+      and status <> 'cook_done' and plan_date >= '2026-08-03';`));
+    const nextDraft = draft("Korean midnight update");
+    const impact = JSON.parse(psql(`begin; set local request.jwt.claim.role='service_role';
+      select public.preview_recipe_future_plan_impact(${authArgs()},'${recipeId}',4,'${nextDraft}'::jsonb,'2026-08-02T15:30:00Z'); commit;`));
+    expect(impact.data.future_meal_count).toBe(expected);
+    expect(impact.data.date_range.from).toBe("2026-08-03");
+    const updated = JSON.parse(psql(`begin; set local homecook.personal_recipe_v2='on'; set local request.jwt.claim.role='service_role';
+      select public.write_recipe_future_plan_change(${authArgs()},'${recipeId}',4,'${nextDraft}'::jsonb,
+        '${nutritionSnapshot()}'::jsonb,public.build_recipe_draft_nutrition_predecessor_guard('${nextDraft}'::jsonb),
+        'replace_all','${impact.data.impact_token}',null,'96000000-0000-4000-8000-000000000204','2026-08-02T15:31:00Z'); commit;`));
+    expect(updated.data.revision).toBe(5);
+    expect(psql(`select recipe_content_snapshot_id::text from public.meals where id='${yesterdayMeal}';`)).toBe(priorPin);
+    expect(psql(`select recipe_content_snapshot_id::text from public.meals where id='${todayMeal}';`)).not.toBe(priorPin);
+  });
+
+  it.skipIf(process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION !== "1")("preserves fixed quantities for four servings on shopping update and insert", () => {
+    const fixedDraft = JSON.parse(draft("fixed four servings"));
+    fixedDraft.ingredients[0].component_label = "푸딩";
+    fixedDraft.ingredients[1].scalable = false;
+    fixedDraft.ingredients.push({ ...fixedDraft.ingredients[0], amount: 50, scalable: false,
+      display_text: "일반 재료 50g", component_label: "콩포트" });
+    const fixedSql = jsonSql(fixedDraft);
+    const before = domainDigest();
+    const result = psqlResult(`begin; set local homecook.personal_recipe_v2='on'; set local request.jwt.claim.role='service_role';
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      update public.meals set planned_servings=4 where id='${eligibleMeal}';
+      delete from public.shopping_list_items where shopping_list_id='${incompleteShopping}' and food_product_id='${foodProduct}';
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+      do $check$ declare v_preview jsonb; v_parts numeric[]; v_product numeric; begin
+        v_preview := public.preview_recipe_future_plan_impact(${authArgs()},'${recipeId}',5,${fixedSql},'2026-08-02T15:32:00Z');
+        perform public.write_recipe_future_plan_change(${authArgs()},'${recipeId}',5,${fixedSql},
+          '${nutritionSnapshot([genericIngredient, productIngredient, genericIngredient])}'::jsonb,
+          public.build_recipe_draft_nutrition_predecessor_guard(${fixedSql}),'replace_all',
+          v_preview #>> '{data,impact_token}',null,'96000000-0000-4000-8000-000000000205','2026-08-02T15:33:00Z');
+        select array_agg((part->>'amount')::numeric order by (part->>'amount')::numeric) into v_parts
+        from public.shopping_list_items item cross join jsonb_array_elements(item.amounts_json) part
+        where item.shopping_list_id='${incompleteShopping}' and item.ingredient_id='${genericIngredient}';
+        if v_parts is distinct from array[50,200]::numeric[] then raise exception 'FIXED_GENERIC_AMOUNT_CHANGED: %',v_parts; end if;
+        select sum((part->>'amount')::numeric) into v_product
+        from public.shopping_list_items item cross join jsonb_array_elements(item.amounts_json) part
+        where item.shopping_list_id='${incompleteShopping}' and item.food_product_id='${foodProduct}';
+        if v_product is distinct from 1::numeric then raise exception 'FIXED_PRODUCT_AMOUNT_CHANGED: %',v_product; end if;
+      end $check$; rollback;`);
+    expect(result.status, result.stderr).toBe(0);
+    expect(domainDigest()).toBe(before);
+  });
+
+  it.skipIf(process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION !== "1")("creates shopping from an owner's existing pin after source deletion and rejects forged pins", () => {
+    const before = domainDigest();
+    const result = psqlResult(`begin; set local homecook.personal_recipe_v2='on'; set local request.jwt.claim.role='service_role';
+      select public.write_personal_recipe_core(${authArgs()},'delete','${secondRecipeId}',null,null,null,null,null,null,null,
+        '96000000-0000-4000-8000-000000000206',clock_timestamp());
+      do $check$ declare v_pin uuid; v_recipes jsonb; v_items jsonb; v_result jsonb; v_before bigint; begin
+        select recipe_content_snapshot_id into strict v_pin from public.meals where id='${multiRecipeMealC}';
+        if v_pin is null then raise exception 'TEST_PIN_MISSING'; end if;
+        v_recipes := jsonb_build_array(jsonb_build_object('recipe_id','${secondRecipeId}',
+          'recipe_content_snapshot_id',v_pin,'shopping_servings',2,'planned_servings_total',2));
+        v_items := jsonb_build_array(jsonb_build_object('ingredient_id','${secondGenericIngredient}',
+          'display_text','두 번째 일반 재료','amounts_json','[{"amount":100,"unit":"g"}]'::jsonb,
+          'is_pantry_excluded',false,'sort_order',0));
+        select count(*) into v_before from public.shopping_lists;
+        begin
+          perform public.create_shopping_list_with_snapshot_authority(${authArgs()},'${hiddenOwner}','forged-owner',
+            '2026-08-02','2026-08-20',false,array['${multiRecipeMealC}'::uuid],'[]','[]',v_recipes,v_items,0);
+          raise exception 'OTHER_OWNER_ACCEPTED';
+        exception when insufficient_privilege then if sqlerrm <> 'FORBIDDEN' then raise; end if; end;
+        begin
+          perform public.create_shopping_list_with_snapshot_authority(${authArgs()},'${owner}','missing-pin',
+            '2026-08-02','2026-08-20',false,array['${multiRecipeMealC}'::uuid],'[]','[]',
+            jsonb_set(v_recipes,'{0,recipe_content_snapshot_id}','null'),v_items,0);
+          raise exception 'MISSING_PIN_ACCEPTED';
+        exception when insufficient_privilege then if sqlerrm <> 'FORBIDDEN' then raise; end if; end;
+        begin
+          perform public.create_shopping_list_with_snapshot_authority(${authArgs()},'${owner}','wrong-pin',
+            '2026-08-02','2026-08-20',false,array['${multiRecipeMealC}'::uuid],'[]','[]',
+            jsonb_set(v_recipes,'{0,recipe_content_snapshot_id}',to_jsonb('${initialContentId}'::text)),v_items,0);
+          raise exception 'WRONG_PIN_ACCEPTED';
+        exception when insufficient_privilege then if sqlerrm <> 'FORBIDDEN' then raise; end if; end;
+        if (select count(*) from public.shopping_lists) <> v_before then raise exception 'REJECTED_REQUEST_WROTE_LIST'; end if;
+        v_result := public.create_shopping_list_with_snapshot_authority(${authArgs()},'${owner}','deleted-source-plan',
+          '2026-08-02','2026-08-20',false,array['${multiRecipeMealC}'::uuid],'[]','[]',v_recipes,v_items,0);
+        if nullif(v_result->>'id','') is null then raise exception 'SHOPPING_CREATE_FAILED: %',v_result; end if;
+        if not exists (select 1 from public.shopping_list_recipes where shopping_list_id=(v_result->>'id')::uuid
+          and recipe_id='${secondRecipeId}' and recipe_content_snapshot_id=v_pin) then raise exception 'SHOPPING_PIN_NOT_RETAINED'; end if;
+        if not exists (select 1 from public.shopping_list_items where shopping_list_id=(v_result->>'id')::uuid
+          and ingredient_id='${secondGenericIngredient}' and amounts_json='[{"amount":100,"unit":"g"}]'::jsonb) then raise exception 'PINNED_AMOUNT_NOT_RETAINED'; end if;
+        if not exists (select 1 from public.recipes where id='${secondRecipeId}' and deleted_at is not null) then raise exception 'SOURCE_REVIVED'; end if;
+      end $check$; rollback;`);
+    expect(result.status, result.stderr).toBe(0);
+    expect(domainDigest()).toBe(before);
+  });
+
+  it.skipIf(process.env.HOMECOOK_MANUAL_PUBLIC_RUNTIME_REGRESSION !== "1")("publishes a direct manual recipe ready to cook while retaining private copies and historic plans", () => {
+    const originalDraft = JSON.parse(simpleDraft("직접 공개할 요리", genericIngredient, "일반 재료 100g"));
+    originalDraft.steps[0].ingredients_used = [];
+    const nextDraft = { ...originalDraft, title: "공개 원본 수정" };
+    const originalSql = jsonSql(originalDraft);
+    const nextSql = jsonSql(nextDraft);
+    const payload = jsonSql({ p_title: originalDraft.title, p_base_servings: 2, p_thumbnail_url: null,
+      p_tags: ["공개 태그"], p_tag_source: "user_reviewed", p_ingredients: originalDraft.ingredients, p_steps: originalDraft.steps });
+    const before = domainDigest();
+    const result = psqlResult(`begin;
+      alter table public.recipes alter column id set default gen_random_uuid();
+      set local homecook.personal_recipe_v2='on'; set local homecook.snapshot_v2_creation='on';
+      set local request.jwt.claim.role='service_role';
+      do $check$
+      declare v_created jsonb; v_recipe uuid; v_plan uuid:=gen_random_uuid(); v_old_pin uuid;
+        v_context jsonb; v_updated timestamptz; v_result jsonb; v_runtime jsonb; v_cook jsonb;
+        v_fork jsonb; v_preview jsonb; v_snapshot jsonb; v_list jsonb;
+      begin
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+        insert into public.tags(normalized_key,label,kind,is_system,theme_eligible)
+        values ('공개태그','공개 태그','semantic',true,true);
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+        v_created := public.create_manual_recipe_recoverable(${authArgs()},
+          '96000000-0000-4000-8000-000000000301','{}',${payload});
+        v_recipe := (v_created->>'id')::uuid;
+        if v_created->>'visibility' <> 'private' then raise exception 'UNPREPARED_RECIPE_PUBLIC'; end if;
+        select public.read_owned_manual_recipe_publication_context(${authArgs()},v_recipe) into v_context;
+        if v_context->>'idempotency_key' <> '96000000-0000-4000-8000-000000000301' then raise exception 'RECEIPT_IDENTITY_CHANGED'; end if;
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+        insert into public.meals(id,user_id,recipe_id,plan_date,column_id,planned_servings,status)
+        values(v_plan,'${owner}',v_recipe,current_date+2,'${plannerColumn}',2,'registered');
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+        select recipe_content_snapshot_id into v_old_pin from public.meals where id=v_plan;
+        if not exists(select 1 from public.recipe_content_snapshots where id=v_old_pin and owner_user_id='${owner}') then raise exception 'PRIVATE_PLAN_PIN_MISSING'; end if;
+        select updated_at into v_updated from public.recipes where id=v_recipe;
+        v_snapshot := '${nutritionSnapshot([genericIngredient])}'::jsonb || jsonb_build_object('base_servings',2,'input_hash',repeat('d',64),'calculated_at',clock_timestamp());
+        v_result := public.publish_manual_recipe(${authArgs()},'96000000-0000-4000-8000-000000000301',v_recipe,
+          v_updated,v_snapshot,public.build_recipe_nutrition_input_guard(v_recipe),null);
+        if v_result->>'status' <> 'published' then raise exception 'PUBLICATION_INCOMPLETE: %',v_result; end if;
+        v_context := public.read_owned_manual_recipe_publication_context(${authArgs()},v_recipe);
+        if not (v_context->>'runtime_ready')::boolean then raise exception 'PUBLIC_RUNTIME_NOT_READY'; end if;
+        if not exists(select 1 from public.recipes where id=v_recipe and visibility='public' and origin_recipe_id is null) then raise exception 'DIRECT_RECIPE_NOT_PUBLIC'; end if;
+        if not exists(select 1 from public.recipe_tags where recipe_id=v_recipe and visibility='public') then raise exception 'DIRECT_TAGS_NOT_PUBLIC'; end if;
+        v_runtime := public.read_recipe_snapshot_entrypoint_context(${authArgs()},v_recipe);
+        if not (v_runtime ? 'edit_context') then raise exception 'PUBLIC_OWNER_CANNOT_EDIT'; end if;
+        v_cook := public.start_snapshot_v2_cooking_session(${authArgs()},'96000000-0000-4000-8000-000000000302',
+          'standalone',null,null,v_recipe,1,2,clock_timestamp());
+        if v_cook#>>'{data,status}' <> 'in_progress' then raise exception 'PUBLIC_MANUAL_CANNOT_COOK: %',v_cook; end if;
+        v_fork := public.write_personal_recipe_core(${authArgs()},'fork',null,v_recipe,1,${originalSql},
+          '${nutritionSnapshot([genericIngredient])}'::jsonb,null,null,null,
+          '96000000-0000-4000-8000-000000000303',clock_timestamp());
+        if not exists(select 1 from public.recipes where id=(v_fork#>>'{data,id}')::uuid
+          and visibility='private' and origin_recipe_id=v_recipe) then raise exception 'FORK_BECAME_PUBLIC'; end if;
+        v_preview := public.preview_recipe_future_plan_impact(${authArgs()},v_recipe,1,${nextSql},clock_timestamp());
+        v_result := public.write_recipe_future_plan_change(${authArgs()},v_recipe,1,${nextSql},
+          '${nutritionSnapshot([genericIngredient])}'::jsonb,public.build_recipe_draft_nutrition_predecessor_guard(${nextSql}),
+          'keep',v_preview#>>'{data,impact_token}',null,'96000000-0000-4000-8000-000000000304',clock_timestamp());
+        if v_result#>>'{data,revision}' <> '2' then raise exception 'PUBLIC_OWNER_UPDATE_FAILED'; end if;
+        if (select recipe_content_snapshot_id from public.meals where id=v_plan) is distinct from v_old_pin then raise exception 'OLD_PRIVATE_PIN_CHANGED'; end if;
+        if not exists(select 1 from public.recipe_content_snapshots c join public.recipe_nutrition_snapshots n on n.id=c.recipe_nutrition_snapshot_id
+          where c.recipe_id=v_recipe and c.owner_user_id is null and n.owner_user_id is null and n.is_current and c.title='공개 원본 수정') then raise exception 'PUBLIC_UPDATED_SNAPSHOT_INVALID'; end if;
+        perform public.write_personal_recipe_core(${authArgs()},'delete',v_recipe,null,null,null,null,null,null,null,
+          '96000000-0000-4000-8000-000000000305',clock_timestamp());
+        v_list := public.create_shopping_list_with_snapshot_authority(${authArgs()},'${owner}','게시 전 계획 장보기',
+          current_date+2,current_date+2,false,array[v_plan],'[]','[]',
+          jsonb_build_array(jsonb_build_object('recipe_id',v_recipe,'recipe_content_snapshot_id',v_old_pin,'shopping_servings',2,'planned_servings_total',2)),
+          jsonb_build_array(jsonb_build_object('ingredient_id','${genericIngredient}','display_text','일반 재료','amounts_json','[{"amount":100,"unit":"g"}]'::jsonb,'is_pantry_excluded',false,'sort_order',0)),0);
+        if nullif(v_list->>'id','') is null then raise exception 'OLD_PRIVATE_PLAN_SHOPPING_BLOCKED: %',v_list; end if;
+        if not exists(select 1 from public.recipe_content_snapshots where id=v_old_pin and owner_user_id='${owner}' and title='직접 공개할 요리') then raise exception 'PRIVATE_HISTORY_MUTATED'; end if;
+      end;
+      $check$; rollback;`);
+    expect(result.status, result.stderr).toBe(0);
+    expect(domainDigest()).toBe(before);
+  });
+
+  it.skipIf(process.env.HOMECOOK_RECIPE_FUTURE_SAVE_REPAIR_REGRESSION !== "1")("creates one shopping list for five mixed live and deleted private plans without changing meal progress", () => {
+    const mixedDraft = jsonSql(JSON.parse(simpleDraft("다섯 계획 묶음", genericIngredient, "일반 재료 100g")));
+    const before = domainDigest();
+    const result = psqlResult(`begin; set local homecook.personal_recipe_v2='on'; set local request.jwt.claim.role='service_role';
+      do $check$
+      declare v_recipe uuid; v_meal uuid; v_pin uuid; v_meals uuid[]:='{}'; v_recipes uuid[]:='{}';
+        v_rows jsonb:='[]'; v_items jsonb; v_result jsonb; v_before bigint; v_created jsonb; n integer;
+      begin
+        for n in 1..5 loop
+          v_created := public.write_personal_recipe_core(${authArgs()},'create',null,null,null,${mixedDraft},
+            '${nutritionSnapshot([genericIngredient])}'::jsonb,'[]',null,null,gen_random_uuid(),clock_timestamp());
+          v_recipe := (v_created#>>'{data,id}')::uuid; v_meal := gen_random_uuid();
+          perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+          insert into public.meals(id,user_id,recipe_id,plan_date,column_id,planned_servings,status)
+          values(v_meal,'${owner}',v_recipe,current_date+n,'${plannerColumn}',2,'registered');
+          perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+          select recipe_content_snapshot_id into v_pin from public.meals where id=v_meal;
+          v_rows := v_rows || jsonb_build_array(jsonb_build_object('recipe_id',v_recipe,
+            'recipe_content_snapshot_id',v_pin,'shopping_servings',2,'planned_servings_total',2));
+          v_meals := array_append(v_meals,v_meal); v_recipes := array_append(v_recipes,v_recipe);
+          if n<=3 then
+            perform public.write_personal_recipe_core(${authArgs()},'delete',v_recipe,null,null,null,null,null,null,null,gen_random_uuid(),clock_timestamp());
+          end if;
+        end loop;
+        if (select count(*) from public.recipes where id=any(v_recipes) and deleted_at is not null)<>3 then raise exception 'MIXED_SOURCE_FIXTURE_INVALID'; end if;
+        if (select count(*) from public.meals where id=any(v_meals) and status='registered' and shopping_list_id is null)<>5 then raise exception 'ELIGIBLE_FIVE_MISSING'; end if;
+        select count(*) into v_before from public.shopping_lists;
+        v_items := jsonb_build_array(jsonb_build_object('ingredient_id','${genericIngredient}',
+          'display_text','일반 재료','amounts_json','[{"amount":500,"unit":"g"}]'::jsonb,'is_pantry_excluded',false,'sort_order',0));
+        begin
+          perform public.create_shopping_list_with_snapshot_authority(${authArgs()},'${owner}','invalid fifth plan',
+            current_date+1,current_date+5,false,v_meals,'[]','[]',
+            jsonb_set(v_rows,'{4,recipe_content_snapshot_id}','null'),v_items,0);
+          raise exception 'INVALID_FIFTH_PIN_ACCEPTED';
+        exception when insufficient_privilege then if sqlerrm<>'FORBIDDEN' then raise; end if; end;
+        if (select count(*) from public.shopping_lists)<>v_before then raise exception 'PARTIAL_LIST_CREATED'; end if;
+        v_result := public.create_shopping_list_with_snapshot_authority(${authArgs()},'${owner}','five mixed plans',
+          current_date+1,current_date+5,false,v_meals,'[]','[]',v_rows,v_items,0);
+        if nullif(v_result->>'id','') is null then raise exception 'FIVE_PLAN_CREATE_FAILED: %',v_result; end if;
+        if (select count(*) from public.shopping_list_recipes where shopping_list_id=(v_result->>'id')::uuid)<>5 then raise exception 'PLAN_GROUP_DROPPED'; end if;
+        if (select count(*) from public.meals where id=any(v_meals) and status='registered' and shopping_list_id=(v_result->>'id')::uuid)<>5 then raise exception 'MEAL_PROGRESS_CHANGED'; end if;
+        if (select count(*) from public.recipes where id=any(v_recipes) and deleted_at is not null)<>3 then raise exception 'DELETED_SOURCE_REVIVED'; end if;
+        begin
+          perform public.create_shopping_list_with_snapshot_authority(${authArgs()},'${owner}','duplicate list',
+            current_date+1,current_date+5,false,v_meals,'[]','[]',v_rows,v_items,0);
+          raise exception 'ALREADY_LINKED_MEALS_REUSED';
+        exception when no_data_found then if sqlerrm<>'RESOURCE_NOT_FOUND' then raise; end if; end;
+        if (select count(*) from public.shopping_lists)<>v_before+1 then raise exception 'DUPLICATE_LIST_CREATED'; end if;
+      end;
+      $check$; rollback;`);
+    expect(result.status, result.stderr).toBe(0);
+    expect(domainDigest()).toBe(before);
+  });
+
+  it.skipIf(process.env.HOMECOOK_ESTIMATED_WEIGHT_PG_REGRESSION !== "1")("completes estimated weight atomically, resumes only active sessions and protects measured or consumed batches", () => {
+    const before = domainDigest();
+    const ownerB = "91000000-0000-4000-8000-000000000701";
+    const hashB = "e7".repeat(32);
+    const result = psqlResult(`begin; set local request.jwt.claim.role='service_role';
+      set local homecook.personal_recipe_v2='on';
+      set local homecook.snapshot_v2_creation='on';
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      insert into auth.users(id,created_at,email) values ('${ownerB}','${identityEpoch}','weight-other@example.invalid');
+      insert into public.users(id,nickname,social_provider,social_id) values ('${ownerB}','weight-other','test','weight-other');
+      insert into public.user_account_generation_watermarks(owner_uuid,last_account_generation) values ('${ownerB}',1);
+      insert into public.user_account_lifecycles(owner_uuid,account_generation,auth_identity_created_at_snapshot,origin,status,activated_at)
+      values ('${ownerB}',1,'${identityEpoch}','runtime','active',now());
+      insert into public.user_session_generation_bindings(session_key_hash,hmac_key_version,owner_uuid,expected_account_generation,
+        auth_identity_created_at_snapshot,binding_state,auth_authority,local_issuer,local_verified_at,auth_cutover_epoch,session_issued_at,binding_expires_at)
+      values ('${hashB}',1,'${ownerB}',1,'${identityEpoch}','active','local','${localIssuer}','${sessionIssuedAt}',2,'${sessionIssuedAt}','2099-01-01');
+      update public.meals set status='shopping_done' where id='${multiRecipeMealC}';
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+      do $check$
+      declare v_start jsonb; v_resume jsonb; v_completed jsonb; v_replay jsonb; v_measured jsonb;
+        v_planner jsonb; v_result jsonb; v_session uuid; v_new_session uuid; v_planner_session uuid;
+        v_key uuid:=gen_random_uuid(); v_pantry uuid:=gen_random_uuid(); v_event uuid:=gen_random_uuid(); v_event_before jsonb;
+        v_batch_before jsonb; v_invalid numeric; v_revision bigint;
+      begin
+        v_start := public.start_snapshot_v2_cooking_session(${authArgs()},gen_random_uuid(),'standalone',null,null,'${secondRecipeId}',1,2,clock_timestamp());
+        v_session := (v_start#>>'{data,session_id}')::uuid;
+        v_resume := public.start_snapshot_v2_cooking_session(${authArgs()},gen_random_uuid(),'standalone',null,null,'${secondRecipeId}',1,2,clock_timestamp());
+        if v_resume#>>'{data,session_id}' is distinct from v_session::text then raise exception 'ACTIVE_STANDALONE_NOT_RESUMED'; end if;
+        select revision into v_revision from public.meals where id='${multiRecipeMealC}';
+        v_planner := public.start_snapshot_v2_cooking_session(${authArgs()},gen_random_uuid(),'planner',array['${multiRecipeMealC}'::uuid],
+          jsonb_build_object('${multiRecipeMealC}',v_revision),null,null,null,clock_timestamp());
+        v_planner_session := (v_planner#>>'{data,session_id}')::uuid;
+        if v_planner_session=v_session then raise exception 'DIFFERENT_MODE_RESUMED'; end if;
+        perform set_config('homecook.snapshot_v2_creation','off',true);
+        v_resume := public.start_snapshot_v2_cooking_session(${authArgs()},gen_random_uuid(),'planner',array['${multiRecipeMealC}'::uuid],
+          jsonb_build_object('${multiRecipeMealC}',v_revision),null,null,null,clock_timestamp());
+        if v_resume#>>'{data,session_id}' is distinct from v_planner_session::text then raise exception 'ACTIVE_PLANNER_NOT_RESUMED'; end if;
+        perform set_config('homecook.snapshot_v2_creation','on',true);
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+        insert into public.pantry_items(id,user_id,ingredient_id) values(v_pantry,'${owner}','${secondGenericIngredient}');
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+        v_completed := public.complete_snapshot_v2_cooking_session(${authArgs()},v_session,v_key,array[v_pantry],'estimate_from_ingredients',75,clock_timestamp());
+        if v_completed#>>'{data,cooked_batch,weight_source}' is distinct from 'estimated'
+          or v_completed#>>'{data,cooked_batch,weight_status}' is distinct from 'known'
+          or (v_completed#>>'{data,cooked_batch,finished_weight_g}')::numeric<>75 then raise exception 'ESTIMATED_COMPLETION_INVALID: %',v_completed; end if;
+        v_replay := public.complete_snapshot_v2_cooking_session(${authArgs()},v_session,v_key,array[v_pantry],'estimate_from_ingredients',120,clock_timestamp());
+        if v_replay is distinct from v_completed then raise exception 'CHANGED_ESTIMATE_REPLAY_DRIFT'; end if;
+        v_replay := public.complete_snapshot_v2_cooking_session(${authArgs()},v_session,v_key,array[v_pantry],'estimate_from_ingredients',null,clock_timestamp());
+        if v_replay is distinct from v_completed then raise exception 'UNKNOWN_ESTIMATE_REPLAY_DRIFT'; end if;
+        if (select count(*) from public.leftover_dishes where id=v_session)<>1 then raise exception 'DUPLICATE_COMPLETION_BATCH'; end if;
+        if (v_completed#>>'{data,pantry_removed}')::integer<>1
+          or exists(select 1 from public.pantry_items where id=v_pantry)
+          or not exists(select 1 from public.pantry_items where id='${genericPantry}') then raise exception 'PANTRY_COMPLETION_REPLAY_CHANGED_SCOPE'; end if;
+        if (select status::text from public.meals where id='${multiRecipeMealC}')<>'shopping_done' then raise exception 'STANDALONE_CHANGED_PLAN'; end if;
+        begin
+          perform public.mutate_cooked_batch_weight('${ownerB}','${identityEpoch}','${hashB}',1,'${sessionIssuedAt}',v_session,gen_random_uuid(),'set_finished_weight',100,1,clock_timestamp());
+          raise exception 'OTHER_OWNER_CHANGED_BATCH';
+        exception when no_data_found then if sqlerrm<>'RESOURCE_NOT_FOUND' then raise; end if; end;
+        v_measured := public.mutate_cooked_batch_weight(${authArgs()},v_session,gen_random_uuid(),'set_finished_weight',100,1,clock_timestamp());
+        if v_measured#>>'{data,batch,weight_source}' is distinct from 'measured'
+          or (v_measured#>>'{data,batch,finished_weight_g}')::numeric<>100
+          or (v_measured#>>'{data,batch,revision}')::bigint<>2 then raise exception 'MEASURED_CORRECTION_INVALID'; end if;
+        -- A legacy known weight with no source marker is not an editable estimate.
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+        update public.leftover_dishes set weight_source=null where id=v_session;
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+        begin
+          perform public.mutate_cooked_batch_weight(${authArgs()},v_session,gen_random_uuid(),'set_finished_weight',110,2,clock_timestamp());
+          raise exception 'LEGACY_KNOWN_WEIGHT_REPLACED';
+        exception when sqlstate '55000' then if sqlerrm<>'CONFLICT' then raise; end if; end;
+        v_start := public.start_snapshot_v2_cooking_session(${authArgs()},gen_random_uuid(),'standalone',null,null,'${secondRecipeId}',1,2,clock_timestamp());
+        v_new_session := (v_start#>>'{data,session_id}')::uuid;
+        if v_new_session=v_session then raise exception 'COMPLETED_SESSION_RESUMED'; end if;
+        v_result := public.complete_snapshot_v2_cooking_session(${authArgs()},v_new_session,gen_random_uuid(),'{}'::uuid[],'estimate_from_ingredients',null,clock_timestamp());
+        if v_result#>>'{data,cooked_batch,weight_status}' is distinct from 'missing'
+          or v_result#>>'{data,cooked_batch,finished_weight_g}' is not null
+          or v_result#>>'{data,cooked_batch,weight_source}' is not null then raise exception 'UNKNOWN_WEIGHT_BECAME_ZERO'; end if;
+        v_start := public.start_snapshot_v2_cooking_session(${authArgs()},gen_random_uuid(),'standalone',null,null,'${secondRecipeId}',1,2,clock_timestamp());
+        v_new_session := (v_start#>>'{data,session_id}')::uuid;
+        foreach v_invalid in array array[0::numeric,'NaN'::numeric,'Infinity'::numeric] loop
+          begin
+            perform public.complete_snapshot_v2_cooking_session(${authArgs()},v_new_session,gen_random_uuid(),'{}'::uuid[],'estimate_from_ingredients',v_invalid,clock_timestamp());
+            raise exception 'INVALID_ESTIMATE_ACCEPTED';
+          exception when invalid_parameter_value then if sqlerrm<>'VALIDATION_ERROR' then raise; end if; end;
+        end loop;
+        if exists(select 1 from public.leftover_dishes where id=v_new_session) then raise exception 'FAILED_COMPLETION_WROTE_BATCH'; end if;
+        -- Deleted original content remains usable only through this owner's
+        -- existing planner session/pin; new standalone source access stays closed.
+        perform public.write_personal_recipe_core(${authArgs()},'delete','${secondRecipeId}',null,null,null,null,null,null,null,gen_random_uuid(),clock_timestamp());
+        v_resume := public.start_snapshot_v2_cooking_session(${authArgs()},gen_random_uuid(),'planner',array['${multiRecipeMealC}'::uuid],
+          jsonb_build_object('${multiRecipeMealC}',v_revision),null,null,null,clock_timestamp());
+        if v_resume#>>'{data,session_id}' is distinct from v_planner_session::text then raise exception 'DELETED_OWNER_PLAN_NOT_RESUMED'; end if;
+        v_result := public.read_snapshot_v2_cook_mode(${authArgs()},v_planner_session,clock_timestamp());
+        if v_result#>>'{data,status}' is distinct from 'in_progress' then raise exception 'DELETED_OWNER_PLAN_NOT_READABLE'; end if;
+        -- Planner completion advances only its linked Meal and creates another estimate.
+        v_result := public.complete_snapshot_v2_cooking_session(${authArgs()},v_planner_session,gen_random_uuid(),'{}'::uuid[],'estimate_from_ingredients',75,clock_timestamp());
+        if (select status::text from public.meals where id='${multiRecipeMealC}')<>'cook_done' then raise exception 'PLANNER_COMPLETION_NOT_APPLIED'; end if;
+        -- Exercise the real consumption-ledger/replay boundary without loading the
+        -- unrelated meal-log UI/food-catalog migrations into this focused fixture.
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+        insert into public.cooked_batch_quantity_events(id,owner_user_id,cooked_batch_id,event_type,delta_g,reason,operation_id,ordinal,payload_hash)
+        values(v_event,'${owner}',v_planner_session,'consumed',-20,'meal-log fixture',gen_random_uuid(),1,repeat('c',64));
+        perform private.replay_cooked_batch(v_planner_session,'${owner}',clock_timestamp());
+        perform public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+        select to_jsonb(event) into v_event_before from public.cooked_batch_quantity_events event where id=v_event;
+        select to_jsonb(batch) into v_batch_before from public.leftover_dishes batch where id=v_planner_session;
+        begin
+          perform public.mutate_cooked_batch_weight(${authArgs()},v_planner_session,gen_random_uuid(),'set_finished_weight',100,2,clock_timestamp());
+          raise exception 'CONSUMED_ESTIMATE_REPLACED';
+        exception when sqlstate '55000' then if sqlerrm<>'CONFLICT' then raise; end if; end;
+        if (select to_jsonb(batch) from public.leftover_dishes batch where id=v_planner_session) is distinct from v_batch_before then raise exception 'REJECTED_CORRECTION_CHANGED_BATCH'; end if;
+        v_result := public.adjust_cooked_batch(${authArgs()},v_planner_session,gen_random_uuid(),-5,'잔량 확인',2,clock_timestamp());
+        if (v_result#>>'{data,batch,remaining_weight_g}')::numeric<>50 then raise exception 'REMAINING_ADJUSTMENT_FAILED'; end if;
+        if (select to_jsonb(event) from public.cooked_batch_quantity_events event where id=v_event) is distinct from v_event_before then raise exception 'CONSUMPTION_EVENT_CHANGED'; end if;
+      end;
+      $check$; rollback;`);
+    expect(result.status, result.stderr).toBe(0);
+    expect(domainDigest()).toBe(before);
   });
 
   it("rolls back stale recipe revision, target drift, predecessor drift, and active-claim replace-all as whole requests", () => {

@@ -1,4 +1,5 @@
 "use client";
+import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -267,6 +268,8 @@ function readHomeAuthOverride() {
 }
 
 export function HomeScreen() {
+  const confirmedViewCounts = useRecipeViewCountStore((state) => state.counts);
+  const trackRecipeOpen = useRecipeViewCountStore((state) => state.track);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sort, setSort] = useState<RecipeSortKey>("view_count");
@@ -561,8 +564,14 @@ export function HomeScreen() {
   ].filter(Boolean).length;
   const showClearAllFilters = activeFilterCount > 1;
   const displayedRecipes = useMemo(
-    () => (effectiveTagKey ? recipes?.items ?? [] : selectedTheme?.recipes ?? recipes?.items ?? []),
-    [effectiveTagKey, recipes?.items, selectedTheme?.recipes],
+    () => (effectiveTagKey ? recipes?.items ?? [] : selectedTheme?.recipes ?? recipes?.items ?? [])
+      .map((recipe) => {
+        const confirmed = confirmedViewCounts[recipe.id];
+        return typeof confirmed === "number" && confirmed > recipe.view_count
+          ? { ...recipe, view_count: confirmed }
+          : recipe;
+      }),
+    [confirmedViewCounts, effectiveTagKey, recipes?.items, selectedTheme?.recipes],
   );
   const consumerScreenState: ScreenState =
     selectedTheme && displayedRecipes.length > 0 && screenState !== "error"
@@ -639,13 +648,14 @@ export function HomeScreen() {
 
   const applyIngredientFilter = useCallback(
     (ingredientIds: string[]) => {
+      clearSearch();
       setAppliedIngredientIds(ingredientIds);
       setIngredientModalOpen(false);
       setActiveThemeId(null);
       setActiveTagKey(null);
       setActiveTagLabel(null);
     },
-    [setAppliedIngredientIds],
+    [clearSearch, setAppliedIngredientIds],
   );
 
   const selectSort = useCallback((nextSort: string) => {
@@ -728,40 +738,6 @@ export function HomeScreen() {
     });
   }, []);
 
-  const incrementRecipeViewCount = useCallback((recipeId: string) => {
-    const bumpRecipe = (recipe: RecipeCardItem) =>
-      recipe.id === recipeId
-        ? {
-            ...recipe,
-            view_count: recipe.view_count + 1,
-          }
-        : recipe;
-
-    setRecipes((currentRecipes) => {
-      if (!currentRecipes) {
-        return currentRecipes;
-      }
-
-      return {
-        ...currentRecipes,
-        items: currentRecipes.items.map(bumpRecipe),
-      };
-    });
-
-    setThemes((currentThemes) => {
-      if (!currentThemes) {
-        return currentThemes;
-      }
-
-      return {
-        themes: currentThemes.themes.map((theme) => ({
-          ...theme,
-          recipes: theme.recipes.map(bumpRecipe),
-        })),
-      };
-    });
-  }, []);
-
   const homeSaveFlow = useHomeRecipeSaveFlow({
     isAuthenticated,
     onRecipeSaved: updateRecipeSaveState,
@@ -818,7 +794,7 @@ export function HomeScreen() {
           mealGreeting={mealGreeting}
           emptyStateActionLabel={emptyStateActionLabel}
           onOpenIngredientModal={() => setIngredientModalOpen(true)}
-          onRecipeOpen={incrementRecipeViewCount}
+          onRecipeOpen={trackRecipeOpen}
           onRecipeSave={homeSaveFlow.openRecipeSaveModal}
           onRetry={() => void loadRecipes()}
           onRetryTags={() => void loadTagOptions()}
@@ -871,7 +847,7 @@ export function HomeScreen() {
                 오늘 뭐 먹지?
               </h1>
               <p className="home-mobile-discovery-sub">
-                레시피 제목으로 검색하거나, 재료로 좁혀 보세요.
+                레시피 제목이나 재료로 검색해 보세요.
               </p>
             </div>
 
@@ -880,7 +856,7 @@ export function HomeScreen() {
               <div className="home-mobile-discovery-search-row">
                 <label className="home-mobile-search-bar">
                   <SearchIcon />
-                  <span className="visually-hidden">레시피 제목 검색</span>
+                  <span className="visually-hidden">제목·재료 검색</span>
                   <input
                     onChange={(event) => {
                       setQuery(event.target.value);
@@ -888,7 +864,7 @@ export function HomeScreen() {
                       setActiveTagKey(null);
                       setActiveTagLabel(null);
                     }}
-                    placeholder="레시피 제목 검색"
+                    placeholder="제목·재료 검색"
                     value={query}
                   />
                 </label>
@@ -1023,7 +999,7 @@ export function HomeScreen() {
                       <RecipeCard
                         isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
                         key={recipe.id}
-                        onOpen={() => incrementRecipeViewCount(recipe.id)}
+                        onOpen={() => trackRecipeOpen(recipe.id)}
                         onSave={homeSaveFlow.openRecipeSaveModal}
                         priority={index === 0}
                         recipe={recipe}
@@ -1206,13 +1182,13 @@ function HomeWebScreen({
                 <div className="web-discovery-search-row">
                   <label className="web-search-bar">
                     <SearchIcon />
-                    <span className="visually-hidden">레시피 제목 검색</span>
+                    <span className="visually-hidden">제목·재료 검색</span>
                     <input
                       onChange={(event) => {
                         setQuery(event.target.value);
                         clearTagFilter();
                       }}
-                      placeholder="레시피 제목 검색"
+                      placeholder="제목·재료 검색"
                       value={query}
                     />
                   </label>
@@ -1506,13 +1482,21 @@ function HomeSearchEmptyState({
       <div className="home-search-empty-icon" aria-hidden="true" />
       <h2 className="home-search-empty-title">{title}</h2>
       <p className="home-search-empty-description">{description}</p>
-      <button
-        className="home-search-empty-action"
-        onClick={onAction}
-        type="button"
-      >
-        {actionLabel}
-      </button>
+      <div className="flex w-full flex-wrap justify-center gap-x-2">
+        <button
+          className="home-search-empty-action"
+          onClick={onAction}
+          type="button"
+        >
+          {actionLabel}
+        </button>
+        <Link className="home-search-empty-action" href="/menu/add/manual" prefetch={false}>
+          레시피 직접 등록
+        </Link>
+        <Link className="home-search-empty-action" href="/recipes/new/youtube" prefetch={false}>
+          유튜브로 가져오기
+        </Link>
+      </div>
     </div>
   );
 }
@@ -1671,7 +1655,7 @@ function HomeShortcutIcon({
 
 function HomeAppBar() {
   return (
-    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center justify-between border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
+    <header className="flex min-h-[var(--control-height-xl)] items-center justify-between border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
       <h1
         aria-label="무먹, 무엇을 먹든"
         className="home-app-brand-lockup"

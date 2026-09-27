@@ -1,5 +1,29 @@
 # API\_설계\_v1.2.43
 
+## 2026-09-27 후속 — 계획·요리 상태와 완료 화면
+
+snapshot-v2 시작은 동일 소유자·source·고정본·인분 및 계획 집합이 일치하는 진행 중 세션을 반환할 수 있다. 완료/취소는 재사용하지 않는다. 생성 실패가 단순404/500이라는 이유로 legacy 생성으로 전환하지 않으며 명시적 SNAPSHOT_V2_CREATION_DISABLED만 기존 대체 경로를 허용한다. 완료의 weigh_later/null 요청은 유지하고 서버가 고정 재료·요리 인분 기준 75% 추정을 수행한다. batch projection에 weight_source(estimated/measured/null)를 추가하고 기존 weight_status는 유지한다. 소비 전 추정 총량만 실제 무게로 교체 가능하며 소비 후에는 기존 잔량 조정을 사용한다.
+
+## 2026-09-27 후속 — 직접 등록 공개·모바일 입력·요리 준비
+
+직접 등록 POST는 서버가 원본 직접 작성 여부·소유자·저장 영수증을 확인해 공개 등록한다. fork는 private를 유지하며 client visibility를 허용하지 않는다. 성공은 영양/content snapshot 준비 및 공개 이미지 연결 확정 후 반환한다. 상세 GET에 visibility(public/private)를 제공하며 본인의 public manual 원본(origin_recipe_id NULL)에 edit_context를 제공한다. 공개 공유 URL은 /recipe/{id}의 canonical 경로다. [세부 계약](engineering/manual-recipe-authoring-repair-20260927.md) 참조.
+
+`POST /api/v1/recipes/{id}/publish`는 기존 직접 작성 원본의 명시적 공개 액션이다. 현재 세션·소유자·계정 세대·직접 등록 영수증의 recipe ID를 확인하고 서버가 영수증의 요청 키를 선택한다. client가 제출한 owner/visibility/키를 사용하지 않는다. 영양·이미지·내용 공개 준비를 마친 뒤 `{ id, visibility: public }`을 반환한다. 개인 포크·타인·생성 증빙 없음은 거부하며 GET은 공개 상태를 바꾸지 않는다. 상세 GET은 origin_recipe_id도 제공해 원본과 개인 사본을 구분한다.
+
+## 2026-09-27 후속 — 삭제된 개인 레시피의 기존 계획 장보기
+
+장보기 생성은 미삭제 원본의 기존 권한 경로 외에, 삭제된 본인 private 원본과 본인 계획의 유효한 content snapshot이 일치하는 제한된 경우를 허용한다. snapshot 누락·원본 불일치·다른 사용자 snapshot은 거부하며 일반 레시피 조회의 삭제 차단은 유지한다. 새 endpoint나 응답 필드는 추가하지 않는다.
+
+## 2026-09-27 후속 — 계획 고정 내용 읽기와 개인 저장 복구
+
+`GET /api/v1/meals/{meal_id}/recipe-snapshot`은 로그인 사용자가 소유한 계획의 `recipe_content_snapshot_id`만 읽는다. 응답 data는 meal_id, recipe_id, snapshot_id, title, planned_servings, 계획 인분으로 조정한 ingredients, 고정 steps다. 미로그인401, 없는/다른 사용자 계획404, pin누락·불일치409(`SNAPSHOT_UNAVAILABLE`), 세션 정비503/만료409를 구분하고 최신 레시피로 대체하지 않는다. 기존 wrapper와 error fields 계약을 유지한다. 개인 writer는 허용 단위 또는 검증된 같은 원본 재료·구성 단위만 허용하며 임의 단위는422다. 재편집 태그 source는 user_reviewed다. [설계 기록](engineering/personal-recipe-redesign-20260927.md) 참조.
+
+`GET /api/v1/recipes/{id}/image`는 접근 가능한 레시피의 관리 대표 이미지 바이트를 반환하는 media endpoint다. 비공개 레시피 소유권·삭제 상태·이미지 레지스트리의 bucket/path/owner/state를 확인하며 임의 URL을 받지 않는다. 성공은 JPEG/PNG/WebP, `private, no-store`, `nosniff` 헤더를 사용하고 실패는 기존 API error wrapper를 따른다. 공개 레시피의 익명 읽기에는 recipe-detail의 정확한 단일 레시피 조회만 허용한다.
+
+## 2026-09-27 후속 — 상세 통계·구성별 개인 복제·전송 실패
+
+공개 상세 조회수는 전용 local `recipe-view` 내부 RPC로 기록하며 성공한 실제값만 반환한다. 실패 시 현재 저장값을 반환하고 범용 UPDATE fallback을 사용하지 않는다. 개인 복제 초안은 ingredient_id와 정리된 component_label이 모두 같은 경우만 중복으로 거부한다. 다른 구성의 같은 재료는 독립 행으로 수량·제품 영양 버전·guard에 반영한다. error.fields 및 응답 wrapper는 유지한다. Auth/Data 전송 실패·시간초과는 기존 503, 실제 세션·권한 거절은 기존 409를 유지한다. 목록 GET만 제한적으로 재시도하며 조회수 부수효과가 있는 상세 GET과 모든 쓰기는 자동 재실행하지 않는다.
+
 ## 2026-09-22 사용자 요청 — 베타 핵심 흐름 보완
 
 기존 제품·재료 검색과 레시피 작성/편집, 식사기록·요리 완료 API의 화면 소비를 연결한다. 응답 `{ success, data, error }`, error `{ code, message, fields[] }`, 소유권·revision·idempotency·read-only 계약을 유지한다. 제품 검색 실패를 빈 성공 결과로 바꾸지 않으며 단위는 승인된 basis relation만 사용한다. 새 공개 endpoint는 추가하지 않으며 다음 additive 필드와 기존 endpoint의 정확 ID 조회 모드를 제공한다.
@@ -1925,9 +1949,9 @@ GET /recipes
 
 | 구분  | 필드           | 타입    | 설명                                                            |
 | ----- | -------------- | ------- | --------------------------------------------------------------- |
-| Query | q              | string? | 제목 또는 public/approved tag label 검색어                      |
+| Query | q              | string? | 제목·public/approved tag·실제 사용 재료명/별칭 검색어                      |
 | Query | tag            | string? | 정확 태그 필터. P0에서는 한글 `normalized_key`를 그대로 사용      |
-| Query | ingredient_ids | string? | 재료 ID 콤마 구분 (AND 필터)                                    |
+| Query | ingredient_ids | string? | 재료 ID 콤마 구분 (그룹 내부 OR, 그룹 사이 AND)                                    |
 | Query | sort           | string? | `view_count`(기본) / `latest` / `save_count` / `plan_count` / `cook_count` |
 | Query | cursor         | string? | opaque 커서                                                     |
 | Query | limit          | int?    | 기본 20                                                         |
@@ -1960,7 +1984,7 @@ GET /recipes
 
 > 로그인 사용자는 목록/테마 카드에 `user_status`가 포함된다. 비로그인 또는 저장 없음은 `user_status: null` 또는 `{ "is_saved": false, "saved_book_ids": [] }`로 처리할 수 있다.
 > `latest`는 `recipes.created_at DESC, id DESC` 기준이다. `cook_count`는 요리완료 수 기준이다. `like_count`는 응답 지표와 좋아요 토글에는 남지만 HOME 노출 정렬 키에서는 제외한다.
-> `q`는 제목과 `recipe_tags.visibility='public'`, `recipe_tags.review_status='approved'`인 tag label을 검색한다. 사용자 private/pending tag는 전역 검색 대상이 아니다.
+> `q`는 제목과 공개·승인된 tag label, 실제 사용 재료의 표준명·별칭을 검색하고 합친 결과를 중복 제거한다. 일반 돼지고기 검색과 일반 돼지고기 ID는 육류 분류의 돼지 부위 이름·별칭으로 확장한다. `ingredient_ids`는 각 선택 재료 그룹 내부 OR, 여러 선택 사이 AND를 적용한다. API에서 함께 전달한 q/tag/재료 필터는 교집합을 유지한다. 검색 확장은 재료 ID나 영양 근거를 병합하지 않는다. 사용자 private/pending tag·private/deleted/quarantined 레시피는 공개 결과에 포함하지 않는다.
 > `tag`는 `tags.normalized_key` 정확 필터다. 예: `GET /recipes?tag=한식`. 자동 romanization된 `hansik` 같은 key는 P0에서 지원하지 않는다.
 > tag 검색/필터 구현은 `recipe_tags` join으로 row를 중복시키면 안 된다. DB function/view 또는 2단계 recipe id lookup + dedupe 후 기존 sort/cursor를 적용해 cursor pagination의 stable order를 보장한다.
 

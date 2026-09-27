@@ -9,6 +9,7 @@ import {
   isQaFixtureModeEnabled,
   MOCK_RECIPE_ID,
 } from "@/lib/mock/recipes";
+import { resolveAuthorizedRecipeImageUrls } from "@/lib/server/recipe-image-read";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   dedupeProductPlannerEntries,
@@ -42,6 +43,7 @@ import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/
 import {
   createFutureMealWriteInternalClient,
   createRouteHandlerClient,
+  createRecipeImageInternalClient,
 } from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
@@ -58,6 +60,7 @@ interface RecipeLookupRow {
 
 interface RecipeSummaryRow {
   id: string;
+  created_by: string | null;
   title: string;
   thumbnail_url: string | null;
 }
@@ -153,7 +156,7 @@ interface MealsInsertQuery {
 
 interface RecipesTable {
   select(columns: "id"): RecipesLookupQuery;
-  select(columns: "id, title, thumbnail_url"): RecipesSummaryQuery;
+  select(columns: "id, title, thumbnail_url, created_by"): RecipesSummaryQuery;
 }
 
 interface PlannerColumnsTable {
@@ -511,7 +514,7 @@ async function getMeals(request: NextRequest) {
   if (recipeIds.length > 0) {
     const recipesResult = await dbClient
       .from("recipes")
-      .select("id, title, thumbnail_url")
+      .select("id, title, thumbnail_url, created_by")
       .in("id", recipeIds);
 
     if (recipesResult.error || !recipesResult.data) {
@@ -522,9 +525,20 @@ async function getMeals(request: NextRequest) {
       return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
     }
 
-    recipesResult.data.forEach((recipe) => {
-      recipeMap.set(recipe.id, recipe);
-    });
+    const imageClient = createRecipeImageInternalClient();
+    try {
+      const imageUrls = imageClient
+        ? await resolveAuthorizedRecipeImageUrls({ client: imageClient, recipes: recipesResult.data })
+        : null;
+      recipesResult.data.forEach((recipe) => {
+        recipeMap.set(recipe.id, {
+          ...recipe,
+          thumbnail_url: imageUrls?.get(recipe.id) ?? recipe.thumbnail_url,
+        });
+      });
+    } catch {
+      return fail("INTERNAL_ERROR", "식사 이미지를 불러오지 못했어요.", 500);
+    }
   }
 
   return ok({

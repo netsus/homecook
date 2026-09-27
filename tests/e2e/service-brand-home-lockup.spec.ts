@@ -30,7 +30,7 @@ async function openHome(
   const page = await context.newPage();
   await installDiscoveryRoutes(page);
   await page.goto(`${BASE_URL}/`);
-  await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
+  await expect(page.getByPlaceholder("제목·재료 검색")).toBeVisible();
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -99,7 +99,7 @@ async function readGeometry(page: Page, kind: "desktop" | "mobile") {
     const firstTab = document.querySelector(".web-topnav-tab");
     const logo = document.querySelector(".mumeok-horizontal-logo");
     const search = document.querySelector<HTMLInputElement>(
-      'input[placeholder="레시피 제목 검색"]',
+      'input[placeholder="제목·재료 검색"]',
     );
 
     return {

@@ -8,10 +8,20 @@ function isAllowed(input: Record<string, unknown>) {
   return isAnonymousHybridPublicReadRequest(input as never);
 }
 
-const recipeDetailSelect = "id,title,description,thumbnail_url,base_servings,tags,source_type,created_by,visibility,deleted_at,revision,view_count,like_count,save_count,plan_count,cook_count";
+const recipeDetailSelect = "id,title,description,thumbnail_url,base_servings,tags,source_type,created_by,visibility,origin_recipe_id,deleted_at,revision,view_count,like_count,save_count,plan_count,cook_count";
 const recipeId = "00000000-0000-4000-8000-000000000001";
 
 describe("hybrid anonymous public read policy", () => {
+  it("permits only the exact recipe image access-check columns and one recipe ID", () => {
+    const request = { scope: "recipe-detail", method: "GET", path: "/recipes" };
+    const search = new URLSearchParams({ select: "id,created_by,deleted_at,visibility", id: `eq.${recipeId}` });
+    expect(isAllowed({ ...request, search: search.toString() })).toBe(true);
+    search.set("select", "id,created_by,deleted_at,origin_recipe_id");
+    expect(isAllowed({ ...request, search: search.toString() })).toBe(false);
+    search.set("select", "id,created_by,deleted_at,visibility");
+    search.set("id", `in.(${recipeId})`);
+    expect(isAllowed({ ...request, search: search.toString() })).toBe(false);
+  });
   it("allows the actual SDK recipe detail query with visibility, deletion, and revision fields", async () => {
     const requests: URL[] = [];
     const client = createClient("http://127.0.0.1:54321", "public-test-key", {

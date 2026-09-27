@@ -22,6 +22,40 @@ async function advanceSearch(milliseconds = 250) {
   await act(async () => { await vi.advanceTimersByTimeAsync(milliseconds); });
 }
 describe("recipe food catalog picker", () => {
+  it("keeps the mobile dialog focused until the user chooses its search input", () => {
+    vi.useFakeTimers();
+    vi.mocked(fetchFoodCatalogSearch).mockResolvedValue(ingredientResult("tofu", "두부"));
+    render(<RecipeFoodCatalogPicker onAdd={vi.fn()} onClose={vi.fn()} />);
+    expect(document.activeElement).toBe(screen.getByRole("dialog"));
+    expect(screen.getByRole("searchbox").classList.contains("text-base")).toBe(true);
+  });
+
+  it("follows the visible keyboard viewport and removes its listeners on close", async () => {
+    vi.useFakeTimers();
+    const viewport = Object.assign(new EventTarget(), { height: 812, offsetTop: 0, scale: 1 });
+    const previous = window.visualViewport;
+    Object.defineProperty(window, "visualViewport", { configurable: true, value: viewport });
+    try {
+      vi.mocked(fetchFoodCatalogSearch).mockResolvedValue(ingredientResult("tofu", "두부"));
+      const view = render(<RecipeFoodCatalogPicker onAdd={vi.fn()} onClose={vi.fn()} />);
+      const backdrop = screen.getByRole("dialog").parentElement!;
+      expect(backdrop.style.getPropertyValue("--dialog-viewport-height")).toBe("812px");
+      viewport.height = 410;
+      viewport.offsetTop = 24;
+      await act(async () => {
+        viewport.dispatchEvent(new Event("resize"));
+        await vi.advanceTimersByTimeAsync(20);
+      });
+      expect(backdrop.style.getPropertyValue("--dialog-viewport-height")).toBe("410px");
+      expect(backdrop.style.getPropertyValue("--dialog-viewport-top")).toBe("24px");
+      const remove = vi.spyOn(viewport, "removeEventListener");
+      view.unmount();
+      expect(remove).toHaveBeenCalledWith("resize", expect.any(Function));
+      expect(remove).toHaveBeenCalledWith("scroll", expect.any(Function));
+    } finally {
+      Object.defineProperty(window, "visualViewport", { configurable: true, value: previous });
+    }
+  });
   it("keeps an unavailable search retryable without claiming the account is under maintenance", async () => {
     vi.useFakeTimers();
     const unavailable = Object.assign(new Error("계정 정비 작업 중이에요."), {

@@ -1,5 +1,7 @@
 "use client";
 
+import { DecimalInput } from "@/components/shared/decimal-input";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -1052,24 +1054,22 @@ function ReviewIngredientRow({
           ) : null}
         </div>
         <div className="flex min-w-0 flex-col items-stretch gap-1">
-          <input
+          <DecimalInput
             aria-label={`${ingredientName} 수량`}
             className="h-9 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
             inputMode="decimal"
             min={0}
             step="any"
-            onChange={(event) => {
-              const value = event.target.value;
+            onValueChange={(amount) => {
               onUpdateIngredient(ingredient.tempId, {
-                amount: value === "" ? 0 : Number(value),
+                amount,
                 ingredient_type: "QUANT",
                 scalable: true,
                 unit: ingredient.unit ?? "g",
                 ...getQuantityEditPatch(ingredient),
               });
             }}
-            type="number"
-            value={ingredient.amount ?? 0}
+            value={ingredient.amount}
           />
           {isInferredQuantity ? (
             <span
@@ -1098,7 +1098,7 @@ function ReviewIngredientRow({
               key={option}
               onClick={() =>
                 onUpdateIngredient(ingredient.tempId, {
-                  amount: ingredient.amount ?? 0,
+                  amount: ingredient.amount,
                   ingredient_type: "QUANT",
                   scalable: true,
                   unit: option,

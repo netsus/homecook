@@ -20,7 +20,8 @@ import {
   YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY,
 } from "@/lib/youtube-extraction-client-state";
 
-vi.mock("@/lib/api/youtube-extraction-jobs", () => ({
+vi.mock("@/lib/api/youtube-extraction-jobs", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/api/youtube-extraction-jobs")>(),
   enqueueYoutubeExtraction: vi.fn(),
   fetchYoutubeExtractionJob: vi.fn(),
   fetchYoutubeExtractionNotifications: vi.fn(),
@@ -29,6 +30,8 @@ vi.mock("@/lib/api/youtube-extraction-jobs", () => ({
 }));
 
 const youtubeUrl = "https://www.youtube.com/watch?v=abcdefghijk";
+const navigation = vi.hoisted(() => ({ pathname: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
 const encodedYoutubeUrl = encodeURIComponent(youtubeUrl);
 
 const successItem = {
@@ -88,6 +91,7 @@ function renderCenter() {
 
 describe("YouTube extraction notification center", () => {
   beforeEach(() => {
+    navigation.pathname = "/";
     window.sessionStorage.clear();
     useYoutubeExtractionStore.getState().setAuthenticated(false);
     useYoutubeExtractionStore.getState().setItems([]);
@@ -326,9 +330,26 @@ describe("YouTube extraction notification center", () => {
     );
   });
 
-  it("retains a floating trigger when the desktop header is hidden", async () => {
+  it("does not float a fallback bell over content when the header is hidden", async () => {
     render(<><div style={{ display: "none" }}><button data-youtube-extraction-trigger="header" type="button">데스크탑 알림</button></div><YoutubeExtractionNotificationCenter initialAuthenticated /></>);
-    expect(await screen.findByRole("button", { name: /YouTube 추출 알림/ })).toBeTruthy();
+    expect(await screen.findByText("레시피 추출 2건이 끝났어요")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /YouTube 추출 알림/ })).toBeNull();
+  });
+
+  it.each(["/recipe/one", "/recipe/one/edit", "/recipebooks/one", "/pantry"])("hides the bell on %s while keeping notification delivery", async (pathname) => {
+    navigation.pathname = pathname;
+    renderCenter();
+    expect(await screen.findByText("레시피 추출 2건이 끝났어요")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /YouTube 추출 알림/ })).toBeNull();
+    await waitFor(() => expect(api.markYoutubeExtractionDelivered).toHaveBeenCalled());
+  });
+
+  it.each(["/", "/planner"])("shows the bell inside the root header on %s", async (pathname) => {
+    navigation.pathname = pathname;
+    render(<><header><YoutubeExtractionNotificationTrigger /></header><YoutubeExtractionNotificationCenter initialAuthenticated /></>);
+    const trigger = await screen.findByRole("button", { name: /YouTube 추출 알림/ });
+    expect(trigger.closest("header")).not.toBeNull();
+    expect(trigger.className).not.toMatch(/fixed|sticky/);
   });
 
   it("preserves the user's current focus when the closed center first mounts", async () => {
@@ -691,7 +712,7 @@ describe("YouTube extraction notification center", () => {
     renderCenter();
 
     await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 2개" }));
-    expect(screen.getByRole("dialog", { name: "YouTube 추출 알림" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "알림" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
 
     await waitFor(() => {
@@ -703,7 +724,7 @@ describe("YouTube extraction notification center", () => {
     expect(screen.getByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
 
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "YouTube 추출 알림" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "알림" })).toBeNull();
   });
 
   it("keeps the badge unseen until the seen mutation succeeds and offers a retry", async () => {
@@ -785,7 +806,7 @@ describe("YouTube extraction notification center", () => {
     renderCenter();
 
     const login = await screen.findByRole("link", { name: "로그인하고 돌아오기" });
-    expect(login.getAttribute("href")).toContain("/login?next=");
+    expect(login.getAttribute("href")).toContain("/login?reauthenticate=1&next=");
     expect(screen.getByRole("button", { name: "로그인 안내 닫기" })).toBeTruthy();
     expect(login.closest("aside")?.className).not.toContain("top-[");
     expect(screen.queryByText("매콤한 두부조림")).toBeNull();
@@ -1058,7 +1079,7 @@ describe("YouTube extraction notification center", () => {
 
     const overlay = screen.getByTestId("youtube-notification-overlay");
     expect(overlay.className).toContain("z-[500]");
-    expect(screen.getByRole("heading", { name: "YouTube 추출 알림" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "알림" })).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "알림 닫기" }));
     await user.keyboard("{Escape}");
     expect(document.activeElement).toBe(trigger);

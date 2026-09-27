@@ -29,6 +29,8 @@ function createChainQuery<T>(result: QueryResult<T>) {
     order: vi.fn(() => query),
     in: vi.fn(() => query),
     ilike: vi.fn(() => query),
+    like: vi.fn(() => query),
+    range: vi.fn(() => query),
     is: vi.fn(() => query),
     eq: vi.fn(() => query),
     or: vi.fn(() => query),
@@ -172,6 +174,7 @@ describe("36c recipe tag search route", () => {
         };
       }),
       from: vi.fn((table: string) => {
+        if (table === "ingredients" || table === "ingredient_synonyms") return createChainQuery({ data: [], error: null });
         if (table === "recipes") {
           const query = recipeQueries.shift();
           if (!query) throw new Error("unexpected extra recipes query");
@@ -203,5 +206,54 @@ describe("36c recipe tag search route", () => {
       recipeTagId,
       recipeTitleId,
     ]);
+  });
+
+  it("returns an ingredient match when neither the recipe title nor public tags match", async () => {
+    const ingredientId = "550e8400-e29b-41d4-a716-446655440201";
+    const catalogQuery = createChainQuery({ data: [{ id: ingredientId, standard_name: "양파", category: "채소" }], error: null });
+    const synonymQuery = createChainQuery({ data: [], error: null });
+    const matchingIngredients = createChainQuery({ data: [
+      { recipe_id: recipeTagId, ingredient_id: ingredientId },
+      { recipe_id: recipeTagId, ingredient_id: ingredientId },
+    ], error: null });
+    const titleQuery = createChainQuery({ data: [], error: null });
+    const ingredientRecipesQuery = createChainQuery({ data: [createRecipeRow({ title: "김치찌개", tags: [] })], error: null });
+    const recipeQueries = [titleQuery, ingredientRecipesQuery];
+    const catalogClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return catalogQuery;
+        if (table === "ingredient_synonyms") return synonymQuery;
+        throw new Error(`unexpected catalog table: ${table}`);
+      }),
+    };
+    const recipeClient = {
+      auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return matchingIngredients;
+        if (table === "recipes") {
+          const query = recipeQueries.shift();
+          if (query) return query;
+        }
+        throw new Error(`unexpected recipe table: ${table}`);
+      }),
+    };
+    createRouteHandlerClient.mockImplementation(async (options) => options.anonymousPublicReadScope === "ingredients" ? catalogClient : recipeClient);
+
+    const { GET } = await importRecipesRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/recipes?q=%EC%96%91%ED%8C%8C"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toMatchObject([{ id: recipeTagId, title: "김치찌개" }]);
+    expect(body.data.items).toHaveLength(1);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({ anonymousPublicReadScope: "recipes" });
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({ anonymousPublicReadScope: "ingredients" });
+    expect(catalogQuery.like).toHaveBeenCalledWith("search_name", "%양파%");
+    expect(matchingIngredients.in).toHaveBeenCalledWith("ingredient_id", [ingredientId]);
+    expect(matchingIngredients.order).toHaveBeenCalledWith("id", { ascending: true });
+    expect(matchingIngredients.range).toHaveBeenCalledWith(0, 999);
+    expect(titleQuery.ilike).toHaveBeenCalledWith("title", "%양파%");
+    expect(ingredientRecipesQuery.in).toHaveBeenCalledWith("id", [recipeTagId]);
   });
 });

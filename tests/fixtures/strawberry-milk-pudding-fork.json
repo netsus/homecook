@@ -1,0 +1,245 @@
+{
+  "steps": [
+    {
+      "heat_level": null,
+      "instruction": "믹서에 딸기와 우유를 넣고 곱게 갈아 체에 걸러 씨와 큰 섬유질을 제거해 주세요.",
+      "step_number": 1,
+      "duration_text": null,
+      "component_label": "딸기 우유 푸딩",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440218",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440218"
+      ]
+    },
+    {
+      "heat_level": null,
+      "instruction": "설탕과 소금, 옥수수전분을 넣고 완전히 섞은 다음 중약불에 올려 가열해 끓여 주세요.",
+      "step_number": 2,
+      "duration_text": null,
+      "component_label": "딸기 우유 푸딩",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440211",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440211"
+      ]
+    },
+    {
+      "heat_level": null,
+      "instruction": "계속 천천히 젓다가 뭉치기 시작하면 빠르게 저으며 섞고 끓어오르고 1분 정도 더 가열해 주세요.",
+      "step_number": 3,
+      "duration_text": null,
+      "component_label": "딸기 우유 푸딩",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440211",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440211"
+      ]
+    },
+    {
+      "heat_level": null,
+      "instruction": "불에서 내려 무염버터와 바닐라 익스트랙을 넣고 섞어 용기에 부어 주세요.",
+      "step_number": 4,
+      "duration_text": null,
+      "component_label": "딸기 우유 푸딩",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440217",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440217"
+      ]
+    },
+    {
+      "heat_level": null,
+      "instruction": "실온에서 15분 정도 식힌 다음 윗면에 랩을 덮어 냉장실에서 1시간 정도 굳혀 주세요.",
+      "step_number": 5,
+      "duration_text": null,
+      "component_label": "딸기 우유 푸딩",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440218",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440218"
+      ]
+    },
+    {
+      "heat_level": null,
+      "instruction": "딸기를 다양한 크기로 잘라 냄비에 넣고 설탕, 레몬즙을 넣고 중약불에서 3~4분 정도 끓여 주세요.",
+      "step_number": 6,
+      "duration_text": null,
+      "component_label": "딸기 콩포트",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440211",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440211"
+      ]
+    },
+    {
+      "heat_level": null,
+      "instruction": "옥수수전분과 물을 섞은 전분물을 붓고 30~1분 정도 더 끓여 주세요.",
+      "step_number": 7,
+      "duration_text": null,
+      "component_label": "딸기 콩포트",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440211",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440211"
+      ]
+    },
+    {
+      "heat_level": null,
+      "instruction": "완전히 식힌 다음 푸딩 위에 올려 냉장고에서 3~4시간 정도 굳히고 생딸기를 올려 주세요.",
+      "step_number": 8,
+      "duration_text": null,
+      "component_label": "딸기 콩포트",
+      "duration_seconds": null,
+      "ingredients_used": [],
+      "cooking_method_id": "550e8400-e29b-41d4-a716-446655440217",
+      "cooking_method_ids": [
+        "550e8400-e29b-41d4-a716-446655440217"
+      ]
+    }
+  ],
+  "title": "오븐도 젤라틴도 필요 없는 딸기 우유 푸딩 만들기 | 쉬운 디저트 베이킹 | No-Bake! No Gelatin! Strawberry Milk Pudding Recipe",
+  "description": null,
+  "ingredients": [
+    {
+      "unit": "g",
+      "amount": 270.0,
+      "scalable": true,
+      "display_text": "생딸기 270g",
+      "ingredient_id": "1a74251a-f66f-4d8e-aab0-e908aeb9aa27",
+      "component_label": "딸기 우유 푸딩",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 540.0,
+      "scalable": true,
+      "display_text": "우유 540g",
+      "ingredient_id": "71fbac83-73a8-4b54-a8da-a2010f4cd5a7",
+      "component_label": "딸기 우유 푸딩",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 75.0,
+      "scalable": true,
+      "display_text": "설탕 75g",
+      "ingredient_id": "0305831c-dc7a-4341-9492-9afed5e4450b",
+      "component_label": "딸기 우유 푸딩",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 1.0,
+      "scalable": true,
+      "display_text": "소금 1g",
+      "ingredient_id": "0ab7b211-7e75-4972-9822-c54c9b67ca4b",
+      "component_label": "딸기 우유 푸딩",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 60.0,
+      "scalable": true,
+      "display_text": "옥수수전분 60g",
+      "ingredient_id": "e9ec9e10-714f-4b85-a943-1282a1b3cd27",
+      "component_label": "딸기 우유 푸딩",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 15.0,
+      "scalable": true,
+      "display_text": "무염버터 15g",
+      "ingredient_id": "b6f2635f-4384-4db6-9123-b2c4c5a1dcb7",
+      "component_label": "딸기 우유 푸딩",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 4.0,
+      "scalable": true,
+      "display_text": "바닐라 익스트랙 4g",
+      "ingredient_id": "5bcd3464-6f7b-4185-a526-7a45443b6131",
+      "component_label": "딸기 우유 푸딩",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 230.0,
+      "scalable": true,
+      "display_text": "생딸기 230g",
+      "ingredient_id": "1a74251a-f66f-4d8e-aab0-e908aeb9aa27",
+      "component_label": "딸기 콩포트",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 45.0,
+      "scalable": true,
+      "display_text": "설탕 45g",
+      "ingredient_id": "0305831c-dc7a-4341-9492-9afed5e4450b",
+      "component_label": "딸기 콩포트",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 8.0,
+      "scalable": true,
+      "display_text": "레몬즙 8g",
+      "ingredient_id": "be38bc63-ced9-4b9f-84a2-924dde0eb62c",
+      "component_label": "딸기 콩포트",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 3.0,
+      "scalable": true,
+      "display_text": "옥수수전분 3g",
+      "ingredient_id": "e9ec9e10-714f-4b85-a943-1282a1b3cd27",
+      "component_label": "딸기 콩포트",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    },
+    {
+      "unit": "g",
+      "amount": 10.0,
+      "scalable": true,
+      "display_text": "물 10g",
+      "ingredient_id": "487653de-ae9b-499b-af18-ac444d2ed040",
+      "component_label": "딸기 콩포트",
+      "food_product_id": null,
+      "ingredient_type": "QUANT",
+      "food_product_nutrition_version_id": null
+    }
+  ],
+  "base_servings": 2
+}

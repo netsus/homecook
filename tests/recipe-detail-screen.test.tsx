@@ -7,6 +7,7 @@ import { act, cleanup, render, screen, waitFor, within } from "@testing-library/
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { MOCK_RECIPE_DETAIL } from "@/lib/mock/recipes";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
@@ -19,6 +20,12 @@ import type {
   RecipeLikeData,
   RecipeSaveData,
 } from "@/types/recipe";
+
+const PROFILE_OWNER_UUID = "550e8400-e29b-41d4-a716-446655440098";
+
+function buildEditIngredients(): RecipeEditDraft["ingredients"] {
+  return [{ ingredient_id: "550e8400-e29b-41d4-a716-446655440010", amount: 100, unit: "g", ingredient_type: "QUANT", display_text: null, component_label: null, scalable: true, food_product_id: null, food_product_nutrition_version_id: null }];
+}
 
 const fetchJson = vi.fn();
 const getSession = vi.fn();
@@ -69,6 +76,7 @@ vi.mock("@/lib/api/meal", () => ({
 
 vi.mock("@/lib/api/cooking", () => ({
   createSnapshotV2CookingSession: (...args: unknown[]) => createSnapshotV2CookingSession(...args),
+  isCookingApiError: (error: unknown) => Boolean(error && typeof error === "object" && "status" in error),
 }));
 
 vi.mock("@/lib/api/recipe-future-impact", () => ({
@@ -114,6 +122,7 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/recipe/mock-kimchi-jjigae",
   useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));
@@ -231,7 +240,7 @@ function buildSaveableBooks(): RecipeBookListData {
 function mockProfileSummaryApis() {
   fetchUserProfile.mockResolvedValue({
     email: "home@example.com",
-    id: "user-1",
+    id: PROFILE_OWNER_UUID,
     nickname: "김집밥",
     profile_image_url: null,
     settings: { screen_wake_lock: false },
@@ -262,6 +271,7 @@ describe("recipe detail screen", () => {
   });
 
   beforeEach(() => {
+    useRecipeViewCountStore.setState({ counts: {} });
     delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES;
     fetchJson.mockReset();
     getSession.mockReset();
@@ -283,6 +293,7 @@ describe("recipe detail screen", () => {
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
+    window.sessionStorage.clear();
 
     fetchJson.mockResolvedValue(MOCK_RECIPE_DETAIL);
     mockProfileSummaryApis();
@@ -291,6 +302,13 @@ describe("recipe detail screen", () => {
       data: { subscription: { unsubscribe: vi.fn() } },
     });
     hasSupabasePublicEnv.mockReturnValue(true);
+  });
+
+  it("publishes the server-confirmed view count for a recipe opened from discovery", async () => {
+    useRecipeViewCountStore.getState().track(MOCK_RECIPE_DETAIL.id);
+    fetchJson.mockResolvedValue(buildRecipeDetail({ view_count: 41 }));
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+    await waitFor(() => expect(useRecipeViewCountStore.getState().counts[MOCK_RECIPE_DETAIL.id]).toBe(41));
   });
 
   it("places nutrition after the serving control and updates selected totals", async () => {
@@ -397,6 +415,28 @@ describe("recipe detail screen", () => {
     });
   });
 
+  it("releases the standalone start latch after navigation so a preserved detail page can cook again", async () => {
+    const result = { session_id: "550e8400-e29b-41d4-a716-446655440099", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", content_summary: { recipe_id: MOCK_RECIPE_DETAIL.id, title: "레시피", cooking_servings: 2 } };
+    createSnapshotV2CookingSession.mockResolvedValue(result);
+    fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledTimes(1));
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    await waitFor(() => expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(2));
+    expect(mockRouterPush).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a cooking start conflict message and keeps retry available", async () => {
+    createSnapshotV2CookingSession.mockRejectedValue({ status: 409, code: "RECIPE_REVISION_CONFLICT", message: "레시피가 수정됐어요. 새로고침해 주세요." });
+    fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    expect(await screen.findByText("레시피가 수정됐어요. 새로고침해 주세요.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "요리하기" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
   it("sends the owner-edited full draft unchanged from impact preview to PATCH", async () => {
     const draft: RecipeEditDraft = {
       title: "내 김치찌개",
@@ -405,7 +445,7 @@ describe("recipe detail screen", () => {
       ingredients: [{
         ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
         amount: 1,
-        unit: null,
+        unit: "g",
         ingredient_type: "QUANT",
         display_text: null,
         component_label: null,
@@ -503,7 +543,7 @@ describe("recipe detail screen", () => {
       title: "내 김치찌개",
       description: null,
       base_servings: 2,
-      ingredients: [],
+      ingredients: buildEditIngredients(),
       steps: [],
     };
     fetchJson.mockResolvedValue(buildRecipeDetail({
@@ -575,7 +615,7 @@ describe("recipe detail screen", () => {
       title: "내 김치찌개",
       description: null,
       base_servings: 2,
-      ingredients: [],
+      ingredients: buildEditIngredients(),
       steps: [],
     };
     const resumedDraft: RecipeEditDraft = {
@@ -602,8 +642,9 @@ describe("recipe detail screen", () => {
       active_cooking_claim_count: 0,
       replace_all_allowed: true,
     });
-    window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
       type: "recipe-edit-save",
+      sourceOwnerUuid: PROFILE_OWNER_UUID,
       recipeId: MOCK_RECIPE_DETAIL.id,
       redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
       createdAt: Date.now(),
@@ -632,7 +673,7 @@ describe("recipe detail screen", () => {
       );
     });
     expect(screen.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeTruthy();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("restores the owner draft for save-as-new after login without auto-resuming same-id impact preview", async () => {
@@ -640,7 +681,7 @@ describe("recipe detail screen", () => {
       title: "내 김치찌개",
       description: null,
       base_servings: 2,
-      ingredients: [],
+      ingredients: buildEditIngredients(),
       steps: [],
     };
     const resumedDraft: RecipeEditDraft = {
@@ -656,8 +697,9 @@ describe("recipe detail screen", () => {
         image_object_id: "550e8400-e29b-41d4-a716-446655440099",
       },
     }));
-    window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
       type: "recipe-save-as-new",
+      sourceOwnerUuid: PROFILE_OWNER_UUID,
       recipeId: MOCK_RECIPE_DETAIL.id,
       redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
       createdAt: Date.now(),
@@ -682,7 +724,7 @@ describe("recipe detail screen", () => {
     expect(screen.queryByRole("button", { name: "변경사항 저장" })).toBeNull();
     expect(fetchRecipeFutureImpact).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog", { name: "미래 계획 반영 확인" })).toBeNull();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("opens the existing login gate with the edited draft when impact preview returns 401", async () => {
@@ -690,7 +732,7 @@ describe("recipe detail screen", () => {
       title: "내 김치찌개",
       description: null,
       base_servings: 2,
-      ingredients: [],
+      ingredients: buildEditIngredients(),
       steps: [],
     };
     fetchJson.mockResolvedValue(buildRecipeDetail({
@@ -738,6 +780,7 @@ describe("recipe detail screen", () => {
     expect(document.activeElement).toBe(login);
     expect(useAuthGateStore.getState().action).toEqual({
       type: "recipe-edit-save",
+      sourceOwnerUuid: PROFILE_OWNER_UUID,
       recipeId: MOCK_RECIPE_DETAIL.id,
       redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
       createdAt: expect.any(Number),
@@ -763,7 +806,7 @@ describe("recipe detail screen", () => {
       title: "내 김치찌개",
       description: null,
       base_servings: 2,
-      ingredients: [],
+      ingredients: buildEditIngredients(),
       steps: [],
     };
     fetchJson.mockResolvedValue(buildRecipeDetail({
@@ -798,6 +841,7 @@ describe("recipe detail screen", () => {
     expect(loginGate).toBeTruthy();
     expect(useAuthGateStore.getState().action).toEqual({
       type: "recipe-save-as-new",
+      sourceOwnerUuid: PROFILE_OWNER_UUID,
       recipeId: MOCK_RECIPE_DETAIL.id,
       redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
       createdAt: expect.any(Number),
@@ -841,6 +885,63 @@ describe("recipe detail screen", () => {
 
     expect(await screen.findByRole("button", { name: "편집" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "삭제" })).toBeTruthy();
+    const management = screen.getByRole("region", { name: "레시피 관리" });
+    expect(within(management).getByRole("button", { name: "편집" })).toBeTruthy();
+    expect(within(management).getByRole("button", { name: "삭제" })).toBeTruthy();
+    const footer = screen.getByRole("region", { name: "레시피 주요 작업" });
+    expect(within(footer).getAllByRole("button")).toHaveLength(2);
+    expect(within(footer).queryByRole("button", { name: "삭제" })).toBeNull();
+  });
+
+  it("confirms owner deletion and returns to the prior book instead of showing not-found", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ returnTo: "/mypage/recipe-books/book-1?readerMode=book&readerRecipe=old", returnSurface: "mypage.recipebooks" }));
+    fetchJson.mockResolvedValue(buildRecipeDetail({ edit_context: { base_recipe_revision: 12,
+      draft: { title: "내 김치찌개", description: null, base_servings: 2, ingredients: [], steps: [] }, image_object_id: null } }));
+    deletePersonalRecipe.mockResolvedValue({ id: MOCK_RECIPE_DETAIL.id, revision: 13 });
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    const title = await screen.findByRole("heading", { name: MOCK_RECIPE_DETAIL.title, level: 1 });
+    expect(title.parentElement?.querySelector('[aria-label="레시피 관리"]')).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "삭제" }));
+    const dialog = screen.getByRole("dialog", { name: "정말 레시피를 삭제할까요?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
+    await waitFor(() => expect(mockRouterReplace).toHaveBeenCalled());
+    const destination = new URL(mockRouterReplace.mock.calls.at(-1)![0], "http://localhost");
+    expect(destination.pathname).toBe("/mypage/recipe-books/book-1");
+    expect(destination.searchParams.get("readerMode")).toBe("book");
+    expect(useActionConfirmationStore.getState().message).toBe("레시피를 삭제했어요. 기존 요리계획은 유지돼요.");
+    expect(screen.queryByText("이 레시피를 찾을 수 없어요")).toBeNull();
+  });
+
+  it.each(["public", "private"] as const)("shares only a public canonical URL, not private copies (%s)", async (visibility) => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", { configurable: true, value: share });
+    window.history.replaceState({}, "", "/recipe/source?returnTo=%2Fmypage%2Fprivate-book");
+    fetchJson.mockResolvedValue(buildRecipeDetail({ visibility }));
+    try {
+      render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} initialAuthenticated />);
+      await userEvent.click(await screen.findByRole("button", { name: "공유하기" }));
+      if (visibility === "public") {
+        expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: `${window.location.origin}/recipe/${MOCK_RECIPE_DETAIL.id}` }));
+      } else {
+        expect(share).not.toHaveBeenCalled();
+        expect(screen.getByText("개인 레시피는 나만 볼 수 있어요.")).toBeTruthy();
+      }
+    } finally { Reflect.deleteProperty(navigator, "share"); window.history.replaceState({}, "", "/"); }
+  });
+
+  it("announces where a fork is saved and preserves the source as the return destination", async () => {
+    const draft: RecipeEditDraft = { title: "내 김치찌개", description: null, base_servings: 2, ingredients: buildEditIngredients(), steps: [] };
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    createPersonalRecipeFromSource.mockResolvedValue({ id: "new-personal-recipe", revision: 1 });
+    render(<RecipeDetailScreen initialAuthenticated initialForkContext={{ base_recipe_revision: 12, image_object_id: null, draft }} recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "내 레시피로 수정" }));
+    await userEvent.click(screen.getByRole("button", { name: "내 레시피로 저장" }));
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalled());
+    const destination = new URL(mockRouterPush.mock.calls.at(-1)![0], "http://localhost");
+    expect(destination.pathname).toBe("/recipe/new-personal-recipe");
+    expect(new URL(destination.searchParams.get("returnTo")!, "http://localhost").pathname).toBe(`/recipe/${MOCK_RECIPE_DETAIL.id}`);
+    expect(useActionConfirmationStore.getState().message).toContain("내가 추가한 레시피");
+    expect(useActionConfirmationStore.getState().message).toContain("마이 → 레시피북");
   });
 
   it.each([
@@ -956,13 +1057,13 @@ describe("recipe detail screen", () => {
         image_object_id: null,
       },
     }));
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
         type: "recipe-delete",
         recipeId: MOCK_RECIPE_DETAIL.id,
         redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
-        createdAt: 1,
+        createdAt: Date.now(),
       }),
     );
 
@@ -976,7 +1077,7 @@ describe("recipe detail screen", () => {
 
     const deleteDialog = await screen.findByRole("dialog", { name: "정말 레시피를 삭제할까요?" });
     expect(deletePersonalRecipe).not.toHaveBeenCalled();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
     await act(async () => {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     });
@@ -1057,13 +1158,13 @@ describe("recipe detail screen", () => {
       steps: [],
     };
     fetchJson.mockResolvedValue(buildRecipeDetail({ edit_context: undefined }));
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
         type: "recipe-fork",
         recipeId: MOCK_RECIPE_DETAIL.id,
         redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
-        createdAt: 1,
+        createdAt: Date.now(),
       }),
     );
 
@@ -1082,7 +1183,7 @@ describe("recipe detail screen", () => {
 
     const title = await screen.findByRole("textbox", { name: "레시피 제목" });
     expect((title as HTMLInputElement).value).toBe(forkDraft.title);
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("keeps the public fork editor behind the explicit QA query boundary when server fork context is absent", async () => {
@@ -1737,13 +1838,13 @@ describe("recipe detail screen", () => {
       expect(input).toBe(`/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`);
       return Promise.resolve(detail);
     });
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
         type: "like",
         recipeId: MOCK_RECIPE_DETAIL.id,
         redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
-        createdAt: 1,
+        createdAt: Date.now(),
       }),
     );
 
@@ -1760,7 +1861,7 @@ describe("recipe detail screen", () => {
       await screen.findByText("로그인 완료. 좋아요를 반영했어요."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "좋아요 204" })).toBeTruthy();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("replays the pending like action from the server-authenticated callback state", async () => {
@@ -1778,13 +1879,13 @@ describe("recipe detail screen", () => {
       expect(input).toBe(`/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`);
       return Promise.resolve(detail);
     });
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
         type: "like",
         recipeId: MOCK_RECIPE_DETAIL.id,
         redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
-        createdAt: 1,
+        createdAt: Date.now(),
       }),
     );
 
@@ -1805,7 +1906,7 @@ describe("recipe detail screen", () => {
     expect(
       await screen.findByText("로그인 완료. 좋아요를 반영했어요."),
     ).toBeTruthy();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("opens the save modal with recipe books for authenticated users", async () => {
@@ -2179,13 +2280,13 @@ describe("recipe detail screen", () => {
       return Promise.reject(new Error(`Unexpected request: ${input}`));
     });
 
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
         type: "save",
         recipeId: MOCK_RECIPE_DETAIL.id,
         redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
-        createdAt: 1,
+        createdAt: Date.now(),
       }),
     );
 
@@ -2197,7 +2298,7 @@ describe("recipe detail screen", () => {
     expect(
       screen.getByText("로그인 완료. 저장할 레시피북을 선택해 주세요."),
     ).toBeTruthy();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("replays the pending save action from the server-authenticated callback state", async () => {
@@ -2216,13 +2317,13 @@ describe("recipe detail screen", () => {
       return Promise.reject(new Error(`Unexpected request: ${input}`));
     });
 
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
         type: "save",
         recipeId: MOCK_RECIPE_DETAIL.id,
         redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
-        createdAt: 1,
+        createdAt: Date.now(),
       }),
     );
 
@@ -2236,7 +2337,7 @@ describe("recipe detail screen", () => {
     expect(
       await screen.findByRole("heading", { name: "레시피 저장" }),
     ).toBeTruthy();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("shows OAuth failure feedback from the callback query string", async () => {

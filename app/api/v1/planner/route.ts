@@ -11,7 +11,8 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { resolveAuthorizedRecipeImageUrls } from "@/lib/server/recipe-image-read";
+import { createRecipeImageInternalClient, createRouteHandlerClient } from "@/lib/supabase/server";
 import type { MealStatus, PlannerData, PlannerMealData } from "@/types/planner";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
@@ -48,6 +49,7 @@ interface PlannerMealRow {
 
 interface RecipeRow {
   id: string;
+  created_by: string | null;
   title: string;
   thumbnail_url: string | null;
 }
@@ -306,7 +308,7 @@ export async function GET(request: NextRequest) {
 
   const [recipesResult, shoppingListsResult] = await Promise.all([
     recipeIds.length > 0
-      ? dbClient.from("recipes").select("id, title, thumbnail_url").in("id", recipeIds)
+      ? dbClient.from("recipes").select("id, title, thumbnail_url, created_by").in("id", recipeIds)
       : Promise.resolve({ data: [], error: null }),
     shoppingListIds.length > 0
       ? dbClient.from("shopping_lists").select("id, title").in("id", shoppingListIds)
@@ -315,7 +317,18 @@ export async function GET(request: NextRequest) {
   if (recipesResult.error || !recipesResult.data || shoppingListsResult.error || !shoppingListsResult.data) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
-  recipesResult.data.forEach((recipe) => recipeMap.set(recipe.id, recipe));
+  const imageClient = createRecipeImageInternalClient();
+  try {
+    const imageUrls = imageClient
+      ? await resolveAuthorizedRecipeImageUrls({ client: imageClient, recipes: recipesResult.data })
+      : null;
+    recipesResult.data.forEach((recipe) => recipeMap.set(recipe.id, {
+      ...recipe,
+      thumbnail_url: imageUrls?.get(recipe.id) ?? recipe.thumbnail_url,
+    }));
+  } catch {
+    return fail("INTERNAL_ERROR", "플래너 이미지를 불러오지 못했어요.", 500);
+  }
   shoppingListsResult.data.forEach((shoppingList) => shoppingListMap.set(shoppingList.id, shoppingList));
 
   const responseData: PlannerData = {

@@ -71,7 +71,11 @@ export function getCookedBatchActions(batch: CookedBatchProjection): CookedBatch
   if (batch.batch_status === "depleted") {
     return batch.current_unweighed_closure_event_id ? ["cancel_current"] : [];
   }
-  if (batch.weight_status === "known") return ["adjust", "discard"];
+  if (batch.weight_status === "known") {
+    return batch.weight_source === "estimated" && batch.revision === 1
+      ? ["set_finished_weight", "adjust", "discard"]
+      : ["adjust", "discard"];
+  }
   if (batch.weight_status === "missing") {
     return ["set_finished_weight", "mark_unrecoverable", "close"];
   }

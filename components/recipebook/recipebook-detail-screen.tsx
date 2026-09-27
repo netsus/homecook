@@ -4,7 +4,7 @@ import { showActionConfirmation } from "@/stores/ui-store";
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -85,17 +85,23 @@ function buildRecipeBookDetailHref({
   bookId,
   bookName,
   bookType,
+  readerRecipeId,
+  readerMode,
 }: {
   bookId: string;
   bookName: string;
   bookType: RecipeBookType;
+  readerRecipeId?: string;
+  readerMode?: "book" | "list";
 }) {
   const params = new URLSearchParams({
     type: bookType,
     name: bookName,
   });
+  if (readerRecipeId) params.set("readerRecipe", readerRecipeId);
+  if (readerMode) params.set("readerMode", readerMode);
 
-  return `/mypage/recipe-books/${bookId}?${params.toString()}`;
+  return `/mypage/recipe-books/${bookId}?${params.toString()}${readerRecipeId ? `#recipebook-recipe-${encodeURIComponent(readerRecipeId)}` : ""}`;
 }
 
 function normalizeServings(servings?: number | null) {
@@ -137,6 +143,7 @@ export function RecipeBookDetailScreen({
   initialAuthenticated = false,
 }: RecipeBookDetailScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isMobileViewport = useIsMobileViewport();
   const appReturn = useAppReturn({ fallback: "/mypage" });
   const [authState, setAuthState] = useState<AuthState>(
@@ -165,10 +172,12 @@ export function RecipeBookDetailScreen({
   const [bookDeleteOpen, setBookDeleteOpen] = useState(false);
   const [bookActionError, setBookActionError] = useState<string | null>(null);
   const [isBookActionSaving, setIsBookActionSaving] = useState(false);
-  const [desktopReaderMode, setDesktopReaderMode] = useState<"book" | "list">("book");
+  const [desktopReaderMode, setDesktopReaderMode] = useState<"book" | "list">(() => searchParams.get("readerMode") === "list" ? "list" : "book");
   const [activeDesktopRecipeId, setActiveDesktopRecipeId] = useState<string | null>(
-    null,
+    () => searchParams.get("readerRecipe"),
   );
+  const pendingRestoreRecipeId = useRef(searchParams.get("readerRecipe"));
+  const restoreRequestedCursors = useRef(new Set<string>());
   const [saveTarget, setSaveTarget] = useState<RecipeBookRecipeItem | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalState, setSaveModalState] = useState<SaveModalState>("idle");
@@ -217,7 +226,7 @@ export function RecipeBookDetailScreen({
   }, []);
 
   const buildRecipeDetailReturnHref = useCallback(
-    (recipeId: string) =>
+    (recipeId: string, readerMode = desktopReaderMode) =>
       buildReturnHref(`/recipe/${recipeId}`, {
         restore: "recipebook-tab",
         returnSurface: "mypage.recipebooks",
@@ -225,9 +234,11 @@ export function RecipeBookDetailScreen({
           bookId,
           bookName: currentBookName,
           bookType,
+          readerRecipeId: recipeId,
+          readerMode,
         }),
       }),
-    [bookId, bookType, currentBookName],
+    [bookId, bookType, currentBookName, desktopReaderMode],
   );
   const buildRecipeCookHref = useCallback(
     (item: RecipeBookRecipeItem, readerDetailState?: ReaderDetailState) =>
@@ -605,6 +616,20 @@ export function RecipeBookDetailScreen({
     }
   }, [cursor, isLoadingMore, loadRecipes]);
 
+  useEffect(() => {
+    const recipeId = pendingRestoreRecipeId.current;
+    if (!recipeId || viewState !== "ready") return;
+    if (items.some((item) => item.recipe_id === recipeId)) {
+      pendingRestoreRecipeId.current = null;
+      requestAnimationFrame(() => document.getElementById(`recipebook-recipe-${recipeId}`)?.scrollIntoView?.({ block: "start" }));
+    } else if (!hasNext) {
+      pendingRestoreRecipeId.current = null;
+    } else if (cursor && !isLoadingMore && !restoreRequestedCursors.current.has(cursor)) {
+      restoreRequestedCursors.current.add(cursor);
+      void loadMore();
+    }
+  }, [cursor, hasNext, isLoadingMore, items, loadMore, viewState]);
+
   const handleRemove = useCallback(
     async (recipeId: string) => {
       if (removingId) return;
@@ -930,6 +955,7 @@ export function RecipeBookDetailScreen({
   }, [hasNext, loadMore]);
 
   useEffect(() => {
+    if (viewState === "loading") return;
     if (items.length === 0) {
       setActiveDesktopRecipeId(null);
       return;
@@ -940,9 +966,9 @@ export function RecipeBookDetailScreen({
         return current;
       }
 
-      return items[0]?.recipe_id ?? null;
+      return pendingRestoreRecipeId.current && hasNext ? current : items[0]?.recipe_id ?? null;
     });
-  }, [items]);
+  }, [hasNext, items, viewState]);
 
   useEffect(() => {
     if (authState !== "authenticated" || viewState !== "ready") return;
@@ -1937,7 +1963,7 @@ function MobileRecipeBookDetailView({
     item: RecipeBookRecipeItem,
     readerDetailState?: ReaderDetailState,
   ) => string;
-  buildRecipeHref: (recipeId: string) => string;
+  buildRecipeHref: (recipeId: string, readerMode?: "book" | "list") => string;
   bookMenuOpen: boolean;
   bookName: string;
   bookRenameOpen: boolean;
@@ -1966,8 +1992,9 @@ function MobileRecipeBookDetailView({
   scrollSentinelRef: React.RefObject<HTMLDivElement | null>;
   toast: { message: string; tone: "success" | "error" } | null;
 }) {
-  const [activeRecipeId, setActiveRecipeId] = useState(items[0]?.recipe_id ?? null);
-  const [readerMode, setReaderMode] = useState<"book" | "list">("book");
+  const searchParams = useSearchParams();
+  const [activeRecipeId, setActiveRecipeId] = useState(() => searchParams.get("readerRecipe") ?? items[0]?.recipe_id ?? null);
+  const [readerMode, setReaderMode] = useState<"book" | "list">(() => searchParams.get("readerMode") === "list" ? "list" : "book");
   const [isTocOpen, setIsTocOpen] = useState(false);
   const activeIndex = Math.max(
     0,
@@ -1980,10 +2007,10 @@ function MobileRecipeBookDetailView({
   const visibleItems = readerMode === "list" ? items : activeItem ? [activeItem] : [];
 
   useEffect(() => {
-    if (!items.some((item) => item.recipe_id === activeRecipeId)) {
+    if (!hasNext && !items.some((item) => item.recipe_id === activeRecipeId)) {
       setActiveRecipeId(items[0]?.recipe_id ?? null);
     }
-  }, [activeRecipeId, items]);
+  }, [activeRecipeId, hasNext, items]);
 
   const handleModeChange = useCallback((mode: "book" | "list") => {
     setReaderMode(mode);
@@ -2068,7 +2095,7 @@ function MobileRecipeBookDetailView({
                 item={item}
                 key={item.recipe_id}
                 pageNumber={itemIndex + 1}
-                recipeHref={buildRecipeHref(item.recipe_id)}
+                recipeHref={buildRecipeHref(item.recipe_id, "list")}
               />
             ) : (
               <MobileRecipeBookRecipeCard
@@ -2081,6 +2108,7 @@ function MobileRecipeBookDetailView({
                 pageNumber={itemIndex + 1}
                 pageCount={items.length}
                 recipeHref={buildRecipeCookHref(item, readerDetailState)}
+                recipeDetailHref={buildRecipeHref(item.recipe_id, "book")}
                 readerDetailState={readerDetailState}
                 removeLabel={removeLabel}
                 removing={removingId === item.recipe_id}
@@ -2374,6 +2402,7 @@ function MobileRecipeBookRecipeCard({
   pageNumber,
   pageCount,
   recipeHref,
+  recipeDetailHref,
   readerDetailState,
   onRemove,
   onPreviousRecipe,
@@ -2387,6 +2416,7 @@ function MobileRecipeBookRecipeCard({
   onPreviousRecipe?: () => void;
   pageCount?: number;
   readerDetailState?: ReaderDetailState;
+  recipeDetailHref: string;
 }) {
   const imageSrc = getRecipeBookItemImage(item);
   const metaItems = [
@@ -2439,6 +2469,9 @@ function MobileRecipeBookRecipeCard({
               </span>
             ))}
           </div>
+          <Link className="mt-3 inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] px-4 text-sm font-bold text-[var(--brand)]" href={recipeDetailHref}>
+            레시피 상세
+          </Link>
         </div>
         <div
           className="mobile-recipebook-note-stack grid grid-cols-1 gap-3"
@@ -2542,6 +2575,7 @@ function MobileRecipeBookListCard({
     <article
       className="mobile-recipebook-list-card rounded-[22px]"
       data-testid={`recipebook-mobile-list-card-${item.recipe_id}`}
+      id={`recipebook-recipe-${item.recipe_id}`}
     >
       <Link className="grid grid-cols-[86px_minmax(0,1fr)] gap-3 p-3" href={recipeHref}>
         <Image
@@ -2919,6 +2953,7 @@ function DesktopRecipeBookReader({
                 pageNumber={activeIndex + 1}
                 readerDetailState={activeReaderDetailState}
                 recipeHref={activeRecipeCookHref}
+                recipeDetailHref={buildRecipeHref(activeItem.recipe_id)}
                 removeLabel={removeLabel}
                 removing={removingId === activeItem.recipe_id}
               />
@@ -3006,6 +3041,7 @@ function DesktopRecipeBookRecipePage({
   pageNumber,
   readerDetailState,
   recipeHref,
+  recipeDetailHref,
   removeLabel,
   removing,
   onSave,
@@ -3022,6 +3058,7 @@ function DesktopRecipeBookRecipePage({
   | "removing"
 > & {
   readerDetailState?: ReaderDetailState;
+  recipeDetailHref: string;
 }) {
   const pageLabel = pageNumber ?? 1;
   const metaItems = [
@@ -3072,6 +3109,9 @@ function DesktopRecipeBookRecipePage({
               ))}
             </div>
           </div>
+          <Link className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] px-4 text-sm font-bold text-[var(--brand)]" href={recipeDetailHref}>
+            레시피 상세
+          </Link>
         </div>
         <div className="web-recipebook-recipe-columns">
           <section className="web-recipebook-note-section">

@@ -332,6 +332,31 @@ describe("supabase server helpers", () => {
     expect(refreshSession).toHaveBeenCalledTimes(0);
   });
 
+  it.each([
+    { status: 500, error: { code: "XX000", message: "temporary database failure" }, code: "ACCOUNT_LIFECYCLE_MAINTENANCE", publicStatus: 503 },
+    { status: 502, error: { code: "BAD_GATEWAY", message: "upstream unavailable" }, code: "ACCOUNT_LIFECYCLE_MAINTENANCE", publicStatus: 503 },
+    { status: 503, error: { code: "PGRST003", message: "Timed out acquiring connection" }, code: "ACCOUNT_LIFECYCLE_MAINTENANCE", publicStatus: 503 },
+    { status: 504, error: { message: "upstream timeout" }, code: "ACCOUNT_LIFECYCLE_MAINTENANCE", publicStatus: 503 },
+    { status: 500, error: { code: "ACCOUNT_SESSION_STALE", message: "rejected" }, code: "ACCOUNT_SESSION_STALE", publicStatus: 409 },
+    { status: 503, error: { code: "55000", message: "ACCOUNT_SESSION_STALE" }, code: "ACCOUNT_SESSION_STALE", publicStatus: 409 },
+    { status: 500, error: { code: "", message: "TypeError: fetch failed", details: "HOMECOOK_SESSION_AUTHORITY_REASON::revoked" }, code: "ACCOUNT_SESSION_STALE", publicStatus: 409, reason: "revoked" },
+    { status: 403, error: { code: "42501", message: "permission denied" }, code: "ACCOUNT_SESSION_STALE", publicStatus: 409 },
+  ])("classifies session authority RPC $status as $publicStatus without losing explicit denial", async ({ status, error, code, publicStatus, reason }) => {
+    getServiceRoleKey.mockReturnValue("local-service-secret");
+    const rpc = vi.fn().mockResolvedValue({ error, status });
+    createServerClient.mockReturnValue({ auth: { getSession: vi.fn() } });
+    createClient.mockReturnValue({ rpc, from: vi.fn(), storage: {} });
+    const server = await import("@/lib/supabase/server");
+    await server.createRouteHandlerClient();
+    const assertion = createHybridAuthorityFetch.mock.calls.at(-1)?.[0].assertSessionAuthority;
+    await expect(assertion({
+      authCutoverEpoch: 1, sessionIssuedAt: "2026-09-27T00:00:00Z", sessionId: "session",
+      accessTokenExpiresAt: "2026-09-27T01:00:00Z", lastTokenIssuedAt: "2026-09-27T00:00:00Z", verifiedAt: "2026-09-27T00:00:00Z",
+      binding: { owner_uuid: "owner", issuer: "local", identity_created_at: "2026-09-01T00:00:00Z", session_key_hash: "a".repeat(64), hmac_key_version: 1, binding_expires_at: "2026-09-27T01:00:00Z" },
+    })).rejects.toMatchObject({ publicCode: code, publicStatus, ...(reason ? { internalReason: reason } : {}) });
+    expect(rpc).toHaveBeenCalledWith("assert_and_renew_full_local_session_authority_v2", expect.objectContaining({ p_auth_cutover_epoch: 1 }));
+  });
+
   it("binds each local internal responsibility to an exact gateway scope", async () => {
     getSupabaseEnv.mockReturnValue({
       url: "http://127.0.0.1:8000",
@@ -362,6 +387,7 @@ describe("supabase server helpers", () => {
     const recipeMealWeightClient =
       server.createRecipeMealWeightReadInternalClient();
     const recipeSaveClient = server.createRecipeSaveInternalClient();
+    const recipeViewClient = server.createRecipeViewInternalClient();
     const snapshotV2SessionClient =
       server.createSnapshotV2SessionInternalClient();
     const futureMealClient = server.createFutureMealWriteInternalClient();
@@ -387,6 +413,7 @@ describe("supabase server helpers", () => {
       "recipe-future-propagation",
       "recipe-meal-weight",
       "recipe-save",
+      "recipe-view",
       "snapshot-v2-session",
       "future-meal-write",
       "shopping-create",
@@ -415,6 +442,7 @@ describe("supabase server helpers", () => {
       "Internal Data scope denied table: recipes",
     );
     expect(recipeSaveClient).toEqual({ rpc: expect.any(Function) });
+    expect(recipeViewClient).toEqual({ increment: expect.any(Function) });
     expect(snapshotV2SessionClient).toEqual({ rpc: expect.any(Function) });
     expect(futureMealClient).toEqual({ rpc: expect.any(Function) });
     expect(shoppingCreateClient).toEqual({ rpc: expect.any(Function) });

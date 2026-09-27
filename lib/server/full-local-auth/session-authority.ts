@@ -3,6 +3,7 @@ import {
   validateRemoteJwtClaims,
 } from "@/lib/server/hybrid-auth/jwt-guard";
 import { createSessionLivenessBinding } from "@/lib/server/hybrid-auth/session-authority";
+import { isSessionAuthorityTransportFailure } from "@/lib/server/hybrid-auth/gateway";
 import type {
   AccountGenerationBootstrapSessionAuthority,
 } from "@/lib/server/account-generation/session-authority";
@@ -77,6 +78,9 @@ function isLocalControl(value: unknown): value is LocalControl {
 export async function readFullLocalSessionControl(client: RpcClient) {
   try {
     const result = await client.rpc("read_full_local_auth_control", {});
+    if (isSessionAuthorityTransportFailure(result.error)) {
+      return { ok: false as const, reason: "maintenance" as const };
+    }
     return result.error || !isLocalControl(result.data)
       ? { ok: false as const, reason: "stale" as const }
       : { ok: true as const, control: result.data };

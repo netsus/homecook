@@ -938,6 +938,8 @@ esac
         "vitest",
         "run",
         INTEGRATION_TEST,
+        ...(process.env.HOMECOOK_RECIPE_SNAPSHOT_BASE_TEST_NAME_PATTERN
+          ? ["-t", process.env.HOMECOOK_RECIPE_SNAPSHOT_BASE_TEST_NAME_PATTERN] : []),
         "--pool=forks",
         "--maxWorkers=1",
         `--testTimeout=${TEST_TIMEOUT_MS}`,
@@ -1011,6 +1013,8 @@ esac
             "vitest",
             "run",
             FOLLOWUP_INTEGRATION_TEST,
+            ...(process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TEST_NAME_PATTERN
+              ? ["-t", process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TEST_NAME_PATTERN] : []),
             "--pool=forks",
             "--maxWorkers=1",
             `--testTimeout=${TEST_TIMEOUT_MS}`,
@@ -1089,7 +1093,9 @@ if (!postgresBin) {
 await runMode(postgresBin, "fresh");
 const freshFailed = Boolean(process.exitCode && process.exitCode !== 0);
 process.exitCode = 0;
-await runMode(postgresBin, "replay");
+if (process.env.HOMECOOK_RECIPE_SNAPSHOT_FRESH_ONLY !== "1") {
+  await runMode(postgresBin, "replay");
+}
 const replayFailed = Boolean(process.exitCode && process.exitCode !== 0);
 if (freshFailed || replayFailed) {
   process.exit(1);

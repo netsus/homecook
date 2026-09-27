@@ -4,6 +4,7 @@ const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: () => null,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,

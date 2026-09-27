@@ -9,6 +9,7 @@ const formatBootstrapErrorMessage = vi.fn((_error: unknown, fallbackMessage: str
 );
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: () => null,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));

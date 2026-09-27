@@ -83,7 +83,6 @@ describe("cooked batch completion replay", () => {
     render(<SnapshotV2CookModeScreen initialAuthenticated sessionId={snapshot.session_id} />);
 
     await user.click(await screen.findByRole("button", { name: "요리 완료" }));
-    await user.click(screen.getByRole("radio", { name: "나중에 입력" }));
     const save = screen.getByRole("button", { name: "완료 저장" });
     await user.dblClick(save);
 

@@ -23,7 +23,7 @@ test.describe("Slice 01 basic flow", () => {
   }) => {
     await page.goto("/");
 
-    const searchInput = page.locator('input[placeholder="레시피 제목 검색"]:visible').first();
+    const searchInput = page.locator('input[placeholder="제목·재료 검색"]:visible').first();
     await expect(searchInput).toBeVisible();
     await expect(
       page.locator('a[href="/recipe/mock-kimchi-jjigae"]:visible').first(),

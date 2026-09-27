@@ -15,6 +15,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: () => null,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -452,7 +453,7 @@ describe("17b recipebook detail backend", () => {
       },
     ]);
     expect(recipesTable.select).toHaveBeenCalledWith(
-      "id, title, thumbnail_url, tags, view_count, base_servings, created_at",
+      "id, title, thumbnail_url, created_by, tags, view_count, base_servings, created_at",
     );
     expect(recipesTable.__query.eq).toHaveBeenCalledWith("created_by", "user-1");
     expect(recipesTable.__query.in).toHaveBeenCalledWith("source_type", ["youtube", "manual"]);

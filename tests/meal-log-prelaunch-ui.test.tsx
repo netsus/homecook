@@ -135,20 +135,24 @@ describe("prelaunch meal log presentation", () => {
     expect(screen.getByRole("button", { name: /식사 기록 상세/ }).closest("details")).toBeNull();
     const edit = screen.getByRole("button", { name: /식사 기록 상세/ });
     await user.click(edit);
-    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "취소" }));
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록으로 돌아가기" }));
     await waitFor(() => expect(document.activeElement).toBe(edit));
   });
   it("keeps cooked food editing in grams and sends entered grams unchanged", async () => {
     render(<MealLogScreen {...props} />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /식사 기록 상세/ }));
-    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog");
-    expect((within(dialog).getByRole("textbox", { name: "단위" }) as HTMLInputElement).readOnly).toBe(true);
-    await user.clear(within(dialog).getByRole("spinbutton", { name: "실제 양" }));
-    await user.type(within(dialog).getByRole("spinbutton", { name: "실제 양" }), "80.5");
-    await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
+    const dialog = screen.getByRole("dialog", { name: "식사 기록 상세" });
+    expect(within(dialog).getByText("g", { exact: true })).toBeTruthy();
+    const input = within(dialog).getByRole<HTMLInputElement>("textbox", { name: "먹은 양" });
+    const save = within(dialog).getByRole<HTMLButtonElement>("button", { name: "먹은 양 수정" });
+    await user.clear(input);
+    expect(input.value).toBe(""); expect(save.disabled).toBe(true);
+    await user.type(input, "0"); expect(save.disabled).toBe(true);
+    await user.clear(input); await user.type(input, "80.");
+    expect(input.value).toBe("80.");
+    await user.type(input, "5");
+    await user.click(save);
     await waitFor(() => expect(api.update).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ quantity: { amount: 80.5, unit: "g" } }), expect.any(String)));
   });
   it("shows public sample data without private requests and gates every mutation", async () => {
@@ -206,7 +210,7 @@ describe("prelaunch meal log presentation", () => {
     await userEvent.setup().click(await screen.findByRole("button",{name:/식사 기록 상세/}));
     const detail = screen.getByRole("dialog", { name: "식사 기록 상세" });
     expect(detail.className).toContain("fixed inset-0");
-    expect(within(detail).getByRole("button", { name: "식사 기록 수정" })).toBeTruthy();
+    expect(within(detail).getByRole("button", { name: "먹은 양 수정" })).toBeTruthy();
     expect(screen.queryByText(/나트륨/)).toBeNull();
     expect(api.update).not.toHaveBeenCalled();
   });
@@ -216,7 +220,7 @@ describe("prelaunch meal log presentation", () => {
     const draft = { version: 1, action: "edit", date: "2026-09-07", entryId: "10000000-0000-4000-8000-000000000001", invoker: "entry-edit", draft: { amount: 80, unit: "g", columnId: "20000000-0000-4000-8000-000000000001" } };
     sessionStorage.setItem("homecook.meal-log-return-context.v1", JSON.stringify(draft));
     render(<MealLogScreen {...props} />);
-    expect((await screen.findByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("80");
+    expect((await screen.findByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("80");
     expect((screen.getByRole("textbox", { name: "단위" }) as HTMLInputElement).value).toBe("g");
     expect(sessionStorage.getItem("homecook.meal-log-return-context.v1")).toBeNull();
     expect(api.update).not.toHaveBeenCalled();

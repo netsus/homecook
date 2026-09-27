@@ -21,6 +21,7 @@ import {
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
 import { E2E_AUTH_OVERRIDE_KEY } from "@/lib/auth/e2e-auth-override";
 import { formatCount } from "@/lib/recipe";
+import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
@@ -256,6 +257,7 @@ function ruleBody(selector: string) {
 
 describe("home screen", () => {
   beforeEach(() => {
+    useRecipeViewCountStore.setState({ counts: {} });
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [] });
     useAuthGateStore.setState({ action: null, isOpen: false });
     fetchJson.mockReset();
@@ -318,8 +320,8 @@ describe("home screen", () => {
       "/brand/mumeok-logo-horizontal.png",
     );
     expect(mobileBrand.textContent).toBe("");
-    expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
-    expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+    expect(screen.getByText("레시피 제목이나 재료로 검색해 보세요.")).toBeTruthy();
+    expect(screen.getByPlaceholderText("제목·재료 검색")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
@@ -470,11 +472,11 @@ describe("home screen", () => {
     expect(ruleBody(".web-home-aside-top")).toContain("margin-top: 0;");
   });
 
-  it("keeps the mobile search controls sticky under the app bar", () => {
+  it("keeps search at the viewport top after the app bar scrolls away", () => {
     const searchRule = ruleBody(".home-mobile-discovery-search");
 
     expect(searchRule).toContain("position: sticky;");
-    expect(searchRule).toContain("top: var(--control-height-xl);");
+    expect(searchRule).toContain("top: 0;");
     expect(searchRule).toContain("z-index: 19;");
     expect(searchRule).toContain("background: var(--surface);");
     expect(searchRule).toContain("padding: 10px 20px 8px;");
@@ -506,7 +508,7 @@ describe("home screen", () => {
 
     const { container } = render(<HomeScreen />);
 
-    const searchInput = await screen.findByPlaceholderText("레시피 제목 검색");
+    const searchInput = await screen.findByPlaceholderText("제목·재료 검색");
     const tagButton = await screen.findByRole("button", { name: "국물요리" });
     const searchBlock = searchInput.closest(".home-mobile-discovery-search");
     const tagRail = tagButton.closest(".home-mobile-tag-rail");
@@ -862,7 +864,7 @@ describe("home screen", () => {
         name: "무먹, 무엇을 먹든",
       }),
     ).toBeTruthy();
-    expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+    expect(screen.getByPlaceholderText("제목·재료 검색")).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: /재료로 검색/ }),
     ).toHaveLength(1);
@@ -1074,7 +1076,7 @@ describe("home screen", () => {
 
     render(<HomeScreen />);
 
-    await user.type(await screen.findByPlaceholderText("레시피 제목 검색"), "김치");
+    await user.type(await screen.findByPlaceholderText("제목·재료 검색"), "김치");
 
     expect(screen.queryByRole("navigation", { name: "홈 빠른 이동" })).toBeNull();
     expect(screen.queryByRole("heading", { level: 2, name: "무먹 둘러보기" })).toBeNull();
@@ -1202,6 +1204,34 @@ describe("home screen", () => {
     );
   });
 
+  it("starts a fresh ingredient search when applying the modal after a text search", async () => {
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    await user.type(await screen.findByPlaceholderText("제목·재료 검색"), "돼지고기");
+    await waitFor(() => expect(fetchJson.mock.calls.some(([input]) => {
+      if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) return false;
+      return new URL(input, "http://localhost:3000").searchParams.get("q") === "돼지고기";
+    })).toBe(true));
+    await user.click(screen.getByRole("button", { name: /재료로 검색/ }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+    fetchJson.mockClear();
+    await user.click(screen.getByRole("button", { name: "1개 적용" }));
+
+    expect(screen.getByPlaceholderText("제목·재료 검색")).toHaveProperty("value", "");
+    await waitFor(() => {
+      const recipeRequests = fetchJson.mock.calls
+        .map(([input]) => input)
+        .filter((input): input is string => typeof input === "string" && input.startsWith("/api/v1/recipes?"))
+        .map((input) => new URL(input, "http://localhost:3000"));
+      expect(recipeRequests.length).toBeGreaterThan(0);
+      for (const request of recipeRequests) {
+        expect(request.searchParams.get("ingredient_ids")).toBe(ONION_ID);
+        expect(request.searchParams.has("q")).toBe(false);
+      }
+    });
+  });
+
   it("keeps draft ingredients across parent rerenders and resets them after close and reopen", async () => {
     const user = userEvent.setup();
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [ONION_ID] });
@@ -1287,14 +1317,19 @@ describe("home screen", () => {
     expect(onionOption?.className).toContain("web-ingredient-option-active");
   });
 
-  it("updates the visible app recipe card view count when the recipe is opened", async () => {
+  it("keeps server-confirmed view counts on return without guessing an increment", async () => {
     const user = userEvent.setup();
 
-    render(<HomeScreen />);
+    const initialCount = 40;
+    const baseFetch = fetchJson.getMockImplementation()!;
+    fetchJson.mockImplementation((input: string, ...args: unknown[]) => input.startsWith("/api/v1/recipes?")
+      ? Promise.resolve({ items: [{ ...MOCK_RECIPE_CARD, view_count: initialCount }], next_cursor: null, has_next: false })
+      : baseFetch(input, ...args));
+    const view = render(<HomeScreen />);
 
     await screen.findByRole("heading", { name: MOCK_RECIPE_CARD.title });
     expect(
-      screen.getByText(`조회 ${formatCount(MOCK_RECIPE_CARD.view_count)}`),
+      screen.getByText(`조회 ${formatCount(initialCount)}`),
     ).toBeTruthy();
 
     const recipeLinks = screen.getAllByRole("link", {
@@ -1303,9 +1338,13 @@ describe("home screen", () => {
     recipeLinks[0]!.addEventListener("click", (event) => event.preventDefault());
     await user.click(recipeLinks[0]!);
 
-    expect(
-      screen.getByText(`조회 ${formatCount(MOCK_RECIPE_CARD.view_count + 1)}`),
-    ).toBeTruthy();
+    expect(screen.getByText(`조회 ${formatCount(initialCount)}`)).toBeTruthy();
+    act(() => useRecipeViewCountStore.getState().record(MOCK_RECIPE_CARD.id, initialCount + 1));
+    expect(screen.getByText(`조회 ${formatCount(initialCount + 1)}`)).toBeTruthy();
+    view.unmount();
+    render(<HomeScreen />);
+    await screen.findByRole("heading", { name: MOCK_RECIPE_CARD.title });
+    expect(screen.getByText(`조회 ${formatCount(initialCount + 1)}`)).toBeTruthy();
   });
 
   it("clears the theme filter when the active theme card is tapped again", async () => {
@@ -1454,7 +1493,7 @@ describe("home screen", () => {
 
     render(<HomeScreen />);
 
-    const searchInput = await screen.findByPlaceholderText("레시피 제목 검색");
+    const searchInput = await screen.findByPlaceholderText("제목·재료 검색");
 
     await waitFor(() => {
       expect(
@@ -1592,6 +1631,9 @@ describe("home screen", () => {
       screen.getByText("다른 키워드나 재료 조합으로 다시 찾아보세요."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "초기화" })).toBeTruthy();
+    const emptyState = within(screen.getByTestId("home-search-empty-state"));
+    expect(emptyState.getByRole("link", { name: "레시피 직접 등록" }).getAttribute("href")).toBe("/menu/add/manual");
+    expect(emptyState.getByRole("link", { name: "유튜브로 가져오기" }).getAttribute("href")).toBe("/recipes/new/youtube");
     expect(screen.getByTestId("home-search-empty-state").className).toContain(
       "home-search-empty-state",
     );
@@ -1627,6 +1669,9 @@ describe("home screen", () => {
       await screen.findByRole("heading", { name: "조건에 맞는 레시피가 없어요" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "초기화" })).toBeTruthy();
+    const emptyState = within(screen.getByTestId("home-search-empty-state"));
+    expect(emptyState.getByRole("link", { name: "레시피 직접 등록" }).getAttribute("href")).toBe("/menu/add/manual");
+    expect(emptyState.getByRole("link", { name: "유튜브로 가져오기" }).getAttribute("href")).toBe("/recipes/new/youtube");
     expect(screen.getByTestId("home-search-empty-state").className).toContain(
       "home-search-empty-state",
     );
@@ -1824,7 +1869,7 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     await user.type(
-      await screen.findByPlaceholderText("레시피 제목 검색"),
+      await screen.findByPlaceholderText("제목·재료 검색"),
       "김치",
     );
 
@@ -1847,7 +1892,7 @@ describe("home screen", () => {
 
     await user.click(screen.getAllByRole("button", { name: "초기화" })[0]!);
 
-    expect(screen.getByPlaceholderText("레시피 제목 검색")).toHaveProperty(
+    expect(screen.getByPlaceholderText("제목·재료 검색")).toHaveProperty(
       "value",
       "김치",
     );
@@ -1874,7 +1919,7 @@ describe("home screen", () => {
   it("positions the ingredient filter action under the mobile search field", async () => {
     render(<HomeScreen />);
 
-    const searchInput = await screen.findByPlaceholderText("레시피 제목 검색");
+    const searchInput = await screen.findByPlaceholderText("제목·재료 검색");
     const moreButton = screen.getByRole("button", { name: /재료로 검색/ });
     const searchBlock = searchInput.closest(".home-mobile-discovery-search");
 
@@ -1887,7 +1932,7 @@ describe("home screen", () => {
     window.localStorage.setItem(E2E_AUTH_OVERRIDE_KEY, "authenticated");
     mockAuthedProfileFetch();
     render(<HomeScreen />);
-    await screen.findByPlaceholderText("레시피 제목 검색");
+    await screen.findByPlaceholderText("제목·재료 검색");
     expect(screen.queryByTestId("mobile-profile-summary-button")).toBeNull();
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
   });

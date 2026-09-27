@@ -1,5 +1,6 @@
 "use client";
 
+import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import { showActionConfirmation } from "@/stores/ui-store";
 
 import Link from "next/link";
@@ -13,6 +14,7 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { PersonalRecipeDeleteDialog } from "@/components/recipe/personal-recipe-delete-dialog";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
+import { ManualRecipePublishAction } from "@/components/recipe/manual-recipe-publish-action";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
 import { RecipeDetailPersonalEditor } from "@/components/recipe/recipe-detail-personal-editor";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
@@ -49,7 +51,7 @@ import {
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchUserProfile } from "@/lib/api/mypage";
-import { createSnapshotV2CookingSession } from "@/lib/api/cooking";
+import { createSnapshotV2CookingSession, isCookingApiError } from "@/lib/api/cooking";
 import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
@@ -266,6 +268,7 @@ export function RecipeDetailScreen({
         setDetailState("error");
         return;
       }
+      useRecipeViewCountStore.getState().record(data.id, data.view_count);
       setRecipe(data);
       setDetailState("ready");
     } catch (error) {
@@ -1019,15 +1022,16 @@ export function RecipeDetailScreen({
     openAuthGate({ recipeId, type: "recipe-delete" });
   }, [openAuthGate, recipeId]);
 
-  const showDeletedRecipeFallback = useCallback(() => {
+  const returnAfterPersonalRecipeDeletion = useCallback((alreadyRemoved = false) => {
     deleteKeyRef.current = null;
     setDeletePersonalRecipeError(null);
     setIsDeleteDialogOpen(false);
-    setRecipe(null);
-    setDetailErrorKind("not-found");
-    setDetailState("error");
-    router.refresh();
-  }, [router]);
+    const returnPath = new URL(appReturn.href, "http://homecook.local");
+    const destination = returnPath.pathname === `/recipe/${recipeId}`
+      ? "/mypage?tab=recipebooks" : appReturn.href;
+    showActionConfirmation(alreadyRemoved ? "이미 삭제된 레시피예요." : "레시피를 삭제했어요. 기존 요리계획은 유지돼요.");
+    router.replace(destination);
+  }, [appReturn.href, recipeId, router]);
 
   const handleDeletePersonalRecipe = useCallback(async () => {
     if (isDeletingPersonalRecipe) {
@@ -1041,7 +1045,7 @@ export function RecipeDetailScreen({
 
     try {
       await deletePersonalRecipe(recipeId, idempotencyKey);
-      showDeletedRecipeFallback();
+      returnAfterPersonalRecipeDeletion();
     } catch (error) {
       if (
         isPersonalRecipeApiError(error)
@@ -1052,7 +1056,7 @@ export function RecipeDetailScreen({
       }
 
       if (isPersonalRecipeApiError(error) && error.status === 404) {
-        showDeletedRecipeFallback();
+        returnAfterPersonalRecipeDeletion(true);
         return;
       }
 
@@ -1066,7 +1070,7 @@ export function RecipeDetailScreen({
     isDeletingPersonalRecipe,
     openDeletePersonalRecipeLoginGate,
     recipeId,
-    showDeletedRecipeFallback,
+    returnAfterPersonalRecipeDeletion,
   ]);
 
   const qaFutureImpactEditContext = useMemo(() => (
@@ -1275,7 +1279,11 @@ export function RecipeDetailScreen({
       return;
     }
 
-    const url = window.location.href;
+    if (recipe.visibility === "private" || (!recipe.visibility && activePersonalEditContext)) {
+      setFeedback({ message: "개인 레시피는 나만 볼 수 있어요.", tone: "status" });
+      return;
+    }
+    const url = `${window.location.origin}/recipe/${encodeURIComponent(recipeId)}`;
 
     try {
       if (navigator.share) {
@@ -1387,10 +1395,12 @@ export function RecipeDetailScreen({
         returnSurface: "recipe.detail",
         returnTo: recipeDetailReturnHref,
       }));
-    } catch {
+    } catch (error) {
+      setFeedback({ message: isCookingApiError(error) ? error.message : "요리를 시작하지 못했어요. 다시 시도해 주세요.", tone: "error" });
+    } finally {
+      // This page may be preserved when returning from cook mode.
       snapshotStartLatchRef.current = false;
       setSnapshotStartState("idle");
-      setFeedback({ message: "요리 세션을 만들지 못했어요. 다시 시도해 주세요.", tone: "error" });
     }
   }
   const shouldRenderWebView = isDesktopViewport;
@@ -1434,6 +1444,7 @@ export function RecipeDetailScreen({
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
             personalRecipeAccessState={personalRecipeAccessState}
+            onPublished={() => void loadRecipe()}
             personalRecipeCapabilityEnabled={personalRecipeCapabilityEnabled}
             onDeletePersonalRecipe={openDeletePersonalRecipeDialog}
             onEditPersonalRecipe={openPersonalEditor}
@@ -1783,7 +1794,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="min-h-screen bg-[var(--surface)] pb-[190px] text-[var(--foreground)] lg:hidden">
+      <div className="min-h-screen bg-[var(--surface)] pb-[calc(160px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
         <section
           className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden md:max-h-[460px]"
           data-testid="recipe-detail-hero"
@@ -1869,6 +1880,14 @@ export function RecipeDetailScreen({
           <h1 className="mb-2.5 text-[24px] font-bold leading-tight text-[var(--foreground)]">
             {recipe.title}
           </h1>
+          {personalRecipeCapabilityEnabled && personalRecipeAccessState === "owner-private" ? (
+            <section aria-label="레시피 관리" className="mb-4 space-y-2">
+              <Link className="inline-flex min-h-10 items-center text-sm text-[var(--brand)] underline underline-offset-4" href="/mypage?tab=recipebooks">마이 · 내가 추가한 레시피</Link>
+              <span className="ml-2 inline-flex rounded-full bg-[var(--surface-fill)] px-2 py-1 text-xs text-[var(--text-2)]">{recipe.visibility === "public" ? "공개 레시피" : "나만 보는 레시피"}</span>
+              <RecipeDetailPersonalActions accessState={personalRecipeAccessState} capabilityEnabled={personalRecipeCapabilityEnabled} isAuthenticated={isAuthenticated} onDelete={openDeletePersonalRecipeDialog} onEdit={openPersonalEditor} onFork={handlePersonalForkAction} />
+              {recipe.visibility === "private" && recipe.source_type === "manual" && recipe.origin_recipe_id === null ? <ManualRecipePublishAction recipeId={recipe.id} onPublished={() => void loadRecipe()} /> : null}
+            </section>
+          ) : null}
           {displayTags.length > 0 ? (
             <div className="mb-3 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
               {youtubeSourceHref ? (
@@ -2116,6 +2135,18 @@ export function RecipeDetailScreen({
             </div>
           </section>
         ) : null}
+        {personalRecipeCapabilityEnabled && personalRecipeAccessState === "public" ? (
+          <section aria-label="레시피 관리" className="border-t border-[var(--line)] bg-[var(--surface)] p-5">
+            <RecipeDetailPersonalActions
+              accessState={personalRecipeAccessState}
+              capabilityEnabled={personalRecipeCapabilityEnabled}
+              isAuthenticated={isAuthenticated}
+              onDelete={openDeletePersonalRecipeDialog}
+              onEdit={openPersonalEditor}
+              onFork={handlePersonalForkAction}
+            />
+          </section>
+        ) : null}
       </div>
       ) : null}
       {shouldRenderWebView ? (
@@ -2136,7 +2167,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(82px+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
+      <div aria-label="레시피 주요 작업" className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(82px+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden" role="region">
         <div className="flex gap-2">
           <button
             className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand-primary-accessible)] px-3 text-[15px] font-bold [color:var(--text-inverse)]"
@@ -2155,14 +2186,6 @@ export function RecipeDetailScreen({
             {cookActionLabel}
           </button>
         </div>
-        <RecipeDetailPersonalActions
-          accessState={personalRecipeAccessState}
-          capabilityEnabled={personalRecipeCapabilityEnabled}
-          isAuthenticated={isAuthenticated}
-          onDelete={openDeletePersonalRecipeDialog}
-          onEdit={openPersonalEditor}
-          onFork={handlePersonalForkAction}
-        />
       </div>
       ) : null}
       {shouldRenderAppView ? (
@@ -2278,7 +2301,11 @@ export function RecipeDetailScreen({
             setPersonalEditResumeContext(null);
             setPersonalEditResumeAction(null);
             if (result.id !== recipeId) {
-              router.push(`/recipe/${result.id}`);
+              showActionConfirmation("‘내가 추가한 레시피’에 저장했어요. 마이 → 레시피북에서 다시 볼 수 있어요.");
+              router.push(buildReturnHref(`/recipe/${result.id}`, {
+                returnSurface: "recipe.detail",
+                returnTo: recipeDetailReturnHref,
+              }));
               return;
             }
             void loadRecipe();
@@ -2307,6 +2334,7 @@ function RecipeDetailWebView({
   onForkPersonalRecipe,
   onOpenLightbox,
   personalRecipeAccessState,
+  onPublished,
   personalRecipeCapabilityEnabled,
   onProtectedAction,
   onRetryNutrition,
@@ -2332,6 +2360,7 @@ function RecipeDetailWebView({
   onForkPersonalRecipe: (payload: { requiresLogin: boolean }) => void;
   onOpenLightbox: (index: number) => void;
   personalRecipeAccessState: "unknown" | "public" | "owner-private";
+  onPublished: () => void;
   personalRecipeCapabilityEnabled: boolean;
   onProtectedAction: (type: "like" | "save" | "planner") => void;
   onRetryNutrition: () => void;
@@ -2412,6 +2441,14 @@ function RecipeDetailWebView({
                 </p>
               ) : null}
               <h1 className="web-recipe-title">{recipe.title}</h1>
+              {personalRecipeCapabilityEnabled && personalRecipeAccessState === "owner-private" ? (
+                <section aria-label="레시피 관리" className="mb-4 space-y-2">
+                  <Link className="inline-flex min-h-10 items-center text-sm text-[var(--brand)] underline underline-offset-4" href="/mypage?tab=recipebooks">마이 · 내가 추가한 레시피</Link>
+              <span className="ml-2 inline-flex rounded-full bg-[var(--surface-fill)] px-2 py-1 text-xs text-[var(--text-2)]">{recipe.visibility === "public" ? "공개 레시피" : "나만 보는 레시피"}</span>
+                  <RecipeDetailPersonalActions accessState={personalRecipeAccessState} capabilityEnabled={personalRecipeCapabilityEnabled} isAuthenticated={isAuthenticated} onDelete={onDeletePersonalRecipe} onEdit={onEditPersonalRecipe} onFork={onForkPersonalRecipe} />
+                  {recipe.visibility === "private" && recipe.source_type === "manual" && recipe.origin_recipe_id === null ? <ManualRecipePublishAction recipeId={recipe.id} onPublished={onPublished} /> : null}
+                </section>
+              ) : null}
               <div className="web-recipe-tags">
                 {recipe.source_type === "youtube" && youtubeSourceHref ? (
                   <a
@@ -2611,8 +2648,19 @@ function RecipeDetailWebView({
                 </ol>
               </section>
             </div>
+            {personalRecipeCapabilityEnabled && personalRecipeAccessState === "public" ? (
+              <section aria-label="레시피 관리" className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5">
+                <RecipeDetailPersonalActions
+                  accessState={personalRecipeAccessState}
+                  capabilityEnabled={personalRecipeCapabilityEnabled}
+                  isAuthenticated={isAuthenticated}
+                  onDelete={onDeletePersonalRecipe}
+                  onEdit={onEditPersonalRecipe}
+                  onFork={onForkPersonalRecipe}
+                />
+              </section>
+            ) : null}
           </div>
-
           <aside className="web-recipe-rail">
             <WebCard>
               <WebCardBody className="web-recipe-rail-body">
@@ -2629,14 +2677,6 @@ function RecipeDetailWebView({
                     <CookIcon />
                     {cookActionLabel}
                   </WebButton>
-                  <RecipeDetailPersonalActions
-                    accessState={personalRecipeAccessState}
-                    capabilityEnabled={personalRecipeCapabilityEnabled}
-                    isAuthenticated={isAuthenticated}
-                    onDelete={onDeletePersonalRecipe}
-                    onEdit={onEditPersonalRecipe}
-                    onFork={onForkPersonalRecipe}
-                  />
                 </div>
                 <p className="web-recipe-rail-note">
                   <InfoIcon />
@@ -2653,14 +2693,6 @@ function RecipeDetailWebView({
           플래너에 추가
         </WebButton>
         <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
-        <RecipeDetailPersonalActions
-          accessState={personalRecipeAccessState}
-          capabilityEnabled={personalRecipeCapabilityEnabled}
-          isAuthenticated={isAuthenticated}
-          onDelete={onDeletePersonalRecipe}
-          onEdit={onEditPersonalRecipe}
-          onFork={onForkPersonalRecipe}
-        />
       </WebCTA>
     </WebShell>
   );

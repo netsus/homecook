@@ -1,7 +1,6 @@
 import type {
   RecipeNutrition,
   RecipeNutritionQuality,
-  RecipeNutritionStatus,
   RecipeNutritionValue,
 } from "@/types/recipe";
 
@@ -138,7 +137,6 @@ function formatPerServing(
   return formatNutrientAmount(
     numericValue / baseServings,
     unit,
-    value?.status ?? "unavailable",
   );
 }
 
@@ -163,21 +161,18 @@ function formatSelectedTotal(
     return UNAVAILABLE_TEXT;
   }
 
-  return formatNutrientAmount(selectedTotal, unit, value.status);
+  return formatNutrientAmount(selectedTotal, unit);
 }
 
 function formatNutrientAmount(
   amount: number,
   unit: RecipeNutrientMeta["unit"],
-  status: RecipeNutritionStatus,
 ) {
   const maximumFractionDigits = unit === "g" ? 1 : 0;
   const formatted = new Intl.NumberFormat("ko-KR", {
     maximumFractionDigits,
   }).format(amount);
-  const prefix = status === "partial" ? "최소 " : "";
-
-  return `${prefix}${formatted} ${unit}`;
+  return `${formatted} ${unit}`;
 }
 
 function qualityText(quality: RecipeNutritionQuality | null) {

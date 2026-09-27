@@ -41,7 +41,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     await openBreakfast(user);
     await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     await user.click(await screen.findByRole("button", { name: /달걀/u }));
-    await user.click(screen.getByRole("spinbutton", { name: "실제 양" }));
+    await user.click(screen.getByRole("textbox", { name: "실제 양" }));
     await user.tab();
     await user.click(screen.getByRole("button", { name: "기록 저장" }));
 
@@ -62,7 +62,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const restored = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
     expect(within(restored).getByText("8월 10일 · 아침")).toBeTruthy();
     expect(within(restored).getByText("달걀", { selector: "footer p" })).toBeTruthy();
-    expect((within(restored).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("2");
+    expect((within(restored).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("2");
     await waitFor(() => expect((within(restored).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(false));
     expect(within(restored).getByRole("combobox", { name: "단위" })).toBeTruthy();
     const restoredInvoker = selectedDay().getByRole("button", { hidden: true, name: "아침에 먹은 음식 추가" });
@@ -110,7 +110,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     restored.releaseBatchLoad();
     await waitFor(() => expect(
-      (within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).max,
+      (within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).max,
     ).toBe("60"));
     expect(within(dialog).getByText("된장찌개", { selector: "footer p" })).toBeTruthy();
     expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
@@ -141,7 +141,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     renderMealLogShell({ batchRemainingWeight: 30, includeCookedBatch: true });
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
     expect(await within(dialog).findByText("남은 양 30g 이하로 입력해 주세요.")).toBeTruthy();
-    expect((within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).max)
+    expect((within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).max)
       .toBe("30");
     expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
       .toBe(true);
@@ -171,7 +171,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
 
     await waitFor(() => expect(
-      (within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).max,
+      (within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).max,
     ).toBe("55"));
     expect(within(dialog).getByRole("button", { name: /카레/u })).toBeTruthy();
     expect(within(dialog).getByRole("button", { name: "요리한 음식 더 불러오기" })).toBeTruthy();
@@ -311,7 +311,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
       expect(restored.settledBatchCursors()).toEqual([null]);
       expect(within(dialog).getByText("공공 두유", { selector: "footer p" })).toBeTruthy();
     });
-    expect((within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value)
+    expect((within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value)
       .toBe("100");
     expect((within(dialog).getByRole("textbox", { name: "단위" }) as HTMLInputElement).value)
       .toBe("mL");
@@ -341,7 +341,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     const dialog = screen.getByRole("dialog", { name: "식사 기록 상세" });
-    const amount = within(dialog).getByRole("spinbutton", { name: "먹은 양" });
+    const amount = within(dialog).getByRole("textbox", { name: "먹은 양" });
     await user.clear(amount);
     await user.type(amount, "3");
     await user.click(within(dialog).getByRole("button", { name: "먹은 양 수정" }));
@@ -359,7 +359,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     first.unmount();
     renderMealLogShell();
     const restored = await screen.findByRole("dialog", { name: "식사 기록 수정" });
-    expect((within(restored).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value).toBe("3");
+    expect((within(restored).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("3");
     const restoredInvoker = screen.getByRole("button", { hidden: true, name: /아침의 달걀 식사 기록 상세/u });
     await user.click(within(restored).getByRole("button", { name: "수정 저장" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());

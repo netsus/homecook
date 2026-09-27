@@ -26,6 +26,15 @@ const INVENTORY_PATH = process.env.SECURITY_FUNCTION_INVENTORY_PATH
   );
 const ADDITIVE_SOURCES = [
   {
+    manifestPath: path.join(REPO_ROOT, "docs/security/manual-recipe-publication-security-function-authorization-manifest.json"),
+  },
+  {
+    manifestPath: path.join(REPO_ROOT, "docs/security/recipe-fork-image-security-function-authorization-manifest.json"),
+  },
+  {
+    manifestPath: path.join(REPO_ROOT, "docs/security/recipe-future-save-repairs-security-function-authorization-manifest.json"),
+  },
+  {
     manifestPath: path.join(
       REPO_ROOT,
       "docs/security/full-local-account-quarantine-security-function-authorization-manifest.json",

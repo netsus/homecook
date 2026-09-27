@@ -10,11 +10,13 @@ import React, {
 } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
+import { suggestCookingMethod } from "@/lib/cooking-method-suggestion";
 import {
   getRecipeEditorContextPolicy,
   isRecipeEditorDraftDirty,
@@ -126,20 +128,18 @@ export function RecipeEditorIngredientList({
                 {ingredient.standard_name}
               </div>
             </div>
-            <input
+            <DecimalInput
               aria-label={`${ingredient.standard_name} 수량`}
               className="h-11 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
               inputMode="decimal"
               min={0}
-              onChange={(event) => {
-                const value = event.target.value;
+              onValueChange={(amount) => {
                 onChange(ingredient.tempId, {
-                  amount: value === "" ? 0 : Number(value),
+                  amount,
                   unit: ingredient.unit ?? "g",
                 });
               }}
-              type="number"
-              value={ingredient.amount ?? 0}
+              value={ingredient.amount}
             />
             <div
               aria-label={`${ingredient.standard_name} 단위`}
@@ -159,7 +159,7 @@ export function RecipeEditorIngredientList({
                   ].join(" ")}
                   onClick={() =>
                     onChange(ingredient.tempId, {
-                      amount: ingredient.amount ?? 0,
+                      amount: ingredient.amount,
                       unit: option,
                     })
                   }
@@ -275,6 +275,7 @@ export function RecipeEditorStepComposer({
   const [selectedMethodId, setSelectedMethodId] = useState("");
   const [instruction, setInstruction] = useState("");
   const [methodError, setMethodError] = useState<string | null>(null);
+  const [methodSelectedManually, setMethodSelectedManually] = useState(false);
 
   const selectedMethod =
     cookingMethods.find((method) => method.id === selectedMethodId) ?? null;
@@ -303,6 +304,7 @@ export function RecipeEditorStepComposer({
     });
     setInstruction("");
     setSelectedMethodId("");
+    setMethodSelectedManually(false);
     setMethodError(null);
   };
 
@@ -316,7 +318,7 @@ export function RecipeEditorStepComposer({
           {nextStepNumber}단계 입력
         </span>
         <span className="text-[12px] font-medium text-[var(--text-3)]">
-          조리방법을 먼저 골라 주세요
+          {selectedMethod && !methodSelectedManually ? `${selectedMethod.label} 자동 선택` : "설명 입력 후 조리방법 확인"}
         </span>
       </div>
       <div
@@ -341,6 +343,7 @@ export function RecipeEditorStepComposer({
                       aria-pressed={isSelected}
                       className="h-11 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition"
                       onClick={() => {
+                        setMethodSelectedManually(true);
                         setSelectedMethodId(method.id);
                         setMethodError(null);
                       }}
@@ -367,7 +370,15 @@ export function RecipeEditorStepComposer({
         <textarea
           aria-label={`만들기 ${nextStepNumber} 설명`}
           className="min-h-[92px] w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2.5 text-[14px] leading-[1.55] text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
-          onChange={(event) => setInstruction(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value;
+            setInstruction(value);
+            if (!methodSelectedManually) {
+              const suggestion = suggestCookingMethod(value, cookingMethods);
+              setSelectedMethodId(suggestion?.id ?? "");
+              if (suggestion) setMethodError(null);
+            }
+          }}
           placeholder="만들기 설명을 입력하세요"
           rows={3}
           value={instruction}

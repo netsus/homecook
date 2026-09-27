@@ -24,6 +24,7 @@ export interface PersonalRecipeCreateInput {
 export interface PersonalRecipeApiError extends Error {
   status: number;
   code: string;
+  fields: Array<{ field: string; reason: string }>;
 }
 
 export function isPersonalRecipeApiError(error: unknown): error is PersonalRecipeApiError {
@@ -44,6 +45,7 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
     ) as PersonalRecipeApiError;
     error.status = response.status;
     error.code = payload.error?.code ?? "UNKNOWN_ERROR";
+    error.fields = payload.error?.fields ?? [];
     throw error;
   }
 

@@ -67,8 +67,8 @@ describe("recipe image resolver", () => {
     });
 
     expect(first).toBe(second);
-    expect(first).toMatch(/^https:\/\//);
-    expect(otherRecipe).toMatch(/^https:\/\//);
+    expect(first).toBe("/images/recipe-placeholder.svg");
+    expect(otherRecipe).toBe(first);
   });
 
   it("falls back from recipe_id when the item does not expose id", () => {
