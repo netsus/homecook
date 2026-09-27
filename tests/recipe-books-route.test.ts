@@ -316,10 +316,10 @@ describe("/api/v1/recipe-books", () => {
     });
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
-    expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+    expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id, recipes!inner(id)", { count: "exact", head: true });
     expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000002");
     expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000004");
-    expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id", { count: "exact", head: true });
+    expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id, recipes!inner(id)", { count: "exact", head: true });
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 

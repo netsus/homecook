@@ -108,6 +108,7 @@ function isValidIngredient(row: RecipeNutritionIngredientRow) {
 export async function prepareRecipeNutritionSnapshot(
   dbClient: RecipeNutritionServiceClient,
   recipeId: string,
+  predecessorClient: Pick<RecipeNutritionServiceClient, "from"> & RecipeProductNutritionClient = dbClient,
 ) {
   if (!isNonEmptyText(recipeId)) {
     throw new RecipeNutritionServiceError("INVALID_RECIPE_NUTRITION_INPUT");
@@ -135,10 +136,13 @@ export async function prepareRecipeNutritionSnapshot(
     throw new RecipeNutritionServiceError("INVALID_RECIPE_NUTRITION_INPUT");
   }
 
+  // Ingredient quantities remain subject to the caller's recipe ownership.
+  // Approved nutrition evidence is internal-only; publication supplies its
+  // existing scoped reader instead of mistaking RLS-filtered rows for missing data.
   let predecessors;
   try {
     predecessors = await loadRecipeNutritionPredecessors(
-      dbClient,
+      predecessorClient,
       ingredientsResult.data.map((ingredient) => ingredient.ingredient_id),
     );
   } catch {
@@ -148,7 +152,7 @@ export async function prepareRecipeNutritionSnapshot(
   let productHydration;
   try {
     productHydration = await hydrateRecipeProductNutrition(
-      dbClient as unknown as RecipeProductNutritionClient,
+      predecessorClient,
       ingredientsResult.data,
       hydrateRecipeNutritionIngredients(ingredientsResult.data, predecessors),
       recipeResult.data.created_by,

@@ -1,23 +1,31 @@
 "use client";
 
+import { useMobileFullscreenPage } from "@/components/shared/use-mobile-fullscreen-page";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { CookedBatchCompletionSheet, type CookedBatchCompletionError } from "@/components/cooking/cooked-batch-completion-sheet";
 import { MobileCookModeLoadingBoard } from "@/components/cooking/cook-mode-loading-board";
 import { SnapshotV2CookModeView } from "@/components/cooking/snapshot-v2-cook-mode-view";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { cancelSnapshotV2CookingSession, completeSnapshotV2CookingSession, fetchSnapshotV2CookMode, isCookingApiError } from "@/lib/api/cooking";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
-import type { SnapshotV2CompleteBody, SnapshotV2CompleteData, SnapshotV2CookModeData } from "@/types/cooking";
+import type { SnapshotV2CompleteBody, SnapshotV2CookModeData } from "@/types/cooking";
 
 export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { initialAuthenticated: boolean; sessionId: string }) {
+  useMobileFullscreenPage(true, sessionId);
   const [data, setData] = useState<SnapshotV2CookModeData | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "unauthorized">(initialAuthenticated ? "loading" : "unauthorized");
   const [cancelling, setCancelling] = useState(false);
   const [completionOpen, setCompletionOpen] = useState(false);
+  const [completionPreparing, setCompletionPreparing] = useState(false);
+  const [preparationError, setPreparationError] = useState<string | null>(null);
+  const completionRefreshRef = useRef(false);
   const [completionSubmitting, setCompletionSubmitting] = useState(false);
   const [completionError, setCompletionError] = useState<CookedBatchCompletionError | null>(null);
-  const [completionResult, setCompletionResult] = useState<SnapshotV2CompleteData | null>(null);
+  const [completionNotice, setCompletionNotice] = useState<string | null>(null);
+  const notifiedSessionRef = useRef<string | null>(null);
   const cancelKeyRef = useRef<string | null>(null);
   const completeAttemptRef = useRef<{ key: string; payload: string } | null>(null);
   const completeInFlightRef = useRef(false);
@@ -56,6 +64,12 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
     }
   }, [state]);
 
+  useEffect(() => {
+    if (!completionNotice) return;
+    const timeout = window.setTimeout(() => setCompletionNotice(null), 5_000);
+    return () => window.clearTimeout(timeout);
+  }, [completionNotice]);
+
   const returnPath = `/cooking/session-attempts/${sessionId}/cook-mode`;
   const loginHref = `/login?next=${encodeURIComponent(returnPath)}`;
 
@@ -84,15 +98,34 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
     setCompletionError(null);
     void completeSnapshotV2CookingSession(sessionId, body, attempt.key)
       .then((result) => {
-        setCompletionResult(result);
+        if (notifiedSessionRef.current !== result.session_id) {
+          notifiedSessionRef.current = result.session_id;
+          const servings = result.cooked_batch.cooking_servings ?? data.recipe.cooking_servings;
+          const lines = [`${result.cooked_batch.recipe_title} ${servings}인분을 완성했어요.`];
+          if (result.pantry_removed > 0) {
+            const selected = new Set(body.consumed_pantry_item_ids);
+            const removed = data.pantry_candidates.filter((item) => selected.has(item.pantry_item_id));
+            const names = removed.map((item) => item.name || item.standard_name).filter(Boolean);
+            const label = names.length === result.pantry_removed ? names.join(", ") : `재료 ${result.pantry_removed}개`;
+            lines.push(`팬트리에서 ${label} 차감했어요.`);
+          }
+          setCompletionNotice(lines.join("\n"));
+        }
         setCompletionOpen(false);
         setData((current) => current ? { ...current, status: "completed" } : current);
       })
-      .catch((error: unknown) => {
+      .catch(async (error: unknown) => {
         if (isCookingApiError(error) && error.status === 401) {
           setCompletionOpen(false);
           setState("unauthorized");
           return;
+        }
+        if (isCookingApiError(error) && [404, 409, 422].includes(error.status) && error.code !== "ACCOUNT_SESSION_STALE") {
+          try {
+            const latest = await fetchSnapshotV2CookMode(sessionId);
+            setData(latest);
+            if (latest.status !== "in_progress") setCompletionOpen(false);
+          } catch { /* Keep the submitted draft and its explicit error. */ }
         }
         setCompletionError(isCookingApiError(error)
           ? { code: error.code, fields: error.fields, message: error.message, status: error.status }
@@ -104,10 +137,23 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
       });
   };
 
-  const openCompletion = () => {
-    if (data.status !== "in_progress" || cancelling) return;
+  const openCompletion = async () => {
+    if (data.status !== "in_progress" || cancelling || completionRefreshRef.current) return;
+    completionRefreshRef.current = true;
+    setCompletionPreparing(true);
+    setPreparationError(null);
     setCompletionError(null);
-    setCompletionOpen(true);
+    try {
+      const latest = await fetchSnapshotV2CookMode(sessionId);
+      setData(latest);
+      if (latest.status === "in_progress") setCompletionOpen(true);
+    } catch (error) {
+      if (isCookingApiError(error) && error.status === 401) setState("unauthorized");
+      else setPreparationError("팬트리를 불러오지 못했어요. 다시 시도해 주세요.");
+    } finally {
+      completionRefreshRef.current = false;
+      setCompletionPreparing(false);
+    }
   };
 
   const cancelCooking = () => {
@@ -127,13 +173,15 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   return (
     <>
       <SnapshotV2CookModeView
-        completionResult={completionResult}
         cancelling={cancelling}
         data={data}
         onCancel={cancelCooking}
-        onComplete={openCompletion}
+        onComplete={() => void openCompletion()}
+        preparingCompletion={completionPreparing}
         returnHref={appReturn.href}
       />
+      {preparationError ? <AppFeedbackToast message={preparationError} position="bottom" tone="error" /> : null}
+      {completionNotice ? <AppFeedbackToast className="pointer-events-none whitespace-pre-line" message={completionNotice} position="bottom" testId="cooking-completion-notice" tone="success" /> : null}
       {completionOpen ? (
         <CookedBatchCompletionSheet
           candidates={data.pantry_candidates}

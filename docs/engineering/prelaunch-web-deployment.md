@@ -60,6 +60,13 @@ pnpm deploy:dev -- --verify-script test:product
 실제 정의된 키만 사용할 수 있다. 추가 셸 인수는 받지 않는다. test 명령은 OS 실행 기본값과 CI만 전달받아 NODE_ENV=test로 실행하고, verify/marketing 운영 검증은 실제 운영 환경을 유지한다.
 실제 외부 기능을 검사하는 스크립트는 그 스크립트의 준비 조건을 따른다.
 
+변경 범위에 맞는 테스트 묶음을 명시하려면 `--test-script <test 이름>`을 사용한다.
+대상 `package.json`에 정의된 `test` 또는 `test:*` 명령만 허용하고 실제 실행한다.
+지정하지 않으면 API 변경의 기존 기본값 `test:product`를 유지한다.
+`--verify-script`는 여전히 선택한 기본 테스트 뒤에 실행하는 추가 검증이다.
+두 옵션 모두 `--skip-automated-tests`와 함께 사용할 수 없다. 배포 기록에는
+선택한 기본 명령과 실행한 전체 검증 목록을 남기며 빌드·별도 포트·운영 GET 확인을 유지한다.
+
 ## 웹 보안키·환경 설정
 
 Git 저장소 밖의 실제 파일을 만들고 권한을 0600으로 설정한다. 값은 명령 인수나 PR에 넣지 않는다.
@@ -152,3 +159,97 @@ pnpm test:dev-deploy:db
 
 기준: AGENTS.md, agent-workflow-overview.md, supabase-local-only-operations.md,
 local-mac-production-release-promotion.md. 기존 정식 promotion kill switch는 변경하지 않는다.
+
+## 2026-09-19 — 이미 반영된 복구 DB와 웹 분리 배포
+
+사용자가 자동 테스트 생략과 새 웹 배포를 요청했다. `--skip-automated-tests`는 자동 `test:product`를 생략한 사실을 배포 상태에 기록한다. 추가 검증 명령과 함께 쓰지 못하며 고정 의존성 설치·production 빌드·별도 포트와 실제 운영 포트의 build/정적 파일 확인은 유지한다.
+
+`--already-applied-db --db-config <비공개 설정>`은 대상 checkout의 모든 SQL checksum을 실제 로컬 DB ledger와 대조한다. 미적용 SQL·새 baseline·변조가 있으면 중단하며 SQL 적용이나 격리 테스트를 실행하지 않는다. 빌드 후 웹 교체 직전에도 이력을 다시 대조한다. 원래의 추가형 DB 적용 경로와 서버 구성 변경 거부는 유지한다.
+
+`--reviewed-repair-readiness`는 2026-09-18 복구 웹의 정확한 출발/도착 commit과 검토한 CSS·SQL에만 사용하는 한정된 재검증이다. 기존 readiness 승계 규칙을 일반적으로 완화하지 않는다. 실제 DB의 보존된 R2 권한 함수·마케팅 구조/함수와 기존 증거 해시를 대조하고, 기존 provider·ingress 검증 시각과 파일 해시를 보존한다. 새 소스 검토 기록은 release의 별도 `round2-source-review.json`에 남긴다. 적용 DB 확인 옵션이 필수다.
+
+운영 도구 변경은 이미 별도 고정 snapshot에 설치되어 있다. 웹은 `5d9c5b09624dff83b43d91983704cec3171087da`를 `--reviewed-ref`로 선택한다. 앱 코드가 master와 동일한지 대조하며 운영 도구를 웹 배포 과정에서 재실행하지 않는다.
+
+## 2026-09-22 — 베타 기능 웹의 한정된 R2 재검증
+
+`--reviewed-beta-readiness`는 운영 웹 `6fa49be6ac55d77a6537d097cf872dba785e0533`에서
+검토된 웹 후보 `3f1fc55038f7e172ec052cda2b8a802808e1d64e`로 바꾸는 한 쌍만 허용한다.
+일반 R2 승계 규칙·worker/Docker/runtime 변경 거부·추가형 SQL 판정을 완화하지 않는다.
+동적 SQL은 별도 대상·백업·검증 절차로 먼저 적용하고, 웹 명령에는
+`--already-applied-db --db-config <비공개 full-local 설정>`을 함께 지정해야 한다.
+
+후보의 전체 Git diff와 보호파일 9개의 이전/이후 SHA-256을 고정한다. 이 중
+`lib/supabase/server.ts`는 제품 영양의 개당 중량 조회 범위 한 줄,
+`package.json`은 실제 관련 테스트 묶음 한 키이며, SQL 7개는 이미 검토된 원본이다.
+전체 migration ledger를 실제 DB와 대조하고 원본 R2 proof·ingress proof 해시,
+동일 DB 자원, 기존 R2 receipt·권한, immutable scope 및 원래 마케팅 catalog를 재확인한다.
+새 제품 영양 wrapper는 격리된 전체 182개 migration 재현에서 얻은 정확한
+7개 함수의 이름·본문·owner·ACL·설정 hash 및 기존 delegate 연결로 검증한다.
+기존 운영에는 NULL/빈 scope를 더 엄격히 거부하는 블록과 호출되지 않는 과거
+owner-only 별칭 2개가 남아 있다. 오늘 변경 전의 인증된 플랫폼 백업에서 이
+3개 원문을 추출하고, 앞서 검증한 서명된 복원 manifest의 archive/schema hash와
+연결한 비공개 증거 파일 2개의 SHA를 고정했다. 실제 9개 전체 hash와 이 원문을
+대조한 뒤, 검증용 메모리 사본에서만 정확한 거부 블록과 별칭을 분리하면
+격리 기준 7개와 완전히 같아야 한다. 별칭을 호출하는 다른 public/private 함수나
+PostgREST DB 설정이 없어야 하며 owner-only 권한도 그대로 확인한다.
+기존 거부 블록·함수·권한을 운영에서 수정하거나, 운영에서 관측한 새 hash를
+자동으로 신뢰값에 넣지 않는다.
+
+검증은 준비 시와 웹 교체 직전에 반복한다. 원 provider/ingress 검증시각을 새 시각으로
+꾸미지 않고 보존하며 `round2-beta-source-review.json`에 이번 source/DB 확인을 별도로 남긴다.
+새 모드 활성화와 실제 저장 완주 확인은 웹 배포의 GET 확인과 별개다.
+
+## 2026-09-27 — 피드백 수정의 exact source 재검증
+
+`--reviewed-feedback-readiness`는 실행 웹 `5d05a180b6c0850dc4e87bfe0945a609ff450e90`에서
+검토한 웹 전용 후속 commit 하나로 배포하기 위한 별도 경로다. 기존 일반 승계,
+beta/repair의 고정 source pair, 서버 구성 변경 거부는 유지한다.
+`scripts/lib/prelaunch-feedback-readiness.mjs`의 `FEEDBACK_REVIEW_PIN`이 비어 있으면
+웹 준비를 시작하기 전에 중단한다. CLI나 환경 변수로 승인 대상을 바꾸지 않는다.
+
+운영자는 다음 증거를 준비하고 검토한 뒤 manifest의 절대 경로와 SHA-256을 코드에 고정한다.
+
+1. 최종 통합 코드 commit과 현재 실행 웹을 부모로 하는 웹 전용 후보 commit을 확정한다.
+   웹 후보의 모든 변경 파일에 이전/이후 byte SHA-256을 기록하고 보호 파일을 명시적으로 검토한다.
+   `app/components/lib/stores/types/hooks/public` 변경은 통합 코드 commit과 byte가 같아야 한다.
+2. **SQL 적용 전** 새 외부 0700 작업 디렉터리에서 `createRecordingDockerAdapter`와
+   `captureFeedbackDatabaseBefore(adapter)`를 사용해 읽기 전용 증거를 수집하고 0600/create-only
+   JSON으로 저장한다. 결과는 대상 identity, 185개 기존 ledger, R2 receipt·catalog·불변 권한·
+   마케팅 데이터 hash, 기존 scope 함수별 body hash·owner·ACL·설정이다. 사용자 데이터 원문은
+   이 증거에 넣지 않는다. 실제 DB 변경 직전에는 별도 새 논리 백업을 만들고 확인한다.
+3. 새 SQL의 검토된 격리 실행에서 예상 scope 함수 목록과 각 body·owner·ACL·설정을 확정한다.
+   운영에 적용한 결과를 그대로 새 신뢰값으로 채택하지 않는다. 기존 active 함수가 새 이름으로
+   위임되는 경우에도 그 본문·권한은 그대로 남아야 하며, 기존 이름의 delegate도 유지한다.
+4. 현재 R2 readiness의 `JSON.stringify` 결과 SHA-256, 원본 proof 6개와 proxy proof 3개의
+   SHA-256을 manifest에 넣는다. provider 검증 시각을 새 시각으로 바꾸지 않는다.
+
+manifest 형식은 `homecook.prelaunch-feedback-review.v1`이며 다음 필드를 가진다.
+
+- `from`, `to`: 현재 실행 SHA와 검토한 웹 후보 SHA.
+- `migrationSourceRef`, `migrationCount`: 테스트한 통합 코드 SHA와 정확히 `197`.
+- `files`: 전체 변경 파일별 `[이전 SHA 또는 null, 이후 SHA 또는 null]`.
+- `protectedSources`: 위 파일 중 별도 검토한 보호 파일 목록. 미기재 보호 파일은 일반 승계에서 거부한다.
+- `originalReadinessSha256`, `proofDigests`: 변경되지 않은 원본 readiness와 9개 증거의 hash.
+- `preApplyProof`: SQL 적용 전 저장한 JSON의 `path`, `sha256`.
+- `expectedScopeFunctions`: 격리 실행·검토로 확정한 함수별 `name`, `bodySha256`, `owner`, `acl`,
+  `securityDefiner`, `config`. 수집 형식은 `feedbackScopeEvidence`를 재사용한다.
+
+이번 SQL은 별도 통제 절차로 한 번 적용한다. 웹 전용 후보에 SQL 파일을 섞지 않으며,
+이 플래그의 읽기 전용 DB 확인은 `migrationSourceRef`의 **197개 SQL 전체**와 실제 ledger를
+대조한다. 후보에 없는 SQL을 허용하는 일반 예외가 아니라 고정된 source·count·predecessor
+증거를 요구하는 이 rollout 전용 검증이다. 일반 `--already-applied-db` 동작은 바뀌지 않는다.
+
+```bash
+pnpm deploy:dev -- \
+  --reviewed-ref <검토한 웹 후보의 40자리 SHA> \
+  --already-applied-db \
+  --db-config <기존 비공개 full-local 설정> \
+  --reviewed-feedback-readiness \
+  --test-script <이번 변경에 맞는 기존 test 명령>
+```
+
+준비 시와 웹 교체 직전에 전체 source·실제 ledger·원본 증거·R2 catalog/행/권한·scope 위임을
+다시 확인한다. 검증 기록은 release의 `round2-feedback-source-review.json`에 남긴다.
+이 경로가 SQL을 적용하거나 플랫폼 백업/복원·CI·전체 제품 테스트를 새로 강제하지 않는다.
+기존 유효한 백업 증거와 해당 변경 직전 논리 백업을 사용하고 `/beta`·build·정적 파일 확인 및
+실제 변경 사용자 흐름 검증은 유지한다.

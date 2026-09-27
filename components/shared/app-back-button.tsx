@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 interface AppBackButtonProps {
   ariaLabel?: string;
@@ -8,6 +9,7 @@ interface AppBackButtonProps {
   disabled?: boolean;
   onClick: () => void;
   testId?: string;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 export function AppBackButton({
@@ -16,6 +18,7 @@ export function AppBackButton({
   disabled,
   onClick,
   testId,
+  ref,
 }: AppBackButtonProps) {
   return (
     <button
@@ -28,21 +31,11 @@ export function AppBackButton({
         .join(" ")}
       data-testid={testId}
       disabled={disabled}
+      ref={ref}
       onClick={onClick}
       type="button"
     >
-      <svg
-        aria-hidden="true"
-        className="h-[var(--app-back-button-icon-size)] w-[var(--app-back-button-icon-size)]"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-      >
-        <path d="m15 18-6-6 6-6" />
-      </svg>
+      <AppBackIcon />
     </button>
   );
 }
@@ -59,4 +52,25 @@ export function AppBackButtonSpacer({ className }: { className?: string }) {
         .join(" ")}
     />
   );
+}
+
+export function AppBackIcon() {
+  return (
+      <svg
+        aria-hidden="true"
+        className="h-[var(--app-back-button-icon-size)] w-[var(--app-back-button-icon-size)]"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+  );
+}
+
+export function AppBackLink({ href, ariaLabel = "뒤로 가기" }: { href: string; ariaLabel?: string }) {
+  return <Link aria-label={ariaLabel} className="flex h-[var(--app-back-button-size)] w-[var(--app-back-button-size)] shrink-0 items-center justify-center rounded-[var(--app-back-button-radius)] text-[var(--app-back-button-color)] hover:bg-[var(--app-back-button-hover-bg)]" href={href}><AppBackIcon /></Link>;
 }

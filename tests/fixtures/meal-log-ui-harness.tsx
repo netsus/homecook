@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
 // These fixtures protect retained editing flows independently of the prelaunch gate.
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 import { PlannerWeekScreen } from "@/components/planner/planner-week-screen";
 
@@ -522,6 +522,16 @@ export function renderMealLogShell({
   });
   vi.stubGlobal("fetch", fetchMock);
   const rendered = render(<PlannerWeekScreen initialAuthenticated />);
+  const historyMocks = {
+    push: vi.spyOn(window.history, "pushState").mockImplementation((_state, _unused, url) => {
+      currentHref = String(url);
+      rendered.rerender(<PlannerWeekScreen initialAuthenticated />);
+    }),
+    replace: vi.spyOn(window.history, "replaceState").mockImplementation((_state, _unused, url) => {
+      currentHref = String(url);
+      rendered.rerender(<PlannerWeekScreen initialAuthenticated />);
+    }),
+  };
   return {
     ...rendered,
     deferredNavigation: deferNavigation
@@ -537,6 +547,7 @@ export function renderMealLogShell({
         }
       : null,
     fetchMock,
+    historyMocks,
     navigationMocks,
     releaseBatchLoad,
     settledBatchCursors: () => [...settledBatchCursors],

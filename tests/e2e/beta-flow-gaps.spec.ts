@@ -140,6 +140,89 @@ test.describe("beta flow gaps — local fixture UI", () => {
     await installBetaFlowFixtures(page);
   });
 
+  test("M01 meal-log keeps date cards while loading and does not reset scroll on date changes", async ({ page }, testInfo) => {
+    await page.setViewportSize(testInfo.project.name === "mobile-chrome" ? { width: 375, height: 812 } : { width: 1280, height: 900 });
+    await installRecentMealLog(page);
+    let release!: () => void;
+    const ready = new Promise<void>(resolve => { release = resolve; });
+    let reads = 0;
+    await page.route("**/api/v1/meal-log?*", async route => {
+      ++reads;
+      await ready;
+      const date = new URL(route.request().url()).searchParams.get("date")!;
+      const nutrition = { calculation_status: "complete", calories_kcal: 210, carbohydrate_g: 18, protein_g: 14, fat_g: 9, sodium_mg: 330 };
+      const entry = { id: `10000000-0000-4000-8000-${date.replaceAll("-", "").padStart(12, "0")}`, revision: 1, consumed_at: null,
+        consumed_local_date: date, timezone_name_snapshot: "Asia/Seoul", meal_plan_column_id: COLUMN, slot_name_snapshot: "아침",
+        source: { type: "ingredient", id: ONION }, quantity: { amount: 100, unit: "g" }, display_name: "양파 요리", display_brand: null,
+        nutrition, created_at: `${date}T00:00:00Z`, updated_at: `${date}T00:00:00Z` };
+      await route.fulfill({ json: { success: true, data: { date, active_columns: [{ id: COLUMN, name: "아침", sort_order: 0 }],
+        active_sections: [{ meal_plan_column_id: COLUMN, slot_name_snapshot: "아침", sort_order: 0, entries: [entry], subtotal: nutrition, incomplete_count: 0 }],
+        deleted_column_sections: [], entries: [entry], day_total: { ...nutrition, incomplete_count: 0 } }, error: null } });
+    });
+    await page.goto("/planner?segment=log&date=2026-09-21");
+    await expect(page.locator("[data-planner-date]")).toHaveCount(7);
+    await expect(page.getByText("기록을 불러오는 중이에요.")).toHaveCount(0);
+    await expect(page.locator('[role="status"][aria-busy="true"]')).toHaveCount(7);
+    await capture(page, testInfo, "m01-meal-log-loading");
+    release();
+    await expect(page.getByRole("button", { name: "아침의 양파 요리 식사 기록 상세" })).toHaveCount(7);
+    const serverNavigations: string[] = [];
+    page.on("request", request => { if (request.headers()["rsc"] === "1" && new URL(request.url()).pathname === "/planner") serverNavigations.push(request.url()); });
+    await page.getByRole("radio", { name: /9\/24 목요일 선택/ }).click();
+    await expect(page).toHaveURL(/date=2026-09-24/);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+    const before = await page.evaluate(() => window.scrollY);
+    await page.mouse.move(280, 600);
+    await page.mouse.wheel(0, 450);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before + 100);
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(before + 100);
+    expect(serverNavigations).toEqual([]);
+    expect(reads).toBe(7);
+    await capture(page, testInfo, "m01-meal-log-scrolled");
+    await page.getByRole("button", { name: "아침의 양파 요리 식사 기록 상세" }).nth(4).click();
+    const detail = page.getByRole("dialog", { name: "식사 기록 상세" });
+    await expect(detail.getByRole("button", { name: "기록 삭제" })).toBeVisible();
+    await capture(page, testInfo, "m01-meal-log-detail");
+    await detail.getByRole("button", { name: "식사 기록으로 돌아가기" }).click();
+  });
+
+  test("L01 remaining food has one list and one mobile scroller", async ({ page }, testInfo) => {
+    await page.setViewportSize(testInfo.project.name === "mobile-chrome" ? { width: 375, height: 812 } : { width: 1280, height: 900 });
+    const items = Array.from({ length: 8 }, (_, i) => ({
+      id: `10000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+      recipe_id: "20000000-0000-4000-8000-000000000001", recipe_title: `김치찌개 ${i + 1}`, recipe_thumbnail_url: null,
+      status: "leftover", cooked_at: "2026-09-28T00:00:00Z", cooking_servings: 2,
+      finished_weight_g: 800, remaining_weight_g: 500, weight_status: "known", weight_source: "estimated", batch_status: "available",
+      depleted_reason: null, revision: 1, nutrition_calculation_status: "complete", current_unweighed_closure_event_id: null,
+    }));
+    await page.route("**/api/v1/cooked-batches?*", route => route.fulfill({ json: { success: true, data: { items, has_next: false, next_cursor: null }, error: null } }));
+    await page.goto("/leftovers");
+    await expect(page.getByTestId("cooked-batch-card")).toHaveCount(8);
+    await expect(page.getByText("중량·잔량 기록")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "버림", exact: true })).toHaveCount(0);
+    await capture(page, testInfo, "l01-leftovers-top");
+    if (testInfo.project.name === "mobile-chrome") {
+      expect((await page.getByRole("heading", { name: "남은 요리", exact: true }).boundingBox())!.y).toBeLessThan(40);
+      await page.getByTestId("leftovers-scroll").evaluate(element => { element.scrollTop = element.scrollHeight; });
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      const card = await page.getByTestId("cooked-batch-card").last().boundingBox();
+      const tabs = await page.getByRole("navigation", { name: "남은 요리 하단 탭" }).boundingBox();
+      expect(card!.y + card!.height).toBeLessThanOrEqual(tabs!.y);
+      expect((await page.getByRole("heading", { name: "남은 요리", exact: true }).boundingBox())!.y).toBeLessThan(40);
+      const headerBox = await page.getByTestId("leftovers-screen").locator("header").boundingBox();
+      const mainBox = await page.getByTestId("leftovers-scroll").boundingBox();
+      expect(mainBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+      await capture(page, testInfo, "l01-leftovers-bottom");
+      await page.screenshot({ path: testInfo.outputPath("l01-viewport.png"), fullPage: false });
+      expect(await page.evaluate(() => Boolean(document.elementFromPoint(120, 30)?.closest("header")))).toBe(true);
+    }
+    await page.getByLabel("김치찌개 8 관리").click();
+    await expect(page.getByRole("button", { name: "무게 수정", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "버림", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "버린 양 기록", exact: true })).toBeVisible();
+  });
+
   test("D07 completed and cancelled cooking sessions have safe next actions", async ({ page }, testInfo) => {
     const mutations: string[] = [];
     page.on("request", (request) => {
@@ -148,18 +231,26 @@ test.describe("beta flow gaps — local fixture UI", () => {
     await installTerminalCooking(page, "completed");
     await page.goto("/cooking/session-attempts/qa-terminal-session/cook-mode?returnTo=%2Fabout");
     const actions = page.getByRole("navigation", { name: "요리 후 다음 행동" });
-    await expect(actions.getByRole("link", { name: "먹은 음식 기록하기" })).toHaveAttribute("href", "/planner?segment=log");
-    await expect(actions.getByRole("link", { name: "남은요리 보기" })).toHaveAttribute("href", "/leftovers");
-    await expect(actions.getByRole("link", { name: "돌아가기" })).toBeVisible();
+    await expect(actions.getByRole("link", { name: "식사 기록하기" })).toHaveAttribute("href", "/planner?segment=log");
+    await expect(actions.getByRole("link")).toHaveCount(1);
     await expect(page.getByRole("button", { name: "요리 완료", exact: true })).toHaveCount(0);
+    if (testInfo.project.name === "mobile-chrome") {
+      await expect(page.locator("html")).toHaveAttribute("data-mobile-fullscreen-page", "true");
+      await page.mouse.wheel(0, 700);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      const box = await page.getByTestId("snapshot-v2-cook-mode").boundingBox();
+      expect(box!.y).toBe(0);
+      expect(box!.height).toBe(page.viewportSize()!.height);
+    }
     await capture(page, testInfo, "d07-completed");
-    await actions.getByRole("link", { name: "돌아가기" }).click();
-    await expect(page).toHaveURL(/\/about$/);
+    await actions.getByRole("link", { name: "식사 기록하기" }).click();
+    await expect(page).toHaveURL(/segment=log/);
+    await expect(page.locator("html")).not.toHaveAttribute("data-mobile-fullscreen-page", "true");
 
     await installTerminalCooking(page, "cancelled");
     await page.goto("/cooking/session-attempts/qa-terminal-session/cook-mode?returnTo=%2Fabout");
-    await expect(page.getByText("취소된 요리 기록이에요. 읽기 전용으로 볼 수 있어요.")).toBeVisible();
-    await expect(actions.getByRole("link", { name: "먹은 음식 기록하기" })).toHaveCount(0);
+    await expect(page.getByText("2인분 · 취소됨")).toBeVisible();
+    await expect(actions.getByRole("link", { name: "식사 기록하기" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "취소", exact: true })).toHaveCount(0);
     await capture(page, testInfo, "d07-cancelled");
     await actions.getByRole("link", { name: "돌아가기" }).click();
@@ -276,11 +367,12 @@ test.describe("beta flow gaps — local fixture UI", () => {
     await expect(title).toBeEnabled();
     await title.dispatchEvent("compositionstart");
     await title.fill("ㄱ");
+    await title.fill("");
     await title.fill("김치볶음");
     await title.dispatchEvent("compositionend", { data: "김치볶음" });
     await expect(title).toHaveValue("김치볶음");
     await expect(page.getByRole("dialog", { name: "변경사항을 버릴까요?" })).toHaveCount(0);
-    await expect(page.getByText("직접 등록한 레시피는 공개되어 검색·공유할 수 있어요.")).toBeVisible();
+    await expect(page.getByText("공개 레시피로 저장돼요.")).toBeVisible();
     const instruction = page.getByLabel("만들기 1 설명");
     await instruction.fill("양파를 볶아요");
     await expect(page.getByRole("button", { name: "볶기", exact: true })).toHaveAttribute("aria-pressed", "true");

@@ -93,12 +93,55 @@ describe("cooked batch completion replay", () => {
       expect.any(String),
     );
 
-    expect(await screen.findByText("저장된 완료 결과를 확인했어요.")).toBeTruthy();
-    expect(screen.getByText("팬트리 항목 0개를 반영했어요.")).toBeTruthy();
+    const notice = await screen.findByTestId("cooking-completion-notice");
+    expect(notice.textContent).toBe(`${snapshot.recipe.title} 2인분을 완성했어요.`);
+    expect(screen.getAllByTestId("cooking-completion-notice")).toHaveLength(1);
+    expect(notice.textContent).not.toContain("팬트리");
     expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "요리 완료" })).toBeNull();
-    expect(screen.getByRole("link", { name: "먹은 음식 기록하기" }).getAttribute("href")).toBe("/planner?segment=log");
-    expect(screen.getByRole("link", { name: "남은요리 보기" }).getAttribute("href")).toBe("/leftovers");
-    expect(screen.getByRole("link", { name: "돌아가기" }).getAttribute("href")).toBe(`/recipe/${snapshot.recipe.id}`);
+    expect(screen.getByRole("link", { name: "식사 기록하기" }).getAttribute("href")).toBe("/planner?segment=log");
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: "돌아가기" })).toBeNull();
   });
+  it("shows one two-line notice only after a successful retry and names only confirmed pantry rows", async () => {
+    const user = userEvent.setup();
+    const candidate = { pantry_item_id: "pantry-a", ingredient_id: snapshot.recipe.ingredients[0].ingredient_id, item_type: "ingredient", standard_name: "닭가슴살", name: "닭가슴살", brand: null, food_product_id: null, food_product_nutrition_version_id: null };
+    cookingApi.fetchSnapshotV2CookMode.mockResolvedValue({ ...snapshot, pantry_candidates: [candidate] });
+    cookingApi.completeSnapshotV2CookingSession.mockRejectedValueOnce(new Error("연결 실패")).mockResolvedValueOnce({ ...completion, pantry_removed: 1 });
+    render(<SnapshotV2CookModeScreen initialAuthenticated sessionId={snapshot.session_id} />);
+    await user.click(await screen.findByRole("button", { name: "요리 완료" }));
+    await user.click(screen.getByRole("checkbox", { name: "닭가슴살 선택" }));
+    await user.click(screen.getByRole("button", { name: "완료 저장" }));
+    await screen.findByText("요리 완료를 저장하지 못했어요.");
+    expect(screen.queryByTestId("cooking-completion-notice")).toBeNull();
+    await user.dblClick(screen.getByRole("button", { name: "완료 저장" }));
+    const notice = await screen.findByTestId("cooking-completion-notice");
+    expect(notice.textContent).toBe(`${snapshot.recipe.title} 2인분을 완성했어요.\n팬트리에서 닭가슴살 차감했어요.`);
+    expect(screen.getAllByTestId("cooking-completion-notice")).toHaveLength(1);
+    expect(cookingApi.completeSnapshotV2CookingSession).toHaveBeenCalledTimes(2);
+    expect(cookingApi.completeSnapshotV2CookingSession.mock.calls[0][2]).toBe(cookingApi.completeSnapshotV2CookingSession.mock.calls[1][2]);
+  });
+  it("refreshes pantry candidates when opening completion and removes stale selections after a rejected deduction", async () => {
+    const candidate = { pantry_item_id: "new-pantry", ingredient_id: snapshot.recipe.ingredients[0].ingredient_id, item_type: "ingredient", standard_name: "닭가슴살", name: "새 팬트리 닭가슴살", brand: null, food_product_id: null, food_product_nutrition_version_id: null };
+    cookingApi.fetchSnapshotV2CookMode.mockResolvedValueOnce(snapshot).mockResolvedValueOnce({ ...snapshot, pantry_candidates: [candidate] }).mockResolvedValue(snapshot);
+    cookingApi.completeSnapshotV2CookingSession.mockRejectedValueOnce(Object.assign(new Error("팬트리 항목이 없어졌어요."), { status: 404, code: "RESOURCE_NOT_FOUND", fields: [] })).mockResolvedValueOnce(completion);
+    render(<SnapshotV2CookModeScreen initialAuthenticated sessionId={snapshot.session_id} />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리 완료" }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: "새 팬트리 닭가슴살 선택" }));
+    await userEvent.click(screen.getByRole("button", { name: "완료 저장" }));
+    await screen.findByText("팬트리 항목이 없어졌어요.");
+    expect(screen.queryByRole("checkbox", { name: "새 팬트리 닭가슴살 선택" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "완료 저장" }));
+    await screen.findByRole("link", { name: "식사 기록하기" });
+    expect(cookingApi.completeSnapshotV2CookingSession.mock.calls[1][1].consumed_pantry_item_ids).toEqual([]);
+  });
+
+  it("does not emit a fresh completion notice when reopening a completed session", async () => {
+    cookingApi.fetchSnapshotV2CookMode.mockResolvedValue({ ...snapshot, status: "completed" });
+    render(<SnapshotV2CookModeScreen initialAuthenticated sessionId={snapshot.session_id} />);
+    await screen.findByRole("link", { name: "식사 기록하기" });
+    expect(screen.queryByTestId("cooking-completion-notice")).toBeNull();
+    expect(cookingApi.completeSnapshotV2CookingSession).not.toHaveBeenCalled();
+  });
+
 });

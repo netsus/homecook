@@ -336,7 +336,7 @@ async function readRecipeBookItemCounts(
       bookId,
       result: await dbClient
         .from("recipe_book_items")
-        .select("id", { count: "exact", head: true })
+        .select("id, recipes!inner(id)", { count: "exact", head: true })
         .eq("book_id", bookId),
     })),
   );
@@ -453,7 +453,7 @@ export async function GET(request: Request) {
       readRecipeBookItemCounts(dbClient, countedBookIds),
       dbClient
         .from("recipe_likes")
-        .select("recipe_id", { count: "exact", head: true })
+        .select("recipe_id, recipes!inner(id)", { count: "exact", head: true })
         .eq("user_id", user.id),
       dbClient
         .from("recipes")

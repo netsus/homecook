@@ -1,5 +1,6 @@
 import Link from "next/link";
 import React from "react";
+import { AppBackLink } from "@/components/shared/app-back-button";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { WebShell, WebTopNav } from "@/components/web";
@@ -37,9 +38,7 @@ export function LegalDocumentPage({
     <WebShell className="legal-shell pb-[calc(80px+env(safe-area-inset-bottom))] lg:pb-0" wide>
       <WebTopNav className="legal-desktop-nav" />
       <header className="legal-mobile-header">
-        <Link aria-label="마이페이지로 돌아가기" className="legal-mobile-brand" href="/mypage" prefetch={false}>
-          ← 마이페이지
-        </Link>
+        <AppBackLink ariaLabel="마이페이지로 돌아가기" href="/mypage" />
       </header>
       <main className="legal-page">
         <nav aria-label="법적 문서" className="legal-document-nav">

@@ -1,5 +1,11 @@
 # cooking-meal-log-cross-slice-release-qa
 
+## 2026-09-22 현재 상태와 기록 해석
+
+PR #1412의 자동화·브라우저 리허설 QA와 병합은 완료됐다. `omo-report.md`는 2026-08-25 병합 후 13/13 성공을 기록한다. 아래 Stage 2/Ready/merge pending은 당시 checkpoint이며 현재 미병합 상태가 아니다. 리허설 결과를 실제 운영의 모든 사용자 흐름 완주로 해석하지 않는다.
+
+2026-09-21 22:37 KST 운영 DB 읽기 확인에서는 account capability가 `generation_active`였고, 직접 Postgres 연결의 recipe UI mode는 `legacy_v1`이었다. 앱 요청의 별도 설정은 확인하지 않았다. 과거 activation pending을 현재 F0 미활성으로 단정하지 않는다. [현재 실행 기록](../../engineering/beta-flow-gaps-20260922.md)을 함께 확인한다. 아래 Stage/CI 절차는 과거 기록이며 신규 작업에는 현재 `AGENTS.md`를 적용한다.
+
 ## Goal
 
 F0와 #1~#13에서 병합된 계정 세대, 제품 검색·재료 연결, 개인 레시피·snapshot, cooked batch, meal log, Planner/COOK_MODE와 legacy runtime을 하나의 verification-only 최종 release gate에서 재검증한다. exact repaired head에서 pinned isolated local gate와 권한이 있는 controlled full-local read-only evidence를 모으고, 결함은 이 slice에서 고치지 않고 separate failing-test-first TDD repair PR 뒤 전체 증거를 다시 만든다.

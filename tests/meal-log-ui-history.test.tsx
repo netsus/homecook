@@ -20,31 +20,30 @@ describe("MEAL_LOG deleted-column history", () => {
 
   it("moves by exactly seven days through the existing Planner history helper", async () => {
     const user = userEvent.setup();
-    const { navigationMocks } = renderMealLogShell();
+    const { historyMocks } = renderMealLogShell();
     const rail = screen.getByTestId("meal-log-week-date-rail");
     rail.focus();
     await user.keyboard("{PageDown}");
-    expect(navigationMocks.push).toHaveBeenCalledWith(
-      "/planner?segment=log&date=2026-08-17",
-      { scroll: false },
+    expect(historyMocks.push).toHaveBeenCalledWith(
+      null, "", "/planner?segment=log&date=2026-08-17",
     );
   });
   it("swipes a week once without making adjacent duplicate dates keyboard targets", async () => {
-    const { navigationMocks } = renderMealLogShell();
+    const { historyMocks } = renderMealLogShell();
     const rail=screen.getByTestId("meal-log-week-date-rail");
     Object.defineProperty(rail,"clientWidth",{configurable:true,value:320});
     expect(screen.getAllByRole("radio")).toHaveLength(7);
     rail.scrollLeft=640;
     fireEvent.scroll(rail);
-    await waitFor(()=>expect(navigationMocks.push).toHaveBeenCalledWith("/planner?segment=log&date=2026-08-17",{scroll:false}));
+    await waitFor(()=>expect(historyMocks.push).toHaveBeenCalledWith(null,"","/planner?segment=log&date=2026-08-17"));
     expect(rail.scrollLeft).toBe(320);
   });
   it("jumps directly to last month using the calendar control", async () => {
-    const { navigationMocks } = renderMealLogShell();
+    const { historyMocks } = renderMealLogShell();
     fireEvent.click(screen.getByRole("button",{name:"달력에서 날짜 선택"}));
     fireEvent.click(screen.getByRole("button",{name:"이전 달"}));
     fireEvent.click(screen.getByRole("button",{name:"2026년 7월 10일"}));
-    await waitFor(()=>expect(navigationMocks.push).toHaveBeenCalledWith("/planner?segment=log&date=2026-07-10",{scroll:false}));
+    await waitFor(()=>expect(historyMocks.push).toHaveBeenCalledWith(null,"","/planner?segment=log&date=2026-07-10"));
   });
   it("preserves focus for repeated keyboard week movement from a selected date", async () => {
     renderMealLogShell();

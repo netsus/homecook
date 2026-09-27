@@ -10,11 +10,9 @@ import { AteListScreen } from "@/components/leftovers/ate-list-screen";
 import * as leftoversApi from "@/lib/api/leftovers";
 import * as cookingApi from "@/lib/api/cooking";
 import * as mealApi from "@/lib/api/meal";
-import * as plannerApi from "@/lib/api/planner";
+import * as mealLogApi from "@/lib/api/meal-log";
 import type { LeftoverListItemData } from "@/types/leftover";
 
-const LEFTOVERS_DESCRIPTION =
-  "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
 const EATEN_DESCRIPTION =
   "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
 
@@ -32,6 +30,7 @@ vi.mock("next/navigation", () => ({
     refresh: vi.fn(),
   })),
   useSearchParams: () => navigationMocks.searchParams(),
+  usePathname: () => "/leftovers",
 }));
 
 vi.mock("next/link", () => ({
@@ -144,527 +143,64 @@ const EATEN_ITEMS: LeftoverListItemData[] = [
   },
 ];
 
-function isoDaysAgo(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-}
 
 describe("LeftoversScreen", () => {
   beforeEach(() => {
     installMatchMedia(false);
-    navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
-    vi.spyOn(leftoversApi, "isLeftoverApiError").mockReturnValue(false);
-    vi.spyOn(cookingApi, "fetchCookedBatches").mockResolvedValue({
-      items: [],
-      next_cursor: null,
-      has_next: false,
-    });
+    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    vi.spyOn(cookingApi, "fetchCookedBatches").mockResolvedValue({ items: [], next_cursor: null, has_next: false });
   });
-
-  afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-    window.localStorage.clear();
-    Reflect.deleteProperty(window, "matchMedia");
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); Reflect.deleteProperty(window, "matchMedia"); });
+  it("shows a login action without reading personal food", async () => {
+    render(<LeftoversScreen />);
+    expect(await screen.findByRole("link", { name: "로그인" })).toBeTruthy();
+    expect(cookingApi.fetchCookedBatches).not.toHaveBeenCalled();
   });
-
-  it("renders unauthorized state when not authenticated", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockImplementation(
-      () => new Promise(() => {}),
-    );
-
-    render(<LeftoversScreen initialAuthenticated={false} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("이 화면은 로그인이 필요해요")).toBeTruthy();
-    });
-
-    expect(screen.getByTestId("social-login-buttons")).toBeTruthy();
-  });
-
-  it("renders loading state while fetching", () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockImplementation(
-      () => new Promise(() => {}),
-    );
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    expect(screen.getByTestId("leftovers-loading")).toBeTruthy();
-  });
-
-  it("uses the mobile auth gate shell instead of the legacy state panel", async () => {
-    installMatchMedia(true);
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockImplementation(
-      () => new Promise(() => {}),
-    );
-
-    render(<LeftoversScreen initialAuthenticated={false} />);
-
-    expect(await screen.findByTestId("leftovers-mobile-auth-gate")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "남은 요리" })).toBeTruthy();
-  });
-
-  it("renders leftover list after loading", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    expect(screen.getByText("된장찌개")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "남은 요리 2개" })).toBeTruthy();
-    expect(screen.getByText(LEFTOVERS_DESCRIPTION)).toBeTruthy();
-    expect(screen.getAllByTestId("leftover-card")).toHaveLength(2);
-    expect(screen.getAllByTestId("eat-button")).toHaveLength(2);
-    expect(screen.getAllByTestId("planner-add-button")).toHaveLength(2);
-    expect(screen.getByText("< 마이페이지")).toBeTruthy();
-    expect(screen.getByTestId("leftover-list").className).toContain(
-      "web-leftover-grid",
-    );
-    expect(screen.getAllByRole("button", { name: "다 먹었어요" })).toHaveLength(
-      2,
-    );
-    expect(screen.getAllByRole("button", { name: "플래너에 추가" })).toHaveLength(
-      2,
-    );
-    expect(screen.queryAllByRole("link", { name: "요리하기" })).toHaveLength(0);
-    expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
-      "/recipe/recipe-1",
-    );
-  });
-
-  it("keeps legacy leftovers and cooked batches in separate sections", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({ items: [LEFTOVER_ITEMS[0]] });
-    vi.mocked(cookingApi.fetchCookedBatches).mockResolvedValue({
-      items: [{
-        id: "11111111-1111-4111-8111-111111111111",
-        recipe_id: "22222222-2222-4222-8222-222222222222",
-        recipe_title: "김치찌개",
-        recipe_thumbnail_url: null,
-        status: "leftover",
-        cooked_at: "2026-08-10T01:00:00.000Z",
-        cooking_servings: 2,
-        finished_weight_g: 800,
-        remaining_weight_g: 500,
-        weight_status: "known",
-        batch_status: "available",
-        depleted_reason: null,
-        revision: 3,
-        nutrition_calculation_status: "complete",
-        current_unweighed_closure_event_id: null,
-      }],
-      next_cursor: null,
-      has_next: false,
-    });
-
+  it("uses a single loading region and a single empty list", async () => {
     render(<LeftoversScreen initialAuthenticated />);
-
-    expect(await screen.findByRole("heading", { name: "남은요리 관리" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "중량·잔량 기록" })).toBeTruthy();
-    expect(screen.getAllByText("김치찌개")).toHaveLength(2);
-    expect(screen.getAllByTestId("leftover-card")).toHaveLength(1);
-    expect(screen.getAllByTestId("cooked-batch-card")).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: /플래너에 추가/ })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: /김치찌개 양 조정/ })).toHaveLength(1);
+    expect(screen.getByRole("status", { name: "남은 요리 불러오는 중" })).toBeTruthy();
+    expect(await screen.findByText("남은 요리가 없어요.")).toBeTruthy();
+    expect(screen.queryByText("중량·잔량 기록")).toBeNull();
+    expect(screen.queryByText("남은요리 관리")).toBeNull();
   });
-
-  it("shows a stale reminder for leftovers kept at least 30 days without eating automatically", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: [
-        {
-          ...LEFTOVER_ITEMS[0],
-          id: "ld-fresh",
-          cooked_at: isoDaysAgo(29),
-          recipe_title: "29일 된 찌개",
-        },
-        {
-          ...LEFTOVER_ITEMS[1],
-          id: "ld-stale",
-          cooked_at: isoDaysAgo(30),
-          recipe_title: "30일 된 찌개",
-        },
-      ],
-    });
-    const eatSpy = vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
-      id: "ld-stale",
-      status: "eaten",
-      eaten_at: "2026-06-20T12:00:00.000Z",
-      auto_hide_at: "2026-07-20T12:00:00.000Z",
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    expect(await screen.findByText("30일 된 찌개")).toBeTruthy();
-    expect(screen.getByText("오래 보관한 남은 요리가 있어요")).toBeTruthy();
-    expect(screen.getByText("보관한 지 30일이 지났어요")).toBeTruthy();
-    expect(screen.queryByText("보관한 지 29일이 지났어요")).toBeNull();
-    expect(eatSpy).not.toHaveBeenCalled();
+  it("retries a failed list without also requesting the legacy list", async () => {
+    const legacy = vi.spyOn(leftoversApi, "fetchLeftovers");
+    vi.mocked(cookingApi.fetchCookedBatches).mockRejectedValueOnce(new Error("목록 오류"));
+    render(<LeftoversScreen initialAuthenticated />);
+    await userEvent.click(await screen.findByRole("button", { name: "다시 시도" }));
+    expect(await screen.findByText("남은 요리가 없어요.")).toBeTruthy();
+    expect(legacy).not.toHaveBeenCalled();
   });
-
-  it("does not repeat a stale reminder when the server has a keep review timestamp", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: [
-        {
-          ...LEFTOVER_ITEMS[0],
-          id: "ld-reviewed",
-          cooked_at: isoDaysAgo(60),
-          recipe_title: "보관 확인한 찌개",
-          stale_reviewed_at: new Date().toISOString(),
-        },
-      ],
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    expect(await screen.findByText("보관 확인한 찌개")).toBeTruthy();
-    expect(screen.queryByTestId("leftover-stale-banner")).toBeNull();
-    expect(screen.queryByTestId("leftover-stale-notice")).toBeNull();
-  });
-
-  it("lets users keep a stale leftover without moving it to eaten", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: [
-        {
-          ...LEFTOVER_ITEMS[0],
-          id: "ld-old",
-          cooked_at: "2020-01-01T00:00:00.000Z",
-        },
-      ],
-    });
-    const keepSpy = vi.spyOn(leftoversApi, "keepLeftoverStaleReview").mockResolvedValue({
-      id: "ld-old",
-      status: "leftover",
-      stale_reviewed_at: "2026-06-20T12:00:00.000Z",
-    });
-    const eatSpy = vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
-      id: "ld-old",
-      status: "eaten",
-      eaten_at: "2026-06-20T12:00:00.000Z",
-      auto_hide_at: "2026-07-20T12:00:00.000Z",
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    expect(await screen.findByText("김치찌개")).toBeTruthy();
-    expect(screen.getByText(/보관한 지 \d+일이 지났어요/)).toBeTruthy();
-
+  it("adds the chosen cooked batch to meal logging instead of creating another plan", async () => {
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({ items: LEFTOVER_ITEMS });
+    vi.spyOn(mealLogApi, "fetchMealLogDay").mockResolvedValue({ active_columns: [
+      { id: "col-1", name: "아침", sort_order: 0 },
+    ] } as never);
+    vi.spyOn(mealLogApi, "fetchMealLogRecent").mockResolvedValue({ items: [], has_next: false, next_cursor: null });
+    vi.mocked(cookingApi.fetchCookedBatches).mockResolvedValue({ items: [{
+      id: "ld-1", recipe_id: "recipe-1", recipe_title: "김치찌개", recipe_thumbnail_url: null,
+      status: "leftover", cooked_at: "2026-04-20", cooking_servings: 2,
+      finished_weight_g: 500, remaining_weight_g: 500, weight_status: "known", batch_status: "available", depleted_reason: null,
+      revision: 1, nutrition_calculation_status: "complete", current_unweighed_closure_event_id: null,
+    }], next_cursor: null, has_next: false });
+    const createLog = vi.spyOn(mealLogApi, "createMealLogEntry").mockResolvedValue({} as never);
+    const createPlan = vi.spyOn(mealApi, "createMeal");
+    render(<LeftoversScreen initialAuthenticated />);
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "계속 보관" }));
-
-    expect(screen.queryByText(/보관한 지 \d+일이 지났어요/)).toBeNull();
-    expect(screen.getByText("김치찌개")).toBeTruthy();
-    expect(keepSpy).toHaveBeenCalledWith("ld-old");
-    expect(eatSpy).not.toHaveBeenCalled();
-    expect(window.localStorage.getItem("homecook:leftovers:stale-review:v1")).toBeNull();
+    await user.click((await screen.findAllByRole("button", { name: "김치찌개 식사 기록" }))[0]);
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    const amount = await within(dialog).findByRole("textbox", { name: "실제 양" });
+    await user.clear(amount);
+    await user.type(amount, "120");
+    await user.click(within(dialog).getByRole("button", { name: "기록 저장" }));
+    await waitFor(() => expect(createLog).toHaveBeenCalledWith(expect.objectContaining({
+      source: { type: "cooked_batch", id: "ld-1" }, quantity: { amount: 120, unit: "g" }, mealPlanColumnId: "col-1",
+    }), expect.any(String)));
+    expect(createPlan).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "먹은 음식 추가" })).toBeNull());
   });
 
-  it("formats leftover timestamps with the Korea calendar day", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: [
-        {
-          ...LEFTOVER_ITEMS[0],
-          cooked_at: "2026-04-20T16:30:00.000Z",
-        },
-      ],
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    expect(await screen.findByText("김치찌개")).toBeTruthy();
-    expect(screen.getByText(/4월 21일/)).toBeTruthy();
-  });
-
-  it("renders empty state when no leftovers", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: [],
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("남은 요리가 없어요")).toBeTruthy();
-    });
-
-    expect(
-      screen.getByText("요리를 완료하면 여기에 저장돼요"),
-    ).toBeTruthy();
-  });
-
-  it("renders error state on fetch failure", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockRejectedValue(
-      new Error("서버 오류"),
-    );
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("남은 요리를 불러오지 못했어요"),
-      ).toBeTruthy();
-    });
-
-    expect(screen.getByText("다시 시도")).toBeTruthy();
-  });
-
-  it("removes item from list after eat action", async () => {
-    const fetchSpy = vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-    vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
-      id: "ld-1",
-      status: "eaten",
-      eaten_at: "2026-04-29T00:00:00.000Z",
-      auto_hide_at: "2026-05-29T00:00:00.000Z",
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    const eatButtons = screen.getAllByTestId("eat-button");
-    await user.click(eatButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText("다먹음 처리됐어요")).toBeTruthy();
-    });
-
-    expect(screen.getAllByTestId("leftover-card")).toHaveLength(1);
-    expect(screen.queryByText("김치찌개")).toBeNull();
-    expect(screen.getByText("된장찌개")).toBeTruthy();
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows error feedback when eat fails", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-    vi.spyOn(leftoversApi, "eatLeftover").mockRejectedValue(
-      new Error("다먹음 처리에 실패했어요."),
-    );
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    const eatButtons = screen.getAllByTestId("eat-button");
-    await user.click(eatButtons[0]);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("다먹음 처리에 실패했어요."),
-      ).toBeTruthy();
-    });
-
-    // Items should still be in the list
-    expect(screen.getAllByTestId("leftover-card")).toHaveLength(2);
-  });
-
-  it("transitions to empty state after eating last item", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: [LEFTOVER_ITEMS[0]],
-    });
-    vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
-      id: "ld-1",
-      status: "eaten",
-      eaten_at: "2026-04-29T00:00:00.000Z",
-      auto_hide_at: "2026-05-29T00:00:00.000Z",
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("eat-button"));
-
-    await waitFor(() => {
-      expect(screen.getByText("남은 요리가 없어요")).toBeTruthy();
-    });
-  });
-
-  it("opens planner-add sheet when clicking planner add button", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-    vi.spyOn(plannerApi, "fetchPlanner").mockResolvedValue({
-      columns: [
-        { id: "col-1", name: "아침", sort_order: 0 },
-        { id: "col-2", name: "점심", sort_order: 1 },
-      ],
-      meals: [],
-      product_entries: [],
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    const plannerButtons = screen.getAllByTestId("planner-add-button");
-    await user.click(plannerButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText("날짜와 끼니를 선택해 주세요")).toBeTruthy();
-    });
-
-    const dateGroup = screen.getByRole("group", { name: "날짜 선택" });
-    expect(within(dateGroup).getAllByRole("button")).toHaveLength(14);
-  });
-
-  it("submits planner add with leftover_dish_id", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-    vi.spyOn(plannerApi, "fetchPlanner").mockResolvedValue({
-      columns: [
-        { id: "col-1", name: "아침", sort_order: 0 },
-        { id: "col-2", name: "점심", sort_order: 1 },
-      ],
-      meals: [],
-      product_entries: [],
-    });
-    const createMealSpy = vi
-      .spyOn(mealApi, "createMeal")
-      .mockResolvedValue({
-        id: "meal-1",
-        plan_date: "2026-04-29",
-        column_id: "col-1",
-        recipe_id: "recipe-1",
-        planned_servings: 1,
-        status: "registered",
-        is_leftover: true,
-        leftover_dish_id: "ld-1",
-        recipe_nutrition_snapshot_id: null,
-      });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    await user.click(screen.getAllByTestId("planner-add-button")[0]);
-
-    // Wait for sheet to be ready (identified by the sheet description)
-    await waitFor(() => {
-      expect(screen.getByText("날짜와 끼니를 선택해 주세요")).toBeTruthy();
-    });
-
-    // Click the confirm button inside the dialog
-    const dialog = screen.getByRole("dialog");
-    const confirmButtons = Array.from(dialog.querySelectorAll("button")).filter(
-      (btn) => btn.textContent === "날짜 끼니에 추가",
-    );
-    await user.click(confirmButtons[0]);
-
-    await waitFor(() => {
-      expect(createMealSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          leftover_dish_id: "ld-1",
-          recipe_id: "recipe-1",
-        }),
-      );
-    });
-  });
-
-  it("keeps the mobile planner-add label while constraining the button width", async () => {
-    installMatchMedia(true);
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    const plannerAddButton = (await screen.findAllByTestId("planner-add-button"))[0];
-    expect(plannerAddButton.textContent?.trim()).toBe("플래너에 추가");
-    expect(plannerAddButton.getAttribute("aria-label")).toBe("플래너에 추가");
-    expect(plannerAddButton.className).toContain("w-[112px]");
-    expect(screen.getByText(LEFTOVERS_DESCRIPTION)).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "다먹음" })).toHaveLength(2);
-  });
-
-  it("uses brand-colored mobile feedback after eating a leftover", async () => {
-    installMatchMedia(true);
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-    vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
-      id: "ld-1",
-      status: "eaten",
-      eaten_at: "2026-04-29T00:00:00.000Z",
-      auto_hide_at: "2026-05-29T00:00:00.000Z",
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    const user = userEvent.setup();
-    await user.click((await screen.findAllByTestId("eat-button"))[0]);
-
-    const toast = await screen.findByTestId("feedback-toast");
-    expect(toast.className).toContain("growth-toast-card-xp");
-    expect(toast.className).toContain("border-[var(--growth-toast-xp-border)]");
-    expect(toast.className).not.toContain("success");
-  });
-
-  it("has link to ate-list page", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
-      items: LEFTOVER_ITEMS,
-    });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    const ateListLink = screen.getByText("다먹은 요리");
-    const href = ateListLink.closest("a")?.getAttribute("href") ?? "";
-    expect(href).toContain("/leftovers/ate");
-    expect(href).toContain("returnTo=");
-    expect(href).toContain("returnSurface=leftovers.list");
-  });
-
-  it("retries loading on error action", async () => {
-    const fetchSpy = vi
-      .spyOn(leftoversApi, "fetchLeftovers")
-      .mockRejectedValueOnce(new Error("서버 오류"))
-      .mockResolvedValueOnce({ items: LEFTOVER_ITEMS });
-
-    render(<LeftoversScreen initialAuthenticated={true} />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("남은 요리를 불러오지 못했어요"),
-      ).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    await user.click(screen.getByText("다시 시도"));
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-  });
 });
 
 describe("AteListScreen", () => {

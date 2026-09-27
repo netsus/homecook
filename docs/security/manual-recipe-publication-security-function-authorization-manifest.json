@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "slice": "manual-recipe-publication",
+  "migrations": [
+    "supabase/migrations/20260927120400_manual_public_recipe_runtime.sql",
+    "supabase/migrations/20260927120500_manual_recipe_publication.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.publish_manual_recipe(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, uuid, timestamp with time zone, jsonb, jsonb, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.complete_manual_recipe_runtime(uuid, uuid, timestamp with time zone, jsonb, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.read_owned_manual_recipe_publication_context(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    }
+  ]
+}

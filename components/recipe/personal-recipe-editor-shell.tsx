@@ -279,6 +279,7 @@ export function RecipeEditorStepComposer({
 
   const selectedMethod =
     cookingMethods.find((method) => method.id === selectedMethodId) ?? null;
+  const selectedMethodColor = selectedMethod ? getCookingMethodColor(selectedMethod) : undefined;
   const cookingMethodGroups = useMemo(
     () => groupCookingMethodsByCategory(cookingMethods),
     [cookingMethods],
@@ -317,8 +318,13 @@ export function RecipeEditorStepComposer({
         <span className="text-[13px] font-semibold text-[var(--foreground)]">
           {nextStepNumber}단계 입력
         </span>
-        <span className="text-[12px] font-medium text-[var(--text-3)]">
-          {selectedMethod && !methodSelectedManually ? `${selectedMethod.label} 자동 선택` : "설명 입력 후 조리방법 확인"}
+        <span
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-semibold text-[var(--foreground)]"
+          data-testid="step-selected-method"
+          style={selectedMethodColor ? { backgroundColor: `color-mix(in srgb, ${selectedMethodColor} 14%, transparent)` } : undefined}
+        >
+          {selectedMethodColor ? <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: selectedMethodColor }} /> : null}
+          {selectedMethod ? `${selectedMethod.label} ${methodSelectedManually ? "직접 선택" : "자동 선택"}` : "조리방법 선택"}
         </span>
       </div>
       <div
@@ -369,7 +375,7 @@ export function RecipeEditorStepComposer({
         <span className="sr-only">만들기 설명</span>
         <textarea
           aria-label={`만들기 ${nextStepNumber} 설명`}
-          className="min-h-[92px] w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2.5 text-[14px] leading-[1.55] text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+          className="min-h-[92px] w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2.5 text-base leading-[1.55] text-[var(--foreground)] outline-none focus:border-[var(--brand)] sm:text-[14px]"
           onChange={(event) => {
             const value = event.target.value;
             setInstruction(value);
@@ -381,6 +387,7 @@ export function RecipeEditorStepComposer({
           }}
           placeholder="만들기 설명을 입력하세요"
           rows={3}
+          style={selectedMethodColor ? { borderColor: selectedMethodColor, boxShadow: `inset 3px 0 0 ${selectedMethodColor}` } : undefined}
           value={instruction}
         />
       </label>

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
 import { renderMealLogShell } from "@/tests/fixtures/meal-log-ui-harness";
 
 function selectedDay() {
@@ -16,6 +17,63 @@ async function openBreakfast(user: ReturnType<typeof userEvent.setup>) {
 
 describe("MEAL_LOG add sheet", () => {
   afterEach(cleanup);
+
+  it("hides depleted foods instead of offering an action that will fail", async () => {
+    const user = userEvent.setup();
+    renderMealLogShell({ includeCookedBatch: true, batchStatus: "depleted", batchRemainingWeight: 0 });
+    await openBreakfast(user);
+    await screen.findByText("요리한 음식 전체");
+    await waitFor(() => expect(screen.queryByRole("status", { name: "음식 목록 불러오는 중" })).toBeNull());
+    expect(screen.queryByText("된장찌개")).toBeNull();
+  });
+
+  it("invalidates a selected batch immediately after an acknowledged depletion", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderMealLogShell({ includeCookedBatch: true });
+    await openBreakfast(user);
+    await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
+    expect(screen.getByRole("button", { name: "기록 저장" })).toBeTruthy();
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) => {
+      const response = await original(input, init);
+      if (!String(input).includes("/cooked-batches")) return response;
+      const body = await response.json();
+      body.data.items = body.data.items.map((batch: object) => ({ ...batch, status: "eaten", remaining_weight_g: 0, batch_status: "depleted", depleted_reason: "consumed" }));
+      return new Response(JSON.stringify(body), { status: 200 });
+    });
+    act(() => notifyCookedBatchChanged("40000000-0000-4000-8000-000000000001"));
+    expect(screen.queryByRole("button", { name: "기록 저장" })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("status", { name: "음식 목록 불러오는 중" })).toBeNull());
+    expect(screen.queryByText("된장찌개")).toBeNull();
+  });
+
+  it("does not restore a depleted food from an older pending list response", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, releaseBatchLoad, settledBatchCursors } = renderMealLogShell({ includeCookedBatch: true, deferBatchLoad: true });
+    await openBreakfast(user);
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/cooked-batches"))).toBe(true));
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) => String(input).includes("/cooked-batches")
+      ? new Response(JSON.stringify({ success: true, data: { items: [], has_next: false, next_cursor: null }, error: null }))
+      : original(input, init));
+    act(() => notifyCookedBatchChanged("40000000-0000-4000-8000-000000000001"));
+    await waitFor(() => expect(screen.queryByRole("status", { name: "음식 목록 불러오는 중" })).toBeNull());
+    await act(async () => { releaseBatchLoad(null); });
+    await waitFor(() => expect(settledBatchCursors()).toContain(null));
+    expect(screen.queryByText("된장찌개")).toBeNull();
+  });
+
+  it("keeps the search outside the result scroller and explains an empty result", async () => {
+    const user = userEvent.setup();
+    renderMealLogShell();
+    await openBreakfast(user);
+    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    const input = screen.getByRole("searchbox", { name: "제품·재료 검색" });
+    expect(screen.getByTestId("meal-log-source-scroll").contains(input)).toBe(false);
+    await user.type(input, "없는음식");
+    expect(screen.getByRole("status", { name: "제품·재료 검색 중" })).toBeTruthy();
+    expect(await screen.findByText("검색 결과가 없어요. 다른 제품·재료 이름으로 찾아보세요.")).toBeTruthy();
+  });
 
   it("keeps a cleared quantity empty, rejects zero and below-minimum amounts, and saves 12.5 once", async () => {
     const user = userEvent.setup();
@@ -47,7 +105,7 @@ describe("MEAL_LOG add sheet", () => {
 
     await openBreakfast(user);
     const dialog = screen.getByRole("dialog", { name: "먹은 음식 추가" });
-    expect(dialog.className.split(" ")).toContain("h-[100dvh]");
+    expect(dialog.className.split(" ")).toContain("h-full");
     expect(screen.getByText("8월 10일 · 아침")).toBeTruthy();
     expect(screen.getByRole("button", { name: "닫기" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "요리한 음식" })).toBeTruthy();
@@ -103,7 +161,7 @@ describe("MEAL_LOG add sheet", () => {
     const unit = screen.getByRole("textbox", { name: "단위" }) as HTMLInputElement;
     expect(unit.value).toBe("g");
     expect(unit.readOnly).toBe(true);
-    expect(screen.getByText("먹은 양을 g(그램) 단위로 입력해 주세요.")).toBeTruthy();
+    expect(screen.queryByText("먹은 양을 g(그램) 단위로 입력해 주세요.")).toBeNull();
   });
 
   it("appends each server-ordered source with its single opaque cursor", async () => {

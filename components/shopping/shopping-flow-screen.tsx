@@ -1,5 +1,7 @@
 "use client";
 
+import { useMobileFullscreenPage } from "@/components/shared/use-mobile-fullscreen-page";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
@@ -322,6 +324,7 @@ export function ShoppingFlowScreen({
 }: ShoppingFlowScreenProps) {
   const { push } = useRouter();
   const [viewState, setViewState] = useState<ViewState>("loading");
+  useMobileFullscreenPage(viewState === "loading" || viewState === "creating", viewState);
   const [mealConfigs, setMealConfigs] = useState<MealConfig[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const isMobileViewport = useIsMobileViewport();
@@ -461,7 +464,7 @@ export function ShoppingFlowScreen({
   if (viewState === "loading") {
     return (
       <div
-        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[var(--wave1-surface)]"
         data-testid="shopping-flow-state-shell"
       >
         <AppBar onBack={handleBack} />
@@ -480,7 +483,7 @@ export function ShoppingFlowScreen({
   if (viewState === "empty") {
     return (
       <div
-        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[var(--wave1-surface)]"
         data-testid="shopping-flow-state-shell"
       >
         <AppBar onBack={handleBack} />
@@ -502,7 +505,7 @@ export function ShoppingFlowScreen({
   if (viewState === "error") {
     return (
       <div
-        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[var(--wave1-surface)]"
         data-testid="shopping-flow-state-shell"
       >
         <AppBar onBack={handleBack} />
@@ -523,7 +526,7 @@ export function ShoppingFlowScreen({
   if (viewState === "creating") {
     return (
       <div
-        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[var(--wave1-surface)]"
         data-testid="shopping-flow-state-shell"
       >
         <AppBar onBack={handleBack} />

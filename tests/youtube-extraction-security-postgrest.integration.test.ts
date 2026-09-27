@@ -2,11 +2,22 @@ import { spawnSync } from "node:child_process";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { YOUTUBE_ASYNC_POLICY } from "@/lib/server/youtube-async-extraction";
-
 const enabled =
   process.env.HOMECOOK_YTA_POSTGREST_INTEGRATION === "1";
 const postgrestUrl = process.env.HOMECOOK_YTA_POSTGREST_URL ?? "";
+// The runner captures this non-secret snapshot immediately after the historical
+// migration bundle. Do not replace it with the current application's policy.
+const fixturePolicy = JSON.parse(process.env.HOMECOOK_YTA_FIXTURE_POLICY ?? "{}") as {
+  policyVersion: number;
+  extractorMode: string;
+  pipelineIdentity: string;
+  resultAffectingOptions: Record<string, unknown>;
+  fingerprintKeyVersion: string;
+  snapshotDigest: string;
+};
+if (enabled && (fixturePolicy.policyVersion !== 1 || !/^[a-f0-9]{64}$/u.test(fixturePolicy.snapshotDigest ?? ""))) {
+  throw new Error("The historical YouTube integration runner policy is required");
+}
 const host = process.env.HOMECOOK_YTA_PGHOST ?? "";
 const port = process.env.HOMECOOK_YTA_PGPORT ?? "";
 const database = process.env.HOMECOOK_YTA_PGDATABASE ?? "";
@@ -69,11 +80,11 @@ function resetRuntimeState() {
         expires_at = null;
     update private.youtube_extraction_current_policy
     set enabled = true,
-        policy_version = ${YOUTUBE_ASYNC_POLICY.policyVersion},
-        extractor_mode = '${YOUTUBE_ASYNC_POLICY.extractorMode}',
-        pipeline_identity = '${YOUTUBE_ASYNC_POLICY.pipelineIdentity}',
-        result_affecting_options = $policy$${JSON.stringify(YOUTUBE_ASYNC_POLICY.resultAffectingOptions)}$policy$::jsonb,
-        fingerprint_key_version = '${YOUTUBE_ASYNC_POLICY.fingerprintKeyVersion}',
+        policy_version = ${fixturePolicy.policyVersion},
+        extractor_mode = '${fixturePolicy.extractorMode}',
+        pipeline_identity = '${fixturePolicy.pipelineIdentity}',
+        result_affecting_options = $policy$${JSON.stringify(fixturePolicy.resultAffectingOptions)}$policy$::jsonb,
+        fingerprint_key_version = '${fixturePolicy.fingerprintKeyVersion}',
         previous_fingerprint_key_version = null,
         previous_fingerprint_valid_until = null,
         updated_at = now()

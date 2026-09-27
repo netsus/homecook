@@ -100,7 +100,6 @@ export function LinkedAuthProviders() {
   return (
     <section aria-label="연결된 로그인 방법" className="mt-4 border-t border-[var(--line)] pt-4">
       <h3 className="text-sm font-extrabold text-[var(--foreground)]">연결된 로그인 방법</h3>
-      <p className="mt-1 text-xs leading-5 text-[var(--muted)]">로그인할 때 사용할 수 있는 방법이에요. 계정 소유 정보는 표시하지 않아요.</p>
       {linkSucceeded ? <p role="status" className="mt-3 text-sm text-[var(--success)]">로그인 방법이 연결됐어요.</p> : null}
       {linkCancelled ? <p role="status" className="mt-3 text-sm text-[var(--muted)]">연결을 취소했어요.</p> : null}
       {error && !linkCancelled ? <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error === "link_conflict" ? "이 로그인 방법을 현재 계정에 연결하지 못했어요." : "연결에 실패했어요. 잠시 후 다시 연결해 주세요."}</p> : null}
@@ -113,7 +112,7 @@ export function LinkedAuthProviders() {
         const isLinked = linked.includes(provider);
         return <div className="flex min-h-11 items-center justify-between gap-3 rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3" key={provider}>
           <span className="min-w-0 truncate text-sm font-semibold">{AUTH_PROVIDER_META[provider].displayName} {isLinked ? "연결됨" : "미연결"}</span>
-          {!isLinked ? <button className="min-h-11 shrink-0 px-3 text-sm font-bold text-[var(--brand)] disabled:opacity-60" disabled={pending !== null} onClick={() => void link(provider)} type="button">{pending === provider ? `${AUTH_PROVIDER_META[provider].displayName} 연결 중` : `${AUTH_PROVIDER_META[provider].displayName} 연결`}</button> : <span className="text-xs font-bold text-[var(--muted)]">읽기 전용</span>}
+          {!isLinked ? <button className="min-h-11 shrink-0 px-3 text-sm font-bold text-[var(--brand)] disabled:opacity-60" disabled={pending !== null} onClick={() => void link(provider)} type="button">{pending === provider ? `${AUTH_PROVIDER_META[provider].displayName} 연결 중` : `${AUTH_PROVIDER_META[provider].displayName} 연결`}</button> : null}
         </div>;
       })}</div> : null}
     </section>

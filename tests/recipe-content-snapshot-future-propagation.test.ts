@@ -346,6 +346,11 @@ describe("recipe content snapshot future propagation public contract", () => {
     expect(result.predecessorGuard.recipe_ingredients).toHaveLength(12);
     expect(result.predecessorGuard.recipe_ingredients.map((row) => row.amount)).toEqual(strawberryPuddingDraft.ingredients.map((row) => row.amount));
     expect(result.nutritionSnapshot.target_ingredient_count).toBe(12);
+    // The database payload validator permits only letters, digits and hyphens in row identities.
+    expect(JSON.stringify(result.nutritionSnapshot)).not.toContain(":row:");
+    for (const reason of result.nutritionSnapshot.missing_reasons) {
+      expect(reason.split(":")[1]).toMatch(/^[A-Za-z0-9-]+$/);
+    }
     expect(result.nutritionSnapshot.calculation_status).toBe("unavailable");
     await expect(calculateRecipeDraftNutrition(client, { recipeId, baseRecipeRevision: 1, draft: {
       ...strawberryPuddingDraft, ingredients: [...strawberryPuddingDraft.ingredients, strawberryPuddingDraft.ingredients[0]],

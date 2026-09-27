@@ -17737,3 +17737,13 @@ body:has(.mdv2-root) [aria-label^="YouTube 추출"] {
     border-radius: var(--radius-card);
   }
 }
+
+/* Fullscreen mobile flows scroll their content, never a second document viewport. */
+html[data-mobile-fullscreen-page="true"],
+html[data-mobile-fullscreen-page="true"] body {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  scroll-behavior: auto !important;
+}

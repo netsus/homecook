@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -100,6 +100,8 @@ export function SettingsScreen({
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const deleteAttemptRef = useRef<string | null>(null);
+  const deletePendingRef = useRef(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
@@ -278,10 +280,14 @@ export function SettingsScreen({
   }, [router]);
 
   const handleDeleteAccount = useCallback(async () => {
+    if (deletePendingRef.current) return;
+    deletePendingRef.current = true;
+    const key = deleteAttemptRef.current ?? crypto.randomUUID();
+    deleteAttemptRef.current = key;
     setDeleteError(null);
     setIsDeleting(true);
     try {
-      await deleteAccount();
+      await deleteAccount(key);
       clearLastAuthProvider();
     } catch (error) {
       if (isMypageApiError(error)) {
@@ -289,6 +295,7 @@ export function SettingsScreen({
       } else {
         setDeleteError("탈퇴에 실패했어요");
       }
+      deletePendingRef.current = false;
       setIsDeleting(false);
       return;
     }
@@ -296,6 +303,7 @@ export function SettingsScreen({
       await logout();
     } catch {
       setDeleteError("탈퇴는 완료되었으나 로그아웃에 실패했어요. 브라우저를 닫아주세요.");
+      deletePendingRef.current = false;
       setIsDeleting(false);
       return;
     }
@@ -867,7 +875,7 @@ export function SettingsScreen({
         <ConfirmDialog
           confirmLabel={isDeleting ? "탈퇴 처리 중..." : "탈퇴하기"}
           confirmTone="danger"
-          description="레시피북, 플래너, 장보기, 팬트리 등 개인 기록은 삭제되며 되돌릴 수 없어요. 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요."
+          description="개인 기록을 삭제하며 복구할 수 없어요. 공개한 제품은 작성자 정보 없이 남아요."
           disabled={isDeleting}
           errorMessage={deleteError}
           onCancel={() => {

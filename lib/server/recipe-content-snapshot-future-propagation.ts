@@ -507,7 +507,7 @@ export async function calculateRecipeDraftNutrition(
   const validIngredients = validRows.map((ingredient) => ({
     ...ingredient,
     id: ingredientCounts.get(ingredient.ingredient_id)! > 1
-      ? `${ingredient.ingredient_id}:row:${ingredient.sort_order}`
+      ? `${ingredient.ingredient_id}-row-${ingredient.sort_order}`
       : ingredient.ingredient_id,
   }));
 

@@ -68,6 +68,7 @@ const navigationMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/settings",
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
@@ -350,7 +351,7 @@ describe("SettingsScreen", () => {
     expect(screen.getByText("계정 삭제").className).toContain("text-[var(--danger)]");
     expect(
       screen.getByText(
-        "개인 기록은 삭제되고, 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요.",
+        "계정 삭제하기",
       ),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "계정 삭제하기" }).className).toContain(
@@ -784,7 +785,7 @@ describe("SettingsScreen", () => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
       expect(
         screen.getByText(
-          "레시피북, 플래너, 장보기, 팬트리 등 개인 기록은 삭제되며 되돌릴 수 없어요. 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요.",
+          "개인 기록을 삭제하며 복구할 수 없어요. 공개한 제품은 작성자 정보 없이 남아요.",
         ),
       ).toBeTruthy();
     });
@@ -883,6 +884,11 @@ describe("SettingsScreen", () => {
       expect(screen.getByText("탈퇴에 실패했어요.")).toBeTruthy();
     });
 
+    const firstKey = mockDeleteAccount.mock.calls[0][0];
+    expect(firstKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    await user.click(within(screen.getByRole("alertdialog")).getByText("탈퇴하기"));
+    await waitFor(() => expect(mockDeleteAccount).toHaveBeenCalledTimes(2));
+    expect(mockDeleteAccount.mock.calls[1][0]).toBe(firstKey);
     // Dialog should still be open
     expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     expect(mockRouterReplace).not.toHaveBeenCalled();
