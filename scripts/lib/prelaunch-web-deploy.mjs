@@ -21,6 +21,7 @@ export function classifyPrelaunchScope(files, before, after) {
     "scripts/lib/ingredient-conversion-domain.mjs",
     "scripts/reconcile-recipe-nutrition-v2-data.mjs",
     "scripts/run-recipe-nutrition-postgres-integration.mjs",
+    "scripts/run-feedback-batch-tests.mjs",
     "scripts/sql/reconcile-recipe-nutrition-v2-data-20260915.sql",
     "scripts/validate-account-session-generation-inventory.mjs",
     "scripts/youtube-real-app-route-smoke.mjs",
