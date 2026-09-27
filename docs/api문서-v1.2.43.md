@@ -1,5 +1,7 @@
 # API\_설계\_v1.2.43
 
+> 운영 반영(2026-09-28): 누적 피드백 후속을 웹 `8d9dc57efe22`·DB 이력198개에 반영했다. 아래 항목의 ‘미배포’는 구현 당시 상태다. [실제 반영·검증·남은 확인](engineering/feedback-batch-release-20260928.md)이 우선한다.
+
 ## 2026-09-28 추가 — 레시피북 개수·완료 직전 읽기·탈퇴 키
 
 레시피북 saved/custom/liked 개수는 상세와 동일한 visible recipe inner join/RLS를 따른다. recipe cook-mode 진입은 기존 POST /cooking/session-attempts를 사용하고 완료창을 열 때 기존 GET snapshot cook-mode로 현재 pantry_item_id 후보를 갱신한다. DELETE /users/me의 Idempotency-Key는 기존 필수 계약 그대로이며 client 누락을 수정한다. 새 endpoint/권한 완화는 없다. [세부 기록](engineering/feedback-library-cleanup-20260928.md), 코드 미배포.
