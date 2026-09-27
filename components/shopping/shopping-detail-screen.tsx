@@ -1,5 +1,7 @@
 "use client";
 
+import { AppBackButton } from "@/components/shared/app-back-button";
+
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
@@ -975,16 +977,7 @@ function ShoppingDetailSkeleton({
       >
         <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
           <div className="grid min-h-[var(--control-height-xl)] grid-cols-[44px_1fr_44px] items-center gap-2 px-4 py-2.5">
-            <button
-              aria-label="뒤로 가기"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
-              onClick={onBack}
-              type="button"
-            >
-              <span aria-hidden="true" className="text-[26px] leading-none">
-                ‹
-              </span>
-            </button>
+            <AppBackButton onClick={onBack} />
             <h1 className="min-w-0 truncate text-center text-[18px] font-extrabold leading-[1.3]">
               장보기 상세
             </h1>
@@ -1363,16 +1356,7 @@ function MobileShoppingAppBar({
   return (
     <header className="fixed inset-x-0 top-0 z-30 border-b border-[var(--line-strong)] bg-[var(--surface)]">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
-        <button
-          aria-label="뒤로 가기"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
-          onClick={onBack}
-          type="button"
-        >
-          <span aria-hidden="true" className="text-[26px] leading-none">
-            ‹
-          </span>
-        </button>
+        <AppBackButton onClick={onBack} />
         <h1 className="min-w-0 flex-1 truncate text-left text-[18px] font-extrabold leading-[1.3]">
           {title}
         </h1>

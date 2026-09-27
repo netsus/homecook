@@ -1,5 +1,15 @@
 # API\_설계\_v1.2.43
 
+> 운영 반영(2026-09-28): 누적 피드백 후속을 웹 `8d9dc57efe22`·DB 이력198개에 반영했다. 아래 항목의 ‘미배포’는 구현 당시 상태다. [실제 반영·검증·남은 확인](engineering/feedback-batch-release-20260928.md)이 우선한다.
+
+## 2026-09-28 추가 — 레시피북 개수·완료 직전 읽기·탈퇴 키
+
+레시피북 saved/custom/liked 개수는 상세와 동일한 visible recipe inner join/RLS를 따른다. recipe cook-mode 진입은 기존 POST /cooking/session-attempts를 사용하고 완료창을 열 때 기존 GET snapshot cook-mode로 현재 pantry_item_id 후보를 갱신한다. DELETE /users/me의 Idempotency-Key는 기존 필수 계약 그대로이며 client 누락을 수정한다. 새 endpoint/권한 완화는 없다. [세부 기록](engineering/feedback-library-cleanup-20260928.md), 코드 미배포.
+
+## 2026-09-28 후속 — 저장 준비와 최근 음식 후보
+
+응답 wrapper·소유권·세션·영양 자료 검증·멱등성 계약은 유지한다. 직접 등록 POST/공개 POST의 레시피/수량은 사용자 권한으로 읽고 승인 영양 근거는 기존 recipe-future-propagation 내부 조회 권한으로 읽는다. 개인 복제 영양 계산의 구성별 임시 행 ID는 기존 DB validator가 허용하는 문자로 생성한다. 최근 식사 출처 GET의 cooked_batch는 본인 음식 중 status=leftover이고 batch_status가 depleted가 아닌 항목만 후보로 반환한다. 식사 기록 POST는 기존 source=cooked_batch/실제 batch ID를 사용한다. [원인·확인 기록](engineering/feedback-followup-20260928.md), 미배포.
+
 > 운영 상태(2026-09-27): 이날까지 누적한 피드백 수정은 웹 `f8824662e90f`·DB 이력 197개에 반영됐다. 개별 항목의 이전 ‘미배포’ 표시는 구현 당시 상태다. [실제 배포 결과와 남은 확인](engineering/feedback-batch-release-20260927.md)을 기준으로 한다.
 
 ## 2026-09-27 후속 — 계획·요리 상태와 완료 화면

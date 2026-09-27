@@ -84,6 +84,7 @@ describe("manual publication readiness", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("create_manual_recipe_recoverable", expect.objectContaining({ p_idempotency_key: key }));
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ recipeId, idempotencyKey: key, nutritionSnapshot: { calculation_status: "unavailable" } }));
     expect(mocks.prepare.mock.invocationCallOrder[0]).toBeLessThan(mocks.publish.mock.invocationCallOrder[0]);
+    expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({ auth: expect.any(Object) }), recipeId, expect.objectContaining({ rpc: mocks.rpc }));
     expect(mocks.recalculate).not.toHaveBeenCalled();
   });
 

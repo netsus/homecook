@@ -9,6 +9,7 @@ import {
 } from "@/components/shared/app-overlay";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
+import { useSoftKeyboardOpen } from "@/components/shared/use-soft-keyboard-open";
 import { useDialogViewport } from "@/components/shared/use-dialog-viewport";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import {
@@ -128,6 +129,7 @@ function IngredientOnlyAddModal({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const viewportStyle = useDialogViewport();
+  const keyboardOpen = useSoftKeyboardOpen();
   const isDesktopViewport = useDesktopViewport();
   const isWebPresentation =
     presentation === "web" || (presentation === "auto" && isDesktopViewport);
@@ -370,7 +372,7 @@ function IngredientOnlyAddModal({
       bodyClassName="ingredient-search-results"
       headerSlotClassName="mt-2"
       description={INGREDIENT_ADD_DESCRIPTION}
-      footer={
+      footer={keyboardOpen ? null :
         <AppModalFooterActions
           cancelDisabled={selectedIngredients.length === 0}
           cancelLabel="초기화"

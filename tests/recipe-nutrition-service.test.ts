@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   RecipeNutritionServiceError,
   recalculateRecipeNutritionSnapshot,
+  prepareRecipeNutritionSnapshot,
 } from "@/lib/server/recipe-nutrition-service";
 
 function maybeSingleResult(data: unknown, error: unknown = null) {
@@ -244,6 +245,22 @@ function serviceClient({
 }
 
 describe("recipe nutrition snapshot service", () => {
+  it("uses the scoped predecessor reader while keeping recipe ownership reads on the user client", async () => {
+    const internal = serviceClient();
+    const user = { from: vi.fn((table: string) => {
+      if (table === "recipes" || table === "recipe_ingredients") return internal.from(table);
+      // These tables have RLS enabled with no authenticated read policy.
+      return listResult([]);
+    }), rpc: vi.fn() };
+    const prepared = await prepareRecipeNutritionSnapshot(user as never, "recipe-1", internal as never);
+    expect(prepared.calculation.calculation_status).toBe("complete");
+    expect(user.from.mock.calls.map(([table]) => table)).toEqual(["recipes", "recipe_ingredients"]);
+    expect(prepared.inputGuard.recipe_ingredients).toEqual([expect.objectContaining({
+      nutrition_candidates: [expect.objectContaining({ profile_id: "profile-1" })],
+    })]);
+    expect(user.rpc).not.toHaveBeenCalled();
+  });
+
   it("hydrates the only eligible predecessor chain across unspecified states in bounded queries", async () => {
     const { from, rpc } = serviceClient();
 

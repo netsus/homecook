@@ -262,7 +262,7 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false, isRecovering = 
           {isSaving ? "저장 중..." : isRecovering ? "저장 결과 확인" : "저장"}
         </button>
       </div>
-      <p className="px-4 pb-2.5 text-[12px] leading-5 text-[var(--text-2)]">직접 등록한 레시피는 공개되어 검색·공유할 수 있어요.</p>
+      <p className="px-4 pb-2.5 text-[12px] leading-5 text-[var(--text-2)]">공개 레시피로 저장돼요.</p>
     </div>
   );
 }
@@ -645,6 +645,8 @@ export function ManualRecipeCreateScreen({
     requestCancel,
     stay,
   } = editorShell;
+  const hasDraftChangesRef = useRef(hasDraftChanges);
+  hasDraftChangesRef.current = hasDraftChanges;
   const isImageLifecycleLocked = (
     isSaving
     || isCreateOutcomeUnknown
@@ -712,6 +714,10 @@ export function ManualRecipeCreateScreen({
     }
 
     if (!hasDraftChanges) {
+      if (historyGuardActiveRef.current) {
+        event.preventDefault();
+        releaseHistoryGuard(() => router.push(href));
+      }
       return;
     }
 
@@ -723,6 +729,7 @@ export function ManualRecipeCreateScreen({
     editorShell.isSubmitting,
     hasDraftChanges,
     openDiscardDialog,
+    releaseHistoryGuard,
     router,
   ]);
 
@@ -749,7 +756,9 @@ export function ManualRecipeCreateScreen({
       window.location.href,
     );
     historyGuardActiveRef.current = true;
+  }, [hasDraftChanges]);
 
+  useEffect(() => {
     const handleHistoryBack = () => {
       if (!historyGuardActiveRef.current) {
         return;
@@ -761,6 +770,14 @@ export function ManualRecipeCreateScreen({
         const pendingExit = pendingHistoryExitRef.current;
         pendingHistoryExitRef.current = null;
         queueMicrotask(() => pendingExit?.());
+        return;
+      }
+
+      // IME editing can temporarily restore an empty/clean draft. Never move
+      // history during those input changes; decide only on actual navigation.
+      if (!hasDraftChangesRef.current && !createOutcomeUnknownRef.current) {
+        historyGuardActiveRef.current = false;
+        completeExitRef.current();
         return;
       }
 
@@ -784,6 +801,7 @@ export function ManualRecipeCreateScreen({
     };
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasDraftChangesRef.current && !createOutcomeUnknownRef.current) return;
       event.preventDefault();
       event.returnValue = "";
     };
@@ -809,7 +827,7 @@ export function ManualRecipeCreateScreen({
         }
       }
     };
-  }, [hasDraftChanges]);
+  }, []);
 
   const handleAddIngredient = useCallback(
     (newIngredients: ManualRecipeIngredientInput[]) => {
@@ -1709,7 +1727,7 @@ export function ManualRecipeCreateScreen({
   ) : null;
   const desktopManualFooter = (
     <div className="web-manual-footer">
-      <p className="mb-2 text-[12px] leading-5 text-[var(--text-2)]">직접 등록한 레시피는 공개되어 검색·공유할 수 있어요.</p>
+      <p className="mb-2 text-[12px] leading-5 text-[var(--text-2)]">공개 레시피로 저장돼요.</p>
       <WebButton
         className="web-manual-save-button"
         disabled={isSaving || editorShell.isSubmitting || isUploading || !draftReady}
@@ -1894,7 +1912,7 @@ export function ManualRecipeCreateScreen({
                   placeholder="예: 김치찌개"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 text-[14px] font-normal text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:border-[var(--brand)] focus:outline-none"
+                  className="h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 text-base font-normal text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:border-[var(--brand)] focus:outline-none"
                 />
                 {showValidationErrors && title.trim().length === 0 ? (
                   <span className="mt-1.5 block text-[12px] font-semibold leading-[1.4] text-[var(--danger)]">

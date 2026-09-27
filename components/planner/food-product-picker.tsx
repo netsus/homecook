@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { FoodProductCreateForm } from "@/components/planner/food-product-create-form";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import {
   deleteFoodProduct,
@@ -228,6 +229,7 @@ export function FoodProductPicker({
   planDate: string;
   slotName: string;
 }) {
+  const isDesktopViewport = useDesktopViewport();
   const [returnContext] = useState(() => readProductPlannerReturnContext());
   const scopedContext = returnContext &&
     returnContext.planDate === planDate &&
@@ -425,8 +427,8 @@ export function FoodProductPicker({
   useEffect(() => () => clearDebounceTimer(), []);
 
   useEffect(() => {
-    if (!isCreating) searchInputRef.current?.focus();
-  }, [isCreating]);
+    if (!isCreating && isDesktopViewport) searchInputRef.current?.focus({ preventScroll: true });
+  }, [isCreating, isDesktopViewport]);
 
   const compatibleUnits = useMemo(
     () => selectedProduct ? buildCompatibleFoodProductUnits(selectedProduct) : [],
@@ -666,7 +668,7 @@ export function FoodProductPicker({
       }
       setDeleteTarget(null);
       setDeleteError(null);
-      searchInputRef.current?.focus();
+      searchInputRef.current?.focus({ preventScroll: true });
     } catch (caught) {
       if (isFoodProductApiError(caught) && caught.status === 401) {
         beginPickerLoginReturn(query, deleteTarget.id);
@@ -844,7 +846,7 @@ export function FoodProductPicker({
         <span className="sr-only">완제품 검색</span>
         <input
           aria-label="완제품 검색"
-          className="min-h-12 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 text-sm outline-none focus:border-[var(--brand-primary)]"
+          className="min-h-12 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 text-base outline-none focus:border-[var(--brand-primary)]"
           onChange={(event) => {
             const nextQuery = event.target.value;
             const compositionEndQuery = compositionEndQueryRef.current;

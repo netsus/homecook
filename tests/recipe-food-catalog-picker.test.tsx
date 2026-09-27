@@ -9,8 +9,10 @@ vi.mock("@/lib/api/food-catalog-search", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/api/food-catalog-search")>(),
   fetchFoodCatalogSearch: vi.fn(),
 }));
+const keyboard = vi.hoisted(() => ({ open: false }));
+vi.mock("@/components/shared/use-soft-keyboard-open", () => ({ useSoftKeyboardOpen: () => keyboard.open }));
 const product = (linked: boolean): FoodCatalogProductData => ({ type: "food_product", id: linked ? "p1" : "p2", name: linked ? "양조간장" : "미검수 간장", brand: "브랜드", recipe_ingredient_id: linked ? "soy" : null, nutrition_version_id: "v1", source_type: "public_dataset", visibility: "public", editable: false, basis_relations: [], nutrition: { basis: { amount: 15, unit: "ml" }, values: {}, calculation_status: "complete", calculation_quality: "direct", warnings: [], sources: [] } });
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); vi.mocked(fetchFoodCatalogSearch).mockReset(); });
+afterEach(() => { keyboard.open = false; cleanup(); vi.useRealTimers(); vi.clearAllMocks(); vi.mocked(fetchFoodCatalogSearch).mockReset(); });
 type SearchResult = Awaited<ReturnType<typeof fetchFoodCatalogSearch>>;
 const ingredientResult = (id: string, name: string): SearchResult => ({ items: [{ type: "ingredient", id, standard_name: name, category: "기타", default_unit: "g" }], next_cursor: null, has_next: false });
 function deferred<T>() {
@@ -22,6 +24,22 @@ async function advanceSearch(milliseconds = 250) {
   await act(async () => { await vi.advanceTimersByTimeAsync(milliseconds); });
 }
 describe("recipe food catalog picker", () => {
+  it("hides the add footer while the keyboard is open and restores the selection after closing", async () => {
+    vi.mocked(fetchFoodCatalogSearch).mockResolvedValue(ingredientResult("tofu", "두부"));
+    const onAdd = vi.fn(); const onClose = vi.fn();
+    const view = render(<RecipeFoodCatalogPicker onAdd={onAdd} onClose={onClose} />);
+    await userEvent.type(screen.getByRole("searchbox"), "두부");
+    await userEvent.click(await screen.findByRole("checkbox", { name: "두부" }));
+    keyboard.open = true;
+    view.rerender(<RecipeFoodCatalogPicker onAdd={onAdd} onClose={onClose} />);
+    expect(screen.queryByRole("button", { name: "선택한 재료 1개 추가" })).toBeNull();
+    expect(screen.getByRole<HTMLInputElement>("checkbox", { name: "두부" }).checked).toBe(true);
+    keyboard.open = false;
+    view.rerender(<RecipeFoodCatalogPicker onAdd={onAdd} onClose={onClose} />);
+    await userEvent.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    expect(onAdd).toHaveBeenCalledOnce();
+  });
+
   it("keeps the mobile dialog focused until the user chooses its search input", () => {
     vi.useFakeTimers();
     vi.mocked(fetchFoodCatalogSearch).mockResolvedValue(ingredientResult("tofu", "두부"));

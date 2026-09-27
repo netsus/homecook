@@ -1,5 +1,8 @@
 "use client";
 
+import { AppBackButton } from "@/components/shared/app-back-button";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import { DecimalInput } from "@/components/shared/decimal-input";
 
 import Image from "next/image";
@@ -278,8 +281,8 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDelete
   onDetail: (entry: MealLogEntry) => void;
 }) {
   return (
-    <section aria-labelledby={`meal-log-section-${date}-${section.meal_plan_column_id}`} className="w-full min-w-0 border-y border-[var(--ui-slate-200)] bg-[var(--ui-white)] px-4 pb-1 pt-2 md:rounded-2xl md:border">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--ui-slate-100)] pb-1">
+    <section aria-labelledby={`meal-log-section-${date}-${section.meal_plan_column_id}`} className={`w-full min-w-0 bg-[var(--ui-white)] px-4 pb-1 pt-2 md:rounded-2xl ${section.entries.length > 0 ? "border-y border-[var(--ui-slate-200)] md:border" : ""}`}>
+      <div className={`flex items-center justify-between gap-2 pb-1 ${section.entries.length > 0 ? "border-b border-[var(--ui-slate-100)]" : ""}`}>
         <div className="min-w-0">
           <h2 className="font-extrabold text-[var(--ui-slate-800)] [overflow-wrap:anywhere]" id={`meal-log-section-${date}-${section.meal_plan_column_id}`} tabIndex={-1}>{section.slot_name_snapshot}</h2>
           {section.entries.length > 0 ? <p className="mt-0.5 text-xs text-[var(--ui-slate-500)]">{foodNutritionValue(section.subtotal.calories_kcal, "kcal")}</p> : null}
@@ -346,6 +349,7 @@ function EntryDialog({
   fallbackFocusRef,
   state,
   onClose,
+  onDelete,
   onComplete,
   onFeedback,
   mutationEnabled,
@@ -356,6 +360,7 @@ function EntryDialog({
   fallbackFocusRef: React.RefObject<HTMLElement | null>;
   state: Exclude<DialogState, { type: "add" } | null>;
   onClose: () => void;
+  onDelete: (entry: MealLogEntry) => void;
   onComplete: () => Promise<MealLogDayData>;
   onFeedback: (message: string) => void;
   mutationEnabled: boolean;
@@ -399,7 +404,7 @@ function EntryDialog({
   }, [error]);
 
   useEffect(() => {
-    if (state.type === "edit") (requiresColumnSelection ? selectorRef.current : cancelRef.current)?.focus();
+    if (state.type !== "detail") (state.type === "edit" && requiresColumnSelection ? selectorRef.current : cancelRef.current)?.focus({ preventScroll: true });
   }, [state.type, requiresColumnSelection]);
 
   async function mutate() {
@@ -503,7 +508,7 @@ function EntryDialog({
     return <div aria-label="식사 기록 상세" aria-modal="true" className="fixed inset-0 z-[60] flex flex-col bg-[var(--surface-fill)] outline-none" ref={panelRef} role="dialog" tabIndex={-1}>
       <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <button aria-label="식사 기록으로 돌아가기" className="flex min-h-11 shrink-0 items-center gap-1 rounded-full px-2 font-bold hover:bg-[var(--surface-fill)]" onClick={onClose} ref={cancelRef} type="button"><span aria-hidden="true" className="text-2xl">←</span><span className="text-sm lg:hidden">뒤로</span></button>
+          <AppBackButton ariaLabel="식사 기록으로 돌아가기" disabled={pending} onClick={onClose} ref={cancelRef} />
           <h2 className="text-lg font-extrabold">{longDate(entry.consumed_local_date)} · {entry.slot_name_snapshot}</h2>
         </div>
       </header>
@@ -515,7 +520,6 @@ function EntryDialog({
           </article>
           <aside className="rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] p-5">
             <h3 className="font-extrabold">먹은 양</h3>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-2)]">처음 기록한 양을 바로 수정할 수 있어요.</p>
             {requiresColumnSelection ? <>
               <p className="mt-3 text-sm font-bold">기존 위치: 삭제된 끼니 {entry.slot_name_snapshot}</p>
               <label className="mt-3 block text-sm font-bold">옮길 끼니 (필수)
@@ -534,6 +538,7 @@ function EntryDialog({
             </label>
             {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
             <button className="mt-4 min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending || !columnValid || amountInvalid || !unit.trim()} onClick={() => void mutate()} type="button">{pending ? "수정 중…" : "먹은 양 수정"}</button>
+            <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--danger-border)] px-4 font-bold text-[var(--danger-strong)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => onDelete(entry)} type="button">기록 삭제</button>
           </aside>
         </div>
       </div>
@@ -569,7 +574,7 @@ function EntryDialog({
               <label className="text-sm font-bold">단위<input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onChange={(event) => setUnit(event.target.value)} readOnly={entry.source.type === "cooked_batch"} value={unit} /></label>
             </div>
           </div>
-        ) : <p className="mt-3 text-sm leading-6">요리한 음식이면 이 기록의 섭취 event만 되돌리고 기록은 목록에서 사라져요.</p>}
+        ) : <p className="mt-3 text-sm leading-6">요리한 음식은 먹기 전 남은 양으로 되돌려요.</p>}
         {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
         <div className="mt-5 grid gap-2 min-[360px]:grid-cols-2">
           <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={pending} onClick={onClose} ref={cancelRef} type="button">취소</button>
@@ -823,7 +828,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
               <h2 aria-label={`${longDate(dayKey)} 식사 기록`} className="text-base font-extrabold text-[var(--ui-slate-800)]" id={titleId}>{dayKey === todayKey ? "오늘 · " : ""}{Number(dayKey.slice(5, 7))}/{Number(dayKey.slice(8, 10))} ({WEEKDAYS[new Date(`${dayKey}T00:00:00.000Z`).getUTCDay()]})</h2>
               {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardSections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardSections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardSections.filter((section) => section.entries.length > 0).length} / {cardSections.length}</span> : null}
             </div>
-            {isLoading ? <p aria-busy="true" className="p-4 text-sm text-[var(--ui-slate-500)]">기록을 불러오는 중이에요.</p> : cardDay ? <div className="p-3 lg:p-4">
+            {isLoading && !cardDay ? <div aria-busy="true" aria-label={`${longDate(dayKey)} 기록 불러오는 중`} className="space-y-3 p-4" role="status"><Skeleton className="h-16 rounded-xl" /><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map(index => <Skeleton className="h-20 rounded-xl" key={index} />)}</div></div> : cardDay ? <div className="p-3 lg:p-4">
               {cardDay.entries.length > 0 ? <section aria-label="하루 영양" className="mb-3 max-w-2xl rounded-2xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] p-3">
                 <MealLogNutritionChart nutrition={cardDay.day_total} />
               {cardDay.day_total.incomplete_count > 0 ? <p className="mt-2 text-xs text-[var(--ui-slate-500)]">일부 정보 없음 {cardDay.day_total.incomplete_count}건</p> : null}
@@ -839,7 +844,7 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
       </div>
 
       {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
-      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onComplete={reloadSelected} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
+      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onDelete={entry => setDialog({ type: "delete", entry })} onComplete={reloadSelected} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, dialog.type === "delete" ? "delete" : "edit")}"]`)} state={dialog} /> : null}
     </main>
     </>
   );

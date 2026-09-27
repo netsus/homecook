@@ -1,5 +1,7 @@
 "use client";
 
+import { useMobileFullscreenPage } from "@/components/shared/use-mobile-fullscreen-page";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -52,6 +54,7 @@ export function StandaloneCookModeScreen({
   const [showLoginGate, setShowLoginGate] = useState(false);
   const colorTheme = "dark";
   const isMobileViewport = useIsMobileViewport();
+  useMobileFullscreenPage(true, recipeId);
   const completePendingRef = useRef(false);
 
   const screenState = useStandaloneCookModeStore((s) => s.screenState);

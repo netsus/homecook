@@ -162,9 +162,10 @@ export async function updateNickname(nickname: string) {
   });
 }
 
-export async function deleteAccount() {
+export async function deleteAccount(idempotencyKey: string = crypto.randomUUID()) {
   return requestMypage<UserDeleteData>("/api/v1/users/me", {
     method: "DELETE",
+    headers: { "Idempotency-Key": idempotencyKey },
   });
 }
 

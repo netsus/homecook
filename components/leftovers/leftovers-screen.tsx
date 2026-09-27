@@ -1,432 +1,85 @@
 "use client";
 
-import { showActionConfirmation } from "@/stores/ui-store";
-
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppBackLink } from "@/components/shared/app-back-button";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
-
-import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
-import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
-import {
-  CookedBatchActionSheet,
-  type CookedBatchActionError,
-} from "@/components/leftovers/cooked-batch-action-sheet";
-import {
-  CookedBatchSection,
-  type CookedBatchSectionState,
-} from "@/components/leftovers/cooked-batch-section";
-import {
-  mergeCookedBatchPages,
-  nextCookedBatchOperation,
-  type CookedBatchAction,
-  type CookedBatchMutationRequest,
-  type CookedBatchOperation,
-} from "@/components/leftovers/cooked-batch-state";
+import { showActionConfirmation } from "@/stores/ui-store";
+import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
+import { createMealLogEntry, fetchMealLogDay } from "@/lib/api/meal-log";
+import type { MealLogColumn } from "@/types/meal-log";
+import { CookedBatchActionSheet, type CookedBatchActionError } from "./cooked-batch-action-sheet";
+import { CookedBatchSection, type CookedBatchSectionState } from "./cooked-batch-section";
+import { mergeCookedBatchPages, nextCookedBatchOperation, type CookedBatchAction, type CookedBatchMutationRequest, type CookedBatchOperation } from "./cooked-batch-state";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
-import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
-import { ContentState } from "@/components/shared/content-state";
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { useAppReturn } from "@/components/shared/use-app-return";
-import {
-  WebButton,
-  WebCard,
-  WebEmptyState,
-  WebErrorState,
-  WebPageHeader,
-  WebShell,
-  WebSkeleton,
-  WebTopNav,
-} from "@/components/web";
-import {
-  eatLeftover,
-  fetchLeftovers,
-  isLeftoverApiError,
-  keepLeftoverStaleReview,
-} from "@/lib/api/leftovers";
-import {
-  adjustCookedBatch,
-  closeUnweighedCookedBatch,
-  discardCookedBatch,
-  fetchCookedBatches,
-  isCookingApiError,
-  updateCookedBatchWeight,
-} from "@/lib/api/cooking";
-import { createMeal, isMealApiError } from "@/lib/api/meal";
-import { fetchPlanner } from "@/lib/api/planner";
-import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
-import { formatKoreaCompactDate, formatKoreaDate } from "@/lib/korean-date";
+import { useMobileFullscreenPage } from "@/components/shared/use-mobile-fullscreen-page";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import type { LeftoverListItemData } from "@/types/leftover";
+import { adjustCookedBatch, closeUnweighedCookedBatch, discardCookedBatch, fetchCookedBatches, isCookingApiError, updateCookedBatchWeight } from "@/lib/api/cooking";
 import type { CookedBatchProjection } from "@/types/cooking";
-import type { PlannerColumnData } from "@/types/planner";
 
-type AuthState = "checking" | "authenticated" | "unauthorized";
-type ScreenState = "loading" | "ready" | "empty" | "error";
-type FeedbackTone = "error" | "status";
-
-const FEEDBACK_AUTO_DISMISS_MS = 4000;
-const LEFTOVER_STALE_REVIEW_DAYS = 30;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const LEFTOVERS_DESCRIPTION =
-  "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
-const LEFTOVER_LIST_PLANNER_ADD_LABEL = "플래너에 추가";
-const LEFTOVER_PLANNER_ADD_CONFIRM_LABEL = "날짜 끼니에 추가";
-export interface LeftoversScreenProps {
-  initialAuthenticated?: boolean;
-}
-
-function formatCookedAt(dateStr: string) {
-  return formatKoreaDate(dateStr, {
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function formatShortDate(dateStr: string) {
-  return formatKoreaCompactDate(dateStr);
-}
-
-function formatLeftoverMeta(item: LeftoverListItemData) {
-  const sourceLabel = item.source_meal_label ?? "연결 끼니 없음";
-  return `${sourceLabel} · ${item.cooking_servings}인분`;
-}
-
-function getLeftoverAgeDays(cookedAt: string, now: Date) {
-  const cookedAtTime = new Date(cookedAt).getTime();
-
-  if (Number.isNaN(cookedAtTime)) {
-    return null;
-  }
-
-  const diff = now.getTime() - cookedAtTime;
-
-  if (diff < 0) {
-    return null;
-  }
-
-  return Math.floor(diff / MS_PER_DAY);
-}
-
-function hasStaleReview(item: LeftoverListItemData) {
-  if (!item.stale_reviewed_at) {
-    return false;
-  }
-
-  const reviewedAtTime = new Date(item.stale_reviewed_at).getTime();
-  const cookedAtTime = new Date(item.cooked_at).getTime();
-
-  if (Number.isNaN(reviewedAtTime) || Number.isNaN(cookedAtTime)) {
-    return false;
-  }
-
-  return reviewedAtTime >= cookedAtTime;
-}
-
-function LeftoverImageIcon({ className }: { className: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-      viewBox="0 0 24 24"
-    >
-      <path d="M5 12h14" />
-      <path d="M12 5v14" />
-      <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
-    </svg>
-  );
-}
-
-function LeftoverCard({
-  item,
-  isEating,
-  anyMutating,
-  onEat,
-  onKeepStale,
-  onPlannerAdd,
-  staleReviewAgeDays,
-}: {
-  item: LeftoverListItemData;
-  isEating: boolean;
-  anyMutating: boolean;
-  onEat: (id: string) => void;
-  onKeepStale: (item: LeftoverListItemData) => void;
-  onPlannerAdd: (item: LeftoverListItemData) => void;
-  staleReviewAgeDays: number | null;
-}) {
-  const isStaleReviewDue = staleReviewAgeDays !== null;
-
-  return (
-    <WebCard
-      className="web-leftover-card"
-      data-testid="leftover-card"
-      interactive
-    >
-      <div className="web-leftover-thumb">
-        {item.recipe_thumbnail_url ? (
-          <Image
-            alt=""
-            className="h-full w-full object-cover"
-            fill
-            sizes="(min-width: 1024px) 320px, 56px"
-            src={item.recipe_thumbnail_url}
-            unoptimized
-          />
-        ) : (
-          <div
-            className="web-leftover-thumb-placeholder"
-            data-testid="leftover-image-placeholder"
-          >
-            <LeftoverImageIcon className="h-7 w-7" />
-            <span className="text-xs font-semibold">사진 없음</span>
-          </div>
-        )}
-      </div>
-
-      <div className="web-leftover-body">
-        <div className="web-leftover-head">
-          <Link
-            className="web-leftover-title"
-            href={`/recipe/${item.recipe_id}`}
-            prefetch={false}
-          >
-            {item.recipe_title}
-          </Link>
-          <span className="web-leftover-tag">남은 요리</span>
-        </div>
-        <p className="web-leftover-meta">
-          {formatCookedAt(item.cooked_at)} · {formatLeftoverMeta(item)}
-        </p>
-
-        {isStaleReviewDue ? (
-          <div className="web-leftover-stale-note" data-testid="leftover-stale-notice">
-            <div>
-              <strong>보관한 지 {staleReviewAgeDays}일이 지났어요</strong>
-              <span>
-                먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 안내를 숨겨 주세요.
-              </span>
-            </div>
-            <WebButton
-              data-testid="keep-leftover-button"
-              disabled={anyMutating}
-              onClick={() => onKeepStale(item)}
-              size="sm"
-              variant="ghost"
-            >
-              계속 보관
-            </WebButton>
-          </div>
-        ) : null}
-
-        <div className="web-leftover-actions">
-          <WebButton
-            data-testid="planner-add-button"
-            disabled={anyMutating}
-            onClick={() => onPlannerAdd(item)}
-            size="sm"
-            variant="secondary"
-          >
-            플래너에 추가
-          </WebButton>
-          <WebButton
-            data-testid="eat-button"
-            disabled={anyMutating}
-            onClick={() => onEat(item.id)}
-            size="sm"
-            variant="ghost"
-          >
-            {isEating ? "처리 중..." : "다 먹었어요"}
-          </WebButton>
-        </div>
-      </div>
-    </WebCard>
-  );
-}
-
-export function LeftoversScreen({
-  initialAuthenticated = false,
-}: LeftoversScreenProps) {
-  const isMobileViewport = useIsMobileViewport();
+export interface LeftoversScreenProps { initialAuthenticated?: boolean }
+export function LeftoversScreen({ initialAuthenticated = false }: LeftoversScreenProps) {
+  useMobileFullscreenPage();
   const appReturn = useAppReturn({ fallback: "/planner" });
-  const [staleReviewNow] = useState(() => new Date());
-  const [authState, setAuthState] = useState<AuthState>(
-    initialAuthenticated ? "authenticated" : "checking",
-  );
-  const [screenState, setScreenState] = useState<ScreenState>("loading");
-  const [items, setItems] = useState<LeftoverListItemData[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [eatingId, setEatingId] = useState<string | null>(null);
-  const [keepingId, setKeepingId] = useState<string | null>(null);
+  const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthorized">(initialAuthenticated ? "authenticated" : "checking");
   const [batchState, setBatchState] = useState<CookedBatchSectionState>("loading");
   const [batchItems, setBatchItems] = useState<CookedBatchProjection[]>([]);
   const [batchCursor, setBatchCursor] = useState<string | null>(null);
   const [batchHasNext, setBatchHasNext] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
   const [batchPagePending, setBatchPagePending] = useState(false);
-  const [batchActionTarget, setBatchActionTarget] = useState<{
-    action: CookedBatchAction;
-    batch: CookedBatchProjection;
-  } | null>(null);
+  const [batchActionTarget, setBatchActionTarget] = useState<{ action: CookedBatchAction; batch: CookedBatchProjection } | null>(null);
   const [batchActionError, setBatchActionError] = useState<CookedBatchActionError | null>(null);
   const [batchMutationPending, setBatchMutationPending] = useState(false);
   const batchOperationRef = useRef<CookedBatchOperation | null>(null);
   const batchActionReturnFocusRef = useRef<HTMLElement | null>(null);
-
-  // Feedback toast
-  const [feedback, setFeedback] = useState<{
-    message: string;
-    tone: FeedbackTone;
-  } | null>(null);
-
+  const [feedback, setFeedback] = useState<{ message: string; tone: "error" | "status" } | null>(null);
+  const [mealLogTarget, setMealLogTarget] = useState<MealLogSourceSelection | null>(null);
+  const [mealLogColumns, setMealLogColumns] = useState<MealLogColumn[]>([]);
+  const [mealLogDate, setMealLogDate] = useState("");
+  const logOpenRequest = useRef(0);
+  const logMutationKeys = useRef(new Map<string, string>());
+  const listGeneration = useRef(0);
+  const mutationLatch = useRef(false);
+  useEffect(() => {
+    const override = readE2EAuthOverride();
+    if (typeof override === "boolean") { setAuthState(override ? "authenticated" : "unauthorized"); return; }
+    if (!hasSupabasePublicEnv()) { if (!initialAuthenticated) setAuthState("unauthorized"); return; }
+    const client = getSupabaseBrowserClient();
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => setAuthState(session ? "authenticated" : "unauthorized"));
+    if (!initialAuthenticated) void client.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => setAuthState(session ? "authenticated" : "unauthorized"));
+    return () => subscription.unsubscribe();
+  }, [initialAuthenticated]);
+  useEffect(() => {
+    if (authState !== "authenticated") { setMealLogTarget(null); setBatchActionTarget(null); setBatchItems([]); logMutationKeys.current.clear(); }
+    const requests = logOpenRequest, lists = listGeneration;
+    return () => { ++requests.current; ++lists.current; };
+  }, [authState]);
   useEffect(() => {
     if (!feedback) return;
-
-    const timer = setTimeout(() => setFeedback(null), FEEDBACK_AUTO_DISMISS_MS);
-
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(() => setFeedback(null), 4000);
+    return () => window.clearTimeout(timer);
   }, [feedback]);
 
-  // Planner-add sheet state
-  const [plannerAddTarget, setPlannerAddTarget] =
-    useState<LeftoverListItemData | null>(null);
-  const [isPlannerAddSheetOpen, setIsPlannerAddSheetOpen] = useState(false);
-  const [plannerAddSheetState, setPlannerAddSheetState] =
-    useState<PlannerAddSheetState>("loading-columns");
-  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
-  const [selectedPlanDate, setSelectedPlanDate] = useState("");
-  const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
-  const [plannerServings, setPlannerServings] = useState(1);
-  const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
-
-  const buildSelectableDates = useCallback(() => {
-    const dates: string[] = [];
-
-    for (let i = 0; i < 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      dates.push(`${y}-${m}-${day}`);
-    }
-
-    return dates;
-  }, []);
-
-  const selectableDates = useMemo(
-    () => buildSelectableDates(),
-    [buildSelectableDates],
-  );
-
-  // Auth check
-  useEffect(() => {
-    const e2eOverride = readE2EAuthOverride();
-
-    if (typeof e2eOverride === "boolean") {
-      setAuthState(e2eOverride ? "authenticated" : "unauthorized");
-      return;
-    }
-
-    if (initialAuthenticated) {
-      setAuthState("authenticated");
-
-      if (!hasSupabasePublicEnv()) {
-        return;
-      }
-
-      const supabase = getSupabaseBrowserClient();
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(
-        (_event: AuthChangeEvent, session: Session | null) => {
-          setAuthState(session ? "authenticated" : "unauthorized");
-        },
-      );
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
-
-    if (!hasSupabasePublicEnv()) {
-      setAuthState("unauthorized");
-      return;
-    }
-
-    const supabase = getSupabaseBrowserClient();
-    let mounted = true;
-
-    void supabase.auth
-      .getSession()
-      .then((result: { data: { session: Session | null } }) => {
-        if (!mounted) return;
-        setAuthState(result.data.session ? "authenticated" : "unauthorized");
-      });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
-        setAuthState(session ? "authenticated" : "unauthorized");
-      },
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [initialAuthenticated]);
-
-  // Load leftovers
-  const loadLeftovers = useCallback(async () => {
-    setScreenState("loading");
-    setErrorMessage(null);
-
-    try {
-      const data = await fetchLeftovers("leftover");
-      setItems(data.items);
-      setScreenState(data.items.length > 0 ? "ready" : "empty");
-    } catch (error) {
-      if (isLeftoverApiError(error) && error.status === 401) {
-        setAuthState("unauthorized");
-        return;
-      }
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "남은 요리를 불러오지 못했어요.",
-      );
-      setScreenState("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (authState !== "authenticated") return;
-    void loadLeftovers();
-  }, [authState, loadLeftovers]);
-
   const loadCookedBatches = useCallback(async ({ preserve = false }: { preserve?: boolean } = {}) => {
+    const generation = ++listGeneration.current;
     if (!preserve) setBatchState("loading");
     setBatchError(null);
     try {
       const data = await fetchCookedBatches({ availability: "all", limit: 20 });
+      if (generation !== listGeneration.current) return null;
       setBatchItems(data.items);
       setBatchCursor(data.next_cursor);
       setBatchHasNext(data.has_next);
       setBatchState(data.items.length > 0 ? "ready" : "empty");
       return data.items;
     } catch (error) {
+      if (generation !== listGeneration.current) return null;
       if (isCookingApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
         return null;
@@ -447,10 +100,12 @@ export function LeftoversScreen({
 
   const loadMoreCookedBatches = useCallback(async () => {
     if (!batchCursor || batchPagePending || batchMutationPending) return;
+    const generation = listGeneration.current;
     setBatchPagePending(true);
     setBatchError(null);
     try {
       const data = await fetchCookedBatches({ availability: "all", cursor: batchCursor, limit: 20 });
+      if (generation !== listGeneration.current) return;
       setBatchItems((current) => mergeCookedBatchPages(current, data.items));
       setBatchCursor(data.next_cursor);
       setBatchHasNext(data.has_next);
@@ -494,7 +149,8 @@ export function LeftoversScreen({
   }, [batchActionTarget, batchMutationPending]);
 
   const submitBatchAction = useCallback(async (request: CookedBatchMutationRequest) => {
-    if (!batchActionTarget || batchMutationPending) return;
+    if (!batchActionTarget || mutationLatch.current) return;
+    mutationLatch.current = true;
     const operation = nextCookedBatchOperation(batchOperationRef.current, request);
     batchOperationRef.current = operation;
     setBatchMutationPending(true);
@@ -518,7 +174,7 @@ export function LeftoversScreen({
       setBatchActionTarget(null);
       setBatchActionError(null);
       batchOperationRef.current = null;
-      setFeedback({ message: "서버의 최신 중량·잔량 기록을 반영했어요.", tone: "status" });
+      setFeedback({ message: "저장했어요.", tone: "status" });
     } catch (error) {
       if (isCookingApiError(error) && error.status === 401) {
         setBatchActionTarget(null);
@@ -538,870 +194,68 @@ export function LeftoversScreen({
         if (apiError.code === "WEIGHT_UNRECOVERABLE") setBatchActionTarget(null);
       }
     } finally {
+      mutationLatch.current = false;
       setBatchMutationPending(false);
     }
-  }, [batchActionTarget, batchMutationPending, loadCookedBatches]);
+  }, [batchActionTarget, loadCookedBatches]);
 
-  const staleReviewAgeById = useMemo(() => {
-    const result = new Map<string, number>();
-
-    for (const item of items) {
-      const ageDays = getLeftoverAgeDays(item.cooked_at, staleReviewNow);
-
-      if (
-        ageDays !== null &&
-        ageDays >= LEFTOVER_STALE_REVIEW_DAYS &&
-        !hasStaleReview(item)
-      ) {
-        result.set(item.id, ageDays);
-      }
-    }
-
-    return result;
-  }, [items, staleReviewNow]);
-
-  const staleReviewCount = staleReviewAgeById.size;
-
-  const handleKeepStaleReview = useCallback(
-    async (item: LeftoverListItemData) => {
-      if (eatingId || keepingId) return;
-
-      setKeepingId(item.id);
-      setFeedback(null);
-
-      try {
-        const kept = await keepLeftoverStaleReview(item.id);
-        setItems((current) =>
-          current.map((currentItem) =>
-            currentItem.id === item.id
-              ? {
-                  ...currentItem,
-                  stale_reviewed_at: kept.stale_reviewed_at,
-                }
-              : currentItem,
-          ),
-        );
-        setFeedback({ message: "계속 보관으로 표시했어요", tone: "status" });
-      } catch (error) {
-        if (isLeftoverApiError(error) && error.status === 401) {
-          setAuthState("unauthorized");
-          return;
-        }
-
-        setFeedback({
-          message:
-            error instanceof Error
-              ? error.message
-              : "계속 보관으로 표시하지 못했어요.",
-          tone: "error",
-        });
-      } finally {
-        setKeepingId(null);
-      }
-    },
-    [eatingId, keepingId],
-  );
-
-  // Eat action
-  const handleEat = useCallback(
-    async (leftoverId: string) => {
-      if (eatingId) return;
-      setEatingId(leftoverId);
-      setFeedback(null);
-
-      try {
-        await eatLeftover(leftoverId);
-        const nextItems = items.filter((item) => item.id !== leftoverId);
-        setItems(nextItems);
-
-        if (nextItems.length === 0) {
-          setScreenState("empty");
-        }
-
-        setFeedback({ message: "다먹음 처리됐어요", tone: "status" });
-      } catch (error) {
-        if (isLeftoverApiError(error) && error.status === 401) {
-          setAuthState("unauthorized");
-          return;
-        }
-
-        setFeedback({
-          message:
-            error instanceof Error
-              ? error.message
-              : "다먹음 처리에 실패했어요.",
-          tone: "error",
-        });
-      } finally {
-        setEatingId(null);
-      }
-    },
-    [eatingId, items],
-  );
-
-  // Planner-add flow
-  const loadPlannerColumns = useCallback(async () => {
-    setPlannerAddSheetState("loading-columns");
-    setPlannerAddError(null);
-
+  const openMealLogSheet = useCallback(async (item: CookedBatchProjection) => {
+    if (authState !== "authenticated") return;
+    const request = ++logOpenRequest.current;
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     try {
-      const today = selectableDates[0] ?? "";
-      const data = await fetchPlanner(today, today);
-      setPlannerColumns(data.columns);
-      setSelectedPlanColumnId((current) => {
-        if (current && data.columns.some((col) => col.id === current)) {
-          return current;
-        }
-
-        return data.columns[0]?.id ?? "";
-      });
-      setPlannerAddSheetState("ready");
-    } catch {
-      setPlannerAddSheetState("error");
-      setPlannerAddError("플래너 슬롯을 불러오지 못했어요.");
-    }
-  }, [selectableDates]);
-
-  const openPlannerAddSheet = useCallback(
-    async (item: LeftoverListItemData) => {
-      if (authState !== "authenticated") return;
-
-      setPlannerAddTarget(item);
-      setIsPlannerAddSheetOpen(true);
-      setPlannerAddError(null);
-      setFeedback(null);
-      setSelectedPlanDate(selectableDates[0] ?? "");
-      setPlannerServings(1);
-
-      await loadPlannerColumns();
-    },
-    [authState, loadPlannerColumns, selectableDates],
-  );
-
-  const closePlannerAddSheet = useCallback(() => {
-    if (plannerAddSheetState === "submitting") return;
-    setIsPlannerAddSheetOpen(false);
-    setPlannerAddError(null);
-    setPlannerAddTarget(null);
-  }, [plannerAddSheetState]);
-
-  const handlePlannerAddSubmit = useCallback(async () => {
-    if (
-      !plannerAddTarget ||
-      !selectedPlanColumnId ||
-      !selectedPlanDate ||
-      plannerAddSheetState !== "ready"
-    ) {
-      return;
-    }
-
-    setPlannerAddSheetState("submitting");
-    setPlannerAddError(null);
-
-    try {
-      await createMeal({
-        recipe_id: plannerAddTarget.recipe_id,
-        plan_date: selectedPlanDate,
-        column_id: selectedPlanColumnId,
-        planned_servings: plannerServings,
-        leftover_dish_id: plannerAddTarget.id,
-      });
-
-      setIsPlannerAddSheetOpen(false);
-      setPlannerAddTarget(null);
-
-      const [, planM, planD] = selectedPlanDate.split("-").map(Number);
-      const dateLabel = `${planM}월 ${planD}일`;
-      const columnName =
-        plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ??
-        "선택한 끼니";
-      showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`);
+      const day = await fetchMealLogDay(today);
+      if (request !== logOpenRequest.current) return;
+      if (!day.active_columns.length) throw new Error("식사 기록의 끼니를 확인하지 못했어요.");
+      setMealLogColumns(day.active_columns);
+      setMealLogDate(today);
+      setMealLogTarget({ type: "cooked_batch", id: item.id, name: item.recipe_title, brand: null, amount: Math.min(100, item.remaining_weight_g ?? 100), unit: "g" });
     } catch (error) {
-      const message =
-        isMealApiError(error) && error.status === 403
-          ? "내 플래너 슬롯에만 추가할 수 있어요."
-          : error instanceof Error
-            ? error.message
-            : "플래너 추가에 실패했어요. 다시 시도해 주세요.";
-
-      setPlannerAddError(message);
-      setPlannerAddSheetState("ready");
+      if (request === logOpenRequest.current) setFeedback({ message: error instanceof Error ? error.message : "식사 기록을 열지 못했어요.", tone: "error" });
     }
-  }, [
-    plannerAddTarget,
-    plannerAddSheetState,
-    plannerColumns,
-    plannerServings,
-    selectedPlanColumnId,
-    selectedPlanDate,
-  ]);
+  }, [authState]);
 
-  const plannerAddSheet = (
-    <PlannerAddSheet
-      columns={plannerColumns}
-      errorMessage={plannerAddError}
-      isOpen={isPlannerAddSheetOpen}
-      onChangeServings={setPlannerServings}
-      onClose={closePlannerAddSheet}
-      onRetryLoad={loadPlannerColumns}
-      onSelectColumn={setSelectedPlanColumnId}
-      onSelectDate={setSelectedPlanDate}
-      onSubmit={handlePlannerAddSubmit}
-      selectableDates={selectableDates}
-      selectedColumnId={selectedPlanColumnId}
-      selectedDate={selectedPlanDate}
-      servings={plannerServings}
-      sheetState={plannerAddSheetState}
-      defaultConfirmLabel={LEFTOVER_PLANNER_ADD_CONFIRM_LABEL}
+  const mealLogSheet = mealLogTarget ? (
+    <MealLogAddSheet
+      columns={mealLogColumns}
+      date={mealLogDate}
+      initialColumnId={mealLogColumns[0]?.id ?? ""}
+      initialSelection={mealLogTarget}
+      initialSuggestionConfirmed={false}
+      onClose={() => setMealLogTarget(null)}
+      onUnauthorized={() => { setMealLogTarget(null); setAuthState("unauthorized"); }}
+      onSave={async (selection, columnId, date) => {
+        const input = {
+          consumedAt: null, consumedLocalDate: date, mealPlanColumnId: columnId,
+          quantity: { amount: selection.amount, unit: selection.unit },
+          source: { id: selection.id, type: selection.type },
+          timezoneNameSnapshot: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        };
+        const fingerprint = JSON.stringify(input);
+        const key = logMutationKeys.current.get(fingerprint) ?? crypto.randomUUID();
+        logMutationKeys.current.set(fingerprint, key);
+        await createMealLogEntry(input, key);
+        logMutationKeys.current.delete(fingerprint);
+        setMealLogTarget(null);
+        showActionConfirmation("식사 기록에 추가했어요.");
+        void loadCookedBatches();
+      }}
     />
-  );
-  const cookedBatchSection = authState === "authenticated" ? (
-    <>
-      <CookedBatchSection
-        error={batchError}
-        hasNext={batchHasNext}
-        items={batchItems}
-        onAction={openBatchAction}
-        onLoadMore={() => {
-          void loadMoreCookedBatches();
-        }}
-        onRetry={() => {
-          void loadCookedBatches();
-        }}
-        pagePending={batchPagePending}
-        state={batchState}
-      />
-      {batchActionTarget ? (
-        <CookedBatchActionSheet
-          action={batchActionTarget.action}
-          batch={batchActionTarget.batch}
-          error={batchActionError}
-          onClose={closeBatchAction}
-          onSubmit={(request) => {
-            void submitBatchAction(request);
-          }}
-          pending={batchMutationPending}
-        />
-      ) : null}
-    </>
   ) : null;
-  const leftoversSelfHref = buildReturnHref("/leftovers", {
-    returnSurface: "leftovers.list",
-    returnTo: appReturn.href,
-  });
-  const eatenListHref = buildReturnHref("/leftovers/ate", {
-    returnSurface: "leftovers.list",
-    returnTo: leftoversSelfHref,
-  });
-
-  if (isMobileViewport) {
-    if (authState === "checking") {
-      return (
-        <LeftoversMobileStateShell
-          actionHref={eatenListHref}
-          actionLabel="다먹은 요리"
-          appReturnHref={appReturn.href}
-          testId="leftovers-mobile-auth-loading"
-          title="남은 요리"
-        >
-          <div className="space-y-3 p-4" data-testid="leftovers-loading">
-            {[1, 2].map((index) => (
-              <div
-                className="h-[136px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
-                key={index}
-              />
-            ))}
-          </div>
-        </LeftoversMobileStateShell>
-      );
-    }
-
-    if (authState === "unauthorized") {
-      return (
-        <LeftoversMobileStateShell
-          actionHref={eatenListHref}
-          actionLabel="다먹은 요리"
-          appReturnHref={appReturn.href}
-          testId="leftovers-mobile-auth-gate"
-          title="남은 요리"
-        >
-          <div className="p-4">
-            <ContentState
-              description="남은 요리를 관리하려면 로그인이 필요해요. 로그인하면 이 화면으로 돌아와요."
-              eyebrow="로그인 필요"
-              safeBottomPadding
-              tone="gate"
-              title="이 화면은 로그인이 필요해요"
-            >
-              <div className="space-y-3">
-                <SocialLoginButtons nextPath={leftoversSelfHref} />
-                <Link
-                  className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--text-2)]"
-                  href={appReturn.href}
-                >
-                  이전 화면으로 돌아가기
-                </Link>
-              </div>
-            </ContentState>
-          </div>
-        </LeftoversMobileStateShell>
-      );
-    }
-
-    return (
-      <LeftoversMobileView
-        appReturnHref={appReturn.href}
-        eatenListHref={eatenListHref}
-        eatingId={eatingId}
-        errorMessage={errorMessage}
-        feedback={feedback}
-        items={items}
-        keepingId={keepingId}
-        onEat={handleEat}
-        onKeepStale={handleKeepStaleReview}
-        onPlannerAdd={openPlannerAddSheet}
-        onRetry={loadLeftovers}
-        plannerAddSheet={plannerAddSheet}
-        cookedBatchSection={cookedBatchSection}
-        screenState={screenState}
-        staleReviewAgeById={staleReviewAgeById}
-        staleReviewCount={staleReviewCount}
-      />
-    );
-  }
-
-  return (
-    <WebShell className="web-leftovers-shell" wide>
-      <WebTopNav
-        activeId="mypage"
-        rightSlot={
-          <ProfileSummaryButton
-            autoLoad
-            isAuthenticated={authState === "authenticated"}
-            variant="web"
-          />
-        }
-      />
-      <div className="web-leftovers-screen" data-testid="leftovers-screen">
-        <nav aria-label="남은 요리 경로" className="web-breadcrumb">
-          <Link className="web-breadcrumb-link" href="/mypage">
-            &lt; 마이페이지
-          </Link>
-          <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">남은 요리</span>
-        </nav>
-
-        <WebPageHeader
-          actions={
-            <Link className="web-button web-button-tertiary" href={eatenListHref}>
-              다먹은 요리
-            </Link>
-          }
-          description={LEFTOVERS_DESCRIPTION}
-          title={`남은 요리 ${items.length}개`}
-        />
-
-        {authState === "checking" ? (
-          <WebEmptyState
-            description="남은 요리 화면에 접근하기 위해 로그인 상태를 확인하고 있어요."
-            icon={<span aria-hidden="true">...</span>}
-            title="로그인 상태를 확인하고 있어요"
-          />
-        ) : null}
-
-        {authState === "unauthorized" ? (
-          <WebEmptyState
-            action={
-              <div className="web-leftover-login-actions">
-                <SocialLoginButtons nextPath={leftoversSelfHref} />
-                <Link className="web-button web-button-tertiary" href={appReturn.href}>
-                  이전 화면으로 돌아가기
-                </Link>
-              </div>
-            }
-            description="남은 요리를 관리하려면 로그인이 필요해요. 로그인하면 이 화면으로 돌아와요."
-            icon={<span aria-hidden="true">!</span>}
-            title="이 화면은 로그인이 필요해요"
-          />
-        ) : null}
-
-      {authState === "authenticated" ? (
-        <section aria-labelledby="legacy-leftovers-title" className="mb-4">
-          <h2 className="text-xl font-extrabold" id="legacy-leftovers-title">
-            남은요리 관리
-          </h2>
-          <p className="mt-1 text-sm text-[var(--text-3)]">
-            기존 남은 요리 기록이에요. 중량·잔량 기록과 섞지 않고 따로 보여드려요.
-          </p>
-        </section>
-      ) : null}
-
-      {authState === "authenticated" && feedback ? (
-        <AppFeedbackToast
-          className="mb-4"
-          message={feedback.message}
-          position="inline"
-          testId="feedback-toast"
-          tone={feedback.tone === "error" ? "error" : "success"}
-        />
-      ) : null}
-
-      {authState === "authenticated" &&
-      screenState === "ready" &&
-      staleReviewCount > 0 ? (
-        <StaleLeftoverBanner count={staleReviewCount} />
-      ) : null}
-
-      {authState === "authenticated" && screenState === "loading" ? (
-        <div
-          className="web-leftover-grid"
-          data-testid="leftovers-loading"
-        >
-          {Array.from({ length: 6 }).map((_, i) => (
-            <WebSkeleton
-              key={i}
-              height={276}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {authState === "authenticated" && screenState === "error" ? (
-        <WebErrorState
-          action={
-            <WebButton
-              onClick={() => {
-                void loadLeftovers();
-              }}
-              variant="secondary"
-            >
-              다시 시도
-            </WebButton>
-          }
-          description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
-          icon={<span aria-hidden="true">!</span>}
-          title="남은 요리를 불러오지 못했어요"
-        />
-      ) : null}
-
-      {authState === "authenticated" && screenState === "empty" ? (
-        <WebEmptyState
-          action={
-            <Link className="web-button web-button-tertiary" href={appReturn.href}>
-              이전 화면으로 돌아가기
-            </Link>
-          }
-          description="요리를 완료하면 여기에 저장돼요"
-          icon={<span aria-hidden="true">□</span>}
-          title="남은 요리가 없어요"
-        />
-      ) : null}
-
-      {authState === "authenticated" && screenState === "ready" ? (
-        <div
-          className="web-leftover-grid"
-          data-testid="leftover-list"
-        >
-          {items.map((item) => (
-            <LeftoverCard
-              key={item.id}
-              anyMutating={eatingId === item.id || keepingId === item.id}
-              isEating={eatingId === item.id}
-              item={item}
-              onEat={handleEat}
-              onKeepStale={handleKeepStaleReview}
-              onPlannerAdd={openPlannerAddSheet}
-              staleReviewAgeDays={staleReviewAgeById.get(item.id) ?? null}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {cookedBatchSection}
-
-      {plannerAddSheet}
-      </div>
-    </WebShell>
-  );
-}
-
-function LeftoversMobileView({
-  appReturnHref,
-  eatenListHref,
-  eatingId,
-  errorMessage,
-  feedback,
-  items,
-  keepingId,
-  onEat,
-  onKeepStale,
-  onPlannerAdd,
-  onRetry,
-  plannerAddSheet,
-  cookedBatchSection,
-  screenState,
-  staleReviewAgeById,
-  staleReviewCount,
-}: {
-  appReturnHref: string;
-  eatenListHref: string;
-  eatingId: string | null;
-  errorMessage: string | null;
-  feedback: { message: string; tone: FeedbackTone } | null;
-  items: LeftoverListItemData[];
-  keepingId: string | null;
-  onEat: (id: string) => void;
-  onKeepStale: (item: LeftoverListItemData) => void;
-  onPlannerAdd: (item: LeftoverListItemData) => void;
-  onRetry: () => void;
-  plannerAddSheet: React.ReactNode;
-  cookedBatchSection: React.ReactNode;
-  screenState: ScreenState;
-  staleReviewAgeById: Map<string, number>;
-  staleReviewCount: number;
-}) {
-  return (
-    <div
-      className="h-[calc(100dvh-8px-4rem-var(--space-5)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain bg-[var(--surface-fill)] pb-4 text-[var(--foreground)] lg:hidden"
-      data-testid="leftovers-screen"
-    >
-      <MobileAppBar
-        actionHref={eatenListHref}
-        actionLabel="다먹은 요리"
-        backHref={appReturnHref}
-        title="남은 요리"
-      />
-
-      {feedback ? <MobileFeedback feedback={feedback} /> : null}
-
-      <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3">
-        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[var(--foreground)]">
-          남은요리 관리
-        </h2>
-        <h3 className="mt-2 text-[15px] font-extrabold leading-[1.35] text-[var(--foreground)]">
-          남은 요리 {items.length}개
-        </h3>
-        <p className="mt-1 text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
-          {LEFTOVERS_DESCRIPTION}
-        </p>
-      </section>
-
-      {screenState === "ready" && staleReviewCount > 0 ? (
-        <div className="px-4 pt-3">
-          <StaleLeftoverBanner count={staleReviewCount} mobile />
-        </div>
-      ) : null}
-
-      {screenState === "loading" ? (
-        <div className="space-y-3 p-4" data-testid="leftovers-loading">
-          {[1, 2].map((index) => (
-            <div
-              className="h-[136px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
-              key={index}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {screenState === "error" ? (
-        <div className="p-4">
-          <ContentState
-            actionLabel="다시 시도"
-            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
-            onAction={() => {
-              void onRetry();
-            }}
-            title="남은 요리를 불러오지 못했어요"
-            tone="error"
-          />
-        </div>
-      ) : null}
-
-      {screenState === "empty" ? (
-        <div className="p-4">
-          <ContentState
-            actionLabel="이전 화면으로 돌아가기"
-            description="요리를 완료하면 여기에 저장돼요"
-            onAction={() => {
-              window.location.href = appReturnHref;
-            }}
-            title="남은 요리가 없어요"
-            tone="empty"
-          />
-        </div>
-      ) : null}
-
-      {screenState === "ready" ? (
-        <div className="space-y-[10px] p-4" data-testid="leftover-list">
-          {items.map((item) => (
-            <MobileLeftoverCard
-              anyMutating={eatingId === item.id || keepingId === item.id}
-              isEating={eatingId === item.id}
-              item={item}
-              key={item.id}
-              onEat={onEat}
-              onKeepStale={onKeepStale}
-              onPlannerAdd={onPlannerAdd}
-              staleReviewAgeDays={staleReviewAgeById.get(item.id) ?? null}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {cookedBatchSection}
-
-      {plannerAddSheet}
-      <Wave1MobileBottomTab ariaLabel="남은 요리 하단 탭" currentTab="mypage" />
-    </div>
-  );
-}
-
-function LeftoversMobileStateShell({
-  actionHref,
-  actionLabel,
-  appReturnHref,
-  children,
-  testId,
-  title,
-}: {
-  actionHref: string;
-  actionLabel: string;
-  appReturnHref: string;
-  children: React.ReactNode;
-  testId: string;
-  title: string;
-}) {
-  return (
-    <div
-      className="h-[calc(100dvh-8px-4rem-var(--space-5)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain bg-[var(--surface-fill)] pb-4 text-[var(--foreground)] lg:hidden"
-      data-testid={testId}
-    >
-      <MobileAppBar
-        actionHref={actionHref}
-        actionLabel={actionLabel}
-        backHref={appReturnHref}
-        title={title}
-      />
-      {children}
-      <Wave1MobileBottomTab ariaLabel={`${title} 하단 탭`} currentTab="mypage" />
-    </div>
-  );
-}
-
-function MobileLeftoverCard({
-  anyMutating,
-  isEating,
-  item,
-  onEat,
-  onKeepStale,
-  onPlannerAdd,
-  staleReviewAgeDays,
-}: {
-  anyMutating: boolean;
-  isEating: boolean;
-  item: LeftoverListItemData;
-  onEat: (id: string) => void;
-  onKeepStale: (item: LeftoverListItemData) => void;
-  onPlannerAdd: (item: LeftoverListItemData) => void;
-  staleReviewAgeDays: number | null;
-}) {
-  const isStaleReviewDue = staleReviewAgeDays !== null;
-
-  return (
-    <article
-      className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
-      data-testid="leftover-card"
-    >
-      <div className="flex items-center gap-3">
-        <MobileDishThumb
-          src={item.recipe_thumbnail_url}
-        />
-        <div className="min-w-0 flex-1">
-          <Link
-            className="block truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]"
-            href={`/recipe/${item.recipe_id}`}
-            prefetch={false}
-          >
-            {item.recipe_title}
-          </Link>
-          <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
-            {formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}
-          </p>
-        </div>
-      </div>
-
-      {isStaleReviewDue ? (
-        <div
-          className="mt-3 rounded-[var(--radius-control)] border border-[var(--brand-border)] bg-[var(--brand-soft)] px-3 py-2"
-          data-testid="leftover-stale-notice"
-        >
-          <p className="text-[12px] font-extrabold leading-[1.35] text-[var(--brand)]">
-            보관한 지 {staleReviewAgeDays}일이 지났어요
-          </p>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="min-w-0 text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
-              아직 보관 중이면 안내를 숨겨 주세요.
-            </p>
-            <button
-              className="h-8 shrink-0 rounded-[var(--radius-control)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--brand)]"
-              data-testid="keep-leftover-button"
-              disabled={anyMutating}
-              onClick={() => onKeepStale(item)}
-              type="button"
-            >
-              계속 보관
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          aria-label={LEFTOVER_LIST_PLANNER_ADD_LABEL}
-          className="flex h-11 w-[112px] min-w-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-2 text-center text-[11px] font-extrabold leading-none text-[var(--brand)] disabled:opacity-60"
-          data-testid="planner-add-button"
-          disabled={anyMutating}
-          onClick={() => onPlannerAdd(item)}
-          type="button"
-        >
-          <span className="whitespace-nowrap">플래너에 추가</span>
-        </button>
-        <button
-          className="flex h-11 w-[82px] min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"
-          data-testid="eat-button"
-          disabled={anyMutating}
-          onClick={() => onEat(item.id)}
-          type="button"
-        >
-          {isEating ? "처리 중..." : "다먹음"}
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function StaleLeftoverBanner({
-  count,
-  mobile = false,
-}: {
-  count: number;
-  mobile?: boolean;
-}) {
-  if (mobile) {
-    return (
-      <section
-        className="rounded-[var(--radius-card)] border border-[var(--brand-border)] bg-[var(--brand-soft)] px-4 py-3"
-        data-testid="leftover-stale-banner"
-      >
-        <p className="text-[13px] font-extrabold leading-[1.35] text-[var(--brand)]">
-          오래 보관한 남은 요리가 있어요
-        </p>
-        <p className="mt-1 text-[12px] font-semibold leading-[1.45] text-[var(--text-2)]">
-          {count}개 항목을 확인해 주세요. 먹었다면 다먹음으로 정리하고, 아직 보관 중이면 계속 보관을 눌러 주세요.
-        </p>
-      </section>
-    );
-  }
-
-  return (
-    <section className="web-leftover-stale-banner" data-testid="leftover-stale-banner">
-      <div>
-        <strong>오래 보관한 남은 요리가 있어요</strong>
-        <span>
-          {count}개 항목을 확인해 주세요. 먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 계속 보관을 눌러 주세요.
-        </span>
-      </div>
-    </section>
-  );
-}
-
-function MobileDishThumb({
-  src,
-}: {
-  src: string | null;
-}) {
-  if (src) {
-    return (
-      <Image
-        alt=""
-        className="h-14 w-14 shrink-0 rounded-[var(--radius-control)] object-cover"
-        height={56}
-        src={src}
-        unoptimized
-        width={56}
-      />
-    );
-  }
-
-  return (
-    <div
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--text-3)]"
-      data-testid="leftover-image-placeholder"
-    >
-      <LeftoverImageIcon className="h-6 w-6" />
-    </div>
-  );
-}
-
-function MobileFeedback({
-  feedback,
-}: {
-  feedback: { message: string; tone: FeedbackTone };
-}) {
-  return (
-    <AppFeedbackToast
-      className="mx-4 mt-2"
-      message={feedback.message}
-      position="inline"
-      testId="feedback-toast"
-      tone={feedback.tone === "error" ? "error" : "success"}
-    />
-  );
-}
-
-function MobileAppBar({
-  actionHref,
-  actionLabel,
-  backHref,
-  title,
-}: {
-  actionHref: string;
-  actionLabel: string;
-  backHref: string;
-  title: string;
-}) {
-  return (
-    <div
-      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
-      style={{ borderBottomWidth: "0.5px" }}
-    >
-      <Link
-        aria-label="뒤로 가기"
-        className="absolute left-2.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-[var(--foreground)]"
-        href={backHref}
-      >
-        <svg
-          aria-hidden="true"
-          className="h-6 w-6"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2.3"
-          viewBox="0 0 24 24"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-      </Link>
-      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)]">
-        {title}
-      </h1>
-      <Link
-        className="absolute right-2.5 top-1/2 flex min-h-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--brand-contrast)]"
-        href={actionHref}
-      >
-        {actionLabel}
-      </Link>
-    </div>
-  );
+  const selfHref = buildReturnHref("/leftovers", { returnSurface: "leftovers.list", returnTo: appReturn.href });
+  const eatenHref = buildReturnHref("/leftovers/ate", { returnSurface: "leftovers.list", returnTo: selfHref });
+  return <div className="fixed inset-0 flex flex-col overflow-hidden bg-[var(--surface-fill)] text-[var(--foreground)] lg:static lg:mx-auto lg:h-auto lg:max-w-5xl lg:min-h-screen lg:overflow-visible" data-testid="leftovers-screen">
+    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-[var(--surface)] px-4">
+      <AppBackLink href={appReturn.href} />
+      <h1 className="flex-1 text-xl font-bold">남은 요리</h1>
+      <Link className="rounded-full border px-3 py-2 font-semibold" href={eatenHref}>다 먹은 요리</Link>
+    </header>
+    <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-[calc(100px+env(safe-area-inset-bottom))] lg:overflow-visible lg:pb-8" data-testid="leftovers-scroll">
+      {authState === "unauthorized" ? <div className="p-8 text-center"><p>로그인이 필요해요.</p><Link className="mt-4 inline-block rounded-xl bg-[var(--brand)] px-5 py-3 text-white" href={`/login?next=${encodeURIComponent(selfHref)}`}>로그인</Link></div> : <CookedBatchSection error={batchError} hasNext={batchHasNext} items={batchItems} onAction={openBatchAction} onRecord={batch => void openMealLogSheet(batch)} onLoadMore={() => void loadMoreCookedBatches()} onRetry={() => void loadCookedBatches()} pagePending={batchPagePending || batchMutationPending} state={batchState} />}
+    </main>
+    {feedback ? <AppFeedbackToast message={feedback.message} position="bottom" testId="feedback-toast" tone={feedback.tone === "error" ? "error" : "success"} /> : null}
+    {batchActionTarget ? <CookedBatchActionSheet action={batchActionTarget.action} batch={batchActionTarget.batch} error={batchActionError} onClose={closeBatchAction} onSubmit={request => void submitBatchAction(request)} pending={batchMutationPending} /> : null}
+    {mealLogSheet}
+    <Wave1MobileBottomTab ariaLabel="남은 요리 하단 탭" currentTab="mypage" />
+  </div>;
 }

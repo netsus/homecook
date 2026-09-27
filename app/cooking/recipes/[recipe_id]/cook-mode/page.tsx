@@ -1,4 +1,5 @@
-import { StandaloneCookModeScreen } from "@/components/cooking/standalone-cook-mode-screen";
+import { RecipeCookingEntry } from "@/components/cooking/recipe-cooking-entry";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 
 interface StandaloneCookModePageProps {
   params: Promise<{ recipe_id: string }>;
@@ -13,5 +14,5 @@ export default async function StandaloneCookModePage({
   const resolvedSearchParams = await searchParams;
   const servings = Math.max(1, Number(resolvedSearchParams.servings) || 1);
 
-  return <StandaloneCookModeScreen recipeId={recipe_id} servings={servings} />;
+  return <RecipeCookingEntry initialAuthenticated={await getInitialAuthenticatedFromServer()} recipeId={recipe_id} servings={servings} />;
 }

@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
 import { canonicalizeLegacyConsumedIngredientIds } from "@/lib/cooking/legacy-completion-payload";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
@@ -326,7 +327,7 @@ export async function fetchCookedBatches({
 } = {}): Promise<CookedBatchListData> {
   const params = new URLSearchParams({ availability, limit: String(limit) });
   if (cursor) params.set("cursor", cursor);
-  const data = await requestCooking<CookedBatchListData>(`/api/v1/cooked-batches?${params.toString()}`);
+  const data = await requestCooking<CookedBatchListData>(`/api/v1/cooked-batches?${params.toString()}`, { cache: "no-store" });
   if (!isExactCookedBatchListData(data)) {
     throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "중량·잔량 기록 응답을 확인하지 못했어요." });
   }
@@ -348,6 +349,7 @@ async function mutateCookedBatch(
   if (!isExactCookedBatchMutationData(data, expectedAction)) {
     throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "중량·잔량 변경 결과를 확인하지 못했어요." });
   }
+  notifyCookedBatchChanged(data.batch.id);
   return data;
 }
 

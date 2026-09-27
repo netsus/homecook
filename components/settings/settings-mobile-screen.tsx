@@ -170,10 +170,9 @@ export function SettingsMobileScreen({
         <MobileConfirmSheet
           confirmLabel={isDeleting ? "탈퇴 처리 중..." : "탈퇴하기"}
           destructive
-          description="레시피북, 플래너, 장보기, 팬트리 등 개인 기록은 삭제되며 되돌릴 수 없어요. 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요."
+          description="개인 기록을 삭제하며 복구할 수 없어요. 공개한 제품은 작성자 정보 없이 남아요."
           disabled={isDeleting}
           errorMessage={deleteError}
-          extraWarning="삭제 후 같은 소셜 계정으로 다시 로그인해도 이전 개인 기록은 복구되지 않아요."
           idPrefix="settings-delete"
           onCancel={onCloseDeleteDialog}
           onConfirm={onConfirmDelete}
@@ -533,9 +532,6 @@ function SettingsSurface({
           <strong className="block text-[15px] font-extrabold text-[var(--danger)]">
             계정 삭제
           </strong>
-          <p className="mt-1 text-[12px] font-medium leading-[1.45] text-[var(--text-3)]">
-            개인 기록은 삭제되고, 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요.
-          </p>
           <button
             className="mt-3 min-h-11 rounded-[var(--radius-control)] bg-[var(--danger)] px-4 text-[13px] font-extrabold text-[var(--text-inverse)]"
             onClick={onOpenDeleteDialog}

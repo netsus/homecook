@@ -429,7 +429,7 @@ describe("ManualRecipeCreateScreen", () => {
     resolveUpload(managedUploadSuccess());
   });
 
-  it("removes the browser history guard when a reverted draft becomes clean", async () => {
+  it("keeps input changes out of history and leaves a reverted clean draft without a discard dialog", async () => {
     const user = userEvent.setup();
     const historyBack = vi
       .spyOn(window.history, "back")
@@ -445,10 +445,10 @@ describe("ManualRecipeCreateScreen", () => {
     });
 
     await user.clear(title);
-
-    await waitFor(() => {
-      expect(historyBack).toHaveBeenCalledTimes(1);
-    });
+    expect(historyBack).not.toHaveBeenCalled();
+    await act(async () => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    expect(mockRouterReplace).toHaveBeenCalledWith("/planner/2026-04-18/column-breakfast?slot=%EC%95%84%EC%B9%A8");
+    expect(screen.queryByRole("dialog", { name: "변경사항을 버릴까요?" })).toBeNull();
   });
 
   it("keeps the history guard stable while Korean composition and parent callback identities change", async () => {
@@ -457,16 +457,20 @@ describe("ManualRecipeCreateScreen", () => {
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} onRequestClose={() => undefined} />);
     const title = await screen.findByPlaceholderText("예: 김치찌개");
     await waitFor(() => expect(title.closest("fieldset")?.disabled).toBe(false));
+    title.focus();
     fireEvent.compositionStart(title);
     fireEvent.change(title, { target: { value: "ㄱ" } });
     await waitFor(() => expect(historyPush).toHaveBeenCalledTimes(1));
     view.rerender(<ManualRecipeCreateScreen {...DEFAULT_PROPS} onRequestClose={() => undefined} />);
+    fireEvent.change(title, { target: { value: "" } });
+    window.dispatchEvent(new Event("resize"));
     fireEvent.change(title, { target: { value: "김" } });
     fireEvent.compositionEnd(title, { data: "김" });
     expect(historyBack).not.toHaveBeenCalled();
     expect(historyPush).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog", { name: "변경사항을 버릴까요?" })).toBeNull();
     expect((title as HTMLInputElement).value).toBe("김");
+    expect(document.activeElement).toBe(title);
   });
 
   it("does not show a non-interactive default step placeholder", async () => {
