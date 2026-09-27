@@ -107,8 +107,6 @@ function createCanonicalReadinessFixture(prefix: string) {
     releaseSha,
     schemaIdentity,
     allowedSnapshotDigest: digest,
-    policyVersion: YOUTUBE_ASYNC_POLICY.policyVersion,
-    pipelineIdentity: YOUTUBE_ASYNC_POLICY.pipelineIdentity,
   });
   makeTreeWritable(artifactDir);
   const expectedSchemaPath = join(
@@ -121,7 +119,7 @@ function createCanonicalReadinessFixture(prefix: string) {
   const descriptor = buildYoutubeExtractionAppDescriptor({
     releaseSha,
     schemaIdentity,
-    expectedPolicyVersion: YOUTUBE_ASYNC_POLICY.policyVersion,
+    expectedPolicyVersion: 1,
     expectedPolicySnapshotDigest: digest,
     artifactSha256: materialized.manifest.artifact_sha256,
     expectedSchemaSha256: materialized.manifest.expected_schema_sha256,
@@ -137,7 +135,7 @@ function createCanonicalReadinessFixture(prefix: string) {
     ready: true,
     release_sha: releaseSha,
     schema_identity: schemaIdentity,
-    policy_version: YOUTUBE_ASYNC_POLICY.policyVersion,
+    policy_version: 1,
     policy_snapshot_digest: digest,
     allowed_snapshot_digest: digest,
     fingerprint_key_version: "2",
@@ -204,7 +202,7 @@ describe("YTASYNC Stage 3 API revise RED", () => {
         env,
         new Date("2026-08-13T00:00:00.000Z"),
       )).toEqual({
-        expectedPolicyVersion: YOUTUBE_ASYNC_POLICY.policyVersion,
+        expectedPolicyVersion: 1,
         expectedPolicySnapshotDigest: digest,
         currentFingerprintKeyVersion: "2",
         previousFingerprintKeyVersion: "1",
