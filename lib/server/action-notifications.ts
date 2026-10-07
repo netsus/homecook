@@ -1,3 +1,4 @@
+import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { readVerifiedAccountGenerationSession } from "@/lib/server/account-generation/session-authority";
 import { buildSessionAuthorityRpcArgs } from "@/lib/server/recipe-content-snapshot-future-propagation";
@@ -30,6 +31,9 @@ export function projectActionNotificationPage(items: ActionNotification[], unrea
 async function authorize() {
   const route = await createRouteHandlerClient();
   const { data, error } = await route.auth.getUser();
+  if (isAuthSessionMissingError(error)) {
+    return { response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401) };
+  }
   if (error) throw error;
   if (!data.user) return { response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401) };
   const verified = await readVerifiedAccountGenerationSession(route, data.user);

@@ -10,7 +10,7 @@ const files = [
   'meal-log-auth-return', 'meal-log-entry-mutations', 'meal-log-prelaunch-ui',
   'meal-log-week-cards', 'planner-add-sheet-redesign', 'planner-prelaunch-presentation',
   'planner-nutrition-integer-display', 'planner-meal-nutrition-pages',
-  'planner-meal-log-beta-gaps', 'dialog-boundary-overlap',
+  'planner-meal-log-beta-gaps', 'dialog-boundary-overlap', 'planner-week-navigation',
   'cook-mode-screen', 'youtube-extraction-notifications',
   'account-quarantine-screen', 'auth-logout', 'login-screen',
   'full-local-session-authority', 'hybrid-session-authority-bootstrap',
