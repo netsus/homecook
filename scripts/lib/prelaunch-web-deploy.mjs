@@ -15,6 +15,30 @@ export function classifyPrelaunchScope(files, before, after) {
   const scope = { web: [], database: [], support: [], api: [] };
   const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/|\.claude\/|\.codex\/|\.opencode\/|\.workflow-v2\/)|^(?:AGENTS|CLAUDE|README)\.md$|^opencode\.json$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
   const exactSupport = new Set([
+    // Reviewed offline nutrition tools and contract checks; never executed as runtime hooks.
+    "scripts/lib/nutrition-gap-candidates.mjs",
+    "scripts/lib/public-nutrition-pipeline.mjs",
+    "scripts/validate-security-function-authorization.mjs",
+    "scripts/lib/mext-nutrition-snapshot.mjs",
+    "scripts/lib/usda-nutrition-snapshot.mjs",
+    "scripts/render-ingredient-catalog-cleanup-20261006.mjs",
+    "scripts/render-ingredient-catalog-organization-20261007.mjs",
+    "scripts/render-ingredient-curation-20261006-followup.mjs",
+    "scripts/render-ingredient-curation-20261006.mjs",
+    "scripts/render-ingredient-definition-finalization-20261007.mjs",
+    "scripts/render-ingredient-definition-resolution-20261007.mjs",
+    "scripts/render-ingredient-nutrition-expansion-20261007.mjs",
+    "scripts/run-action-notifications-full-schema-rehearsal.py",
+    "scripts/run-future-meal-key-full-schema-rehearsal.py",
+    "scripts/run-meal-log-preview-full-schema-rehearsal.py",
+    "scripts/sql/ingredient-catalog-cleanup-20261006.sql",
+    "scripts/sql/ingredient-catalog-organization-20261007.sql",
+    "scripts/sql/ingredient-curation-20261006-followup.sql",
+    "scripts/sql/ingredient-curation-20261006.sql",
+    "scripts/sql/ingredient-definition-finalization-20261007.sql",
+    "scripts/sql/ingredient-definition-resolution-20261007.sql",
+    "scripts/sql/ingredient-nutrition-expansion-20261007.sql",
+
     "design-qa.md",
     "scripts/generate-mumeok-icon-edges.mjs",
     "scripts/lib/validate-workflow-v2.mjs",
