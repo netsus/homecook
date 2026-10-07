@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "slice": "meal-log-nutrition-preview",
+  "migrations": [
+    "supabase/migrations/20261006120000_meal_log_nutrition_preview.sql"
+  ],
+  "context_migrations": [
+    "supabase/migrations/20260928020000_action_notifications.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "authorization_rationale": "Verified current account/session authority; private product and cooked batch ownership; exact POST /rpc/preview_meal_log_nutrition under snapshot-v2-session. No food consumption or meal-log mutation.",
+  "verification": [
+    "tests/meal-log-nutrition-preview-postgres.test.ts",
+    "tests/meal-log-nutrition-preview-route.test.ts",
+    "tests/sql/meal-log-preview-full-schema-verify.sql"
+  ],
+  "functions": [
+    {
+      "signature": "public.preview_meal_log_nutrition(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, numeric, text)",
+      "control_class": "application-controlled",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "effect": "read-only",
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.verify_full_local_internal_scope()",
+      "control_class": "application-controlled",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "effect": "trigger/internal",
+      "replaces_additive": "action-notifications",
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.verify_scope_pre_meal_log_preview_20261006()",
+      "control_class": "application-controlled",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "effect": "trigger/internal",
+      "owner": "postgres"
+    }
+  ],
+  "execution_role": "postgres"
+}

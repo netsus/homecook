@@ -1,0 +1,156 @@
+{
+  "schema_version": "homecook-definition-finalization-result-v1",
+  "passed": true,
+  "applied_at": "2026-10-07T10:57:30.256Z",
+  "operation_checksum": "84aa0061852721c397b67e1872fafac7a5115e120246f7938083d108a60b480b",
+  "sql_sha256": "62681b3e4e30b76cab30579503fd40edcc15b1cc0746cd9fdb7b88afa4fbdb49",
+  "counts": {
+    "reviewed": 81,
+    "definitions": {
+      "define": 61,
+      "umbrella": 15,
+      "exclude": 5
+    },
+    "gaps": {},
+    "new_links": 3,
+    "replacements": 0,
+    "revocations": 0,
+    "invalid_aliases": 4
+  },
+  "ingredients_before": 1930,
+  "ingredients_after": 1930,
+  "physical_deletes": 0,
+  "identity_review_pending_after": 0,
+  "existing_source_values_and_history_unchanged": true,
+  "nutrition_after": {
+    "partial": 226,
+    "complete": 1516,
+    "unlinked": 188
+  },
+  "values_verified": 24,
+  "replay_writes": 0,
+  "database_state": {
+    "audit_count": 1,
+    "groups_hash": "780c4c74df7607ada89f9c5745d90eed",
+    "ingredients": 1930,
+    "ledger_hash": "f9988dd76dc4b52d0a3a15dcf17c427b",
+    "entries_hash": "013bddb70286a8cc09e4ec457562e725",
+    "presentations": {
+      "base": 1167,
+      "alias": 20,
+      "detail": 424,
+      "excluded": 124,
+      "umbrella": 88,
+      "prepared_food": 107
+    },
+    "review_states": {
+      "reviewed": 1930
+    },
+    "representatives_hash": "3eea0cefca75f66c978f02060f3697dd",
+    "values_checked": 24
+  },
+  "backup": {
+    "bytes": 116984665,
+    "sha256": "08f329f8e6a8ecc2d2d23913f5334dee749482900c5ef7b9e35a7a2d1b046fe9",
+    "full_isolated_restore_verified": true,
+    "data_only": true
+  },
+  "verification": {
+    "checks": [
+      "catalog drift",
+      "late metadata error rolls back nutrition and catalog",
+      "source quality hold",
+      "exact values and all definitions",
+      "existing source values and app records unchanged",
+      "migration ledger unchanged",
+      "replay zero writes",
+      "umbrella cannot replace alias root",
+      "public writes denied"
+    ],
+    "independent_source_review": true
+  },
+  "ui_catalog_integration_deployed": false,
+  "web_deployed": false,
+  "recipe_nutrition_refresh": {
+    "count": 0,
+    "created": 0,
+    "replay_created": 0
+  },
+  "nutrition_by_presentation": [
+    {
+      "n": 20,
+      "status": "complete",
+      "presentation": "alias"
+    },
+    {
+      "n": 893,
+      "status": "complete",
+      "presentation": "base"
+    },
+    {
+      "n": 181,
+      "status": "partial",
+      "presentation": "base"
+    },
+    {
+      "n": 93,
+      "status": "unlinked",
+      "presentation": "base"
+    },
+    {
+      "n": 398,
+      "status": "complete",
+      "presentation": "detail"
+    },
+    {
+      "n": 26,
+      "status": "partial",
+      "presentation": "detail"
+    },
+    {
+      "n": 100,
+      "status": "complete",
+      "presentation": "excluded"
+    },
+    {
+      "n": 12,
+      "status": "partial",
+      "presentation": "excluded"
+    },
+    {
+      "n": 12,
+      "status": "unlinked",
+      "presentation": "excluded"
+    },
+    {
+      "n": 92,
+      "status": "complete",
+      "presentation": "prepared_food"
+    },
+    {
+      "n": 5,
+      "status": "partial",
+      "presentation": "prepared_food"
+    },
+    {
+      "n": 10,
+      "status": "unlinked",
+      "presentation": "prepared_food"
+    },
+    {
+      "n": 13,
+      "status": "complete",
+      "presentation": "umbrella"
+    },
+    {
+      "n": 2,
+      "status": "partial",
+      "presentation": "umbrella"
+    },
+    {
+      "n": 73,
+      "status": "unlinked",
+      "presentation": "umbrella"
+    }
+  ]
+}

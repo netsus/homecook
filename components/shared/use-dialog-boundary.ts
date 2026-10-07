@@ -13,9 +13,34 @@ const FOCUSABLE_SELECTOR = [
 
 type ReturnFocusTarget = HTMLElement | (() => HTMLElement | null) | null;
 
+const bodyLocks = new WeakMap<HTMLElement, { count: number; previousOverflow: string }>();
+
+function lockBodyScroll(body: HTMLElement) {
+  const lock = bodyLocks.get(body) ?? { count: 0, previousOverflow: body.style.overflow };
+  lock.count += 1;
+  bodyLocks.set(body, lock);
+  body.style.overflow = "hidden";
+  return () => {
+    lock.count -= 1;
+    if (lock.count > 0) return;
+    body.style.overflow = lock.previousOverflow;
+    bodyLocks.delete(body);
+  };
+}
+
+function isVisibleFocusTarget(element: HTMLElement, dialog: HTMLElement) {
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    if (node.hidden || node.inert || node.getAttribute("aria-hidden") === "true") return false;
+    const style = window.getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    if (node === dialog) break;
+  }
+  return true;
+}
+
 function focusableElements(dialog: HTMLElement) {
   return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
-    .filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+    .filter((element) => isVisibleFocusTarget(element, dialog));
 }
 
 export function useDialogBoundary({
@@ -55,17 +80,16 @@ export function useDialogBoundary({
       ? document.activeElement
       : null;
     const fallbackFocusTarget = fallbackFocusRef?.current ?? null;
-    if (activeElement && !dialog.contains(activeElement)) {
+    if (activeElement && activeElement !== document.body && !dialog.contains(activeElement)) {
       invokerFocusRef.current = activeElement;
     }
-    const previousOverflow = document.body.style.overflow;
+    const releaseBodyScroll = lockBodyScroll(document.body);
     const isolated: Array<{
       element: HTMLElement;
       inert: boolean;
       ariaHidden: string | null;
     }> = [];
 
-    document.body.style.overflow = "hidden";
     const initialTarget = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
     initialTarget.focus({ preventScroll: true });
     const focusGuardFrame = requestAnimationFrame(() => {
@@ -124,7 +148,7 @@ export function useDialogBoundary({
     return () => {
       cancelAnimationFrame(focusGuardFrame);
       document.removeEventListener("keydown", handleKeyDown, true);
-      document.body.style.overflow = previousOverflow;
+      releaseBodyScroll();
       for (const { element, inert, ariaHidden } of isolated.reverse()) {
         element.inert = inert;
         if (ariaHidden === null) element.removeAttribute("aria-hidden");
@@ -139,7 +163,7 @@ export function useDialogBoundary({
           const target = requestedTarget?.isConnected
             ? requestedTarget
             : returnTarget?.isConnected ? returnTarget : fallbackFocusTarget;
-          target?.focus({ preventScroll: true });
+          if (target && !target.closest("[inert], [aria-hidden='true']")) target.focus({ preventScroll: true });
           invokerFocusRef.current = null;
         }
       });

@@ -1,8 +1,17 @@
 import { spawnSync } from 'node:child_process';
 
-// Release checks for the September 28 feedback follow-up batch. Keep unrelated historical
+// Release checks for the accumulated UI, notifications and ingredient nutrition batch. Keep unrelated historical
 // image/UI fixtures out of this focused suite; their failures are documented.
 const files = [
+  'action-notification-client', 'action-notification-success-events',
+  'action-notifications-route', 'action-notifications-backup', 'use-action-notifications',
+  'meal-log-nutrition-preview-route', 'meal-log-nutrition-preview',
+  'meals-create-idempotency-route', 'meal-log-nutrition-redesign',
+  'meal-log-auth-return', 'meal-log-entry-mutations', 'meal-log-prelaunch-ui',
+  'meal-log-week-cards', 'planner-add-sheet-redesign', 'planner-prelaunch-presentation',
+  'planner-nutrition-integer-display', 'planner-meal-nutrition-pages',
+  'planner-meal-log-beta-gaps', 'dialog-boundary-overlap',
+  'cook-mode-screen', 'youtube-extraction-notifications',
   'account-quarantine-screen', 'auth-logout', 'login-screen',
   'full-local-session-authority', 'hybrid-session-authority-bootstrap',
   'hybrid-session-authority-gateway', 'hybrid-public-read-policy', 'supabase-server',
@@ -25,11 +34,13 @@ const files = [
   'meal-log-ui', 'meal-log-ui-history', 'app-back-button', 'settings-screen',
 ];
 
+// SQL contract tests run separately against the integrated source, not this web-only release.
 const groups = [
+  ["tests/ingredient-catalog-policy.test.ts", "tests/ingredient-dictionary.backend.test.ts", "tests/nutrition-gap-candidates.test.ts", "tests/public-nutrition-source-acquisition.test.ts", "tests/mext-nutrition-snapshot.test.ts", "tests/usda-nutrition-snapshot.test.ts"],
   files.map((file) => `tests/${file}.test`),
   ['tests/manual-recipe-create-screen.test.tsx', '-t', 'cleared ingredient amount|pending publication|does not replay a pending POST|composition|callback identity|history|Korean|save without image'],
-  ['tests/planner-meal-screen.test.tsx', '-t', 'does not create a legacy session|snapshot-v2|only the selected shopping_done|sole 식사 추가|opens the meal-add|renders the desktop meal screen as'],
-  ['tests/planner-week-screen.test.tsx', '-t', 'scroll|shopping history|distant selected'],
+  ['tests/planner-meal-screen.test.tsx', 'tests/planner-week-screen.test.tsx'],
+  ['tests/recipe-api-contracts.test.ts', '-t', 'records detail visits|uses actual planner meal count|returns deduped public recipe image candidates'],
 ];
 for (const group of groups) {
   const result = spawnSync('pnpm', ['exec', 'vitest', 'run', ...group], {

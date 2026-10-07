@@ -3491,3 +3491,54 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 `public.ingredient_representative_links`는 운영자가 근거를 검토한 source ingredient ID→representative ingredient ID 관계를 기록한다. source가 PK이며 두 ingredient FK, 영양 source_item FK, reviewer FK는 삭제 제한이다. 근거 JSON/사유/검토일을 저장한다. 자기 연결·체인·순환은 공통 transaction advisory lock과 READ COMMITTED 검증으로 거부한다. RLS를 켜고 service_role SELECT만 허용하며 공개/인증 사용자와 service_role의 쓰기 권한은 없다. 기존 recipe/meal/leftover의 ID를 자동 치환하거나 영양값을 자체 생성하지 않는다.
 
 2026-09-19 승인 범위는 기존30개의 확정 영양9개 및 쌀밥 오연결1개 정정, 목심 대표 관계1개, 별칭 정리, 조미김 원본 이상값 승인 철회다. 원본값을 덮어쓰지 않으며 recipe 현재 영양은 기존 writer로 새 snapshot을 추가하고 과거 식사/요리의 고정 참조는 유지한다. 운영 근거·보류21개는 `engineering/ingredient-nutrition-curation-20260919.md`를 참조한다.
+
+
+## 2026-09-28 후속 — 영속 활동 알림 (미배포)
+
+public.action_notifications는 owner_user_id/account_generation/event_type/source_id를 중복 방지 경계로 사용한다. 도메인 트랜잭션 트리거 및 실제 차감 writer에서 기록하고, 세션 검증 RPC로만 읽기/읽음 처리한다. 자세한 화면·데이터·권한 계약은 [후속 기록](engineering/feedback-ui-activity-notifications-20260928.md)을 따른다. 이전 배포 기록과 구분한다.
+
+
+## 2026-10-06 — 계획·식사기록 설계 적용 (미배포)
+
+선택일 중심 요리계획/식사기록, 간결한 상세·모달, 실제 영양 그래프를 적용한다. 레시피 `view=preview`는 조회수 없는 동일 권한 읽기, `/meal-log/nutrition-preview`는 현재 소유자·세대의 읽기 전용 영양 계산이다. 계획 POST는 선택적 `Idempotency-Key`로 동일 시도 결과를 재사용한다. [상세 계약·검증·제한](engineering/planner-meal-log-redesign-20261006.md)을 따르며 웹과 새 SQL2개는 추후 묶음 배포한다.
+
+
+## 2026-10-07 재료 카탈로그 분류와 대표 그룹
+
+기존 재료 ID·영양값·과거 참조를 유지하면서 집밥·일상 베이킹 중심 탐색을 지원하는 메타데이터를 추가한다. 아래 조회는 DB 계약이며 기존 HTTP API·화면 조회 경로는 자동으로 바뀌지 않는다.
+
+- `ingredient_catalog_groups`: `id`, `category`, `name`, `sort_order`. `(category,name)`은 유일하다. 그룹은 탐색용이며 영양 계산·레시피 저장용 재료 ID가 아니다.
+- `ingredient_catalog_entries`: 기존 `ingredients.id`를 PK/FK로 사용하는 1:1 분류. `group_id`, `display_name`, `presentation`, `review_state`, 문자열 배열 `retain_dimensions`, `representative_ingredient_id`, `review_version`, `updated_at`을 갖는다.
+- `presentation`: `base`(기본), `detail`(부위·생/건조·조리 상태 등), `prepared_food`(음식/제품), `excluded`(기본 탐색 제외), `alias`(검증된 중복 이름). `review_state`의 `needs_definition`은 숨김 조건이 아니다.
+- 대표 관계는 기존 `ingredient_representative_links`가 권위 원장이다. 공개 분류의 대표 ID는 복합 FK로 동일 관계만 투영하며, 검토 완료된 기본/상세/음식 루트만 가리킬 수 있다. 자기 연결·체인·순환과 참조받는 루트의 제외/미정 전환을 거부한다. 기존 ID나 영양 연결을 자동 치환하지 않는다.
+- `ingredient_catalog_items`는 재료에 분류/그룹을 LEFT JOIN한다. 미분류 신규 재료는 원래 이름과 `base/unreviewed`로 노출한다. 실제 선택·저장 값은 항상 `ingredient_id`다.
+- `ingredient_catalog_primary`, `_details`, `_foods`, `_excluded`, `_aliases`는 각 presentation의 조회다. `_needs_review`는 `needs_definition/unreviewed` 조회다. 기본 조회는 정의 확인 재료도 포함한다.
+- 음식/제품 조회는 기존 재료에 붙인 분류이며 `food_products`로의 데이터 이관이 아니다. 상세 항목을 같은 그룹에 넣어도 영양값이 같다는 뜻이 아니다.
+- 두 테이블은 RLS와 SELECT 전용 정책을 적용하고, 일곱 view는 `security_invoker=true`다. `anon/authenticated/service_role`은 조회만 가능하다. 검토자·사유·삭제 전 원본은 공개 분류에 넣지 않고 기존 운영 감사 기록에 보존한다.
+- 기존 26-ID 선택 정책은 유지한다. 이전 131-ID 정책 초안은 미적용 상태로 폐기 보관했으며 다시 실행하지 않는다.
+
+적용 자료·검증·화면 연동 범위는 [2026-10-07 운영 정리 기록](engineering/ingredient-catalog-organization-20261007.md)을 따른다.
+
+## 2026-10-07 후속 — 정의 확정과 검색용 상위 이름
+
+`ingredient_catalog_entries.definition`에 가식부·조리 전 상태·가공 조건을 설명하는 공개 정의를 기록한다. NULL은 미기록이며, 기록된 값은 공백이 아니고 1,000자 이하다. 기존 일곱 조회의 마지막 열에 동일 필드를 추가한다.
+
+`presentation='umbrella'`는 버섯·치즈 등 여러 실제 재료를 찾는 상위 이름이다. 의미가 확정된 상위 이름은 `reviewed`이며, 실제 제품/상태를 알 수 없는 `needs_definition`과 구분한다. `ingredient_catalog_umbrellas`는 공개 SELECT 전용 invoker 조회다. 기본 조회에는 상위 이름을 포함하지 않는다. 기존 별칭의 대표는 계속 base/detail/prepared_food의 검토 완료 루트만 허용한다.
+
+상위 이름의 기존 승인 대표 영양값은 승인 범위에서만 보존할 수 있다. 하위 재료에 자동 상속하거나 서로 다른 제품·상태의 영양값을 합치지 않는다. 새 기본 정의는 일반 식용부위·조리 전 원재료를 우선하되 건조/가열/염장/배액 등 실제 사용·영양 기준이 다른 형태는 보존한다. 기존 HTTP/웹 조회 연동은 별도 작업이다.
+
+이번 정의·영양 보완의 입력과 실제 검증은 [후속 적용 기록](engineering/ingredient-definition-resolution-20261007.md)을 따른다.
+
+## 2026-10-07 정의 확인 상태의 기준 정정
+
+`review_state`는 카탈로그 정의·노출 결정을 검토했는지 나타낸다. 식품 정체성은 분명하나 일반 범위에 맞는 영양 출처를 확보하지 못한 경우는 `reviewed`로 기록하고, 영양 미연결/결측은 기존 영양 연결과 성분 상태로 별도 집계한다. 품종·산지·등급 또는 제조사별 자료 차이만으로 정의를 다시 미정으로 돌리지 않는다. 상위 검색 의미가 확정된 항목은 `umbrella`, 식별할 수 없는 범위 제외 항목은 사유를 감사 기록에 남기고 `excluded`로 분류한다. 어느 결정도 영양값 자동 생성·복제·0 보충을 허용하지 않는다.
+
+[남은 81개 실제 처리 및 검증](engineering/ingredient-definition-finalization-20261007.md)을 따른다. 이번 후속은 데이터 변경이며 새 스키마/API 계약은 없다.
+
+## 2026-10-07 해외 공식 영양자료와 원자료 이름 길이
+
+USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에 저장한다. provider/dataset/version/manifest SHA와 식품ID·가식부100g·상태·원문·산출 성격을 유지하며, 서로 다른 식품이나 제품의 값을 합치지 않는다. USDA의 미보고 영양 항목은null와 명시적내부 식별자로 저장하고, MEXT의 추정/차용/계산 표기는 원문 및provenance에 보존한다.
+
+`ingredient_synonyms.synonym` 용량은512자다. 해외 공식명4개의 전체 원문이 기존100자를 초과해 승인 writer의 정확한 식품명 확인을 가능하게 한 변경이다. `search_name` 저장 표현식/순서와 두검색 인덱스를 동일하게 복원하며, 기존 별칭 내용·권한·영양명 검증은 유지한다. 이번 반영의 임시 원자료명 별칭은 제거해 최종 검색 별칭을 늘리지 않는다.
+
+[공식 영양자료 확장 적용·검증 기록](engineering/ingredient-nutrition-expansion-20261007.md)을 따른다.

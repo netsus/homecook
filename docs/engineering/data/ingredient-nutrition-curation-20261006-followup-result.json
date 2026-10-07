@@ -1,0 +1,89 @@
+{
+  "schema_version": "ingredient-nutrition-followup-result-v1",
+  "applied_at": "2026-10-06T09:23:58.338Z",
+  "operation_checksum": "29f1577792f82473090cac1ad53affb0393f10094cf198a4fae411ab1504f3da",
+  "scope": "verified full-local production PostgreSQL",
+  "backup": {
+    "bytes": 116640398,
+    "sha256": "d065991ee4d5cc5e60b08630bded6820e771ab50f18a3822c7fd702376a908c9",
+    "isolated_full_restore_verified": true
+  },
+  "passed": true,
+  "values_checked": 952,
+  "qualified_source_tokens_preserved": 31,
+  "counts": {
+    "new_links": 113,
+    "replacements": 6,
+    "revocations": 2,
+    "invalid_aliases": 19
+  },
+  "new_links_complete": 104,
+  "new_links_partial": 9,
+  "revoked_links": 2,
+  "unrelated_rows_unchanged": true,
+  "recipe_snapshots_created": 3,
+  "excluded_recipe_count": 1,
+  "quality": {
+    "partial": 227,
+    "complete": 1482,
+    "unlinked": 241
+  },
+  "source_quality_before": {
+    "complete": 1380,
+    "partial": 218,
+    "unlinked": 352
+  },
+  "source_quality_after": {
+    "partial": 227,
+    "complete": 1482,
+    "unlinked": 241
+  },
+  "all_ingredients": 1950,
+  "selectable_ingredients": 1924,
+  "selectable_quality_after": {
+    "complete": 1456,
+    "partial": 227,
+    "unlinked": 241
+  },
+  "source_token_parser_verification": {
+    "passed": true,
+    "official_rows": 3366,
+    "before": {
+      "normalized": 3206,
+      "quarantined": 160
+    },
+    "after": {
+      "normalized": 3366,
+      "quarantined": 0
+    },
+    "unchanged_existing_fingerprints": 3206,
+    "newly_interpretable_rows": 160,
+    "qualified_values": 239,
+    "remaining_quarantine": {},
+    "production_writes": 0
+  },
+  "test_results": {
+    "files": 6,
+    "passed": 147
+  },
+  "web_verification": {
+    "http_status": 403,
+    "authenticated": false,
+    "observed_at": "2026-10-06T09:25:19.785097+00:00"
+  },
+  "replay_new_writes": 0,
+  "ingredient_deletions": 0,
+  "recipe_deletions": 0,
+  "delivery": {
+    "database": "applied",
+    "code": "local worktree only, unmerged",
+    "web_deployment": "not performed"
+  },
+  "next_work": {
+    "unlinked_identity_decisions": 219,
+    "unlinked_no_exact_source": 20,
+    "newly_revoked_no_exact_source": 2,
+    "linked_identity_decisions": 25,
+    "partial_core_source_gaps": 227
+  }
+}

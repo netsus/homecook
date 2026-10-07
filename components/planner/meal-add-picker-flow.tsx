@@ -10,8 +10,7 @@ import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
 import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import { AppBackButton } from "@/components/shared/app-back-button";
-import { AppBottomSheet } from "@/components/shared/app-overlay";
-import { showActionConfirmation } from "@/stores/ui-store";
+import { PlannerTaskSheet } from "@/components/planner/planner-task-sheet";
 import { createMealSafe } from "@/lib/api/meal";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type {
@@ -25,6 +24,7 @@ interface MealAddPickerFlowProps {
   columnId: string;
   entryMode: MealAddPickerMode;
   onClose: () => void;
+  onDismiss?: () => void;
   onComplete: () => void | Promise<void>;
   planDate: string;
   slotName: string;
@@ -39,6 +39,8 @@ interface PickerSheetProps {
   onClose: () => void;
   targetLabel?: string;
   title: string;
+  closeDisabled?: boolean;
+  error?: React.ReactNode;
 }
 
 function PickerSheet({
@@ -48,19 +50,23 @@ function PickerSheet({
   onClose,
   targetLabel,
   title,
+  closeDisabled,
+  error,
 }: PickerSheetProps) {
   return (
-    <AppBottomSheet
+    <PlannerTaskSheet
       ariaLabelledBy={ariaLabelledBy}
       badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
       bodyClassName="pb-[calc(20px+env(safe-area-inset-bottom))]"
-      leadingAction={<AppBackButton onClick={onBack} />}
+      leadingAction={<AppBackButton disabled={closeDisabled} onClick={onBack} />}
+      closeDisabled={closeDisabled}
       onClose={onClose}
-      panelClassName="max-w-[480px]"
+      panelClassName="h-[78dvh]"
       title={title}
     >
+      {error}
       {children}
-    </AppBottomSheet>
+    </PlannerTaskSheet>
   );
 }
 
@@ -82,6 +88,7 @@ export function MealAddPickerFlow({
   columnId,
   entryMode,
   onClose,
+  onDismiss,
   onComplete,
   planDate,
   slotName,
@@ -98,6 +105,8 @@ export function MealAddPickerFlow({
     useState<PantryMatchRecipeItem | null>(null);
   const [selectedLeftover, setSelectedLeftover] =
     useState<LeftoverListItemData | null>(null);
+  const creatingRef = useRef(false);
+  const createOperation = useRef<{ fingerprint: string; key: string } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [creationError, setCreationError] = useState<string | null>(null);
   const targetLabel = formatTargetLabel(planDate, slotName);
@@ -108,30 +117,39 @@ export function MealAddPickerFlow({
 
   const handleCreateRecipeMeal = useCallback(
     async (recipeId: string, servings: number, leftoverDishId?: string) => {
+      if (creatingRef.current) return;
+      creatingRef.current = true;
       setIsCreating(true);
       setCreationError(null);
 
-      const response = await createMealSafe({
+      const body = {
         recipe_id: recipeId,
         plan_date: planDate,
         column_id: columnId,
         planned_servings: servings,
         ...(leftoverDishId ? { leftover_dish_id: leftoverDishId } : {}),
-      });
+      };
+      const fingerprint = JSON.stringify(body);
+      if (createOperation.current?.fingerprint !== fingerprint) {
+        createOperation.current = { fingerprint, key: crypto.randomUUID() };
+      }
+      const response = await createMealSafe(body, createOperation.current.key);
 
       if (!response.success) {
         setCreationError(response.error?.message ?? "식사를 추가하지 못했어요.");
+        creatingRef.current = false;
         setIsCreating(false);
         return;
       }
 
-      showActionConfirmation("요리계획에 추가했어요.");
+      createOperation.current = null;
       await finishCreation();
     },
     [columnId, finishCreation, planDate],
   );
 
   const handlePickerBackToOptions = useCallback(() => {
+    if (creatingRef.current) return;
     setSelectedRecipe(null);
     setSelectedBook(null);
     setSelectedBookRecipe(null);
@@ -155,7 +173,7 @@ export function MealAddPickerFlow({
 
   const errorBanner = creationError ? (
     <div
-      className="fixed left-4 right-4 top-4 z-[60] rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger)] shadow-[0_8px_20px_var(--shadow-color-raised)]"
+      className="mx-4 mb-3 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-medium text-[var(--danger)] shadow-[0_8px_20px_var(--shadow-color-raised)]"
       role="alert"
     >
       {creationError}
@@ -165,13 +183,14 @@ export function MealAddPickerFlow({
   if (pickerMode === "search") {
     return (
       <>
-        {errorBanner}
         <PickerSheet
+          closeDisabled={isCreating}
+          error={errorBanner}
           ariaLabelledBy="meal-add-search-picker-title"
-          onBack={handlePickerBackToOptions}
-          onClose={handlePickerBackToOptions}
+          onBack={selectedRecipe || selectedPantryRecipe ? () => { setSelectedRecipe(null); setSelectedPantryRecipe(null); setCreationError(null); } : handlePickerBackToOptions}
+          onClose={onDismiss ?? handlePickerBackToOptions}
           targetLabel={targetLabel}
-          title="검색으로 추가"
+          title={selectedRecipe ? "계획에 추가" : "검색으로 추가"}
         >
           <RecipeSearchPicker
             isCreating={isCreating}
@@ -200,11 +219,12 @@ export function MealAddPickerFlow({
   if (pickerMode === "recipebook") {
     return (
       <>
-        {errorBanner}
         <PickerSheet
+          closeDisabled={isCreating}
+          error={errorBanner}
           ariaLabelledBy="meal-add-recipebook-picker-title"
-          onBack={handlePickerBackToOptions}
-          onClose={handlePickerBackToOptions}
+          onBack={selectedRecipe || selectedPantryRecipe ? () => { setSelectedRecipe(null); setSelectedPantryRecipe(null); setCreationError(null); } : handlePickerBackToOptions}
+          onClose={onDismiss ?? handlePickerBackToOptions}
           targetLabel={targetLabel}
           title="레시피북에서 추가"
         >
@@ -214,7 +234,7 @@ export function MealAddPickerFlow({
               setSelectedBook(book);
               setPickerMode("recipebook-detail");
             }}
-            onClose={handlePickerBackToOptions}
+            onClose={onDismiss ?? handlePickerBackToOptions}
             presentation="sheet"
             slotLabel={targetLabel}
           />
@@ -226,13 +246,14 @@ export function MealAddPickerFlow({
   if (pickerMode === "recipebook-detail" && selectedBook) {
     return (
       <>
-        {errorBanner}
         <PickerSheet
+          closeDisabled={isCreating}
+          error={errorBanner}
           ariaLabelledBy="meal-add-recipebook-detail-picker-title"
-          onBack={handleRecipeBookBack}
-          onClose={handlePickerBackToOptions}
+          onBack={selectedBookRecipe ? () => { setSelectedBookRecipe(null); setCreationError(null); } : handleRecipeBookBack}
+          onClose={onDismiss ?? handlePickerBackToOptions}
           targetLabel={targetLabel}
-          title={selectedBook.name}
+          title={selectedBookRecipe ? "계획에 추가" : selectedBook.name}
         >
           <RecipeBookDetailPicker
             book={selectedBook}
@@ -260,18 +281,19 @@ export function MealAddPickerFlow({
   if (pickerMode === "pantry") {
     return (
       <>
-        {errorBanner}
         <PickerSheet
+          closeDisabled={isCreating}
+          error={errorBanner}
           ariaLabelledBy="meal-add-pantry-picker-title"
-          onBack={handlePickerBackToOptions}
-          onClose={handlePickerBackToOptions}
+          onBack={selectedRecipe || selectedPantryRecipe ? () => { setSelectedRecipe(null); setSelectedPantryRecipe(null); setCreationError(null); } : handlePickerBackToOptions}
+          onClose={onDismiss ?? handlePickerBackToOptions}
           targetLabel={targetLabel}
-          title="팬트리 기반 추천"
+          title={selectedPantryRecipe ? "계획에 추가" : "팬트리 기반 추천"}
         >
           <PantryMatchPicker
             isCreating={isCreating}
             onBack={handlePickerBackToOptions}
-            onClose={handlePickerBackToOptions}
+            onClose={onDismiss ?? handlePickerBackToOptions}
             onRecipeSelect={setSelectedPantryRecipe}
             onServingsCancel={() => {
               setSelectedPantryRecipe(null);

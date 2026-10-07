@@ -405,6 +405,7 @@ export function createDataServiceRoleClient() {
 }
 
 type LocalInternalScope =
+  | "action-notifications"
   | "account-lifecycle"
   | "admin-data"
   | "auth-callback"
@@ -1011,4 +1012,8 @@ export async function getServerAuthUser() {
   const authResult = await supabase.auth.getUser();
 
   return authResult.data.user ?? null;
+}
+
+export function createActionNotificationsInternalClient() {
+  return createScopedInternalRpcClient("action-notifications");
 }

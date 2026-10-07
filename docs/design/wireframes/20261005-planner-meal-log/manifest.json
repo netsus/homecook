@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-05",
+  "status": "original_preserved_superseded_by_reviewed_v2",
+  "generator": "built-in image_gen",
+  "palette": {
+    "carbohydrate": "#94C9FF",
+    "protein": "#FFA7C2",
+    "fat": "#FFD477"
+  },
+  "boards": [
+    {
+      "id": "01-overviews",
+      "title": "요리계획 · 식사기록",
+      "description": "주간 개요와 선택한 날, 짧은 음식별 탄단지 막대",
+      "file": "01-overviews.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-83fd04cf-28c6-4353-8206-f8640461e87c.png"
+    },
+    {
+      "id": "02-plan-add",
+      "title": "요리계획 추가 모달",
+      "description": "레시피 선택 → 계획 인분 확인",
+      "file": "02-plan-add.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-963505e2-5991-4482-a702-0efa48634884.png"
+    },
+    {
+      "id": "03-plan-details",
+      "title": "요리계획 상세",
+      "description": "한 끼의 요리 목록 · 계획한 요리 한 건",
+      "file": "03-plan-details.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-7cbb6eb2-fce7-407a-a2d6-791fbd925a71.png"
+    },
+    {
+      "id": "04-food-selection",
+      "title": "식사기록 음식 선택",
+      "description": "최근 음식 · 제품/재료 검색",
+      "file": "04-food-selection.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-516ec16d-b573-47b8-85e8-56a137a9a7d8.png"
+    },
+    {
+      "id": "05-consumed-amount",
+      "title": "먹은 양 입력",
+      "description": "양 확인 · 키보드가 열린 상태",
+      "file": "05-consumed-amount.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-92e19678-ab66-47b8-8f56-411765976da8.png"
+    },
+    {
+      "id": "06-daily-nutrition",
+      "title": "하루 영양 상세",
+      "description": "끼니별 열량과 구성 · 선택한 영양소 비교",
+      "file": "06-daily-nutrition.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-92826cd7-ce41-4834-ad91-a6c3144ca6cc.png"
+    },
+    {
+      "id": "07-record-details-edit",
+      "title": "음식 상세 · 수정",
+      "description": "기록된 음식 영양 · 먹은 양 수정 모달",
+      "file": "07-record-details-edit.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-7f842bc4-ebb0-475c-992b-cb5da0cc9bba.png"
+    },
+    {
+      "id": "08-delete-confirmations",
+      "title": "삭제 확인",
+      "description": "계획 한 건 삭제 · 식사기록 한 건 삭제",
+      "file": "08-delete-confirmations.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-e6b74b54-1996-48f1-8575-8c2e8897aed3.png"
+    }
+  ],
+  "latest_reviewed_version": "reviewed-v2/manifest.json"
+}

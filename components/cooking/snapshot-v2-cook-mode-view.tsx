@@ -28,7 +28,10 @@ export function SnapshotV2CookModeView({
 
   return (
     <div
-      className="cook-mobile-whole-screen relative mx-auto flex h-dvh min-h-0 max-w-[430px] flex-col overflow-hidden"
+      aria-label="요리 화면"
+      className="cook-mobile-whole-screen relative mx-auto h-dvh max-w-[430px] overflow-y-auto overscroll-y-contain"
+      role="region"
+      tabIndex={0}
       data-cook-theme="dark"
       data-testid="snapshot-v2-cook-mode"
     >
@@ -43,9 +46,8 @@ export function SnapshotV2CookModeView({
 
       <main
         aria-label="요리 내용"
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-4"
+        className="px-4 pb-4"
         style={terminal ? { paddingBottom: "calc(16px + env(safe-area-inset-bottom))" } : undefined}
-        tabIndex={0}
       >
       {terminal ? (
         <nav aria-label="요리 후 다음 행동" className="grid gap-2.5">

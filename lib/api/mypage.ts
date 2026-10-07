@@ -1,3 +1,4 @@
+import { clearActionNotificationSession } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { clearPendingAction } from "@/lib/auth/pending-action";
 import type { ApiError, ApiResponse } from "@/types/api";
@@ -163,15 +164,19 @@ export async function updateNickname(nickname: string) {
 }
 
 export async function deleteAccount(idempotencyKey: string = crypto.randomUUID()) {
-  return requestMypage<UserDeleteData>("/api/v1/users/me", {
+  const data = await requestMypage<UserDeleteData>("/api/v1/users/me", {
     method: "DELETE",
     headers: { "Idempotency-Key": idempotencyKey },
   });
+  clearActionNotificationSession();
+  return data;
 }
 
 export async function logout() {
   clearPendingAction();
-  return requestMypage<UserLogoutData>("/api/v1/auth/logout", {
+  const data = await requestMypage<UserLogoutData>("/api/v1/auth/logout", {
     method: "POST",
   });
+  clearActionNotificationSession();
+  return data;
 }

@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "applied_at": "2026-10-06T13:11:27.289Z",
+  "operation_checksum": "b23ebcc8f0a4550150a01bda4af9b94977a28a0b22c0fa6547588965db7e276e",
+  "ingredients_before": 1950,
+  "ingredients_after": 1932,
+  "deleted": 18,
+  "renamed": 33,
+  "categories_fixed": 11,
+  "default_units_fixed": 1,
+  "attribute_aliases_removed": 179,
+  "all_aliases_removed": 181,
+  "nutrition_and_application_history_unchanged": true,
+  "replay_writes": 0,
+  "schema_version": "homecook-catalog-cleanup-result-v1",
+  "backup": {
+    "bytes": 116697442,
+    "sha256": "504402f7bdd1cdba10bbe7526d5483638533b17a22afedd6a4da8aeb73965a2f",
+    "isolated_full_restore_verified": true
+  },
+  "verification_role": "postgres (same as production operator)",
+  "checked_json_columns": 42,
+  "private_receipt_reference_negative_test": true,
+  "model_settings_lock": "read-only ACCESS SHARE; user-record reference tables SHARE; no permission changes",
+  "reference_scope_exclusions": [
+    "nutrition_source_items provenance (source provenance, not app references)",
+    "operational_events metadata (historical audit, preserved)",
+    "food_product_nutrition_versions basis_relations (unit relations, not ingredient IDs)"
+  ],
+  "tests": {
+    "files": 4,
+    "passed": 72
+  },
+  "selection_state": {
+    "all_ingredients": 1932,
+    "currently_selectable": 1906,
+    "db_selection_policy_changed": false
+  },
+  "nutrition_after": {
+    "partial": 227,
+    "complete": 1482,
+    "unlinked": 223
+  },
+  "pending_selection": {
+    "hide_unused_out_of_scope": 86,
+    "duplicate_pairs": 19,
+    "total_new_exclusions": 105,
+    "combined_exclusion_ids_with_previous": 131,
+    "production_applied": false,
+    "alias_consolidation_applied": false,
+    "requires": [
+      "recheck that source IDs have no live/reference usage",
+      "copy exact source names and valid aliases to the reviewed representative IDs",
+      "record representative evidence without rewriting historical ingredient IDs",
+      "release the TypeScript and SQL selection policy together with the web build"
+    ]
+  }
+}

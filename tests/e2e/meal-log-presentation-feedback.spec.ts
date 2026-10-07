@@ -1,0 +1,48 @@
+import { expect, test } from "@playwright/test";
+import { installAccountLibraryVisualRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
+
+const date = "2026-09-28";
+const columnId = "20000000-0000-4000-8000-000000000001";
+const nutrition = { calculation_status: "complete", calories_kcal: 258.4, carbohydrate_g: 39.6, protein_g: 6.4, fat_g: 7.4, sodium_mg: 123.4 };
+const entry = { id: "10000000-0000-4000-8000-000000000001", revision: 1, consumed_at: null, consumed_local_date: date, timezone_name_snapshot: "Asia/Seoul", meal_plan_column_id: columnId, slot_name_snapshot: "아침", source: { type: "ingredient", id: "30000000-0000-4000-8000-000000000001" }, quantity: { amount: 125.5, unit: "g" }, display_name: "딸기 우유 푸딩", display_brand: null, nutrition, created_at: `${date}T00:00:00Z`, updated_at: `${date}T00:00:00Z` };
+const success = (data: unknown) => ({ success: true, data, error: null });
+for (const width of [375, 1280]) test(`meal record presentation and same-meal add ${width}px`, async ({ page }, testInfo) => {
+  const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100");
+  if (!["127.0.0.1", "localhost"].includes(origin.hostname)) throw new Error("Local QA only");
+  await page.setViewportSize({ width, height: 812 });
+  await setE2EAuthOverride(page);
+  await installAccountLibraryVisualRoutes(page);
+  await installEmptyYoutubeNotificationRoutes(page);
+  await page.route("**/api/v1/meal-log?*", route => {
+    const day = new URL(route.request().url()).searchParams.get("date")!;
+    const entries = day === date ? [entry] : [];
+    return route.fulfill({ json: success({ date: day, active_columns: [{ id: columnId, name: "아침", sort_order: 0 }], active_sections: [{ meal_plan_column_id: columnId, slot_name_snapshot: "아침", sort_order: 0, entries, subtotal: nutrition, incomplete_count: 0 }], deleted_column_sections: [], entries, day_total: { ...nutrition, incomplete_count: 0 } }) });
+  });
+  await page.route("**/api/v1/meal-log/recent?*", route => route.fulfill({ json: success({ items: [], next_cursor: null, has_next: false }) }));
+  await page.route("**/api/v1/cooked-batches*", route => route.fulfill({ json: success({ items: [{ id: "40000000-0000-4000-8000-000000000001", recipe_id: entry.source.id, recipe_title: "무게 없는 제육볶음", recipe_thumbnail_url: null, status: "leftover", cooked_at: `${date}T00:00:00Z`, cooking_servings: 2, finished_weight_g: null, remaining_weight_g: null, weight_status: "missing", batch_status: "available", depleted_reason: null, revision: 1, nutrition_calculation_status: "unavailable", current_unweighed_closure_event_id: null }], next_cursor: null, has_next: false }) }));
+  await page.goto(`/planner?segment=log&date=${date}`);
+  const card = page.locator(`[data-planner-date="${date}"]`);
+  const detailButton = card.getByRole("button", { name: "아침의 딸기 우유 푸딩 식사 기록 상세" });
+  await expect(detailButton).toBeVisible();
+  await expect(card).toContainText("126g");
+  await expect(card).not.toContainText("258.4");
+  await expect(card.getByRole("button", { name: /식사 기록 삭제/ })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  await card.screenshot({ path: testInfo.outputPath("meal-day.png") });
+  await detailButton.click();
+  const detail = page.getByRole("dialog", { name: "식사 기록 상세" });
+  await expect(detail.getByRole("button", { name: "기록 삭제" })).toBeVisible();
+  const add = detail.getByRole("button", { name: "아침에 먹은 음식 추가" });
+  await expect(add).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath("meal-detail.png") });
+  await add.click();
+  const picker = page.getByRole("dialog", { name: "먹은 음식 추가" });
+  await expect(picker).toContainText("9월 28일 · 아침");
+  await expect(picker.getByRole("link", { name: "무게 없는 제육볶음 완성 중량 입력" })).toBeVisible();
+  await expect(picker).toContainText("무게 입력 필요");
+  await expect(picker).not.toContainText("g 식사 기록 저장 불가");
+  await page.screenshot({ path: testInfo.outputPath("missing-weight.png") });
+  await picker.getByRole("tab", { name: "제품·재료" }).click();
+  await expect(picker).not.toContainText("제품이나 재료 이름을 입력하면");
+});

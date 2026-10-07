@@ -5766,3 +5766,13 @@ POST /api/v1/admin/page-view
 # 2026-09-15 legacy 조리 음식 영양·수정 후속 계약
 
 식사기록의 기존 공개 PATCH request/response와 revision/idempotency 계약은 유지한다. `recipe_content_snapshot_id`, `weight_status`, `batch_status`가 모두 없는 legacy cooked batch는 현재 recipe 영양 snapshot이 존재하고 모든 정량 재료 단위가 `g/kg`일 때 재료 합산 중량을 기준으로 실제 섭취 g 영양을 계산한다. PATCH는 내부 `update_legacy_leftover_meal_log_entry`로 먼저 처리하고 대상이 modern batch이면 기존 `mutate_meal_log_entry`로 위임한다.
+
+
+## 2026-09-28 후속 — 활동 알림 API (미배포)
+
+GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_count를 반환한다. POST /api/v1/users/me/action-notifications/seen은 ids를 받아 seen_ids와 unread_count를 반환한다. 표준 응답 래퍼/본인 세대 세션 검증을 유지한다. 자세한 화면·데이터·권한 계약은 [후속 기록](engineering/feedback-ui-activity-notifications-20260928.md)을 따른다. 이전 배포 기록과 구분한다.
+
+
+## 2026-10-06 — 계획·식사기록 설계 적용 (미배포)
+
+선택일 중심 요리계획/식사기록, 간결한 상세·모달, 실제 영양 그래프를 적용한다. 레시피 `view=preview`는 조회수 없는 동일 권한 읽기, `/meal-log/nutrition-preview`는 현재 소유자·세대의 읽기 전용 영양 계산이다. 계획 POST는 선택적 `Idempotency-Key`로 동일 시도 결과를 재사용한다. [상세 계약·검증·제한](engineering/planner-meal-log-redesign-20261006.md)을 따르며 웹과 새 SQL2개는 추후 묶음 배포한다.

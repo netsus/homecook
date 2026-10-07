@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { normalizeIngredientSearchName } from "@/lib/ingredient-search";
+
 import {
   buildExtractedIngredient,
   findIngredientIds,
@@ -65,8 +67,15 @@ function createIngredientDb({
   synonyms?: SynonymRow[];
   synonymError?: QueryError | null;
 } = {}) {
-  const ingredientsTable = createFilteringTable(ingredients);
-  const synonymsTable = createFilteringTable(synonyms, { error: synonymError });
+  // PostgreSQL stores normalized search keys on both dictionary tables.
+  const ingredientsTable = createFilteringTable(ingredients.map((row) => ({
+    ...row,
+    search_name: normalizeIngredientSearchName(row.standard_name),
+  })));
+  const synonymsTable = createFilteringTable(synonyms.map((row) => ({
+    ...row,
+    search_name: normalizeIngredientSearchName(row.synonym),
+  })), { error: synonymError });
   const dbClient = {
     from: vi.fn((table: string) => {
       if (table === "ingredients") return ingredientsTable;
@@ -161,7 +170,7 @@ describe("21 ingredient dictionary backend", () => {
     const lookup = await findIngredientIds(dbClient, ["Soy Sauce"]);
     const ingredient = buildIngredient("Soy Sauce", lookup.matchesByName);
 
-    expect(synonymsTable.__query.in).toHaveBeenCalledWith("synonym", ["Soy Sauce", "soy sauce"]);
+    expect(synonymsTable.__query.in).toHaveBeenCalledWith("search_name", ["soysauce"]);
     expect(lookup.matchesByName.has("Soy Sauce")).toBe(true);
     expect(ingredient).toMatchObject({
       ingredient_id: soySauceId,
@@ -190,12 +199,14 @@ describe("21 ingredient dictionary backend", () => {
     });
   });
 
-  it("returns needs_review without canonical substitution when one parsed name matches multiple ingredients", async () => {
-    const genericGreenOnionId = "00000000-0000-4000-8000-000000000004";
+  it("returns needs_review when a synonym matches multiple ingredients without an exact canonical match", async () => {
     const largeGreenOnionId = "00000000-0000-4000-8000-000000000005";
     const chiveId = "00000000-0000-4000-8000-000000000006";
     const { dbClient } = createIngredientDb({
-      ingredients: [{ id: genericGreenOnionId, standard_name: "파" }],
+      ingredients: [
+        { id: largeGreenOnionId, standard_name: "대파" },
+        { id: chiveId, standard_name: "쪽파" },
+      ],
       synonyms: [
         { synonym: "파", ingredients: { id: chiveId, standard_name: "쪽파" } },
         { synonym: "파", ingredients: { id: largeGreenOnionId, standard_name: "대파" } },
@@ -211,7 +222,6 @@ describe("21 ingredient dictionary backend", () => {
       resolution_status: "needs_review",
       confidence: 0.93,
       candidates: [
-        { ingredient_id: genericGreenOnionId, standard_name: "파", confidence: 0.93 },
         { ingredient_id: largeGreenOnionId, standard_name: "대파", confidence: 0.93 },
         { ingredient_id: chiveId, standard_name: "쪽파", confidence: 0.93 },
       ],

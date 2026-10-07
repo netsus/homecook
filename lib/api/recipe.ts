@@ -1,4 +1,5 @@
 import { fetchJson, isApiFetchError } from "@/lib/api/fetch-json";
+export { fetchRecipePreview } from "@/lib/api/recipe-preview";
 import type { ApiResponse } from "@/types/api";
 import type {
   PantryMatchListData,

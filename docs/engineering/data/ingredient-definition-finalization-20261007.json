@@ -1,0 +1,3778 @@
+{
+  "schema_version": "homecook-definition-finalization-20261007",
+  "expected_ingredients_checksum": "d8019677a472339dc33d7e7aefc49de4",
+  "expected_entries_checksum": "8e3833b45b4d7f100e19a1d0362eef5c",
+  "decisions": [
+    {
+      "id": "e667dd3f-95fc-4bf6-a4fe-d3d2ea79280a",
+      "name": "민들레 잎",
+      "decision": "define",
+      "definition": "민들레의 식용 생잎. 뿌리·식물 전체·건조품과 별도 식품.",
+      "display_name": "민들레 잎",
+      "presentation": "base",
+      "reason": "식물명과 잎 부위가 이미 명확하고 일상 기본상태를 생잎으로 확정할 수 있다. 원자료916의 분석 가식부가 잎만인지 확인되지 않았다는 것은 영양 출처 문제이며 재료 정의를 다시 보류할 이유가 아니다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 민들레 잎 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "부위: 잎"
+      ],
+      "previous_catalog": {
+        "group_id": "a0128006-c5d6-5a46-83ec-d15ef3fb2b4e",
+        "definition": "민들레의 식용 생잎; 원자료916의 분석 가식부 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "민들레 (잎)",
+        "presentation": "detail",
+        "review_state": "needs_definition",
+        "ingredient_id": "e667dd3f-95fc-4bf6-a4fe-d3d2ea79280a",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "부위: 잎",
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "7d1b734c-bf15-4a3a-a1c7-76c5ac628f48",
+      "name": "참나물",
+      "decision": "define",
+      "definition": "참나물의 식용 생 잎줄기. 데친 것·건조품은 별도 상태이며 파드득나물 등 다른 식물로 자동 치환하지 않음.",
+      "display_name": "참나물",
+      "presentation": "base",
+      "reason": "통상 식용 나물의 의미와 가식부를 확정한다.1172 야생/1174 재배 등 원자료 조건 때문에 사용자에게 재배방식 선택을 강요하지 않는다. 어떤 표본을 일반 대표자료로 쓸지의 검토만 영양자료 대기로 남긴다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 참나물 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "f71fefea-ba8c-52f5-98f3-5bcd10a9849d",
+        "definition": "생 참나물의 식용 잎줄기. 재배형/야생형 식물 정체성 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "참나물",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "7d1b734c-bf15-4a3a-a1c7-76c5ac628f48",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "0573eb6e-b6df-466b-9e80-bd44029c2687",
+      "name": "표고버섯",
+      "decision": "define",
+      "definition": "표고버섯의 조리 전 식용 자실체(손질한 갓과 대). 갓만·대만·건조품·조리품은 별도 상태.",
+      "display_name": "표고버섯",
+      "presentation": "base",
+      "reason": "표고버섯이라는 식품과 생 가식부는 명확하다.1358 배지재배/1371 참나무재배 조건은 영양 출처의 표본조건이지 식품 정의 미완료 사유가 아니다. 생/건조 및 대/갓은 구분하되 재배선택은 늘리지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 표고버섯 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "155d4797-58af-5772-b71c-f64ef937a7ef",
+        "definition": "생 표고버섯의 가식부. 재배 방식과 전체/갓/대 범위를 확인한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "표고버섯",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "0573eb6e-b6df-466b-9e80-bd44029c2687",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "23727367-5479-4538-acf2-c32810ef7615",
+      "name": "귀리",
+      "decision": "umbrella",
+      "definition": "귀리 곡립과 귀리 가공품을 찾는 상위 검색그룹. 도정 곡립·오트밀·조리된 귀리밥은 하위 식품으로 구분.",
+      "display_name": "귀리",
+      "presentation": "umbrella",
+      "reason": "현재 별칭에 곡립과 오트밀이 섞여 있어 한 계산 재료로 사용하면 가공·수분 상태가 달라진다. 연구품종은 상세 근거에 남기고 실제 구매형태만 하위 선택에 유지한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 귀리 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [
+        "오트밀"
+      ],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "52f978c9-91c4-5776-99eb-4cce3372addd",
+        "definition": "식용 귀리의 도정 원곡인지 오트밀인지 먼저 분리한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "귀리",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "23727367-5479-4538-acf2-c32810ef7615",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440040",
+      "name": "라면",
+      "decision": "umbrella",
+      "definition": "즉석 라면 제품군 검색그룹. 봉지/용기·면 단독/스프 포함·조리 전/후는 실제 사용형태로 구분.",
+      "display_name": "라면",
+      "presentation": "umbrella",
+      "reason": "RDA211 면 건조품,3142 조리전 라면,3374 용기라면은 동일 재료가 아니다. 특정 제품을 임의로 대표 연결하지 않는 검색그룹으로 정의를 완료한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 라면 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "c20a6b78-b4a7-55fa-87d5-11e7ad001239",
+        "definition": "라면의 조리 전/후 및 면·스프 포함 범위를 명시한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "라면",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440040",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "a4fabde3-b240-598c-950e-f7c3d502a6dd",
+      "name": "고려엉겅퀴",
+      "decision": "define",
+      "definition": "고려엉겅퀴(곤드레)의 조리 전 식용 잎. 일반 엉겅퀴나 말린 곤드레와 구분.",
+      "display_name": "곤드레 (생잎)",
+      "presentation": "base",
+      "reason": "공식742 이름에 고려엉겅퀴(곤드레)와 잎 생것이 명시되어 일반 식재료 정체성을 확정할 수 있다. 재래종 표본 여부는 출처조건이며 정의를 보류하거나 사용자 품종선택을 요구하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 고려엉겅퀴 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "63247043-3e97-5d0d-8869-f5198b6e7755",
+        "definition": "고려엉겅퀴(곤드레)의 식용 잎. 품종·생것/건조를 명시한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "고려엉겅퀴",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "a4fabde3-b240-598c-950e-f7c3d502a6dd",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "09c45eb5-5173-5d62-bcdb-ce5bc7fd897c",
+      "name": "고비",
+      "decision": "define",
+      "definition": "고비의 식용 어린 순을 포함한 생 가식부. 고사리와 다른 식물이며 말린 것·삶은 것은 별도 상태.",
+      "display_name": "고비",
+      "presentation": "base",
+      "reason": "식물명과 나물의 기본 생 가식부를 확정한다.745 야생/749 재배 표본의 차이는 영양 대표자료 검토로 남기고 고비 정의 자체는 완료한다. 다른 고사리 자료를 가져오지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 고비 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "de33bc33-fc04-5162-a41c-3e29928331b1",
+        "definition": "고비의 어린 식용 순 생것. 야생/재배 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "고비",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "09c45eb5-5173-5d62-bcdb-ce5bc7fd897c",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "cb88d8e9-9795-51e2-b9b5-fa91c622d52c",
+      "name": "귤",
+      "decision": "define",
+      "definition": "귤로 유통되는 생과일의 가식 과육. 껍질·씨·가공주스·통조림은 별도 식품.",
+      "display_name": "귤",
+      "presentation": "base",
+      "reason": "일상 과일의 생 가식부로 정의를 확정한다. 확보 원자료가 온주밀감·만감류 및 품종별로 나뉘었다는 이유로 이름을 다시 미정 처리하지 않는다. 특정 품종 영양 선택만 보류한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 귤 / 과일",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "3f0a65aa-2864-531f-9712-f66e0f22cd76",
+        "definition": "귤 계열 생과일 가식부. 온주밀감/만감류 종류 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "귤",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "cb88d8e9-9795-51e2-b9b5-fa91c622d52c",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "a4bdf8ce-f4df-51e7-80d7-882b65e3c6ee",
+      "name": "당귀",
+      "decision": "exclude",
+      "definition": "당귀라는 포괄명만으로 식용 잎·약재 뿌리와 일당귀·참당귀를 식별하지 못하는 특수 식물 원료.",
+      "display_name": "당귀",
+      "presentation": "excluded",
+      "reason": "현재 이름과 별칭으로는 실제 종과 가식부를 구별할 수 없다. 일상 집밥 기본 범위에서 제외하며 약용 뿌리나 특정 식용잎으로 억지 확정하지 않는다. ID·기록은 보존한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 당귀 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "625ad5b9-5231-5e9f-981d-431097b0c80b",
+        "definition": "식용 잎 당귀와 약재용 뿌리, 참당귀와 일당귀를 구분해야 하는 재료.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "당귀",
+        "presentation": "detail",
+        "review_state": "needs_definition",
+        "ingredient_id": "a4bdf8ce-f4df-51e7-80d7-882b65e3c6ee",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "d13cd5f0-4f24-5388-af46-c8e32f7062c0",
+      "name": "대두",
+      "decision": "umbrella",
+      "definition": "대두 식품의 검색그룹. 노란콩·검정콩 및 건조·삶은 콩 등 실제 유형은 하위 식품으로 구분.",
+      "display_name": "대두",
+      "presentation": "umbrella",
+      "reason": "일반 대두에 색·품종·조리상태가 다른 값을 하나로 붙이지 않는다. 대풍·청자 등 연구품종을 별도 사용자 질문으로 늘리지 않고 실제 식품 종류와 상태만 남긴다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 대두 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "콩 종류·품종·생/건조·불림/조리 전후 구분"
+      ],
+      "previous_catalog": {
+        "group_id": "2f98cb4e-2636-5b89-a2d9-733502c135e8",
+        "definition": "대두의 미조리 건조 곡립. 노란콩/검은콩 정체성 분리 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "대두",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "d13cd5f0-4f24-5388-af46-c8e32f7062c0",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "콩 종류·품종·생/건조·불림/조리 전후 구분"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "ea3a7a75-cabd-5a06-99af-726dc15eb23a",
+      "name": "두유",
+      "decision": "define",
+      "definition": "대두를 원료로 만든 일반 액상 두유 음료. 무가당·검은콩·혼합곡물 제품과 콩국물은 별도 선택.",
+      "display_name": "두유",
+      "presentation": "base",
+      "reason": "일반 두유를 특정 상표나 무가당 제품으로 좁히지 않고 공식 일반 대두 두유571과 같은 식품 범위로 정의한다.571은 일반 제품 대표자료이며 실제 상품 라벨이 있으면 해당 상품값을 우선한다. 무가당3554나 콩국물574로 대체하지 않는다.",
+      "nutrition_action": "link",
+      "rda_code": "571",
+      "evidence": [
+        "입력 이름과 분류: 두유 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "정의와 일치하는 공식자료 571 두유, 대두 / 가식부 100g"
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "25563b5b-126a-5a51-b371-691debbbb1aa",
+        "definition": "음용 두유. 원료 콩과 가당·혼합곡물 여부 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "두유",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "ea3a7a75-cabd-5a06-99af-726dc15eb23a",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "89b5cdbe-8d08-5655-976a-e8641b23bec7",
+      "name": "렌틸콩",
+      "decision": "define",
+      "definition": "렌틸콩(렌즈콩)의 조리 전 말린 식용 종실. 삶은 것·통조림은 별도 상태.",
+      "display_name": "렌틸콩 (말린 것)",
+      "presentation": "base",
+      "reason": "일상 구매 기본상태를 말린 종실로 명시해 정의를 완료한다.583 갈색/584 빨간색 중 어느 표본을 대표할지의 문제는 영양자료 대기이며 식품 정의를 미정으로 되돌리지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 렌틸콩 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "콩 종류·품종·생/건조·불림/조리 전후 구분"
+      ],
+      "previous_catalog": {
+        "group_id": "5a4771b3-548a-52ae-948f-814ae5675180",
+        "definition": "렌틸콩의 미조리 건조 곡립. 갈색/빨간색 종류 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "렌틸콩",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "89b5cdbe-8d08-5655-976a-e8641b23bec7",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "콩 종류·품종·생/건조·불림/조리 전후 구분"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "513fa5b6-fcd8-5cc3-8643-a7f8fbe08540",
+      "name": "보리",
+      "decision": "umbrella",
+      "definition": "보리 곡류를 찾는 검색그룹. 도정 곡립·압맥·할맥·보리밥 등 실제 가공형태는 하위 식품으로 구분.",
+      "display_name": "보리",
+      "presentation": "umbrella",
+      "reason": "현재 별칭에 조곡·압맥·할맥 등 영양·조리 기준이 다른 유형이 섞여 있다. 겉/쌀보리 및 가공형태의 식품 선택만 유지하며 세부 육성품종은 소비자 선택에서 제외한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 보리 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [
+        "조곡"
+      ],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "01bf2738-763e-5ee7-b750-2e82e07f262e",
+        "definition": "식용 보리의 조리 전 곡립. 종류·도정·압맥/할맥 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "보리",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "513fa5b6-fcd8-5cc3-8643-a7f8fbe08540",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "6a8469d8-bab7-563e-bbf5-a36c1edd37f5",
+      "name": "수박",
+      "decision": "define",
+      "definition": "수박의 생 가식 과육. 단단한 껍질과 먹지 않는 씨는 제외하고 주스·수박씨는 별도 식품.",
+      "display_name": "수박",
+      "presentation": "base",
+      "reason": "일상 생과일의 과육으로 정의를 확정한다.1529 적육질/1530 황육질 표본의 차이는 영양자료 선정 문제이며 필요 없이 품종선택을 요구하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 수박 / 과일",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "aab1ed52-a628-5480-a7d9-84e4792d547e",
+        "definition": "수박의 생 가식부. 적육질/황육질과 미니수박 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "수박",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "6a8469d8-bab7-563e-bbf5-a36c1edd37f5",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "e5e7ea08-1702-5932-8594-2061dc070d7e",
+      "name": "시리얼",
+      "decision": "umbrella",
+      "definition": "곡물로 만든 시리얼 제품군 검색그룹. 곡물 원료·가당·그래놀라 배합 등 실제 제품 유형은 하위 식품으로 구분.",
+      "display_name": "시리얼",
+      "presentation": "umbrella",
+      "reason": "쌀·옥수수·현미 시리얼과 견과·과일 그래놀라는 배합이 다른 제품이다. 연구품종 문제가 아니라 제품군 차이이므로 단일 계산 재료 대신 검색그룹으로 정의를 완료한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 시리얼 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "237a8f45-e180-534a-924f-28d2fd033e62",
+        "definition": "아침식사용 시리얼. 원료·당·견과/과일 배합 확인.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "시리얼",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "e5e7ea08-1702-5932-8594-2061dc070d7e",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "9c19aa89-9e57-535d-980d-bf2fca59ef6c",
+      "name": "아마란스",
+      "decision": "define",
+      "definition": "곡류로 이용하는 아마란스의 조리 전 말린 식용 종실. 채소 열대비름의 잎과 구분.",
+      "display_name": "아마란스 (곡립)",
+      "presentation": "base",
+      "reason": "현재 곡류 카테고리에 맞춰 식용 종실로 정의한다.319 노란색/320 빨간색 표본 차이는 영양자료 문제이며 임의 하나의 색상을 선택하지 않고 데이터만 대기한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 아마란스 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "a0d59945-98a4-5785-8c31-a1108b82a90e",
+        "definition": "아마란스의 식용 곡립인지 잎인지와 색 유형을 구분한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "아마란스",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "9c19aa89-9e57-535d-980d-bf2fca59ef6c",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "f9e5649c-633c-5a5a-84c4-ad603f54ed33",
+      "name": "엉겅퀴",
+      "decision": "exclude",
+      "definition": "엉겅퀴라는 일반 식물명으로만 등록된 특수 나물·약용 원료. 고려엉겅퀴(곤드레)와 구분.",
+      "display_name": "엉겅퀴",
+      "presentation": "excluded",
+      "reason": "현재 항목에는 식용 부위와 실제 사용형태가 없고 원자료는 말린것·삶아 말린것뿐이다. 기본 집밥 범위에서 제외하고 흔한 곤드레로 대체하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 엉겅퀴 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "8fa68b34-2d93-5fd8-88b6-097e32ed334e",
+        "definition": "엉겅퀴의 식용 부위. 생것/건조/삶아건조 상태 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "엉겅퀴",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "f9e5649c-633c-5a5a-84c4-ad603f54ed33",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "cba5d38e-d9e7-53c8-b7a8-48c78619dc01",
+      "name": "에그누들",
+      "decision": "define",
+      "definition": "달걀을 사용한 에그누들의 삶기 전 건면. 생면과 삶은 면은 별도 상태.",
+      "display_name": "에그누들 (건면)",
+      "presentation": "base",
+      "reason": "승인된 일상 구매 기본상태를 건면으로 확정하면 공식3397 에그누들 말린것과 정확히 일치한다.3398 삶은 에그누들로 계산하지 않는다.",
+      "nutrition_action": "link",
+      "rda_code": "3397",
+      "evidence": [
+        "입력 이름과 분류: 에그누들 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "정의와 일치하는 공식자료 3397 에그누들, 말린것 / 가식부 100g"
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "면 종류·두께·원료 및 건면/생면/삶은 후 중량 구분"
+      ],
+      "previous_catalog": {
+        "group_id": "11dd5c4a-d8a8-5325-8d7f-ff3cade161cb",
+        "definition": "달걀을 포함한 면. 생면/건면 및 조리 전후 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "에그누들",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "cba5d38e-d9e7-53c8-b7a8-48c78619dc01",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "면 종류·두께·원료 및 건면/생면/삶은 후 중량 구분"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "17a7550e-f21b-5f0a-8371-2a786b5da333",
+      "name": "염교",
+      "decision": "define",
+      "definition": "염교의 조리 전 식용 생 뿌리줄기. 락교 절임제품은 별도 가공식품.",
+      "display_name": "염교 (생 뿌리줄기)",
+      "presentation": "base",
+      "reason": "일반 원재료의 생 가식부를 명시해 정의한다.공식1132가 염교(락교) 뿌리줄기 생것으로 정확히 일치한다.당류·나트륨이 높은 별도 염교제품1133으로 대체하지 않는다.",
+      "nutrition_action": "link",
+      "rda_code": "1132",
+      "evidence": [
+        "입력 이름과 분류: 염교 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "정의와 일치하는 공식자료 1132 염교(락교), 뿌리줄기, 생것 / 가식부 100g",
+        "미측정 항목은 null 유지: sugars_g"
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "3a46846e-2d41-5077-b8bf-7b4cd2cabdc3",
+        "definition": "염교의 생 뿌리줄기 또는 락교 절임제품 중 실제 대상을 확인해야 하는 재료.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "염교",
+        "presentation": "detail",
+        "review_state": "needs_definition",
+        "ingredient_id": "17a7550e-f21b-5f0a-8371-2a786b5da333",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "fc052f44-d451-5d32-b9be-953d4d7d469f",
+      "name": "용과",
+      "decision": "define",
+      "definition": "용과의 생 식용 과육. 껍질은 제외하고 백육종/적육종 색상은 필요시 출처·제품정보로 보존.",
+      "display_name": "용과",
+      "presentation": "base",
+      "reason": "생과일의 의미와 과육을 확정한다.1554 백육종/1555 적육종 자료 때문에 정의를 보류하거나 색상 질문을 강요하지 않으며 영양 대표자료만 기다린다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 용과 / 과일",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "125ad38e-ba9a-51ea-a679-448d137a7bce",
+        "definition": "용과의 생 과육 가식부. 백육/적육 종류 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "용과",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "fc052f44-d451-5d32-b9be-953d4d7d469f",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "7ab71f94-aaf6-570c-bec9-46cbfcef47ec",
+      "name": "음나무",
+      "decision": "exclude",
+      "definition": "음나무(엄나무)라는 식물명으로만 등록되어 식용 순·잎과 약재용 줄기를 구별하지 못하는 원료.",
+      "display_name": "음나무",
+      "presentation": "excluded",
+      "reason": "부위가 실제로 불명확하며 기본 식재료로 사용할 근거가 부족하다.일상 범위에서 제외하고 특정 잎이나 새순으로 억지 확정하지 않는다.기록은 보존한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 음나무 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [],
+      "previous_catalog": {
+        "group_id": "3c9e5135-c918-59b6-bd25-aa027088ada7",
+        "definition": "음나무(엄나무)의 식용 순·잎과 약재용 줄기를 구별해야 하는 재료.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "음나무",
+        "presentation": "detail",
+        "review_state": "needs_definition",
+        "ingredient_id": "7ab71f94-aaf6-570c-bec9-46cbfcef47ec",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "b9f947da-44eb-5b2a-9157-99181135acc5",
+      "name": "잔대",
+      "decision": "exclude",
+      "definition": "잔대라는 식물명으로만 등록된 특수 나물·약용 원료. 뿌리와 순은 다른 가식부.",
+      "display_name": "잔대",
+      "presentation": "excluded",
+      "reason": "1162 뿌리/1163 순이 별도인 상황에서 이름만으로 실제 재료를 결정하지 않는다.일상 기본 범위에서 제외하고 명확한 부위별 기존 항목의 기록은 그대로 남긴다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 잔대 / 채소",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "선택: 뿌리/순"
+      ],
+      "previous_catalog": {
+        "group_id": "74fdd1b1-a46d-5494-8a66-d73d46cfb1bb",
+        "definition": "잔대의 식용 뿌리 또는 순. 부위 선택 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "잔대",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "b9f947da-44eb-5b2a-9157-99181135acc5",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 확인 필요",
+          "선택: 뿌리/순"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "089fa75c-2f6e-51e7-abde-9f6a0bf7b916",
+      "name": "조",
+      "decision": "umbrella",
+      "definition": "조 곡류의 검색그룹. 메조·차조 및 원곡/조리품의 실제 유형을 구분.",
+      "display_name": "조",
+      "presentation": "umbrella",
+      "reason": "메조와 차조가 모두 별칭에 있고 서로 다른 조리 성질을 갖는다.실제 유형을 검색그룹 아래 보존하되 삼다찰·다황메 등의 연구품종은 사용자 선택으로 늘리지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 조 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "d172fa1f-806c-58c0-a8f6-5251cb7afdc6",
+        "definition": "식용 조의 도정 생 곡립. 메조/차조를 분리한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "조",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "089fa75c-2f6e-51e7-abde-9f6a0bf7b916",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "d3718355-12a8-5121-8cbe-a82e95e21270",
+      "name": "즉석밥",
+      "decision": "umbrella",
+      "definition": "즉석 조리 밥 제품군. 백미밥·잡곡밥·물 부어 먹는 건조형은 개별 제품으로 구분.",
+      "display_name": "즉석밥",
+      "presentation": "umbrella",
+      "reason": "140 백미,141 잡곡밥,138 건조 누룽지는 다른 제품·수분상태다.특정 유형을 임의로 고르지 않고 실제 제품군 검색의 정의를 완료한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 즉석밥 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "d62bdaba-e684-5c8d-aca9-560e25bd8368",
+        "definition": "완성 즉석밥. 백미/잡곡과 제품 배합 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "즉석밥",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "d3718355-12a8-5121-8cbe-a82e95e21270",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "307d4824-6496-5e6f-84a7-cc7eb58a10a5",
+      "name": "참외",
+      "decision": "define",
+      "definition": "참외의 생 식용 과육. 겉껍질을 제외하며 씨방 포함 여부는 실제 사용 중량 및 영양 출처에서 구분.",
+      "display_name": "참외",
+      "presentation": "base",
+      "reason": "과일 정체성은 분명하다.1570 씨 제거/1571 씨 포함 중 어떤 수치를 쓸지의 문제는 영양정보 선택으로 남기고 재료 자체를 미정으로 표시하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 참외 / 과일",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "387b8acd-4932-5717-aa42-1ac8ac59d4a6",
+        "definition": "참외의 생 과육. 씨 포함/제거 범위 선택 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "참외",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "307d4824-6496-5e6f-84a7-cc7eb58a10a5",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "4d6a7b63-d20d-5f4b-b665-8da6635a4c8c",
+      "name": "키위",
+      "decision": "define",
+      "definition": "키위의 생 식용 과육. 껍질을 제외하고 그린/골드 정보는 필요시 상품·출처 조건으로 남김.",
+      "display_name": "키위",
+      "presentation": "base",
+      "reason": "일상 과일의 뜻을 확정한다.1580 골드/1581 그린 중 하나를 임의 대표자료로 복제하지 않으며 영양 보완만 대기한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 키위 / 과일",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "82888c94-0862-550d-94ac-d60320a8c238",
+        "definition": "키위의 생 과육 가식부. 골드/그린 종류 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "키위",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "4d6a7b63-d20d-5f4b-b665-8da6635a4c8c",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "6401ea7d-7a9b-52f6-9c2e-77ff8223d5e5",
+      "name": "팥",
+      "decision": "umbrella",
+      "definition": "팥 원료와 가공품을 찾는 검색그룹. 적색·검정·황백 팥 및 말린것/삶은것/앙금은 실제 유형으로 구분.",
+      "display_name": "팥",
+      "presentation": "umbrella",
+      "reason": "별칭에 여러 팥 유형이 있고 종실과 앙금은 다른 식품이다.사용자에게 모든 육성품종을 묻지 않고 실제 구매 형태만 검색그룹 아래 남긴다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 팥 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "콩 종류·품종·생/건조·불림/조리 전후 구분"
+      ],
+      "previous_catalog": {
+        "group_id": "e7447d94-92ed-5615-aae3-ead580b07210",
+        "definition": "팥의 무염 미조리 건조 곡립. 적색/검정/황백 유형 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "팥",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "6401ea7d-7a9b-52f6-9c2e-77ff8223d5e5",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "콩 종류·품종·생/건조·불림/조리 전후 구분"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "f3a0fa27-57ee-5ba9-a987-d7b1b53cdcba",
+      "name": "포도",
+      "decision": "define",
+      "definition": "생 포도 열매의 식용 부분. 송이줄기 등 비가식부를 제외하고 껍질·씨 섭취 범위는 영양 출처 조건으로 구분.",
+      "display_name": "포도",
+      "presentation": "base",
+      "reason": "품종이 명시되지 않아도 포도 식품의 뜻은 명확하다.공식 자료가 품종·가식부별로만 있다는 이유로 정의를 미정 처리하지 않으며 영양 대표자료 확보만 대기한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 포도 / 과일",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "80a75369-245b-54c7-aa40-0766903e1b17",
+        "definition": "포도의 생 가식부. 품종·껍질/씨 포함 범위 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "포도",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "f3a0fa27-57ee-5ba9-a987-d7b1b53cdcba",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "b81abca0-d252-5a37-8a8e-761d1beb41b7",
+      "name": "비스킷",
+      "decision": "umbrella",
+      "definition": "비스킷 제품군의 검색그룹. 소프트·하드 및 배합이 다른 제품은 하위 식품으로 구분.",
+      "display_name": "비스킷",
+      "presentation": "umbrella",
+      "reason": "185 소프트/186 하드는 제품 배합과 질감이 다르다.임의 한 제품 영양을 일반 비스킷 전체에 적용하지 않는 상위 개념으로 정의를 완료한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 비스킷 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "802728c6-fea9-56f1-81e0-557e1aa0ccca",
+        "definition": "비스킷의 소프트/하드 유형 또는 제품 확인.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "비스킷",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "b81abca0-d252-5a37-8a8e-761d1beb41b7",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "060e7487-0132-50ac-819e-2ef95ec75cb2",
+      "name": "쿠키",
+      "decision": "umbrella",
+      "definition": "쿠키 제품군의 검색그룹. 버터·초코칩·땅콩버터·통밀 등 배합 제품은 개별 식품으로 구분.",
+      "display_name": "쿠키",
+      "presentation": "umbrella",
+      "reason": "공식196~199는 원료 배합이 다른 제품이다.버터쿠키를 모든 쿠키의 대표로 가정하지 않고 검색그룹을 확정한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 쿠키 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "007f4664-53b1-5263-bba7-f64e5b3f4110",
+        "definition": "구운 쿠키. 종류·배합 또는 제품 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "쿠키",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "060e7487-0132-50ac-819e-2ef95ec75cb2",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "2161ed98-b3bb-537d-959b-d4696ce3c7c5",
+      "name": "또띠아",
+      "decision": "umbrella",
+      "definition": "또띠아 제품군의 검색그룹. 밀·통밀·옥수수 등 기본 원료가 다른 제품은 개별 선택.",
+      "display_name": "또띠아",
+      "presentation": "umbrella",
+      "reason": "3279 밀/3280 통밀 자료가 있다고 일반 또띠아를 특정 곡물 제품으로 역정의하지 않는다.알레르기·배합·영양이 달라 실제 원료 유형은 남겨야 한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 또띠아 / 곡류",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "1ddbcf9e-81d3-5bb9-8b4d-a919af0b5495",
+        "definition": "또띠아의 밀/통밀/옥수수 원료 및 제품 배합 확인.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "또띠아",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "2161ed98-b3bb-537d-959b-d4696ce3c7c5",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "73f3bc38-cc77-5f09-9ce3-0f84eb5ad191",
+      "name": "청포도",
+      "decision": "define",
+      "definition": "녹색 계열 껍질의 생 식용 포도인 청포도. 송이줄기를 제외하고 껍질·씨 섭취 범위는 출처에 명시.",
+      "display_name": "청포도",
+      "presentation": "base",
+      "reason": "청수·샤이니스타는 품종 세부정보이지 청포도 정의를 보류할 이유가 아니다.한 품종의 값을 다른 품종에 복제하지 않고 일반 구매 식품 정의만 확정한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력 이름과 분류: 청포도 / 과일",
+        "현재 영양 링크 없음: 정의 reviewed 전환은 영양성분 완료를 의미하지 않음",
+        "공식 후보 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json (RDA10.4 3366개)",
+        "미연결 영양은 계속 대기. 임의 종·품종·제품 영양 복제 없음."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식품 정체성 및 가식부 기준"
+      ],
+      "previous_catalog": {
+        "group_id": "80a75369-245b-54c7-aa40-0766903e1b17",
+        "definition": "청포도 계열의 생 가식부. 실제 품종·껍질/씨 범위 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "청포도",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "73f3bc38-cc77-5f09-9ce3-0f84eb5ad191",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식품 정체성 및 가식부 기준"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "31d66f75-acc4-5b56-bbdc-f9eed636eb8d",
+      "name": "소고기 갈비",
+      "decision": "define",
+      "definition": "소의 갈비 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 갈비",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#31d66f75-acc4-5b56-bbdc-f9eed636eb8d; 기존이름=소고기 갈비; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 갈비 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 33개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1783 소고기, 한우, 갈비, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1792 소고기, 한우(1++등급), 갈비, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1793 소고기, 한우(1++등급), 갈비(꽃갈비), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1794 소고기, 한우(1++등급), 갈비(본갈비), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 갈비"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 갈비 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 갈비",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "31d66f75-acc4-5b56-bbdc-f9eed636eb8d",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 갈비"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "6e57d019-6120-520f-b4fd-51f026f3d58f",
+      "name": "소고기 꾸리살",
+      "decision": "define",
+      "definition": "소의 꾸리살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 꾸리살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#6e57d019-6120-520f-b4fd-51f026f3d58f; 기존이름=소고기 꾸리살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 꾸리살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 5개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1820 소고기, 한우(1++등급), 앞다리(꾸리살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1865 소고기, 한우(1+등급), 앞다리(꾸리살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1910 소고기, 한우(1등급), 앞다리(꾸리살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1955 소고기, 한우(2등급), 앞다리(꾸리살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 꾸리살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 꾸리살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 꾸리살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "6e57d019-6120-520f-b4fd-51f026f3d58f",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 꾸리살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "4bfe859a-1826-5a8b-ae36-328fe4759deb",
+      "name": "소고기 도가니살",
+      "decision": "define",
+      "definition": "소의 도가니살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 도가니살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#4bfe859a-1826-5a8b-ae36-328fe4759deb; 기존이름=소고기 도가니살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 도가니살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1812 소고기, 한우(1++등급), 설도(도가니살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1857 소고기, 한우(1+등급), 설도(도가니살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1902 소고기, 한우(1등급), 설도(도가니살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1947 소고기, 한우(2등급), 설도(도가니살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 도가니살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 도가니살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 도가니살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "4bfe859a-1826-5a8b-ae36-328fe4759deb",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 도가니살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "f04edf07-c4bd-5dd5-becd-d81c050c8cf7",
+      "name": "소고기 등심",
+      "decision": "define",
+      "definition": "소의 등심 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 등심",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#f04edf07-c4bd-5dd5-becd-d81c050c8cf7; 기존이름=소고기 등심; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 등심 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 22개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1784 소고기, 한우, 등심, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1799 소고기, 한우(1++등급), 등심, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1800 소고기, 한우(1++등급), 등심(꽃등심살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1801 소고기, 한우(1++등급), 등심(살치살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 등심"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 등심 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 등심",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "f04edf07-c4bd-5dd5-becd-d81c050c8cf7",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 등심"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "e51e0634-88ec-541e-bc3a-2a0029c6e10f",
+      "name": "소고기 목심",
+      "decision": "define",
+      "definition": "소의 목심 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 목심",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#e51e0634-88ec-541e-bc3a-2a0029c6e10f; 기존이름=소고기 목심; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 목심 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 6개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1778 소고기, 수입산, 목심(목심살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1804 소고기, 한우(1++등급), 목심, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1849 소고기, 한우(1+등급), 목심, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1894 소고기, 한우(1등급), 목심, 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 목심"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 목심 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 목심",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "e51e0634-88ec-541e-bc3a-2a0029c6e10f",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 목심"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "a609d583-1dc9-5aaf-a0c4-7a09a3755be3",
+      "name": "소고기 보섭살",
+      "decision": "define",
+      "definition": "소의 보섭살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 보섭살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#a609d583-1dc9-5aaf-a0c4-7a09a3755be3; 기존이름=소고기 보섭살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 보섭살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 5개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1813 소고기, 한우(1++등급), 설도(보섭살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1858 소고기, 한우(1+등급), 설도(보섭살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1903 소고기, 한우(1등급), 설도(보섭살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1948 소고기, 한우(2등급), 설도(보섭살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 보섭살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 보섭살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 보섭살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "a609d583-1dc9-5aaf-a0c4-7a09a3755be3",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 보섭살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "583cb307-0543-51cf-a525-1af595d8121d",
+      "name": "소고기 부채살",
+      "decision": "define",
+      "definition": "소의 부채살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 부채살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#583cb307-0543-51cf-a525-1af595d8121d; 기존이름=소고기 부채살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 부채살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1822 소고기, 한우(1++등급), 앞다리(부채살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1867 소고기, 한우(1+등급), 앞다리(부채살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1912 소고기, 한우(1등급), 앞다리(부채살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1957 소고기, 한우(2등급), 앞다리(부채살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "구입형태",
+        "생/가공 상태",
+        "부위/가식부: 부채살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 부채살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 부채살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "583cb307-0543-51cf-a525-1af595d8121d",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "구입형태",
+          "생/가공 상태",
+          "부위/가식부: 부채살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "2fdcbb4d-f5ad-53f0-88b3-2d1e4b94e928",
+      "name": "소고기 사태",
+      "decision": "define",
+      "definition": "소의 사태 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 사태",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#2fdcbb4d-f5ad-53f0-88b3-2d1e4b94e928; 기존이름=소고기 사태; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 사태 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 24개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1805 소고기, 한우(1++등급), 사태, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1806 소고기, 한우(1++등급), 사태(뒷사태), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1807 소고기, 한우(1++등급), 사태(뭉치사태), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1808 소고기, 한우(1++등급), 사태(상박살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 사태"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 사태 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 사태",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "2fdcbb4d-f5ad-53f0-88b3-2d1e4b94e928",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 사태"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "69329ac0-4b34-5858-a40f-93cef64b031e",
+      "name": "소고기 살치살",
+      "decision": "define",
+      "definition": "소의 살치살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 살치살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#69329ac0-4b34-5858-a40f-93cef64b031e; 기존이름=소고기 살치살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 살치살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1801 소고기, 한우(1++등급), 등심(살치살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1846 소고기, 한우(1+등급), 등심(살치살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1891 소고기, 한우(1등급), 등심(살치살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1936 소고기, 한우(2등급), 등심(살치살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 살치살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 살치살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 살치살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "69329ac0-4b34-5858-a40f-93cef64b031e",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 살치살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "25ea278b-5bdb-5159-946d-989b1a0c52ea",
+      "name": "소고기 설깃살",
+      "decision": "define",
+      "definition": "소의 설깃살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 설깃살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#25ea278b-5bdb-5159-946d-989b1a0c52ea; 기존이름=소고기 설깃살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 설깃살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 5개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1816 소고기, 한우(1++등급), 설도(설깃살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1861 소고기, 한우(1+등급), 설도(설깃살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1906 소고기, 한우(1등급), 설도(설깃살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1951 소고기, 한우(2등급), 설도(설깃살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 설깃살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 설깃살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 설깃살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "25ea278b-5bdb-5159-946d-989b1a0c52ea",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 설깃살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "4658d669-bb34-5cd1-94fb-17acb4cd26ac",
+      "name": "소고기 설도",
+      "decision": "define",
+      "definition": "소의 설도 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 설도",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#4658d669-bb34-5cd1-94fb-17acb4cd26ac; 기존이름=소고기 설도; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 설도 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 26개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1811 소고기, 한우(1++등급), 설도, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1812 소고기, 한우(1++등급), 설도(도가니살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1813 소고기, 한우(1++등급), 설도(보섭살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1814 소고기, 한우(1++등급), 설도(삼각살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 설도"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 설도 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 설도",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "4658d669-bb34-5cd1-94fb-17acb4cd26ac",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 설도"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "99eb747c-0e6d-552c-adc8-3748a706e82e",
+      "name": "소고기 안심",
+      "decision": "define",
+      "definition": "소의 안심 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 안심",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#99eb747c-0e6d-552c-adc8-3748a706e82e; 기존이름=소고기 안심; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 안심 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1817 소고기, 한우(1++등급), 안심, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1862 소고기, 한우(1+등급), 안심, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1907 소고기, 한우(1등급), 안심, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1952 소고기, 한우(2등급), 안심, 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 안심"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 안심 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 안심",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "99eb747c-0e6d-552c-adc8-3748a706e82e",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 안심"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "3b707f9a-10ce-5832-8d93-08f2f6dd013f",
+      "name": "소고기 안창살",
+      "decision": "define",
+      "definition": "소의 안창살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 안창살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#3b707f9a-10ce-5832-8d93-08f2f6dd013f; 기존이름=소고기 안창살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 안창살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1795 소고기, 한우(1++등급), 갈비(안창살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1840 소고기, 한우(1+등급), 갈비(안창살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1885 소고기, 한우(1등급), 갈비(안창살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1930 소고기, 한우(2등급), 갈비(안창살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 안창살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 안창살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 안창살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "3b707f9a-10ce-5832-8d93-08f2f6dd013f",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 안창살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "6d11a60d-0f7c-5d16-9aa8-e2e7eb0f0a85",
+      "name": "소고기 앞다리",
+      "decision": "define",
+      "definition": "소의 앞다리 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 앞다리",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#6d11a60d-0f7c-5d16-9aa8-e2e7eb0f0a85; 기존이름=소고기 앞다리; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 앞다리 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 25개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1818 소고기, 한우(1++등급), 앞다리, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1819 소고기, 한우(1++등급), 앞다리(갈비덧살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1820 소고기, 한우(1++등급), 앞다리(꾸리살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1821 소고기, 한우(1++등급), 앞다리(부채덮개살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 앞다리"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 앞다리 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 앞다리",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "6d11a60d-0f7c-5d16-9aa8-e2e7eb0f0a85",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 앞다리"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "dcb4cc3f-de4b-5bc3-b090-a5e55301943d",
+      "name": "소고기 앞치마살",
+      "decision": "define",
+      "definition": "소의 앞치마살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 앞치마살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#dcb4cc3f-de4b-5bc3-b090-a5e55301943d; 기존이름=소고기 앞치마살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 앞치마살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1825 소고기, 한우(1++등급), 양지(앞치마살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1870 소고기, 한우(1+등급), 양지(앞치마살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1915 소고기, 한우(1등급), 양지(앞치마살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1960 소고기, 한우(2등급), 양지(앞치마살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 앞치마살",
+        "부위/가식부: 치마살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 앞치마살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 앞치마살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "dcb4cc3f-de4b-5bc3-b090-a5e55301943d",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 앞치마살",
+          "부위/가식부: 치마살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "314b45c0-649b-55cd-9f18-d04fb64b2d42",
+      "name": "소고기 양지",
+      "decision": "define",
+      "definition": "소의 양지 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 양지",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#314b45c0-649b-55cd-9f18-d04fb64b2d42; 기존이름=소고기 양지; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 양지 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 35개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1787 소고기, 한우, 양지, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1824 소고기, 한우(1++등급), 양지, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1825 소고기, 한우(1++등급), 양지(앞치마살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1826 소고기, 한우(1++등급), 양지(양지머리), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 양지"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 양지 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 양지",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "314b45c0-649b-55cd-9f18-d04fb64b2d42",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 양지"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "5f51c575-8d84-590d-8d3e-40b0a45b0147",
+      "name": "소고기 업진살",
+      "decision": "define",
+      "definition": "소의 업진살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 업진살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#5f51c575-8d84-590d-8d3e-40b0a45b0147; 기존이름=소고기 업진살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 업진살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 5개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1827 소고기, 한우(1++등급), 양지(업진살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1872 소고기, 한우(1+등급), 양지(업진살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1917 소고기, 한우(1등급), 양지(업진살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1962 소고기, 한우(2등급), 양지(업진살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 업진살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 업진살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 업진살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "5f51c575-8d84-590d-8d3e-40b0a45b0147",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 업진살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "5e782158-de00-5076-a716-cb826e61d73c",
+      "name": "소고기 우둔",
+      "decision": "define",
+      "definition": "소의 우둔 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 우둔",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#5e782158-de00-5076-a716-cb826e61d73c; 기존이름=소고기 우둔; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 우둔 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 14개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1832 소고기, 한우(1++등급), 우둔, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1833 소고기, 한우(1++등급), 우둔(우둔살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1834 소고기, 한우(1++등급), 우둔(홍두깨살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1877 소고기, 한우(1+등급), 우둔, 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 우둔"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 우둔 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 우둔",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "5e782158-de00-5076-a716-cb826e61d73c",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 우둔"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "3cb3f84d-b462-5611-a786-94e0bf56171b",
+      "name": "소고기 제비추리",
+      "decision": "define",
+      "definition": "소의 제비추리 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 제비추리",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#3cb3f84d-b462-5611-a786-94e0bf56171b; 기존이름=소고기 제비추리; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 제비추리 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1796 소고기, 한우(1++등급), 갈비(제비추리), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1841 소고기, 한우(1+등급), 갈비(제비추리), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1886 소고기, 한우(1등급), 갈비(제비추리), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1931 소고기, 한우(2등급), 갈비(제비추리), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 제비추리"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 제비추리 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 제비추리",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "3cb3f84d-b462-5611-a786-94e0bf56171b",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 제비추리"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "d56d0a61-e159-5c1e-935e-e3e950fb142c",
+      "name": "소고기 채끝",
+      "decision": "define",
+      "definition": "소의 채끝 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 채끝",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#d56d0a61-e159-5c1e-935e-e3e950fb142c; 기존이름=소고기 채끝; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 채끝 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 6개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1790 소고기, 한우, 채끝, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1835 소고기, 한우(1++등급), 채끝, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1880 소고기, 한우(1+등급), 채끝, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1925 소고기, 한우(1등급), 채끝, 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "구입형태",
+        "생/가공 상태",
+        "부위/가식부: 채끝"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 채끝 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 채끝",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "d56d0a61-e159-5c1e-935e-e3e950fb142c",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "구입형태",
+          "생/가공 상태",
+          "부위/가식부: 채끝"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "09ed8c5b-5c67-5ebb-a9e1-c031eed10842",
+      "name": "소고기 치마살",
+      "decision": "define",
+      "definition": "소의 치마살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 치마살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#09ed8c5b-5c67-5ebb-a9e1-c031eed10842; 기존이름=소고기 치마살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 치마살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 8개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1825 소고기, 한우(1++등급), 양지(앞치마살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1830 소고기, 한우(1++등급), 양지(치마살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1870 소고기, 한우(1+등급), 양지(앞치마살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1875 소고기, 한우(1+등급), 양지(치마살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 치마살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 치마살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 치마살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "09ed8c5b-5c67-5ebb-a9e1-c031eed10842",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 치마살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "c62ca473-120e-564c-b4d0-5679febcf350",
+      "name": "소고기 토시살",
+      "decision": "define",
+      "definition": "소의 토시살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 토시살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#c62ca473-120e-564c-b4d0-5679febcf350; 기존이름=소고기 토시살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 토시살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 4개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1798 소고기, 한우(1++등급), 갈비(토시살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1843 소고기, 한우(1+등급), 갈비(토시살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1888 소고기, 한우(1등급), 갈비(토시살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1933 소고기, 한우(2등급), 갈비(토시살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 토시살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 토시살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 토시살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "c62ca473-120e-564c-b4d0-5679febcf350",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 토시살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "98efd5f8-0f41-5195-87ca-01e5ed7a9d5f",
+      "name": "소고기 홍두깨살",
+      "decision": "define",
+      "definition": "소의 홍두깨살 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "소고기 홍두깨살",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 산지·품종·등급·지방 정선 기준은 영양자료의 적용조건으로 관리하며 이 조건의 자료가 없다는 이유로 정의를 미정으로 되돌리지 않는다. 현재 확보된 RDA에는 이 일반 구매 부위와 동일 범위의 자료가 없어 영양 출처만 대기한다. 특정 한우등급/수입산 값 대입이나 등급평균을 만들지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#98efd5f8-0f41-5195-87ca-01e5ed7a9d5f; 기존이름=소고기 홍두깨살; 활성영양연결=0",
+        "기존 카탈로그 정의: 소의 홍두깨살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 5개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1834 소고기, 한우(1++등급), 우둔(홍두깨살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1879 소고기, 한우(1+등급), 우둔(홍두깨살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1924 소고기, 한우(1등급), 우둔(홍두깨살), 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 1969 소고기, 한우(2등급), 우둔(홍두깨살), 생것 / 가식부 100g",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 홍두깨살"
+      ],
+      "previous_catalog": {
+        "group_id": "c50f0161-8ef3-5e30-9a37-1dc036b0edac",
+        "definition": "소의 홍두깨살 생 가식부. 한우/수입·등급·지방 정선 기준 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "소고기 홍두깨살",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "98efd5f8-0f41-5195-87ca-01e5ed7a9d5f",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 홍두깨살"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "78188902-aad1-5a1e-a01d-ede8addce53f",
+      "name": "양고기 갈비",
+      "decision": "define",
+      "definition": "양의 갈비 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "양고기 갈비",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 어린양/성체·산지·지방 정선 차이는 영양자료의 적용조건으로 관리한다. 현재 확보 RDA는 수입산 또는 어린양으로 특정되어 일반 부위에 새 영양대표를 임의 지정하지 않고 영양 출처만 대기한다. 어린양 별칭은 검색어로만 유지하며 현재 이름의 연령을 강제로 확정하는 근거로 쓰지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#78188902-aad1-5a1e-a01d-ede8addce53f; 기존이름=양고기 갈비; 활성영양연결=0",
+        "기존 카탈로그 정의: 양고기의 해당 부위 생 가식부. 램/성체와 원산 범위 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 1개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 2030 어린양고기, 수입산, 갈비, 생것 / 가식부 100g",
+        "현재 별칭: 어린양고기 갈비, 램갈비; 종류를 넓히거나 좁히는 자동영양매칭에는 사용하지 않음.",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태",
+        "부위/가식부: 갈비"
+      ],
+      "previous_catalog": {
+        "group_id": "264f6746-f404-5355-b7b0-37b5b396bb91",
+        "definition": "양고기의 해당 부위 생 가식부. 램/성체와 원산 범위 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "양고기 갈비",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "78188902-aad1-5a1e-a01d-ede8addce53f",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "부위/가식부: 갈비"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "15013432-54a1-505b-8949-1369323c92c2",
+      "name": "양고기 다리",
+      "decision": "define",
+      "definition": "양의 다리 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "양고기 다리",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 어린양/성체·산지·지방 정선 차이는 영양자료의 적용조건으로 관리한다. 현재 확보 RDA는 수입산 또는 어린양으로 특정되어 일반 부위에 새 영양대표를 임의 지정하지 않고 영양 출처만 대기한다. 어린양 별칭은 검색어로만 유지하며 현재 이름의 연령을 강제로 확정하는 근거로 쓰지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#15013432-54a1-505b-8949-1369323c92c2; 기존이름=양고기 다리; 활성영양연결=0",
+        "기존 카탈로그 정의: 양고기의 해당 부위 생 가식부. 램/성체와 원산 범위 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 2개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 2029 양고기, 수입산, 다리, 생것 / 가식부 100g",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 2032 어린양고기, 수입산, 다리, 생것 / 가식부 100g",
+        "현재 별칭: 어린양고기 다리; 종류를 넓히거나 좁히는 자동영양매칭에는 사용하지 않음.",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "부위·가식부",
+        "생/가공 상태"
+      ],
+      "previous_catalog": {
+        "group_id": "264f6746-f404-5355-b7b0-37b5b396bb91",
+        "definition": "양고기의 해당 부위 생 가식부. 램/성체와 원산 범위 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "양고기 다리",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "15013432-54a1-505b-8949-1369323c92c2",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "b5dff5df-ccc1-52ef-a8ee-6d5680997680",
+      "name": "양고기 어깨",
+      "decision": "define",
+      "definition": "양의 어깨 부위로 판매하는 조리 전 고기의 가식부. 뼈 등 비가식부를 제외한 식용 중량을 기준으로 하며 삶은 고기·구운 고기·양념육과 구분한다.",
+      "display_name": "양고기 어깨",
+      "presentation": "base",
+      "reason": "축종·구매 부위·조리 전 상태가 명확하므로 재료 정의는 확정한다. 어린양/성체·산지·지방 정선 차이는 영양자료의 적용조건으로 관리한다. 현재 확보 RDA는 수입산 또는 어린양으로 특정되어 일반 부위에 새 영양대표를 임의 지정하지 않고 영양 출처만 대기한다. 어린양 별칭은 검색어로만 유지하며 현재 이름의 연령을 강제로 확정하는 근거로 쓰지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "검토 입력: /tmp/homecook-definition-finalization-20261007/animals.json#b5dff5df-ccc1-52ef-a8ee-6d5680997680; 기존이름=양고기 어깨; 활성영양연결=0",
+        "기존 카탈로그 정의: 양고기의 해당 부위 생 가식부. 램/성체와 원산 범위 확인 필요.",
+        "RDA10.4 전체 3366행 비교; 일반이름 그대로인 생것 식품행 0개; 같은 부위의 한정된 생것 후보 1개",
+        "RDA 식품명이 뜻하는 품종/원산지/등급/가식부 한정은 원자료 선정조건이며 카탈로그 재료 정의와 구분한다.",
+        "범위가 좁아 새연결하지 않은 후보: RDA10.4 2035 어린양고기, 수입산, 어깨, 생것 / 가식부 100g",
+        "현재 별칭: 어린양고기 어깨; 종류를 넓히거나 좁히는 자동영양매칭에는 사용하지 않음.",
+        "root 독립 DB 확인: 승인된 일반 MFDS 원재료군은 9행이며 대부분 기존 사용자 검수 항목. 304347행 대형자료는 가공식품 제품군이므로 이 일반 육류 부위의 영양 대표 근거로 사용하지 않음. 이번 검토에서 해당 부위의 일반 원자료를 확보하지 못함."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "축종/식품 종류",
+        "생/가공 상태"
+      ],
+      "previous_catalog": {
+        "group_id": "264f6746-f404-5355-b7b0-37b5b396bb91",
+        "definition": "양고기의 해당 부위 생 가식부. 램/성체와 원산 범위 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "양고기 어깨",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "b5dff5df-ccc1-52ef-a8ee-6d5680997680",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "생/가공 상태"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "775026fb-a00e-44f0-995d-dfc5599463b1",
+      "name": "바닐라 페이스트",
+      "decision": "define",
+      "definition": "바닐라 향과 바닐라빈 성분을 포함한 식용 페이스트형 제과 향료. 에센스·익스트랙·바닐라 시럽과는 다른 제형으로 취급한다.",
+      "display_name": "바닐라 페이스트",
+      "presentation": "base",
+      "reason": "식용 페이스트형 바닐라 향료라는 의미가 명확해 정의 완료. 당·점증제·바닐라빈 함량은 제품별 영양 속성이지 재료 정체성 미정 사유가 아니다. RDA 바닐라 시럽3464는 다른 제형이라 연결하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#775026fb-a00e-44f0-995d-dfc5599463b1",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "에센스/페이스트/익스트랙",
+        "용매",
+        "당·고형분"
+      ],
+      "previous_catalog": {
+        "group_id": "95ce15c9-222a-5100-820a-975472693e88",
+        "definition": "바닐라빈을 포함하는 식용 페이스트; 사용 제품과 당·고형분을 지정한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "바닐라 페이스트",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "775026fb-a00e-44f0-995d-dfc5599463b1",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "에센스/페이스트/익스트랙",
+          "용매",
+          "당·고형분"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+      "name": "통후추",
+      "decision": "define",
+      "definition": "분쇄하지 않은 식용 후추 열매 향신료. 검정·흰 후추 등 색/가공 유형은 구매 상세에 보존한다.",
+      "display_name": "통후추",
+      "presentation": "base",
+      "reason": "통후추 원재료와 비분쇄 형태는 확정한다. 제공 RDA3108·3109는 가루 자료이므로 통후추의 exact 영양 근거로 새로 연결하지 않는다. 단순 형태 차이 때문에 정의 미정으로 남기지는 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#7588611d-b21a-46b7-8023-e9408bf84a6b",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "통알/가루",
+        "검정/흰색"
+      ],
+      "previous_catalog": {
+        "group_id": "a7c9b786-60af-5cc0-ad0e-6f69080de75b",
+        "definition": "분쇄하지 않은 식용 후추 열매. 검정/흰 후추 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "통후추",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "통알/가루",
+          "검정/흰색"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "e6648ba1-0773-46dc-a254-b0d72922f174",
+      "name": "원당",
+      "decision": "define",
+      "definition": "원당으로 유통되는 결정형 식용 설탕 재료. 제품의 정제도·당밀 잔류·수분은 상세 속성으로 보존한다.",
+      "display_name": "원당",
+      "presentation": "base",
+      "reason": "원당이라는 당류 재료 의미는 확정한다. 비정제설탕3463·흑설탕513과 모든 원당의 성분이 같다는 근거는 없으므로 제품별 영양자료 확보와 분리한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#e6648ba1-0773-46dc-a254-b0d72922f174",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "분말/결정",
+        "정제/비정제",
+        "당밀",
+        "전분 혼합"
+      ],
+      "previous_catalog": {
+        "group_id": "62378361-d528-5ef1-b708-d400aaae14c3",
+        "definition": "원당이라는 제품 표기만 확인된 설탕 재료. 실제 제품의 정제도·당밀 잔류·수분을 확인한 뒤 유형을 확정한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "원당 (제품 확인)",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "e6648ba1-0773-46dc-a254-b0d72922f174",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "분말/결정",
+          "정제/비정제",
+          "당밀",
+          "전분 혼합"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "4506786e-7602-42a4-b41c-c15a7136a6b9",
+      "name": "미원",
+      "decision": "umbrella",
+      "definition": "미원 브랜드 조미료를 찾는 검색용 제품 묶음. 구체 제품의 단일 MSG/복합조미 구성과 제형은 제품 단위로 구분한다.",
+      "display_name": "미원",
+      "presentation": "umbrella",
+      "reason": "브랜드를 모른다는 뜻이 아니라 브랜드 검색묶음으로 정의 완료한다. 제품명·배합이 다를 수 있어 일반 MSG나 임의 미원 제품의 영양을 묶음 전체에 신규 부여하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#4506786e-7602-42a4-b41c-c15a7136a6b9",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지.",
+        "umbrella는 검색묶음으로 정의 완료. 하위 제품에 일반명 또는 기존 승인 한 제품 영양을 자동상속하지 않는다."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "단일 MSG/복합 조미",
+        "제품 정보"
+      ],
+      "previous_catalog": {
+        "group_id": "5702d8fa-52d9-53db-b96b-d5b9994699cb",
+        "definition": "미원 브랜드로 지칭된 조미료. 실제 제품명과 원재료 조성을 확인해야 한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "미원 (제품 확인)",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "4506786e-7602-42a4-b41c-c15a7136a6b9",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "단일 MSG/복합 조미",
+          "제품 정보"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "290ff750-add0-455f-a407-325b71e2d51f",
+      "name": "화이트크림",
+      "decision": "exclude",
+      "definition": "현재 화이트크림이라는 기록만으로 유크림·식물성 휘핑크림·제과 충전크림·조리 소스 중 어느 식품인지 식별되지 않는 항목.",
+      "display_name": "화이트크림",
+      "presentation": "excluded",
+      "reason": "흰색이라는 외관과 크림이라는 넓은 표현만으로 식품 정체성이 복원되지 않는다. 신규 검색·선택에서 제외하고 기존 ID·레시피·과거 기록은 보존한다. 실제 원문 또는 제품 확인 시 해당 구체 재료로 복원하며 생크림으로 임의 변환하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#290ff750-add0-455f-a407-325b71e2d51f",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지.",
+        "excluded는 신규 선택 제한 제안이며 삭제가 아니다. 기존 레시피·장보기·식사로그 ID와 스냅샷을 보존한다."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "유크림/식물성",
+        "유지방",
+        "가당",
+        "휘핑용/조리용"
+      ],
+      "previous_catalog": {
+        "group_id": "57f060a4-eafd-5a46-94df-fd6278e7a5b6",
+        "definition": "화이트크림으로 기록된 제품. 유크림/식물성 크림, 가당 여부와 휘핑용/조리용을 확인해야 한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "화이트크림 (제품 확인)",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "290ff750-add0-455f-a407-325b71e2d51f",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "유크림/식물성",
+          "유지방",
+          "가당",
+          "휘핑용/조리용"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+      "name": "해물육수코인",
+      "decision": "define",
+      "definition": "해물 계열 육수 원료와 조미성분을 동전형 고형물로 만든 조리용 육수 제품. 물에 풀기 전 코인 제품 자체를 기준으로 한다.",
+      "display_name": "해물육수코인",
+      "presentation": "base",
+      "reason": "코인형 농축 고형 육수라는 의미와 투입 전 상태가 명확하다. 구성 해물·채소·염분·코인당 중량은 제품별 영양·환산자료로 확보한다. 액상 해물육수와 같은 재료로 자동매칭하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#f13270c3-ce36-41ef-bb12-77775fc615a7",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [
+        "해물 육수",
+        "해물육수"
+      ],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "고형 코인",
+        "원료 배합",
+        "1개 중량",
+        "희석 배수"
+      ],
+      "previous_catalog": {
+        "group_id": "7e4d0cd4-6e6d-54c4-81d1-27e62238134a",
+        "definition": "고형 해물 육수 코인, 물에 녹이기 전 제품. 제조사·제품 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "해물육수코인",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "고형 코인",
+          "원료 배합",
+          "1개 중량",
+          "희석 배수"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "9935fd54-6916-4743-9783-06fb457dacca",
+      "name": "다시다",
+      "decision": "umbrella",
+      "definition": "다시다 브랜드 복합조미료를 찾는 검색용 제품 묶음. 맛·가루/링/액상 제형별로 구체 제품을 구분한다.",
+      "display_name": "다시다",
+      "presentation": "umbrella",
+      "reason": "브랜드 검색묶음으로 정의 완료한다. 기존 사용자가 명시 승인한 다시다링 소고기 링크는 그 승인 이력과 적용 범위로 유지한다. 묶음에 새로 들어온 다른 제품이나 가루 다시다에 자동상속하지 않는다.",
+      "nutrition_action": "keep",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#9935fd54-6916-4743-9783-06fb457dacca",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "기존 승인 연결 유지 범위: P113-201020100-0836 다시다링 소고기; link_id=c2fbf389-49ce-4fbe-ae91-a1378ec1e55d; 사용자가 공식 영양 후보를 검수 승인함",
+        "umbrella는 검색묶음으로 정의 완료. 하위 제품에 일반명 또는 기존 승인 한 제품 영양을 자동상속하지 않는다."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "브랜드/제품",
+        "맛",
+        "가루/링/액상"
+      ],
+      "previous_catalog": {
+        "group_id": "654f73d8-28bd-5a8e-9a31-e47283f9f78f",
+        "definition": "다시다 브랜드의 복합조미료. 실제 맛·가루/링/액상 제형 및 제품명을 확인해야 한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "다시다 (제품·형태 확인)",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "9935fd54-6916-4743-9783-06fb457dacca",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "브랜드/제품",
+          "맛",
+          "가루/링/액상"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "b3f706a6-0162-4323-8e3d-8fd93e87f086",
+      "name": "허브솔트",
+      "decision": "define",
+      "definition": "소금과 식용 허브·향신료를 배합한 조리용 조미소금. 일반 소금이나 허브 단품과 구분한다.",
+      "display_name": "허브솔트",
+      "presentation": "base",
+      "reason": "조미소금이라는 식품형태는 확정한다. 허브 종류·소금 함량·첨가물 차이는 제품별 영양자료 문제이며 정의를 계속 미정으로 두지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#b3f706a6-0162-4323-8e3d-8fd93e87f086",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "소스 종류",
+        "분말/액상",
+        "당·지방·염분 배합",
+        "농축 배수"
+      ],
+      "previous_catalog": {
+        "group_id": "fe676fb4-183f-54a1-a463-1aa36eb94d25",
+        "definition": "허브를 섞은 조미소금; 제품·배합 정의 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "허브솔트",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "b3f706a6-0162-4323-8e3d-8fd93e87f086",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "소스 종류",
+          "분말/액상",
+          "당·지방·염분 배합",
+          "농축 배수"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440048",
+      "name": "냉동만두",
+      "decision": "umbrella",
+      "definition": "최종 조리 전 냉동 상태의 만두류를 찾는 구매 묶음. 고기·김치·채소 등의 소 종류와 제품을 상세 선택한다.",
+      "display_name": "냉동만두",
+      "presentation": "umbrella",
+      "reason": "냉동 만두류라는 상위 범주는 명확하다. RDA3448 고기만두·3449 김치만두 중 하나를 묶음 전체 대표로 새로 선택하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#550e8400-e29b-41d4-a716-446655440048",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지.",
+        "umbrella는 검색묶음으로 정의 완료. 하위 제품에 일반명 또는 기존 승인 한 제품 영양을 자동상속하지 않는다."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "속 종류",
+        "제품 배합",
+        "조리 전후"
+      ],
+      "previous_catalog": {
+        "group_id": "aaed7bf6-a80e-5b1b-9f8a-aed8a2aadc10",
+        "definition": "조리 전 냉동만두. 고기/김치 등 속과 제품 유형 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "냉동만두",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440048",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "속 종류",
+          "제품 배합",
+          "조리 전후"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440050",
+      "name": "냉동야채",
+      "decision": "umbrella",
+      "definition": "냉동 상태로 유통되는 식용 채소와 혼합채소 제품을 찾는 구매 묶음. 단일 채소 또는 구성 채소·혼합비를 상세에 기록한다.",
+      "display_name": "냉동채소",
+      "presentation": "umbrella",
+      "reason": "냉동 채소라는 검색 범주는 정의 완료한다. 혼합 내용과 비율이 다르므로 임의 평균 채소 또는 한 냉동제품의 영양을 전체에 적용하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#550e8400-e29b-41d4-a716-446655440050",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지.",
+        "umbrella는 검색묶음으로 정의 완료. 하위 제품에 일반명 또는 기존 승인 한 제품 영양을 자동상속하지 않는다."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "채소 구성",
+        "배합 비율",
+        "냉동/해동"
+      ],
+      "previous_catalog": {
+        "group_id": "4040263e-32a0-53c4-a3ba-e9a96da09725",
+        "definition": "냉동 채소 또는 혼합채소로 기록된 제품. 실제 구성 채소와 혼합비를 확인해야 한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "냉동채소 (구성 확인)",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440050",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "채소 구성",
+          "배합 비율",
+          "냉동/해동"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+      "name": "크림 소스",
+      "decision": "define",
+      "definition": "크림 또는 크림의 역할을 하는 식용 유지·유제품 등을 기반으로 만든 조리용 소스. 생크림 원료 자체와 제과용 휘핑크림은 제외한다.",
+      "display_name": "크림 소스",
+      "presentation": "base",
+      "reason": "조리 소스라는 용도·형태가 분명하다. RDA3366은 병조림 크림 스파게티 소스이므로 미지정 크림소스 전체에 연결하지 않는다. 직접 만든 배합과 제품 배합은 영양 산정 단계에서 구분한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "소스 배합",
+        "유제품/식물성",
+        "농도"
+      ],
+      "previous_catalog": {
+        "group_id": "8f405cdc-670d-5e82-a766-0907bcac4fa6",
+        "definition": "파스타 등에 쓰는 조리용 크림 소스. 제품 또는 배합 레시피 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "크림 소스",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "소스 배합",
+          "유제품/식물성",
+          "농도"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "05eddd4a-bb23-47bf-9e12-671d85aa2e36",
+      "name": "마르살라 와인",
+      "decision": "define",
+      "definition": "마르살라 유형의 식용 주정강화 와인. 드라이·스위트, 알코올 도수와 당 함량은 제품 상세 속성으로 보존한다.",
+      "display_name": "마르살라 와인",
+      "presentation": "base",
+      "reason": "마르살라 와인이라는 주류 유형은 명확하다. 특정 도수·당도의 제품이나 일반 포도주 영양을 임의 대입하지 않고 해당 제품 공식 자료를 별도로 확보한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#05eddd4a-bb23-47bf-9e12-671d85aa2e36",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "https://www.martinez.it/en/about-marsala-wines/",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "주종",
+        "알코올 도수",
+        "당·염분 첨가",
+        "조리 전후"
+      ],
+      "previous_catalog": {
+        "group_id": "eb6d6d61-ce56-5e97-ac2c-74228380dbc1",
+        "definition": "조리·베이킹용 마르살라 와인. 드라이/스위트와 도수 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "마르살라 와인",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "05eddd4a-bb23-47bf-9e12-671d85aa2e36",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "주종",
+          "알코올 도수",
+          "당·염분 첨가",
+          "조리 전후"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "932abb06-4fee-48f7-a9f1-e2643e3a3eac",
+      "name": "바닐라 에센스",
+      "decision": "define",
+      "definition": "바닐라 향을 내는 식용 에센스형 제과 향료. 페이스트·시럽과 구분하고 익스트랙과 동일 제품으로 자동 취급하지 않는다.",
+      "display_name": "바닐라 에센스",
+      "presentation": "base",
+      "reason": "식용 액상 향료라는 의미를 확정한다. 향료 조성·용매·당 배합은 제품별 영양자료로 남기며 바닐라 시럽 값은 연결하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#932abb06-4fee-48f7-a9f1-e2643e3a3eac",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "에센스/페이스트/익스트랙",
+        "용매",
+        "당·고형분"
+      ],
+      "previous_catalog": {
+        "group_id": "95ce15c9-222a-5100-820a-975472693e88",
+        "definition": "식용 바닐라 향료 에센스; 제품 조성 확인 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "바닐라 에센스",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "932abb06-4fee-48f7-a9f1-e2643e3a3eac",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "에센스/페이스트/익스트랙",
+          "용매",
+          "당·고형분"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "0867870d-a814-4559-892b-a9f486dfc4e9",
+      "name": "쯔유",
+      "decision": "define",
+      "definition": "간장과 육수 등을 배합해 면요리·조림에 사용하는 일본식 조미 액체. 스트레이트/농축과 희석 전후는 상세 상태로 보존한다.",
+      "display_name": "쯔유",
+      "presentation": "base",
+      "reason": "쯔유라는 조미료 종류는 정의 완료한다. 농축 배수·염도·당류 차이는 제품 속성이므로 일반 간장·가다랑어 육수의 영양을 대체 연결하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#0867870d-a814-4559-892b-a9f486dfc4e9",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "소스 종류",
+        "분말/액상",
+        "당·지방·염분 배합",
+        "농축 배수"
+      ],
+      "previous_catalog": {
+        "group_id": "b3e6ff40-8de6-540c-a782-543a64f06bbe",
+        "definition": "물로 희석하기 전 쯔유 원액; 제품·농축 배수 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "쯔유",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "0867870d-a814-4559-892b-a9f486dfc4e9",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "소스 종류",
+          "분말/액상",
+          "당·지방·염분 배합",
+          "농축 배수"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+      "name": "다크 커버춰",
+      "decision": "define",
+      "definition": "다크 초콜릿 계열의 커버춰형 제과 재료. 카카오 함량·당·유지 배합은 제품별로 보존하며 밀크·화이트 커버춰와 구분한다.",
+      "display_name": "다크 커버춰",
+      "presentation": "base",
+      "reason": "다크 커버춰라는 제과 재료 정체성은 확정한다. RDA529 일반 다크 초콜릿이 해당 커버춰 배합을 정확히 나타낸다는 근거가 없어 제품 영양 확보만 보류한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "다크",
+        "커버춰",
+        "카카오 함량",
+        "코코아버터 비율"
+      ],
+      "previous_catalog": {
+        "group_id": "ed73ae63-158f-59f7-98e5-efb2f14a7319",
+        "definition": "베이킹용 다크 커버춰. 카카오%·제조사·제품 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "다크 커버춰",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "다크",
+          "커버춰",
+          "카카오 함량",
+          "코코아버터 비율"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "20212bd2-6a01-4a61-b45a-617fe9d87852",
+      "name": "초코 크런치",
+      "decision": "define",
+      "definition": "초콜릿 또는 코코아 풍미를 지닌 바삭한 제과용 혼합 토핑 재료. 곡물·과자·초콜릿 배합은 제품 상세로 보존한다.",
+      "display_name": "초코 크런치",
+      "presentation": "base",
+      "reason": "바삭한 초코 제과 토핑이라는 사용 의미는 확정 가능하다. RDA534 크런치 초콜릿 완제품과 동일 배합인지 알 수 없으므로 명칭 유사성으로 영양값을 대입하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#20212bd2-6a01-4a61-b45a-617fe9d87852",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "다크/밀크/화이트",
+        "카카오 함량",
+        "크런치 구성",
+        "제품 배합"
+      ],
+      "previous_catalog": {
+        "group_id": "3dec48c9-7405-502b-bb2d-d7b3b751d2cc",
+        "definition": "초콜릿 또는 코코아를 포함한 바삭한 토핑/혼합재료라는 제품 이름. 실제 곡물·초콜릿 배합을 확인해야 한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "초코 크런치 (제품 확인)",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "20212bd2-6a01-4a61-b45a-617fe9d87852",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "다크/밀크/화이트",
+          "카카오 함량",
+          "크런치 구성",
+          "제품 배합"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "9246b694-51e3-5f61-8176-500d254197f6",
+      "name": "레몬그라스",
+      "decision": "define",
+      "definition": "조리에 향을 내는 식용 레몬그라스의 생 원재료. 향료용 정유와 관상용 제품은 포함하지 않고 건조형은 별도 상세 상태로 구분한다.",
+      "display_name": "레몬그라스",
+      "presentation": "base",
+      "reason": "식용 허브와 생 원재료라는 의미를 확정한다. 기존 승인 RDA3034 레몬그라스(시트로넬라), 생것 연결은 유지하되 원자료 괄호 이름을 다른 식물·정유까지 확장하는 분류 근거로 쓰지 않는다.",
+      "nutrition_action": "keep",
+      "rda_code": "3034",
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#9246b694-51e3-5f61-8176-500d254197f6",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "https://www.rhs.org.uk/herbs/lemongrass/grow-your-own",
+        "기존 승인 연결 유지 범위: 3034 레몬그라스(시트로넬라), 생것; link_id=e416adb6-95a0-44ef-abc4-f4ab37f331d1; 2026-10-06 후속 재료 영양 정리: 표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g, fiber_g. 임의 보간하지 않음.",
+        "유지 RDA 3034 레몬그라스(시트로넬라), 생것 (가식부 100g)"
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식물 종류",
+        "생잎/건조",
+        "식용 등급"
+      ],
+      "previous_catalog": {
+        "group_id": "50d3ed57-e106-5f7f-b779-5b0f1a4ad181",
+        "definition": "식용 레몬그라스로 사용하는 허브. 식용 원물의 정체성과 생것/건조 상태를 원자료 또는 제품에서 확인한다.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "식용 레몬그라스 (상태 확인)",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "9246b694-51e3-5f61-8176-500d254197f6",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식물 종류",
+          "생잎/건조",
+          "식용 등급"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "72815b82-fe0d-54f8-8a61-26b33bc27da5",
+      "name": "올스파이스",
+      "decision": "define",
+      "definition": "올스파이스 식물의 열매를 말려 향신료로 쓰는 재료. 여러 향신료 혼합분이 아니며 통열매/분말 형태는 별도 상세 속성이다.",
+      "display_name": "올스파이스",
+      "presentation": "base",
+      "reason": "식물 원료의 의미는 Kew 설명으로 확인했다. RDA3078은 가루이므로 현재 형태가 특정되지 않은 일반 항목에 새 영양을 연결하지 않는다. 정의 완료와 분쇄형태 영양대기를 구분한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#72815b82-fe0d-54f8-8a61-26b33bc27da5",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "https://www.kew.org/read-and-watch/christmas-spices",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식물 종류",
+        "원물/분말",
+        "식용 등급"
+      ],
+      "previous_catalog": {
+        "group_id": "eba8b646-38e1-51d7-ad78-2f527c7cf3e5",
+        "definition": "식용 올스파이스; 통열매/가루 선택 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "올스파이스",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "72815b82-fe0d-54f8-8a61-26b33bc27da5",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식물 종류",
+          "원물/분말",
+          "식용 등급"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "4c835934-8469-5221-9564-065a82412feb",
+      "name": "육두구",
+      "decision": "define",
+      "definition": "육두구 식물의 씨 부분을 사용하는 식용 향신료. 통 형태/분말은 상세 속성이며 메이스와는 구분한다.",
+      "display_name": "육두구",
+      "presentation": "base",
+      "reason": "육두구 원재료의 정체성은 명확하다. RDA3081은 가루 자료여서 통 육두구 또는 형태 미지정의 exact 값으로 연결하지 않는다. 혼합 향신료도 별도 제품이다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#4c835934-8469-5221-9564-065a82412feb",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "https://www.kew.org/read-and-watch/christmas-spices",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식물 종류",
+        "원물/분말",
+        "식용 등급"
+      ],
+      "previous_catalog": {
+        "group_id": "1b8bd5b4-7eb7-5646-b88a-b341e1463629",
+        "definition": "육두구의 식용 종자; 통/분말 형태 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "육두구",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "4c835934-8469-5221-9564-065a82412feb",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식물 종류",
+          "원물/분말",
+          "식용 등급"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "b30dccc5-924b-530b-a9b5-8f621e90a3fe",
+      "name": "정향",
+      "decision": "define",
+      "definition": "정향나무의 꽃이 피기 전 꽃봉오리를 말려 사용하는 식용 향신료. 통 형태와 분말은 상세 속성으로 구분한다.",
+      "display_name": "정향",
+      "presentation": "base",
+      "reason": "정향의 식용 부위와 의미는 Kew 설명으로 확인했다. RDA3082는 가루이므로 해당 제형이 확정될 때의 영양 후보로만 보존하며 일반 정향의 정의 미정 상태는 종료한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#b30dccc5-924b-530b-a9b5-8f621e90a3fe",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "https://www.kew.org/read-and-watch/christmas-spices",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식물 종류",
+        "원물/분말",
+        "식용 등급"
+      ],
+      "previous_catalog": {
+        "group_id": "1042e0cc-707c-5491-bb4d-7582bc3a7355",
+        "definition": "식용 정향의 통원물/가루 형태 선택.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "정향",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "b30dccc5-924b-530b-a9b5-8f621e90a3fe",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식물 종류",
+          "원물/분말",
+          "식용 등급"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "eb097118-74cd-59b4-b738-a9ecc65108f3",
+      "name": "타임",
+      "decision": "define",
+      "definition": "요리에 향을 내는 식용 타임 허브의 잎과 연한 부분. 생잎·건조·분말 형태는 상세 상태로 보존한다.",
+      "display_name": "타임",
+      "presentation": "base",
+      "reason": "식용 타임 허브라는 의미는 RHS 자료로 확인한다. RDA3099는 가루로 한정되므로 생 타임까지 그 영양을 상속하지 않는다. 원재료 정의는 완료하고 형태별 영양만 분리한다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#eb097118-74cd-59b4-b738-a9ecc65108f3",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "https://www.rhs.org.uk/herbs/thyme/grow-your-own?type=h",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "식물 종류",
+        "생잎/건조",
+        "식용 등급"
+      ],
+      "previous_catalog": {
+        "group_id": "719ae1dc-6eed-5d9f-8765-643c74dd5975",
+        "definition": "식용 타임의 생잎/건조잎/분말 형태 구분 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "타임",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "eb097118-74cd-59b4-b738-a9ecc65108f3",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "식물 종류",
+          "생잎/건조",
+          "식용 등급"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "df26beb3-3778-47b1-b2b0-65963ce25eeb",
+      "name": "고추청",
+      "decision": "define",
+      "definition": "고추와 당류를 배합해 절이거나 추출한 조리용 청. 고추 원물·고추장·고추기름과 구분한다.",
+      "display_name": "고추청",
+      "presentation": "base",
+      "reason": "고추 기반 감미 조미료라는 의미를 확정한다. 고추/당 배합과 건더기·액즙 포함 여부는 실제 제조법 또는 제품자료로 산정하며 고추 또는 설탕 영양 하나로 대체하지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#df26beb3-3778-47b1-b2b0-65963ce25eeb",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "원료",
+        "당 배합",
+        "과육/액상",
+        "농도"
+      ],
+      "previous_catalog": {
+        "group_id": "a28ffa67-da10-543e-86c0-9e53c515d39b",
+        "definition": "고추를 설탕 등에 절인 청. 원료·당 배합·숙성액 범위 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "고추청",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "df26beb3-3778-47b1-b2b0-65963ce25eeb",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "원료",
+          "당 배합",
+          "과육/액상",
+          "농도"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "id": "5d430d7a-525c-4185-91a8-1f5a035a7562",
+      "name": "생강술",
+      "decision": "define",
+      "definition": "생강 성분과 향을 술에 우려내거나 배합한 조리용 향미술. 생강청과 일반 맛술은 별도 재료로 취급한다.",
+      "display_name": "생강술",
+      "presentation": "base",
+      "reason": "생강 향미를 낸 조리용 술이라는 의미는 확정한다. 술 종류·도수·생강 배합·당 첨가는 영양 산정 조건으로 남기며 임의 소주나 생강청 값을 쓰지 않는다.",
+      "nutrition_action": "defer",
+      "rda_code": null,
+      "evidence": [
+        "입력: /tmp/homecook-definition-finalization-20261007/others.json#5d430d7a-525c-4185-91a8-1f5a035a7562",
+        "RDA10.4 공식3366행 대조: /tmp/homecook-nutrition-followup-20261006/official-rows.json",
+        "재료 정체성 확정과 영양자료 확보는 별개다. 제품 또는 형태별 영양 미확보만으로 needs_definition을 반복하지 않는다.",
+        "영양 defer: 현재 정의와 같은 가식부·형태·배합의 근거 확보 전 결측 유지. 브랜드 임의 대표·다른 제형·합성 평균값·0 채우기 금지."
+      ],
+      "invalid_synonyms": [],
+      "scope": "definitions",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "주종",
+        "알코올 도수",
+        "당·염분 첨가",
+        "조리 전후"
+      ],
+      "previous_catalog": {
+        "group_id": "eb6d6d61-ce56-5e97-ac2c-74228380dbc1",
+        "definition": "생강을 넣은 조리용 술. 바탕 술·도수·가당 배합 필요.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "생강술",
+        "presentation": "base",
+        "review_state": "needs_definition",
+        "ingredient_id": "5d430d7a-525c-4185-91a8-1f5a035a7562",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "주종",
+          "알코올 도수",
+          "당·염분 첨가",
+          "조리 전후"
+        ],
+        "representative_ingredient_id": null
+      }
+    }
+  ],
+  "patch": {
+    "schema_version": "homecook-nutrition-review-apply-v1",
+    "reviewed_by": "1ae7bee7-57fe-41ce-8ff5-315724600476",
+    "reviewed_at": "2026-10-07T10:53:07.731Z",
+    "decision_reason": "사용자 승인: 집밥·베이킹 재료 정의 확정과 정확한 공식 원자료 연결. 과거명시대표승인/원자료결측/기존기록 보존.",
+    "source_report_checksum": "a36158f3d46bb3ad1f5cdea03a9854add32af13e7eabaceb7f2dffd4d5fb6df1",
+    "entries": [
+      {
+        "ingredient_id": "17a7550e-f21b-5f0a-8371-2a786b5da333",
+        "ingredient_name": "염교",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-10-07 정의 확정: 염교의 조리 전 식용 생 뿌리줄기. 락교 절임제품은 별도 가공식품. / 일반 원재료의 생 가식부를 명시해 정의한다.공식1132가 염교(락교) 뿌리줄기 생것으로 정확히 일치한다.당류·나트륨이 높은 별도 염교제품1133으로 대체하지 않는다.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "1132",
+          "external_name": "염교(락교), 뿌리줄기, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "7873f314f462b62331abc90ccd62955c9370a8652fb721e34e70b5dafb67811a",
+          "content_hash": "7fa218f9c077f47532d007956fc8588dfce6b1e7883efa5ca2598d3c39f60a4b",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "염교(락교), 뿌리줄기, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "review_operation": "ingredient-definition-finalization-20261007",
+            "definition": "염교의 조리 전 식용 생 뿌리줄기. 락교 절임제품은 별도 가공식품.",
+            "database_amount_scale": 6,
+            "rda_qualified_nutrients": {
+              "saturated_fat_g": {
+                "source_token": "(0.03)",
+                "qualifier": "cited_or_converted"
+              }
+            }
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 83,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "83",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 29.3,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "29.3",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 1.4,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "1.4",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.2,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.2",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 2,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "2",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": null,
+            "unit": "g",
+            "missing_reason": "dash",
+            "source_token": "-",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.03,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "(0.03)",
+            "source_value_qualifier": "cited_or_converted",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 20.7,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "20.7",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "cba5d38e-d9e7-53c8-b7a8-48c78619dc01",
+        "ingredient_name": "에그누들",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-10-07 정의 확정: 달걀을 사용한 에그누들의 삶기 전 건면. 생면과 삶은 면은 별도 상태. / 승인된 일상 구매 기본상태를 건면으로 확정하면 공식3397 에그누들 말린것과 정확히 일치한다.3398 삶은 에그누들로 계산하지 않는다.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "3397",
+          "external_name": "에그누들, 말린것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "2c65e6906e2467b75e29d811c519ad362ffeb1b390e35a176a7e54ff4009d591",
+          "content_hash": "cf543e893c56b68ba2994f2dc327ec94aba24375eb208885fcbf20744df0e8aa",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "에그누들, 말린것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "review_operation": "ingredient-definition-finalization-20261007",
+            "definition": "달걀을 사용한 에그누들의 삶기 전 건면. 생면과 삶은 면은 별도 상태.",
+            "database_amount_scale": 6,
+            "rda_qualified_nutrients": {}
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 387,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "387",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 73.97,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "73.97",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 13.78,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "13.78",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 2,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "2",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 657,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "657",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 1.63,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "1.63",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.49,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.49",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 1.9,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "1.9",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "ea3a7a75-cabd-5a06-99af-726dc15eb23a",
+        "ingredient_name": "두유",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-10-07 정의 확정: 대두를 원료로 만든 일반 액상 두유 음료. 무가당·검은콩·혼합곡물 제품과 콩국물은 별도 선택. / 일반 두유를 특정 상표나 무가당 제품으로 좁히지 않고 공식 일반 대두 두유571과 같은 식품 범위로 정의한다.571은 일반 제품 대표자료이며 실제 상품 라벨이 있으면 해당 상품값을 우선한다. 무가당3554나 콩국물574로 대체하지 않는다.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "571",
+          "external_name": "두유, 대두",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "874258d080ded4384f46af2a8fa1fd562e379bfb37f8dcce5f853c773e3bcd33",
+          "content_hash": "f7c9e352bb6628dc2436bae760282a1829e20e823c58010228bf384efaae8773",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "두유, 대두",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "review_operation": "ingredient-definition-finalization-20261007",
+            "definition": "대두를 원료로 만든 일반 액상 두유 음료. 무가당·검은콩·혼합곡물 제품과 콩국물은 별도 선택.",
+            "database_amount_scale": 6,
+            "rda_qualified_nutrients": {}
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 62,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "62",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 3.42,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.42",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 3.01,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.01",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 3.92,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.92",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 72,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "72",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 3.02,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.02",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.7,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.7",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 0.7,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.7",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      }
+    ],
+    "summary": {
+      "total_count": 3,
+      "apply_count": 3,
+      "approved_candidate_count": 3,
+      "manual_resolution_count": 0,
+      "keep_current_count": 0,
+      "hold_count": 0
+    },
+    "payload_checksum": "fd09ab9bf145c14849ee6465655bb21d35047afb6720fc2f83ffe4f5f68bd262"
+  },
+  "revocations": [],
+  "expected_links": [
+    {
+      "ingredient_id": "ea3a7a75-cabd-5a06-99af-726dc15eb23a",
+      "standard_name": "두유",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "cba5d38e-d9e7-53c8-b7a8-48c78619dc01",
+      "standard_name": "에그누들",
+      "active_links": []
+    },
+    {
+      "ingredient_id": "17a7550e-f21b-5f0a-8371-2a786b5da333",
+      "standard_name": "염교",
+      "active_links": []
+    }
+  ],
+  "invalid_aliases": [
+    {
+      "id": "51cd86ed-5c9e-5edd-aa1c-42396cc09e25",
+      "synonym": "오트밀",
+      "search_name": "오트밀",
+      "ingredient_id": "23727367-5479-4538-acf2-c32810ef7615"
+    },
+    {
+      "id": "aa8f095d-d3e1-53b0-a822-3cc37a455ef3",
+      "synonym": "조곡",
+      "search_name": "조곡",
+      "ingredient_id": "513fa5b6-fcd8-5cc3-8643-a7f8fbe08540"
+    },
+    {
+      "id": "ac13eb14-c3f6-4913-ba7a-4391088c8310",
+      "synonym": "해물 육수",
+      "search_name": "해물육수",
+      "ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7"
+    },
+    {
+      "id": "75d36773-4d27-4848-9741-dbd2aacf8bc5",
+      "synonym": "해물육수",
+      "search_name": "해물육수",
+      "ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7"
+    }
+  ],
+  "counts": {
+    "reviewed": 81,
+    "definitions": {
+      "define": 61,
+      "umbrella": 15,
+      "exclude": 5
+    },
+    "gaps": {},
+    "new_links": 3,
+    "replacements": 0,
+    "revocations": 0,
+    "invalid_aliases": 4
+  },
+  "operation_checksum": "84aa0061852721c397b67e1872fafac7a5115e120246f7938083d108a60b480b"
+}

@@ -208,7 +208,7 @@ describe("planner week screen Stage 4", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByText("그릭요거트 볼")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "3월 25일 수요일 식사 기록" })).toBeTruthy();
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(
       within(document.querySelector<HTMLElement>('[data-planner-date="2026-03-25"]')!).getByRole("button", { name: "아침에 먹은 음식 추가" }),
     );
@@ -258,12 +258,12 @@ describe("planner week screen Stage 4", () => {
     expect(screen.queryByText(/계획 영양/)).toBeNull();
     expect(fetchPlanner).toHaveBeenCalledTimes(1);
 
-    const rail = screen.getByTestId("planner-week-date-rail");
-    expect(within(rail).getAllByRole("button")).toHaveLength(7);
-    expect(screen.getAllByTestId(/^planner-day-card-/)).toHaveLength(7);
+    const overview = screen.getByRole("region", { name: "한 주 요리계획" });
+    expect(within(overview).getAllByRole("button", { name: /선택$/ })).toHaveLength(7);
+    expect(screen.getAllByTestId(/^planner-day-card-/)).toHaveLength(1);
   });
 
-  it("keeps every day of recipe meals visible with status-specific actions", async () => {
+  it("shows the whole week as summaries and opens recipes directly on the selected day", async () => {
     fetchPlanner.mockResolvedValue(
       createPlannerData({
         meals: [
@@ -294,10 +294,13 @@ describe("planner week screen Stage 4", () => {
     expect(board.queryByRole("link", { name: "상세" })).toBeNull();
     expect(screen.getByRole("button", { name: "3/24 저녁 식사 추가" })).toBeTruthy();
     expect(screen.queryByText("완제품 추가")).toBeNull();
+    expect(within(screen.getByTestId("planner-week-body")).queryByText("다음 날 된장찌개")).toBeNull();
+    expect(new URL(board.getByRole("link", { name: "김치찌개" }).getAttribute("href")!, "http://homecook.local").searchParams.get("mealId")).toBe("meal-registered");
+    fireEvent.click(screen.getByRole("button", { name: "3/25 수 선택" }));
     expect(within(screen.getByTestId("planner-week-body")).getByText("다음 날 된장찌개")).toBeTruthy();
   });
 
-  it("starts the mobile public preview at the selected day instead of earlier empty days", async () => {
+  it("keeps the compact week overview visible on entry without automatically scrolling away", async () => {
     readE2EAuthOverride.mockReturnValue(false);
     const geometry = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       x: 0, y: 0, top: 0, left: 0, right: 390, bottom: 300, width: 390, height: 300,
@@ -307,7 +310,9 @@ describe("planner week screen Stage 4", () => {
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
     render(<PlannerWeekScreen />);
     await screen.findByText("예시 플래너");
-    await waitFor(() => expect(scrollIntoView.mock.contexts).toContain(screen.getByTestId("planner-day-card-2026-03-24")));
+    expect(screen.getAllByTestId(/^planner-day-card-/)).toHaveLength(1);
+    expect(screen.getByTestId("planner-day-card-2026-03-24")).toBeTruthy();
+    expect(scrollIntoView).not.toHaveBeenCalled();
     geometry.mockRestore();
   });
 
@@ -316,6 +321,7 @@ describe("planner week screen Stage 4", () => {
     render(<PlannerWeekScreen />);
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
 
+    await user.click(screen.getByRole("button", { name: "3/25 수 선택" }));
     await user.click(screen.getByRole("button", { name: "3/25 저녁 식사 추가" }));
 
     const sheet = screen.getByRole("dialog", { name: "식사 추가" });
@@ -337,6 +343,7 @@ describe("planner week screen Stage 4", () => {
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
     expect(readPlannerWeekReturnContext()).toBeNull();
 
+    await user.click(screen.getByRole("button", { name: "3/25 수 선택" }));
     await user.click(screen.getByRole("button", { name: "3/25 저녁 식사 추가" }));
     expect(readPlannerWeekReturnContext()).toBeNull();
     await user.click(within(screen.getByRole("dialog", { name: "식사 추가" })).getByRole("button", { name: "닫기" }));
@@ -349,6 +356,7 @@ describe("planner week screen Stage 4", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<PlannerWeekScreen />);
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
+    await user.click(screen.getByRole("button", { name: "3/25 수 선택" }));
     await user.click(screen.getByRole("button", { name: "3/25 저녁 식사 추가" }));
     const route = within(screen.getByRole("dialog", { name: "식사 추가" })).getByRole("link", { name: routeName });
     // JSDOM cannot navigate to another document; preserve the real React click handler.
@@ -370,6 +378,7 @@ describe("planner week screen Stage 4", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<PlannerWeekScreen />);
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
+    await user.click(screen.getByRole("button", { name: "3/25 수 선택" }));
     await user.click(screen.getByRole("button", { name: "3/25 저녁 식사 추가" }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 추가" })).getByRole("button", { name: "레시피북" }));
 
@@ -389,6 +398,7 @@ describe("planner week screen Stage 4", () => {
       await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
       const previousOverflow = document.body.style.overflow;
       const background = screen.getByTestId("planner-week-shell");
+      await user.click(screen.getByRole("button", { name: "3/25 수 선택" }));
       await user.click(screen.getByRole("button", { name: "3/25 저녁 식사 추가" }));
       expect(screen.getByRole("dialog", { name: "식사 추가" })).toBeTruthy();
       expect(document.body.style.overflow).toBe("hidden");
@@ -407,12 +417,13 @@ describe("planner week screen Stage 4", () => {
       act(() => usePlannerStore.setState({ isRefreshing: false, errorMessage: null }));
       expect(screen.queryByRole("dialog", { name: "식사 추가" })).toBeNull();
       expect(document.body.style.overflow).toBe(previousOverflow);
+      await user.click(screen.getByRole("button", { name: "3/25 수 선택" }));
       await user.click(screen.getByRole("button", { name: "3/25 저녁 식사 추가" }));
       expect(screen.getByRole("dialog", { name: "식사 추가" })).toBeTruthy();
     },
   );
 
-  it("scrolls to the chosen day while preserving plan history and avoiding a reload", async () => {
+  it("scrolls once after an explicit overview selection without snapping back on refresh", async () => {
     const scrollIntoView = vi.fn();
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
       configurable: true,
@@ -427,8 +438,16 @@ describe("planner week screen Stage 4", () => {
 
     expect(navigationMocks.push).toHaveBeenLastCalledWith("/planner?date=2026-03-26", { scroll: false });
     expect(fetchPlanner).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
-    expect(scrollIntoView.mock.contexts).toContain(screen.getByTestId("planner-day-card-2026-03-26"));
+    await act(async () => { vi.advanceTimersByTime(32); });
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "smooth" });
+    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByTestId("planner-day-card-2026-03-26"));
+    act(() => usePlannerStore.setState({ isRefreshing: true }));
+    act(() => usePlannerStore.setState({ isRefreshing: false }));
+    await act(async () => { vi.advanceTimersByTime(32); });
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("planner-day-card-2026-03-26")).toBeTruthy();
+    expect(screen.queryByTestId("planner-day-card-2026-03-24")).toBeNull();
   });
 
   it("preserves the selected card scroll position when queued date navigation reaches the router", async () => {
@@ -448,13 +467,13 @@ describe("planner week screen Stage 4", () => {
     expect(fetchPlanner).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps seven date rows and all configured columns available in the desktop weekly table", async () => {
+  it("keeps all configured meal headings available while expanding only the selected date", async () => {
     render(<PlannerWeekScreen />);
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
 
-    const columns = document.querySelectorAll(".web-planner-column-head");
-    expect(Array.from(columns, (column) => column.textContent)).toEqual(["아침", "점심", "저녁"]);
-    expect(screen.getAllByTestId(/^web-planner-date-row-/)).toHaveLength(7);
+    expect(screen.getAllByRole("heading", { level: 3 }).map(node => node.textContent)).toEqual(["아침›", "점심›", "저녁›"]);
+    expect(screen.getAllByTestId(/^web-planner-date-row-/)).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "3/25 수 선택" }));
     const nextDay = screen.getByTestId("web-planner-date-row-2026-03-25");
     expect(within(nextDay).getByRole("button", { name: "3/25 점심 식사 추가" })).toBeTruthy();
   });
@@ -516,7 +535,7 @@ describe("planner week screen Stage 4", () => {
         (await screen.findAllByText("아주 긴 사용자 지정 브런치 이름")).length,
       ).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByRole("button", { name: /^3\/24 .* 식사 추가$/ })).toHaveLength(columnCount);
-      expect(screen.getAllByRole("button", { name: /식사 추가$/ })).toHaveLength(columnCount * 7);
+      expect(screen.getAllByRole("button", { name: /식사 추가$/ })).toHaveLength(columnCount);
     },
   );
 
@@ -568,14 +587,10 @@ describe("planner week screen Stage 4", () => {
     view.unmount();
   });
 
-  it("loads the next week when the date rail settles on its next page", async () => {
+  it("loads the next week from the compact overview navigation", async () => {
     render(<PlannerWeekScreen />);
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
-    const rail = screen.getByTestId("planner-week-date-rail");
-    Object.defineProperty(rail, "clientWidth", { configurable: true, value: 320 });
-    rail.scrollLeft = 640;
-
-    fireEvent.scroll(rail);
+    fireEvent.click(screen.getByRole("button", { name: "다음 주" }));
 
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenLastCalledWith("2026-03-31", "2026-04-06");
@@ -588,7 +603,7 @@ describe("planner week screen Stage 4", () => {
     render(<PlannerWeekScreen />);
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
 
-    fireEvent.keyDown(screen.getByTestId("planner-week-date-rail"), { key: "ArrowRight" });
+    fireEvent.click(screen.getByRole("button", { name: "다음 주" }));
 
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenLastCalledWith("2026-03-31", "2026-04-06");
@@ -617,7 +632,7 @@ describe("planner week screen Stage 4", () => {
     const view = render(<PlannerWeekScreen />);
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
 
-    fireEvent.keyDown(screen.getByTestId("planner-week-date-rail"), { key: "ArrowRight" });
+    fireEvent.click(screen.getByRole("button", { name: "다음 주" }));
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenCalledTimes(2);
       expect(fetchPlanner).toHaveBeenLastCalledWith("2026-03-31", "2026-04-06");
@@ -642,7 +657,7 @@ describe("planner week screen Stage 4", () => {
     await within(await screen.findByTestId("planner-week-body")).findByText("김치찌개");
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
-    fireEvent.keyDown(screen.getByTestId("planner-week-date-rail"), { key: "ArrowRight" });
+    fireEvent.click(screen.getByRole("button", { name: "다음 주" }));
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenCalledTimes(2);
       expect(fetchPlanner).toHaveBeenLastCalledWith("2026-03-31", "2026-04-06");
@@ -726,7 +741,7 @@ describe("planner week screen Stage 4", () => {
   it("guides guests to login before food detail and preserves the meal-log return route", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
     readE2EAuthOverride.mockReturnValue(false);
-    navigationMocks.searchParams.mockReturnValue(new URLSearchParams("segment=log&date=2026-03-25"));
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams("segment=log&date=2026-03-24"));
     render(<PlannerWeekScreen />);
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(await screen.findByRole("button", { name: /그릭요거트 볼 식사 기록 상세/ }));
     expect(navigationMocks.push).toHaveBeenCalledWith("/login?next=%2Fplanner%3Fsegment%3Dlog%26date%3D2026-03-24");

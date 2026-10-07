@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   loadPlannerMealNutritionForServer: vi.fn(),
   getServerAuthUser: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({ redirect: (location: string) => { throw Object.assign(new Error("redirect"), { location }); } }));
 vi.mock("next/headers", () => ({ cookies: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/lib/auth/e2e-auth-override", () => ({ readE2EAuthOverrideCookie: () => null }));
 vi.mock("@/lib/supabase/env", () => ({ hasSupabasePublicEnv: () => true }));
@@ -73,4 +74,20 @@ describe("planner page nutrition ranges", () => {
     });
     expect(childProps(result).initialMealNutrition).toBe(nutrition);
   });
+  it.each(["/planner?date=2026-10-05", "https://example.invalid/"])("preserves focused plan login context with safe return %s", async (returnTo) => {
+    mocks.getServerAuthUser.mockResolvedValue(null);
+    let destination = "";
+    try {
+      await MealScreenPage({ params: Promise.resolve({ date: "2026-10-05", columnId: "column-1" }), searchParams: Promise.resolve({ slot: "점심", mealId: "meal-1", returnTo, returnSurface: "planner.week" }) });
+    } catch (error) { destination = (error as { location: string }).location; }
+    const login = new URL(destination, "http://localhost");
+    expect(login.pathname).toBe("/login");
+    const next = new URL(login.searchParams.get("next")!, "http://localhost");
+    expect(next.pathname).toBe("/planner/2026-10-05/column-1");
+    expect(next.searchParams.get("mealId")).toBe("meal-1");
+    expect(next.searchParams.get("slot")).toBe("점심");
+    expect(next.searchParams.get("returnTo")).toBe(returnTo.startsWith("/") ? returnTo : "/");
+    expect(mocks.loadPlannerMealNutritionForServer).not.toHaveBeenCalled();
+  });
+
 });

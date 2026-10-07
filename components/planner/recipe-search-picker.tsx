@@ -102,7 +102,7 @@ function SearchInput({
         <input
           aria-label="레시피 검색"
           autoFocus
-          className="min-w-0 flex-1 bg-transparent text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
+          className="min-w-0 flex-1 bg-transparent text-base text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -114,7 +114,7 @@ function SearchInput({
         {value ? (
           <button
             aria-label="검색어 지우기"
-            className="shrink-0 text-[16px] font-bold text-[var(--text-3)]"
+            className="shrink-0 text-[16px] font-medium text-[var(--text-3)]"
             onClick={() => onChange("")}
             type="button"
           >
@@ -123,7 +123,7 @@ function SearchInput({
         ) : null}
         <button
           aria-label="검색"
-          className="flex h-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-bold text-[var(--text-inverse)] disabled:opacity-50"
+          className="flex h-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-medium text-[var(--text-inverse)] disabled:opacity-50"
           disabled={disabled}
           onClick={onSearch}
           type="button"
@@ -204,7 +204,7 @@ function ResultCard({ recipe, onSelect, presentation = "inline" }: ResultCardPro
           <RecipeThumb recipe={recipe} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-bold text-[var(--foreground)]">
+          <span className="block truncate text-[14px] font-medium text-[var(--foreground)]">
             {recipe.title}
           </span>
           <span className="mt-0.5 block truncate text-[11px] text-[var(--text-3)]">
@@ -266,6 +266,7 @@ function ServingsModal({
       metaText={`기본 ${recipe.base_servings}인분`}
       onCancel={onCancel}
       onConfirm={onConfirm}
+      recipeId={recipe.id}
       recipeTitle={recipe.title}
       targetLabel={slotLabel}
       thumbnail={<RecipeThumb recipe={recipe} />}
@@ -407,7 +408,7 @@ export function RecipeSearchPicker({
       <div className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]">
         <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton onClick={onBack ?? (() => undefined)} />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-medium text-[var(--foreground)]">
             {title}
           </h1>
           <AppBackButtonSpacer />
@@ -426,7 +427,7 @@ export function RecipeSearchPicker({
             <input
               aria-label="레시피 검색"
               autoFocus
-              className="min-w-0 flex-1 bg-transparent text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
+              className="min-w-0 flex-1 bg-transparent text-base text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
               onChange={(event) => changeSearchQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") void handleSearch();
@@ -439,7 +440,7 @@ export function RecipeSearchPicker({
             {searchQuery ? (
               <button
                 aria-label="검색어 지우기"
-                className="shrink-0 text-[16px] font-bold text-[var(--text-3)]"
+                className="shrink-0 text-[16px] font-medium text-[var(--text-3)]"
                 onClick={() => changeSearchQuery("")}
                 type="button"
               >
@@ -447,7 +448,7 @@ export function RecipeSearchPicker({
               </button>
             ) : null}
             <button
-              className="flex h-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-bold text-[var(--text-inverse)] disabled:opacity-50"
+              className="flex h-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-medium text-[var(--text-inverse)] disabled:opacity-50"
               disabled={searchState === "loading"}
               onClick={() => void handleSearch()}
               type="button"
@@ -506,6 +507,7 @@ export function RecipeSearchPicker({
   }
 
   const isSheet = presentation === "sheet";
+  if (isSheet && selectedRecipe) return <ServingsModal isCreating={isCreating} onCancel={onServingsCancel} onConfirm={onServingsConfirm} recipe={selectedRecipe} slotLabel={slotLabel} />;
 
   return (
     <>
@@ -527,9 +529,7 @@ export function RecipeSearchPicker({
         )}
 
         {searchState === "loading" && isSheet ? (
-          <div className="py-8 text-center text-[13px] text-[var(--text-3)]" aria-busy="true">
-            검색 중...
-          </div>
+          <div className="space-y-3 py-4" aria-busy="true" aria-label="레시피 불러오는 중"><WebSkeleton className="h-20" /><WebSkeleton className="h-20" /></div>
         ) : null}
 
         {searchState === "empty" && !isSheet && (

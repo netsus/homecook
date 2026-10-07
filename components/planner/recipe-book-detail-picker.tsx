@@ -71,7 +71,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
           <RecipeThumb recipe={recipe} />
         </div>
         <div className="p-2.5">
-          <h3 className="truncate text-[13px] font-bold text-[var(--foreground)]">
+          <h3 className="truncate text-[13px] font-medium text-[var(--foreground)]">
             {recipe.title}
           </h3>
           <p className="mt-0.5 truncate text-[11px] text-[var(--text-3)]">
@@ -108,7 +108,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
 
   return (
     <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--shadow-color-soft)]">
-      <h3 className="line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
+      <h3 className="line-clamp-2 text-2xl font-medium tracking-[-0.02em] text-[var(--foreground)]">
         {recipe.title}
       </h3>
       {recipe.tags.length > 0 && (
@@ -158,6 +158,7 @@ function ServingsModal({
       metaText={`기본 ${recipe.base_servings}인분`}
       onCancel={onCancel}
       onConfirm={onConfirm}
+      recipeId={recipe.recipe_id}
       recipeTitle={recipe.title}
       targetLabel={slotLabel}
       thumbnail={<RecipeThumb recipe={recipe} />}
@@ -270,7 +271,7 @@ export function RecipeBookDetailPicker({
       <div className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]">
         <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton onClick={onBack} />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-medium text-[var(--foreground)]">
             {book.name}
           </h1>
           <AppBackButtonSpacer />
@@ -298,7 +299,7 @@ export function RecipeBookDetailPicker({
   if (presentation === "sheet") {
     return (
       <>
-        {content}
+        {selectedRecipe ? null : content}
         {selectedRecipe && (
           <ServingsModal
             isCreating={isCreating}
@@ -354,7 +355,7 @@ export function RecipeBookDetailPicker({
         <div className="flex items-center gap-2">
           <AppBackButton onClick={onBack} />
           <h2
-            className="flex-1 text-xl font-bold text-[var(--foreground)]"
+            className="flex-1 text-xl font-medium text-[var(--foreground)]"
             id="recipebook-detail-title"
           >
             {book.name}

@@ -1,0 +1,359 @@
+{
+  "schema_version": "homecook-ingredient-curation-20261006",
+  "patch": {
+    "schema_version": "homecook-nutrition-review-apply-v1",
+    "reviewed_by": "1ae7bee7-57fe-41ce-8ff5-315724600476",
+    "reviewed_at": "2026-10-06T08:39:11.406Z",
+    "decision_reason": "사용자가 승인한 참깨·두부·양상추 영양 오연결 교정. 식품 자체/조리상태/가식부100g을 원자료로 확인, 테스트 레시피보다 재료 영양 정확성 우선.",
+    "source_report_checksum": "ed5342923d9dd561305910e890838794573dfde03b0843e549e811a48ac01e9a",
+    "entries": [
+      {
+        "ingredient_id": "2048ae5f-e62f-4fd4-889b-5dacf749607c",
+        "ingredient_name": "양상추",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-10-06 사용자 영양 교정 요청: 생양상추(결구상추) RDA1027 연결. 샐러드/샌드위치의 생잎 사용과 일치하며 햄버거3236 전체 값의 부재료 문자열 오매칭을 정정.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "1027",
+          "external_name": "상추, 결구(양상추), 녹색, 생것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "d5a83bd2d7d9b14823bace8ea127c2005b72bdd79a828d35538875db2ede268e",
+          "content_hash": "ba12ba986254adae6a6c8927ed5371bf60432405d6d0c575d8712acce1ee5231",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "상추, 결구(양상추), 녹색, 생것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "review_operation": "ingredient-curation-20261006",
+            "source_observation": "Official workbook re-downloaded and SHA-256 verified on 2026-10-06; original XML independently compared"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 14,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "14",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 3.37,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.37",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 0.72,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.72",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 0.08,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.08",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 4,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "4",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 1.77,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "1.77",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.01,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.01",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 1.5,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "1.5",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "3e5d2f69-d053-4d20-b7e7-2443bfc3cdbf",
+        "ingredient_name": "참깨",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-10-06 사용자 영양 교정 요청: 과거 2026-07-22 검수 승인 RDA677(흰색 말린 참깨)을 복구. 현재 canonical 참깨에 송편156을 연결한 것은 부재료 구성요소의 오매칭. 테스트 레시피 고명 표현만으로 볶음 상태를 새로 가정하지 않음. 볶은깨는 RDA678과 별도 구분 필요.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "677",
+          "external_name": "참깨, 흰색, 말린것",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "dae0329517921148df24ee400bbbf2a6c9881487e374a28d4753b472c7d4e5dc",
+          "content_hash": "0f85e28a8b30f6b39d8cc7206007fcc6866fcc7f7be61e78ddaa6183f697374f",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "참깨, 흰색, 말린것",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "review_operation": "ingredient-curation-20261006",
+            "source_observation": "Official workbook re-downloaded and SHA-256 verified on 2026-10-06; original XML independently compared"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 556,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "556",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 21.77,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "21.77",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 25.41,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "25.41",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 45.31,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "45.31",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 4,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "4",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 6.68,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "6.68",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 14.9,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "14.9",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      },
+      {
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440017",
+        "ingredient_name": "두부",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "2026-10-06 사용자 영양 교정 요청: 일반 두부 RDA565로 복구. 2026-07-22 검수 승인과 현재 모 단위 두부 사용이 일치. 동두부 동결건조566은 일반 두부와 수분/가공 상태가 달라 연결 대상에서 제외.",
+        "source": {
+          "provider_code": "RDA_10_4",
+          "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+          "source_version": "10.4",
+          "data_basis_date": "2026-04-28",
+          "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "license_name": "공공누리 제1유형(출처표시)",
+          "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+          "priority_rank": 2,
+          "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313"
+        },
+        "source_item": {
+          "external_item_key": "565",
+          "external_name": "두부",
+          "source_basis_text": "100 g",
+          "edible_portion_text": "가식부 100g 당 (per 100g Edible Portion)",
+          "stable_fingerprint": "b2ca23535bc6097f47216cbbcde6ff5cbdc6830bc7ad43127ef3a8feb9dcbfcc",
+          "content_hash": "8b7f113cd8473427cab0aba2b2db650f9640808b66319a232997f78a54837ec2",
+          "provenance": {
+            "origin_provider": "농촌진흥청",
+            "origin_dataset": "국가표준식품성분 DB 10.4",
+            "origin_source_version": "10.4",
+            "origin_external_name": "두부",
+            "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+            "review_operation": "ingredient-curation-20261006",
+            "source_observation": "Official workbook re-downloaded and SHA-256 verified on 2026-10-06; original XML independently compared"
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 97,
+            "unit": "kcal",
+            "missing_reason": null,
+            "source_token": "97",
+            "source_nutrient_code": "energy"
+          },
+          "carbohydrate_g": {
+            "amount": 3.75,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "3.75",
+            "source_nutrient_code": "carbohydrate"
+          },
+          "protein_g": {
+            "amount": 9.62,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "9.6199999999999992",
+            "source_nutrient_code": "protein"
+          },
+          "fat_g": {
+            "amount": 4.63,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "4.63",
+            "source_nutrient_code": "fat"
+          },
+          "sodium_mg": {
+            "amount": 1,
+            "unit": "mg",
+            "missing_reason": null,
+            "source_token": "1",
+            "source_nutrient_code": "sodium"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0",
+            "source_nutrient_code": "sugars"
+          },
+          "saturated_fat_g": {
+            "amount": 0.7,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "0.7",
+            "source_nutrient_code": "saturated_fat"
+          },
+          "fiber_g": {
+            "amount": 2.9,
+            "unit": "g",
+            "missing_reason": null,
+            "source_token": "2.9",
+            "source_nutrient_code": "fiber"
+          }
+        }
+      }
+    ],
+    "summary": {
+      "total_count": 3,
+      "apply_count": 3,
+      "approved_candidate_count": 3,
+      "manual_resolution_count": 0,
+      "keep_current_count": 0,
+      "hold_count": 0
+    },
+    "payload_checksum": "c7747e89acf4cc313c52b0fc4823e077f1f390cb2c8e0381c4f4574ef7421708"
+  },
+  "expected_links": [
+    {
+      "ingredient_id": "2048ae5f-e62f-4fd4-889b-5dacf749607c",
+      "standard_name": "양상추",
+      "active_links": [
+        "6aef214a-1a6a-4a81-95a0-81c39c996a61"
+      ],
+      "old_profile_id": "941122d5-943a-4169-9a55-8a0daa868f9c",
+      "old_source_code": "3236"
+    },
+    {
+      "ingredient_id": "3e5d2f69-d053-4d20-b7e7-2443bfc3cdbf",
+      "standard_name": "참깨",
+      "active_links": [
+        "a5770190-f6a7-48aa-b97c-6abb1b2701c2"
+      ],
+      "old_profile_id": "0a9e4a96-1b44-4d2f-94a0-618771b62af8",
+      "old_source_code": "156"
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440017",
+      "standard_name": "두부",
+      "active_links": [
+        "fc611b3e-660b-4ba3-9ff4-035894e16f80"
+      ],
+      "old_profile_id": "63bfdf54-f41c-4488-a6cf-cc82284d828c",
+      "old_source_code": "566"
+    }
+  ],
+  "invalid_aliases": [
+    {
+      "id": "e769bac5-0a21-491d-a847-3803168897b7",
+      "synonym": "햄버거, 소고기패티, 토마토, 양상추, 양파",
+      "ingredient_id": "2048ae5f-e62f-4fd4-889b-5dacf749607c"
+    },
+    {
+      "id": "beb680ff-7ac5-4da7-a5c9-95451eb48fd1",
+      "synonym": "멥쌀떡, 송편, 깨",
+      "ingredient_id": "3e5d2f69-d053-4d20-b7e7-2443bfc3cdbf"
+    },
+    {
+      "id": "d78279eb-7bd1-494e-a844-cb10ad48ea6f",
+      "synonym": "두부, 동두부, 동결건조",
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440017"
+    }
+  ],
+  "operation_checksum": "38ec29348c8fd07e5c3db6f1841cad62d2ae34e0017d0465924276d7f2a6e14e"
+}

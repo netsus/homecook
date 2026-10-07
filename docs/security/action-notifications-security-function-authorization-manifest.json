@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "slice": "action-notifications",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "private.write_action_notification(uuid, text, uuid, text, text, text, bigint)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.capture_action_notification()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.clear_action_notifications_on_lifecycle_change()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "public.list_action_notifications(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, integer, timestamp with time zone, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "public.mark_action_notifications_seen(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid[])",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.verify_full_local_internal_scope()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "replaces_additive": "legacy-product-compat",
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.verify_scope_pre_action_notifications_20260928()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "owner": "postgres"
+    }
+  ],
+  "migrations": [
+    "supabase/migrations/20260928020000_action_notifications.sql"
+  ],
+  "context_migrations": [
+    "supabase/migrations/20260927120501_manual_recipe_publication_scope.sql"
+  ],
+  "execution_role": "postgres"
+}

@@ -1,0 +1,168 @@
+{
+  "notice": "설계 비교용 가상 영양값. 실제 식품의 공인 영양정보가 아니다.",
+  "date": "2026-10-05",
+  "palette": {
+    "carbohydrate": "#94C9FF",
+    "protein": "#FFA7C2",
+    "fat": "#FFD477"
+  },
+  "foods": [
+    {
+      "id": "breakfast-bread",
+      "meal": "아침",
+      "name": "통밀빵",
+      "quantity_g": 100,
+      "calories_kcal": 240,
+      "carbohydrate_g": 40,
+      "protein_g": 11,
+      "fat_g": 4,
+      "energy_segments": [
+        160,
+        44,
+        36
+      ],
+      "energy_percent": [
+        66.66666666666667,
+        18.333333333333332,
+        15.0
+      ]
+    },
+    {
+      "id": "breakfast-milk",
+      "meal": "아침",
+      "name": "우유",
+      "quantity_g": 300,
+      "calories_kcal": 190,
+      "carbohydrate_g": 16,
+      "protein_g": 9,
+      "fat_g": 10,
+      "energy_segments": [
+        64,
+        36,
+        90
+      ],
+      "energy_percent": [
+        33.68421052631579,
+        18.94736842105263,
+        47.36842105263158
+      ]
+    },
+    {
+      "id": "lunch-rice",
+      "meal": "점심",
+      "name": "현미밥",
+      "quantity_g": 200,
+      "calories_kcal": 310,
+      "carbohydrate_g": 63,
+      "protein_g": 10,
+      "fat_g": 2,
+      "energy_segments": [
+        252,
+        40,
+        18
+      ],
+      "energy_percent": [
+        81.29032258064517,
+        12.903225806451612,
+        5.806451612903226
+      ]
+    },
+    {
+      "id": "lunch-stew",
+      "meal": "점심",
+      "name": "김치찌개",
+      "quantity_g": 300,
+      "calories_kcal": 310,
+      "carbohydrate_g": 14,
+      "protein_g": 23,
+      "fat_g": 18,
+      "energy_segments": [
+        56,
+        92,
+        162
+      ],
+      "energy_percent": [
+        18.06451612903226,
+        29.677419354838708,
+        52.25806451612903
+      ]
+    },
+    {
+      "id": "dinner-tofu",
+      "meal": "저녁",
+      "name": "두부조림",
+      "quantity_g": 180,
+      "calories_kcal": 240,
+      "carbohydrate_g": 17,
+      "protein_g": 16,
+      "fat_g": 12,
+      "energy_segments": [
+        68,
+        64,
+        108
+      ],
+      "energy_percent": [
+        28.333333333333332,
+        26.666666666666668,
+        45.0
+      ]
+    },
+    {
+      "id": "dinner-fried-rice",
+      "meal": "저녁",
+      "name": "볶음밥",
+      "quantity_g": 100,
+      "calories_kcal": 160,
+      "carbohydrate_g": 30,
+      "protein_g": 1,
+      "fat_g": 4,
+      "energy_segments": [
+        120,
+        4,
+        36
+      ],
+      "energy_percent": [
+        75.0,
+        2.5,
+        22.5
+      ]
+    }
+  ],
+  "day": {
+    "calories_kcal": 1450,
+    "carbohydrate_g": 180,
+    "protein_g": 70,
+    "fat_g": 50
+  },
+  "meals": {
+    "아침": {
+      "calories_kcal": 430,
+      "carbohydrate_g": 56,
+      "protein_g": 20,
+      "fat_g": 14
+    },
+    "점심": {
+      "calories_kcal": 620,
+      "carbohydrate_g": 77,
+      "protein_g": 33,
+      "fat_g": 20
+    },
+    "저녁": {
+      "calories_kcal": 400,
+      "carbohydrate_g": 47,
+      "protein_g": 17,
+      "fat_g": 16
+    }
+  },
+  "stew_edit": {
+    "old_g": 300,
+    "new_g": 250,
+    "old_calories_kcal": 310,
+    "new_calories_kcal": 258,
+    "energy_percent_unchanged": [
+      18.06451612903226,
+      29.677419354838708,
+      52.25806451612903
+    ]
+  }
+}

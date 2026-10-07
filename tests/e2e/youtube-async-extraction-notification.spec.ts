@@ -632,7 +632,7 @@ for (const viewport of [
     await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, viewport.file));
 
     if (viewport.width === 320) {
-      await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "알림 1개" })).toBeVisible();
       await youtubeToast.getByRole("button", { name: "toast 닫기" }).click();
       await expect(youtubeToast).toHaveCount(0);
       await expect(growthToast).toHaveCount(1);
@@ -677,7 +677,7 @@ for (const viewport of [
       expect(rectanglesAreDisjoint(growthBox, searchAfterBox)).toBe(true);
       expect(rectanglesAreDisjoint(growthBox, filterAfterBox)).toBe(true);
       expect(rectanglesAreDisjoint(growthBox, navAfterBox)).toBe(true);
-      await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+      await page.getByRole("button", { name: "알림 1개" }).click();
       await expect(page.getByTestId("youtube-notification-list").getByText("감자 수프")).toBeVisible();
       return;
     }
@@ -741,7 +741,7 @@ test("async enqueue is immediately escapable and visually stable at 390", async 
     .include("[data-youtube-extraction-accepted]")
     .analyze();
   expect(results.violations).toEqual([]);
-  await page.getByRole("button", { name: "YouTube 추출 알림 없음" }).click();
+  await page.getByRole("button", { name: "알림 없음" }).click();
   await expect(page.getByText("추출 대기 중")).toBeVisible();
   await page.getByRole("button", { name: "알림 닫기" }).click();
   await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-accepted.png"), true);
@@ -984,7 +984,7 @@ test("consumed notification shows the registered-recipe meaning and destination"
     "/recipes/recipe-potato-soup",
   );
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-consumed-toast.png"));
-  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.getByRole("button", { name: "알림 1개" }).click();
   await expect(page.getByTestId("youtube-notification-list").getByText("이미 등록한 레시피예요")).toBeVisible();
   await expect(page.getByTestId("youtube-notification-list").getByRole("link", { name: "레시피 보기" })).toHaveAttribute(
     "href",
@@ -1019,17 +1019,17 @@ test("real reload and logout-login restore badge list and exact destination", as
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: "감자 수프" })]);
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "알림 1개" })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "알림 1개" })).toBeVisible();
   await setE2EAuthOverride(page, "guest");
   await page.reload();
   await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
 
   await setE2EAuthOverride(page, "authenticated");
   await page.reload();
-  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.getByRole("button", { name: "알림 1개" }).click();
   const destination = page.getByTestId("youtube-notification-list").getByRole("link", { name: "결과 확인" });
   await expect(destination).toHaveAttribute(
     "href",
@@ -1049,7 +1049,7 @@ test("notification tabs wrap in both directions and support Home and End", async
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: null })]);
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.getByRole("button", { name: "알림 1개" }).click();
 
   const unseenTab = page.getByRole("tab", { name: "새 알림" });
   const archiveTab = page.getByRole("tab", { name: "지난 알림" });
@@ -1094,7 +1094,7 @@ test("an open notification panel hands focus to unauthorized guidance", async ({
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.getByRole("button", { name: "알림 1개" }).click();
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeFocused();
   await page.getByRole("tab", { name: "지난 알림" }).click();
 
@@ -1118,7 +1118,7 @@ test("archive stays visible while online recovery discovers new unseen work", as
   ];
   await installNotificationRoutes(page, unseenItems);
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.getByRole("button", { name: "알림 1개" }).click();
   await page.getByRole("tab", { name: "지난 알림" }).click();
   await expect(page.getByRole("heading", { name: "감자 수프" })).toBeVisible();
 
@@ -1136,7 +1136,7 @@ test("archive stays visible while online recovery discovers new unseen work", as
     '[data-youtube-extraction-trigger="header"], [data-youtube-extraction-trigger="global"]',
   )).toHaveAttribute(
     "aria-label",
-    "YouTube 추출 알림 2개",
+    "알림 2개",
   );
   await captureEvidence(
     page,
@@ -1185,7 +1185,7 @@ test("expired and non-retryable outcomes remain distinguishable", async ({ page 
     notificationItem({ code: "NOT_RECIPE_VIDEO", status: "failed", title: "레시피가 아닌 영상" }),
   ]);
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 2개" }).click();
+  await page.getByRole("button", { name: "알림 2개" }).click();
   await expect(page.getByText("결과가 만료됐어요. 다시 추출해 주세요.")).toBeVisible();
   await expect(page.getByRole("button", { name: "다시 추출" })).toBeVisible();
   await expect(page.getByText("레시피 영상으로 확인되지 않았어요.")).toBeVisible();
@@ -1200,7 +1200,7 @@ test("shell empty state is explicit", async ({ page }, testInfo) => {
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page, []);
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 없음" }).click();
+  await page.getByRole("button", { name: "알림 없음" }).click();
   await expect(page.getByText("표시할 알림이 없어요.")).toBeVisible();
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-empty.png"));
 });
@@ -1211,7 +1211,7 @@ test("shell offline state offers an inline retry without guessing success", asyn
   await installDiscoveryRoutes(page);
   await installNotificationFailureRoute(page, "NETWORK_ERROR");
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 없음" }).click();
+  await page.getByRole("button", { name: "알림 없음" }).click();
   await expect(page.getByText("인터넷 연결을 확인한 뒤 다시 시도해 주세요.")).toBeVisible();
   await expect(page.getByRole("button", { name: "다시 불러오기" })).toBeVisible();
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-offline.png"));
@@ -1239,9 +1239,9 @@ test("failure panel reflows at 200% text with non-zero safe areas at 320", async
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page, [notificationItem({ code: "QUOTA_EXCEEDED", status: "failed", title: "두부조림" })]);
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.getByRole("button", { name: "알림 1개" }).click();
   await page.addStyleTag({ content: ":root { --youtube-notification-safe-area-top: 24px; --youtube-notification-safe-area-bottom: 34px; font-size: 200%; }" });
-  const dialog = page.getByRole("dialog", { name: "YouTube 추출 알림" });
+  const dialog = page.getByRole("dialog", { name: "알림" });
   const overlay = page.getByTestId("youtube-notification-overlay");
   await expect(dialog).toBeVisible();
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeFocused();
@@ -1314,12 +1314,12 @@ test("desktop archive remains internally scrollable without page overlap", async
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page);
   await page.goto("/");
-  const trigger = page.locator('button[aria-label^="YouTube 추출 알림"]');
+  const trigger = page.locator('button[aria-label^="알림"]');
   await trigger.click();
   const overlay = page.getByTestId("youtube-notification-overlay");
   expect(Number(await overlay.evaluate((element) => getComputedStyle(element).zIndex)))
     .toBeGreaterThan(Number(await page.locator(".web-topnav").evaluate((element) => getComputedStyle(element).zIndex)));
-  await expect(page.getByRole("heading", { name: "YouTube 추출 알림" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "알림" })).toBeVisible();
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeVisible();
   await page.getByRole("tab", { name: "지난 알림" }).click();
   await expect(page.getByRole("heading", { name: "감자 수프" })).toBeVisible();

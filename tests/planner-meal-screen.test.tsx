@@ -66,6 +66,7 @@ vi.mock("@/lib/api/leftovers", () => ({
 }));
 
 vi.mock("@/lib/api/recipe", () => ({
+  fetchRecipePreview: vi.fn(async () => { throw new Error("미리보기 준비 중"); }),
   fetchPantryMatchRecipes: vi.fn(),
   fetchRecipeBookRecipes: vi.fn(),
   fetchRecipeBooks: vi.fn(),
@@ -363,7 +364,6 @@ describe("MealScreen", () => {
     expect(screen.queryByTestId("meal-screen-loading-summary")).toBeNull();
     expect(screen.getAllByTestId("meal-screen-loading-card")).toHaveLength(2);
     expect(screen.getAllByTestId("meal-screen-loading-thumb")).toHaveLength(2);
-    expect(screen.getAllByTestId("meal-screen-loading-stepper")).toHaveLength(2);
     expect(screen.getAllByTestId("meal-screen-loading-action")).toHaveLength(2);
   });
 
@@ -383,23 +383,14 @@ describe("MealScreen", () => {
     },
   );
 
-  it("uses the final desktop meal layout for loading skeletons", async () => {
+  it("uses the same compact loading layout on desktop", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockReturnValue(new Promise(() => {}));
-
     render(<MealScreen {...DEFAULT_PROPS} />);
-
-    const skeleton = await screen.findByTestId("web-meal-loading-skeleton");
-    expect(skeleton.className).toContain("web-meal-list-layout");
-    const cards = within(skeleton).getAllByRole("article", { hidden: true });
-    expect(cards).toHaveLength(2);
-    expect(cards[0].parentElement?.className).toContain("grid-cols-2");
-    expect(screen.getByTestId("web-meal-loading-summary")).toBeTruthy();
-    expect(screen.queryByTestId("web-meal-list")).toBeNull();
+    expect(await screen.findByTestId("meal-screen-loading-skeleton")).toBeTruthy();
+    expect(screen.queryByTestId("web-meal-summary")).toBeNull();
   });
-
-  // ── Error state ─────────────────────────────────────────────────────────
 
   it("shows error state when fetchMeals fails", async () => {
     readE2EAuthOverride.mockReturnValue(true);
@@ -469,17 +460,16 @@ describe("MealScreen", () => {
     });
     expect(screen.getByText("미역국")).toBeTruthy();
     expect(screen.getByText("시금치볶음")).toBeTruthy();
-    expect(screen.queryByText("등록")).toBeNull();
-    expect(screen.queryByText("장보기 완료")).toBeNull();
-    expect(screen.queryByText("요리 완료")).toBeNull();
+    expect(screen.getByText("등록")).toBeTruthy();
+    expect(screen.getByText("장보기 완료")).toBeTruthy();
+    expect(screen.getByText("요리 완료")).toBeTruthy();
 
     const firstCard = screen.getByLabelText("김치찌개 식사 카드");
-    const titleButton = within(firstCard).getByText("김치찌개");
-    expect(titleButton.className).toContain("font-extrabold");
-    expect(titleButton.getAttribute("style") ?? "").toContain("font-weight: 800");
-    expect(within(firstCard).getByText(/2인분 · \d+분/)).toBeTruthy();
-    expect(within(firstCard).queryByText(/\d+분 · 2인분/)).toBeNull();
-    expect(within(firstCard).getByRole("button", { name: "장보기" }).querySelector("svg")).toBeTruthy();
+    const titleButton = within(firstCard).getByTestId("meal-recipe-link-meal-1");
+    expect(within(titleButton).getByText("김치찌개").className).toContain("font-semibold");
+    expect(within(firstCard).getByText("2인분")).toBeTruthy();
+    expect(within(firstCard).getByRole("group", { name: "인분 조절" })).toBeTruthy();
+    expect(within(firstCard).queryByText(/\d+인분 · \d+분/)).toBeNull();
     expect(screen.queryByText(/등록된 음식/)).toBeNull();
     expect(screen.queryByText(/개 음식/)).toBeNull();
     expect(screen.queryByText(/총 \d+인분 계획/)).toBeNull();
@@ -510,7 +500,7 @@ describe("MealScreen", () => {
     });
 
     await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
-    expect(mockRouterReplace).toHaveBeenCalledWith("/planner");
+    expect(mockRouterReplace).toHaveBeenCalledWith("/planner?date=2026-04-18");
     expect(mockRouterBack).not.toHaveBeenCalled();
   });
 
@@ -534,7 +524,7 @@ describe("MealScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    await user.click(screen.getByRole("button", { name: "김치찌개 요리하기" }));
+    await user.click(screen.getByRole("button", { name: "김치찌개 요리 시작" }));
 
     await waitFor(() => {
       expect(createCookingSession).toHaveBeenCalledWith({
@@ -571,9 +561,9 @@ describe("MealScreen", () => {
       recipeSnapshotUiMode="snapshot_v2"
     />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "김치찌개 요리하기" }));
+    await userEvent.click(await screen.findByRole("button", { name: "김치찌개 요리 시작" }));
 
-    expect(await screen.findByText("요리 세션 생성 중…")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "김치찌개 요리 시작" }).getAttribute("aria-busy")).toBe("true");
     expect(createSnapshotV2CookingSession).toHaveBeenCalledWith({
       mode: "planner",
       meal_ids: ["meal-1"],
@@ -595,7 +585,7 @@ describe("MealScreen", () => {
     fetchMeals.mockResolvedValue({ items: [buildMeal({ status: "shopping_done", revision: 3 })] });
     createSnapshotV2CookingSession.mockRejectedValue(Object.assign(new Error("요리 연결을 다시 확인해 주세요."), { status, code: status === 503 ? "ACCOUNT_LIFECYCLE_MAINTENANCE" : "RECIPE_IMPACT_STALE" }));
     render(<MealScreen {...DEFAULT_PROPS} recipeSnapshotUiMode="snapshot_v2" />);
-    await userEvent.click(await screen.findByRole("button", { name: "김치찌개 요리하기" }));
+    await userEvent.click(await screen.findByRole("button", { name: "김치찌개 요리 시작" }));
     expect(await screen.findByText("요리 연결을 다시 확인해 주세요.")).toBeTruthy();
     expect(createCookingSession).not.toHaveBeenCalled();
     expect(mockRouterPush).not.toHaveBeenCalled();
@@ -633,7 +623,7 @@ describe("MealScreen", () => {
     });
 
     const cookButtons = screen.getAllByRole("button", {
-      name: "김치찌개 요리하기",
+      name: "김치찌개 요리 시작",
     });
     await user.click(cookButtons[1]);
 
@@ -658,7 +648,7 @@ describe("MealScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    expect(screen.queryByRole("button", { name: "김치찌개 요리하기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "김치찌개 요리 시작" })).toBeNull();
     expect(createCookingSession).not.toHaveBeenCalled();
   });
 
@@ -679,11 +669,11 @@ describe("MealScreen", () => {
     const cookedCard = screen.getByLabelText("완료식사 식사 카드");
 
     expect(within(registeredCard).getByRole("button", { name: "장보기" })).toBeTruthy();
-    expect(within(registeredCard).queryByRole("button", { name: "등록식사 요리하기" })).toBeNull();
+    expect(within(registeredCard).queryByRole("button", { name: "등록식사 요리 시작" })).toBeNull();
     expect(within(shoppingDoneCard).queryByRole("button", { name: "장보기" })).toBeNull();
-    expect(within(shoppingDoneCard).getByRole("button", { name: "장보기식사 요리하기" })).toBeTruthy();
+    expect(within(shoppingDoneCard).getByRole("button", { name: "장보기식사 요리 시작" })).toBeTruthy();
     expect(within(cookedCard).queryByRole("button", { name: "장보기" })).toBeNull();
-    expect(within(cookedCard).queryByRole("button", { name: "완료식사 요리하기" })).toBeNull();
+    expect(within(cookedCard).queryByRole("button", { name: "완료식사 요리 시작" })).toBeNull();
   });
 
   it("shows desktop meal actions only for the current meal status", async () => {
@@ -704,94 +694,28 @@ describe("MealScreen", () => {
     const cookedCard = screen.getByLabelText("완료식사 식사 카드");
 
     expect(within(registeredCard).getByRole("button", { name: "장보기" })).toBeTruthy();
-    expect(within(registeredCard).queryByRole("button", { name: "등록식사 요리하기" })).toBeNull();
+    expect(within(registeredCard).queryByRole("button", { name: "등록식사 요리 시작" })).toBeNull();
     expect(within(shoppingDoneCard).queryByRole("button", { name: "장보기" })).toBeNull();
-    expect(within(shoppingDoneCard).getByRole("button", { name: "장보기식사 요리하기" })).toBeTruthy();
+    expect(within(shoppingDoneCard).getByRole("button", { name: "장보기식사 요리 시작" })).toBeTruthy();
     expect(within(cookedCard).queryByRole("button", { name: "장보기" })).toBeNull();
-    expect(within(cookedCard).queryByRole("button", { name: "완료식사 요리하기" })).toBeNull();
+    expect(within(cookedCard).queryByRole("button", { name: "완료식사 요리 시작" })).toBeNull();
   });
 
-  it("renders the desktop meal screen as a two-column card grid with per-food actions", async () => {
+  it("shows inline servings for each food on desktop without a redundant total-servings label", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
-    const longRecipeTitle = "봄나물 된장 크림 리조또와 바삭한 두부 스테이크";
-    fetchMeals.mockResolvedValue({
-      items: [
-        buildMeal({
-          id: "meal-1",
-          recipe_id: "recipe-1",
-          recipe_title: longRecipeTitle,
-          status: "shopping_done",
-          planned_servings: 2,
-        }),
-        buildMeal({
-          id: "meal-2",
-          recipe_id: "recipe-2",
-          recipe_title: "파스타",
-          status: "registered",
-          planned_servings: 1,
-        }),
-      ],
-    });
-
+    fetchMeals.mockResolvedValue({ items: [buildMeal(), buildMeal({ id: "meal-2", recipe_title: "파스타" })] });
     render(<MealScreen {...DEFAULT_PROPS} />);
-
-    const list = await screen.findByTestId("web-meal-list");
-    const summary = screen.getByTestId("web-meal-summary");
-    const firstCard = screen.getByLabelText(`${longRecipeTitle} 식사 카드`);
-
-    expect(screen.getByRole("heading", { name: "4월 18일 아침 식사" })).toBeTruthy();
-    expect(within(summary).getByRole("heading", { name: "4월 18일 아침" })).toBeTruthy();
-    expect(within(summary).getByText("음식")).toBeTruthy();
-    expect(within(summary).getByText("2개")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "4월 18일 · 아침" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "끼니 음식 2개" })).toBeNull();
-    expect(list.className).toContain("grid-cols-2");
-    expect(within(list).getAllByRole("article")).toHaveLength(2);
-    expect(within(firstCard).getByRole("button", { name: `${longRecipeTitle} 삭제` })).toBeTruthy();
-    expect(within(list).getByText(longRecipeTitle)).toBeTruthy();
-    expect(within(list).getByText("파스타")).toBeTruthy();
-    expect(screen.queryByLabelText(`${longRecipeTitle} 레시피 보기`)).toBeNull();
-    expect(within(list).queryByText("집밥")).toBeNull();
-    expect(within(list).queryByText("간단")).toBeNull();
-    expect(within(list).queryByText("플래너")).toBeNull();
-    expect(within(list).getByRole("button", { name: `${longRecipeTitle} 요리하기` })).toBeTruthy();
-    expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(1);
-    expect(within(list).getAllByRole("button", { name: "인분 증가" })).toHaveLength(2);
-    expect(within(list).getAllByRole("button", { name: "인분 감소" })).toHaveLength(2);
-    expect(within(firstCard).getByRole("group", { name: "인분 조절" })).toBeTruthy();
-    expect(within(list).getAllByRole("button", { name: / 삭제$/ })).toHaveLength(2);
-    const addCta = screen.getByTestId("meal-screen-add-cta");
-    expect(screen.getByTestId("meal-screen-header").contains(addCta)).toBe(true);
-    expect(addCta.getAttribute("aria-label")).toBe("식사 추가");
+    await screen.findByText("김치찌개");
+    expect(screen.getAllByRole("article")).toHaveLength(2);
+    expect(screen.getAllByRole("group", { name: "인분 조절" })).toHaveLength(2);
+    expect(screen.queryByText("총 인분")).toBeNull();
+    expect(screen.getByTestId("meal-screen-header").contains(screen.getByTestId("meal-screen-add-cta"))).toBe(true);
   });
 
-  it("keeps a single desktop meal card in one column of the two-column grid", async () => {
-    setDesktopViewport(true);
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchMeals.mockResolvedValue({
-      items: [
-        buildMeal({
-          id: "meal-1",
-          recipe_title: "긴 이름의 단일 식사 카드가 화면 가운데에서 작게 떠 보이지 않는 메뉴",
-          status: "registered",
-        }),
-      ],
-    });
-
-    render(<MealScreen {...DEFAULT_PROPS} />);
-
-    const list = await screen.findByTestId("web-meal-list");
-    const card = screen.getByLabelText("긴 이름의 단일 식사 카드가 화면 가운데에서 작게 떠 보이지 않는 메뉴 식사 카드");
-
-    expect(list.className).toContain("grid-cols-2");
-    expect(within(list).getAllByRole("article")).toEqual([card]);
-    expect(card.className).not.toMatch(/col-span/);
-    expect(within(card).getByRole("group", { name: "인분 조절" })).toBeTruthy();
-  });
-
-  it.each([false, true])("shows each pinned meal's nutrition and hides stale servings until RSC refresh (desktop=%s)", async (desktop) => {
+  it.each([[false, false], [true, false], [false, true], [true, true]])("shows inline nutrition and hides stale servings until refresh (desktop=%s, foodDetail=%s)", async (desktop, foodDetail) => {
     setDesktopViewport(desktop);
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams(foodDetail ? { mealId: "meal-1" } : {}));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [
       buildMeal({ id: "meal-1", recipe_title: "김치찌개", planned_servings: 2 }),
@@ -807,20 +731,20 @@ describe("MealScreen", () => {
     const initialMealNutrition = { "meal-1": nutrition(2, 450, 24), "meal-2": nutrition(1, 90, 5) };
     const user = userEvent.setup();
     const { rerender } = render(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={initialMealNutrition} />);
-    const firstNutrition = await screen.findByRole("region", { name: "김치찌개 계획 영양정보" });
-    const secondNutrition = screen.getByRole("region", { name: "된장국 계획 영양정보" });
+    const firstNutrition = await screen.findByLabelText("김치찌개 계획 영양정보");
+    if (foodDetail) expect(screen.queryByLabelText("된장국 계획 영양정보")).toBeNull();
+    else expect(screen.getByLabelText("된장국 계획 영양정보")).toBeTruthy();
+    expect(firstNutrition.tagName).toBe("SECTION");
+    expect(within(firstNutrition).getByText("1인분 225 kcal")).toBeTruthy();
     expect(within(firstNutrition).getByText("450 kcal")).toBeTruthy();
     expect(within(firstNutrition).getByText("24 g")).toBeTruthy();
-    expect(within(secondNutrition).getByText("90 kcal")).toBeTruthy();
-    expect(within(secondNutrition).queryByText("450 kcal")).toBeNull();
 
     const card = screen.getByLabelText("김치찌개 식사 카드");
     await user.click(within(card).getByRole("button", { name: "인분 증가" }));
     await waitFor(() => expect(updateMealServings).toHaveBeenCalledWith("meal-1", 3));
     await waitFor(() => expect(mockRouterRefresh).toHaveBeenCalledOnce());
     expect(within(firstNutrition).queryByText("450 kcal")).toBeNull();
-    expect(within(firstNutrition).getByText("영양 정보를 다시 확인하고 있어요.")).toBeTruthy();
-    expect(within(secondNutrition).getByText("90 kcal")).toBeTruthy();
+    expect(within(firstNutrition).getByText("정보 준비 중")).toBeTruthy();
 
     rerender(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={{
       ...initialMealNutrition, "meal-1": nutrition(3, 640, 35),
@@ -833,6 +757,7 @@ describe("MealScreen", () => {
   // ── Stepper — registered (no modal) ────────────────────────────────────
 
   it("calls updateMealServings directly for registered meals on stepper tap", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ planned_servings: 2, status: "registered" })] });
     updateMealServings.mockResolvedValue({ id: "meal-1", planned_servings: 3, status: "registered" });
@@ -855,11 +780,12 @@ describe("MealScreen", () => {
       expect(updateMealServings).toHaveBeenCalledWith("meal-1", 3);
     });
     await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
-    expect(screen.getByText(/3인분 · \d+분/)).toBeTruthy();
+    expect(screen.getByText("3인분")).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("does not decrement below 1 serving — minus button is disabled", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ planned_servings: 1, status: "registered" })] });
 
@@ -877,6 +803,7 @@ describe("MealScreen", () => {
   // ── Stepper — shopping_done / cook_done (modal required) ───────────────
 
   it("shows serving-change modal for shopping_done meal before API call", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [buildMeal({ planned_servings: 2, status: "shopping_done" })],
@@ -896,6 +823,7 @@ describe("MealScreen", () => {
   });
 
   it("shows serving-change modal for cook_done meal before API call", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [buildMeal({ planned_servings: 2, status: "cook_done" })],
@@ -915,6 +843,7 @@ describe("MealScreen", () => {
   });
 
   it("calls updateMealServings after serving-change modal confirmation", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [buildMeal({ id: "meal-1", planned_servings: 2, status: "shopping_done" })],
@@ -940,6 +869,7 @@ describe("MealScreen", () => {
   });
 
   it("cancels serving-change modal without calling API", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [buildMeal({ planned_servings: 2, status: "shopping_done" })],
@@ -964,6 +894,7 @@ describe("MealScreen", () => {
   // ── Delete ───────────────────────────────────────────────────────────────
 
   it("shows delete confirmation modal on delete tap", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ recipe_title: "김치찌개" })] });
 
@@ -974,18 +905,19 @@ describe("MealScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    await user.click(screen.getByRole("button", { name: "김치찌개 삭제" }));
+    await user.click(screen.getByRole("button", { name: "김치찌개 이 계획에서 삭제" }));
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "이 식사를 삭제하시겠어요?" })).toBeTruthy();
-    expect(screen.getByTestId("delete-confirm-icon")).toBeTruthy();
-    expect(screen.getByTestId("delete-confirm").className).toContain("bg-[var(--danger)]");
-    expect(screen.getByTestId("delete-confirm").className).toContain("min-w-[104px]");
+    expect(screen.getByRole("heading", { name: "4월 18일 아침" })).toBeTruthy();
+    expect(screen.queryByTestId("delete-confirm-icon")).toBeNull();
+    expect(screen.getByTestId("delete-confirm").className).toContain("bg-[var(--danger-strong)]");
+    expect(screen.getByTestId("delete-confirm").className).toContain("min-h-12");
     expect(deleteMeal).not.toHaveBeenCalled();
   });
 
   it("calls deleteMeal and removes card after confirmation", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ id: "meal-1", recipe_title: "김치찌개" })] });
     deleteMeal.mockResolvedValue(undefined);
@@ -1002,7 +934,7 @@ describe("MealScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    await user.click(screen.getByRole("button", { name: "김치찌개 삭제" }));
+    await user.click(screen.getByRole("button", { name: "김치찌개 이 계획에서 삭제" }));
     await user.click(screen.getByTestId("delete-confirm"));
 
     await waitFor(() => {
@@ -1012,10 +944,11 @@ describe("MealScreen", () => {
       expect(screen.queryByText("김치찌개")).toBeNull();
     });
     await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
-    expect(screen.getByText("계획 영양 정보 없음")).toBeTruthy();
+    expect(screen.queryByText("영양 정보를 불러오는 중")).toBeNull();
   });
 
   it("cancels delete modal without calling deleteMeal", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ recipe_title: "김치찌개" })] });
 
@@ -1026,7 +959,7 @@ describe("MealScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    await user.click(screen.getByRole("button", { name: "김치찌개 삭제" }));
+    await user.click(screen.getByRole("button", { name: "김치찌개 이 계획에서 삭제" }));
 
     const dialog = screen.getByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "취소" }));
@@ -1037,6 +970,7 @@ describe("MealScreen", () => {
   });
 
   it("transitions to empty state after last meal is deleted", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ id: "meal-1", recipe_title: "김치찌개" })] });
     deleteMeal.mockResolvedValue(undefined);
@@ -1048,17 +982,19 @@ describe("MealScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    await user.click(screen.getByRole("button", { name: "김치찌개 삭제" }));
+    await user.click(screen.getByRole("button", { name: "김치찌개 이 계획에서 삭제" }));
     await user.click(screen.getByTestId("delete-confirm"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("meal-screen-empty")).toBeTruthy();
+      expect(mockRouterReplace).toHaveBeenCalledWith("/planner?date=2026-04-18");
+      expect(screen.queryByText("이 날짜에 해당 계획이 없어요.")).toBeNull();
     });
   });
 
   // ── 409 conflict inline error ────────────────────────────────────────────
 
   it("shows inline 409 error on card when updateMealServings returns 409", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ status: "registered" })] });
     updateMealServings.mockRejectedValue(createMealApiError(409, "서버 충돌"));
@@ -1081,6 +1017,7 @@ describe("MealScreen", () => {
   });
 
   it("shows inline error on card when deleteMeal returns 409", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ id: "meal-1" })] });
     deleteMeal.mockRejectedValue(createMealApiError(409, "충돌"));
@@ -1092,7 +1029,7 @@ describe("MealScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    await user.click(screen.getByRole("button", { name: "김치찌개 삭제" }));
+    await user.click(screen.getByRole("button", { name: "김치찌개 이 계획에서 삭제" }));
     await user.click(screen.getByTestId("delete-confirm"));
 
     await waitFor(() => {
@@ -1101,23 +1038,13 @@ describe("MealScreen", () => {
     expect(screen.getByText("김치찌개")).toBeTruthy();
   });
 
-  it("folds long ingredient chips into a compact +N summary", async () => {
+  it("does not fabricate recipe chips or cooking time from the recipe title", async () => {
     readE2EAuthOverride.mockReturnValue(true);
-    fetchMeals.mockResolvedValue({
-      items: [buildMeal({ recipe_title: "김치볶음밥" })],
-    });
-
+    fetchMeals.mockResolvedValue({ items: [buildMeal({ recipe_title: "김치볶음밥" })] });
     render(<MealScreen {...DEFAULT_PROPS} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("김치볶음밥")).toBeTruthy();
-    });
-
-    expect(screen.getByText("묵은지")).toBeTruthy();
-    expect(screen.getByText("찬밥")).toBeTruthy();
-    expect(screen.getByText("대파")).toBeTruthy();
-    expect(screen.queryByText("계란")).toBeNull();
-    expect(screen.getByText("+2")).toBeTruthy();
+    await screen.findByText("김치볶음밥");
+    expect(screen.queryByText("묵은지")).toBeNull();
+    expect(screen.queryByText(/\d+인분 · \d+분/)).toBeNull();
   });
 
   // ── Sticky CTA ───────────────────────────────────────────────────────────
@@ -1136,7 +1063,8 @@ describe("MealScreen", () => {
     expect(screen.queryByText("+ 식사 추가")).toBeNull();
   });
 
-  it("opens the meal-add option sheet from the app CTA instead of navigating to menu-add", async () => {
+  it.each([false, true])("opens the same meal-add modal rather than navigating away (desktop=%s)", async (desktop) => {
+    setDesktopViewport(desktop);
     const user = userEvent.setup();
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal()] });
@@ -1160,7 +1088,8 @@ describe("MealScreen", () => {
     expect(screen.queryByTestId("meal-screen-meal-add-sheet")).toBeNull();
   });
 
-  it("refreshes nutrition without blocking the list after an inline recipe meal is added", async () => {
+  it.each([false, true])("refreshes the meal list after an inline addition (from focused recipe=%s)", async (focused) => {
+    if (focused) navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-existing", slot: DEFAULT_PROPS.slotName, returnTo: `/planner?date=${DEFAULT_PROPS.planDate}`, returnSurface: "planner.week" }));
     const existingMeal = buildMeal({ id: "meal-existing", recipe_title: "된장찌개" });
     const addedMeal = buildMeal({ id: "meal-added", recipe_title: "김치찌개", planned_servings: 1 });
     const pendingNutritionRefresh = createDeferred<ReturnType<typeof createPlannerNutritionData>>();
@@ -1170,24 +1099,10 @@ describe("MealScreen", () => {
       .mockResolvedValueOnce({ items: [existingMeal, addedMeal], product_entries: [] });
     fetchPlannerNutrition
       .mockReset()
+      .mockResolvedValue(createPlannerNutritionData())
       .mockResolvedValueOnce(createPlannerNutritionData())
       .mockReturnValueOnce(pendingNutritionRefresh.promise);
-    fetchLeftovers.mockResolvedValue({
-      items: [
-        {
-          id: "leftover-1",
-          recipe_id: "recipe-1",
-          recipe_title: "김치찌개",
-          recipe_thumbnail_url: null,
-          status: "leftover",
-          cooked_at: "2026-04-17T00:00:00.000Z",
-          eaten_at: null,
-          cooking_servings: 1,
-          source_meal_label: "저녁",
-          source_planned_servings: 1,
-        },
-      ],
-    });
+    fetchRecipes.mockResolvedValue({ success: true, error: null, data: { items: [{ id: "recipe-1", title: "김치찌개", thumbnail_url: null, servings: 2, is_saved: false, tags: [], view_count: 0, save_count: 0 }], next_cursor: null, has_next: false } });
     createMealSafe.mockResolvedValue({
       success: true,
       data: {
@@ -1204,19 +1119,32 @@ describe("MealScreen", () => {
       error: null,
     });
 
-    render(<MealScreen {...DEFAULT_PROPS} />);
+    const view = render(<MealScreen {...DEFAULT_PROPS} />);
     await userEvent.click(await screen.findByTestId("meal-screen-add-cta"));
     await userEvent.click(
       within(screen.getByTestId("meal-screen-meal-add-sheet")).getByTestId(
-        "meal-add-option-leftover",
+        "meal-add-option-search",
       ),
     );
-    await userEvent.click(await screen.findByRole("button", { name: "추가" }));
-    const servingsDialog = await screen.findByRole("dialog", { name: "계획 인분 입력" });
+    await userEvent.type(screen.getByRole("textbox", { name: "레시피 검색" }), "김치");
+    await userEvent.click(screen.getByRole("button", { name: "검색" }));
+    await userEvent.click(await screen.findByRole("button", { name: "김치찌개 선택" }));
+    const servingsDialog = await screen.findByLabelText("계획 인분 입력");
     await userEvent.click(within(servingsDialog).getByRole("button", { name: "추가하기" }));
 
     await waitFor(() => expect(fetchMeals).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
+    if (focused) {
+      const [destination, options] = mockRouterReplace.mock.calls.at(-1)!;
+      const target = new URL(destination, "http://localhost");
+      expect(target.pathname).toBe(`/planner/${DEFAULT_PROPS.planDate}/${DEFAULT_PROPS.columnId}`);
+      expect(target.searchParams.has("mealId")).toBe(false);
+      expect(target.searchParams.get("slot")).toBe(DEFAULT_PROPS.slotName);
+      expect(target.searchParams.get("returnTo")).toBe(`/planner?date=${DEFAULT_PROPS.planDate}`);
+      expect(options).toEqual({ scroll: false });
+      navigationMocks.searchParams.mockReturnValue(target.searchParams);
+      view.rerender(<MealScreen {...DEFAULT_PROPS} />);
+    }
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByTestId("meal-screen-add-cta")).toBeTruthy();
   });
@@ -1610,6 +1538,6 @@ describe("MealScreen", () => {
     expect(screen.queryByTestId("product-planner-entry-entry-delete-retry")).toBeNull();
     expect(deleteProductPlannerEntry).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
-    expect(screen.getByText("계획 영양 정보 없음")).toBeTruthy();
+    expect(screen.queryByText("영양 정보를 불러오는 중")).toBeNull();
   });
 });

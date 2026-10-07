@@ -16,6 +16,7 @@ interface PlannerWeekNavigationProps {
   onShiftWeek: (days: number) => void | Promise<void>;
   onCurrentWeek: () => void;
   mode?: "plan" | "log";
+  hideDateRail?: boolean;
   recordedDates?: string[];
   dateBarRef?: React.Ref<HTMLDivElement>;
   dateAnchorRef?: React.Ref<HTMLDivElement>;
@@ -25,7 +26,7 @@ interface PlannerWeekNavigationProps {
 export function PlannerWeekNavigation({
   startDate, selectedDate, today, isCurrentWeek,
   onDateSelect, onShiftWeek, onCurrentWeek, dateBarRef, dateAnchorRef, actions,
-  mode = "plan", recordedDates = [],
+  mode = "plan", recordedDates = [], hideDateRail = false,
 }: PlannerWeekNavigationProps) {
   const { railRef, weeks, handlers } = useWeekSwipePager(startDate, onShiftWeek);
   const dateRefs = React.useRef(new Map<string, HTMLButtonElement>());
@@ -62,7 +63,7 @@ export function PlannerWeekNavigation({
     <section aria-label="주간 이동" className="contents" data-testid="planner-week-shell">
       <PlannerDateControls date={selectedDate} today={today} onDateSelect={onDateSelect} actions={actions} />
       <div aria-hidden="true" className="h-0" ref={dateAnchorRef} />
-      <div className="sticky top-0 z-30 bg-[var(--surface-fill)] px-4 py-1.5 lg:static lg:mx-auto lg:max-w-7xl lg:pb-2" ref={dateBarRef} data-testid="planner-sticky-dates">
+      {!hideDateRail ? <div className="sticky top-0 z-30 bg-[var(--surface-fill)] px-4 py-1.5 lg:static lg:mx-auto lg:max-w-7xl lg:pb-2" ref={dateBarRef} data-testid="planner-sticky-dates">
       <p className="sr-only" id="planner-week-swipe-help">{isLog ? "날짜 줄을 좌우로 넘기면 주가 바뀝니다. 키보드 PageUp, PageDown으로도 주를 이동할 수 있어요." : "날짜 줄을 좌우로 넘기거나 방향키를 누르면 이전 주 또는 다음 주로 이동합니다."}</p>
       <div
         aria-describedby="planner-week-swipe-help"
@@ -124,14 +125,14 @@ export function PlannerWeekNavigation({
                   type="button"
                 >
                   <span className="text-[10px] font-normal">{date === today ? "오늘" : formatKoreaWeekday(date, "short")}</span>
-                  <span className="text-sm font-extrabold">{Number(date.slice(8))}</span>
+                  <span className="text-sm font-medium">{Number(date.slice(8))}</span>
                 </button>
               </li>
             ))}
           </ol>
         ))}
       </div>
-      </div>
+      </div> : <div ref={dateBarRef} />}
     </section>
   );
 }

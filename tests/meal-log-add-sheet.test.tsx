@@ -13,10 +13,34 @@ function selectedDay() {
 async function openBreakfast(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("region", { name: "8월 10일 월요일 식사 기록" });
   await user.click(await selectedDay().findByRole("button", { name: "아침에 먹은 음식 추가" }));
+  await user.click(screen.getByRole("tab", { name: "요리한 음식" }));
 }
 
 describe("MEAL_LOG add sheet", () => {
   afterEach(cleanup);
+
+  it("keeps the chosen date and meal through food selection and saves without target selectors", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderMealLogShell({ includeCookedBatch: true });
+    await openBreakfast(user);
+    expect(screen.getByRole("heading", { name: "8월 10일 아침" })).toBeTruthy();
+    await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
+    const sheet = screen.getByRole("dialog", { name: "먹은 음식 추가" });
+    expect(within(sheet).getByRole("heading", { name: "8월 10일 아침" })).toBeTruthy();
+    expect(within(sheet).queryByLabelText("먹은 날짜")).toBeNull();
+    expect(within(sheet).queryByRole("combobox", { name: "끼니" })).toBeNull();
+    const amount = within(sheet).getByRole("textbox", { name: "먹은 양" });
+    await user.clear(amount);
+    await user.type(amount, "50");
+    await user.click(within(sheet).getByRole("button", { name: "기록 저장" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url).includes("/meal-log/entries") && init?.method === "POST")).toBe(true));
+    const request = fetchMock.mock.calls.find(([url, init]) => String(url).includes("/meal-log/entries") && init?.method === "POST")!;
+    expect(JSON.parse(String(request[1]?.body))).toMatchObject({
+      consumed_local_date: "2026-08-10",
+      meal_plan_column_id: "20000000-0000-4000-8000-000000000001",
+      quantity: { amount: 50, unit: "g" },
+    });
+  });
 
   it("hides depleted foods instead of offering an action that will fail", async () => {
     const user = userEvent.setup();
@@ -63,13 +87,13 @@ describe("MEAL_LOG add sheet", () => {
     expect(screen.queryByText("된장찌개")).toBeNull();
   });
 
-  it("keeps the search outside the result scroller and explains an empty result", async () => {
+  it("keeps search and results in one scroller and explains an empty result", async () => {
     const user = userEvent.setup();
     renderMealLogShell();
     await openBreakfast(user);
     await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     const input = screen.getByRole("searchbox", { name: "제품·재료 검색" });
-    expect(screen.getByTestId("meal-log-source-scroll").contains(input)).toBe(false);
+    expect(screen.getByTestId("meal-log-source-scroll").contains(input)).toBe(true);
     await user.type(input, "없는음식");
     expect(screen.getByRole("status", { name: "제품·재료 검색 중" })).toBeTruthy();
     expect(await screen.findByText("검색 결과가 없어요. 다른 제품·재료 이름으로 찾아보세요.")).toBeTruthy();
@@ -81,7 +105,7 @@ describe("MEAL_LOG add sheet", () => {
     await openBreakfast(user);
     await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     await user.click(await screen.findByRole("button", { name: /달걀/u }));
-    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "실제 양" });
+    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "먹은 양" });
     const save = screen.getByRole<HTMLButtonElement>("button", { name: "기록 저장" });
     await user.clear(amount);
     expect(amount.value).toBe(""); expect(save.disabled).toBe(true);
@@ -105,12 +129,12 @@ describe("MEAL_LOG add sheet", () => {
 
     await openBreakfast(user);
     const dialog = screen.getByRole("dialog", { name: "먹은 음식 추가" });
-    expect(dialog.className.split(" ")).toContain("h-full");
-    expect(screen.getByText("8월 10일 · 아침")).toBeTruthy();
+    expect(dialog.className.split(" ")).toContain("h-[78dvh]");
+    expect(screen.getByText("8월 10일 아침")).toBeTruthy();
     expect(screen.getByRole("button", { name: "닫기" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "요리한 음식" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "제품·재료" })).toBeTruthy();
-    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
 
     const cookedTab = screen.getByRole("tab", { name: "요리한 음식" });
     cookedTab.focus();
@@ -131,7 +155,7 @@ describe("MEAL_LOG add sheet", () => {
     expect(save.disabled).toBe(true);
     expect(screen.getByText("제안된 양을 확인해 주세요.")).toBeTruthy();
 
-    await user.click(screen.getByRole("textbox", { name: "실제 양" }));
+    await user.click(screen.getByRole("textbox", { name: "먹은 양" }));
     await user.tab();
     expect(save.disabled).toBe(false);
   });
@@ -144,7 +168,7 @@ describe("MEAL_LOG add sheet", () => {
     expect(await screen.findByText(/8월 9일 조리/u)).toBeTruthy();
     expect(screen.getByText(/남은 양 80g/u)).toBeTruthy();
     await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
-    const amount = screen.getByRole("textbox", { name: "실제 양" });
+    const amount = screen.getByRole("textbox", { name: "먹은 양" });
     await user.clear(amount);
     await user.type(amount, "81");
 
@@ -195,6 +219,7 @@ describe("MEAL_LOG add sheet", () => {
     });
 
     await openBreakfast(user);
+    expect(screen.queryByText(/g 식사 기록 저장 불가|완성 무게 확인 불가|이전 기록이라 중량/)).toBeNull();
     expect((await screen.findByRole("link", { name: /된장찌개 완성 중량 입력/u })).getAttribute("href"))
       .toBe("/leftovers");
     const unmatched = await screen.findByRole("button", { name: /예전 카레/u });

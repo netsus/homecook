@@ -131,10 +131,10 @@ export function formatProductExpectedEnergy(
   value: FoodProductNutrientValue | undefined,
 ) {
   if (value?.status === "complete" && isObserved(value.amount)) {
-    return `예상 열량 ${formatAmount(value.amount)} kcal`;
+    return `예상 열량 ${formatAmount(Math.round(value.amount))} kcal`;
   }
   if (value?.status === "partial" && isObserved(value.known_amount)) {
-    return `예상 열량 최소 ${formatAmount(value.known_amount)} kcal`;
+    return `예상 열량 최소 ${formatAmount(Math.round(value.known_amount))} kcal`;
   }
   return "예상 열량 정보 준비 중";
 }
@@ -196,10 +196,10 @@ export function getFoodProductCoreNutritionLines(
   return CORE_NUTRIENT_META.map(({ code, label, unit }) => {
     const value = scaleNutrientValue(product.nutrition.values[code], scale);
     if (value?.status === "complete" && isObserved(value.amount)) {
-      return `${label} ${formatAmount(value.amount)} ${unit}`;
+      return `${label} ${formatAmount(Math.round(value.amount))} ${unit}`;
     }
     if (value?.status === "partial" && isObserved(value.known_amount)) {
-      return `${label} 최소 ${formatAmount(value.known_amount)} ${unit}`;
+      return `${label} 최소 ${formatAmount(Math.round(value.known_amount))} ${unit}`;
     }
     return `${label} 정보 준비 중`;
   });
@@ -212,5 +212,5 @@ export function formatProductQuantity({
   amount: number;
   unit: FoodProductBasisUnit;
 }) {
-  return `${formatAmount(amount)}${formatProductUnit(unit)}`;
+  return `${unit === "g" ? formatAmount(Math.round(amount)) : formatAmount(amount)}${formatProductUnit(unit)}`;
 }

@@ -3751,6 +3751,7 @@ function CustomBookCard({
         )}
         <button
           aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
           aria-label={`${book.name} 옵션 메뉴`}
           className="web-recipebook-menu-button"
           onClick={(e) => {
@@ -3765,11 +3766,14 @@ function CustomBookCard({
             fill="currentColor"
             viewBox="0 0 20 20"
           >
-            <circle cx="10" cy="4" r="1.5" />
-            <circle cx="10" cy="10" r="1.5" />
-            <circle cx="10" cy="16" r="1.5" />
+            <circle cx="4" cy="10" r="1.75" />
+            <circle cx="10" cy="10" r="1.75" />
+            <circle cx="16" cy="10" r="1.75" />
           </svg>
         </button>
+        <span aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`} className="web-recipebook-book-count">
+          {formatRecipeCount(book.recipe_count)}
+        </span>
       </div>
       {isMenuOpen ? (
         <div

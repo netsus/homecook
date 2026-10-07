@@ -4,7 +4,7 @@ import Link from "next/link";
 import React from "react";
 
 import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
-import { AppBottomSheet } from "@/components/shared/app-overlay";
+import { PlannerTaskSheet } from "@/components/planner/planner-task-sheet";
 
 export type MealAddPickerMode =
   | "search"
@@ -34,7 +34,7 @@ const PICKER_OPTIONS: Array<{
 ];
 
 const OPTION_TILE_CLASS =
-  "flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-left text-[14px] font-semibold leading-[1.25] text-[var(--foreground)]";
+  "flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-left text-[14px] font-medium leading-[1.25] text-[var(--foreground)]";
 const OPTION_LABEL_CLASS = "text-[14px] leading-[1.25]";
 
 function SearchIcon({ className }: { className?: string }) {
@@ -88,11 +88,11 @@ export function MealAddOptionsSheet({
   onPickerSelect,
   routeHrefFor,
   testId,
-  showProductOption = true,
+  showProductOption = false,
   onRouteSelect,
 }: MealAddOptionsSheetProps) {
   return (
-    <AppBottomSheet
+    <PlannerTaskSheet
       ariaLabelledBy="meal-add-options-title"
       badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
       bodyClassName="pb-[calc(24px+env(safe-area-inset-bottom))]"
@@ -160,6 +160,6 @@ export function MealAddOptionsSheet({
           <span className={OPTION_LABEL_CLASS}>직접 등록</span>
         </Link>
       </div>
-    </AppBottomSheet>
+    </PlannerTaskSheet>
   );
 }
