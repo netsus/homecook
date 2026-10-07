@@ -28,6 +28,17 @@ export function PlannerWeekNavigation({
   onDateSelect, onShiftWeek, onCurrentWeek, dateBarRef, dateAnchorRef, actions,
   mode = "plan", recordedDates = [], hideDateRail = false,
 }: PlannerWeekNavigationProps) {
+  return (
+    <section aria-label="주간 이동" className="contents" data-testid="planner-week-shell">
+      <PlannerDateControls date={selectedDate} today={today} onDateSelect={onDateSelect} actions={actions} />
+      <div aria-hidden="true" className="h-0" ref={dateAnchorRef} />
+      {!hideDateRail ? <WeekDateRail startDate={startDate} selectedDate={selectedDate} today={today} isCurrentWeek={isCurrentWeek} onDateSelect={onDateSelect} onShiftWeek={onShiftWeek} onCurrentWeek={onCurrentWeek} dateBarRef={dateBarRef} mode={mode} recordedDates={recordedDates} /> : <div ref={dateBarRef} />}
+    </section>
+  );
+}
+
+/** Mount the pager with its rail so centering and resize/swipe listeners share its lifetime. */
+function WeekDateRail({ startDate, selectedDate, today, isCurrentWeek, onDateSelect, onShiftWeek, onCurrentWeek, dateBarRef, mode, recordedDates = [] }: Omit<PlannerWeekNavigationProps, "endDate">) {
   const { railRef, weeks, handlers } = useWeekSwipePager(startDate, onShiftWeek);
   const dateRefs = React.useRef(new Map<string, HTMLButtonElement>());
   const isLog = mode === "log";
@@ -60,10 +71,7 @@ export function PlannerWeekNavigation({
   }
 
   return (
-    <section aria-label="주간 이동" className="contents" data-testid="planner-week-shell">
-      <PlannerDateControls date={selectedDate} today={today} onDateSelect={onDateSelect} actions={actions} />
-      <div aria-hidden="true" className="h-0" ref={dateAnchorRef} />
-      {!hideDateRail ? <div className="sticky top-0 z-30 bg-[var(--surface-fill)] px-4 py-1.5 lg:static lg:mx-auto lg:max-w-7xl lg:pb-2" ref={dateBarRef} data-testid="planner-sticky-dates">
+    <div className="sticky top-0 z-30 bg-[var(--surface-fill)] px-4 py-1.5 lg:static lg:mx-auto lg:max-w-7xl lg:pb-2" ref={dateBarRef} data-testid="planner-sticky-dates">
       <p className="sr-only" id="planner-week-swipe-help">{isLog ? "날짜 줄을 좌우로 넘기면 주가 바뀝니다. 키보드 PageUp, PageDown으로도 주를 이동할 수 있어요." : "날짜 줄을 좌우로 넘기거나 방향키를 누르면 이전 주 또는 다음 주로 이동합니다."}</p>
       <div
         aria-describedby="planner-week-swipe-help"
@@ -132,7 +140,6 @@ export function PlannerWeekNavigation({
           </ol>
         ))}
       </div>
-      </div> : <div ref={dateBarRef} />}
-    </section>
+      </div>
   );
 }

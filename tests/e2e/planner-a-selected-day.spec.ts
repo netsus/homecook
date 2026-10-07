@@ -2,6 +2,40 @@ import { test, expect } from "@playwright/test";
 import { installAccountLibraryVisualRoutes, installPlannerWeekRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
 
 for (const width of [375, 1280]) {
+  test(`reveals the selected week after switching from plan to log at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 812 });
+    await setE2EAuthOverride(page, "guest");
+    await page.goto("/planner?date=2026-10-08");
+    const nav = page.getByRole("navigation", { name: width < 1024 ? "플래너 하단 탭" : "데스크탑 주요 메뉴", exact: true });
+    await expect(page.getByTestId("meal-log-week-date-rail")).toHaveCount(0);
+    await nav.getByRole("link", { name: "식사 기록", exact: true }).click();
+    const rail = page.getByTestId("meal-log-week-date-rail");
+    const selected = rail.getByRole("radio", { checked: true });
+    await expect(selected).toHaveAttribute("aria-label", /10\/8/);
+    // AX visibility ignores clipped pages; verify the selected date's actual painted position.
+    await expect.poll(() => selected.evaluate(node => {
+      const rail = node.closest('[data-testid="meal-log-week-date-rail"]')!;
+      const bounds = rail.getBoundingClientRect();
+      const date = node.getBoundingClientRect();
+      return date.left >= bounds.left && date.right <= bounds.right;
+    })).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`log-week-revealed-${width}.png`) });
+    // Simulate a completed horizontal gesture; mounting must not disable subsequent swipes.
+    await rail.evaluate(node => {
+      node.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      node.scrollLeft += node.clientWidth;
+      node.dispatchEvent(new Event("scroll", { bubbles: true }));
+      node.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    });
+    await expect(page).toHaveURL(/date=2026-10-15/);
+    await expect(selected).toHaveAttribute("aria-label", /10\/15/);
+    await expect(selected).toBeInViewport({ ratio: 1 });
+    await nav.getByRole("link", { name: "요리 계획", exact: true }).click();
+    await nav.getByRole("link", { name: "식사 기록", exact: true }).click();
+    await expect(selected).toHaveAttribute("aria-label", /10\/15/);
+    await expect(selected).toBeInViewport({ ratio: 1 });
+  });
+
   test(`Planner A selects one day and preserves add context at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 812 });
     await setE2EAuthOverride(page);
