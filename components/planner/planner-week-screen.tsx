@@ -13,9 +13,10 @@ import React, {
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { PlannerLoginDialog } from "@/components/planner/planner-login-dialog";
-import { createGuestPlannerData, createGuestPlannerNutrition } from "@/lib/planner/guest-planner-preview";
+import { createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { PlannerWeekOverview } from "@/components/planner/planner-week-overview";
 import { PlannerWeekBoard } from "@/components/planner/planner-week-board";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import {
@@ -25,7 +26,6 @@ import {
 } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { buildReturnHref } from "@/lib/navigation/return-context";
-import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { LegacyProductPlanSection } from "@/components/planner/legacy-product-plan-section";
 import { MealLogScreen } from "@/components/planner/meal-log-screen";
 import { ContentState } from "@/components/shared/content-state";
@@ -139,7 +139,6 @@ function PlannerLoadingState({ columnCount }: { columnCount: number }) {
 
 export function PlannerWeekScreen({
   initialAuthenticated = false,
-  initialMealNutrition = {},
 }: PlannerWeekScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -178,7 +177,6 @@ export function PlannerWeekScreen({
   const screenState = guest ? "ready" : storedScreenState;
   const isRefreshing = guest ? false : storedIsRefreshing;
   const errorMessage = guest ? null : storedErrorMessage;
-  const displayedNutrition = guest ? createGuestPlannerNutrition() : initialMealNutrition;
   const [activeSegment, setActiveSegment] =
     useState<PlannerShellSegment>(initialLocation.segment);
   const [selectedDateKey, setSelectedDateKey] = useState(initialLocation.date);
@@ -190,16 +188,13 @@ export function PlannerWeekScreen({
   const [mealAddTarget, setMealAddTarget] = useState<MealAddTarget | null>(null);
   const [mealAddMode, setMealAddMode] = useState<MealAddPickerMode | null>(null);
   const dayRefs = useRef<Record<string, HTMLElement | null>>({});
+  const overviewScrollTarget = useRef<string | null>(null);
+  const [overviewSelection, setOverviewSelection] = useState(0);
   const logDayRefs = useRef<Record<string, HTMLElement | null>>({});
-  const [logReadyWeek, setLogReadyWeek] = useState<string | null>(null);
-  const onLogDaysReady = useCallback((week: string) => setLogReadyWeek(week), []);
-  const allowScrollDateSyncRef = useRef(false);
   const stickyHeaderRef = useRef<HTMLDivElement>(null);
   const dateAnchorRef = useRef<HTMLDivElement>(null);
   const pendingSegmentDateTopRef = useRef<number | null>(null);
-  const pendingDateScrollRef = useRef<string | null>(null);
   const [stickyHeight, setStickyHeight] = useState(70);
-  const mealAddBoundaryRef = useRef<HTMLDivElement>(null);
   const restoredAddRef = useRef<string | null>(null);
   const previousSegmentRef = useRef(activeSegment);
   const hasLoadedPlannerRef = useRef(false);
@@ -208,7 +203,6 @@ export function PlannerWeekScreen({
   const latestNavigationRef = useRef<PendingShellNavigation | null>(null);
   const requestedRangeRef = useRef<string | null>(null);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
-  const positionedSegmentsRef = useRef<Record<PlannerShellSegment, boolean>>({ plan: false, log: false });
   const currentLogLocationRef = useRef({ date: selectedDateKey, query: searchParams.toString() });
   currentLogLocationRef.current = { date: selectedDateKey, query: searchParams.toString() };
   useEffect(() => {
@@ -236,35 +230,6 @@ export function PlannerWeekScreen({
     : dateKeys.includes(selectedDateKey)
     ? selectedDateKey
     : dateKeys[0] ?? selectedDateKey;
-  const selectedWeekStart = buildWeekRangeForDate(selectedDateKey).startDate;
-  useEffect(() => {
-    const ready = activeSegment === "plan"
-      ? ["ready", "empty", "read-only"].includes(screenState) && columns.length > 0
-      : logReadyWeek === selectedWeekStart;
-    if (positionedSegmentsRef.current[activeSegment] || authState === "checking" || !ready) return;
-    const frame = requestAnimationFrame(() => {
-      const target = (activeSegment === "plan" ? dayRefs : logDayRefs).current[selectedDateKey];
-      if (!target) return;
-      positionedSegmentsRef.current[activeSegment] = true;
-      allowScrollDateSyncRef.current = false;
-      const desktop = window.matchMedia?.("(min-width: 1024px)").matches;
-      target.scrollIntoView?.({ behavior: "auto", block: desktop ? "nearest" : "start" });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [activeSegment, authState, columns.length, screenState, selectedDateKey, selectedWeekStart, logReadyWeek]);
-
-  useEffect(() => {
-    const target = pendingDateScrollRef.current;
-    if (!target || (activeSegment === "plan" ? !dateKeys.includes(target) : logReadyWeek !== selectedWeekStart)) return;
-    const frame = requestAnimationFrame(() => {
-      const day = (activeSegment === "plan" ? dayRefs : logDayRefs).current[target];
-      if (!day) return;
-      pendingDateScrollRef.current = null;
-      allowScrollDateSyncRef.current = false;
-      day.scrollIntoView?.({ behavior: "smooth", block: "start" });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [activeSegment, dateKeys, meals, logReadyWeek, selectedWeekStart]);
   const mealStats = useMemo(() => buildPlannerMealStatusStats(meals), [meals]);
   const shoppingLists = useMemo(
     () => [
@@ -335,46 +300,6 @@ export function PlannerWeekScreen({
     },
     [activeSegment, router, searchParams, selectedDate],
   );
-  useEffect(() => {
-    let frame = 0;
-    const allow = () => {
-      allowScrollDateSyncRef.current = true;
-      positionedSegmentsRef.current[activeSegment] = true;
-      pendingDateScrollRef.current = null;
-    };
-    const stop = () => { allowScrollDateSyncRef.current = false; };
-    const update = () => {
-      frame = 0;
-      if (!allowScrollDateSyncRef.current || document.body.style.overflow === "hidden" || (activeSegment === "plan" && isRefreshing)) return;
-      const refs = (activeSegment === "plan" ? dayRefs : logDayRefs).current;
-      const week = buildWeekRangeForDate(selectedDateKey);
-      const candidates = buildDateKeys(week.startDate, week.endDate).flatMap(date => {
-        const node = refs[date];
-        if (!node?.isConnected) return [];
-        const rect = node.getBoundingClientRect();
-        const visible = Math.max(0, Math.min(rect.bottom, window.innerHeight - 80) - Math.max(rect.top, stickyHeight));
-        return [{ date, visible }];
-      });
-      const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
-      const target = atBottom ? candidates.at(-1)?.date : candidates.sort((a, b) => b.visible - a.visible)[0]?.date;
-      if (!target || target === selectedDateKey || !candidates.some(item => item.visible > 0)) return;
-      setSelectedDateKey(target);
-      navigateShell({ date: target, segment: activeSegment }, "replace");
-    };
-    const scroll = () => { if (!frame) frame = requestAnimationFrame(update); };
-    window.addEventListener("wheel", allow, { passive: true });
-    window.addEventListener("touchmove", allow, { passive: true });
-    window.addEventListener("scroll", scroll, { passive: true });
-    window.addEventListener("popstate", stop);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("wheel", allow);
-      window.removeEventListener("touchmove", allow);
-      window.removeEventListener("scroll", scroll);
-      window.removeEventListener("popstate", stop);
-    };
-  }, [activeSegment, isRefreshing, navigateShell, selectedDateKey, stickyHeight]);
-
   const handleRestoreConsumed = useCallback(() => {
     const next = new URLSearchParams(searchParams.toString());
     next.delete("restore");
@@ -399,10 +324,8 @@ export function PlannerWeekScreen({
   );
 
   function handleSegmentSelect(segment: PlannerShellSegment) {
+    overviewScrollTarget.current = null;
     if (segment === activeSegment) return;
-    pendingDateScrollRef.current = null;
-    allowScrollDateSyncRef.current = false;
-    if (segment === "log") setLogReadyWeek(null);
     pendingSegmentDateTopRef.current = stickyHeaderRef.current?.getBoundingClientRect().top ?? null;
     panelScrollPositions.current[activeSegment] = window.scrollY;
     previousSegmentRef.current = activeSegment;
@@ -411,15 +334,9 @@ export function PlannerWeekScreen({
   }
 
   function handleDateSelect(dateKey: string) {
-    allowScrollDateSyncRef.current = false;
-    pendingDateScrollRef.current = null;
-    if (activeSegment === "log" && buildWeekRangeForDate(dateKey).startDate !== selectedWeekStart) {
-      setLogReadyWeek(null);
-      pendingDateScrollRef.current = dateKey;
-    }
+    overviewScrollTarget.current = null;
     if (activeSegment === "plan" && (dateKey < rangeStartDate || dateKey > rangeEndDate)) {
       const range = buildWeekRangeForDate(dateKey);
-      pendingDateScrollRef.current = dateKey;
       void loadRange(range.startDate, range.endDate, dateKey);
       return;
     }
@@ -427,13 +344,40 @@ export function PlannerWeekScreen({
       setSelectedDateKey(dateKey);
       navigateShell({ date: dateKey, segment: activeSegment });
     }
-    if (!pendingDateScrollRef.current) {
-      (activeSegment === "plan" ? dayRefs : logDayRefs).current[dateKey]?.scrollIntoView?.({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
   }
+
+  function handleOverviewSelect(dateKey: string) {
+    handleDateSelect(dateKey);
+    overviewScrollTarget.current = dateKey;
+    setOverviewSelection(value => value + 1);
+  }
+
+  useLayoutEffect(() => {
+    const dateKey = overviewScrollTarget.current;
+    if (!dateKey || activeSegment !== "plan" || selectedDate !== dateKey || isRefreshing
+      || !["ready", "empty", "read-only"].includes(screenState)) return;
+    const frame = requestAnimationFrame(() => {
+      const card = dayRefs.current[dateKey];
+      if (!card || overviewScrollTarget.current !== dateKey) return;
+      overviewScrollTarget.current = null;
+      card.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+      card.scrollIntoView?.({ block: "start", behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeSegment, isRefreshing, overviewSelection, screenState, selectedDate]);
+
+  useEffect(() => {
+    // A later data response must not pull a user back after they moved on.
+    const cancel = () => { overviewScrollTarget.current = null; };
+    window.addEventListener("wheel", cancel, { passive: true });
+    window.addEventListener("touchmove", cancel, { passive: true });
+    window.addEventListener("popstate", cancel);
+    return () => {
+      window.removeEventListener("wheel", cancel);
+      window.removeEventListener("touchmove", cancel);
+      window.removeEventListener("popstate", cancel);
+    };
+  }, []);
 
   function closeMealAdd() {
     clearPlannerWeekReturnContext();
@@ -448,17 +392,6 @@ export function PlannerWeekScreen({
     }
   }
 
-  const { setReturnFocusTarget: setAddReturnFocus } = useDialogBoundary({
-    active:
-      mealAddTarget !== null &&
-      activeSegment === "plan" &&
-      canAddMeal &&
-      authState === "authenticated",
-    dialogRef: mealAddBoundaryRef,
-    fallbackFocusRef: selectedDateTitleRef,
-    onClose: closeMealAdd,
-  });
-
   function openMealAdd(dateKey: string, column: PlannerColumnData) {
     if (guest) {
       const next = new URLSearchParams({ date: dateKey, slot: column.name, restore: "meal-add-modal" });
@@ -466,8 +399,6 @@ export function PlannerWeekScreen({
       return;
     }
     if (!canAddMeal) return;
-    const invoker = document.activeElement;
-    if (invoker instanceof HTMLElement) setAddReturnFocus(() => invoker);
     setMealAddTarget({ dateKey, columnId: column.id, slotName: column.name });
     setMealAddMode(null);
   }
@@ -500,16 +431,11 @@ export function PlannerWeekScreen({
 
   function completeMealAdd() {
     const target = mealAddTarget;
-    saveMealAddReturn();
-    setMealAddTarget(null);
-    setMealAddMode(null);
+    closeMealAdd();
     if (target) {
-      router.push(
-        buildReturnHref(`/planner/${target.dateKey}/${target.columnId}?slot=${encodeURIComponent(target.slotName)}`, {
-          returnSurface: "planner.week",
-          returnTo: `/planner?${new URLSearchParams({ date: target.dateKey })}`,
-        }),
-      );
+      setSelectedDateKey(target.dateKey);
+      navigateShell({ date: target.dateKey, segment: "plan" });
+      void requestPlannerRange({ startDate: rangeStartDate, endDate: rangeEndDate });
     }
   }
 
@@ -530,8 +456,7 @@ export function PlannerWeekScreen({
   }
 
   function shiftRange(dayDelta: number) {
-    allowScrollDateSyncRef.current = false;
-    pendingDateScrollRef.current = null;
+    overviewScrollTarget.current = null;
     if (activeSegment === "log") {
       const next = new Date(`${selectedDateKey}T00:00:00Z`);
       next.setUTCDate(next.getUTCDate() + dayDelta);
@@ -543,6 +468,7 @@ export function PlannerWeekScreen({
   }
 
   function resetRange() {
+    overviewScrollTarget.current = null;
     if (activeSegment === "log") { handleDateSelect(todayKey); return; }
     const range = createDefaultPlannerRange();
     void loadRange(range.startDate, range.endDate, todayKey);
@@ -702,8 +628,6 @@ export function PlannerWeekScreen({
     const previousDateTop = pendingSegmentDateTopRef.current;
     pendingSegmentDateTopRef.current = null;
     previousSegmentRef.current = activeSegment;
-    allowScrollDateSyncRef.current = false;
-    if (!positionedSegmentsRef.current[activeSegment]) return;
     const frame = requestAnimationFrame(() => {
       const anchor = dateAnchorRef.current;
       const naturalTop = anchor ? anchor.getBoundingClientRect().top + window.scrollY : 0;
@@ -738,14 +662,6 @@ export function PlannerWeekScreen({
     setMealAddMode(null);
   }, [activeSegment, authState, canAddMeal, mealAddTarget]);
 
-  useLayoutEffect(() => {
-    if (!mealAddTarget || !canAddMeal || activeSegment !== "plan") return;
-    mealAddBoundaryRef.current
-      ?.querySelector<HTMLElement>(
-        "button:not([disabled]), input:not([disabled]), a[href]",
-      )
-      ?.focus();
-  }, [activeSegment, canAddMeal, mealAddMode, mealAddTarget]);
 
   useEffect(() => {
     if (authState !== "authenticated" || !canAddMeal || activeSegment !== "plan") return;
@@ -767,7 +683,7 @@ export function PlannerWeekScreen({
     setMealAddMode(null);
   }, [activeSegment, authState, canAddMeal, columns, dateKeys, searchParams]);
 
-  const loginControl = <button className="min-h-11 rounded-xl px-3 text-sm font-bold text-[var(--brand-contrast)]" onClick={() => setLoginNextPath(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date: selectedDate, segment: activeSegment }))} type="button">로그인</button>;
+  const loginControl = <button className="min-h-11 rounded-xl px-3 text-sm font-medium text-[var(--brand-contrast)]" onClick={() => setLoginNextPath(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date: selectedDate, segment: activeSegment }))} type="button">로그인</button>;
 
   return (
     <div
@@ -786,10 +702,11 @@ export function PlannerWeekScreen({
         />
       </div>
       <div className="mx-auto max-w-7xl px-4 pt-3" data-testid="planner-shell-header">
-        <div className="flex min-h-11 items-center justify-between lg:sr-only"><h1 id={`planner-${activeSegment}-tab`} className="text-xl font-extrabold">{activeSegment === "plan" ? "요리 계획" : "식사 기록"}</h1><div className="lg:hidden"><YoutubeExtractionNotificationTrigger /></div></div>
-        {guest ? <p className="pt-2 text-[11px] text-[var(--text-2)]"><span className="font-bold text-[var(--ui-sky-700)]">예시 플래너</span> · 로그인하면 내 기록을 남길 수 있어요.</p> : null}
+        <div className="flex min-h-11 items-center justify-between lg:sr-only"><h1 id={`planner-${activeSegment}-tab`} className="text-xl font-semibold">{activeSegment === "plan" ? "요리 계획" : "식사 기록"}</h1><div className="lg:hidden"><YoutubeExtractionNotificationTrigger /></div></div>
+        {guest ? <p className="pt-2 text-[11px] text-[var(--text-2)]"><span className="font-medium text-[var(--ui-sky-700)]">예시 플래너</span> · 로그인하면 내 기록을 남길 수 있어요.</p> : null}
       </div>
         <PlannerWeekNavigation
+          hideDateRail={activeSegment === "plan"}
           mode={activeSegment}
           startDate={navigationRange.startDate}
           endDate={navigationRange.endDate}
@@ -801,10 +718,9 @@ export function PlannerWeekScreen({
           onCurrentWeek={resetRange}
           dateBarRef={stickyHeaderRef}
           dateAnchorRef={dateAnchorRef}
-          actions={activeSegment === "plan" ? <div className="ml-auto flex items-center gap-1">
-            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-[var(--ui-sky-700)] hover:bg-[var(--ui-slate-50)]" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
-            <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-bold text-[var(--text-2)] hover:bg-[var(--ui-white)]" href="/leftovers">남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>
-          </div> : null}
+          actions={<div className="ml-auto flex items-center gap-1">
+            {activeSegment === "plan" ? <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-medium text-[var(--ui-sky-700)] hover:bg-[var(--ui-slate-50)]" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link> : <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-medium text-[var(--text-2)] hover:bg-[var(--ui-white)]" href="/leftovers">남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>}
+          </div>}
         />
 
       {activeSegment === "log" ? (
@@ -812,9 +728,8 @@ export function PlannerWeekScreen({
           guest={guest}
           showDateNavigation={false}
           onDayRef={(date, node) => { logDayRefs.current[date] = node; }}
-          onDaysReady={onLogDaysReady}
-          onFoodLoginRequired={(date = selectedDateKey) => { allowScrollDateSyncRef.current = false; router.push(`/login?next=${encodeURIComponent(buildPlannerShellHref(new URLSearchParams(), { date, segment: "log" }))}`); }}
-          onLoginRequired={(date = selectedDateKey) => { allowScrollDateSyncRef.current = false; setLoginNextPath(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date, segment: "log" })); }}
+          onFoodLoginRequired={(date = selectedDateKey) => { router.push(`/login?next=${encodeURIComponent(buildPlannerShellHref(new URLSearchParams(), { date, segment: "log" }))}`); }}
+          onLoginRequired={(date = selectedDateKey) => { setLoginNextPath(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date, segment: "log" })); }}
           date={selectedDate}
           onDateChange={handleDateSelect}
           onUnauthorized={handleMealLogUnauthorized}
@@ -827,42 +742,18 @@ export function PlannerWeekScreen({
           role="tabpanel"
           tabIndex={0}
         >
-          <div aria-label="이번 주 요약" className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-[var(--text-2)]">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="hidden font-bold text-[var(--foreground)] sm:inline">이번 주 요약</span>
-              {[
-                ["등록", mealStats.registered, "var(--planner-status-registered)"],
-                ["장보기 완료", mealStats.shoppingDone, "var(--planner-status-shopping)"],
-                ["요리 완료", mealStats.cookDone, "var(--planner-status-cooked)"],
-              ].map(([label, count, color]) => <span className="inline-flex items-center gap-1.5" key={label}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: String(color) }} />{label} <strong className="text-[var(--foreground)]">{count}</strong></span>)}
-            </div>
-            {shoppingLists.length ? (
-              <Link
-                className="ml-auto inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-xs font-extrabold text-[var(--foreground)] shadow-sm hover:bg-[var(--surface-fill)]"
-                href={buildReturnHref("/mypage", {
-                  returnTo: buildPlannerShellHref(new URLSearchParams(), {
-                    date: selectedDate,
-                    segment: "plan",
-                  }),
-                  returnSurface: "planner.week",
-                  restore: "shopping-history-tab",
-                })}
-                onClick={() =>
-                  savePlannerWeekReturnContext({
-                    version: 1,
-                    startDate: rangeStartDate,
-                    endDate: rangeEndDate,
-                    selectedDate,
-                    columnId: null,
-                    slotName: null,
-                  })
-                }
-              >
-                <span className="text-[var(--ui-sky-700)]">캘린더 보기</span>
-                <span aria-hidden="true" className="h-3 w-px bg-[var(--line-strong)]" />
-                <span>이번 주 장보기 기록 {shoppingLists.length}개</span>
-              </Link>
-            ) : null}
+          <div className="lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <div>
+          <PlannerWeekOverview
+            dateKeys={buildDateKeys(navigationRange.startDate, navigationRange.endDate)}
+            meals={meals}
+            productEntries={productEntries}
+            selectedDate={selectedDateKey}
+            today={todayKey}
+            loading={screenState === "loading" || isRefreshing}
+            onSelect={handleOverviewSelect}
+            onShiftWeek={shiftRange}
+          />
           </div>
           <div className="min-w-0">
             <section
@@ -887,7 +778,7 @@ export function PlannerWeekScreen({
                 <div role="alert" className="mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] p-3 text-sm">
                   <p>{errorMessage}</p>
                   <button
-                    className="min-h-11 font-bold text-[var(--brand-contrast)]"
+                    className="min-h-11 font-medium text-[var(--brand-contrast)]"
                     onClick={retryPlannerLoad}
                     type="button"
                   >
@@ -897,10 +788,8 @@ export function PlannerWeekScreen({
               ) : null}
               {screenState === "ready" || screenState === "empty" || screenState === "read-only" ? (
                 <PlannerWeekBoard
-                  dateKeys={dateKeys}
                   columns={columns}
                   meals={meals}
-                  nutritionByMeal={displayedNutrition}
                   onMealOpen={guest ? () => setLoginNextPath(buildPlannerShellHref(new URLSearchParams(), { date: selectedDate, segment: "plan" })) : undefined}
                   selectedDate={selectedDate}
                   today={todayKey}
@@ -932,17 +821,56 @@ export function PlannerWeekScreen({
             </section>
 
           </div>
+          <div aria-label="이번 주 요약" className="mt-4 mb-3 flex flex-col lg:col-start-1 items-start gap-2 text-xs text-[var(--text-2)]">
+            {shoppingLists.length ? (
+              <Link
+                className="ml-auto inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)] shadow-sm hover:bg-[var(--surface-fill)]"
+                href={buildReturnHref("/mypage", {
+                  returnTo: buildPlannerShellHref(new URLSearchParams(), {
+                    date: selectedDate,
+                    segment: "plan",
+                  }),
+                  returnSurface: "planner.week",
+                  restore: "shopping-history-tab",
+                })}
+                onClick={() =>
+                  savePlannerWeekReturnContext({
+                    version: 1,
+                    startDate: rangeStartDate,
+                    endDate: rangeEndDate,
+                    selectedDate,
+                    columnId: null,
+                    slotName: null,
+                  })
+                }
+              >
+                <span className="text-[var(--ui-sky-700)]">캘린더 보기</span>
+                <span aria-hidden="true" className="h-3 w-px bg-[var(--line-strong)]" />
+                <span>이번 주 장보기 기록 {shoppingLists.length}개</span>
+              </Link>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="hidden font-medium text-[var(--foreground)] sm:inline">이번 주 요약</span>
+              {[
+                ["등록", mealStats.registered, "var(--planner-status-registered)"],
+                ["장보기 완료", mealStats.shoppingDone, "var(--planner-status-shopping)"],
+                ["요리 완료", mealStats.cookDone, "var(--planner-status-cooked)"],
+              ].map(([label, count, color]) => <span className="inline-flex items-center gap-1.5" key={label}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: String(color) }} />{label} <strong className="font-medium text-[var(--foreground)]">{count}</strong></span>)}
+            </div>
+          </div>
+          </div>
         </div>
       )}
       {loginNextPath ? <PlannerLoginDialog nextPath={loginNextPath} onClose={() => setLoginNextPath(null)} /> : null}
       {mealAddTarget && !guest && activeSegment === "plan" && canAddMeal ? (
-        <div ref={mealAddBoundaryRef}>
+        <div>
           {mealAddMode ? (
             <MealAddPickerFlow
               columnId={mealAddTarget.columnId}
               entryMode={mealAddMode}
               key={`${mealAddTarget.dateKey}:${mealAddTarget.columnId}:${mealAddMode}`}
               onClose={() => setMealAddMode(null)}
+              onDismiss={closeMealAdd}
               onComplete={completeMealAdd}
               planDate={mealAddTarget.dateKey}
               slotName={mealAddTarget.slotName}

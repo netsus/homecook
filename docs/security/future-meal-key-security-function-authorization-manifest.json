@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "slice": "future-meal-create-idempotency",
+  "migrations": [
+    "supabase/migrations/20261006130000_future_meal_create_idempotency.sql"
+  ],
+  "context_migrations": [
+    "supabase/migrations/20261006120000_meal_log_nutrition_preview.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "authorization_rationale": "Verified current account/session authority precedes receipt replay; receipts scoped by owner and generation; existing authoritative meal writer retains recipe/column ownership checks. Exact POST /rpc/create_future_meal_idempotent under future-meal-write.",
+  "verification": [
+    "tests/meals-create-idempotency-route.test.ts",
+    "tests/sql/future-meal-key-full-schema-verify.sql"
+  ],
+  "functions": [
+    {
+      "signature": "public.create_future_meal_idempotent(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, uuid, date, uuid, integer, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "effect": "mutation",
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.verify_full_local_internal_scope()",
+      "control_class": "application-controlled",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "effect": "trigger/internal",
+      "replaces_additive": "meal-log-nutrition-preview",
+      "owner": "postgres"
+    },
+    {
+      "signature": "private.verify_scope_pre_meal_create_key_20261006()",
+      "control_class": "application-controlled",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ],
+      "effect": "trigger/internal",
+      "owner": "postgres"
+    }
+  ],
+  "execution_role": "postgres"
+}

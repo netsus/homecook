@@ -1,3 +1,4 @@
+import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
@@ -64,6 +65,7 @@ export async function createProductPlannerEntry(body: ProductPlannerEntryCreateB
       body: JSON.stringify(body),
     },
   );
+  notifyActionNotificationsChanged();
   return data.entry;
 }
 

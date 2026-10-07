@@ -16,6 +16,7 @@ function selectedDay() {
 async function openBreakfast(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("region", { name: "8월 10일 월요일 식사 기록" });
   await user.click(await selectedDay().findByRole("button", { name: "아침에 먹은 음식 추가" }));
+  await user.click(screen.getByRole("tab", { name: "요리한 음식" }));
 }
 
 describe("MEAL_LOG unauthorized return-to-action", () => {
@@ -27,7 +28,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     expect(await screen.findByRole("dialog", { name: "로그인이 필요해요" })).toBeTruthy();
     expect(screen.queryByText("달걀")).toBeNull();
-    expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: /월 \d+일/ })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "먹은 음식 추가" })).toBeNull();
     const gate = screen.getByRole("dialog", { name: "로그인이 필요해요" });
     expect(within(gate).getByRole("link", { name: "로그인" }).getAttribute("href"))
@@ -41,7 +42,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     await openBreakfast(user);
     await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     await user.click(await screen.findByRole("button", { name: /달걀/u }));
-    await user.click(screen.getByRole("textbox", { name: "실제 양" }));
+    await user.click(screen.getByRole("textbox", { name: "먹은 양" }));
     await user.tab();
     await user.click(screen.getByRole("button", { name: "기록 저장" }));
 
@@ -60,9 +61,9 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     first.unmount();
     renderMealLogShell();
     const restored = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
-    expect(within(restored).getByText("8월 10일 · 아침")).toBeTruthy();
-    expect(within(restored).getByText("달걀", { selector: "footer p" })).toBeTruthy();
-    expect((within(restored).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("2");
+    expect(within(restored).getByText("8월 10일 아침")).toBeTruthy();
+    expect(within(restored).getByText("달걀", { selector: "section p" })).toBeTruthy();
+    expect((within(restored).getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("2");
     await waitFor(() => expect((within(restored).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(false));
     expect(within(restored).getByRole("combobox", { name: "단위" })).toBeTruthy();
     const restoredInvoker = selectedDay().getByRole("button", { hidden: true, name: "아침에 먹은 음식 추가" });
@@ -110,9 +111,9 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     restored.releaseBatchLoad();
     await waitFor(() => expect(
-      (within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).max,
+      (within(dialog).getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).max,
     ).toBe("60"));
-    expect(within(dialog).getByText("된장찌개", { selector: "footer p" })).toBeTruthy();
+    expect(within(dialog).getByText("된장찌개", { selector: "section p" })).toBeTruthy();
     expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
       .toBe(false);
   });
@@ -124,6 +125,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     const restored = renderMealLogShell({ catalogBadges: true, deferBatchLoad: true });
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    await user.click(within(dialog).getByRole("button", { name: "음식 선택으로 돌아가기" }));
     await user.click(within(dialog).getByRole("tab", { name: "제품·재료" }));
     await user.type(within(dialog).getByRole("searchbox", { name: "제품·재료 검색" }), "두유");
     await user.click(await within(dialog).findByRole("button", { name: /공공 두유/u }));
@@ -141,7 +143,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     renderMealLogShell({ batchRemainingWeight: 30, includeCookedBatch: true });
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
     expect(await within(dialog).findByText("남은 양 30g 이하로 입력해 주세요.")).toBeTruthy();
-    expect((within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).max)
+    expect((within(dialog).getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).max)
       .toBe("30");
     expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
       .toBe(true);
@@ -171,12 +173,13 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
 
     await waitFor(() => expect(
-      (within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).max,
+      (within(dialog).getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).max,
     ).toBe("55"));
-    expect(within(dialog).getByRole("button", { name: /카레/u })).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: "요리한 음식 더 불러오기" })).toBeTruthy();
     expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
       .toBe(false);
+    await user.click(within(dialog).getByRole("button", { name: "음식 선택으로 돌아가기" }));
+    expect(within(dialog).getByRole("button", { name: /카레/u })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "요리한 음식 더 불러오기" })).toBeTruthy();
     expect(restored.fetchMock.mock.calls
       .filter(([input]) => String(input).includes("/cooked-batches"))
       .map(([input]) => new URL(String(input), "http://localhost").searchParams.get("cursor")))
@@ -299,19 +302,20 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
       deferredBatchCursors: [null],
     });
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    await user.click(within(dialog).getByRole("button", { name: "음식 선택으로 돌아가기" }));
     await user.click(within(dialog).getByRole("tab", { name: "제품·재료" }));
     await user.type(within(dialog).getByRole("searchbox", { name: "제품·재료 검색" }), "두유");
     await user.click(await within(dialog).findByRole("button", { name: /공공 두유/u }));
-    expect(within(dialog).getByText("공공 두유", { selector: "footer p" })).toBeTruthy();
+    expect(within(dialog).getByText("공공 두유", { selector: "section p" })).toBeTruthy();
     expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
       .toBe(false);
 
     restored.releaseBatchLoad();
     await waitFor(() => {
       expect(restored.settledBatchCursors()).toEqual([null]);
-      expect(within(dialog).getByText("공공 두유", { selector: "footer p" })).toBeTruthy();
+      expect(within(dialog).getByText("공공 두유", { selector: "section p" })).toBeTruthy();
     });
-    expect((within(dialog).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value)
+    expect((within(dialog).getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value)
       .toBe("100");
     expect((within(dialog).getByRole("textbox", { name: "단위" }) as HTMLInputElement).value)
       .toBe("mL");
@@ -332,7 +336,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     renderMealLogShell(options);
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
     await waitFor(() => expect(within(dialog).queryByRole("button", { name: "기록 저장" })).toBeNull());
-    expect(within(dialog).queryByText("된장찌개", { selector: "footer p" })).toBeNull();
+    expect(within(dialog).queryByText("된장찌개", { selector: "section p" })).toBeNull();
   });
 
   it("preserves the edit draft and invoking entry action while hiding it after an edit 401", async () => {
@@ -340,11 +344,12 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const first = renderMealLogShell({ unauthorized: "edit" });
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 상세" });
+    await user.click(screen.getByRole("button", { name: "식사 기록 수정" }));
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     const amount = within(dialog).getByRole("textbox", { name: "먹은 양" });
     await user.clear(amount);
     await user.type(amount, "3");
-    await user.click(within(dialog).getByRole("button", { name: "먹은 양 수정" }));
+    await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
 
     expect(await screen.findByRole("dialog", { name: "로그인이 필요해요" })).toBeTruthy();
     expect(screen.queryByText("달걀")).toBeNull();
@@ -358,20 +363,22 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     first.unmount();
     renderMealLogShell();
-    const restored = await screen.findByRole("dialog", { name: "식사 기록 수정" });
-    expect((within(restored).getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("3");
+    const restored = await screen.findByRole("dialog", { name: /월 \d+일/ });
+    expect((within(restored).getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("3");
     const restoredInvoker = screen.getByRole("button", { hidden: true, name: /아침의 달걀 식사 기록 상세/u });
     await user.click(within(restored).getByRole("button", { name: "수정 저장" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(restoredInvoker));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /월 \d+일/ })).toBeNull());
+    expect(restoredInvoker.isConnected).toBe(true);
+    expect(screen.getByRole("dialog", { name: "식사 기록 상세" })).toBeTruthy();
   });
 
   it("preserves the invoking delete action while hiding the confirmation and private entry after 401", async () => {
     const user = userEvent.setup();
     const first = renderMealLogShell({ unauthorized: "delete" });
 
-    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 삭제/u }));
-    await user.click(within(screen.getByRole("alertdialog", { name: "식사 기록 삭제 확인" }))
+    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "기록 삭제" }));
+    await user.click(within(screen.getByRole("dialog", { name: /월 \d+일/ }))
       .getByRole("button", { name: "삭제" }));
 
     await waitFor(() => expect(screen.getByRole("dialog", { name: "로그인이 필요해요" })).toBeTruthy());
@@ -386,9 +393,9 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     first.unmount();
     renderMealLogShell({ applyMutationRefresh: true });
-    const restored = await screen.findByRole("alertdialog", { name: "식사 기록 삭제 확인" });
+    const restored = await screen.findByRole("dialog", { name: /월 \d+일/ });
     await user.click(within(restored).getByRole("button", { name: "삭제" }));
-    await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "식사 기록 삭제 확인" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /월 \d+일/ })).toBeNull());
     expect(screen.queryByRole("button", { name: /아침의 달걀 식사 기록 삭제/u })).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(selectedDay().getByRole("heading", { name: "아침" })));
   });
@@ -398,15 +405,16 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const first = renderMealLogShell({ unauthorized: "edit" });
 
     await user.click(await screen.findByRole("button", { name: /간식의 플레인 요거트 식사 기록 상세/u }));
-    const initialDialog = screen.getByRole("dialog", { name: "식사 기록 상세" });
+    await user.click(screen.getByRole("button", { name: "식사 기록 수정" }));
+    const initialDialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     expect(within(initialDialog).getByText("기존 위치: 삭제된 끼니 간식")).toBeTruthy();
-    expect((within(initialDialog).getByRole("button", { name: "먹은 양 수정" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(initialDialog).getByRole("button", { name: "수정 저장" }) as HTMLButtonElement).disabled).toBe(true);
     expect(first.fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
     await user.selectOptions(
       within(initialDialog).getByRole("combobox", { name: "옮길 끼니 (필수)" }),
       "20000000-0000-4000-8000-000000000002",
     );
-    await user.click(within(initialDialog).getByRole("button", { name: "먹은 양 수정" }));
+    await user.click(within(initialDialog).getByRole("button", { name: "수정 저장" }));
     await screen.findByRole("dialog", { name: "로그인이 필요해요" });
     const submitted = first.fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
     expect(JSON.parse(String(submitted?.[1]?.body))).toMatchObject({
@@ -417,14 +425,14 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
 
     first.unmount();
     renderMealLogShell({ applyMutationRefresh: true });
-    const restored = await screen.findByRole("dialog", { name: "식사 기록 수정" });
+    const restored = await screen.findByRole("dialog", { name: /월 \d+일/ });
     const originalInvoker = screen.getByRole("button", { hidden: true, name: /간식의 플레인 요거트 식사 기록 상세/u });
     await user.click(within(restored).getByRole("button", { name: "수정 저장" }));
 
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
-    const currentInvoker = screen.getByRole("button", { name: /점심의 플레인 요거트 식사 기록 상세/u });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /월 \d+일/ })).toBeNull());
+    const currentInvoker = screen.getByRole("button", { hidden: true, name: /점심의 플레인 요거트 식사 기록 상세/u });
     expect(originalInvoker.isConnected).toBe(false);
     expect(currentInvoker.isConnected).toBe(true);
-    await waitFor(() => expect(document.activeElement).toBe(selectedDay().getByRole("heading", { name: "점심" })));
+    expect(screen.getByRole("dialog", { name: "식사 기록 상세" })).toBeTruthy();
   });
 });

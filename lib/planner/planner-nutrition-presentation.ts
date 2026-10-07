@@ -32,10 +32,10 @@ const WARNING_MESSAGES: Record<string, string> = {
   UNIT_CONVERSION_MISSING: "일부 재료나 단위의 영양값을 계산하지 못했어요.",
 };
 
-function formatAmount(amount: number) {
+function formatAmount(amount: number, wholeNumber: boolean) {
   return new Intl.NumberFormat("ko-KR", {
-    maximumFractionDigits: 1,
-  }).format(amount);
+    maximumFractionDigits: wholeNumber ? 0 : 1,
+  }).format(wholeNumber ? Math.round(amount) : amount);
 }
 
 export function formatPlannerNutritionValue(
@@ -45,11 +45,11 @@ export function formatPlannerNutritionValue(
   const unit = PLANNER_NUTRITION_UNITS[code];
 
   if (value.status === "complete" && value.amount !== null) {
-    return `${formatAmount(value.amount)} ${unit}`;
+    return `${formatAmount(value.amount, unit !== "mg")} ${unit}`;
   }
 
   if (value.status === "partial" && value.known_amount !== null) {
-    return `${formatAmount(value.known_amount)} ${unit}`;
+    return `${formatAmount(value.known_amount, unit !== "mg")} ${unit}`;
   }
 
   return "정보 준비 중";

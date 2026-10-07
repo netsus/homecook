@@ -1,0 +1,38 @@
+{
+  "tool": "built-in image_gen",
+  "common_prompt": "Create a Korean mobile LOW-FIDELITY UX wireframe board for existing app 무먹. This is part of one coherent approved-design set, NOT competing options. Two equally sized side-by-side mobile CONTENT frames, each logical375x812px, enlarged crisp Korean at14–16px body, export tall near-square two-frame board. Reference images ground visual style, but user-approved STRUCTURE in prompt overrides them. White app backgrounds, very light gray surfaces, charcoal typography, modest blue actionablecontrols, singlethinborders and quietlineicons. NO photography/illustrations, no gradients/3D/glows, no tinygrayparagraphs, no cards nested insidecards, no phonebezel/OSstatusbar/notch/browserchrome. Render English units correctly. Exact nutrition PALETTE MUST be consistent: carbohydrate skyblue #94C9FF; protein PINK #FFA7C2; fat pale YELLOW #FFD477. Not purple/orange. Dark text on pastels. Bar labels outside not white illegible textinside. Nutrition colors encode nutrients, nevermeals. All numeric nutritiondisplay integers. All mockdates Monday2026-10-05, weekOct5–11 withcorrectweekdays. Smallfooter OUTSIDE appframes \"예시 데이터 · 설계 검토용\". Apps sameheader scaleand44pxtargets. No random ornaments or undocumentedfeatures. Each board has a shorttitle above and each frame a caption outside. Content area has realisticspacing; allow scroll instead ofshrinkingfonts. Bottomnav ONLY on main browsing screens; detail pages haveback and no globalnav. For additions/edits ALWAYS a bottomsheet covering~75% viewport: show recognizable oldscreen behinddimoverlay in TOP25%, roundedsheet topcorners, draghandle, compacttitleand×, inheriteddate/meal, oneinnerscroller, no stackedmodal, no exposedtappableglobalnav. Bottom action within sheetflow or smallsheetfooter, never largefloatingbutton overkeyboard. Withkeyboard sheet mayexpandtoavailableviewport and keep a small backgroundstrip, avoiddouble scroll; submit reachablebyscrollinginside, no hiddenfields. No changestoapplicationcode requested. Produce one finished boardimage only.",
+  "boards": [
+    [
+      "01",
+      "요리계획 A: 주간 개요와 선택한 날. 식사기록: 음식명 다음 줄에 양·kcal·짧은 탄단지 구성 막대. 막대는 세 색으로 100% 채우고 목표 진행률과 혼동되는 빈 회색 부분은 제거."
+    ],
+    [
+      "02",
+      "요리계획 배경 위 하단 모달: 레시피 검색/레시피북/직접 등록/유튜브 → 선택한 레시피의 계획 인분 확인. 간결한 2인분 예상 열량만 표시."
+    ],
+    [
+      "03",
+      "끼니 상세와 계획한 요리 상세. 상태별 대표 행동, 계획 인분 변경, 계획에 저장된 재료/만들기, 예상 영양, 장보기 기록, 해당 계획 삭제."
+    ],
+    [
+      "04",
+      "식사기록 배경 위 하단 모달: 최근/요리한 음식/제품·재료. 최근 목록과 제품 검색 결과 두 상태."
+    ],
+    [
+      "05",
+      "먹은 양 입력 모달: 현재 남은 양, 선택량, 해당량 영양, 기록 후 잔량. 숫자 키보드 상태에는 큰 고정 버튼/글로벌 하단 탭 없이 하나의 스크롤 영역."
+    ],
+    [
+      "06",
+      "하루 영양 상세: 기본 열량 누적 가로막대와 단백질 선택 단색 가로막대. 같은 단위/영점/눈금으로 끼니 비교. 아래 기록과 기여 음식 연결."
+    ],
+    [
+      "07",
+      "기록된 음식 상세와 그 위의 양 수정 모달. 300g→250g, 310→258kcal 예시, 수정 후 잔량350g. 음식/레시피 원본 유지."
+    ],
+    [
+      "08",
+      "계획과 식사기록 한 건의 삭제 확인 하단 모달. 대상 날짜/끼니/음식/양 명시, 취소와 해당 항목 삭제. 완료 후 같은 날짜 화면 복귀."
+    ]
+  ]
+}

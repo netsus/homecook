@@ -190,7 +190,7 @@ describe("LeftoversScreen", () => {
     const user = userEvent.setup();
     await user.click((await screen.findAllByRole("button", { name: "김치찌개 식사 기록" }))[0]);
     const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
-    const amount = await within(dialog).findByRole("textbox", { name: "실제 양" });
+    const amount = await within(dialog).findByRole("textbox", { name: "먹은 양" });
     await user.clear(amount);
     await user.type(amount, "120");
     await user.click(within(dialog).getByRole("button", { name: "기록 저장" }));

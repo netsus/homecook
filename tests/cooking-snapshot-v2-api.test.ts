@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { cancelSnapshotV2CookingSession, completeSnapshotV2CookingSession, createSnapshotV2CookingSession, fetchSnapshotV2CookMode } from "@/lib/api/cooking";
 
+vi.mock("@/lib/app-action-notifications", () => ({
+  notifyActionNotificationsChanged: vi.fn(),
+}));
+import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
+
 const UUID = "550e8400-e29b-41d4-a716-446655440000";
 const RECIPE_UUID = "550e8400-e29b-41d4-a716-446655440001";
 const BATCH_UUID = "550e8400-e29b-41d4-a716-446655440002";
@@ -59,7 +64,7 @@ function validCookModeData(sessionId = UUID, mode: "planner" | "standalone" = "s
 }
 
 describe("snapshot v2 cooking API", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
 
   it("accepts explicitly estimated completion without changing the client's weigh-later payload", async () => {
     const valid = validCompleteData();
@@ -68,8 +73,10 @@ describe("snapshot v2 cooking API", () => {
     const body = { consumed_pantry_item_ids: [RECIPE_UUID], weight_action: "weigh_later" as const, finished_weight_g: null };
     await expect(completeSnapshotV2CookingSession(UUID, body, BATCH_UUID, "standalone")).resolves.toEqual(estimated);
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(body);
+    expect(notifyActionNotificationsChanged).toHaveBeenCalledTimes(1);
     fetchMock.mockImplementationOnce(() => response({ ...valid, cooked_batch: { ...valid.cooked_batch, weight_source: "measured" } }));
     await expect(completeSnapshotV2CookingSession(UUID, body, BATCH_UUID, "standalone")).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    expect(notifyActionNotificationsChanged).toHaveBeenCalledTimes(1);
   });
 
   it("sends the same explicit UUID idempotency key for cancel replays", async () => {

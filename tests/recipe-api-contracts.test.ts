@@ -1924,7 +1924,7 @@ describe("recipe API contracts", () => {
     },
   );
 
-  it("awaits the recipe detail view-count persistence through the narrow local view writer", async () => {
+  it.each([false, true])("records detail visits but not picker previews (preview=%s)", async (preview) => {
     const recipeReadQuery = createQuery({
       data: {
         id: "recipe-1",
@@ -2000,16 +2000,17 @@ describe("recipe API contracts", () => {
     });
 
     const { GET } = await import("@/app/api/v1/recipes/[id]/route");
-    const response = await GET(new Request("http://localhost:3000/api/v1/recipes/recipe-1"), {
+    const response = await GET(new Request(`http://localhost:3000/api/v1/recipes/recipe-1${preview ? "?view=preview" : ""}`), {
       params: Promise.resolve({ id: "recipe-1" }),
     });
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(increment).toHaveBeenCalledWith("recipe-1");
+    if (preview) expect(increment).not.toHaveBeenCalled();
+    else expect(increment).toHaveBeenCalledWith("recipe-1");
     expect(rpc).not.toHaveBeenCalled();
-    expect(viewCountRpcQuery.maybeSingle).toHaveBeenCalled();
-    expect(body.data.view_count).toBe(11);
+    expect(viewCountRpcQuery.maybeSingle).toHaveBeenCalledTimes(preview ? 0 : 1);
+    expect(body.data.view_count).toBe(preview ? 10 : 11);
     expect(readRecipeImageProjection).toHaveBeenCalledWith({
       client: expect.any(Object),
       recipeId: "recipe-1",

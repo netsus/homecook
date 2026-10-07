@@ -1,0 +1,2495 @@
+{
+  "schema_version": "homecook-catalog-cleanup-20261006",
+  "actor_id": "1ae7bee7-57fe-41ce-8ff5-315724600476",
+  "reviewed_at": "2026-10-06T13:10:42.926Z",
+  "user_scope": "집밥·일상 베이킹 중심: 미사용 약용식물·희귀 식재료·과도한 세분 항목 정리",
+  "deletes": [
+    {
+      "id": "5f211100-368f-5ed7-a675-e70f58522a71",
+      "name": "가시오갈피",
+      "action": "hard_delete_candidate",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결도 0이므로 재확인 후 물리삭제 가능한 후보. 기존 검토표와 현재 재조회 대조 완료.",
+      "expected": {
+        "id": "5f211100-368f-5ed7-a675-e70f58522a71",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "가시오갈피",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "가시오갈피"
+      }
+    },
+    {
+      "id": "355caef0-54bf-5381-995e-d617b12e1f2b",
+      "name": "구기자",
+      "action": "hard_delete_candidate",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결도 0이므로 재확인 후 물리삭제 가능한 후보. 기존 검토표와 현재 재조회 대조 완료.",
+      "expected": {
+        "id": "355caef0-54bf-5381-995e-d617b12e1f2b",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "구기자",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "구기자"
+      }
+    },
+    {
+      "id": "2cceb78e-d82c-55be-9e7c-fd2f0f500ec9",
+      "name": "꾸지뽕",
+      "action": "hard_delete_candidate",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결도 0이므로 재확인 후 물리삭제 가능한 후보. 기존 검토표와 현재 재조회 대조 완료.",
+      "expected": {
+        "id": "2cceb78e-d82c-55be-9e7c-fd2f0f500ec9",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "꾸지뽕",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "꾸지뽕"
+      }
+    },
+    {
+      "id": "9e405f89-b76e-5d7c-af5a-6b7666123eb6",
+      "name": "둥굴레",
+      "action": "hard_delete_candidate",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결도 0이므로 재확인 후 물리삭제 가능한 후보. 기존 검토표와 현재 재조회 대조 완료.",
+      "expected": {
+        "id": "9e405f89-b76e-5d7c-af5a-6b7666123eb6",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "둥굴레",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "둥굴레"
+      }
+    },
+    {
+      "id": "052926f7-7664-53f5-8da1-9fee4716df14",
+      "name": "상황버섯",
+      "action": "hard_delete_candidate",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결도 0이므로 재확인 후 물리삭제 가능한 후보. 기존 검토표와 현재 재조회 대조 완료.",
+      "expected": {
+        "id": "052926f7-7664-53f5-8da1-9fee4716df14",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "상황버섯",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "상황버섯"
+      }
+    },
+    {
+      "id": "68af9ba5-b24e-53ef-8017-b0c3e7dc66cb",
+      "name": "영지버섯",
+      "action": "hard_delete_candidate",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결도 0이므로 재확인 후 물리삭제 가능한 후보. 기존 검토표와 현재 재조회 대조 완료.",
+      "expected": {
+        "id": "68af9ba5-b24e-53ef-8017-b0c3e7dc66cb",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "영지버섯",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "영지버섯"
+      }
+    },
+    {
+      "id": "e0f66624-2146-5db1-ac60-8088c0d4020a",
+      "name": "화살나무",
+      "action": "hard_delete_candidate",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결도 0이므로 재확인 후 물리삭제 가능한 후보. 기존 검토표와 현재 재조회 대조 완료.",
+      "expected": {
+        "id": "e0f66624-2146-5db1-ac60-8088c0d4020a",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "화살나무",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "화살나무"
+      }
+    },
+    {
+      "id": "44bd8a1e-c9d5-5dff-b2f9-d08e6819ed11",
+      "name": "거위고기",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "44bd8a1e-c9d5-5dff-b2f9-d08e6819ed11",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "거위고기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "거위고기"
+      }
+    },
+    {
+      "id": "2031d07b-0e21-548f-896b-56d8bd2d6412",
+      "name": "꿩고기",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "2031d07b-0e21-548f-896b-56d8bd2d6412",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "꿩고기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "꿩고기"
+      }
+    },
+    {
+      "id": "2c1923b1-cc84-5cdf-a000-81b3404297b3",
+      "name": "말고기",
+      "action": "hard_delete_candidate",
+      "reason": "국내 초보 집밥·일상 베이킹 기본 재료 범위에서 벗어난 특수 육류. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "2c1923b1-cc84-5cdf-a000-81b3404297b3",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "말고기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말고기"
+      }
+    },
+    {
+      "id": "713c399c-650f-5f58-b8d3-2068c71fe489",
+      "name": "송아지고기",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "713c399c-650f-5f58-b8d3-2068c71fe489",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "송아지고기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "송아지고기"
+      }
+    },
+    {
+      "id": "e262fe7d-3e52-53ca-ac9b-0bb22af58d2a",
+      "name": "송아지고기 갈비",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "e262fe7d-3e52-53ca-ac9b-0bb22af58d2a",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "송아지고기갈비",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "송아지고기 갈비"
+      }
+    },
+    {
+      "id": "73da4236-0630-59f2-942a-911bac6f7f3c",
+      "name": "송아지고기 등심",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "73da4236-0630-59f2-942a-911bac6f7f3c",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "송아지고기등심",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "송아지고기 등심"
+      }
+    },
+    {
+      "id": "6bb0bf7d-fdbb-5cc2-a3da-9ea63d40a7fc",
+      "name": "송아지고기 어깨",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "6bb0bf7d-fdbb-5cc2-a3da-9ea63d40a7fc",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "송아지고기어깨",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "송아지고기 어깨"
+      }
+    },
+    {
+      "id": "d00bdd19-7a05-5fa2-9964-73733f5ec4fa",
+      "name": "송아지고기 채끝",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "d00bdd19-7a05-5fa2-9964-73733f5ec4fa",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "송아지고기채끝",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "송아지고기 채끝"
+      }
+    },
+    {
+      "id": "6fb24ff1-34a4-4182-aed8-d43d84729503",
+      "name": "식용 금",
+      "action": "hard_delete_candidate",
+      "reason": "섭취·영양 목적보다 전문 제과 장식 목적의 재료로 일상 베이킹 범위 밖. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "6fb24ff1-34a4-4182-aed8-d43d84729503",
+        "category": "기타",
+        "created_at": "2026-07-17T11:00:59.518586+00:00",
+        "search_name": "식용금",
+        "default_unit": null,
+        "category_code": "frozen_ready_drink_other",
+        "standard_name": "식용 금"
+      }
+    },
+    {
+      "id": "576b9cd4-b17c-5170-87cc-cf672b2d5b3c",
+      "name": "자라고기",
+      "action": "hard_delete_candidate",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON·영양·환산 참조 0건; 별칭 외 연결이 없어 물리 삭제 후보.",
+      "expected": {
+        "id": "576b9cd4-b17c-5170-87cc-cf672b2d5b3c",
+        "category": "육류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "자라고기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "자라고기"
+      }
+    },
+    {
+      "id": "02554a9d-9855-56ad-bb9c-97fbd5ced9d1",
+      "name": "팽화",
+      "action": "hard_delete_candidate",
+      "reason": "식품 종류 없이 가공 공정명만 남은 미사용 항목. 직접·JSON·영양·별칭 참조가 없으므로 삭제.",
+      "expected": {
+        "id": "02554a9d-9855-56ad-bb9c-97fbd5ced9d1",
+        "category": "곡류",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "팽화",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "팽화"
+      }
+    }
+  ],
+  "renames": [
+    {
+      "id": "82b64ffd-24f7-4b0d-b974-b2f8c028595e",
+      "old_name": "호박 하얀색",
+      "new_name": "차요테 (흰색)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1280 「호박, 차요테, 하얀색, 생것」에서 식품 종류·순차 조리상태를 그대로 복원. 현재 이름에서 빠진 차요테/국수호박의 식품 정체성을 복원. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "82b64ffd-24f7-4b0d-b974-b2f8c028595e",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "호박하얀색",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "호박 하얀색"
+      }
+    },
+    {
+      "id": "078b1e76-2000-4ab7-b1b9-3dd4d247c97b",
+      "old_name": "초록 호박",
+      "new_name": "차요테 (초록색)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1279 「호박, 차요테, 초록색, 생것」에서 식품 종류·순차 조리상태를 그대로 복원. 현재 이름에서 빠진 차요테/국수호박의 식품 정체성을 복원. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "078b1e76-2000-4ab7-b1b9-3dd4d247c97b",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "초록호박",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "초록 호박"
+      }
+    },
+    {
+      "id": "225f919a-3be4-4d60-94dd-f50c1c3f03be",
+      "old_name": "데친 호박",
+      "new_name": "데친 국수호박",
+      "reason": "승인 활성 원자료 RDA10.4 key 1264 「호박, 국수호박, 데친것」에서 식품 종류·순차 조리상태를 그대로 복원. 현재 이름에서 빠진 차요테/국수호박의 식품 정체성을 복원. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "225f919a-3be4-4d60-94dd-f50c1c3f03be",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "데친호박",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "데친 호박"
+      }
+    },
+    {
+      "id": "34a6847d-8d9d-4847-993f-c55113ab4da9",
+      "old_name": "말리거나 데친 토란대 줄기",
+      "new_name": "말린 토란대 (데친 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1223 「토란대, 줄기, 말린것, 데친것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "34a6847d-8d9d-4847-993f-c55113ab4da9",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나데친토란대줄기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 데친 토란대 줄기"
+      }
+    },
+    {
+      "id": "5c61578f-aab6-490e-9da0-811c4e8e6d97",
+      "old_name": "말리거나 삶은 강낭콩",
+      "new_name": "말린 강낭콩 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3289 「강낭콩, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "5c61578f-aab6-490e-9da0-811c4e8e6d97",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은강낭콩",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 강낭콩"
+      }
+    },
+    {
+      "id": "b13ef32c-4d24-4851-86dd-b78f522278b5",
+      "old_name": "말리거나 삶은 고비 야생",
+      "new_name": "말린 야생 고비 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 747 「고비, 야생, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "b13ef32c-4d24-4851-86dd-b78f522278b5",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은고비야생",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 고비 야생"
+      }
+    },
+    {
+      "id": "84f6a9cf-c943-45f0-88d8-1f752eca5575",
+      "old_name": "말리거나 삶은 마카로니",
+      "new_name": "마카로니 건면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 214 「마카로니, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "84f6a9cf-c943-45f0-88d8-1f752eca5575",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은마카로니",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 마카로니"
+      }
+    },
+    {
+      "id": "ac009277-2970-40a7-90fd-e096f6a389bc",
+      "old_name": "말리거나 삶은 메밀 국수",
+      "new_name": "메밀국수 건면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 19 「메밀 국수, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "ac009277-2970-40a7-90fd-e096f6a389bc",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은메밀국수",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 메밀 국수"
+      }
+    },
+    {
+      "id": "b0e4de5d-efb8-47a7-a0f9-c94664635c0c",
+      "old_name": "말리거나 삶은 멥쌀 국수",
+      "new_name": "멥쌀국수 건면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3274 「멥쌀 국수, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "b0e4de5d-efb8-47a7-a0f9-c94664635c0c",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은멥쌀국수",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 멥쌀 국수"
+      }
+    },
+    {
+      "id": "ce736de8-0c13-4491-afd6-fad17e6185a7",
+      "old_name": "말리거나 삶은 병아리콩",
+      "new_name": "말린 병아리콩 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3292 「병아리콩, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "ce736de8-0c13-4491-afd6-fad17e6185a7",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은병아리콩",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 병아리콩"
+      }
+    },
+    {
+      "id": "10e06724-5370-46d6-b12d-8032ab791c78",
+      "old_name": "말리거나 삶은 상추 줄기상추 줄기",
+      "new_name": "말린 궁채 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3576 「상추, 줄기상추(궁채), 줄기, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "10e06724-5370-46d6-b12d-8032ab791c78",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은상추줄기상추줄기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 상추 줄기상추 줄기"
+      }
+    },
+    {
+      "id": "5f03e3d7-7068-446f-a903-6a0edc2747f4",
+      "old_name": "말리거나 삶은 소면 중면",
+      "new_name": "중면 건면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 210 「국수, 중면, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "5f03e3d7-7068-446f-a903-6a0edc2747f4",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은소면중면",
+        "default_unit": "g",
+        "category_code": "noodle_pasta",
+        "standard_name": "말리거나 삶은 소면 중면"
+      }
+    },
+    {
+      "id": "c4545ee1-34b6-40c0-8fdb-8e42be8e000e",
+      "old_name": "말리거나 삶은 에그누들",
+      "new_name": "에그누들 건면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3398 「에그누들, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "c4545ee1-34b6-40c0-8fdb-8e42be8e000e",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은에그누들",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 에그누들"
+      }
+    },
+    {
+      "id": "bb1754c9-0ff4-4d29-aaa9-049ebf5436a6",
+      "old_name": "말리거나 삶은 완두",
+      "new_name": "말린 완두 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3293 「완두, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "bb1754c9-0ff4-4d29-aaa9-049ebf5436a6",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은완두",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 완두"
+      }
+    },
+    {
+      "id": "404a70c1-db36-4791-9a77-ea71e2654d16",
+      "old_name": "말리거나 삶은 취나물",
+      "new_name": "말린 참취 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1200 「취나물, 참취, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "404a70c1-db36-4791-9a77-ea71e2654d16",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은취나물",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 취나물"
+      }
+    },
+    {
+      "id": "c12979c9-850a-43f4-8cc6-3faff6139733",
+      "old_name": "말리거나 삶은 칼국수면",
+      "new_name": "칼국수 건면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3400 「칼국수면, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "c12979c9-850a-43f4-8cc6-3faff6139733",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은칼국수면",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 칼국수면"
+      }
+    },
+    {
+      "id": "65944e20-a783-4210-ab8e-3238d45f6818",
+      "old_name": "말리거나 삶은 파스타면",
+      "new_name": "스파게티 건면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 216 「스파게티면, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "65944e20-a783-4210-ab8e-3238d45f6818",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은파스타면",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 파스타면"
+      }
+    },
+    {
+      "id": "b629e4e5-7ed2-449e-acb4-1e4c6648cc7a",
+      "old_name": "말리거나 삶은 표고버섯 배지재배",
+      "new_name": "말린 표고버섯 (배지재배, 삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1362 「표고버섯, 배지재배, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "b629e4e5-7ed2-449e-acb4-1e4c6648cc7a",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은표고버섯배지재배",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 표고버섯 배지재배"
+      }
+    },
+    {
+      "id": "9c1aabcd-cbcf-45fd-abdd-ebc1359f491c",
+      "old_name": "말리거나 삶은 표고버섯 배지재배 대",
+      "new_name": "말린 표고버섯 대 (배지재배, 삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1370 「표고버섯, 배지재배, 대, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "9c1aabcd-cbcf-45fd-abdd-ebc1359f491c",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은표고버섯배지재배대",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 표고버섯 배지재배 대"
+      }
+    },
+    {
+      "id": "eeb752ee-19ec-4512-999f-cde36804ddf1",
+      "old_name": "말리거나 삶은 표고버섯 참나무재배",
+      "new_name": "말린 표고버섯 (참나무재배, 삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1374 「표고버섯, 참나무재배, 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "eeb752ee-19ec-4512-999f-cde36804ddf1",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "말리거나삶은표고버섯참나무재배",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "말리거나 삶은 표고버섯 참나무재배"
+      }
+    },
+    {
+      "id": "64290f73-6357-4dd0-bc94-05eb438c4992",
+      "old_name": "삶아 말리거나 데친 취나물",
+      "new_name": "삶아 말린 참취 (데친 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1202 「취나물, 참취, 삶아서 말린것, 데친것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "64290f73-6357-4dd0-bc94-05eb438c4992",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "삶아말리거나데친취나물",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "삶아 말리거나 데친 취나물"
+      }
+    },
+    {
+      "id": "3d869cb0-9ad6-42b4-b872-bbff4f39bc4b",
+      "old_name": "삶아 말리거나 삶은 고구마 줄기",
+      "new_name": "삶아 말린 고구마 줄기 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 736 「고구마, 줄기, 삶아서 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "3d869cb0-9ad6-42b4-b872-bbff4f39bc4b",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "삶아말리거나삶은고구마줄기",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "삶아 말리거나 삶은 고구마 줄기"
+      }
+    },
+    {
+      "id": "03a156f5-8b03-44aa-aabe-e7fbff7a4aec",
+      "old_name": "삶아 말리거나 삶은 고구마 줄기 껍질 포함",
+      "new_name": "삶아 말린 고구마 줄기 (껍질 포함, 삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 739 「고구마, 줄기, 껍질 포함, 삶아서 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "03a156f5-8b03-44aa-aabe-e7fbff7a4aec",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "삶아말리거나삶은고구마줄기껍질포함",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "삶아 말리거나 삶은 고구마 줄기 껍질 포함"
+      }
+    },
+    {
+      "id": "99cce9fe-f43d-4b36-8348-7b2b2e97763f",
+      "old_name": "삶아 말리거나 삶은 고춧잎",
+      "new_name": "삶아 말린 고춧잎 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 772 「고춧잎, 삶아서 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "99cce9fe-f43d-4b36-8348-7b2b2e97763f",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "삶아말리거나삶은고춧잎",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "삶아 말리거나 삶은 고춧잎"
+      }
+    },
+    {
+      "id": "89fed45a-5ae1-47d2-87b9-1d1cb621afab",
+      "old_name": "삶아 말리거나 삶은 뽕잎",
+      "new_name": "삶아 말린 뽕잎 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 975 「뽕잎, 삶아서 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "89fed45a-5ae1-47d2-87b9-1d1cb621afab",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "삶아말리거나삶은뽕잎",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "삶아 말리거나 삶은 뽕잎"
+      }
+    },
+    {
+      "id": "20f940b2-1d1b-4278-91ae-e6110541cd02",
+      "old_name": "삶아 말리거나 삶은 참죽나물 순",
+      "new_name": "삶아 말린 참죽나물 순 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 1183 「참죽나물, 순, 삶아서 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "20f940b2-1d1b-4278-91ae-e6110541cd02",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "삶아말리거나삶은참죽나물순",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "삶아 말리거나 삶은 참죽나물 순"
+      }
+    },
+    {
+      "id": "ce85144b-63b6-4894-a1fd-afb86134620c",
+      "old_name": "삶아 말리거나 삶은 취나물",
+      "new_name": "삶아 말린 미역취 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 3496 「취나물, 미역취, 삶아서 말린것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "ce85144b-63b6-4894-a1fd-afb86134620c",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "삶아말리거나삶은취나물",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "삶아 말리거나 삶은 취나물"
+      }
+    },
+    {
+      "id": "32e309a1-62fd-4646-92ae-92857a445048",
+      "old_name": "생 또는 삶은 메밀 국수",
+      "new_name": "메밀국수 생면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 17 「메밀 국수, 생것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "32e309a1-62fd-4646-92ae-92857a445048",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "생또는삶은메밀국수",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "생 또는 삶은 메밀 국수"
+      }
+    },
+    {
+      "id": "40bbd6c0-f0bb-4bc2-adde-09aad4984255",
+      "old_name": "생 또는 삶은 우동면",
+      "new_name": "우동 생면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 218 「우동면, 생것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "40bbd6c0-f0bb-4bc2-adde-09aad4984255",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "생또는삶은우동면",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "생 또는 삶은 우동면"
+      }
+    },
+    {
+      "id": "1752ec08-3bac-41b5-9a7b-e8a29a044979",
+      "old_name": "생 또는 삶은 중식면",
+      "new_name": "중식 생면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 220 「중식면, 생것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "1752ec08-3bac-41b5-9a7b-e8a29a044979",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "생또는삶은중식면",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "생 또는 삶은 중식면"
+      }
+    },
+    {
+      "id": "59c087ef-4cb3-4875-a03a-be2cdd590f53",
+      "old_name": "생 또는 삶은 칼국수면",
+      "new_name": "칼국수 생면 (삶은 것)",
+      "reason": "승인 활성 원자료 RDA10.4 key 226 「칼국수면, 생것, 삶은것」에서 식품 종류·순차 조리상태를 그대로 복원. 원자료의 생것/말린것 뒤 삶은것·데친것은 선택지 둘이 아니라 순차 처리된 최종식품이므로 현재 명칭의 또는/거나를 제거. 업무·JSON 참조 0; ID와 영양 연결·값은 유지하며 표시이름만 교정.",
+      "expected": {
+        "id": "59c087ef-4cb3-4875-a03a-be2cdd590f53",
+        "category": "곡류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "생또는삶은칼국수면",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "생 또는 삶은 칼국수면"
+      }
+    },
+    {
+      "id": "3181eb3d-8678-4c17-9bef-5acb4cf95f1f",
+      "old_name": "요구르트 발효주 탁주 막걸리 전통주 알코올 8.5%",
+      "new_name": "전통 막걸리 (호상, 알코올 8.5%)",
+      "reason": "연결 원자료 RDA10.4 3530은 발효주, 탁주, 막걸리, 전통주, 호상, 알코올 8.5%. 원자료에 없는 요구르트가 잘못 붙었음. 호상의 뜻을 임의 해석하지 않고 원자료 한정어 그대로 유지.",
+      "expected": {
+        "id": "3181eb3d-8678-4c17-9bef-5acb4cf95f1f",
+        "category": "유제품",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "요구르트발효주탁주막걸리전통주알코올8.5%",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "요구르트 발효주 탁주 막걸리 전통주 알코올 8.5%"
+      }
+    },
+    {
+      "id": "49ccad2b-35b7-4b1d-a879-9eac954f3cc7",
+      "old_name": "달걀 설탕첨가",
+      "new_name": "가당 난황액",
+      "reason": "연결 원자료 RDA10.4 3414는 달걀, 난황액, 설탕첨가. 전란이 아닌 액상 노른자임이 현재 이름에서 누락. default_unit=개도 액상원료와 부적합하므로 g 또는 미지정 별도 검토 필요.",
+      "expected": {
+        "id": "49ccad2b-35b7-4b1d-a879-9eac954f3cc7",
+        "category": "기타",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "달걀설탕첨가",
+        "default_unit": "개",
+        "category_code": "egg",
+        "standard_name": "달걀 설탕첨가"
+      }
+    }
+  ],
+  "category_fixes": [
+    {
+      "id": "e8e8b0ef-b2b4-4480-ae3e-d22311a69124",
+      "name": "백합 뿌리",
+      "old_category": "해산물",
+      "new_category": "채소",
+      "old_category_code": null,
+      "new_category_code": "root_stem",
+      "reason": "RDA10.4 966 백합 뿌리 식물 원료. 조개 백합과 혼동하여 해산물에 분류됨.",
+      "expected": {
+        "id": "e8e8b0ef-b2b4-4480-ae3e-d22311a69124",
+        "category": "해산물",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "백합뿌리",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "백합 뿌리"
+      }
+    },
+    {
+      "id": "3181eb3d-8678-4c17-9bef-5acb4cf95f1f",
+      "name": "요구르트 발효주 탁주 막걸리 전통주 알코올 8.5%",
+      "old_category": "유제품",
+      "new_category": "기타",
+      "old_category_code": null,
+      "new_category_code": "frozen_ready_drink_other",
+      "reason": "RDA10.4 3530 막걸리인 주류이며 요구르트나 유제품이 아님.",
+      "expected": {
+        "id": "3181eb3d-8678-4c17-9bef-5acb4cf95f1f",
+        "category": "유제품",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "요구르트발효주탁주막걸리전통주알코올8.5%",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "요구르트 발효주 탁주 막걸리 전통주 알코올 8.5%"
+      }
+    },
+    {
+      "id": "f7fd3767-4adb-4428-8324-a36718cdaa4c",
+      "name": "초록 겨자",
+      "old_category": "양념",
+      "new_category": "채소",
+      "old_category_code": null,
+      "new_category_code": "leaf_namul",
+      "reason": "RDA10.4 727 겨자 녹색 생것은 겨자채소이며 겨자분말/소스가 아님.",
+      "expected": {
+        "id": "f7fd3767-4adb-4428-8324-a36718cdaa4c",
+        "category": "양념",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "초록겨자",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "초록 겨자"
+      }
+    },
+    {
+      "id": "2ea37159-9cc6-4fc6-9b9e-35ef31733514",
+      "name": "붉은 겨자",
+      "old_category": "양념",
+      "new_category": "채소",
+      "old_category_code": null,
+      "new_category_code": "leaf_namul",
+      "reason": "RDA10.4 728 겨자 적색 생것은 겨자채소이며 겨자분말/소스가 아님.",
+      "expected": {
+        "id": "2ea37159-9cc6-4fc6-9b9e-35ef31733514",
+        "category": "양념",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "붉은겨자",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "붉은 겨자"
+      }
+    },
+    {
+      "id": "989fa983-2cbe-43b1-8f31-1be2ff964df8",
+      "name": "김 과자 전병",
+      "old_category": "해산물",
+      "new_category": "기타",
+      "old_category_code": "seaweed_dried_fish_fishcake",
+      "new_category_code": "frozen_ready_drink_other",
+      "reason": "RDA10.4 193은 김맛 과자 전병이며 김 자체나 해산물이 아님.",
+      "expected": {
+        "id": "989fa983-2cbe-43b1-8f31-1be2ff964df8",
+        "category": "해산물",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "김과자전병",
+        "default_unit": null,
+        "category_code": "seaweed_dried_fish_fishcake",
+        "standard_name": "김 과자 전병"
+      }
+    },
+    {
+      "id": "cc77cd8f-5ee7-4029-85cf-4c8fdf36e4dd",
+      "name": "새우 과자 스낵",
+      "old_category": "해산물",
+      "new_category": "기타",
+      "old_category_code": "fish_shellfish_crustacean",
+      "new_category_code": "frozen_ready_drink_other",
+      "reason": "RDA10.4 189는 새우맛 스낵 과자이며 새우 자체가 아님.",
+      "expected": {
+        "id": "cc77cd8f-5ee7-4029-85cf-4c8fdf36e4dd",
+        "category": "해산물",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "새우과자스낵",
+        "default_unit": null,
+        "category_code": "fish_shellfish_crustacean",
+        "standard_name": "새우 과자 스낵"
+      }
+    },
+    {
+      "id": "b76b4a65-80aa-4ba5-92bd-682291d84c14",
+      "name": "버터 사탕",
+      "old_category": "유제품",
+      "new_category": "기타",
+      "old_category_code": "cheese_butter_alt_milk",
+      "new_category_code": "frozen_ready_drink_other",
+      "reason": "RDA10.4 507은 버터맛 사탕이며 버터 원재료나 유제품이 아님.",
+      "expected": {
+        "id": "b76b4a65-80aa-4ba5-92bd-682291d84c14",
+        "category": "유제품",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "버터사탕",
+        "default_unit": "g",
+        "category_code": "cheese_butter_alt_milk",
+        "standard_name": "버터 사탕"
+      }
+    },
+    {
+      "id": "f5fc6a29-9f64-4aa8-b400-ee1bfda324ad",
+      "name": "닭고기 샌드위치",
+      "old_category": "육류",
+      "new_category": "기타",
+      "old_category_code": "chicken_duck",
+      "new_category_code": "frozen_ready_drink_other",
+      "reason": "RDA10.4 3175는 빵과 닭고기를 포함하는 완성 식품이며 육류 원재료가 아님.",
+      "expected": {
+        "id": "f5fc6a29-9f64-4aa8-b400-ee1bfda324ad",
+        "category": "육류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "닭고기샌드위치",
+        "default_unit": "g",
+        "category_code": "chicken_duck",
+        "standard_name": "닭고기 샌드위치"
+      }
+    },
+    {
+      "id": "55c9316e-c515-48bf-a369-a7ed7123638b",
+      "name": "소고기 샌드위치",
+      "old_category": "육류",
+      "new_category": "기타",
+      "old_category_code": "pork_beef_lamb",
+      "new_category_code": "frozen_ready_drink_other",
+      "reason": "RDA10.4 3177은 빵과 소고기를 포함하는 완성 식품이며 육류 원재료가 아님.",
+      "expected": {
+        "id": "55c9316e-c515-48bf-a369-a7ed7123638b",
+        "category": "육류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "소고기샌드위치",
+        "default_unit": "g",
+        "category_code": "pork_beef_lamb",
+        "standard_name": "소고기 샌드위치"
+      }
+    },
+    {
+      "id": "a3b3cc48-4f74-43a9-92a1-5bcbd38ab4d3",
+      "name": "햄 샌드위치 치즈 채소",
+      "old_category": "육류",
+      "new_category": "기타",
+      "old_category_code": null,
+      "new_category_code": "frozen_ready_drink_other",
+      "reason": "RDA10.4 3179는 햄·치즈·채소 샌드위치 완성 식품이며 육류 원재료가 아님.",
+      "expected": {
+        "id": "a3b3cc48-4f74-43a9-92a1-5bcbd38ab4d3",
+        "category": "육류",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "햄샌드위치치즈채소",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "햄 샌드위치 치즈 채소"
+      }
+    },
+    {
+      "id": "335eff99-f04c-4942-adee-5aea91c32dd9",
+      "name": "통밀 식빵",
+      "old_category": "기타",
+      "new_category": "곡류",
+      "old_category_code": null,
+      "new_category_code": "bread_ricecake_cereal",
+      "reason": "식빵 종류의 기본 베이킹/집밥 식재료로 빵·떡·시리얼 분류가 적합. 실제 레시피 참조를 보존하고 분류만 정정.",
+      "expected": {
+        "id": "335eff99-f04c-4942-adee-5aea91c32dd9",
+        "category": "기타",
+        "created_at": "2026-05-25T05:53:06.380646+00:00",
+        "search_name": "통밀식빵",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "통밀 식빵"
+      }
+    }
+  ],
+  "alias_removals": [
+    {
+      "id": "9f6d01ab-6cd2-4f66-8fb4-15c8f3f824ca",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "8db75524-02d0-41a8-84fe-36ffb9ff1caa",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "94540686-47fe-4f79-89c0-aab6b1b9d9fb",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "c6cc08f1-c488-4c92-8a4e-55e992215481",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "13a4dd55-176c-4881-a510-c7de96c9d2c4",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "07bd8b6f-a648-4bf2-bf8c-8838b74324b3",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "fb5dc881-ce81-4e15-94b8-ee71a8cbbfed",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "60c711b8-b387-4209-9ebf-f3ba050b7781",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "6367ba90-8d32-4ae9-b7cd-38a038dd1a18",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "de6f515e-e464-48c4-ba1e-75dd372b5bd4",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "2dc3fa8b-50af-45f2-bf9d-158278ececb2",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "e8e6f360-e782-44fa-a9c6-fa872690a747",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "a82162f6-bd40-4c28-99bf-cf7ae56230c7",
+      "synonym": "어린잎",
+      "search_name": "어린잎",
+      "ingredient_id": "f1cf4b13-b158-45b6-9506-287759ab2a4b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "86620664-9d5e-40c0-b642-0b89bed85dcb",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "2395c617-f512-4c64-86d0-966f1892a701",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "35400249-a762-4c84-afcd-82d1f77818c5",
+      "synonym": "하우스",
+      "search_name": "하우스",
+      "ingredient_id": "00bdab3d-a125-489d-a76a-cfb0f95174c8",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "38ce7c6a-e8f0-4994-b6dd-ca2570417e33",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "31e71d6f-9c4f-49f1-93f8-694976cb3fd4",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "9f98eb7c-16cf-49aa-a910-f53950d81074",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "bcb1d0ce-e897-4cee-9d60-f7c7c70d169d",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "98f772bd-4634-447d-8a9c-979ad0830d19",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "3ad3cd3d-a7bf-4c2c-bd53-54fea2671421",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "e14e6668-d953-4127-a09c-cd82e58bc46a",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "eef81a14-b550-427a-b73a-0e3aa07b1b8d",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "50fe6752-c374-4ab4-adef-9cacec0fdfbc",
+      "synonym": "하우스",
+      "search_name": "하우스",
+      "ingredient_id": "5a3c50a9-3c3e-4aa6-a59e-1786f4877f13",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "cc0fe337-1fa0-415a-9dff-5920c5277201",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "e8e8b0ef-b2b4-4480-ae3e-d22311a69124",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "8cb1aa06-af2c-4baf-8299-0b6190b6956c",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "29f6f3f2-85e9-4543-9242-19f8f5a0fbec",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "673fc18f-fec7-4b33-bc4b-c88710f7bcd5",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "baef6a3b-15ca-47fa-bf17-f7280a85baae",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7014596a-c119-4639-8aca-eb5304dd8931",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "f2a528f8-07b6-4f85-af67-4f03ebaa35c5",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "ca146ed1-c1c9-4b76-a4c0-f76d1fa7a6bf",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "ad2a1cbd-8234-4f6f-a5f7-42329e4558dc",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1273e82d-6a25-4930-af3f-4a797a31907f",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "7a42e229-8f27-4a38-996b-98c7eb5680e0",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4defb315-65d9-40b6-b115-208097f0427a",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "cafdf46e-f46c-4a24-931f-29ed1ecd7b55",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "e0db3b68-4e1d-4734-9a3f-0a56ff19ba05",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "6a9fc3dc-d124-42be-a04b-1c7380025e66",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "3158440a-f412-4d8e-9909-954012610e8f",
+      "synonym": "껍질",
+      "search_name": "껍질",
+      "ingredient_id": "a7a716cd-19ba-4fd5-a838-861376a9c6b6",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "06f1e291-4764-410e-a2b9-b421b4c93932",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "44187f64-69ed-45c1-a7bf-f8da9a7561dd",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "3a4b2186-7b13-420e-b9c2-e0c31d98c8a1",
+      "synonym": "녹색",
+      "search_name": "녹색",
+      "ingredient_id": "13679b30-47d5-4560-bc3f-193558cd80ca",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "70b21d3f-0c71-46fe-a593-059f705f76a7",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "29bdb668-b302-4353-8902-1dd435183049",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "169ccb32-46f6-43da-ab1a-c51a2b7fadad",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "37807b54-43aa-4324-92dd-1a09b6e14337",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "eba37250-36f8-4930-b403-0fc0c2d09781",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "7dea3084-70dc-4347-b74a-473e970a04cf",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4ffc5e01-740e-49d1-a580-ea8e1e742b01",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "3dc1c311-9f89-489d-a869-d19c7bffe7e2",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1847ee41-1135-4763-bd76-4b2b1f53946e",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "35743c94-4a2c-4a81-a12a-6b9a18ca7d44",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c7d6177a-4999-4b4d-9e5d-159e98778f71",
+      "synonym": "국내산",
+      "search_name": "국내산",
+      "ingredient_id": "c047e530-8b23-4279-b5f9-b455cec0d022",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "ba00482e-2f19-4feb-b7e0-00c33beb351a",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "28f31083-e52b-4b3f-a842-fa90e4205ede",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "3ad6cbc1-aaf6-4d28-bba1-cd38fe9aed60",
+      "synonym": "녹색",
+      "search_name": "녹색",
+      "ingredient_id": "bfeaf5da-8849-4194-bf7e-73f9b3f06f8c",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "b4fc9558-a3be-4e19-8232-93fb9bf64f18",
+      "synonym": "껍질",
+      "search_name": "껍질",
+      "ingredient_id": "ab667556-14dd-4c83-8ec5-c3de22974848",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4aa3a326-f6f5-4da7-ad53-2c239cbed441",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "03a156f5-8b03-44aa-aabe-e7fbff7a4aec",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c36e0e49-c4de-46bb-b8fc-ec547c2bf858",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "5bc83621-578b-49b4-b98b-90efbb12d0ab",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "93218f6b-52f3-4f9e-8254-fbcb193e1c0b",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "f83c2639-8829-44de-bf97-29a30d2a8776",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4e052606-12bc-4882-ad28-e035efc5ef77",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "75ecf797-385f-4bd1-b29a-2953091f06f5",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "6cc3f037-e45c-4ac6-9e34-11130da6381e",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "c7c21fcb-229d-47f5-a0d8-414a4a0cb5c0",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "033d12c0-1e21-4ca6-bd17-6dbec0015cac",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "ebb5acb3-3a3b-409d-9fe3-8c5309940152",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "cba70b55-b838-4535-85bd-ab92fd0f84f6",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "b06e817f-e786-4919-bacd-f13a26faf80a",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "fc5868ac-ba5f-4ed4-aeaf-3e2e9d616dd6",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "e16696d5-50f2-4667-b9f1-42edae11252b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "f0ca8daf-19a0-4ee5-a119-d93744b81e34",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "18b501c8-7a5d-4699-a46e-942ca835e4e8",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "9d0b77a5-af96-4fdd-a0ad-ab46025d88ce",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "b5394357-3449-4ab6-a18a-c41f6e9fd140",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "0911b619-ebb6-4b03-987a-8aae02d80348",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "dfb4db4e-0142-44d6-b567-a80f664261f9",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "dc785292-9b1d-4b49-b9b8-42f2aa01d5a9",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "6d054390-68ff-4744-b65b-ee8cac037155",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "0b94cc51-eefd-4e0a-9449-ab43dbb6c286",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "259a494e-8b52-4a42-a105-1bae240c46c8",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "ce4400e0-a94f-4a2a-a9c5-acdd4a533eb3",
+      "synonym": "열매",
+      "search_name": "열매",
+      "ingredient_id": "7217e4a9-87f9-460e-89a8-df95690544ff",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "8f05b92f-2ffe-464d-accd-63215ad1f16b",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "8b9eec49-1113-4e4f-9983-35110675782b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4320f940-63c2-4864-921d-8468ba444019",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "cc423278-9c66-4c7a-b534-ab6024e724d3",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d6d3b3ef-b28f-495b-8c4e-47ac367708be",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "75ce20b7-5308-4a60-8758-16f7e57cb0c6",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "e29ecc26-3baa-4ad3-9565-f12456e9aa8e",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "79f8c6a5-a5f0-4641-b278-c01c8354eb68",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "433bf62f-c3f6-4ef6-84db-e2689ae91c7d",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "a63e320c-456b-47f0-9338-48a2d0c390be",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "9464a9d7-a74a-4082-836e-4aa0908ed520",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "8129733c-2685-4031-9e32-8998d0a15f5f",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "f386ce21-197e-49a5-8e76-b49043caed0f",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "ffb9a92b-f8f5-4cef-b270-12de5900f06a",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5e3b72fb-545d-43b4-89ef-3565d462f082",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "8621f1a4-00ae-42f6-831a-5a846b6c5d9c",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "2b3b3513-6d1c-421a-a318-e4f06f83aaf0",
+      "synonym": "어린잎",
+      "search_name": "어린잎",
+      "ingredient_id": "47528b57-dc5b-4391-878a-1ded89521a60",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "e171532e-8393-47a4-9b0a-ebb8ea6a5496",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "f0b9c2fd-1ad6-43c3-a01b-88c913c0dc06",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "3bf5929b-3c9a-4de0-9427-b880cd810f7e",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "9f1581f2-e754-4f3a-b09c-c471194571c2",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c6928479-c20a-4975-9ddd-f22af82c1904",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "1566c485-6c87-4f07-b676-bbe297c06341",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "882bf31f-186f-4945-92e6-6786254eec07",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "e42c3e01-bbb3-45b4-8e14-019d278a6f3d",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "8f4124c5-68e9-4850-9537-a223ea0c05ea",
+      "synonym": "어린잎",
+      "search_name": "어린잎",
+      "ingredient_id": "319d0dce-12d7-45ef-b8db-2ff521d9f89b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "e9984f33-758a-4cc0-9661-58b324168f14",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "b6d7cf54-c2f7-4059-9a7d-f4dace9b60e5",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "40d997f2-1ad8-4e43-a3ad-5957875777a4",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "3de16d99-0442-493f-9b9a-6dd99ce1ed84",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "bad8d508-fe97-4a63-984b-ae7c68435703",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "01ecfa33-74bc-4314-9001-887391d32f8b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "f1b4a98a-81d3-4c6c-b461-b760c612774c",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "cc625e8d-f452-40d3-8053-24643b0302af",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5db11a15-7935-41ee-8df0-3a04e922cb17",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "04374af9-bfc0-4dbe-9361-7b3b647ac1c8",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7c69345f-fda3-4418-8863-b8504eb5a4ae",
+      "synonym": "껍질",
+      "search_name": "껍질",
+      "ingredient_id": "043037d0-8fe2-4ab1-ac50-04b0d26fbdd6",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "9c7b2def-0af3-4561-b453-3841f51e8bc4",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "92892934-544a-4866-a314-13514cb6d2a0",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "30080e86-96aa-4db1-b2f6-a0616a50c8bc",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "3d393a2d-0a56-4f04-b852-443af7719887",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "8bdaa8e9-b57d-4027-96ae-96a5f1e8d26d",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "29f6f3f2-85e9-4543-9242-19f8f5a0fbec",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "30543f14-a0e9-4557-af8b-77b38dd92510",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "dfa26343-0d41-4750-9e8f-b6cea850e188",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "13e78252-df38-4eb3-860d-2e9d68e0d007",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "c15cf39e-54c1-4af5-ad17-dc38d44365b2",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "93396a50-ffd3-4659-9c23-5160e0e74efc",
+      "synonym": "녹색",
+      "search_name": "녹색",
+      "ingredient_id": "784c5e09-3ed1-4507-8434-1fdc63aa3f29",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "58e3f0d5-1de1-437f-8d3c-ab4fd09e3419",
+      "synonym": "녹색",
+      "search_name": "녹색",
+      "ingredient_id": "899e0ec6-7d8d-4138-a559-62f1bdf27f84",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "6e250cb5-a089-4e50-9eb2-99b1c8436d7a",
+      "synonym": "과육",
+      "search_name": "과육",
+      "ingredient_id": "7c42fe80-0554-4a68-afd6-12535e4c7852",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "ccf400d8-96f1-4482-9d78-214ac08c63f6",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "3c1c7e80-6735-44f0-a989-8a1e52bf7fa6",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "b0503fcd-9acf-4c9f-a390-52dcdcf62d9c",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "a92bd9c0-9be7-473a-b3bb-4d648b52d1d7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "0c85df61-bd3f-4355-8810-9c7c84a474c3",
+      "synonym": "노지",
+      "search_name": "노지",
+      "ingredient_id": "47528b57-dc5b-4391-878a-1ded89521a60",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "bbca69d1-9156-4850-a975-3be907029a64",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "070424c0-9b69-4084-9808-d5296d82780e",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5f34305b-d990-403c-819b-e748216a0900",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "1a7a0301-e2b2-474d-95a5-75cfafc85a76",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7bfca6b9-dc91-490e-8d8e-68eb68e25552",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "3d869cb0-9ad6-42b4-b872-bbff4f39bc4b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "52aa1f94-283f-401a-af4b-749e8d462533",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "07bccf3d-7699-438c-95a3-fefb2bbe3822",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "18a82938-bd5b-40fd-a2bf-52ecc1ec8690",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "729aae23-1e05-4a4f-9769-c8ace3db30e0",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1d2a0dd1-3c5a-4cef-9141-c7d07268a342",
+      "synonym": "껍질",
+      "search_name": "껍질",
+      "ingredient_id": "c0ca8b8a-986e-4190-bc80-3934859a8e94",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "2e8962fe-13ec-4e33-b0e1-9bde84ccb0dd",
+      "synonym": "녹색",
+      "search_name": "녹색",
+      "ingredient_id": "6fb60f34-dc94-4860-83cf-ffdd27d18372",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "0c7e0f26-e8cc-4f8e-8c54-36123d1879ed",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "ae551f2c-758e-4458-b232-1882f52f33d5",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c4754cab-f50e-4de1-ab6b-de5b730e4f45",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "6680195c-265d-4c7e-b3ca-aab70bce19f6",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "89671251-e680-4e3b-acfc-63c67e2f5c1b",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "3536f795-16fb-4ba1-ae44-a711bff32ef9",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "906ddabb-efb6-406c-8925-ea7f09c88806",
+      "synonym": "하우스",
+      "search_name": "하우스",
+      "ingredient_id": "cfaabb5e-482d-481b-8016-45bac54d1a01",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "919b606e-aacc-43aa-83f7-04a7e2782c34",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "86014f61-f53c-4150-bc32-36c5787c2e83",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "0dcd4d3a-b74c-40f1-9fc6-b2976c1d29cb",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "0eb641bf-ccf8-4dde-b8d7-8b05b1ac172f",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "060a091d-8ed9-44bc-ba35-9a400cd6e506",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "ec7ec24c-b75b-44b1-bc09-17a2fc36bdec",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "be39edbe-6485-44c0-9b7a-674264badbdc",
+      "synonym": "열매",
+      "search_name": "열매",
+      "ingredient_id": "3bcc6562-8aac-43ca-be7e-21306cf63423",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "af4dfc22-b9b3-4d01-8fd5-922b006a8abe",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "556d3dba-fc73-48ba-8113-feebec4ccd31",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "f8728b51-0015-4fcf-a612-51996619bd92",
+      "synonym": "과육",
+      "search_name": "과육",
+      "ingredient_id": "f22e880d-a334-4f9a-994b-7d7ad4b73874",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "3f29fbf3-6b2d-4ced-9949-3a5429b004b3",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "679b47b0-b030-49a9-8728-8411491cfae8",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "6001b9c7-3ce3-4478-aafd-dc7bea1a84f1",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "d0795631-b238-477a-82e5-2136e1eeb893",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "473dea8e-d4a9-4754-af64-b19c44c0b064",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "9bf33451-9b52-4222-94f2-0c72c5c0c7fd",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1b840026-55f8-4909-a2b5-b32f8fff8441",
+      "synonym": "하우스",
+      "search_name": "하우스",
+      "ingredient_id": "49587faf-2b79-441a-b6da-6112381ebc6b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "b982c424-76cf-43cd-bbe7-6dea6425c9ed",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "bec2a7b2-0173-424f-a7a1-93d1f498fc09",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5df9a6f8-8380-4ba9-9646-0ffe3c9957a0",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "cd72acb1-2cb2-41d0-9299-c97ce842588f",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "541bcb2f-68a3-42cd-a101-8865f21f8804",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "32129126-412e-4203-9263-e1f197b00a0b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "a0ebbc14-ce46-455f-8291-811f95626705",
+      "synonym": "어린잎",
+      "search_name": "어린잎",
+      "ingredient_id": "49587faf-2b79-441a-b6da-6112381ebc6b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4341d4f6-b1c5-438c-8472-ec0cbc22bc68",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "511f6636-88aa-46a8-80aa-ce904ea63386",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "f8b362fc-aabc-43d7-9c27-69be754ade1b",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "eeedd734-ce9c-4b9a-a572-cb351e1ef934",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "69e3ae5f-ccbb-42f6-815d-45870060a048",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "002672e3-f341-4a2d-8864-6f2fa3729e5b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "23353eed-d0e8-4e2b-ba16-e250dc1fb230",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "c940cca5-457e-46e8-8e2b-9b9f83074444",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "e1f4cdd6-c9f4-41da-9c23-e60d93a2dce4",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "58c81a2f-3b3c-411a-8c84-fefdf703326a",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4f0a7794-f4e0-40b7-af7d-2ef794bb598f",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "2c99885d-ec4a-4ad0-893b-32bb0e415963",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "b9261ef6-a36d-4b98-a990-b34b5c281b8f",
+      "synonym": "노지",
+      "search_name": "노지",
+      "ingredient_id": "9361798b-6518-43e6-a19a-ef3328e1ab3f",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "a3384803-4e7b-4e8d-bfe6-7ab2aa17eb28",
+      "synonym": "열매",
+      "search_name": "열매",
+      "ingredient_id": "dae930a9-7e30-458c-b238-2245e860a407",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "a4281933-1dcf-42ec-a67c-59e565c264e3",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "7ce22119-a3a4-4438-bf03-f2bf5b68063d",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "08900751-d435-4939-a47c-ed54e9044727",
+      "synonym": "어린잎",
+      "search_name": "어린잎",
+      "ingredient_id": "49b14638-0e22-4dac-af04-6e0f19ff0af7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "a71b687a-3c38-4a5c-8d46-fcf2f0844fbd",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "d2cd6149-b536-4c3b-a1a2-f63ade7fca04",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5c90a349-b7f7-46df-8a95-994892d72fa3",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "1a03df67-214c-4082-b694-96d194a53886",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c28f31d8-8d0d-4e57-bae5-db07eac13a7d",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "744ab7b6-7a72-4650-856c-b23314259adb",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d5460e5f-d0fe-4154-a254-b7f097262461",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "e096237f-08e2-4a9f-baed-0c6f146d7b3e",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4123ab17-b347-41d0-9f98-51ca05a1badf",
+      "synonym": "과육",
+      "search_name": "과육",
+      "ingredient_id": "6461d64f-59e2-4166-8eb8-e4835f854456",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7723f9a0-d29d-41b9-929b-ac82c7f2ec1a",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "44b390d8-2e38-44c0-913b-ef719347a95a",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "976c378c-4749-418d-80d1-9f8765912ca9",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "55a06258-b40c-40a0-ac2f-275a3bda82af",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "ed2883cf-8496-4404-bef5-f7a4786dbb79",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "99f94f85-0846-4068-8707-779c9e3593e7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "14fc37dd-db5b-48ba-96e1-1cc8e7373bb8",
+      "synonym": "녹색",
+      "search_name": "녹색",
+      "ingredient_id": "f7fd3767-4adb-4428-8324-a36718cdaa4c",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "a3db74b7-2beb-4664-be75-62c857447e6b",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "2ea37159-9cc6-4fc6-9b9e-35ef31733514",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1c60caa8-3922-485b-b559-c36df1bef716",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "6211565a-c49f-44b0-a797-7f2af93c1291",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "ff7d3519-7792-469d-b1cb-48eabb6b5659",
+      "synonym": "하우스",
+      "search_name": "하우스",
+      "ingredient_id": "7a736fb6-2153-447c-afdc-b694debc6029",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5ce62ac6-a149-4d30-89d1-e3f281c06854",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "c90456c1-6397-4bc4-bcdb-bd6a5fb20a08",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1f81a000-9d03-4640-a818-ece2af278efc",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "cfd7aa8b-4447-45d6-9015-8e36a9650baa",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "116e6efa-4f0a-48a3-9a58-70e84a005b9b",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "35a70beb-d7bb-4238-8f5b-3d8bec38e6bb",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c0c26341-e480-4268-ad73-125efb9c8acf",
+      "synonym": "어린잎",
+      "search_name": "어린잎",
+      "ingredient_id": "5a3c50a9-3c3e-4aa6-a59e-1786f4877f13",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "dc53c41f-f177-4048-8960-e71d3ed9bfb9",
+      "synonym": "노지",
+      "search_name": "노지",
+      "ingredient_id": "319d0dce-12d7-45ef-b8db-2ff521d9f89b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7ae6a84b-0b31-40aa-af0b-af35e0844d14",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "7f7b8c86-e780-4e70-8738-c3aa33641910",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "198d44ad-5fc2-4088-9bbc-1f323414fa82",
+      "synonym": "열매",
+      "search_name": "열매",
+      "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d83df1d5-e0bb-421d-8b1f-d43280e5b407",
+      "synonym": "녹색",
+      "search_name": "녹색",
+      "ingredient_id": "682bdf65-21ed-4214-b772-fd47be6a9216",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "0c0e1842-232a-40ab-98c2-a809d492a2be",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "a20f2495-27d9-4b3b-a8ef-bbd80c4030f1",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "b84dc00d-a2eb-42bd-aa7f-bbea712fd461",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "a44e53c7-afc6-4fc9-9468-c3342b159fe9",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1eed3427-a601-4d5b-a92e-f00dca96fad5",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "1ab4e1ca-9ebe-42b4-928b-68a0f792e498",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "02e3358f-03cf-464f-9a2d-4156f819a57f",
+      "synonym": "노지",
+      "search_name": "노지",
+      "ingredient_id": "6d95c7c4-ecfd-4247-8016-c45fbac59060",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5372954b-3843-4bd7-8dc7-092fbcb4719d",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "47b96bcd-3b6f-4e54-84a1-98e9618c78e3",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "dccd18a7-ddc9-4fca-94dd-0abcc0e03b00",
+      "synonym": "하우스",
+      "search_name": "하우스",
+      "ingredient_id": "9f094241-b1da-4481-b140-8dedcf80563a",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "43d4324d-f4b6-4b63-8280-ca9afeccc68f",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "69d3b696-9aa9-4ff6-8aa8-568d757b5738",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7431de34-245d-4979-baba-233447db1e2a",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "82c685dc-e522-42dd-a102-a25871cb54d7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "5e7a6fe1-d174-46aa-8fc8-0df60dd0f84a",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "34a6847d-8d9d-4847-993f-c55113ab4da9",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "738227fe-44c9-4a1b-8088-41cb57d940b4",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "68f44948-2481-4295-89dd-649a6379628c",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d37670cd-f810-42d2-9624-38bab916cd2d",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "8a71abe7-dafb-4939-8927-261dbea461f9",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "3132edfa-93dc-4776-85fd-f8e172e2830f",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "355c9f1b-12a5-4701-ac16-1db22fbca006",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "91670b8c-55ec-451e-b26d-3be7f1aac495",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "c11fa183-634a-403b-8cdb-9bcc372b5e6f",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "f9d987dd-1383-4da2-8b5c-e49fdaa0ce21",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "a26c2384-04a3-4faa-99f2-0abebf56c235",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "02a0eee5-d858-49fe-95c9-a4a5648f1e64",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "609b35d0-1e8a-4b7e-9922-984c107eda85",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "10e06724-5370-46d6-b12d-8032ab791c78",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d10642a2-11e7-4441-b37f-fd61dfaa1362",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "d3ab7d0f-04ec-4675-a5b6-015e529459e5",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "b757eb50-4c5f-4aa3-97bb-3d722c88b93c",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "e6d939c8-709d-4891-986e-6645c7bcbfe7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7a03d655-daeb-4c6a-b30c-82171fd64deb",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "b4dc6ed5-2693-4dbb-9be1-fc9a1a0b12bb",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "b77183da-3469-4a06-831f-70cf189bce5a",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "d0795631-b238-477a-82e5-2136e1eeb893",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "dcd6793d-fd45-4614-bf51-20cee328ed31",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "b2f2fd10-e79c-461a-acb8-7a3043ea03f8",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "6ee96e7e-681c-4782-80d7-41f3aa2534d8",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "de605740-707a-4043-ba12-a28f8efa3d0b",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c420dc82-7d2d-4567-aba7-d92d4a50637d",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "7a89d851-b8a6-4f14-a81f-24199a201951",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d491edfd-049a-47fc-9b05-adf7778790ee",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "cc423278-9c66-4c7a-b534-ab6024e724d3",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7dafbfff-a611-4411-bb93-41cdc4403b9a",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "63359fc3-f25b-4935-ada8-b582542cc240",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d83b584c-4a04-4b62-9101-349e5e042218",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "e3980cb8-1827-4ca6-be5c-f5a33ce25c6c",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d535e36d-15f7-40a8-af85-0547a5d0fcad",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "3950affa-cc83-4b0e-8155-b6645b50cad4",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "fbcd10d2-b24d-4279-b06e-d4d22652cba8",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "86196b82-fc22-4c7e-8632-bb74f64e939f",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "1357bc84-cace-4506-99e8-fb781464f0bb",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "ae9e167d-3cea-422e-8800-7ae14a6d7c02",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "13ae816d-0b54-448c-b822-c9b6c5fc5c97",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "b0225d9d-4adc-47e7-9329-7645c1b4bac7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "7ce5f3c7-ac64-48d8-90d2-569f6d50a72c",
+      "synonym": "줄기",
+      "search_name": "줄기",
+      "ingredient_id": "8783d926-3f58-4caf-ab83-d333beb611d3",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "8ff8a15f-cff2-4b43-af13-a80c81297420",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "27aaccc8-1d99-4a93-a1f0-2a51e691e8a7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "d68a8fd7-deb7-4d64-833a-0f73fb57098d",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "559102ea-9576-4962-89f4-86955ed36bd1",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "fdd842ed-04c7-43c7-b0d9-2cea2df4cdda",
+      "synonym": "노지",
+      "search_name": "노지",
+      "ingredient_id": "5dc1a8e5-706c-4af0-a17c-4015590dece6",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "dba78516-d42d-4134-a5af-e652f0257c8e",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "febe610a-bf4a-443b-8600-8cf19536e420",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c2f1da70-26d1-45c6-ad9e-3118df42a0fb",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "999c1022-6367-4d49-b7e1-e7fd1d926c8a",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "4cff2a96-3267-4a1b-afcf-3d2636b88394",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "80eb8be6-6855-4b85-9d69-765a335640ae",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "69c3d31d-1734-4aa9-86c0-f403bb07254b",
+      "synonym": "뿌리",
+      "search_name": "뿌리",
+      "ingredient_id": "969d9da2-da8f-4bb8-89e9-e3e5c2494296",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "132154b0-5e77-45e6-a25b-7d243626cab3",
+      "synonym": "노지",
+      "search_name": "노지",
+      "ingredient_id": "41a5e41b-a738-4e63-8183-3786a5ac61c4",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "c6310e70-ceff-4264-ba31-6ad53e2fff8f",
+      "synonym": "적색",
+      "search_name": "적색",
+      "ingredient_id": "d4a8c665-494e-4b1c-a2eb-b0c28d0f2928",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "ebeb8997-7ee7-47b2-8d2e-40d6202083eb",
+      "synonym": "노지",
+      "search_name": "노지",
+      "ingredient_id": "31eac531-4b86-4c91-86ae-cc62e1f36984",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "94aa8faf-766a-41b9-becc-464888cca356",
+      "synonym": "잎",
+      "search_name": "잎",
+      "ingredient_id": "5780b50f-85ee-4a37-a05c-7727506db525",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "41465cc4-4632-4d1b-bd07-d064d063ebea",
+      "synonym": "수입산",
+      "search_name": "수입산",
+      "ingredient_id": "bed17741-4f3c-4f09-99d7-f61c575b0119",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "195f2af1-5ec9-416c-b583-b9f166089028",
+      "synonym": "살코기",
+      "search_name": "살코기",
+      "ingredient_id": "b0225d9d-4adc-47e7-9329-7645c1b4bac7",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    },
+    {
+      "id": "db0b51c4-1272-4414-bc9e-3d11ceee084b",
+      "synonym": "하우스",
+      "search_name": "하우스",
+      "ingredient_id": "6f90cc1c-9fb7-49bb-88f2-a5ffa8916b8a",
+      "reason": "재료 종류를 특정하지 못하는 속성 단독 별칭"
+    }
+  ],
+  "json_reference_scope": [
+    {
+      "data_type": "jsonb",
+      "table_name": "account_generation_cutover_attempts",
+      "column_name": "auth_barrier_evidence",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "account_generation_cutover_attempts",
+      "column_name": "error_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "account_generation_cutover_attempts",
+      "column_name": "result_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "food_product_ingredient_links",
+      "column_name": "provenance_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "image_upload_quota_counters",
+      "column_name": "byte_events",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "image_upload_quota_counters",
+      "column_name": "request_events",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "ingredient_representative_links",
+      "column_name": "evidence_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "marketing_round2_events",
+      "column_name": "payload",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "marketing_round2_participations",
+      "column_name": "answers",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "marketing_validation_sessions",
+      "column_name": "quiz_answers",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "meal_log_entries",
+      "column_name": "nutrition_evidence_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "mutation_idempotency_keys",
+      "column_name": "durable_result",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_change_previews",
+      "column_name": "durable_result",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_content_snapshots",
+      "column_name": "ingredients_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_content_snapshots",
+      "column_name": "steps_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_nutrition_snapshots",
+      "column_name": "fixed_values_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_nutrition_snapshots",
+      "column_name": "nutrient_status_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_nutrition_snapshots",
+      "column_name": "scalable_values_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_nutrition_snapshots",
+      "column_name": "sources_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_nutrition_snapshots",
+      "column_name": "warnings_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_sources",
+      "column_name": "extraction_meta_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "recipe_steps",
+      "column_name": "ingredients_used",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "shopping_list_items",
+      "column_name": "amounts_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "user_account_lifecycles",
+      "column_name": "deletion_result_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "user_account_lifecycles",
+      "column_name": "resolution_result_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "user_growth_activity_events",
+      "column_name": "source_meta_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "user_progress_events",
+      "column_name": "source_meta_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "user_progress_notifications",
+      "column_name": "payload_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "user_progress_summary",
+      "column_name": "event_counts",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "users",
+      "column_name": "settings_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_extraction_candidates",
+      "column_name": "draft_ingredient_ids_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_extraction_candidates",
+      "column_name": "source_meta_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_extraction_jobs",
+      "column_name": "result_affecting_options",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_extraction_sessions",
+      "column_name": "draft_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_extraction_sessions",
+      "column_name": "extraction_meta_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_llm_extraction_cache",
+      "column_name": "result_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_transcript_cache",
+      "column_name": "segments_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_visual_extraction_cache",
+      "column_name": "result_json",
+      "schema_name": "public"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "manual_recipe_create_receipts",
+      "column_name": "request_body",
+      "schema_name": "private"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "manual_recipe_create_receipts",
+      "column_name": "response_body",
+      "schema_name": "private"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "manual_recipe_publication_images",
+      "column_name": "copy_plan",
+      "schema_name": "private"
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "youtube_extraction_current_policy",
+      "column_name": "result_affecting_options",
+      "schema_name": "private"
+    }
+  ],
+  "default_unit_fixes": [
+    {
+      "id": "49ccad2b-35b7-4b1d-a879-9eac954f3cc7",
+      "old_unit": "개",
+      "new_unit": "g",
+      "reason": "가당 난황액은 액상 가식부100g 원자료이며 개 단위가 아니므로 기본 입력 단위를 g로 정정"
+    }
+  ],
+  "lock_policy": "SHARE on business reference tables; ACCESS SHARE on read-only extraction model settings",
+  "selection_policy_status": "prepared only; not applied; requires alias consolidation and coordinated web release",
+  "operation_checksum": "b23ebcc8f0a4550150a01bda4af9b94977a28a0b22c0fa6547588965db7e276e"
+}

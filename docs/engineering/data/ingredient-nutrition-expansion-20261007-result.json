@@ -1,0 +1,168 @@
+{
+  "schema_version": "homecook-nutrition-expansion-result-v1",
+  "passed": true,
+  "applied_at": "2026-10-07T11:45:04.025Z",
+  "operation_checksum": "6b1053df1894361289dd43da3db8f0b7de4f0e029547f6a1f1032cb954b938ce",
+  "sql_sha256": "cfeb78395510a3e74361c74ce8803fd738b36bfb904d000d9396741d0993164b",
+  "counts": {
+    "reviewed": 93,
+    "new_links": 32,
+    "held": 61,
+    "by_provider": {
+      "USDA_FOUNDATION": 6,
+      "USDA_SR": 20,
+      "MEXT": 5,
+      "RDA": 1
+    }
+  },
+  "migration": {
+    "filename": "20261007210000_ingredient_source_name_capacity.sql",
+    "sha256": "51cbfdd8f47d1e3e61f5a0e058cbeab583e8bf495c4899b1e13127a07b6f4b94",
+    "body_sha256": "397ea930fc6cc4a42232fc862c4c7beaec2a8b68c68a8131ccb76dc4b6150fa3"
+  },
+  "ingredients_before": 1930,
+  "ingredients_after": 1930,
+  "physical_deletes": 0,
+  "identity_review_pending_after": 0,
+  "existing_source_values_and_history_unchanged": true,
+  "nutrition_after": {
+    "partial": 227,
+    "complete": 1547,
+    "unlinked": 156
+  },
+  "values_verified": 256,
+  "replay_writes": 0,
+  "database_state": {
+    "audit_count": 1,
+    "groups_hash": "780c4c74df7607ada89f9c5745d90eed",
+    "ingredients": 1930,
+    "ledger_hash": "99296d4d390dc29321128f7fdf37add0",
+    "entries_hash": "50dfa802565c603e259eda57d24d76ac",
+    "presentations": {
+      "base": 1167,
+      "alias": 20,
+      "detail": 424,
+      "excluded": 124,
+      "umbrella": 88,
+      "prepared_food": 107
+    },
+    "review_states": {
+      "reviewed": 1930
+    },
+    "alias_capacity": 512,
+    "new_ledger_count": 1,
+    "alias_search_indexes": 2,
+    "representatives_hash": "3eea0cefca75f66c978f02060f3697dd",
+    "values_checked": 256
+  },
+  "backup": {
+    "bytes": 117008750,
+    "sha256": "eb4e83d513ba775e96f0258047999fbc58750f9ef616c41417c9bc110faa03f5",
+    "full_isolated_restore_verified": true
+  },
+  "verification": {
+    "tests": 36,
+    "test_files": 4,
+    "checks": [
+      "catalog drift",
+      "late metadata error rolls back nutrition and catalog",
+      "late ledger collision rolls back capacity and nutrition",
+      "source quality hold",
+      "exact values and all definitions",
+      "existing source values and app records unchanged",
+      "full source names fit without weakening link validation",
+      "replay zero writes",
+      "umbrella cannot replace alias root",
+      "public writes denied"
+    ],
+    "independent_source_review": true
+  },
+  "ui_catalog_integration_deployed": false,
+  "web_deployed": false,
+  "recipe_nutrition_refresh": {
+    "count": 1,
+    "created": 1,
+    "replay_created": 0
+  },
+  "nutrition_by_presentation": [
+    {
+      "n": 20,
+      "status": "complete",
+      "presentation": "alias"
+    },
+    {
+      "n": 924,
+      "status": "complete",
+      "presentation": "base"
+    },
+    {
+      "n": 182,
+      "status": "partial",
+      "presentation": "base"
+    },
+    {
+      "n": 61,
+      "status": "unlinked",
+      "presentation": "base"
+    },
+    {
+      "n": 398,
+      "status": "complete",
+      "presentation": "detail"
+    },
+    {
+      "n": 26,
+      "status": "partial",
+      "presentation": "detail"
+    },
+    {
+      "n": 100,
+      "status": "complete",
+      "presentation": "excluded"
+    },
+    {
+      "n": 12,
+      "status": "partial",
+      "presentation": "excluded"
+    },
+    {
+      "n": 12,
+      "status": "unlinked",
+      "presentation": "excluded"
+    },
+    {
+      "n": 92,
+      "status": "complete",
+      "presentation": "prepared_food"
+    },
+    {
+      "n": 5,
+      "status": "partial",
+      "presentation": "prepared_food"
+    },
+    {
+      "n": 10,
+      "status": "unlinked",
+      "presentation": "prepared_food"
+    },
+    {
+      "n": 13,
+      "status": "complete",
+      "presentation": "umbrella"
+    },
+    {
+      "n": 2,
+      "status": "partial",
+      "presentation": "umbrella"
+    },
+    {
+      "n": 73,
+      "status": "unlinked",
+      "presentation": "umbrella"
+    }
+  ],
+  "primary_detail_unlinked_before": 93,
+  "primary_detail_unlinked_after": 61,
+  "source_review_original_checksum": "5a4c7996a5651bc9d86fab569c6b0bf8f160e1e806cf11ed61b0f965a23a2ff1",
+  "source_facts_unchanged_after_capacity_migration": true
+}

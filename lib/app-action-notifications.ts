@@ -32,3 +32,12 @@ export function emitAppActionNotification({
     ),
   );
 }
+
+/** Success invalidation only: the database, not browser message text, owns history. */
+export function notifyActionNotificationsChanged() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(HOMECOOK_APP_ACTION_NOTIFICATION_EVENT));
+}
+export const HOMECOOK_ACTION_NOTIFICATION_SESSION_RESET = "homecook:action-notification-session-reset";
+export function clearActionNotificationSession() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(HOMECOOK_ACTION_NOTIFICATION_SESSION_RESET));
+}

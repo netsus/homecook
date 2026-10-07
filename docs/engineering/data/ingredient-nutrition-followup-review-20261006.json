@@ -1,0 +1,5565 @@
+{
+  "schema_version": "ingredient-nutrition-followup-review-v1",
+  "source": "농촌진흥청 국가표준식품성분 DB 10.4",
+  "source_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+  "identity_review_counts": {
+    "keep_with_reason": 8,
+    "replace": 6,
+    "needs_identity_decision": 25,
+    "revoke_wrong_link": 2
+  },
+  "identity_decisions": [
+    {
+      "ingredient_id": "1ee2e8c8-ac55-4d53-bb6e-e1b396ec3a46",
+      "name": "귀리밥",
+      "current_code": "P123-201020300-3838",
+      "current_name": "통귀리밥 100",
+      "current_provider": "MFDS",
+      "current_link_id": "53d599cb-d4de-47b0-8fe7-6c99e60ed6d3",
+      "current_recipe_count": 2,
+      "decision": "keep_with_reason",
+      "reason": "2026-07-22 공식 후보로 P123-201020300-3838 통귀리밥100을 명시 승인했고 현재 코드가 같다. 기존 대표값 결정을 보존한다. 이 판단은 혼합 쌀비율이 다른 모든 귀리밥에도 같다는 인증이 아니며 특정 상품 대표값 사용을 기록해야 한다.",
+      "confidence": "high",
+      "keep_state": "approved"
+    },
+    {
+      "ingredient_id": "9935fd54-6916-4743-9783-06fb457dacca",
+      "name": "다시다",
+      "current_code": "P113-201020100-0836",
+      "current_name": "다시다링 소고기",
+      "current_provider": "MFDS",
+      "current_link_id": "c2fbf389-49ce-4fbe-ae91-a1378ec1e55d",
+      "current_recipe_count": 2,
+      "decision": "keep_with_reason",
+      "reason": "2026-07-22 P113-201020100-0836 다시다링 소고기를 명시 승인했고 현재 코드가 같다. 9월에는 별도로 다시다0.5스푼=5g 환산도 승인됐다. 특정 제형을 선택한 기존 결정을 임의로 철회하지 않는다. 향후 가루/코인 제품을 구분하는 것은 별도 제품 식별 결정이다.",
+      "confidence": "high",
+      "keep_state": "approved"
+    },
+    {
+      "ingredient_id": "2a155c79-b97b-49a0-88d2-2217ff2bafca",
+      "name": "부추",
+      "current_code": "3299",
+      "current_name": "부추, 솔부추, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "9bda17f1-4cb1-4909-8119-00cfb00a8acd",
+      "current_recipe_count": 2,
+      "decision": "keep_with_reason",
+      "reason": "2026-07-22 검토에서 종전 재래종 값을 RDA3299 솔부추 생것으로 교체 승인했고 현재와 동일하다. 이번 감사만으로 재래종983으로 되돌리면 기존 명시 결정을 뒤집으므로 유지한다. 모든 부추 품종이 영양적으로 동일하다는 뜻은 아니다.",
+      "confidence": "high",
+      "keep_state": "approved"
+    },
+    {
+      "ingredient_id": "f009c2f4-c381-55ff-8eb0-5b22c86f761d",
+      "name": "치커리",
+      "current_code": "1206",
+      "current_name": "치커리, 치콘, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "4429b0b3-07fc-430a-9957-1bc8f698897c",
+      "current_recipe_count": 2,
+      "decision": "replace",
+      "replacement": {
+        "provider_code": "RDA_10_4",
+        "code": "1204",
+        "name": "치커리, 잎, 생것",
+        "basis": "가식부 100g"
+      },
+      "reason": "2026-07-22 검수에서 승인한 대상은 치커리 잎 생것(RDA1204)이다. 현재 치콘1206은 다른 식용 형태를 명시하므로 기존 승인 식품 정체성을 복원한다.",
+      "confidence": "high"
+    },
+    {
+      "ingredient_id": "c7b43488-d336-44b3-bdf6-59f66399a292",
+      "name": "새송이버섯",
+      "current_code": "P116-702070100-0427",
+      "current_name": "청년의 품격 새송이버섯",
+      "current_provider": "MFDS",
+      "current_link_id": "c796285d-ca78-4b8b-a76e-7b2b2980ac98",
+      "current_recipe_count": 1,
+      "decision": "keep_with_reason",
+      "reason": "2026-07-22 사용자 지정 출처로 MFDS P116-702070100-0427 청년의 품격 새송이버섯100g을 확정했고 현재 동일하다. 제품명을 포함한 근거를 보존한다. 큰느타리버섯과 대표명 정리는 영양 원문을 새로 교체할 근거가 아니다.",
+      "confidence": "high",
+      "keep_state": "approved"
+    },
+    {
+      "ingredient_id": "e8630c97-8b65-4cbd-9e0c-ecf0a250ee98",
+      "name": "소면",
+      "current_code": "204",
+      "current_name": "국수, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "e30f7c49-6ce7-4915-9500-e50f9163097b",
+      "current_recipe_count": 1,
+      "decision": "needs_identity_decision",
+      "reason": "현재204는 국수 생것이고 공식207은 소면 말린것,208은 말린 소면을 삶은것이다. 레시피 사용100g만으로 계량 시점을 확정할 수 없다. 건면으로 쓸지 삶은면으로 쓸지 정체성/단위 상태를 결정한 뒤207또는208을 연결한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "207",
+          "name": "국수, 소면, 말린것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "208",
+          "name": "국수, 소면, 말린것, 삶은것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "27eb6475-a35b-40dd-87cf-bb90c7c47f05",
+      "name": "오렌지즙",
+      "current_code": "DONSIMON-ORANGE-JUICE-100ML-20260722",
+      "current_name": "돈시몬 오렌지 주스",
+      "current_provider": "DONSIMON_LABEL",
+      "current_link_id": "ceaabdfc-f3ee-4afd-a25e-e53c4fdc57a8",
+      "current_recipe_count": 1,
+      "decision": "keep_with_reason",
+      "reason": "2026-07-22 사용자 지정 돈시몬 오렌지 주스100mL 근거가 현재와 동일하다. 100mL 기준과 승인된 밀도 환산을 보존하며 다른 순수 착즙의100g값으로 임의 대체하지 않는다.",
+      "confidence": "high",
+      "keep_state": "approved"
+    },
+    {
+      "ingredient_id": "a25492e6-f5f1-51fe-8264-cc16075c478e",
+      "name": "전분",
+      "current_code": "user-demo-potato-starch-20260917",
+      "current_name": "감자전분",
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_link_id": "33fec8d7-4dcc-4f0f-aa63-eb58c162964e",
+      "current_recipe_count": 1,
+      "decision": "keep_with_reason",
+      "reason": "최신 predecessor의 승인사유에 사용자 제공 감자전분 값으로 시연용 영양 계산 보강이라고 명시되어 있다. 일반 이름의 모호함은 있으나 사용자 지정 근거를 자동 철회하지 않는다. 감자전분 대표값이라는 설명을 남기고 옥수수/고구마 전분으로 일반화하지 않는다.",
+      "confidence": "high",
+      "keep_state": "approved"
+    },
+    {
+      "ingredient_id": "4c97d81a-1095-482c-8832-a5f303a19154",
+      "name": "참치",
+      "current_code": "P120-009060000-F002-001",
+      "current_name": "참치통조림",
+      "current_provider": "MFDS",
+      "current_link_id": "1ca57afb-4522-4ad8-a012-3433a64aebc3",
+      "current_recipe_count": 1,
+      "decision": "keep_with_reason",
+      "reason": "2026-07-22 공식 후보 P120-009060000-F002-001 참치통조림을 승인했고 현재 코드가 같다. 기존 승인 대표값을 유지하되 생참치 전체와 동일하다고 해석하지 않는다. 특정 통조림의 기름·고형물 기준은 이후 제품 식별에서 확인한다.",
+      "confidence": "high",
+      "keep_state": "approved"
+    },
+    {
+      "ingredient_id": "b6d1dd47-7bed-4354-a588-3cc63cee86ef",
+      "name": "치즈",
+      "current_code": "2857",
+      "current_name": "치즈, 모차렐라, 슈레드타입",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "f9ae15a0-e977-4051-a130-aa0a4ad34467",
+      "current_recipe_count": 1,
+      "decision": "needs_identity_decision",
+      "reason": "모차렐라 슈레드2857은 정확한 한 종류지만 일반 치즈라는 이름은 체다·자연치즈·가공치즈도 포함할 수 있다. 특정 제품/치즈 종류 확인 없이 다른 종류로 교체하거나 현재값을 자동 철회하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "2856",
+          "name": "치즈, 모차렐라"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "2857",
+          "name": "치즈, 모차렐라, 슈레드타입"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "2861",
+          "name": "치즈, 체다"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "c5c86612-e0b7-5951-8bb2-553225bbfe9c",
+      "name": "호박",
+      "current_code": "1263",
+      "current_name": "호박, 국수호박, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "34cfc975-faa2-4d66-a4e4-43ae27277e73",
+      "current_recipe_count": 1,
+      "decision": "needs_identity_decision",
+      "reason": "현재1263은 국수호박이다. 애호박/단호박/국수호박 중 무엇을 뜻하는지 이름과50g만으로 확정되지 않는다. 실제 의미가 국수호박이면 이름을 복원하고 그 외에는 종류를 정한 뒤 바꾼다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1263",
+          "name": "호박, 국수호박, 생것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "720946c2-0d18-5f82-97a2-a6e035743420",
+      "name": "가리비",
+      "current_code": "2531",
+      "current_name": "가리비, 관자, 냉동",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "270f05ab-abf9-4ef7-a2d3-1970eb0db2a0",
+      "current_recipe_count": 0,
+      "decision": "replace",
+      "replacement": {
+        "provider_code": "RDA_10_4",
+        "code": "2524",
+        "name": "가리비, 생것",
+        "basis": "가식부 100g"
+      },
+      "reason": "현재 일반 가리비 이름에 냉동 관자2531이 연결되어 부위·상태가 축소되어 있다. 공식2524는 가리비 생것으로 같은 일반 식품명이다. 생것이 기본이라는 현행 명칭 정책에 따라 일반 가식부로 정정하고 관자·냉동 원자료는 별도로 보존한다.",
+      "confidence": "high"
+    },
+    {
+      "ingredient_id": "1cf44d08-8078-4536-886a-8f5914e5dea8",
+      "name": "고등어",
+      "current_code": "2121",
+      "current_name": "고등어, 자반고등어",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "7b30b31c-dd06-4b67-ae4d-ad239f9a37b8",
+      "current_recipe_count": 0,
+      "decision": "replace",
+      "replacement": {
+        "provider_code": "RDA_10_4",
+        "code": "2115",
+        "name": "고등어, 생것",
+        "basis": "가식부 100g"
+      },
+      "reason": "현재 자반고등어2121은 염장 가공품이다. 원자료2115는 일반 고등어 생것으로 이름과 기본 생것 정책이 직접 일치한다. 남해/서해나 통조림을 임의 선택하지 않는다.",
+      "confidence": "high"
+    },
+    {
+      "ingredient_id": "424b961c-28f1-5fec-ac9f-61b7920be336",
+      "name": "곶감",
+      "current_code": "1386",
+      "current_name": "감, 떫은감, 곶감, 반건시",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "14ce5d48-7de9-4bba-8fb9-912a48bbddc0",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "공식 원자료에서 곶감 이름으로 찾은 항목은1386반건시다. 일반 곶감에 완전 건조까지 포함하는지 확인이 필요하다. 근거 없는 수분 보정이나 다른 감 자료를 선택하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1386",
+          "name": "감, 떫은감, 곶감, 반건시"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440013",
+      "name": "김치",
+      "current_code": "807",
+      "current_name": "김치, 얼갈이배추 김치",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "892ec66e-d524-49f1-a254-8f30420f467c",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재807은 얼갈이배추 김치이고 일반 김치는 종류를 특정하지 않는다. 배추김치795로 바꾸는 것도 새로운 대표값 결정이므로 종류/기존 사용을 확인할 때까지 보류한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "795",
+          "name": "김치, 배추 김치"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "807",
+          "name": "김치, 얼갈이배추 김치"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "917b6843-199a-4034-96b9-d0faad5d4d60",
+      "name": "당면",
+      "current_code": "3461",
+      "current_name": "당면, 분모자, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "66658262-57fa-4892-a550-6d1b7f78f769",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재3461은 분모자 생것이다.459고구마 건당면,461고구마·감자 건당면,3459넓적건당면이 모두 다른 후보다. 일반 당면이라는 이름만으로 원료와건조 상태를 선택하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "459",
+          "name": "당면, 고구마, 말린것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "461",
+          "name": "당면, 고구마, 감자, 말린것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "3459",
+          "name": "당면, 넓적당면, 말린것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "3461",
+          "name": "당면, 분모자, 생것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "225f919a-3be4-4d60-94dd-f50c1c3f03be",
+      "name": "데친 호박",
+      "current_code": "1264",
+      "current_name": "호박, 국수호박, 데친것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "18e836d1-9843-492d-9f57-4b9e31160660",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1264는 데친 국수호박이다. 수치 자체는 그 식품의 공식자료다. 국수호박이라는 종류가 명칭에서 빠진 문제를 이름복원으로 해결할지, 다른 호박을 의도했는지 먼저 결정한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1264",
+          "name": "호박, 국수호박, 데친것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "dba88bd6-bade-57f4-8638-921b256365cb",
+      "name": "람부탄",
+      "current_code": "1427",
+      "current_name": "람부탄, 통조림",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "a165ca95-c94f-4546-b514-360615eb6ca7",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "공식전체 자료에서 람부탄은1427통조림만 확인된다. 일반 생과일 이름을 통조림 전용으로 명확히 할지 생과일 자료를 추가 확보할지 결정이 필요하다. 통조림을 생과일값으로 인증하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1427",
+          "name": "람부탄, 통조림"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "b29cd1cd-d7f3-590f-91be-7f8075d96055",
+      "name": "로메인",
+      "current_code": "1025",
+      "current_name": "상추, 반결구, 천상, 녹색, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "4c9e34a4-4408-401c-83f6-0e15424fcb30",
+      "current_recipe_count": 0,
+      "decision": "replace",
+      "replacement": {
+        "provider_code": "RDA_10_4",
+        "code": "1023",
+        "name": "상추, 반결구, 로메인, 녹색, 생것",
+        "basis": "가식부 100g"
+      },
+      "reason": "공식 자료에 상추·반결구·로메인·녹색·생것을 명시한1023이 있다. 현재1025는 별도 천상 이름이므로 정확한 로메인 항목으로 연결한다. 품종 동일성 추측이나 천상=로메인 가정을 사용하지 않는다.",
+      "confidence": "high"
+    },
+    {
+      "ingredient_id": "5f03e3d7-7068-446f-a903-6a0edc2747f4",
+      "name": "말리거나 삶은 소면 중면",
+      "current_code": "210",
+      "current_name": "국수, 중면, 말린것, 삶은것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "66d56988-f5f4-44b1-bc2a-ed7b16b87322",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재210은 중면 건면을 삶은것이다. 소면이라는 명칭 혼입과 말리거나라는 잘못된 연속 조리 표현을 고칠지 먼저 결정한다. 중면210을 소면208로 무조건 바꾸지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "210",
+          "name": "국수, 중면, 말린것, 삶은것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "208",
+          "name": "국수, 소면, 말린것, 삶은것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "edd28739-05e9-4d44-bce1-d152985e3aa4",
+      "name": "말린 당면",
+      "current_code": "3459",
+      "current_name": "당면, 넓적당면, 말린것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "9668bad3-d779-4172-ae8b-5a05cefe4927",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재3459는 넓적당면 말린것이다. 건조 상태는 일치하지만 폭/원료를 확인해야 한다. 넓적건당면으로 이름을 구체화할지 일반 고구마 건당면459또는 혼합461을 대표로 할지 미결이다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "3459",
+          "name": "당면, 넓적당면, 말린것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "459",
+          "name": "당면, 고구마, 말린것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "461",
+          "name": "당면, 고구마, 감자, 말린것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "250dedc9-b290-4ea8-951d-fc11ab9a8a13",
+      "name": "말린 취나물 야생",
+      "current_code": "1194",
+      "current_name": "취나물, 곰취, 야생, 말린것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "23bf4f98-67a4-4ed1-91c7-91cb8eb3ede9",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1194는 야생 곰취 말린것이다. 취나물은 식품종을 특정하지 않는 상위 이름이므로 야생 곰취로 명칭복원할지 다른 취나물을 의도했는지 결정한다. 원자료 영양을 오류라고 자동 철회하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1194",
+          "name": "취나물, 곰취, 야생, 말린것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "b946fa8c-5af1-4e02-ad57-07bd6f85a975",
+      "name": "말린 취나물 재배",
+      "current_code": "1195",
+      "current_name": "취나물, 곰취, 재배, 말린것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "11c41a81-7d0c-42ec-b2ad-a61ee7180c03",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1195는 재배 곰취 말린것이다. 곰취라는 종류가 명칭에서 누락되어 있다. 재배 곰취로 명칭복원하는 결정을 먼저 하고 참취/미역취로 임의 교체하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1195",
+          "name": "취나물, 곰취, 재배, 말린것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "a3acbc26-fd36-503f-a113-16ff384765e5",
+      "name": "매실 절임",
+      "current_code": "1444",
+      "current_name": "매실 절임, 당절임, 고형물",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "7b165086-5be5-449e-a984-0c4f17ef43ad",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1444는 당절임 고형물이고1445는 염절임 고형물이다. 일반 이름만으로 당/염·국물 포함 여부가 확정되지 않는다. 현재 연결을 당절임으로 명확히 할지 별도 식품으로 분리할지 결정한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1444",
+          "name": "매실 절임, 당절임, 고형물"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1445",
+          "name": "매실 절임, 염절임, 고형물"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "1f4749a1-cdff-59c2-b854-a77ce8fc6fdb",
+      "name": "밀",
+      "current_code": "169",
+      "current_name": "밀, 호라산, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "756395f6-3e79-483d-a578-f652bd336bd1",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재169는 호라산이다.164도정밀과168통밀도 존재하지만 도정 여부까지 미확정이므로 특정 새 원자료를 자동 선택하지 않는다. 호라산 명칭복원 또는 일반밀 정의를 결정한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "164",
+          "name": "밀, 도정, 생것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "168",
+          "name": "밀, 통밀, 생것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "169",
+          "name": "밀, 호라산, 생것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "4097166d-11eb-453e-92e3-6eee1d78706a",
+      "name": "반건조 돔",
+      "current_code": "2220",
+      "current_name": "돔, 옥돔, 반건조",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "14bfbf6f-6fe5-46d5-aba0-e51f40356698",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재2220은 반건조 옥돔이다. 돔의 어종이 빠진 이름을 반건조 옥돔으로 복원할지 실제 다른 어종을 의도했는지 결정한다. 다른 돔/생선값으로 임의 대체하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "2220",
+          "name": "돔, 옥돔, 반건조"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "a63e320c-456b-47f0-9338-48a2d0c390be",
+      "name": "붉은 치커리",
+      "current_code": "3497",
+      "current_name": "치커리, 치콘, 적색, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "4c978a52-39ed-4982-b79f-d066739c08e7",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재3497은 적색 치콘,1205는 적색 치커리 잎이다. 일반 붉은 치커리 이름만으로 두 형태를 같다고 할 수 없다. 기존 사용/등록에서 잎인지 치콘인지 특정 후 결정한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "3497",
+          "name": "치커리, 치콘, 적색, 생것"
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1205",
+          "name": "치커리, 잎, 적색, 생것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "ce85144b-63b6-4894-a1fd-afb86134620c",
+      "name": "삶아 말리거나 삶은 취나물",
+      "current_code": "3496",
+      "current_name": "취나물, 미역취, 삶아서 말린것, 삶은것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "c6b788c0-7be0-4488-af96-de6809565eb4",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재3496은 미역취를 삶아 말린 뒤 삶은것이다. 미역취라는 종류와연속 조리과정이 명칭에서 훼손되어 있다. 이름을 복원하거나 정확한 의도를 확인하기 전 영양원자료를 바꾸지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "3496",
+          "name": "취나물, 미역취, 삶아서 말린것, 삶은것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "7c0170eb-db77-53a2-bd23-f940ea589ff3",
+      "name": "스테비아",
+      "current_code": "1058",
+      "current_name": "스테비아, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "e87f58b7-7ee1-4174-976e-a5eee5ade935",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1058은 스테비아 식물 생것이다. 감미료 제품을 뜻하는 스테비아와 구분할 별도 식별이 필요하다. 식물 생잎의 영양값을 감미료 라벨로 간주하거나0kcal를 가정하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1058",
+          "name": "스테비아, 생것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "762ecb56-5ef6-5635-8f9b-28cfe68c0196",
+      "name": "오리알",
+      "current_code": "2084",
+      "current_name": "오리알, 피단",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "12e312e4-0bf1-40a8-bec8-638b06c2bffc",
+      "current_recipe_count": 0,
+      "decision": "replace",
+      "replacement": {
+        "provider_code": "RDA_10_4",
+        "code": "2078",
+        "name": "오리알, 생것",
+        "basis": "가식부 100g"
+      },
+      "reason": "현재2084는 피단이라는 가공품이며 원자료2078은 오리알 생것이다. 기본 생것 정책에 따라 전체 생알 자료로 정정한다. 흰자/노른자/청둥오리 자료로 대신하지 않는다.",
+      "confidence": "high"
+    },
+    {
+      "ingredient_id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f",
+      "name": "조미김",
+      "current_code": "2769",
+      "current_name": "김, 조미김, 구운것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "9aab401c-024d-45bf-aa55-46f3186aeae2",
+      "current_recipe_count": 0,
+      "decision": "keep_with_reason",
+      "reason": "RDA2769는9월19일 원자료 열량·지방 정합성 문제로 링크와 프로필 사용승인을 철회했다. 최신자료에서도 링크revoked/inactive이다. keep_with_reason은 철회 상태를 그대로 유지한다는 뜻이며 재승인이나 사용 재개가 아니다.",
+      "confidence": "high",
+      "keep_state": "revoked"
+    },
+    {
+      "ingredient_id": "3c25b745-71d2-5d94-b45a-613b92000ba8",
+      "name": "찹쌀 국수",
+      "current_code": "407",
+      "current_name": "찹쌀 국수, 흑미, 말린것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "0645e96f-7861-4c46-a23c-a4fe9e2d3113",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재407은 흑미 찹쌀 국수 말린것이며 공식전체 자료에서 찹쌀 국수는 이 항목만 확인된다. 흑미건면으로 이름을 명확히 할지 다른 찹쌀면이 필요한지 결정한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "407",
+          "name": "찹쌀 국수, 흑미, 말린것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "7acf2458-73d3-5cc9-af80-f80cdc4bb5e6",
+      "name": "찹쌀떡",
+      "current_code": "410",
+      "current_name": "찹쌀떡, 모둠 찰떡",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "830cad70-3621-4b37-80e9-867309a6af80",
+      "current_recipe_count": 0,
+      "decision": "replace",
+      "replacement": {
+        "provider_code": "RDA_10_4",
+        "code": "408",
+        "name": "찹쌀떡",
+        "basis": "가식부 100g"
+      },
+      "reason": "공식408의 식품명이 정확히 찹쌀떡이다. 현재410은 모둠 찰떡으로 하위 종류가 특정되어 있으므로 더 좁은 가공품을 대표값으로 임의 선택한 연결을 정확한 동일명 자료로 바꾼다.",
+      "confidence": "high"
+    },
+    {
+      "ingredient_id": "078b1e76-2000-4ab7-b1b9-3dd4d247c97b",
+      "name": "초록 호박",
+      "current_code": "1279",
+      "current_name": "호박, 차요테, 초록색, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "5be555df-bc8f-45b7-919d-2fbbd894d358",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1279는 초록 차요테다. 색상만 남은 이름을 초록 차요테로 복원할지 다른 초록호박을 의도했는지 결정한다. 색깔만으로 애호박 자료와 바꾸지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1279",
+          "name": "호박, 차요테, 초록색, 생것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "e10a1b06-34ec-5078-9f92-bf6e548afb35",
+      "name": "초코칩",
+      "current_code": "198",
+      "current_name": "과자, 쿠키, 초코칩",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "f1dbd2cf-8053-4b28-aa9d-24fbd34ddfe9",
+      "current_recipe_count": 0,
+      "decision": "revoke_wrong_link",
+      "reason": "현재198은 초코칩 쿠키 전체이고 베이킹용 초콜릿 조각의 영양근거가 아니다. 공식전체에서 초코칩 직접항목은 이 쿠키뿐이며 다크/밀크/스위트초콜릿 중 제품성분을 임의 선택할 수 없다. 잘못된 연결만 철회하고 실제 초코칩 제품라벨 확보까지 결측으로 남긴다. 쿠키 원자료/프로필/다른 연결은 보존한다.",
+      "confidence": "high",
+      "replacement": null
+    },
+    {
+      "ingredient_id": "576a22f5-ab56-5a38-8ecc-c7eda148413f",
+      "name": "캐슈너트",
+      "current_code": "682",
+      "current_name": "캐슈너트, 조미, 볶은것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "bd44a91f-1807-41c9-a867-82e633c47176",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "공식전체의 캐슈너트는682조미·볶은것 한 항목이다. 무조미 캐슈너트의 대표값으로 사용 승인한 기록은 확인되지 않았다. 조미볶음으로 명칭명확화 또는 실제 제품/무조미 출처 확보가 필요하다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "682",
+          "name": "캐슈너트, 조미, 볶은것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "f9833177-2c21-5f5c-8a99-ba0962650400",
+      "name": "콩고물",
+      "current_code": "413",
+      "current_name": "찹쌀떡, 인절미, 콩고물",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "ba4c87c3-ca6f-4e01-8815-18f3841a4413",
+      "current_recipe_count": 0,
+      "decision": "revoke_wrong_link",
+      "reason": "현재413은 콩고물을 묻힌 인절미 전체이다.564대두 콩가루는 후보지만 볶음·설탕·소금 혼합 여부가 불명확하여 고물과 동일하다고 확정할 수 없다. 인절미 연결만 철회하고 실제 콩고물 조성/제품근거 확보까지 결측으로 남긴다. 인절미 원자료/프로필/다른 연결은 보존한다.",
+      "confidence": "high",
+      "replacement": null
+    },
+    {
+      "ingredient_id": "b0e0a390-94ab-5f07-b900-57cc2bbc11a3",
+      "name": "콩국물",
+      "current_code": "574",
+      "current_name": "두유, 콩국물, 소금 0.3%",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "5e41b476-8a24-424a-875a-9648987297b3",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재574는 소금0.3% 콩국물이다. 무염/가염 기준을 정하지 않고 나트륨을 무염값으로 보정하거나0으로 바꿀 수 없다. 해당 염도 대표값 사용 여부를 결정한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "574",
+          "name": "두유, 콩국물, 소금 0.3%"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "be15aeb9-a002-549d-bd64-279faa89c1eb",
+      "name": "퀴노아",
+      "current_code": "416",
+      "current_name": "퀴노아, 쪄서 말린것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "99c74354-9d43-4fa6-bc8e-93e558162221",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재416은 쪄서 말린것이고 공식전체 퀴노아 자료는 이 항목뿐이다. 일반 생곡물과 동일하다는 근거 없이 대체하지 않으며 현재이름을 쪄서말린 제품으로 정의할지 확인한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "416",
+          "name": "퀴노아, 쪄서 말린것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "d64cfcc1-636e-50fa-9f14-91043e91911e",
+      "name": "할라페뇨",
+      "current_code": "1257",
+      "current_name": "할라페뇨, 통조림",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "e5e74c1d-9016-451c-88f2-2b438623451e",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1257은 통조림이다. 생 할라페뇨를 뜻하는지 절임/통조림 제품을 뜻하는지 결정이 필요하며 다른 고추의 생것값을 임의 사용하지 않는다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1257",
+          "name": "할라페뇨, 통조림"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    },
+    {
+      "ingredient_id": "82b64ffd-24f7-4b0d-b974-b2f8c028595e",
+      "name": "호박 하얀색",
+      "current_code": "1280",
+      "current_name": "호박, 차요테, 하얀색, 생것",
+      "current_provider": "RDA_10_4",
+      "current_link_id": "47bc780e-2fe5-482b-b97c-159823834d76",
+      "current_recipe_count": 0,
+      "decision": "needs_identity_decision",
+      "reason": "현재1280은 흰색 차요테다. 흰색호박이라는 불명확한 이름을 흰색 차요테로 복원할지 실제 다른 종류를 뜻하는지 결정한다.",
+      "confidence": "medium",
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "code": "1280",
+          "name": "호박, 차요테, 하얀색, 생것"
+        }
+      ],
+      "mutation_authorized_by_this_review": false
+    }
+  ],
+  "unlinked_review_counts": {
+    "needs_identity_decision": 219,
+    "link": 113,
+    "no_exact_source": 20
+  },
+  "unlinked_decisions": [
+    {
+      "ingredient_id": "5f211100-368f-5ed7-a675-e70f58522a71",
+      "name": "가시오갈피",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "순을 먹는 재료인지 약재용 줄기·뿌리인지 불명확; 순 자료로 임의 축소하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "c0df490c-11ce-55ce-a185-51c3692c7499",
+      "name": "감",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "단감·떫은감·연시가 한 이름과 별칭에 혼재하므로 식품 정체성을 먼저 분리해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "10f0fdbf-bf4b-5bc3-a7e1-13267ec42ae9",
+      "name": "감말랭이",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1385",
+      "source_name": "감, 떫은감, 감말랭이",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "2ace27b9-4cd3-5f15-b80a-a8cbb404376c",
+      "name": "갓",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "705",
+      "source_name": "갓, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "4dd2c9b4-e54f-5f30-b1e8-00a28c2a992a",
+      "name": "갯나물",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "세발나물·칠면초·함초가 별칭에 혼재하며 서로 다른 식품이므로 임의 연결 금지. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "7d845a35-ea7a-5cae-acf2-939834f09f19",
+      "name": "거봉",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "거봉 자료는 껍질 포함 여부별로 존재; 가식부 기준을 먼저 정해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "dc60016a-42b1-41e8-aaa1-d460d2dd531d",
+      "name": "고구마",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "443",
+      "source_name": "고구마, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "a4fabde3-b240-598c-950e-f7c3d502a6dd",
+      "name": "고려엉겅퀴",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "생것 자료가 재래종 잎으로 한정되고 말린것 자료도 존재; 부위·상태 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "09c45eb5-5173-5d62-bcdb-ce5bc7fd897c",
+      "name": "고비",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "야생·재배 및 건조·조리 상태별 자료만 존재하여 기준 정체성 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "4d6be943-bb58-58d1-b943-8db49550ffe1",
+      "name": "고수",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "754",
+      "source_name": "고수(향채), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "a12cd429-b500-42d2-ac17-e53123f7356a",
+      "name": "고추",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "풋고추·홍고추·청양고추 등을 구분하지 않는 이름이며 별칭만으로 풋고추 확정 불가. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "13321ed6-02cb-5714-8325-74dad27c8f54",
+      "name": "곤약",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "분말·판형·국수형 곤약을 구분해야 하며 특히 분말과 수화제품은 대체 불가. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "355caef0-54bf-5381-995e-d617b12e1f2b",
+      "name": "구기자",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "순·잎·열매 및 건조 약재 중 대상 부위와 수분상태 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e385ea19-12a6-56da-b031-48e24a70f9e5",
+      "name": "구스베리",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1392",
+      "source_name": "구스베리, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "66a32699-e332-51c1-b466-f25711992123",
+      "name": "구아바",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1389",
+      "source_name": "구아바, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "23727367-5479-4538-acf2-c32810ef7615",
+      "name": "귀리",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "겉귀리·쌀귀리·오트밀을 모두 별칭으로 보유; 도정·가공형태 기준 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "cb88d8e9-9795-51e2-b9b5-fa91c622d52c",
+      "name": "귤",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "온주밀감·만감류가 별칭에 혼재하며 일반 귤을 특정 품종군으로 임의 지정하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e0ddb4e8-dca8-433d-8d69-bead22a28a40",
+      "name": "기장",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "공식 생것 자료에 도정 조건이 있으므로 도정 곡립인지 원곡인지 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "ab4c19de-3825-52d2-943e-19a11bf4caef",
+      "name": "꽃양배추",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "808",
+      "source_name": "꽃양배추(콜리플라워), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "2cceb78e-d82c-55be-9e7c-fd2f0f500ec9",
+      "name": "꾸지뽕",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "잎과 열매 자료가 모두 존재하며 부위를 임의 선택할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "73765314-cb0a-51a3-95b9-930ae56ca124",
+      "name": "꿀풀",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "810",
+      "source_name": "꿀풀(하고초), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "2ff74b9c-fcbe-4112-874b-27c172a3d361",
+      "name": "녹두",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "공식 자료는 말린것·삶은것으로 구분; 생콩 또는 건조콩 기준 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "9c03ad75-27f8-58ec-bec8-0ab3dd6d238f",
+      "name": "녹두당면",
+      "decision": "no_exact_source",
+      "confidence": "high",
+      "reason": "녹두 국수 자료는 있으나 녹두전분 당면과 동일 제품이라는 근거가 없어 연결하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "5c683510-ec7d-54ba-916c-ee3357769fe9",
+      "name": "늙은호박",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1265",
+      "source_name": "호박, 늙은호박, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "e3af9089-97f0-5a14-8ebd-1b4c5ec33dfe",
+      "name": "능이버섯",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1305",
+      "source_name": "능이버섯(향버섯), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "062757ae-b90d-506e-849e-d20490b303a8",
+      "name": "다식",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "검정깨 다식과 송화 다식 등 조성이 달라 원료 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "a4bdf8ce-f4df-51e7-80d7-882b65e3c6ee",
+      "name": "당귀",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "일당귀·참당귀 및 잎·뿌리 사용을 구분해야 함; 별칭 혼재. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "1788618b-8947-556a-94e4-1d0f35b4b6b1",
+      "name": "대나무순",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "824",
+      "source_name": "대나무순(죽순), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "d13cd5f0-4f24-5388-af46-c8e32f7062c0",
+      "name": "대두",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "노란콩·검은콩 및 말린것·삶은것을 구분하는 포괄명으로 정체성 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "14022419-668b-5327-86fd-8850dae8af36",
+      "name": "더덕",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "뿌리와 순 자료가 별도로 있어 재료 부위 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "2a55e917-960a-5d42-afe6-13dd52220b66",
+      "name": "도라지",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "뿌리와 순 및 건조 상태를 구분하는 자료여서 부위 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "2c75e6f2-d044-597f-804d-cf4422db0c2d",
+      "name": "동아",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "836",
+      "source_name": "동아, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "669bb26c-0e6e-5aa0-811e-eef1f8d4a8fd",
+      "name": "두릅",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "참두릅과 땅두릅이 별칭에 혼재; 종과 부위를 임의 선택하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "ea3a7a75-cabd-5a06-99af-726dc15eb23a",
+      "name": "두유",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "대두·검은콩·무가당·콩국물 등 조성이 다른 두유 자료가 있어 제품 기준 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "9e405f89-b76e-5d7c-af5a-6b7666123eb6",
+      "name": "둥굴레",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "잎·잎 말린것·차 자료만 확인됨; 통상 약재 부위와 잎을 혼동하지 않도록 부위 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "b70de71e-7690-5b37-9194-474f60d6ee15",
+      "name": "들깨",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "들깨 종실 말린것·볶은것·싹 자료가 존재하여 부위와 상태 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "1e55e0b3-bbdd-598a-971f-3fbacd45e0a8",
+      "name": "땅콩",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·삶은것·볶은것 및 조미 상태가 다르므로 수분·가공상태 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "3322e161-0eec-43bf-961d-d36d0af890a5",
+      "name": "떡국떡",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "떡국떡 원재료와 수분 상태 확인 필요; 가래떡 절단품이라는 근거 없이 일반 가래떡으로 연결하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "2161ed98-b3bb-537d-959b-d4696ce3c7c5",
+      "name": "또띠아",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "밀·통밀 또띠아 자료를 구분해야 하며 원료 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440040",
+      "name": "라면",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "면 단독과 스프 포함 조리전 식품, 용기라면이 혼재; 제품 범위 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "cdda0ea6-bb90-5175-b2a5-215c8b2c87f3",
+      "name": "라임즙",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "천연과즙과 캔 주스 자료의 조성이 다르므로 무첨가 착즙인지 제품인지 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "38fa0922-2749-4122-b57c-9a6b252ce77f",
+      "name": "레이디핑거 쿠키",
+      "decision": "no_exact_source",
+      "confidence": "high",
+      "reason": "공식 원자료에서 레이디핑거 쿠키에 정확히 일치하는 자료를 찾지 못함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "89b5cdbe-8d08-5655-976a-e8641b23bec7",
+      "name": "렌틸콩",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "갈색과 빨간색 렌틸콩의 말린것 자료만 존재하여 종류·건조 여부 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "260d7d4f-9c03-5d86-b7f0-292f55a24f48",
+      "name": "리치",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1432",
+      "source_name": "리치, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 미량(Tr) 표시: 나트륨; 정량값을 임의 생성하지 않음. 핵심 5종: 정량 미확정 나트륨(Tr)."
+    },
+    {
+      "ingredient_id": "a3921aa2-80c4-5b5b-bb5f-832e41cc5e52",
+      "name": "마",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "단마·둥근마·장마가 별칭에 혼재; 종·품종을 임의 선택할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "5e148c02-c0a3-5f02-9534-4203fd5c5e3f",
+      "name": "마늘종",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "877",
+      "source_name": "마늘종, 꽃줄기, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "9bad73b5-732d-50cf-8eb7-b2f29705d331",
+      "name": "마카다미아",
+      "decision": "no_exact_source",
+      "confidence": "high",
+      "reason": "원자료는 조미하여 볶은 마카다미아뿐이며 일반 재료를 이 가공식품으로 대체할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "8e1a99f7-f5aa-5d1a-a893-b7f22c053477",
+      "name": "마카로니",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "건면·삶은 면 및 과자와 구분 필요; 수분상태 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "282edbfa-f865-5854-a7c0-ffc3c34f2dd0",
+      "name": "매실",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1439",
+      "source_name": "매실, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "dfaa3ed8-cf79-5529-89d8-58643c3c2c07",
+      "name": "머핀",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "3401",
+      "source_name": "빵, 머핀",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "9c837c07-4875-5a79-8d46-4ec5063df58b",
+      "name": "메밀",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "도정 생것·가루·싹 등 자료가 존재하며 원곡인지 도정곡인지 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "9e952f9f-d5f0-59b8-953e-f7b66ea746fb",
+      "name": "멥쌀 국수",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "공식 자료는 건면·삶은 건면이며 재료명만으로 수분상태 미확정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "5466d5c5-c860-5f2b-8acb-a240297e5e16",
+      "name": "모링가",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "독립 검토: 원자료 모링가(드럼스틱)의 분석 부위가 명확하지 않음. 잎/꼬투리/분말 용도를 확정하기 전 연결하지 않음."
+    },
+    {
+      "ingredient_id": "928c2ffb-645f-5a43-979d-cfc08f103010",
+      "name": "모시풀",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "공식 자료는 잎으로 한정되므로 재료 가식부를 먼저 명시해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "7eef98fb-e90d-51b2-bac0-1a6017413fb7",
+      "name": "모싯잎송편",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "공식 모싯잎송편은 동부 소로 한정되어 속재료 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "01b8cdf4-50cb-5873-83b4-dbc98726a364",
+      "name": "목이버섯",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1310",
+      "source_name": "목이버섯, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 흰백목이 별칭은 다른 세부식품이므로 이 자료로 승인한 근거가 아님. 핵심 5종: 모두 원자료 정량값 확인.",
+      "invalid_aliases": [
+        {
+          "synonym": "흰백목이",
+          "reason": "공식자료가 일반 목이버섯과 흰백목이를 별도 식품으로 구분; 일반 목이버섯 생것 자료로 흰백목이를 처리하지 않도록 별칭 분리 필요."
+        }
+      ]
+    },
+    {
+      "ingredient_id": "0d2e91d0-63a4-54ff-9134-7654db050dff",
+      "name": "무 절임",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "단무지·쌈무·치킨무 등 서로 다른 절임을 임의 선택할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "46336984-96e8-5903-bedc-21b307f17602",
+      "name": "무말랭이",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "903",
+      "source_name": "무말랭이, 말린것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "d3b42896-e557-57ef-ab58-9f3a26406cd4",
+      "name": "무청",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "생것은 조선무 품종조건, 시래기는 건조조건이 있어 동일성 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "6c0cf014-ad55-5b11-9c08-6caa01f3e01b",
+      "name": "미나리",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "돌미나리·물미나리 별칭 혼재와 부위 차이가 있어 정체성 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "2746f8a1-9dcd-4b81-8983-980bbdee5946",
+      "name": "미니새송이버섯",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "미니새송이버섯과 일반 큰느타리버섯의 영양 대표성 근거가 없어 임의 대체하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e50c094c-8ad8-5e62-9b6a-f0df5f36642b",
+      "name": "미니파프리카",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "노란색·빨간색·주황색별 자료만 존재하므로 색상 또는 대표 기준 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "a0446092-62dc-58e7-8298-5039208cf275",
+      "name": "미음",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "백미·칠분도미·현미 미음이 달라 곡물과 도정도 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e667dd3f-95fc-4bf6-a4fe-d3d2ea79280a",
+      "name": "민들레 잎",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "민들레 생것 자료는 존재하나 원자료 이름에 잎 가식부가 명시되지 않아 잎만의 자료인지 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "0d9c596d-68a0-58b0-9f36-a5d33c05985d",
+      "name": "바질",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 잎으로 한정되어 씨·잎을 혼동하지 않도록 가식부 기준 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "0d1a9737-64b6-51b8-9697-8f918674c1e7",
+      "name": "박",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "과육 및 씨 포함 자료가 별도이므로 가식부 조건 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "71d647ff-fd8c-427a-a14f-757b4cca1403",
+      "name": "밥",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "백미밥·현미밥·잡곡밥 등 곡물 기준이 없으며 공기밥 별칭만으로 백미 확정 불가. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "57884989-ce5f-51ec-9bdc-26d242f42aa8",
+      "name": "배암차즈기",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 잎으로 한정되어 재료 부위 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "326c7d59-f020-57f5-92e0-ded38fc95cfd",
+      "name": "배초향",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 잎으로 한정되어 재료 부위 확정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "a985999a-77ef-5dc7-bb76-aeff5fe32937",
+      "name": "백도",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1486",
+      "source_name": "복숭아, 백도, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "cfdab777-6dfe-549d-bac2-00362e27b318",
+      "name": "백설기",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "152",
+      "source_name": "멥쌀떡, 백설기",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "55b950fc-a88b-4855-a169-3cfbff446815",
+      "name": "버섯",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "버섯은 여러 종을 포함하는 포괄명; 어떤 개별 버섯에도 임의 연결 금지. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "c1fe57ca-dc9c-4831-9cc3-96398b3c4df7",
+      "name": "베트남 고추",
+      "decision": "no_exact_source",
+      "confidence": "high",
+      "reason": "베트남 고추와 정확히 일치하는 종·품종·건조상태 자료가 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "cf6aa3c6-3d31-51a8-b290-73c98bb21413",
+      "name": "병아리콩",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 말린것·삶은것뿐이며 재료 건조상태 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "513fa5b6-fcd8-5cc3-8643-a7f8fbe08540",
+      "name": "보리",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "겉보리·쌀보리·압맥·할맥 등 여러 식품과 도정상태가 별칭에 혼재. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "8e3b8f5e-fdc6-59e6-adda-be6b8dedccf1",
+      "name": "봄동",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "960",
+      "source_name": "배추, 봄동, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "0815baaa-ca39-5fbc-9d25-24d6bd977be0",
+      "name": "부지깽이",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "976",
+      "source_name": "부지깽이(섬쑥부쟁이), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "0c06cb4b-0707-5e29-b177-53b4afb9b6ce",
+      "name": "비비추",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "995",
+      "source_name": "비비추(이밥추), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "b81abca0-d252-5a37-8a8e-761d1beb41b7",
+      "name": "비스킷",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "소프트와 하드 비스킷 조성이 달라 종류 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "3a01df9d-2f3a-50e4-b7c1-e5acb67ef035",
+      "name": "비타민채",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "996",
+      "source_name": "비타민채(다채), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "4c22d101-7b1c-574e-bfeb-51347d9f5fad",
+      "name": "비트",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "뿌리·잎·어린잎 자료가 있어 대상 부위 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "5806b045-9f49-5e0d-96e0-cebc3e205bc4",
+      "name": "뽕나무버섯",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "야생·재배, 갓·줄기, 건조조건별 원자료만 존재하여 가식부와 상태 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "d15300a1-df87-5d95-81cc-82b17ddd6e70",
+      "name": "산마늘 장아찌",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1008",
+      "source_name": "산마늘(명이나물)장아찌",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "70ca56bb-3769-50c9-8b05-c562f1004ed1",
+      "name": "산수유",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "열매 생것과 말린 과육은 수분·가식부가 다르므로 대상 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "c2499335-e907-579c-a0b1-b90c7fa95665",
+      "name": "산자나무 열매",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1532",
+      "source_name": "산자나무 열매(씨벅톤), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "c2bc81e1-6fcf-595e-99fb-90d7f733a88c",
+      "name": "삼씨",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린 종실 자료만 있어 건조 및 탈각 기준 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "d8becf61-b9a5-5217-b364-6109104c33ce",
+      "name": "삼채",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "뿌리·잎·줄기·잎줄기 자료가 존재하여 대상 부위를 임의 선택할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "41673211-398b-56ff-9a87-09296f39d794",
+      "name": "상추",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "잎상추·로메인·양상추·줄기상추와 여러 색/품종이 별칭에 혼재. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "052926f7-7664-53f5-8da1-9fee4716df14",
+      "name": "상황버섯",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것과 추출물만 존재; 원재료 가공상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "0240cc8c-ab63-534c-8669-212362b78b9a",
+      "name": "생강",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 뿌리줄기 생것으로 한정; 분말·절임과 구분되는 재료 정체성 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "938982ca-0354-5a0e-b80b-02e0bd348955",
+      "name": "생강 피클",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1034",
+      "source_name": "생강 피클",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 원자료 결측: 당류; 없는 값을 0으로 만들지 않는 부분 연결. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "a51d3677-ac5d-433f-a2b4-574b3a733662",
+      "name": "석류즙",
+      "decision": "no_exact_source",
+      "confidence": "high",
+      "reason": "공식 원자료에는 석류 생것과 석류 식초음료만 확인되며 석류즙 정확 자료 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "b67200dc-bf76-5f88-9162-290c699977bd",
+      "name": "선인장",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "보검선인장·저단선인장 및 열매·줄기를 구분해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "a8123e7e-87fd-52af-8c7e-490a0fe40a81",
+      "name": "송편",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "검정콩·깨·밤·팥 등 소의 종류를 임의 선택할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "d8c12a48-a804-55e6-8e74-9599c8110276",
+      "name": "쇠귀나물",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 뿌리로 한정되어 부위를 임의 축소하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "fe3b2d49-8a95-5b8b-a38e-48651f96cf58",
+      "name": "수리취",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1046",
+      "source_name": "수리취(떡취), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 나트륨, 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 결측 나트륨."
+    },
+    {
+      "ingredient_id": "6a8469d8-bab7-563e-bbf5-a36c1edd37f5",
+      "name": "수박",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "적육질·황육질·미니수박을 구분하는 자료여서 종류 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "7761089f-2b38-51eb-9110-18ccaddf3a46",
+      "name": "수제비면",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 감자 수제비면이며 일반 수제비면을 감자 제품으로 좁히지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "556e6fdc-b9bb-5ced-94b7-a993bdcf39dd",
+      "name": "순무",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "전체·뿌리·잎 자료가 별도여서 가식부 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "dad55e82-86fe-5f9a-a3cc-a41cd15a24d5",
+      "name": "시래기",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "무청·배추 및 말린것·삶은것 상태별 시래기를 구분해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e5e7ea08-1702-5932-8594-2061dc070d7e",
+      "name": "시리얼",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "쌀·옥수수·현미 및 가당 혼합제품을 임의 선택할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "df455d50-e337-58e6-8396-9d6c144378da",
+      "name": "신선초",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1070",
+      "source_name": "신선초(명일엽), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "811a204a-ce5a-4b05-9af9-fe7821be8015",
+      "name": "쌀가루",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "멥쌀·찹쌀, 백미·현미 및 가루 수분 기준을 확인해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "ee65877f-f0aa-5a1e-8473-bf428b451b27",
+      "name": "쑥",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1073",
+      "source_name": "쑥, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "9c19aa89-9e57-535d-980d-bf2fca59ef6c",
+      "name": "아마란스",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "노란색·빨간색 종실과 잎을 구분해야 하고 건조 여부도 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "dc020c54-a097-5b73-81e7-15d5c988c920",
+      "name": "아몬드",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "건조·볶음·조미 상태별 자료만 있으며 재료 상태 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "c8502cf1-5a01-465b-ab00-107dcf663222",
+      "name": "아몬드가루",
+      "decision": "no_exact_source",
+      "confidence": "high",
+      "reason": "아몬드가루 정확 원자료 없음; 탈피·지방함량·수분이 다른 통아몬드로 대체하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "448c2b65-ebf7-5362-8935-d103a57cd452",
+      "name": "아주까리",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린 순과 생잎 자료가 있어 부위와 가공상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "c84a4656-448f-55f2-bd70-cf0068796436",
+      "name": "알배기",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "3484",
+      "source_name": "배추, 알배기, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "3418723f-d527-4b0f-8bda-86623248a9e2",
+      "name": "알배추",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "3484",
+      "source_name": "배추, 알배기, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 알배추는 알배기 배추 표기로 대조. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "7f883bd9-ae76-55a3-9f7b-d0a32e371ea5",
+      "name": "야콘",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 뿌리로 한정되어 대상 부위 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "d727e38b-372f-5800-9f47-764f4cb081f4",
+      "name": "얼갈이배추",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "962",
+      "source_name": "배추, 얼갈이배추, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "f9e5649c-633c-5a5a-84c4-ad603f54ed33",
+      "name": "엉겅퀴",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·삶아서 말린것 자료만 존재하며 생것을 건조자료로 대체하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "cba5d38e-d9e7-53c8-b7a8-48c78619dc01",
+      "name": "에그누들",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "에그누들 건면·삶은 건면만 존재하며 수분상태 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e65b6e3f-c1bc-57e6-ac73-3c48f882b1a0",
+      "name": "여주",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1124",
+      "source_name": "여주(고야), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "bf72e70d-adc1-506e-97cf-7b7e5bd36815",
+      "name": "연시",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1383",
+      "source_name": "감, 떫은감, 연시, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "60d7c611-ac6d-5136-9581-0141e9caee20",
+      "name": "연씨",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "666",
+      "source_name": "연씨, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "ead4ee8e-0b92-5a90-9e58-897a97515b6a",
+      "name": "열대비름",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "잎·어린잎 자료만 존재; 종실 등과 구별할 가식부 기준 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "17a7550e-f21b-5f0a-8371-2a786b5da333",
+      "name": "염교",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "뿌리줄기 생것과 별도 염교 제품자료의 차이를 확인한 뒤 부위·절임 여부 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "68af9ba5-b24e-53ef-8017-b0c3e7dc66cb",
+      "name": "영지버섯",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·추출물 자료만 있어 상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "ed9da030-71a9-500f-8b5b-786b259a4d39",
+      "name": "오렌지",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1543",
+      "source_name": "오렌지, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "5b1a2a80-2e1f-5dee-9d85-7328a6baf666",
+      "name": "오렴자",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1548",
+      "source_name": "오렴자(카람볼라), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "8161c485-a18f-5389-9bae-4460a27b2d92",
+      "name": "오크라",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1143",
+      "source_name": "오크라, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "84b5c0e9-ebb1-510b-afe6-8080cdd69ad4",
+      "name": "옥수수",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "단옥수수·메옥수수·찰옥수수와 여러 상태를 포괄하므로 임의 대표품종 선정 금지. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "47390b74-fa93-546b-8801-290aca0779a3",
+      "name": "올리브 절임",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "미숙 초록 올리브와 완숙 검은 올리브 절임을 구분해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "fc052f44-d451-5d32-b9be-953d4d7d469f",
+      "name": "용과",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "백육종·적육종 자료가 별도여서 종류 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "c38132b8-3ebc-5e5d-9e47-b0fd45bee3d4",
+      "name": "우거지",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "배추 우거지 자료만 존재; 재료가 배추인지와 생것·삶은것 상태 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "2e89002d-6a26-5161-ba52-19094d1c8f3d",
+      "name": "유부",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "569",
+      "source_name": "두부, 유부",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "d2168108-2edd-52e8-8073-1ccb841d1ada",
+      "name": "유자",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "전체·과육·껍질에 따라 영양값이 다르므로 가식부 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "719751fa-3182-5737-a49e-664a05378449",
+      "name": "율무",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료 생것은 도정곡 조건이 있어 도정 여부 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "7ab71f94-aaf6-570c-bec9-46cbfcef47ec",
+      "name": "음나무",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 잎으로 한정되어 약재용 줄기·뿌리와 구분 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "77a9ad01-3536-5f52-9a72-19c514cf0072",
+      "name": "인절미",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "팥고물·콩고물을 구분하는 자료여서 고물 종류 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "070f8908-f14b-534a-b0e1-41e8ec569aa1",
+      "name": "잇꽃",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 잎 또는 씨기름이며 홍화씨 등과 구분할 부위 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "5bb1e1c5-4462-5bc7-8d2d-42f4a924a686",
+      "name": "자두",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1561",
+      "source_name": "자두, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인.",
+      "invalid_aliases": [
+        {
+          "synonym": "프룬",
+          "reason": "공식자료가 말린 자두(프룬)를 자두 생것과 구분하므로 건조과일을 생과일 영양으로 계산하는 별칭 제거 필요."
+        }
+      ]
+    },
+    {
+      "ingredient_id": "7b79626f-5a30-5421-8eae-01c1648fd5ca",
+      "name": "작두",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "591",
+      "source_name": "작두(도두), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "b9f947da-44eb-5b2a-9157-99181135acc5",
+      "name": "잔대",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "뿌리·순 자료가 별도로 있어 가식부 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "7d60b523-af48-5abe-be2c-fb368d69cfe1",
+      "name": "잠두",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·삶은것 자료만 있어 수분상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "b868d0a9-88c1-4c82-9595-796cf8076303",
+      "name": "적양파",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1110",
+      "source_name": "양파, 적색, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "7a45c7c9-8ea6-5155-ac98-5e5f3b383832",
+      "name": "절편",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "161",
+      "source_name": "멥쌀떡, 절편",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "089fa75c-2f6e-51e7-abde-9f6a0bf7b916",
+      "name": "조",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "메조·차조 및 도정상태가 섞인 이름·별칭으로 종류 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "b135a5ae-c49e-5e53-b84d-ea48ad3ab111",
+      "name": "쥐눈이콩",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·삶은것·볶은것만 존재하여 수분·가공 상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "9c795ce2-95d0-52cb-a724-22b255178aa7",
+      "name": "쥬키니",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1277",
+      "source_name": "호박, 쥬키니, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "d3718355-12a8-5121-8cbe-a82e95e21270",
+      "name": "즉석밥",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "백미·잡곡·누룽지 등 조리제품의 종류 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "845badd4-574f-4a60-9d77-8d65ed03549e",
+      "name": "쪽파",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1240",
+      "source_name": "파, 쪽파, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "3cfafe26-a275-51c3-b51e-17a6c5e47d08",
+      "name": "차이브",
+      "decision": "no_exact_source",
+      "confidence": "high",
+      "reason": "차이브에 정확히 일치하는 공식 원자료 없음; 쪽파나 부추로 대체하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "7d1b734c-bf15-4a3a-a1c7-76c5ac628f48",
+      "name": "참나물",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "야생·재배 및 건조상태별 자료만 있어 재배조건을 임의 선택하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "307d4824-6496-5e6f-84a7-cc7eb58a10a5",
+      "name": "참외",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "씨 포함·제거 자료가 별도로 있어 가식부 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "85f99ca6-6e79-5a5f-9df5-1392d1e51da3",
+      "name": "참죽나물",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 순으로 한정되어 대상 부위 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "73f3bc38-cc77-5f09-9ce3-0f84eb5ad191",
+      "name": "청포도",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "청포도는 여러 품종을 포함하며 샤이니스타·청수 별칭만으로 품종을 확정할 수 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "70c451ba-eb3e-5753-b049-45fabdabf49b",
+      "name": "총각무",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "전체·뿌리·잎 자료가 별도로 있어 가식부 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "67a33d9b-d5fe-5680-9e59-6768da57121c",
+      "name": "취나물",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "개미취·곰취·미역취·참취가 별칭에 혼재하며 서로 다른 식물이라 임의 연결 금지. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "5a3d9a40-620a-5605-854d-dd4748f46e52",
+      "name": "캠벨 포도",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "캠벨얼리임은 별칭과 이름이 일치하나 껍질·씨 포함 조건별 자료 중 가식부 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "d09f959a-6406-56a0-b558-647304547758",
+      "name": "코울슬로",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1105",
+      "source_name": "양배추 샐러드, 코울슬로",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "e4f71e08-08ad-5e9a-871e-df2fa6d2d241",
+      "name": "코코넛",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·볶은것·코코넛밀크·코코넛수가 별도이며 생과육 정확 자료는 없음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "2a629d1d-2b1d-5852-ba4b-d9eb85f13b0a",
+      "name": "콩고기",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "불린것과 양념제품 자료뿐이므로 건조 콩고기를 수화제품으로 연결하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "060e7487-0132-50ac-819e-2ef95ec75cb2",
+      "name": "쿠키",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "땅콩버터·버터·초코칩·통밀 쿠키만 있어 원료/제품 기준 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "029a7140-6386-551d-bfdb-351bdcdfc5f4",
+      "name": "크래커",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "200",
+      "source_name": "과자, 크래커",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 특정 상품이 아닌 공식 일반식품 대표자료로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "dbe99797-6cf3-5c57-83c9-271fba8994bd",
+      "name": "큰느타리버섯",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1345",
+      "source_name": "큰느타리버섯(새송이버섯), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "4d6a7b63-d20d-5f4b-b665-8da6635a4c8c",
+      "name": "키위",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "골드·그린 키위를 구분하는 자료만 존재하여 품종군 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "4ce2f05d-fde7-525c-a257-ddefc4a730df",
+      "name": "토란대",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1220",
+      "source_name": "토란대, 줄기, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "43e4d299-6026-5274-9287-5317c5306f99",
+      "name": "토스카노",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1236",
+      "source_name": "토스카노(잎브로콜리), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "fef9b4f5-fb51-55de-9e35-c6f90befc47a",
+      "name": "통밀",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "168",
+      "source_name": "밀, 통밀, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 나트륨, 당류, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 결측 나트륨."
+    },
+    {
+      "ingredient_id": "82a9675a-f5cf-5b04-b715-6e482e3ecb77",
+      "name": "파드득나물",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1242",
+      "source_name": "파드득나물(삼엽채), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 원자료 결측: 당류, 식이섬유, 포화지방; 없는 값을 0으로 만들지 않는 부분 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "3b93c08e-fb48-4eae-8595-f5e5789c52ab",
+      "name": "파스타면",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "스파게티 별칭은 확인되지만 생면·건면·삶은 면 및 원료 차이를 확정하지 못함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "dc45a809-2855-5111-80b3-76c21ce49621",
+      "name": "파파야",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "미숙·완숙 과일은 조성이 다르므로 숙도 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "6401ea7d-7a9b-52f6-9c2e-77ff8223d5e5",
+      "name": "팥",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "검정·녹색·적색·황백 팥과 건조·삶음 상태가 혼재하여 기준 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "bbbd6934-0b3f-5170-baaf-60c034934c03",
+      "name": "패션프루트",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 씨 포함으로 한정되어 가식부 기준 명시 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "cedb3e41-13a2-5442-b3fc-acbda603b881",
+      "name": "패션프루트 주스",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "천연과즙 및 황색·자색과육 주스가 별도; 원료 및 무첨가 여부 확인 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "02554a9d-9855-56ad-bb9c-97fbd5ced9d1",
+      "name": "팽화",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "팽화는 식품이 아닌 가공방식 이름으로 원재료와 제품 정체성을 먼저 정해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "f3a0fa27-57ee-5ba9-a987-d7b1b53cdcba",
+      "name": "포도",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "포도 원자료가 품종·가식부별로 존재하여 특정 품종으로 임의 연결 금지. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "0573eb6e-b6df-466b-9e80-bd44029c2687",
+      "name": "표고버섯",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "배지재배·참나무재배와 갓·대·전체 및 생/건조 자료가 별도로 있어 기준 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "34161c0c-a365-5e54-ad2d-c48a79f7825e",
+      "name": "피망",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "빨간색·초록색 피망을 구분하는 자료만 있어 색상 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e3c3f4c2-b43f-5323-9ab6-9a0bf12d6a00",
+      "name": "피스타치오",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "건조·볶음·조미 자료가 존재하며 수분·가공상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "b8f49100-ffd9-5117-a739-4568c69f91a6",
+      "name": "피칸",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·조미볶음 자료만 있어 상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "9d975ab5-c33c-583a-a3f9-566ab88eafa2",
+      "name": "해바라기씨",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·볶은것·조미볶음 상태별 자료를 구분해야 함. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "ea0e7698-4f47-59da-b362-b971592eb6a6",
+      "name": "헤이즐넛",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "개암/헤이즐넛 동일명은 공식 이름에서 확인되나 건조·볶음 상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "848ff8ad-1e23-5092-99a0-be151e664ae5",
+      "name": "호두",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "말린것·볶은것 자료만 존재하여 수분·가공상태 결정 필요. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "e0f66624-2146-5db1-ac60-8088c0d4020a",
+      "name": "화살나무",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "원자료는 순으로 한정되어 식물 전체를 식용 순으로 임의 축소하지 않음. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "3a2d919c-7f9d-545f-9f3d-659ae35e240d",
+      "name": "황도",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "1492",
+      "source_name": "복숭아, 황도, 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "48fce525-df8d-57ae-a46a-ec1a8a217984",
+      "name": "흑태",
+      "decision": "needs_identity_decision",
+      "confidence": "high",
+      "reason": "흑태와 서리태가 별칭에 혼재하고 건조·삶음·볶음 상태 미지정. 핵심 5종 완결성은 확정 원자료가 없어 판정 보류."
+    },
+    {
+      "ingredient_id": "db4c989e-cb9a-5aa7-a1f8-bb58b39f98ca",
+      "name": "히카마",
+      "decision": "link",
+      "confidence": "high",
+      "source_key": "489",
+      "source_name": "히카마(얌빈), 생것",
+      "reason": "RDA 10.4 원자료의 식품명·가식부 100g 기준·영양 토큰을 대조. 재료명과 같은 식품의 일반 자료이며 특정 품종·산지를 추가하지 않음. 가공상태가 없는 일반 재료의 기본값은 생것으로 연결. 핵심 5종: 모두 원자료 정량값 확인."
+    },
+    {
+      "ingredient_id": "87c2fb9c-0a91-462f-af81-09a35b0f1e20",
+      "name": "가쓰오부시",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "가다랑어 생것·육수 자료만 있고 훈연 건조 가쓰오부시 자료 없음. 혼다시는 별도 조미료로 오염 별칭에 기대지 않음.",
+      "invalid_aliases": [
+        {
+          "synonym": "혼다시",
+          "reason": "훈연건조 가다랑어 조각과 별도 배합 조미료 제품은 다른 식품."
+        }
+      ]
+    },
+    {
+      "ingredient_id": "0cf43e17-8755-5b32-af21-082c70aec63e",
+      "name": "가재",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "가재·갯가재·바닷가재는 종이 다르며 포괄적인 가재 원자료가 없어 종 구체화 필요."
+    },
+    {
+      "ingredient_id": "44bd8a1e-c9d5-5dff-b2f9-d08e6819ed11",
+      "name": "거위고기",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 살코기 기준만 있어 껍질 포함 여부가 없는 재료를 임의로 살코기로 좁히지 않음."
+    },
+    {
+      "ingredient_id": "908d154a-7008-4959-b3a7-707249da41ad",
+      "name": "건새우",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "꽃새우·중하·대하 등 종과 삶은 뒤 건조 여부가 달라 종·건조 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "da54fc05-0a39-5326-bbb8-b060542c1f83",
+      "name": "게",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "꽃게·대게·왕게 등 종별 자료만 있어 특정 종을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "0ab9d36a-3773-4997-bb59-c193385a9e0e",
+      "name": "겨자",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "겨자채소·겨자가루·겨자페이스트 구분이 안 되어 형태 확인 필요."
+    },
+    {
+      "ingredient_id": "7d968430-6c76-5013-baf7-ee0f613c558e",
+      "name": "고다 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2853",
+      "source_name": "치즈, 고다",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "52904da0-cd62-5e5a-96f7-bdaabc53b178",
+      "name": "고추냉이",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "생뿌리·잎줄기·가루·페이스트가 구분되어 부위와 가공상태 확인 필요."
+    },
+    {
+      "ingredient_id": "df26beb3-3778-47b1-b2b0-65963ce25eeb",
+      "name": "고추청",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "고추청의 정확한 원자료 없음. 생고추나 설탕 단독값으로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "410ac75f-fab5-4db7-a98e-08d1ceefc126",
+      "name": "김가루",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "마른 김 분쇄인지 기름·소금이 든 조미김 분쇄인지 확인 필요."
+    },
+    {
+      "ingredient_id": "179cb586-34b3-4d7c-aa2b-7b2e79503357",
+      "name": "김치국물",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "김치 종류·국물 분리·희석 정도 미상. 고형물 포함 김치 원자료로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "2031d07b-0e21-548f-896b-56d8bd2d6412",
+      "name": "꿩고기",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "수꿩·암꿩 자료만 있으며 포괄값이 없어 임의 선택하지 않음."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440048",
+      "name": "냉동만두",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "고기만두·김치만두·물만두 등 속재료를 확인해야 함."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440049",
+      "name": "냉동새우",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "꽃새우·흰다리새우 냉동 자료가 따로 있어 종 확인 필요."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440050",
+      "name": "냉동야채",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "채소 종류와 혼합비가 없어 특정 채소 영양값으로 대체 불가."
+    },
+    {
+      "ingredient_id": "91de09e3-ec28-4f24-8d75-85e3b4616390",
+      "name": "다랑어",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "가다랑어·참다랑어·황다랑어 및 부위별 자료만 있어 종·부위 확인 필요."
+    },
+    {
+      "ingredient_id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+      "name": "다크 커버춰",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "카카오·코코아버터·당 비율 확인 필요. 일반 다크 초콜릿과 동일시하지 않음."
+    },
+    {
+      "ingredient_id": "d5639a5a-8b04-4956-aeab-76615aa180d1",
+      "name": "달걀 흰자",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2061",
+      "source_name": "달걀, 난백, 생것",
+      "reason": "난백은 달걀 흰자이며 조리 상태가 없는 원재료이므로 생것 선택."
+    },
+    {
+      "ingredient_id": "633ae22e-00f6-435c-8d05-b2d6e0842db9",
+      "name": "닭가슴살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1648",
+      "source_name": "닭고기, 가슴, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "0bffa490-9100-5e8a-99ac-6f2a9430ee67",
+      "name": "닭날개",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1652",
+      "source_name": "닭고기, 날개, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "704d5f43-8b79-418b-8222-f201ea3285bf",
+      "name": "닭다리살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "넓적다리·아랫다리 자료가 나뉘어 부위와 껍질 포함 여부 확인 필요."
+    },
+    {
+      "ingredient_id": "cf803738-d45e-5f96-87e8-08d808a2035c",
+      "name": "닭발",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3314",
+      "source_name": "닭 부산물, 닭발, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "3327d5c0-3978-5efd-89e3-f814dee59d0e",
+      "name": "닭뼈 육수",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1683",
+      "source_name": "닭뼈 육수",
+      "reason": "같은 이름의 육수 원자료가 존재하므로 농축 치킨스톡이나 닭발 육수와 구분하여 연결. 탄수화물 Tr는 미량 표기로 수치 0을 확정하지 않음. 원자료 결측/비정량: carbohydrate_g, sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "233ebb34-0b01-581c-a1d7-f6d386e2cb5c",
+      "name": "당밀",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "500",
+      "source_name": "당밀, 가공당",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g, saturated_fat_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "fafc0adb-cac6-5ae6-87cf-26c930346ec6",
+      "name": "돈까스",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "조리전 냉동 포크커틀릿과 튀긴것 자료가 구분되어 현재 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "9e9ae5d9-b6c8-5e3a-b0eb-f661c6fe43b8",
+      "name": "돈까스소스",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3106",
+      "source_name": "포크커틀릿 소스",
+      "reason": "돈까스소스와 포크커틀릿 소스는 같은 식품 유형. 돈까스 자체의 값과 구분."
+    },
+    {
+      "ingredient_id": "794231e8-b57b-5c49-9d04-320459b6c390",
+      "name": "돔",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "참돔·옥돔 등 여러 종을 하나로 묶은 이름으로 특정 종 선택 불가."
+    },
+    {
+      "ingredient_id": "093dc3b3-6559-5469-a297-b0835915ebce",
+      "name": "돼지고기 갈비",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1686",
+      "source_name": "돼지고기, 갈비, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "33902079-0d1d-5a07-813c-873c54d99f7f",
+      "name": "돼지고기 꾸리살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1722",
+      "source_name": "돼지고기, 앞다리(꾸리살), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "bd316be2-e56c-5ce4-9893-68a46b59b226",
+      "name": "돼지고기 도가니살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1692",
+      "source_name": "돼지고기, 뒷다리(도가니살), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "e2b05a4c-be7d-5bf3-9e08-36d247c6af58",
+      "name": "돼지고기 뒷다리",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1689",
+      "source_name": "돼지고기, 뒷다리, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "575f8ee7-ba60-5c52-ab1e-539b32065d3f",
+      "name": "돼지고기 등심",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1698",
+      "source_name": "돼지고기, 등심, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "f607cc48-96eb-582b-a29d-759de340e88c",
+      "name": "돼지고기 보섭살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1694",
+      "source_name": "돼지고기, 뒷다리(보섭살), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "5685a4f0-ff0c-5913-bf70-307957e83a93",
+      "name": "돼지고기 부채살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1723",
+      "source_name": "돼지고기, 앞다리(부채살), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "8b00dd9b-74b0-5e8a-8c0b-f705308a9805",
+      "name": "돼지고기 사태",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1707",
+      "source_name": "돼지고기, 사태, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "1593217a-735f-5a14-a289-d904326bbb6e",
+      "name": "돼지고기 삼겹살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1710",
+      "source_name": "돼지고기, 삼겹살, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "2573a4b3-63d7-5b1a-99c4-c6564ac7470b",
+      "name": "돼지고기 설깃살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1696",
+      "source_name": "돼지고기, 뒷다리(설깃살), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "13e7d66f-ab7e-5012-bc79-ea4bd9c3c00c",
+      "name": "돼지고기 안심",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1718",
+      "source_name": "돼지고기, 안심, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "ca599d4c-1aa0-53c0-ad1d-4bf23dff07f9",
+      "name": "돼지고기 토시살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1717",
+      "source_name": "돼지고기, 삼겹살(토시살), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "b66e4a97-614e-598f-8045-cc1385534f8e",
+      "name": "돼지고기 홍두깨살",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1697",
+      "source_name": "돼지고기, 뒷다리(홍두깨살), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "cc485c80-23fe-4c5a-ae9f-244b99cdfe7a",
+      "name": "들깨가루",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "탈피 여부와 볶음 여부가 미상이며 원자료는 말린 들깨·볶은 들깨만 존재. 분쇄 외 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440051",
+      "name": "떡갈비",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "육류 종류·배합·조리상태가 없고 정확한 떡갈비 원자료 없음."
+    },
+    {
+      "ingredient_id": "9246b694-51e3-5f61-8176-500d254197f6",
+      "name": "레몬그라스",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3034",
+      "source_name": "레몬그라스(시트로넬라), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g, fiber_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "00f69a49-b151-5d77-956c-7c353037a736",
+      "name": "리코타 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2855",
+      "source_name": "치즈, 리코타",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g, saturated_fat_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "05eddd4a-bb23-47bf-9e12-671d85aa2e36",
+      "name": "마르살라 와인",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "해당 주정강화 와인의 정확한 원자료 없음. 일반 와인으로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "1e3461ad-27bd-4d64-aeb4-7cf05cffae06",
+      "name": "마스카포네 치즈",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "마스카포네 원자료 없음. 크림치즈로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "1a8c0543-a8d3-5152-a1ce-4c8238cca15b",
+      "name": "만새기",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2238",
+      "source_name": "만새기, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: carbohydrate_g, sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "f36c80bf-b4ee-4037-916c-9962b6984f3c",
+      "name": "만체고 치즈",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "만체고 원자료 없음. 고다·체다로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "2c1923b1-cc84-5cdf-a000-81b3404297b3",
+      "name": "말고기",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 살코기 기준만 있어 재료의 지방·부위 범위를 임의 축소하지 않음."
+    },
+    {
+      "ingredient_id": "181da0b2-d6b9-4447-aa94-89897bbbf6d8",
+      "name": "맛살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "어육함량이 낮은것·높은것 자료가 나뉘며 크래미 별칭만으로 특정 제품을 단정하지 않음."
+    },
+    {
+      "ingredient_id": "9708f5b2-c5c2-54d1-b95d-e30964b75ce6",
+      "name": "머스타드 소스",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3428",
+      "source_name": "머스타드 소스",
+      "reason": "표준명과 정확히 일치하는 일반 머스타드 소스 선택. 허니머스타드는 별도 원자료(3370)이므로 해당 별칭 분리 필요.",
+      "invalid_aliases": [
+        {
+          "synonym": "허니머스타드 소스",
+          "reason": "허니머스타드는 당·지방 배합이 다른 별도 소스로 공식 자료 3370이 따로 존재. 일반 머스타드 3428과 혼용 불가."
+        },
+        {
+          "synonym": "허니머스타드",
+          "reason": "허니머스타드는 당·지방 배합이 다른 별도 소스로 공식 자료 3370이 따로 존재. 일반 머스타드 3428과 혼용 불가."
+        },
+        {
+          "synonym": "허니 머스타드 소스",
+          "reason": "허니머스타드는 당·지방 배합이 다른 별도 소스로 공식 자료 3370이 따로 존재. 일반 머스타드 3428과 혼용 불가."
+        },
+        {
+          "synonym": "허니머스타드소스",
+          "reason": "허니머스타드는 당·지방 배합이 다른 별도 소스로 공식 자료 3370이 따로 존재. 일반 머스타드 3428과 혼용 불가."
+        }
+      ]
+    },
+    {
+      "ingredient_id": "4c61bafa-3a95-5874-a0c2-8d3bac977286",
+      "name": "멍게",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2677",
+      "source_name": "멍게(우렁쉥이), 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g, fiber_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "9ec88374-b398-45b2-bb81-ea0ad8e3ebbc",
+      "name": "메이플시럽",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "514",
+      "source_name": "시럽, 단풍나무",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "1a1054c4-d3bf-585a-a4be-189d5a491ed6",
+      "name": "메추리고기",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "1774",
+      "source_name": "메추리고기, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "ccbf581d-aae3-4feb-82c9-a813f46b0183",
+      "name": "목살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "별칭은 돼지목살이지만 표준명에는 축종이 없어 별칭만으로 돼지고기 목심을 확정하지 않음."
+    },
+    {
+      "ingredient_id": "b20e67b2-b4b8-552b-a9fb-6c2aa3e32e09",
+      "name": "문어",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2682",
+      "source_name": "문어, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "4506786e-7602-42a4-b41c-c15a7136a6b9",
+      "name": "미원",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "브랜드 조미료로 제품 종류와 제조사 영양표 필요. 일반 화학조미료 자료로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "932abb06-4fee-48f7-a9f1-e2643e3a3eac",
+      "name": "바닐라 에센스",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "바닐라 에센스 원자료 없음. 당 함량이 다른 바닐라 시럽으로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "775026fb-a00e-44f0-995d-dfc5599463b1",
+      "name": "바닐라 페이스트",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "바닐라 페이스트 원자료 없음. 바닐라 시럽과 동일시하지 않음."
+    },
+    {
+      "ingredient_id": "20d0899b-fb9d-4f5a-b7bf-6ae8bc1954b8",
+      "name": "배추김치",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "795",
+      "source_name": "김치, 배추 김치",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "0360a03c-10fd-5bfe-960f-be95b5a0fb40",
+      "name": "분유",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "일반 분유·영유아 단계별·전지·탈지가 구분되고 현재 전지/탈지 별칭이 혼재하므로 용도와 종류를 먼저 분리."
+    },
+    {
+      "ingredient_id": "e7b707fe-7808-58e4-84f3-4d38865a2fe6",
+      "name": "브리 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2858",
+      "source_name": "치즈, 브리",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "0c2b7adf-8e26-5c08-aa30-5671555326d5",
+      "name": "블루 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2860",
+      "source_name": "치즈, 블루",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "77cb5878-03c3-5569-ac89-78e0aec98ce5",
+      "name": "빙어",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2336",
+      "source_name": "빙어, 생것",
+      "reason": "표준명과 일치하는 생빙어 자료 선택. 바다빙어 별칭은 별도 자료로 분리 필요. 원자료 결측/비정량: sodium_mg, sugars_g, saturated_fat_g. 임의 보간하지 않음.",
+      "invalid_aliases": [
+        {
+          "synonym": "바다빙어",
+          "reason": "공식 자료가 빙어 2336과 바다빙어 2339로 구분되어 상호동의어로 취급하면 다른 식품 영양 적용."
+        }
+      ]
+    },
+    {
+      "ingredient_id": "b486109e-e04e-409a-924f-638dc78258e4",
+      "name": "사각어묵",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "일반 어묵 자료는 있으나 사각어묵의 제조 방식·어육함량과 일치 근거가 없어 대표값 정책 확인 필요."
+    },
+    {
+      "ingredient_id": "7639545d-0744-4db3-9828-3e5b374438f0",
+      "name": "새우",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "흰다리새우·꽃새우·대하 등 종별 자료만 있고 별칭도 혼재하여 종 확인 필요."
+    },
+    {
+      "ingredient_id": "74937465-5b56-44d9-990b-3b08a38064d1",
+      "name": "새우젓",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2721",
+      "source_name": "새우, 젓갈",
+      "reason": "종류 미상의 새우젓에 공식 일반 새우 젓갈 자료 선택. 세부별칭을 근거로 특정 토굴 젓갈 자료로 좁히지 않음."
+    },
+    {
+      "ingredient_id": "3fc8fb72-d96f-5376-a9f8-21cad6550cd6",
+      "name": "샛멸",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2364",
+      "source_name": "샛멸, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: carbohydrate_g, sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "2f1c11c7-59b9-5ee6-b935-ad135f32517f",
+      "name": "생강 페이스트",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3050",
+      "source_name": "생강 페이스트",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: fiber_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "5d430d7a-525c-4185-91a8-1f5a035a7562",
+      "name": "생강술",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "생강술 원자료 없음. 생강청이나 일반 주류로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "31d66f75-acc4-5b56-bbdc-f9eed636eb8d",
+      "name": "소고기 갈비",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 갈비에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "6e57d019-6120-520f-b4fd-51f026f3d58f",
+      "name": "소고기 꾸리살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 꾸리살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "4bfe859a-1826-5a8b-ae36-328fe4759deb",
+      "name": "소고기 도가니살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 도가니살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "f04edf07-c4bd-5dd5-becd-d81c050c8cf7",
+      "name": "소고기 등심",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 등심에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "e51e0634-88ec-541e-bc3a-2a0029c6e10f",
+      "name": "소고기 목심",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 목심에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "a609d583-1dc9-5aaf-a0c4-7a09a3755be3",
+      "name": "소고기 보섭살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 보섭살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "583cb307-0543-51cf-a525-1af595d8121d",
+      "name": "소고기 부채살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 부채살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "2fdcbb4d-f5ad-53f0-88b3-2d1e4b94e928",
+      "name": "소고기 사태",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 사태에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "69329ac0-4b34-5858-a40f-93cef64b031e",
+      "name": "소고기 살치살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 살치살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "25ea278b-5bdb-5159-946d-989b1a0c52ea",
+      "name": "소고기 설깃살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 설깃살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "4658d669-bb34-5cd1-94fb-17acb4cd26ac",
+      "name": "소고기 설도",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 설도에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "99eb747c-0e6d-552c-adc8-3748a706e82e",
+      "name": "소고기 안심",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 안심에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "3b707f9a-10ce-5832-8d93-08f2f6dd013f",
+      "name": "소고기 안창살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 안창살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "6d11a60d-0f7c-5d16-9aa8-e2e7eb0f0a85",
+      "name": "소고기 앞다리",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 앞다리에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "dcb4cc3f-de4b-5bc3-b090-a5e55301943d",
+      "name": "소고기 앞치마살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 앞치마살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "314b45c0-649b-55cd-9f18-d04fb64b2d42",
+      "name": "소고기 양지",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 양지에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "5f51c575-8d84-590d-8d3e-40b0a45b0147",
+      "name": "소고기 업진살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 업진살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "5e782158-de00-5076-a716-cb826e61d73c",
+      "name": "소고기 우둔",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 우둔에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "3cb3f84d-b462-5611-a786-94e0bf56171b",
+      "name": "소고기 제비추리",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 제비추리에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "d56d0a61-e159-5c1e-935e-e3e950fb142c",
+      "name": "소고기 채끝",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 채끝에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "09ed8c5b-5c67-5ebb-a9e1-c031eed10842",
+      "name": "소고기 치마살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 치마살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "c62ca473-120e-564c-b4d0-5679febcf350",
+      "name": "소고기 토시살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 토시살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "98efd5f8-0f41-5195-87ca-01e5ed7a9d5f",
+      "name": "소고기 홍두깨살",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 한우/등급 또는 수입산별로 나뉨. 일반 소고기 홍두깨살에 특정 원산지·품종·등급을 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "1c13b25a-d9e6-51e6-b18d-1642ee52c5c9",
+      "name": "소시지",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "비엔나·프랑크푸르트·볼로냐 등 종류별 자료만 있고 별칭이 혼재하여 종류 구체화 필요."
+    },
+    {
+      "ingredient_id": "bd828930-84ab-4e8f-8439-22119e6bdc15",
+      "name": "소주",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "증류식·희석식 및 알코올 도수에 따라 자료가 달라 도수·종류 확인 필요."
+    },
+    {
+      "ingredient_id": "713c399c-650f-5f58-b8d3-2068c71fe489",
+      "name": "송아지고기",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 수입산으로 특정되어 원산지 미상의 재료를 임의로 수입산에 연결하지 않음."
+    },
+    {
+      "ingredient_id": "e262fe7d-3e52-53ca-ac9b-0bb22af58d2a",
+      "name": "송아지고기 갈비",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 수입산으로 특정되어 원산지 미상의 재료를 임의로 수입산에 연결하지 않음."
+    },
+    {
+      "ingredient_id": "73da4236-0630-59f2-942a-911bac6f7f3c",
+      "name": "송아지고기 등심",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 수입산으로 특정되어 원산지 미상의 재료를 임의로 수입산에 연결하지 않음."
+    },
+    {
+      "ingredient_id": "6bb0bf7d-fdbb-5cc2-a3da-9ea63d40a7fc",
+      "name": "송아지고기 어깨",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 수입산으로 특정되어 원산지 미상의 재료를 임의로 수입산에 연결하지 않음."
+    },
+    {
+      "ingredient_id": "d00bdd19-7a05-5fa2-9964-73733f5ec4fa",
+      "name": "송아지고기 채끝",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 수입산으로 특정되어 원산지 미상의 재료를 임의로 수입산에 연결하지 않음."
+    },
+    {
+      "ingredient_id": "ae558175-275c-5168-8228-a40066d9f71f",
+      "name": "송어",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2371",
+      "source_name": "송어, 생것",
+      "reason": "표준명과 일치하는 생송어 자료 선택. 무지개송어 별칭은 별도 자료로 분리 필요. 원자료 결측/비정량: sugars_g, fiber_g, saturated_fat_g. 임의 보간하지 않음.",
+      "invalid_aliases": [
+        {
+          "synonym": "무지개송어",
+          "reason": "공식2371 일반 송어와2375 무지개송어가 별도식품이므로 일반영양 연결에 특정종 별칭을 섞지 않음."
+        }
+      ]
+    },
+    {
+      "ingredient_id": "ba0dafcb-ada7-5aa0-89c5-1d64a728d8fc",
+      "name": "수란",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2067",
+      "source_name": "달걀, 수란, 중탕",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "c6804475-4ffc-5966-b97b-8da467e62ac7",
+      "name": "순대",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "선지 비율 낮은것·높은것 자료가 나뉘므로 배합 유형 확인 필요."
+    },
+    {
+      "ingredient_id": "b7b6c809-9c1d-460c-90cb-428ae9790924",
+      "name": "슈가파우더",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "508",
+      "source_name": "설탕, 가루",
+      "reason": "표준명 의미와 일치하는 설탕 가루 선택. 데코스노우는 배합 제품일 수 있어 해당 별칭 검토 필요."
+    },
+    {
+      "ingredient_id": "2df3aed0-9424-4142-a4f1-60ba3d32a88d",
+      "name": "스팸",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "브랜드 제품이므로 제품 종류와 제조사 영양표 필요. 일반 통조림 햄으로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "7e9caa6d-742f-5031-b3dd-0fa6d61417b6",
+      "name": "시럽",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "단풍나무·바닐라·올리고당 등 당 조성과 수분이 달라 종류 확인 필요."
+    },
+    {
+      "ingredient_id": "6fb24ff1-34a4-4182-aed8-d43d84729503",
+      "name": "식용 금",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "식용 금 원자료 없음. 임의로 0 처리하지 않음."
+    },
+    {
+      "ingredient_id": "5c69799f-ddab-450a-ae3c-97c1b8f02db6",
+      "name": "식용색소",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "색소·분말/액상·희석제 종류에 따라 다름. 제품 특정 전 임의 입력 불가."
+    },
+    {
+      "ingredient_id": "e1dad3e1-0630-4e6c-a39f-6d355f802148",
+      "name": "신김치",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "김치 종류와 발효 상태가 모호하고 일반 배추김치 대체 근거 없음."
+    },
+    {
+      "ingredient_id": "f1e0affc-1815-5b37-898f-74317ea9ef31",
+      "name": "아이스밀크",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2826",
+      "source_name": "아이스밀크",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "33f4e1d6-bcc8-5172-ae6b-753f5ddc69c4",
+      "name": "아이스크림",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "맛·유지방 함량별 자료만 있고 빙과/소프트아이스크림 별칭도 혼재하여 종류 확인 필요."
+    },
+    {
+      "ingredient_id": "861871e2-cce1-43ff-969b-802a5cce0412",
+      "name": "알룰로스",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "분말·액상·혼합감미료 구분과 제품 고형분 비율 확인 필요."
+    },
+    {
+      "ingredient_id": "f282d726-738f-5fcc-8275-40a71452b0ae",
+      "name": "애꼬치",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2392",
+      "source_name": "애꼬치, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "7ef777e3-7107-5340-b617-cc6c86c5e808",
+      "name": "양고기",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 수입산·어린양/성체·부위로 특정됨. 원산지·연령·부위를 이름보다 좁히지 않고 확인 필요."
+    },
+    {
+      "ingredient_id": "78188902-aad1-5a1e-a01d-ede8addce53f",
+      "name": "양고기 갈비",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 수입산·어린양/성체·부위로 특정됨. 원산지·연령·부위를 이름보다 좁히지 않고 확인 필요."
+    },
+    {
+      "ingredient_id": "15013432-54a1-505b-8949-1369323c92c2",
+      "name": "양고기 다리",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 수입산·어린양/성체·부위로 특정됨. 원산지·연령·부위를 이름보다 좁히지 않고 확인 필요."
+    },
+    {
+      "ingredient_id": "b5dff5df-ccc1-52ef-a8ee-6d5680997680",
+      "name": "양고기 어깨",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 수입산·어린양/성체·부위로 특정됨. 원산지·연령·부위를 이름보다 좁히지 않고 확인 필요."
+    },
+    {
+      "ingredient_id": "ecb6ea89-8c64-467f-b191-87875ce4b4dd",
+      "name": "얼음",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "공식 목록에 얼음 자료 없음. 별도 수분/무열량 정책 없이 수치 임의 생성하지 않음."
+    },
+    {
+      "ingredient_id": "498a9166-aa75-43be-a721-8f012fb3724f",
+      "name": "연겨자",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3014",
+      "source_name": "겨자 페이스트",
+      "reason": "연겨자는 겨자 페이스트 제형으로 식품과 가공상태 일치."
+    },
+    {
+      "ingredient_id": "c63d4c0f-525d-490c-8b92-ab01d6b893dd",
+      "name": "연유",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 점성이 낮은것·높은것으로 구분되어 농축 상태·가당 여부 확인 필요."
+    },
+    {
+      "ingredient_id": "6de713c8-44d8-44f4-a437-8b05c54f13c2",
+      "name": "열무김치 국물",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "열무김치·열무물김치 자료는 고형물 포함 기준이며 국물만의 조성·희석비 미상."
+    },
+    {
+      "ingredient_id": "8c9139d2-e80f-5da5-84cc-ae02a78250a0",
+      "name": "오리고기",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "살코기와 껍질 포함 자료의 지방 차이가 커 껍질 포함 여부 확인 필요."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440053",
+      "name": "옥수수콘",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "가당 통조림·크림 통조림 등 가공 유형 확인 필요. 이름만으로 가당 제품을 단정하지 않음."
+    },
+    {
+      "ingredient_id": "72815b82-fe0d-54f8-8a61-26b33bc27da5",
+      "name": "올스파이스",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 가루만 있으며 재료명에 생것/말린것/가루 상태가 없어 확인 필요."
+    },
+    {
+      "ingredient_id": "1cf6084f-0d9b-5f7f-9ea2-358fde1e05bc",
+      "name": "요구르트",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "액상·호상·가당·저당·맛별 자료가 구분되고 호상 별칭만으로 제형을 단정하지 않음."
+    },
+    {
+      "ingredient_id": "8f62b4cc-5406-5d5b-8548-b37244bd1af0",
+      "name": "우렁이",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "논우렁이·왕우렁·큰논우렁이 등 종이 달라 종 확인 필요."
+    },
+    {
+      "ingredient_id": "e6648ba1-0773-46dc-a254-b0d72922f174",
+      "name": "원당",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "비정제 설탕과 원당의 가공 상태·당/수분 함량 일치 근거가 없어 제품/가공 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "81dd8c7e-319a-5f81-bf3e-4bd21b06d1d5",
+      "name": "월계수잎",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 말린 잎만 있어 생잎인지 건조잎인지 확인 필요."
+    },
+    {
+      "ingredient_id": "4c835934-8469-5221-9564-065a82412feb",
+      "name": "육두구",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 가루만 있어 가공상태 확인 필요."
+    },
+    {
+      "ingredient_id": "c94b9ca5-2875-4d50-ae26-d513393145f8",
+      "name": "인스턴트 드라이 이스트",
+      "confidence": "medium",
+      "decision": "link",
+      "source_key": "3267",
+      "source_name": "팽창제, 효모, 말린것",
+      "reason": "건조 제빵 효모에 해당하여 말린 효모 원자료 선택. 물에 불린 중량에는 적용하지 않음."
+    },
+    {
+      "ingredient_id": "979688d1-894b-41a5-be84-2e961be92b9d",
+      "name": "인스턴트 커피",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2944",
+      "source_name": "커피, 커피가루, 인스턴트",
+      "reason": "설탕·크림 첨가가 명시되지 않은 인스턴트 커피가루 선택. 커피믹스/물에 탄 커피와 구분."
+    },
+    {
+      "ingredient_id": "576b9cd4-b17c-5170-87cc-cf672b2d5b3c",
+      "name": "자라고기",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료가 수입산으로 특정되어 원산지 미상의 재료를 임의로 수입산에 연결하지 않음."
+    },
+    {
+      "ingredient_id": "85e7f857-1598-4039-a892-e947709dad38",
+      "name": "재래간장",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3013",
+      "source_name": "간장, 재래",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "50526d96-68f3-4d3f-a736-8c790e270333",
+      "name": "잿방어",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "잿방어 원자료 없음. 일반 방어와 다른 어종을 동일시하지 않음."
+    },
+    {
+      "ingredient_id": "d70789af-a180-52f1-8c38-f5106cb71fe1",
+      "name": "젓갈",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원재료 어종과 양념·염도 미상. 특정 젓갈 수치를 임의 연결하지 않음."
+    },
+    {
+      "ingredient_id": "b30dccc5-924b-530b-a9b5-8f621e90a3fe",
+      "name": "정향",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 가루만 있어 가공상태 확인 필요."
+    },
+    {
+      "ingredient_id": "2db29c37-7763-5d98-9aa7-9ffd88eb880a",
+      "name": "조개",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "새조개·맛조개 등 종별 자료만 있어 특정 종 연결 불가."
+    },
+    {
+      "ingredient_id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f",
+      "name": "조미김",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "RDA10.4 2769 조미김은 2026-09-19 원자료 열량 307kcal/지방 49.23g 정합성 오류로 source profile과 link가 revoked된 known source quality hold. Do not reapprove / reapproval prohibited. 이름 exact 일치만으로 재승인 금지. 검증된 대체 원자료가 필요."
+    },
+    {
+      "ingredient_id": "89b0fa0f-ba79-5d4b-bee3-6d9d6822226e",
+      "name": "조청",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "쌀·고구마·도라지 조청이 구분되어 원료 확인 필요."
+    },
+    {
+      "ingredient_id": "028a28d4-0619-5435-a011-29a186221a2c",
+      "name": "족발",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "생족발·삶은 족발·조미하여 삶은 족발 자료가 달라 조리·양념 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "7bbc8131-d9ec-57fe-a905-6d024a364fc1",
+      "name": "짜장 소스",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "가루·레토르트·춘장은 수분과 조성이 달라 제형 구체화 필요."
+    },
+    {
+      "ingredient_id": "eb7a7abe-c32c-556c-b333-459d07bdd193",
+      "name": "짜장라면",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "조리전·조리후 자료가 달라 조리 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "0867870d-a814-4559-892b-a9f486dfc4e9",
+      "name": "쯔유",
+      "confidence": "high",
+      "decision": "no_exact_source",
+      "reason": "쯔유 원자료 없음. 간장·가다랑어 육수와 배합/농축도가 달라 대체하지 않음."
+    },
+    {
+      "ingredient_id": "41fdc8b9-ff14-429d-8768-f72fecf21da2",
+      "name": "참치캔",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "어종·기름/물 충전·배액 기준 확인 필요. 가다랑어 유지 통조림으로 임의 축소하지 않음."
+    },
+    {
+      "ingredient_id": "16f73587-3cbe-422c-b759-29cfa366fd30",
+      "name": "채소 육수",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "사용 채소·배합·농축/희석비 미상으로 정확한 값 결정 불가."
+    },
+    {
+      "ingredient_id": "bc42c20f-3b0e-58cf-9a1e-d887e8adce41",
+      "name": "청새치",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2495",
+      "source_name": "청새치, 생것",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "def3d14b-4cb4-5874-a03c-872a59364241",
+      "name": "체다 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2861",
+      "source_name": "치즈, 체다",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "20212bd2-6a01-4a61-b45a-617fe9d87852",
+      "name": "초코 크런치",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "초콜릿 과자인지 제과용 크런치 토핑인지 유형 확인 필요. 크런치 초콜릿으로 단정하지 않음."
+    },
+    {
+      "ingredient_id": "abbd38b4-9d5a-4df6-9fc3-1ba1becd79e8",
+      "name": "초콜릿",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "다크·밀크·화이트·견과 혼합 등 영양값이 다른 별칭이 혼재해 종류 분리 필요."
+    },
+    {
+      "ingredient_id": "42d55c05-1f25-5e2a-a34d-463dfa60c0e0",
+      "name": "치킨너겟",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "냉동 조리전·튀긴것이 구분되어 조리 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "187c8208-10eb-41fb-a07f-3c362ce23ec0",
+      "name": "치킨스톡",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "가루·액상·큐브 제형과 희석 여부 확인 필요."
+    },
+    {
+      "ingredient_id": "71c4f037-83f7-5359-a3c4-ec955af4feee",
+      "name": "칠리파우더",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3094",
+      "source_name": "칠리, 가루",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sugars_g, fiber_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "8ba22700-554d-5aa9-8219-83feaf31a024",
+      "name": "카망베르 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2854",
+      "source_name": "치즈, 카망베르",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "77aafa66-4796-5644-be8c-b783d4e19500",
+      "name": "카테지 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2862",
+      "source_name": "치즈, 카테지",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "0e755a66-4d34-5054-b9cd-39184aea308b",
+      "name": "캐러멜",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "캐러멜 시럽·우유 캐러멜 사탕 등 유형 확인 필요."
+    },
+    {
+      "ingredient_id": "7e82e446-7c89-4a68-89fc-6121bcf5b4a0",
+      "name": "케첩",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3102",
+      "source_name": "토마토 케첩",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "cd5837c0-a64c-5e36-a33f-c6c910c57e02",
+      "name": "코다리",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2260",
+      "source_name": "명태, 코다리, 반건조",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sodium_mg, sugars_g, fiber_g, saturated_fat_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "2f51aac2-44d1-4abe-bc44-66cf818d4e52",
+      "name": "코코아 파우더",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2950",
+      "source_name": "코코아, 가루",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+      "name": "크림 소스",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "배합·제품과 제형 미상으로 우유·생크림 값으로 대체 불가."
+    },
+    {
+      "ingredient_id": "eb097118-74cd-59b4-b738-a9ecc65108f3",
+      "name": "타임",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 가루만 있어 생잎/건조가루 상태 확인 필요."
+    },
+    {
+      "ingredient_id": "d481a270-e2b9-47ad-a6c1-3c8874536ef7",
+      "name": "토마토 소스",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "3101",
+      "source_name": "토마토 소스",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+      "name": "통후추",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "검은 후추·흰 후추 구분이 없고 원자료는 가루 형태만 존재."
+    },
+    {
+      "ingredient_id": "eaa398e9-89d8-5723-9618-0d58901355d8",
+      "name": "파르메산 치즈",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "2864",
+      "source_name": "치즈, 파르메산(파마산)",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택."
+    },
+    {
+      "ingredient_id": "a6d9a5e7-0092-4405-9695-e0ef7fd9f964",
+      "name": "파슬리 가루",
+      "confidence": "medium",
+      "decision": "link",
+      "source_key": "3103",
+      "source_name": "파슬리, 말린것",
+      "reason": "파슬리를 건조해 분쇄한 단일 향신료에 말린 파슬리 자료 연결. 생파슬리·소금 혼합제품에는 적용하지 않음."
+    },
+    {
+      "ingredient_id": "71699593-48f6-5c39-bb9c-2c80483f08b2",
+      "name": "포도당",
+      "confidence": "high",
+      "decision": "link",
+      "source_key": "537",
+      "source_name": "포도당",
+      "reason": "표준명에 해당하는 식품·종류와 일치하는 공식 가식부 100g 자료. 조리 상태가 없는 단일 원재료는 생것, 명시된 가공식품은 같은 유형을 선택. 원자료 결측/비정량: sodium_mg, saturated_fat_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+      "name": "해물육수코인",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "제품별 해산물·소금·전분 배합이 달라 제품 영양표 필요. 희석 육수로 대체 불가."
+    },
+    {
+      "ingredient_id": "c3e3dbef-7d87-4c69-aa11-9419696e69a4",
+      "name": "햄",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "등심햄·프레스햄·슬라이스햄·통조림 등의 값이 달라 종류 분리 필요."
+    },
+    {
+      "ingredient_id": "b3f706a6-0162-4323-8e3d-8fd93e87f086",
+      "name": "허브솔트",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "소금과 허브 배합비·제품 확인 필요. 소금 단일값으로 대체하지 않음."
+    },
+    {
+      "ingredient_id": "290ff750-add0-455f-a407-325b71e2d51f",
+      "name": "화이트크림",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "생크림·휘핑크림·식물성크림·소스 중 어느 유형인지 이름만으로 판단 불가."
+    },
+    {
+      "ingredient_id": "6552f97a-fb88-4d60-83ec-ec04c7469d75",
+      "name": "황태채",
+      "confidence": "medium",
+      "decision": "link",
+      "source_key": "2262",
+      "source_name": "명태, 황태, 포, 말린것",
+      "reason": "말린 황태 포를 채로 절단한 형태로 동일한 무양념 건조 황태 가식부 자료 선택. 조미 명태포와 구분. 원자료 결측/비정량: sugars_g, fiber_g, saturated_fat_g. 임의 보간하지 않음."
+    },
+    {
+      "ingredient_id": "74807485-7b47-4243-80c6-58bf5bd538ca",
+      "name": "훈제오리",
+      "confidence": "high",
+      "decision": "needs_identity_decision",
+      "reason": "원자료는 조미훈제만 있어 일반 훈제와 양념·수분 조성이 같은지 제품 확인 필요."
+    }
+  ],
+  "partial_core_audit": {
+    "ingredients": 218,
+    "findings": "All missing core values match missing/trace in the stored official source, or are absent from the two previously approved third-party records. No numeric fabrication or cross-food fill.",
+    "missing_values": [
+      {
+        "ingredient_id": "7c76c4bd-9def-4e69-ae18-7c3b6a7bf9ea",
+        "name": "샛돔",
+        "code": "2213",
+        "source_name": "돔, 샛돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "7e7123cb-2339-4ed5-af44-1f1a57d26133",
+        "name": "철모새우",
+        "code": "2714",
+        "source_name": "새우, 철모새우(도화새우), 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "80a96fe7-6093-4ad7-affa-cec8e3fb799c",
+        "name": "떡조개",
+        "code": "2620",
+        "source_name": "조개, 떡조개, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "80f8e3da-32b9-4c02-9d1b-d8f1c4c4770a",
+        "name": "피뿔고둥",
+        "code": "2553",
+        "source_name": "고둥, 피뿔고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "810acf38-5656-490e-816a-69fdca3e0f5c",
+        "name": "물렁가시붉은새우",
+        "code": "2701",
+        "source_name": "새우, 물렁가시붉은새우, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "81cfc092-e7ec-4062-bdb5-ec7841f83a21",
+        "name": "염장 대구",
+        "code": "2183",
+        "source_name": "대구, 염장",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "82f1dd1e-74e1-4414-85cb-d694796b6cea",
+        "name": "냉동 오징어",
+        "code": "2739",
+        "source_name": "오징어, 냉동",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "84d01b32-1d3f-4e98-b9c2-1f97176a96c7",
+        "name": "위고둥",
+        "code": "2549",
+        "source_name": "고둥, 위고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "872c3f28-c5b2-4bdd-8856-af1efe83bd76",
+        "name": "빙어 장조림",
+        "code": "2338",
+        "source_name": "빙어, 장조림",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "8795b625-22ce-400f-a409-bbef628e1cb6",
+        "name": "금눈돔",
+        "code": "2204",
+        "source_name": "돔, 금눈돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "8868ee55-30c5-4565-b544-208c4264fff9",
+        "name": "징거미새우",
+        "code": "2713",
+        "source_name": "새우, 징거미새우, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "8bc80b48-c015-4c37-bbea-b1bfd5c47a63",
+        "name": "큰구슬우렁이",
+        "code": "2602",
+        "source_name": "우렁이, 큰구슬우렁이(골뱅이), 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "8e03ffb6-8285-4005-b593-c353250110b8",
+        "name": "살오징어",
+        "code": "2746",
+        "source_name": "오징어, 살오징어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "93a4444b-859e-44a1-b022-cae144e54ea4",
+        "name": "참게",
+        "code": "2659",
+        "source_name": "게, 참게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "943e6b76-1e7d-4025-ae59-c71aae9b79b4",
+        "name": "말린 창자파래",
+        "code": "2815",
+        "source_name": "파래, 창자파래, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "94a30c54-b9bd-45d8-b762-94f152670712",
+        "name": "줄삼치",
+        "code": "2346",
+        "source_name": "삼치, 줄삼치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a78ebb91-7e0e-4f32-b221-90ae5ad01ec0",
+        "name": "말린 취나물",
+        "code": "1199",
+        "source_name": "취나물, 참취, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a7a716cd-19ba-4fd5-a838-861376a9c6b6",
+        "name": "돔 껍질",
+        "code": "2226",
+        "source_name": "돔, 참돔, 껍질, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "aa1689e3-8902-4dd2-8ff2-e47219fe167d",
+        "name": "젓갈 바지락",
+        "code": "2590",
+        "source_name": "바지락, 젓갈",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "aa8e2d9d-fc7c-4609-9057-0f14cb87aa8c",
+        "name": "닭게",
+        "code": "2646",
+        "source_name": "게, 닭게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ab17006d-9493-4a54-ad91-2577c8c71211",
+        "name": "조각매물고둥",
+        "code": "2550",
+        "source_name": "고둥, 조각매물고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ab667556-14dd-4c83-8ec5-c3de22974848",
+        "name": "새우 껍질",
+        "code": "2717",
+        "source_name": "새우, 껍질, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ad032e71-0a7a-42be-8571-55d400cec870",
+        "name": "개볼락",
+        "code": "2320",
+        "source_name": "볼락, 개볼락, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ad41fc11-2dde-49fc-9c95-c7b55f743a6a",
+        "name": "전갱이 어린것",
+        "code": "2465",
+        "source_name": "전갱이, 어린것, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "0131c023-576b-5b19-a17d-424e5012a210",
+        "name": "삼나물",
+        "code": "1009",
+        "source_name": "삼나물, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "366714fd-e160-51c2-924b-de0cc8ab5d63",
+        "name": "으름",
+        "code": "1560",
+        "source_name": "으름, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "5c9a16e7-dcb0-5b8e-8b76-c5e2c396c606",
+        "name": "줄나물",
+        "code": "1168",
+        "source_name": "줄나물, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "dbd0e753-5699-5f6d-addc-cac16c6898ae",
+        "name": "도치",
+        "code": "2198",
+        "source_name": "도치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e0a7fe03-8f44-513f-91c6-505db4062771",
+        "name": "밤버섯",
+        "code": "1316",
+        "source_name": "밤버섯, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e3bf4e54-dd53-51e7-8aea-e50828578f14",
+        "name": "두리안",
+        "code": "1416",
+        "source_name": "두리안, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "Tr",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f80ef573-1aca-5957-9874-99e34c291bad",
+        "name": "보리밥 열매",
+        "code": "1483",
+        "source_name": "보리밥 열매, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ffaf65a9-e470-55d9-b8b7-c28fa2ce2ce0",
+        "name": "리마콩",
+        "code": "581",
+        "source_name": "리마콩, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "Tr",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b2256a41-b940-42d6-a6a9-78708b7e9db9",
+        "name": "각시돔",
+        "code": "2200",
+        "source_name": "돔, 각시돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b2c341ec-ce15-4573-bf59-8f19b8759bbd",
+        "name": "냉동 송어",
+        "code": "2377",
+        "source_name": "송어, 무지개송어, 냉동",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b5594f53-fb40-4ba2-82bf-6129727dd6d6",
+        "name": "젓갈 해삼",
+        "code": "2761",
+        "source_name": "해삼, 젓갈",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b5b86295-2003-5dbf-bbe5-ad6422002e7d",
+        "name": "박대",
+        "code": "2281",
+        "source_name": "박대, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b7728f4c-0ace-4268-8cb0-e3c6941b37bf",
+        "name": "누루시볼락",
+        "code": "2321",
+        "source_name": "볼락, 누루시볼락, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b8f49d67-a9e2-566c-9072-c47abe4555e9",
+        "name": "고둥",
+        "code": "2545",
+        "source_name": "고둥, 보말고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b946fa8c-5af1-4e02-ad57-07bd6f85a975",
+        "name": "말린 취나물 재배",
+        "code": "1195",
+        "source_name": "취나물, 곰취, 재배, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d3605bc8-5a52-4d2f-9c60-da0eea6d5816",
+        "name": "비단고둥",
+        "code": "2547",
+        "source_name": "고둥, 비단고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d4241461-763e-4f81-a786-6c6cf453925b",
+        "name": "보라성게",
+        "code": "2731",
+        "source_name": "성게, 보라성게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d4460162-99ed-5b3d-8277-3e435658de68",
+        "name": "쥐치",
+        "code": "2488",
+        "source_name": "쥐치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d57c5c1b-688e-4a18-a758-62473e2acd4c",
+        "name": "장어 간",
+        "code": "2449",
+        "source_name": "장어, 뱀장어, 간, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d60e07e5-5efc-4bb1-b4c2-2ecd085e5826",
+        "name": "뿔돔",
+        "code": "2212",
+        "source_name": "돔, 뿔돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d8318405-63f8-4380-b35f-f01bd689b7a5",
+        "name": "조미해 말린 조개",
+        "code": "2626",
+        "source_name": "조개, 새조개, 조미하여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d90f80ca-4bca-4d19-b8fa-98138c024c20",
+        "name": "둥근전복",
+        "code": "2607",
+        "source_name": "전복, 둥근전복, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "db6d510c-edb3-4d9c-a7df-c82b5e24fa45",
+        "name": "황돔",
+        "code": "2229",
+        "source_name": "돔, 황돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "dc817321-3d02-4d86-837c-919066a0e782",
+        "name": "냉동 전갱이",
+        "code": "2459",
+        "source_name": "전갱이, 냉동",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "de5f2d8d-1cdc-4930-81fd-7c2c195c22fc",
+        "name": "콩깍지고둥",
+        "code": "2551",
+        "source_name": "고둥, 콩깍지고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "de7e0a71-d2da-4fc0-9f36-fcddaf063671",
+        "name": "황다랑어",
+        "code": "2173",
+        "source_name": "다랑어, 황다랑어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "df089103-4098-49f5-8b3c-0228462c1c7f",
+        "name": "조미해 말린 가오리",
+        "code": "2093",
+        "source_name": "가오리, 조미하여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "df5cf528-b96f-55fc-bcf6-de2e12c2e9bd",
+        "name": "담치",
+        "code": "2574",
+        "source_name": "담치, 진주담치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e39ef251-469d-4ed8-94e5-c33f238cc7ac",
+        "name": "펄조개",
+        "code": "2634",
+        "source_name": "조개, 펄조개, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e728c516-fd23-4448-96dd-7372ac8a786c",
+        "name": "찐 자주색 감자",
+        "code": "432",
+        "source_name": "감자, 자색, 찐것",
+        "nutrient": "fat_g",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e738b586-4545-4ac9-8292-d743e5528f7c",
+        "name": "젓갈 조기",
+        "code": "2485",
+        "source_name": "조기(참조기), 젓갈",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e7eeffaa-ea45-4d7a-939e-adfa20c2f53f",
+        "name": "털탑고둥",
+        "code": "2552",
+        "source_name": "고둥, 털탑고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e8eb28df-7765-569f-80bf-7aa31354d7f6",
+        "name": "청어",
+        "code": "2496",
+        "source_name": "청어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "e9f0ffad-cdb4-5d48-b072-0cf5075eabaa",
+        "name": "대구",
+        "code": "2176",
+        "source_name": "대구, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ea229fec-5af8-4108-bde8-632711435a08",
+        "name": "붕장어",
+        "code": "2450",
+        "source_name": "장어, 붕장어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "eb1045c1-2fd5-4727-af6e-11c3389e706c",
+        "name": "실붉돔",
+        "code": "2215",
+        "source_name": "돔, 실붉돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "eb52186a-5122-4f2a-9527-52f054430fea",
+        "name": "굴 양식",
+        "code": "2557",
+        "source_name": "굴, 참굴, 양식, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "eb81fd24-2a7e-439c-a2bc-ba5bc593296a",
+        "name": "은연어",
+        "code": "2418",
+        "source_name": "연어, 은연어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ec726b53-4858-458d-95f4-c5393659bc42",
+        "name": "어름돔",
+        "code": "2216",
+        "source_name": "돔, 어름돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "edea5e66-fb1b-4602-a7ee-fc880733f8f9",
+        "name": "조미해 말린 새우 중하",
+        "code": "2707",
+        "source_name": "새우, 중하, 조미하여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ee49d176-d609-5e08-8e45-eee7bb3fb0d7",
+        "name": "임연수어",
+        "code": "2435",
+        "source_name": "임연수어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ef87d67c-c16a-4ac8-b3a7-45199b111d78",
+        "name": "조미해 말린 학공치",
+        "code": "2512",
+        "source_name": "학공치, 조미하여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f06f0703-05bc-4922-b471-16896865344f",
+        "name": "접시조개",
+        "code": "2629",
+        "source_name": "조개, 접시조개(비단조개), 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f17f1daa-1b15-4055-b215-4fef4b2ce090",
+        "name": "삶아 말린 새우 중하",
+        "code": "2706",
+        "source_name": "새우, 중하, 삶아서 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f2a4f085-b5cf-4232-ae2d-31929285dec1",
+        "name": "말린 참나물 야생",
+        "code": "1173",
+        "source_name": "참나물, 야생, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f2acb598-e130-4b3f-86ae-6de495efe5a5",
+        "name": "혹돔",
+        "code": "2228",
+        "source_name": "돔, 혹돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f3092a21-b11e-4f73-8e2a-86998a1154d0",
+        "name": "말린 개량조개",
+        "code": "2618",
+        "source_name": "조개, 개량조개(명주조개), 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f54f3fdc-493a-4bf5-a78a-d62289a5d323",
+        "name": "염장 모자반",
+        "code": "2787",
+        "source_name": "모자반, 염장",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "f69e946c-a919-4cb1-bb35-a094726abf06",
+        "name": "전기가오리",
+        "code": "2092",
+        "source_name": "가오리, 전기가오리, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "fa37f0d8-45ff-4345-a226-c8f4db3b3abe",
+        "name": "나비가오리",
+        "code": "2089",
+        "source_name": "가오리, 나비가오리, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "fb705d5b-af25-49dd-839c-1b2b37f41f30",
+        "name": "갯장어",
+        "code": "2444",
+        "source_name": "장어, 갯장어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "fc41b437-6526-4940-a657-840efd1d5394",
+        "name": "미역 양식",
+        "code": "2789",
+        "source_name": "미역, 양식, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "fd01c209-5df3-4688-8691-65eba52424c4",
+        "name": "갈전갱이",
+        "code": "2466",
+        "source_name": "전갱이, 갈전갱이, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "fd42ade3-44f5-4987-8567-ab7c33a45053",
+        "name": "황줄돔",
+        "code": "2230",
+        "source_name": "돔, 황줄돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "fde9e74c-bbd1-48db-8b64-99eac25512a5",
+        "name": "전복 내장",
+        "code": "2610",
+        "source_name": "전복, 내장, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "335eff99-f04c-4942-adee-5aea91c32dd9",
+        "name": "통밀 식빵",
+        "code": "KURLY-WHOLE-WHEAT-BREAD-100G-20260722",
+        "source_name": "통밀빵",
+        "nutrient": "sodium_mg",
+        "raw_token": null,
+        "provider": "KURLY_FOOD_CALORIE"
+      },
+      {
+        "ingredient_id": "9dc0ee0f-7aab-416b-8eb7-4447a8139b0e",
+        "name": "그릭 요거트",
+        "code": "KURLY-GREEK-YOGURT-100G-20260722",
+        "source_name": "그릭 요거트",
+        "nutrient": "sodium_mg",
+        "raw_token": null,
+        "provider": "KURLY_FOOD_CALORIE"
+      },
+      {
+        "ingredient_id": "0030d5af-6c80-4205-9b74-48b24e754b5f",
+        "name": "강담돔",
+        "code": "2202",
+        "source_name": "돔, 강담돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "00474613-ef92-4f17-9495-1688cfcee46e",
+        "name": "자리돔",
+        "code": "2222",
+        "source_name": "돔, 자리돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "013635d2-5ae5-492a-8f71-d46dc920fcdf",
+        "name": "점농어",
+        "code": "2157",
+        "source_name": "농어, 점농어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "0164b294-7f66-5e61-b957-7df924d11efc",
+        "name": "점줄우럭",
+        "code": "2471",
+        "source_name": "점줄우럭, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "03cc8883-5ccd-5989-9e6a-04e2e3cf1173",
+        "name": "민어",
+        "code": "2275",
+        "source_name": "민어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "03dea47f-b9a7-473a-9109-1f61965984d7",
+        "name": "통조림 멸치 유지",
+        "code": "2253",
+        "source_name": "멸치, 통조림, 유지",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "04154434-5dca-47eb-ad46-b6e2f036edf1",
+        "name": "동동갈치",
+        "code": "2108",
+        "source_name": "갈치, 동동갈치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "057e8d36-4dee-492b-9f83-4eb6846bdd8e",
+        "name": "꼽새돔",
+        "code": "2205",
+        "source_name": "돔, 꼽새돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "0853dfc6-d65b-4539-988e-c8fb158e5345",
+        "name": "민꽃게",
+        "code": "2653",
+        "source_name": "게, 민꽃게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "0a3cbbe0-c293-42a8-bd9c-b3a1d2377aa1",
+        "name": "큰논우렁이",
+        "code": "2605",
+        "source_name": "우렁이, 큰논우렁이, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "0d623f27-8003-483f-88d4-8d7d5bb2c0ad",
+        "name": "쇠갑오징어",
+        "code": "2747",
+        "source_name": "오징어, 쇠갑오징어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "0f393a03-e542-4699-bd86-4c0a05d1242a",
+        "name": "훈제 통조림 방어",
+        "code": "2286",
+        "source_name": "방어, 통조림, 훈제",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "0fcab29b-0c88-4852-9dc0-deff7fd56b8b",
+        "name": "동갈치",
+        "code": "2107",
+        "source_name": "갈치, 동갈치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "12181f33-79a7-4f28-8846-2fcfe2a78f20",
+        "name": "말백합",
+        "code": "2595",
+        "source_name": "백합, 말백합, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "130f60aa-be43-49fe-8169-b7782d994e68",
+        "name": "말린 갑오징어",
+        "code": "2745",
+        "source_name": "오징어, 갑오징어, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "156329c8-d30f-4f82-9e71-d58738ef00e1",
+        "name": "황점볼락",
+        "code": "2326",
+        "source_name": "볼락, 황점볼락, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "165a68d2-788d-46ba-b744-7eb4496b7b27",
+        "name": "염장 정어리",
+        "code": "2479",
+        "source_name": "정어리, 염장",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "16a29705-711f-4f48-b97c-c63eb076f4f5",
+        "name": "도토리",
+        "code": "615",
+        "source_name": "도토리, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "186d8903-db41-4d01-b5a6-50db768836d3",
+        "name": "삶아 말린 청어",
+        "code": "2498",
+        "source_name": "청어, 삶아서 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1abef257-e3b3-49d6-bc66-701b663f1951",
+        "name": "새우 장조림",
+        "code": "2697",
+        "source_name": "새우, 꽃새우, 장조림",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1ac31e5d-c969-4db4-aeac-c80499423989",
+        "name": "지중해담치",
+        "code": "2573",
+        "source_name": "담치, 지중해담치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1c3b3d5b-fe9a-4e1d-98dc-ae7690250c9c",
+        "name": "멸치",
+        "code": "2244",
+        "source_name": "멸치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1d766ce8-8f85-4997-913f-5e9b968e26bb",
+        "name": "냉동 붕장어",
+        "code": "2451",
+        "source_name": "장어, 붕장어, 냉동",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1d7a3975-e845-49ca-bea1-17b0338cd87a",
+        "name": "우렁이 왕우렁",
+        "code": "2601",
+        "source_name": "우렁이, 왕우렁, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1dcf39c7-7378-4fdf-9611-cd2207cba307",
+        "name": "조미해 말린 민어 암치",
+        "code": "2278",
+        "source_name": "민어, 암치, 조미하여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1e29d97f-d2d5-4650-acdf-d8f21d4fc87d",
+        "name": "연어 알",
+        "code": "2416",
+        "source_name": "연어, 알, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1ee7b3e9-494e-5699-8f39-f86c50216f2b",
+        "name": "싸리버섯",
+        "code": "1329",
+        "source_name": "싸리버섯, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "1fa2ec03-665e-4884-afca-6c952f5e82fe",
+        "name": "말린 검은비늘버섯",
+        "code": "1285",
+        "source_name": "검은비늘버섯, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "215d542f-334d-40fb-9e20-f721aaa1471e",
+        "name": "명태 알",
+        "code": "2265",
+        "source_name": "명태, 알, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "21d6d6d7-a2f8-5a74-bbef-9f1de9604e08",
+        "name": "숭어",
+        "code": "2378",
+        "source_name": "숭어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "21e58972-b922-471a-b5c8-ef36c1f81d20",
+        "name": "말린 둥근돌김",
+        "code": "2768",
+        "source_name": "김, 둥근돌김, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "22264f27-d026-460a-846c-4edbcdf81ec6",
+        "name": "감성돔",
+        "code": "2201",
+        "source_name": "돔, 감성돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "230c460f-d013-40b6-b44d-ac44bffcd38a",
+        "name": "청어 알",
+        "code": "2501",
+        "source_name": "청어, 알, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "24ca59b7-013f-439c-8645-4eb7eee2fe9c",
+        "name": "가무락조개",
+        "code": "2616",
+        "source_name": "조개, 가무락조개, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "250dedc9-b290-4ea8-951d-fc11ab9a8a13",
+        "name": "말린 취나물 야생",
+        "code": "1194",
+        "source_name": "취나물, 곰취, 야생, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "26be1fcc-c133-4194-a0e1-4a870ab1b578",
+        "name": "통조림 정어리 유지",
+        "code": "2481",
+        "source_name": "정어리, 통조림, 유지",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "28e14e3e-6ef7-4a98-b72d-89d1b1fb3375",
+        "name": "참문어",
+        "code": "2686",
+        "source_name": "문어, 참문어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "28f31083-e52b-4b3f-a842-fa90e4205ede",
+        "name": "데친 토란대 줄기",
+        "code": "1221",
+        "source_name": "토란대, 줄기, 데친것",
+        "nutrient": "fat_g",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "2a2a2d04-563e-4685-a21c-c30f0358e30c",
+        "name": "조개 키조개 패주",
+        "code": "2632",
+        "source_name": "조개, 키조개, 패주, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "2c36e260-0f42-4634-85b3-26895a1ac148",
+        "name": "돌돔",
+        "code": "2208",
+        "source_name": "돔, 돌돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "2c4bf208-a521-4ef8-ba91-b440282924ef",
+        "name": "참담치",
+        "code": "2577",
+        "source_name": "담치, 참담치(홍합), 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "2fedbabe-2495-5c6d-b36c-17cb54b008f7",
+        "name": "백합",
+        "code": "2591",
+        "source_name": "백합, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "302c9b05-61f5-4b0a-a0b1-c4d6fb5cb230",
+        "name": "삶아 말린 게",
+        "code": "2651",
+        "source_name": "게, 대게, 삶아서 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "33da78cb-74bf-4edd-a163-5b079900fd8d",
+        "name": "독돔",
+        "code": "2207",
+        "source_name": "돔, 독돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "3533cf99-6393-4e9a-9e7c-f1d1677903b2",
+        "name": "가루 모자반",
+        "code": "2786",
+        "source_name": "모자반, 가루",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "3592349c-d335-4241-9335-794a6ba16fe2",
+        "name": "끈멍게",
+        "code": "2680",
+        "source_name": "멍게, 끈멍게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "382998e4-423d-4035-8483-e7a5ca6bc54b",
+        "name": "말린 홑파래",
+        "code": "2816",
+        "source_name": "파래, 홑파래, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "3bb6ffb4-f2ec-458a-b898-dc7096b3aa2d",
+        "name": "갈색고리돼지고둥",
+        "code": "2536",
+        "source_name": "고둥, 갈색고리돼지고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "3c8ead23-3ec5-48bf-bd12-c260d623d3f5",
+        "name": "통조림 성게",
+        "code": "2734",
+        "source_name": "성게, 통조림",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "3dd8790e-abd2-4af3-b646-0e41750dc650",
+        "name": "불볼락",
+        "code": "2322",
+        "source_name": "볼락, 불볼락, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "3e315d35-8075-4382-b25c-2086717230a2",
+        "name": "가루 미역",
+        "code": "2791",
+        "source_name": "미역, 가루",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "3e7883fd-3d58-44f0-b776-fea06cafb5eb",
+        "name": "벵에돔",
+        "code": "2211",
+        "source_name": "돔, 벵에돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "4097166d-11eb-453e-92e3-6eee1d78706a",
+        "name": "반건조 돔",
+        "code": "2220",
+        "source_name": "돔, 옥돔, 반건조",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "43fb1873-bfe4-47fe-9d91-1bd8e3a67303",
+        "name": "조미 통조림 피조개",
+        "code": "2636",
+        "source_name": "조개, 피조개, 통조림, 조미",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "451472ce-2fb2-4956-92f2-9f62e3086922",
+        "name": "구갈돔",
+        "code": "2203",
+        "source_name": "돔, 구갈돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "45cc973f-47c7-4788-949f-e1cbb1b7dc47",
+        "name": "도화돔",
+        "code": "2206",
+        "source_name": "돔, 도화돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "465f0ecd-fa6e-43c8-9a13-3b2cca97aded",
+        "name": "말전복",
+        "code": "2608",
+        "source_name": "전복, 말전복, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "4665fec9-de12-4955-9c2b-c4e50b73191b",
+        "name": "두드럭고둥",
+        "code": "2541",
+        "source_name": "고둥, 두드럭고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "46ae6c7d-9650-4561-9876-9d5cf84998cf",
+        "name": "각시흰새우",
+        "code": "2690",
+        "source_name": "새우, 각시흰새우, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "46bfaf3a-a1ad-41e2-8375-e28fc027867d",
+        "name": "살조개",
+        "code": "2623",
+        "source_name": "조개, 살조개, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "46c800aa-69c5-422b-9f20-a6bc744b2bce",
+        "name": "피조개",
+        "code": "2635",
+        "source_name": "조개, 피조개, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "49b9472b-1455-4512-8ac7-ab9b0f717d14",
+        "name": "진주조개",
+        "code": "2630",
+        "source_name": "조개, 진주조개, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "4f3e97ce-0b4f-4f72-a1c5-801f591a9354",
+        "name": "토굴",
+        "code": "2559",
+        "source_name": "굴, 토굴, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "4fe2294d-9d79-43d3-8f80-a87ce7425609",
+        "name": "옥수수 순",
+        "code": "1145",
+        "source_name": "옥수수, 순, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "50f57315-7a67-4ea0-a39e-2869cf06f044",
+        "name": "가시발새우",
+        "code": "2689",
+        "source_name": "새우, 가시발새우, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "5274019c-48be-4650-97ee-17edf1e8159e",
+        "name": "소금에 절여 말린 전갱이",
+        "code": "2460",
+        "source_name": "전갱이, 소금에 절여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "555194d4-2170-4a82-a3ae-b62a69726167",
+        "name": "주름송편게",
+        "code": "2658",
+        "source_name": "게, 주름송편게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "58d65391-0aeb-58fe-a756-c2961e21ae19",
+        "name": "황새치",
+        "code": "2518",
+        "source_name": "황새치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "598bfec7-6f4f-5f25-8682-b85bdd07dd82",
+        "name": "어수리",
+        "code": "1118",
+        "source_name": "어수리, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "5b7298a9-a2f0-4e79-9957-2cae2e7f473b",
+        "name": "말린 고구마",
+        "code": "458",
+        "source_name": "고구마, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "6470942b-1c3e-4c17-b637-a27a2542a6e0",
+        "name": "통조림 참담치",
+        "code": "2579",
+        "source_name": "담치, 참담치(홍합), 통조림",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "66183103-bdc4-4db9-9ead-d22780c8683e",
+        "name": "담치 양식",
+        "code": "2576",
+        "source_name": "담치, 진주담치, 양식, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "6789ea4d-759c-45eb-a938-520fc0dc3c1b",
+        "name": "조미해 말린 명태 포",
+        "code": "2263",
+        "source_name": "명태, 포, 조미하여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "679aeefc-9ca2-4234-b661-b5df508e44bc",
+        "name": "개조개",
+        "code": "2619",
+        "source_name": "조개, 개조개, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "69830905-cd31-41df-afcf-be9bd7007f7f",
+        "name": "범돔",
+        "code": "2210",
+        "source_name": "돔, 범돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "6a174c5b-314f-4a54-931a-95928743cf36",
+        "name": "목탁가오리",
+        "code": "2091",
+        "source_name": "가오리, 목탁가오리, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "6a3b23d7-d4f5-4139-8782-762842fd6813",
+        "name": "붉은대게",
+        "code": "2655",
+        "source_name": "게, 붉은대게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "6e688888-82e9-5f5e-9983-bbd227a20155",
+        "name": "볼락",
+        "code": "2318",
+        "source_name": "볼락, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "71aac8b8-6709-4604-91f0-0f974793a01e",
+        "name": "펄닭새우",
+        "code": "2715",
+        "source_name": "새우, 펄닭새우, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "71e0769f-5818-44d7-9f1d-5f7e178243c0",
+        "name": "붉은멍게",
+        "code": "2681",
+        "source_name": "멍게, 붉은멍게, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "737d7964-6601-4020-bbad-d69948bbb1b3",
+        "name": "세고리물레고둥",
+        "code": "2548",
+        "source_name": "고둥, 세고리물레고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "73ebceb0-e6e0-4ba6-b3bf-d31ef43fdb0c",
+        "name": "매끈이고둥",
+        "code": "2542",
+        "source_name": "고둥, 매끈이고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "743484a7-3fc3-490d-9d78-fb8950c8f869",
+        "name": "물레고둥",
+        "code": "2543",
+        "source_name": "고둥, 물레고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "6675303a-95dc-5d06-b02b-16de12f07cdf",
+        "name": "마타리",
+        "code": "882",
+        "source_name": "마타리, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "73776c98-7c31-5b4f-879d-e43fd779c52f",
+        "name": "콩잎",
+        "code": "1219",
+        "source_name": "콩잎, 잎, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "75a0a4c9-2347-59fc-ac83-92ae7da3217b",
+        "name": "아이비카",
+        "code": "1090",
+        "source_name": "아이비카, 닥풀, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "84eace3d-2bfc-5694-9184-4f8dfc00d50b",
+        "name": "마가목 열매",
+        "code": "1434",
+        "source_name": "마가목 열매, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "86c6666e-7803-5f84-b6bf-401144c956e7",
+        "name": "조뱅이",
+        "code": "1167",
+        "source_name": "조뱅이, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "87eba576-6617-581a-a5f4-a817726dead0",
+        "name": "알로에",
+        "code": "1097",
+        "source_name": "알로에, 과육, 생것",
+        "nutrient": "fat_g",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "b15484bc-2639-51b1-b54e-7999293d6dc0",
+        "name": "는쟁이냉이",
+        "code": "816",
+        "source_name": "는쟁이냉이, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c82336aa-3c07-5c97-b9c6-2cf81eeefc58",
+        "name": "노랑촉수",
+        "code": "2147",
+        "source_name": "노랑촉수, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d3653f75-73c0-52a5-9b79-f16d023c601f",
+        "name": "누리장나무잎",
+        "code": "815",
+        "source_name": "누리장나무잎, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d5d4d379-1685-5b63-8d9a-e7a5c5b03225",
+        "name": "날개콩",
+        "code": "812",
+        "source_name": "날개콩, 미숙, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d9062036-0c22-53bd-86ef-02abf6387f33",
+        "name": "자운영",
+        "code": "1161",
+        "source_name": "자운영, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "daca8d22-8d34-5099-bd1a-41d4dcf374df",
+        "name": "제비쑥",
+        "code": "1166",
+        "source_name": "제비쑥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "bacee7db-8879-4487-aaef-a1589da175fc",
+        "name": "실꼬리돔",
+        "code": "2214",
+        "source_name": "돔, 실꼬리돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "bbdc148b-fb3d-4556-b4ab-138fea11b432",
+        "name": "젓갈 밴댕이",
+        "code": "2292",
+        "source_name": "밴댕이, 젓갈",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "bd4e5d46-7384-4a4b-8f4a-dfff12873c12",
+        "name": "참갑오징어",
+        "code": "2748",
+        "source_name": "오징어, 참갑오징어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "bdb2ab91-78f5-45e2-8922-1e52b275b6ad",
+        "name": "냉동 굴",
+        "code": "2560",
+        "source_name": "굴, 냉동",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c082788e-5d95-4fba-8972-f9cecd4b11ad",
+        "name": "빨간대구",
+        "code": "2190",
+        "source_name": "대구, 빨간대구, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c0ea2bb3-a0db-45b7-83f8-7114f0864c4c",
+        "name": "말린 정어리",
+        "code": "2476",
+        "source_name": "정어리, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c15673e7-90c3-5927-a8b8-c9b702c02955",
+        "name": "전갱이",
+        "code": "2456",
+        "source_name": "전갱이, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c22b2bb9-e33f-4f19-9c24-382affe7e97a",
+        "name": "북방전복",
+        "code": "2609",
+        "source_name": "전복, 북방전복, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c31f63c5-35b2-4f71-984d-52a5d6ed5e31",
+        "name": "평삼치",
+        "code": "2347",
+        "source_name": "삼치, 평삼치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c39ca86d-618a-4c53-86f2-62237ad7a07d",
+        "name": "젓갈 전어",
+        "code": "2469",
+        "source_name": "전어, 젓갈",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c39f63cc-4bfa-4e5e-8edb-4ff6a8f8444f",
+        "name": "튀긴 장어 붕장어 뼈",
+        "code": "2452",
+        "source_name": "장어, 붕장어, 뼈, 튀긴것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c4f0b1cc-c241-577b-b8a1-66105f434b10",
+        "name": "학공치",
+        "code": "2511",
+        "source_name": "학공치, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c6e6c7fc-a2ae-485b-949a-6da68a947659",
+        "name": "조미해 구운 장어",
+        "code": "2448",
+        "source_name": "장어, 뱀장어, 조미, 구운것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "c7450f73-94ba-494d-aa6d-4c35ceeb6ffe",
+        "name": "들깨 싹",
+        "code": "852",
+        "source_name": "들깨, 싹, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ca0272db-1b5a-44f1-a6f6-6ad4c0f70730",
+        "name": "냉동 쥐치 포",
+        "code": "2490",
+        "source_name": "쥐치, 포, 냉동",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "cc388939-608d-4b63-8001-940cca0fb608",
+        "name": "갈색띠매물고둥",
+        "code": "2537",
+        "source_name": "고둥, 갈색띠매물고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "cdca34a5-6dfa-4fde-a79a-0a12eac62e87",
+        "name": "대구 알",
+        "code": "2187",
+        "source_name": "대구, 알, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "ce570b76-f421-4c79-98c9-f855ac0fe193",
+        "name": "삶은 닭게",
+        "code": "2647",
+        "source_name": "게, 닭게, 삶은것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "94b8feb6-ca2f-4260-bfa2-6945f01bd466",
+        "name": "우럭볼락",
+        "code": "2323",
+        "source_name": "볼락, 우럭볼락, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "9503eac7-cd30-5235-aefa-73cb05462ffb",
+        "name": "물쑥",
+        "code": "907",
+        "source_name": "물쑥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "96360c01-c338-4693-95be-4d3f74e95d59",
+        "name": "긴뿔천길새우",
+        "code": "2691",
+        "source_name": "새우, 긴뿔천길새우, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "97444a4c-5465-4767-a97b-fea342233c88",
+        "name": "자두 대석",
+        "code": "1562",
+        "source_name": "자두, 대석, 생것",
+        "nutrient": "fat_g",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "99c3a305-f56c-48b9-85cc-7c42536a4129",
+        "name": "말린 참나물 재배",
+        "code": "1176",
+        "source_name": "참나물, 재배, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "9ac80b90-6d63-4ab4-8f05-8d7174f4d297",
+        "name": "젓갈 강달이 눈강달이",
+        "code": "2112",
+        "source_name": "강달이, 눈강달이, 젓갈",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "9ae56206-b3f4-4229-849c-dfd094aef612",
+        "name": "말린 모자반",
+        "code": "2785",
+        "source_name": "모자반, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "9b0bc2ee-a5ab-48f4-8880-d653e6721f73",
+        "name": "납작파래",
+        "code": "2814",
+        "source_name": "파래, 납작파래, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "9d392a82-69c8-4940-9817-353e70b45a68",
+        "name": "삶은 크릴",
+        "code": "2755",
+        "source_name": "크릴, 삶은것",
+        "nutrient": "carbohydrate_g",
+        "raw_token": "Tr",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "9f1d7cd4-3da3-4c38-8537-0aabb76b4e6e",
+        "name": "삶아 말린 빙어",
+        "code": "2337",
+        "source_name": "빙어, 삶아서 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a0a383b5-5edc-4a91-b30f-a9c102941b3c",
+        "name": "조미해 말린 말쥐치",
+        "code": "2493",
+        "source_name": "쥐치, 말쥐치, 조미하여 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a0e3ae82-e0cf-4bde-a7c0-ddd649c13c51",
+        "name": "데친 배추",
+        "code": "936",
+        "source_name": "배추, 데친것",
+        "nutrient": "fat_g",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a4d24312-112d-5ab8-a957-b295189f7566",
+        "name": "모자반",
+        "code": "2784",
+        "source_name": "모자반, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a4fdda3d-a699-4236-926f-d1ed9f7ac5f5",
+        "name": "대문어",
+        "code": "2684",
+        "source_name": "문어, 대문어, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a5531da7-e320-40ea-a3c4-15da63f47f5e",
+        "name": "말린 명태 노가리",
+        "code": "2256",
+        "source_name": "명태, 노가리, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a68a2213-e1a6-473f-9b57-0e8b2f11af34",
+        "name": "레몬 홍차",
+        "code": "2956",
+        "source_name": "홍차, 레몬",
+        "nutrient": "protein_g",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "a68a2213-e1a6-473f-9b57-0e8b2f11af34",
+        "name": "레몬 홍차",
+        "code": "2956",
+        "source_name": "홍차, 레몬",
+        "nutrient": "fat_g",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "cfd7aa8b-4447-45d6-9015-8e36a9650baa",
+        "name": "말린 버들송이버섯 줄기",
+        "code": "1319",
+        "source_name": "버들송이버섯, 줄기, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "d12dd4ce-804b-4081-944b-9b5ce7823c1b",
+        "name": "염장 송어",
+        "code": "2372",
+        "source_name": "송어, 염장",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "777eb29c-2a73-4e1c-83b9-69f8bb13b616",
+        "name": "민허리돼지고둥",
+        "code": "2544",
+        "source_name": "고둥, 민허리돼지고둥, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "77817276-9296-4bb0-9b0f-d6225c3f7fa0",
+        "name": "백미돔",
+        "code": "2209",
+        "source_name": "돔, 백미돔, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "77eb5d5b-8070-4398-908c-95a6fa508e1a",
+        "name": "말린 갈파래",
+        "code": "2813",
+        "source_name": "파래, 갈파래, 말린것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "795dbbb3-647a-4679-80b3-5ff36fdb1dab",
+        "name": "조개 키조개 근육",
+        "code": "2633",
+        "source_name": "조개, 키조개, 근육, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "79db0d77-dcd0-437b-81bc-11adc224231f",
+        "name": "탁자볼락",
+        "code": "2325",
+        "source_name": "볼락, 탁자볼락, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      },
+      {
+        "ingredient_id": "7c086a37-f9f9-4c25-95bf-bb6fbf1e7aad",
+        "name": "줄전갱이",
+        "code": "2467",
+        "source_name": "전갱이, 줄전갱이, 생것",
+        "nutrient": "sodium_mg",
+        "raw_token": "-",
+        "provider": "RDA_10_4"
+      }
+    ]
+  },
+  "parenthetical_source_notation": {
+    "section": "공식 workbook DB 설명 → 3. 영양성분 함량 표기",
+    "numeric": "인용되었거나 재료량을 이용해 환산한 데이터. 원문과 cited_or_converted 표시 보존.",
+    "dash": "미측정 결측. 0으로 변환하지 않음.",
+    "trace": "검출됐으나 정량 최소농도 미만. 숫자로 변환하지 않음."
+  },
+  "operator_overrides": [
+    {
+      "name": "모링가",
+      "decision": "needs_identity_decision",
+      "reason": "드럼스틱의 분석부위(잎/꼬투리)가 불명확해 신규 연결 제외."
+    },
+    {
+      "name": "조미김",
+      "decision": "no_exact_source",
+      "reason": "기존 RDA2769 원자료 품질 보류를 유지하며 재승인 금지."
+    }
+  ],
+  "recipe_exclusion": {
+    "count": 1,
+    "reason": "새우젓국을 전체 새우젓 값으로 계산하지 않도록 내용 정정 전 재계산 제외"
+  }
+}

@@ -138,6 +138,7 @@ vi.mock("next/navigation", () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
   }),
+  usePathname: () => "/mypage",
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -1264,6 +1265,7 @@ describe("MypageScreen", () => {
     ).toContain("mobile-recipebooks-book-grid-wide");
     const customBookCard = within(customSection).getByTestId("custom-book-book-custom");
     expect(customBookCard.className).toContain("mobile-recipebook-book-card-web-ratio");
+    expect(within(customBookCard).getByLabelText("레시피 2개")).toBeTruthy();
     const customCover = within(customBookCard).getByTestId("mobile-book-cover-book-custom");
     expect(customCover.className).toContain("mobile-recipebook-cover-thumb-image");
     expect(customCover.closest(".mobile-recipebook-cover-thumb")).toBeTruthy();
@@ -1423,7 +1425,7 @@ describe("MypageScreen", () => {
     expect(readerCoverImage.getAttribute("style")).toContain("system-saved.jpg");
   });
 
-  it("displays system books with correct recipe counts", async () => {
+  it("displays system and custom books with correct recipe counts", async () => {
     render(<MypageScreen initialAuthenticated />);
 
     await openRecipebookSurface();
@@ -1439,6 +1441,7 @@ describe("MypageScreen", () => {
     const likedCard = screen.getByTestId("system-book-liked");
     expect(likedCard.textContent).toContain("10개");
     expect(screen.getByLabelText("레시피 10개")).toBeTruthy();
+    expect(within(screen.getByTestId("custom-book-book-custom")).getByLabelText("레시피 2개")).toBeTruthy();
   });
 
   it("shows the error state and retries on failure", async () => {

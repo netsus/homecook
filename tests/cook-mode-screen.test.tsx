@@ -683,8 +683,9 @@ describe("CookModeScreen", () => {
     const stepList = screen.getByTestId("step-list");
 
     expect(screen.queryByTestId("mobile-ingredient-summary")).toBeNull();
-    expect(layoutShell.className).toContain("h-dvh");
-    expect(layoutShell.className).toContain("pb-[92px]");
+    expect(screen.getByTestId("cook-mode-screen").className).toContain("overflow-y-auto");
+    expect(layoutShell.className).not.toContain("h-dvh");
+    expect(layoutShell.className).not.toContain("pb-[92px]");
     expect(headerRow?.contains(screen.getByLabelText("취소"))).toBe(true);
     expect(headerRow?.contains(title)).toBe(true);
     expect(screen.getByTestId("cook-mode-content").firstElementChild).toBe(wholeBoard);
@@ -1569,7 +1570,7 @@ describe("CookModeScreen", () => {
     expect(screen.queryByTestId("cook-mode-timeline-step-2")).toBeNull();
   });
 
-  it("keeps mobile cancel and complete in the fixed bottom bar without step controls", async () => {
+  it("keeps mobile cancel and complete in the page flow without step controls", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -1583,12 +1584,13 @@ describe("CookModeScreen", () => {
 
     const cancelButton = screen.getByTestId("cancel-button");
     const completeButton = screen.getByTestId("complete-button");
-    const fixedBottomBar = completeButton.closest(".fixed");
+    const bottomBar = completeButton.closest(".cook-mobile-whole-bottom-bar");
 
     expect(cancelButton.textContent).toBe("취소");
-    expect(fixedBottomBar).not.toBeNull();
-    expect(fixedBottomBar?.contains(cancelButton)).toBe(true);
-    expect(fixedBottomBar?.contains(completeButton)).toBe(true);
+    expect(completeButton.closest(".fixed")).toBeNull();
+    expect(bottomBar).not.toBeNull();
+    expect(bottomBar?.contains(cancelButton)).toBe(true);
+    expect(bottomBar?.contains(completeButton)).toBe(true);
     expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
   });
 

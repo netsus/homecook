@@ -10,13 +10,13 @@ describe("MEAL_LOG entry mutations", () => {
   afterEach(cleanup);
   beforeEach(() => window.sessionStorage.clear());
 
-  it("exposes edit and delete actions without client-side nutrition recalculation", async () => {
+  it("exposes detail actions without row deletion or client-side nutrition recalculation", async () => {
     renderMealLogShell();
 
     expect(await screen.findAllByRole("button", { name: /식사 기록 상세/u }))
       .toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: /식사 기록 삭제/u }))
-      .toHaveLength(2);
+    expect(screen.queryAllByRole("button", { name: /식사 기록 삭제/u }))
+      .toHaveLength(0);
     expect(screen.queryByText("클라이언트 계산")).toBeNull();
   });
 
@@ -26,7 +26,7 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /간식의 플레인 요거트 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     expect(within(dialog).getByText("기존 위치: 삭제된 끼니 간식")).toBeTruthy();
     const selector = within(dialog).getByRole("combobox", { name: "옮길 끼니 (필수)" });
     expect((selector as HTMLSelectElement).value).toBe("");
@@ -45,9 +45,9 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(invoker);
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 수정" }))
+    await user.click(within(screen.getByRole("dialog", { name: /월 \d+일/ }))
       .getByRole("button", { name: "취소" }));
-    await waitFor(() => expect(document.activeElement).toBe(invoker));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "식사 기록 수정" })));
   });
 
   it.each([
@@ -60,27 +60,28 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(invoker);
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     await user.selectOptions(
       within(dialog).getByRole("combobox", { name: "옮길 끼니 (필수)" }),
       "20000000-0000-4000-8000-000000000002",
     );
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
 
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "점심" })));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /월 \d+일/ })).toBeNull());
+    expect(screen.getByRole("dialog", { name: "식사 기록 상세" })).toBeTruthy();
   });
 
   it("moves focus to the origin section after a successful delete", async () => {
     const user = userEvent.setup();
     renderMealLogShell({ applyMutationRefresh: true });
 
-    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 삭제/u }));
-    await user.click(within(screen.getByRole("alertdialog", { name: "식사 기록 삭제 확인" }))
+    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "기록 삭제" }));
+    await user.click(within(screen.getByRole("dialog", { name: /월 \d+일/ }))
       .getByRole("button", { name: "삭제" }));
 
-    await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "식사 기록 삭제 확인" })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "아침" })));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /월 \d+일/ })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(within(screen.getByRole("region", { name: "8월 10일 월요일 식사 기록" })).getByRole("heading", { name: "아침" })));
   });
 
   it("keeps the edit dialog open while a mutation is pending", async () => {
@@ -89,26 +90,27 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
 
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
     expect(within(dialog).getByRole("button", { name: "처리 중…" })).toBeTruthy();
     await user.keyboard("{Escape}");
 
-    expect(screen.getByRole("dialog", { name: "식사 기록 수정" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: /월 \d+일/ })).toBeTruthy();
   });
 
   it("moves focus to a stale-revision error while preserving the dialog", async () => {
     const user = userEvent.setup();
     renderMealLogShell({ conflictMutation: "delete" });
 
-    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 삭제/u }));
+    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "기록 삭제" }));
     await user.click(screen.getByRole("button", { name: "삭제" }));
 
-    const error = await within(screen.getByRole("alertdialog", { name: "식사 기록 삭제 확인" })).findByRole("alert");
+    const error = await within(screen.getByRole("dialog", { name: /월 \d+일/ })).findByRole("alert");
     await waitFor(() => expect(document.activeElement).toBe(error));
-    expect(screen.getByRole("alertdialog", { name: "식사 기록 삭제 확인" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: /월 \d+일/ })).toBeTruthy();
   });
 
   it("reuses an edit key only for the same payload and rotates it after correction", async () => {
@@ -119,7 +121,7 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     fetchMock.mockImplementation(async () => {
       const call = fetchMock.mock.calls.at(-1) as unknown as [RequestInfo | URL, RequestInit?];
       keys.push(new Headers(call[1]?.headers).get("Idempotency-Key") ?? "");
@@ -138,8 +140,8 @@ describe("MEAL_LOG entry mutations", () => {
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
     await screen.findByRole("alert");
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
-    await user.clear(within(dialog).getByRole("textbox", { name: "실제 양" }));
-    await user.type(within(dialog).getByRole("textbox", { name: "실제 양" }), "3");
+    await user.clear(within(dialog).getByRole("textbox", { name: "먹은 양" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "먹은 양" }), "3");
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
 
     expect(keys[0]).toBe(keys[1]);
@@ -152,12 +154,12 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
 
     expect((await within(dialog).findByRole("alert")).textContent).toContain("최신 기록을 반영했어요");
     expect(within(dialog).getByRole("option", { name: "저녁" })).toBeTruthy();
-    const amount = within(dialog).getByRole("textbox", { name: "실제 양" });
+    const amount = within(dialog).getByRole("textbox", { name: "먹은 양" });
     expect((amount as HTMLInputElement).value).toBe("2");
     await user.clear(amount);
     await user.type(amount, "3");
@@ -179,8 +181,9 @@ describe("MEAL_LOG entry mutations", () => {
     const user = userEvent.setup();
     const { fetchMock } = renderMealLogShell({ conflictMutation: "delete" });
 
-    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 삭제/u }));
-    const dialog = screen.getByRole("alertdialog", { name: "식사 기록 삭제 확인" });
+    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "기록 삭제" }));
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     await user.click(within(dialog).getByRole("button", { name: "삭제" }));
     expect((await within(dialog).findByRole("alert")).textContent).toContain("최신 기록을 반영했어요");
     await user.click(within(dialog).getByRole("button", { name: "삭제" }));
@@ -196,7 +199,7 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
     await within(dialog).findByRole("alert");
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PATCH")).toHaveLength(1);
@@ -204,7 +207,7 @@ describe("MEAL_LOG entry mutations", () => {
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
     await waitFor(() => expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PATCH")).toHaveLength(2));
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /월 \d+일/ })).toBeNull());
 
     const patches = fetchMock.mock.calls.filter(([, init]) => init?.method === "PATCH");
     expect(patches.map(([, init]) => JSON.parse(String(init?.body)).expected_revision)).toEqual([1, 2, 3]);
@@ -220,8 +223,8 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
-    const amount = within(dialog).getByRole("textbox", { name: "실제 양" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
+    const amount = within(dialog).getByRole("textbox", { name: "먹은 양" });
     await user.clear(amount);
     await user.type(amount, "3");
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
@@ -252,7 +255,7 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
     await within(dialog).findByRole("alert");
 
@@ -275,7 +278,7 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 상세/u }));
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByRole("button", { name: "식사 기록 수정" }));
-    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 수정" }))
+    await user.click(within(screen.getByRole("dialog", { name: /월 \d+일/ }))
       .getByRole("button", { name: "수정 저장" }));
 
     expect(await screen.findByRole("heading", { name: "식사 기록을 불러오지 못했어요" })).toBeTruthy();

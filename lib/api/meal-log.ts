@@ -1,3 +1,4 @@
+import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
 import type { ApiError } from "@/types/api";
@@ -385,6 +386,7 @@ export async function createMealLogEntry(
     mutationRequest("POST", mutationBody(input), requireUuid(idempotencyKey)),
   );
   if (data.entry.source.type === "cooked_batch") notifyCookedBatchChanged(data.entry.source.id);
+  notifyActionNotificationsChanged();
   return data.entry;
 }
 
@@ -400,6 +402,7 @@ export async function updateMealLogEntry(
     mutationRequest("PATCH", mutationBody(input), requireUuid(idempotencyKey)),
   );
   if (data.entry.source.type === "cooked_batch") notifyCookedBatchChanged(data.entry.source.id);
+  notifyActionNotificationsChanged();
   return data.entry;
 }
 
@@ -415,5 +418,6 @@ export async function deleteMealLogEntry(
     mutationRequest("DELETE", { expected_revision: expectedRevision }, requireUuid(idempotencyKey)),
   );
   if (data.entry.source.type === "cooked_batch") notifyCookedBatchChanged(data.entry.source.id);
+  notifyActionNotificationsChanged();
   return data.entry;
 }

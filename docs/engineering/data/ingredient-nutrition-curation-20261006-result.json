@@ -1,0 +1,99 @@
+{
+  "schema_version": "homecook-ingredient-curation-result-v1",
+  "applied_at": "2026-10-06T08:48:55.526Z",
+  "operation_checksum": "38ec29348c8fd07e5c3db6f1841cad62d2ae34e0017d0465924276d7f2a6e14e",
+  "target": "verified full-local production PostgreSQL",
+  "source_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+  "backup": {
+    "bytes": 116632177,
+    "sha256": "e98bc2b005267afe1faa031605edcfe11019ee3d230e101707a9eae242fa80e8",
+    "isolated_full_restore_verified": true
+  },
+  "applied_ingredients": [
+    {
+      "code": "1027",
+      "name": "양상추",
+      "values": {
+        "fat_g": 0.08,
+        "fiber_g": 1.5,
+        "sugars_g": 1.77,
+        "protein_g": 0.72,
+        "sodium_mg": 4,
+        "energy_kcal": 14,
+        "carbohydrate_g": 3.37,
+        "saturated_fat_g": 0.01
+      },
+      "source_name": "상추, 결구(양상추), 녹색, 생것"
+    },
+    {
+      "code": "677",
+      "name": "참깨",
+      "values": {
+        "fat_g": 45.31,
+        "fiber_g": 14.9,
+        "sugars_g": 0,
+        "protein_g": 25.41,
+        "sodium_mg": 4,
+        "energy_kcal": 556,
+        "carbohydrate_g": 21.77,
+        "saturated_fat_g": 6.68
+      },
+      "source_name": "참깨, 흰색, 말린것"
+    },
+    {
+      "code": "565",
+      "name": "두부",
+      "values": {
+        "fat_g": 4.63,
+        "fiber_g": 2.9,
+        "sugars_g": 0,
+        "protein_g": 9.62,
+        "sodium_mg": 1,
+        "energy_kcal": 97,
+        "carbohydrate_g": 3.75,
+        "saturated_fat_g": 0.7
+      },
+      "source_name": "두부"
+    }
+  ],
+  "invalid_full_source_aliases_removed": 3,
+  "ingredient_deletions": 0,
+  "recipe_deletions": 0,
+  "recipe_snapshots_created": 24,
+  "replay_new_writes": 0,
+  "rehearsal_checks": [
+    "stale link rejected",
+    "late alias failure rolls back entire operation",
+    "apply 3 reviewed sources",
+    "unrelated application/history rows unchanged",
+    "replay produces no writes",
+    "24 nutrient values equal verified official XML"
+  ],
+  "tests": {
+    "files": 3,
+    "passed": 34
+  },
+  "independent_matcher_review": {
+    "previous_pairs": 1596,
+    "preserved_pairs": 1592,
+    "rejected_wrong_pairs": 4,
+    "important_findings_remaining": 0
+  },
+  "web_verification": {
+    "status": "blocked",
+    "reason": "Cloudflare 523 Origin is unreachable",
+    "observed_at": "2026-10-06T08:49:43Z"
+  },
+  "permission_verification": "Food-catalog actor RPC rejected unauthenticated operator read with FORBIDDEN; no auth or permission protections changed",
+  "delivery": {
+    "production_data": "applied",
+    "candidate_matching_code": "local worktree, not merged",
+    "web_deployment": "not performed"
+  },
+  "remaining_scope": [
+    "Remaining 41 nutrition identity review items were not applied",
+    "352 unlinked and 218 partial ingredients from baseline remain outside this correction",
+    "Sesame follows previously reviewed white dried basis; roasted sesame should remain a separate source decision",
+    "Existing subtype aliases such as roasted sesame/freeze-dried tofu still need catalog identity review"
+  ]
+}

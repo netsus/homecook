@@ -26,6 +26,9 @@ interface MealScreenPageProps {
   params: Promise<{ date: string; columnId: string }>;
   searchParams: Promise<{
     slot?: string;
+    mealId?: string;
+    returnTo?: string;
+    returnSurface?: string;
     productAction?: string;
     productEntryId?: string;
     productAmount?: string;
@@ -60,6 +63,15 @@ export default async function MealScreenPage({
   ) {
     const returnParams = new URLSearchParams();
     if (slot) returnParams.set("slot", slot);
+    if (typeof pageSearchParams.mealId === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(pageSearchParams.mealId)) {
+      returnParams.set("mealId", pageSearchParams.mealId);
+    }
+    if (typeof pageSearchParams.returnTo === "string") {
+      returnParams.set("returnTo", resolveNextPath(pageSearchParams.returnTo));
+    }
+    if (pageSearchParams.returnSurface === "planner.week" || pageSearchParams.returnSurface === "planner.meal") {
+      returnParams.set("returnSurface", pageSearchParams.returnSurface);
+    }
     if (pageSearchParams.productAction === "edit" || pageSearchParams.productAction === "delete") {
       returnParams.set("productAction", pageSearchParams.productAction);
     }

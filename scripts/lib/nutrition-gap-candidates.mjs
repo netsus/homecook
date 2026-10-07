@@ -53,6 +53,10 @@ function candidateNameMatch(ingredient, candidate) {
   const sourceSemantics = normalizeName(
     `${candidate.source_state ?? ""} ${candidate.external_name ?? ""}`,
   );
+  const canonicalName = normalizeName(ingredient.ingredient_name);
+  // Imported aliases are not evidence that a generic ingredient is freeze-dried.
+  if (/동결건조|동결두부|동두부/.test(sourceSemantics) &&
+      !/동결건조|동결두부|동두부/.test(canonicalName)) return null;
   const requiredMarkers = requiredPreparationMarkers(ingredient.ingredient_name);
   if (requiredMarkers.length > 0 && !requiredMarkers.some((marker) =>
     sourceSemantics.includes(normalizeName(marker))
@@ -63,13 +67,41 @@ function candidateNameMatch(ingredient, candidate) {
       .filter(Boolean),
   );
   const externalName = normalizeName(candidate.external_name);
+  const nameParts = String(candidate.external_name ?? "").split(/[,_/]/).map((part) => part.trim());
+  // In these observed prepared foods, later names describe fillings/toppings.
+  // Require the food itself (or its subtype), not an imported full-name
+  // alias, before allowing the existing alias/component/provider-scope matching.
+  const primaryName = normalizeName(nameParts[0]);
+  const isRiceCake = ["멥쌀떡", "찹쌀떡"].includes(primaryName);
+  const isCookieOrBiscuit = primaryName === "과자" &&
+    ["쿠키", "비스킷"].includes(normalizeName(nameParts[1]));
+  const hasFoodSubtype = isRiceCake || isCookieOrBiscuit;
+  if (primaryName === "햄버거" || hasFoodSubtype) {
+    const foodNames = new Set(
+      nameParts.slice(0, hasFoodSubtype ? 2 : 1).map(normalizeName).filter(Boolean),
+    );
+    // Compound canonical names can identify the subtype (e.g. 현미가래떡).
+    // Only inspect the second food component, never later fillings or aliases.
+    const subtypeNames = hasFoodSubtype
+      ? String(nameParts[1] ?? "").split(/[()]/).map(normalizeName).filter((name) => name.length >= 2)
+      : [];
+    const namesSubtype = subtypeNames.some((name) => canonicalName.includes(name));
+    if (canonicalName !== externalName && !namesSubtype &&
+        ![...aliases].some((alias) => alias !== externalName && foodNames.has(alias))) return null;
+  }
   if (aliases.has(externalName)) return { score: 110, method: "exact_external_name" };
 
   const components = new Set(
-    [...(candidate.name_components ?? []), ...String(candidate.external_name ?? "").split(/[,_/]/)]
+    [...(candidate.name_components ?? []), ...nameParts]
       .map(normalizeName)
       .filter(Boolean),
   );
+  // Preserve botanical synonyms such as 상추, 결구(양상추).
+  for (const part of nameParts.slice(0, 2)) {
+    for (const match of part.matchAll(/\(([^()]+)\)/g)) {
+      components.add(normalizeName(match[1]));
+    }
+  }
   if ([...aliases].some((alias) => components.has(alias))) {
     return { score: 100, method: "exact_name_component" };
   }

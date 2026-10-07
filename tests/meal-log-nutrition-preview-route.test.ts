@@ -1,0 +1,11 @@
+import { beforeEach, expect, it, vi } from "vitest";
+import { GET } from "@/app/api/v1/meal-log/nutrition-preview/route";
+const mocks=vi.hoisted(()=>({authorize:vi.fn(),rpc:vi.fn()}));
+vi.mock("@/lib/server/meal-log-route",()=>({authorizeMealLogRequest:mocks.authorize}));
+const url="http://localhost/api/v1/meal-log/nutrition-preview?source_type=ingredient&source_id=11111111-1111-4111-8111-111111111111&amount=50&unit=g";
+const nutrition={calculation_status:"partial",calories_kcal:50,carbohydrate_g:null,protein_g:5,fat_g:null,sodium_mg:null};
+beforeEach(()=>{vi.clearAllMocks();mocks.authorize.mockResolvedValue({ok:true,client:{rpc:mocks.rpc},authorityArgs:{p_owner_uuid:"verified-owner",p_session_key_hash:"verified-hash"}});mocks.rpc.mockResolvedValue({data:nutrition,error:null});});
+it("requires authentication before source lookup",async()=>{mocks.authorize.mockResolvedValue({ok:false,response:new Response(null,{status:401})});expect((await GET(new Request(url))).status).toBe(401);expect(mocks.rpc).not.toHaveBeenCalled();});
+it("uses only verified authority and exact source arguments, with no-store success",async()=>{const response=await GET(new Request(url));expect(response.status).toBe(200);expect(response.headers.get("Cache-Control")).toBe("private, no-store");expect(mocks.rpc).toHaveBeenCalledWith("preview_meal_log_nutrition",{p_owner_uuid:"verified-owner",p_session_key_hash:"verified-hash",p_source_type:"ingredient",p_source_id:"11111111-1111-4111-8111-111111111111",p_amount:50,p_unit:"g"});expect((await response.json()).data.nutrition).toEqual(nutrition);});
+it("rejects attacker supplied owner arguments before RPC",async()=>{expect((await GET(new Request(url+"&p_owner_uuid=someone"))).status).toBe(422);expect(mocks.rpc).not.toHaveBeenCalled();});
+it("maps source and conversion errors without inventing nutrition",async()=>{for(const [message,status]of [["RESOURCE_NOT_FOUND",404],["UNIT_CONVERSION_MISSING",422],["ACCOUNT_SESSION_STALE",409]]as const){mocks.rpc.mockResolvedValue({data:null,error:{message}});const response=await GET(new Request(url));expect(response.status).toBe(status);expect((await response.json()).success).toBe(false);}});

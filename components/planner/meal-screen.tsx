@@ -2,7 +2,9 @@
 
 import { AppBackButton } from "@/components/shared/app-back-button";
 
-import { MealPinnedNutrition } from "@/components/planner/meal-pinned-nutrition";
+import { PlannerTaskSheet } from "@/components/planner/planner-task-sheet";
+import { PlannedMealCard } from "@/components/planner/planned-meal-card";
+import { formatPlannerNutritionValue } from "@/lib/planner/planner-nutrition-presentation";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,7 +13,6 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
-import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
 import type {
   MealAddPickerMode,
@@ -19,10 +20,8 @@ import type {
 } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ProductPlannerEntryCard } from "@/components/planner/product-planner-entry-card";
-import { MealNutritionSummary } from "@/components/planner/planner-nutrition-summary";
 import { usePlannerNutritionSummary } from "@/components/planner/use-planner-nutrition-summary";
 import { ModalHeader } from "@/components/shared/modal-header";
-import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { AllPantryCompletionModal } from "@/components/shopping/all-pantry-completion-modal";
@@ -35,13 +34,8 @@ import {
   WebDialogFooter,
   WebDialogHeader,
   WebDialogTitle,
-  WebEmptyState,
-  WebErrorState,
   WebIconButton,
   WebModal,
-  WebShell,
-  WebSkeleton,
-  WebTopNav,
 } from "@/components/web";
 import { createCookingSession, createSnapshotV2CookingSession, isCookingApiError } from "@/lib/api/cooking";
 import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
@@ -117,11 +111,6 @@ function formatDateShort(planDate: string) {
   return formatKoreaCompactDate(planDate);
 }
 
-function buildNextPath(planDate: string, columnId: string, slotName: string) {
-  const base = `/planner/${planDate}/${columnId}`;
-  return slotName ? `${base}?slot=${encodeURIComponent(slotName)}` : base;
-}
-
 function buildProductEntryNextPath(
   planDate: string,
   columnId: string,
@@ -161,61 +150,6 @@ function buildProductEntryReturnClearedPath(
   return `/planner/${planDate}/${columnId}${query ? `?${query}` : ""}`;
 }
 
-const mealVisualMeta: Record<
-  string,
-  { bg: string; chips: string[]; emoji: string; minutes: number }
-> = {
-  김치볶음밥: {
-    bg: "var(--accent-peach-soft)",
-    chips: ["묵은지", "찬밥", "대파", "계란", "참기름", "+2"],
-    emoji: "🍚",
-    minutes: 15,
-  },
-  된장찌개: {
-    bg: "var(--danger-soft)",
-    chips: ["된장", "애호박", "감자", "두부", "청양고추", "+1"],
-    emoji: "🍲",
-    minutes: 25,
-  },
-  "닭가슴살 샐러드": {
-    bg: "var(--success-soft)",
-    chips: ["닭가슴살", "양상추", "토마토", "오이", "올리브유"],
-    emoji: "🥗",
-    minutes: 20,
-  },
-  김치찌개: {
-    bg: "var(--danger-soft)",
-    chips: ["김치", "돼지고기", "두부", "대파", "고춧가루"],
-    emoji: "🍲",
-    minutes: 25,
-  },
-  미역국: {
-    bg: "var(--accent-blue-soft)",
-    chips: ["미역", "소고기", "국간장", "마늘"],
-    emoji: "🍜",
-    minutes: 20,
-  },
-};
-
-function getMealVisualMeta(meal: MealListItemData) {
-  return (
-    mealVisualMeta[meal.recipe_title] ?? {
-      bg: "var(--brand-soft)",
-      chips: [],
-      emoji: "🍽️",
-      minutes: 20,
-    }
-  );
-}
-
-function getVisibleMealChips(chips: string[], limit = 3) {
-  const normalized = chips.filter((chip) => !/^\+\d+$/.test(chip));
-  const visible = normalized.slice(0, limit);
-  const hiddenCount = Math.max(0, normalized.length - visible.length);
-
-  return { hiddenCount, visible };
-}
-
 // ─── AppBar ──────────────────────────────────────────────────────────────────
 
 interface AppBarProps {
@@ -233,13 +167,13 @@ function AppBar({ titleFull, titleShort, onBack, onAddMeal, canAdd }: AppBarProp
         <AppBackButton onClick={onBack} />
         <h1
           aria-label={titleFull}
-          className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]"
+          className="min-w-0 flex-1 truncate text-center text-[18px] font-semibold leading-[1.3] text-[var(--foreground)]"
         >
           {/* Full title on ≥361px, short title on narrow */}
           <span className="hidden [@media(min-width:361px)]:inline">{titleFull}</span>
           <span className="[@media(min-width:361px)]:hidden">{titleShort}</span>
         </h1>
-        <button aria-label="식사 추가" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--brand)] hover:bg-[var(--surface-fill)] disabled:opacity-40" data-testid="meal-screen-add-cta" disabled={!canAdd} onClick={onAddMeal} type="button"><PlusIcon /></button>
+        <button aria-label="식사 추가" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--ui-slate-300)] bg-[var(--surface)] text-[var(--brand)] shadow-sm hover:bg-[var(--surface-fill)] disabled:opacity-40" data-testid="meal-screen-add-cta" disabled={!canAdd} onClick={onAddMeal} type="button"><PlusIcon /></button>
       </div>
     </div>
   );
@@ -249,252 +183,17 @@ function AppBar({ titleFull, titleShort, onBack, onAddMeal, canAdd }: AppBarProp
 
 function LoadingSkeleton() {
   return (
-    <div
-      className="space-y-3"
-      aria-busy="true"
-      aria-label="식사 목록 불러오는 중"
-      data-testid="meal-screen-loading-skeleton"
-    >
-      {[0, 1].map((i) => (
-        <article
-          key={i}
-          className="relative overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_1px_3px_var(--shadow-color-subtle)]"
-          data-testid="meal-screen-loading-card"
-        >
-          <Skeleton
-            className="absolute right-3 top-3 z-[1] h-8 w-8 rounded-full"
-            data-testid="meal-screen-loading-delete"
-          />
-
-          <div className="flex gap-3 p-3.5">
-            <Skeleton
-              className="h-[76px] w-[76px] shrink-0 rounded-[var(--radius-card)]"
-              data-testid="meal-screen-loading-thumb"
-            />
-            <div className="min-w-0 flex-1 pr-7">
-              <Skeleton className="mb-1 h-6 w-12 rounded-full" />
-              <Skeleton className="h-5 w-36 max-w-full" />
-              <Skeleton className="mt-2 h-4 w-24" />
-            </div>
+    <div className="space-y-4 py-4" aria-busy="true" aria-label="식사 목록 불러오는 중" data-testid="meal-screen-loading-skeleton">
+      {[0, 1].map((index) => (
+        <article key={index} className="border-b border-[var(--line)] pb-5" data-testid="meal-screen-loading-card">
+          <div className="flex gap-3">
+            <Skeleton className="h-14 w-14 shrink-0 rounded-xl" data-testid="meal-screen-loading-thumb" />
+            <div className="flex-1 space-y-3"><Skeleton className="h-5 w-36 max-w-full" /><Skeleton className="h-4 w-20" /></div>
           </div>
-
-          <div className="px-3.5 pb-3.5">
-            <div
-              className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-2.5"
-              data-testid="meal-screen-loading-stepper"
-            >
-              <Skeleton className="h-4 w-16" />
-              <div className="flex items-center gap-2.5">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-8 w-8 rounded-full" />
-              </div>
-            </div>
-
-            <div className="mb-3 flex flex-wrap gap-[5px]">
-              {[48, 56, 44].map((width) => (
-                <Skeleton
-                  className="h-[26px] rounded-full"
-                  key={width}
-                  width={width}
-                />
-              ))}
-            </div>
-
-            <Skeleton
-              className="h-[38px] w-full rounded-[var(--radius-control)]"
-              data-testid="meal-screen-loading-action"
-            />
-          </div>
+          <Skeleton className="mt-4 h-11 w-full rounded-xl" data-testid="meal-screen-loading-action" />
         </article>
       ))}
     </div>
-  );
-}
-
-// Status badge visually removed per Wave1 port. Status data preserved in meal object.
-
-// ─── Meal card ────────────────────────────────────────────────────────────────
-
-interface MealCardProps {
-  nutrition?: PlannerMealNutritionViewMap[string];
-  meal: MealListItemData;
-  conflictError: string | null;
-  isPending: boolean;
-  onStepDown: () => void;
-  onStepUp: () => void;
-  onDelete: () => void;
-  onCreateShopping: () => void;
-  onRecipeClick: () => void;
-  onStartCook: () => void;
-}
-
-function MealCard({
-  meal,
-  nutrition,
-  conflictError,
-  isPending,
-  onCreateShopping,
-  onStepDown,
-  onStepUp,
-  onDelete,
-  onRecipeClick,
-  onStartCook,
-}: MealCardProps) {
-  const isMin = meal.planned_servings <= 1;
-  const canCreateShopping = meal.status === "registered";
-  const canStartCook = meal.status === "shopping_done";
-  const hasMealAction = canCreateShopping || canStartCook;
-  const visual = getMealVisualMeta(meal);
-  const { hiddenCount, visible } = getVisibleMealChips(visual.chips);
-
-  function stopProp(e: React.MouseEvent) {
-    e.stopPropagation();
-  }
-
-  return (
-    <article
-      aria-label={`${meal.recipe_title} 식사 카드`}
-      className={`relative min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_1px_3px_var(--shadow-color-subtle)] transition-opacity ${isPending ? "opacity-60" : ""}`}
-    >
-      {/* Delete trash icon — top-right */}
-      <button
-        aria-label={`${meal.recipe_title} 삭제`}
-        className="absolute right-3 top-3 z-[1] flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger)] disabled:opacity-40"
-        data-testid={`meal-delete-${meal.id}`}
-        disabled={isPending}
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        type="button"
-      >
-        <svg fill="none" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-        </svg>
-      </button>
-
-      <div className="flex gap-3 p-3.5">
-        <div
-          className="flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-card)] text-[40px]"
-          style={{ backgroundColor: visual.bg }}
-        >
-          {meal.recipe_thumbnail_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt=""
-              className="h-full w-full object-cover"
-              src={meal.recipe_thumbnail_url}
-            />
-          ) : (
-            <span aria-hidden="true">{visual.emoji}</span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1 pr-7">
-          <button
-            className="block w-full break-words text-left text-[16px] font-extrabold leading-[1.3] text-[var(--foreground)] hover:text-[var(--brand)]"
-            data-testid={`meal-recipe-link-${meal.id}`}
-            onClick={onRecipeClick}
-            style={{ fontWeight: 800 }}
-            type="button"
-          >
-            {meal.recipe_title}
-          </button>
-          <div className="mt-[3px] text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
-            {meal.planned_servings}인분 · {visual.minutes}분
-          </div>
-        </div>
-      </div>
-
-      <div className="px-3.5 pb-3.5">
-        <div
-          className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-2.5"
-          onClick={stopProp}
-          role="group"
-          aria-label="인분 조절"
-        >
-          <span className="text-[12px] font-semibold leading-[1.3] text-[var(--text-2)]">
-            계획 인분
-          </span>
-          <div className="flex items-center gap-2.5">
-          <button
-            aria-label="인분 감소"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--text-2)] disabled:opacity-40"
-            disabled={isMin || isPending}
-            onClick={onStepDown}
-            type="button"
-          >
-            <span aria-hidden="true" className="text-lg font-bold leading-none">−</span>
-          </button>
-          <span
-            className="min-w-[42px] text-center text-[17px] font-semibold leading-[1.3] text-[var(--foreground)]"
-            aria-live="polite"
-            aria-label={`${meal.planned_servings}인분`}
-          >
-            {meal.planned_servings}
-            <span className="ml-0.5 text-[16px] font-semibold">인분</span>
-          </span>
-          <button
-            aria-label="인분 증가"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--text-inverse)] disabled:opacity-40"
-            disabled={isPending}
-            onClick={onStepUp}
-            type="button"
-          >
-            <span aria-hidden="true" className="text-lg font-bold leading-none">+</span>
-          </button>
-          </div>
-        </div>
-
-        <div className="mb-3 flex flex-wrap gap-[5px]">
-          {visible.map((chip) => (
-            <span
-              className="rounded-full bg-[var(--surface-fill)] px-2 py-[5px] text-[11px] font-medium leading-[1.3] text-[var(--text-2)]"
-              key={chip}
-            >
-              {chip}
-            </span>
-          ))}
-          {hiddenCount > 0 ? (
-            <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-[5px] text-[11px] font-semibold leading-[1.3] text-[var(--text-2)]">
-              +{hiddenCount}
-            </span>
-          ) : null}
-        </div>
-
-        {hasMealAction ? (
-          <div className="grid grid-cols-1 gap-2">
-            {canCreateShopping ? (
-              <button
-                className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--foreground)]"
-                onClick={onCreateShopping}
-                disabled={isPending}
-                type="button"
-              >
-                <ShoppingIcon />
-                {meal.shopping_list_id ? "장보기 이어가기" : "장보기"}
-              </button>
-            ) : null}
-            {canStartCook ? (
-              <button
-                aria-label={`${meal.recipe_title} 요리하기`}
-                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
-                disabled={isPending}
-                onClick={onStartCook}
-                type="button"
-              >
-                요리하기
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      {/* 409 conflict inline error */}
-      {conflictError ? (
-        <p className="px-3.5 pb-3 text-sm text-[var(--danger-strong)]" role="alert">
-          {conflictError}
-        </p>
-      ) : null}
-      <MealPinnedNutrition nutrition={nutrition} servings={meal.planned_servings} title={meal.recipe_title} />
-    </article>
   );
 }
 
@@ -514,260 +213,6 @@ function isAllPantryShoppingList(
   );
 }
 
-function MealWebProfileButton({
-  isAuthenticated,
-}: {
-  isAuthenticated: boolean;
-}) {
-  return (
-    <ProfileSummaryButton
-      autoLoad
-      isAuthenticated={isAuthenticated}
-      variant="web"
-    />
-  );
-}
-
-function MealWebLoadingCardSkeleton() {
-  return <article aria-hidden="true" className="min-w-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
-    <div className="flex items-center gap-3"><WebSkeleton height={76} width={76} /><div className="min-w-0 flex-1"><WebSkeleton height={22} width="85%" /><WebSkeleton className="mt-2" height={14} width="50%" /></div></div>
-    <WebSkeleton className="mt-4" height={48} width="100%" />
-    <WebSkeleton className="mt-3" height={44} width="100%" />
-    <WebSkeleton className="mt-4" height={100} width="100%" />
-  </article>;
-}
-
-function MealWebLoadingSkeleton({
-  planDate,
-  slotName,
-}: {
-  planDate: string;
-  slotName: string;
-}) {
-  return (
-    <div
-      aria-busy="true"
-      aria-label="끼니 화면 불러오는 중"
-      className="web-meal-layout web-meal-list-layout"
-      data-testid="web-meal-loading-skeleton"
-    >
-      <section className="web-meal-main" aria-labelledby="web-meal-loading-title">
-        <h1 className="sr-only" id="web-meal-loading-title">
-          끼니 음식 불러오는 중
-        </h1>
-
-        <div className="grid grid-cols-2 items-start gap-4">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <MealWebLoadingCardSkeleton key={index} />
-          ))}
-        </div>
-      </section>
-
-      <aside className="web-meal-rail">
-        <div
-          className="web-meal-rail-card"
-          data-testid="web-meal-loading-summary"
-        >
-          <div className="web-meal-rail-head">
-            <WebSkeleton height={14} width={64} />
-            <WebSkeleton className="mt-2" height={30} width="78%" />
-          </div>
-          <div className="web-meal-rail-stats">
-            <div>
-              <WebSkeleton height={14} width={42} />
-              <WebSkeleton className="mt-2" height={24} width={38} />
-            </div>
-            <div>
-              <WebSkeleton height={14} width={52} />
-              <WebSkeleton className="mt-2" height={24} width={52} />
-            </div>
-          </div>
-          <WebSkeleton className="mt-5" height={44} width="100%" />
-          <span className="sr-only">
-            {formatDateLong(planDate)}
-            {slotName ? ` · ${slotName}` : ""}
-          </span>
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-function MealWebView({
-  authState,
-  conflictErrors,
-  errorMessage,
-  meals,
-  mealNutrition,
-  productEntries,
-  onAddMeal,
-  onBack,
-  onCreateShopping,
-  onDelete,
-  onRecipeClick,
-  onRetry,
-  onStartCook,
-  onStepDown,
-  onStepUp,
-  onProductDelete,
-  onProductEdit,
-  pendingMealIds,
-  pendingProductIds,
-  planDate,
-  nutritionSummary,
-  screenState,
-  slotName,
-  totalServings,
-  hasCookingStartPending,
-}: {
-  authState: AuthState;
-  conflictErrors: Record<string, string>;
-  errorMessage: string | null;
-  meals: MealListItemData[];
-  mealNutrition: PlannerMealNutritionViewMap;
-  productEntries: MealProductPlannerEntryData[];
-  onAddMeal: () => void;
-  onBack: () => void;
-  onCreateShopping: (meal: MealListItemData) => void;
-  onDelete: (meal: MealListItemData) => void;
-  onRecipeClick: (meal: MealListItemData) => void;
-  onRetry: () => void;
-  onStartCook: (meal: MealListItemData) => void;
-  onStepDown: (meal: MealListItemData) => void;
-  onStepUp: (meal: MealListItemData) => void;
-  onProductDelete: (entry: MealProductPlannerEntryData) => void;
-  onProductEdit: (entry: MealProductPlannerEntryData) => void;
-  pendingMealIds: Set<string>;
-  pendingProductIds: Set<string>;
-  planDate: string;
-  nutritionSummary: React.ReactNode;
-  screenState: ScreenState;
-  slotName: string;
-  totalServings: number;
-  hasCookingStartPending: boolean;
-}) {
-  const isLoading = authState === "checking" || screenState === "loading";
-  const breadcrumbCurrent = slotName
-    ? `${formatDateLong(planDate)} · ${slotName}`
-    : formatDateLong(planDate);
-  const summaryTitle = slotName
-    ? `${formatDateLong(planDate)} ${slotName}`
-    : formatDateLong(planDate);
-  const pageTitle = slotName
-    ? `${formatDateLong(planDate)} ${slotName} 식사`
-    : `${formatDateLong(planDate)} 식사`;
-
-  return (
-    <WebShell className="web-meal" wide>
-      <WebTopNav
-        activeId="planner"
-        rightSlot={<MealWebProfileButton isAuthenticated={authState === "authenticated"} />}
-      />
-      <div className="web-screen web-meal-screen">
-        <nav aria-label="식사 경로" className="mb-4 flex min-h-11 items-center gap-2 text-sm">
-          <button
-            aria-label="플래너로 돌아가기"
-            className="web-breadcrumb-link"
-            onClick={onBack}
-            type="button"
-          >
-            <ChevronLeftIcon />
-            플래너
-          </button>
-          <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">{breadcrumbCurrent}</span>
-        </nav>
-
-        <div className="web-meal-page-head grid-cols-[minmax(0,1fr)_auto] items-center" data-testid="meal-screen-header">
-          <div><p>끼니 화면</p><h1>{pageTitle}</h1></div>
-          <button aria-label="식사 추가" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--brand)] text-[var(--brand)] disabled:opacity-40" data-testid="meal-screen-add-cta" disabled={authState !== "authenticated"} onClick={onAddMeal} type="button"><PlusIcon /></button>
-        </div>
-
-        {nutritionSummary}
-
-        {hasCookingStartPending ? (
-          <p aria-live="polite" className="web-meal-conflict">요리 세션 생성 중…</p>
-        ) : null}
-
-        {isLoading ? (
-          <MealWebLoadingSkeleton planDate={planDate} slotName={slotName} />
-        ) : null}
-
-        {screenState === "error" ? (
-          <WebErrorState
-            action={<WebButton onClick={onRetry}>다시 시도</WebButton>}
-            data-testid="meal-screen-error"
-            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
-            title="식사 목록을 불러오지 못했어요"
-          />
-        ) : null}
-
-        {screenState === "empty" ? (
-          <WebEmptyState
-            data-testid="meal-screen-empty"
-            description="레시피 검색, 팬트리 기반 추천, 직접 등록으로 식사를 추가할 수 있어요."
-            title="이 끼니에 등록된 식사가 없어요"
-          />
-        ) : null}
-
-        {screenState === "ready" && (meals.length > 0 || productEntries.length > 0) ? (
-          <div className="web-meal-layout web-meal-list-layout">
-            <section aria-label="끼니 음식 목록" className="web-meal-main">
-              <div className="grid grid-cols-2 items-start gap-4" data-testid="web-meal-list">
-                {meals.map((meal) => (
-                  <MealCard
-                    conflictError={conflictErrors[meal.id] ?? null}
-                    isPending={pendingMealIds.has(meal.id)}
-                    key={meal.id}
-                    meal={meal}
-                    nutrition={mealNutrition[meal.id]}
-                    onCreateShopping={() => onCreateShopping(meal)}
-                    onDelete={() => onDelete(meal)}
-                    onRecipeClick={() => onRecipeClick(meal)}
-                    onStartCook={() => onStartCook(meal)}
-                    onStepDown={() => onStepDown(meal)}
-                    onStepUp={() => onStepUp(meal)}
-                  />
-                ))}
-                {productEntries.map((entry) => (
-                  <ProductPlannerEntryCard
-                    entry={entry}
-                    isPending={pendingProductIds.has(entry.id)}
-                    key={`product:${entry.id}`}
-                    onDelete={() => onProductDelete(entry)}
-                    onEditQuantity={() => onProductEdit(entry)}
-                    variant="web"
-                  />
-                ))}
-              </div>
-            </section>
-
-            <aside className="web-meal-rail">
-              <div className="web-meal-rail-card" data-testid="web-meal-summary">
-                <div className="web-meal-rail-head">
-                  <p>끼니 요약</p>
-                  <h1>{summaryTitle}</h1>
-                </div>
-                <div className="web-meal-rail-stats">
-                  <div>
-                    <span>음식</span>
-                    <strong>{meals.length + productEntries.length}개</strong>
-                  </div>
-                  <div>
-                    <span>총 인분</span>
-                    <strong>{totalServings}인분</strong>
-                  </div>
-                </div>
-
-              </div>
-            </aside>
-          </div>
-        ) : null}
-      </div>
-    </WebShell>
-  );
-}
-
 function MealWebConfirmDialog({
   confirmLabel,
   description,
@@ -776,7 +221,6 @@ function MealWebConfirmDialog({
   testId,
   title,
   titleId,
-  variant = "normal",
 }: {
   confirmLabel: string;
   description: string;
@@ -785,7 +229,6 @@ function MealWebConfirmDialog({
   testId: string;
   title: string;
   titleId: string;
-  variant?: "normal" | "destructive";
 }) {
   return (
     <WebModal onBackdropClick={onCancel}>
@@ -800,12 +243,9 @@ function MealWebConfirmDialog({
           <div className="web-confirm-body">
             <span
               aria-hidden="true"
-              className={[
-                "web-confirm-icon",
-                variant === "destructive" ? "web-confirm-icon-danger" : "",
-              ].join(" ")}
+              className="web-confirm-icon"
             >
-              {variant === "destructive" ? <TrashIcon /> : "?"}
+              ?
             </span>
             <p className="web-confirm-copy">{description}</p>
           </div>
@@ -815,7 +255,6 @@ function MealWebConfirmDialog({
             취소
           </WebButton>
           <WebButton
-            className={variant === "destructive" ? "web-confirm-danger" : undefined}
             data-testid={testId}
             onClick={onConfirm}
           >
@@ -824,14 +263,6 @@ function MealWebConfirmDialog({
         </WebDialogFooter>
       </WebDialog>
     </WebModal>
-  );
-}
-
-function ChevronLeftIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
-      <path d="M11 4.5L6.5 9l4.5 4.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-    </svg>
   );
 }
 
@@ -847,24 +278,6 @@ function PlusIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 16 16" width="16" xmlns="http://www.w3.org/2000/svg">
       <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-    </svg>
-  );
-}
-
-function ShoppingIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4.5 7h9l-.7 6.3a1.8 1.8 0 01-1.8 1.6H7a1.8 1.8 0 01-1.8-1.6L4.5 7z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
-      <path d="M6.5 7a2.5 2.5 0 015 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
-      <path d="M3.5 5h11M7 5V3.7c0-.7.5-1.2 1.2-1.2h1.6c.7 0 1.2.5 1.2 1.2V5m2.1 0l-.5 9a1.4 1.4 0 01-1.4 1.3H6.8A1.4 1.4 0 015.4 14L4.9 5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-      <path d="M7.8 8v4M10.2 8v4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -934,6 +347,7 @@ export function MealScreen({
   const [productEntries, setProductEntries] = useState<MealProductPlannerEntryData[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [conflictErrors, setConflictErrors] = useState<Record<string, string>>({});
+  const [deletedMealId, setDeletedMealId] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [pendingMealIds, setPendingMealIds] = useState<Set<string>>(new Set());
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
@@ -961,9 +375,11 @@ export function MealScreen({
       null,
     );
   const handleNutritionUnauthorized = useCallback(() => {
-    setAuthReturnPath(buildNextPath(planDate, columnId, slotName));
+    const params = new URLSearchParams(searchParams.toString());
+    if (slotName) params.set("slot", slotName);
+    setAuthReturnPath(`/planner/${planDate}/${columnId}?${params}`);
     setAuthState("unauthorized");
-  }, [columnId, planDate, slotName]);
+  }, [columnId, planDate, searchParams, slotName]);
   const nutritionRequest = usePlannerNutritionSummary({
     enabled: authState === "authenticated",
     endDate: planDate,
@@ -1198,6 +614,9 @@ export function MealScreen({
     clearConflictError(mealId);
     try {
       await deleteMeal(mealId);
+      setDeletedMealId(mealId);
+      showSuccess("요리계획을 삭제했어요.", "요리계획");
+      router.replace(`/planner?date=${planDate}`);
       setMeals((prev) => prev.filter((meal) => meal.id !== mealId));
       void nutritionRequest.retry();
     } catch (error) {
@@ -1260,7 +679,7 @@ export function MealScreen({
       }
       router.push(
         buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: sessionContractVersion }), {
-          returnTo: buildNextPath(planDate, columnId, slotName),
+          returnTo: currentMealPath,
         }),
       );
     } catch (error) {
@@ -1284,7 +703,7 @@ export function MealScreen({
   async function createShoppingForMeal(meal: MealListItemData) {
     const openShoppingList = (listId: string) => router.push(
       buildReturnHref(`/shopping/lists/${listId}`, {
-        returnTo: buildNextPath(planDate, columnId, slotName),
+        returnTo: currentMealPath,
       }),
     );
     if (meal.shopping_list_id) {
@@ -1325,7 +744,7 @@ export function MealScreen({
       showSuccess("장보기 목록을 만들었어요.", "장보기");
       router.push(
         buildReturnHref(`/shopping/lists/${list.id}`, {
-          returnTo: buildNextPath(planDate, columnId, slotName),
+          returnTo: currentMealPath,
         }),
       );
     } catch (error) {
@@ -1569,6 +988,14 @@ export function MealScreen({
   async function handleMealAddComplete() {
     setMealAddPickerMode(null);
     setMealAddSheetOpen(false);
+    // After adding from one recipe's detail, reveal the whole meal, including
+    // the new recipe, without losing the date or the original return context.
+    if (searchParams.get("mealId")) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("mealId");
+      const query = params.toString();
+      router.replace(`/planner/${planDate}/${columnId}${query ? `?${query}` : ""}`, { scroll: false });
+    }
     await loadMeals();
     void nutritionRequest.retry();
     showSuccess("요리계획에 추가됐어요.", "요리계획");
@@ -1580,7 +1007,7 @@ export function MealScreen({
 
   function handleAllPantryCompletionGoPlanner() {
     setAllPantryCompletion(null);
-    router.push("/planner");
+    router.push(`/planner?date=${planDate}`);
   }
 
   function handleAllPantryCompletionOpenList() {
@@ -1593,7 +1020,7 @@ export function MealScreen({
     setAllPantryCompletion(null);
     router.push(
       buildReturnHref(`/shopping/lists/${listId}`, {
-        returnTo: buildNextPath(planDate, columnId, slotName),
+        returnTo: currentMealPath,
       }),
     );
   }
@@ -1605,10 +1032,6 @@ export function MealScreen({
   const titleShort = slotName
     ? `${formatDateShort(planDate)} · ${slotName}`
     : formatDateShort(planDate);
-  const totalServings = displayedMeals.reduce(
-    (sum, meal) => sum + meal.planned_servings,
-    0,
-  );
   const currentColumnNutrition = useMemo(
     () =>
       nutritionRequest.data?.days
@@ -1618,21 +1041,31 @@ export function MealScreen({
     [columnId, nutritionRequest.data, planDate],
   );
   const nutritionStatus = nutritionRequest.status;
-  const nutritionSummary = (
-    <MealNutritionSummary
-      entryCount={
-        screenState === "ready" || screenState === "empty"
-          ? displayedMeals.length + displayedProductEntries.length
-          : undefined
-      }
-      error={nutritionRequest.error}
-      isRefreshing={nutritionRequest.isRefreshing}
-      nutrition={currentColumnNutrition}
-      onRetry={() => void nutritionRequest.retry()}
-      status={nutritionStatus}
-    />
-  );
-  const nextPath = authReturnPath ?? buildNextPath(planDate, columnId, slotName);
+  const selectedMealId = searchParams.get("mealId");
+  const selectedMeal = displayedMeals.find((meal) => meal.id === selectedMealId);
+  const currentMealParams = new URLSearchParams(searchParams.toString());
+  if (slotName) currentMealParams.set("slot", slotName);
+  const currentMealPath = `/planner/${planDate}/${columnId}${currentMealParams.size ? `?${currentMealParams}` : ""}`;
+  const nextPath = authReturnPath ?? currentMealPath;
+  function openPlannedMeal(meal: MealListItemData) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (slotName) params.set("slot", slotName);
+    params.set("mealId", meal.id);
+    params.set("returnTo", currentMealPath);
+    router.push(`/planner/${planDate}/${columnId}?${params}`);
+  }
+  function openPlannedRecipe(meal: MealListItemData) {
+    router.push(buildReturnHref(`/meal/${meal.id}/recipe`, { returnTo: currentMealPath }));
+  }
+  function onMealAction(meal: MealListItemData) {
+    if (meal.status === "cook_done") {
+      router.push(buildReturnHref("/leftovers", { returnTo: currentMealPath }));
+    } else if (meal.status === "shopping_done") {
+      void startMealCooking(meal);
+    } else {
+      void createShoppingForMeal(meal);
+    }
+  }
   const mealAddParams = new URLSearchParams({
     columnId,
     date: planDate,
@@ -1641,11 +1074,6 @@ export function MealScreen({
     mealAddParams.set("slot", slotName);
   }
   const mealAddQuery = mealAddParams.toString();
-  const addMealHref = buildReturnHref(`/menu-add?${mealAddQuery}`, {
-    restore: "meal-add-modal",
-    returnSurface: "planner.meal-add-modal",
-    returnTo: `/planner?${mealAddQuery}`,
-  });
   const mealAddTargetLabel = `${formatDateShort(planDate)}${slotName ? ` ${slotName}` : ""}`;
   function getMealAddRouteHref(mode: MealAddRouteMode) {
     const targetPath =
@@ -1654,11 +1082,9 @@ export function MealScreen({
         : `/menu/add/${mode}?${mealAddQuery}`;
 
     return buildReturnHref(targetPath, {
-      returnTo: buildNextPath(planDate, columnId, slotName),
+      returnTo: currentMealPath,
     });
   }
-  const shouldRenderWebView = isDesktopViewport;
-  const shouldRenderAppView = !isDesktopViewport;
   const isLoading = authState === "checking" || screenState === "loading";
   const navigateToPlanner = useCallback(() => {
     const destination = new URL(appReturn.href, "http://homecook.local");
@@ -1675,7 +1101,7 @@ export function MealScreen({
     return (
       <div
         className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:bg-[var(--background)]"
-        style={{ paddingBottom: "84px" }}
+
       >
         <AppBar
           titleFull={titleFull}
@@ -1704,148 +1130,26 @@ export function MealScreen({
   // ── Main render ───────────────────────────────────────────────────────────
   return (
     <>
-      {shouldRenderWebView ? (
-        <div className="hidden lg:block">
-          <MealWebView
-            authState={authState}
-            conflictErrors={conflictErrors}
-            errorMessage={errorMessage}
-            meals={displayedMeals}
-            mealNutrition={initialMealNutrition}
-            productEntries={displayedProductEntries}
-            onAddMeal={() => router.push(addMealHref)}
-            onBack={navigateToPlanner}
-            onCreateShopping={(meal) => void createShoppingForMeal(meal)}
-            onDelete={(meal) => handleDeleteTap(meal.id)}
-            onRecipeClick={(meal) => router.push(`/meal/${meal.id}/recipe`)}
-            onRetry={() => void loadMeals()}
-            onStartCook={(meal) => void startMealCooking(meal)}
-            onStepDown={(meal) => handleStepperTap(meal, -1)}
-            onStepUp={(meal) => handleStepperTap(meal, 1)}
-            onProductDelete={openProductDelete}
-            onProductEdit={openProductQuantityEdit}
-            pendingMealIds={pendingMealIds}
-            pendingProductIds={pendingProductIds}
-            planDate={planDate}
-            nutritionSummary={nutritionSummary}
-            screenState={screenState}
-            slotName={slotName}
-            totalServings={totalServings}
-            hasCookingStartPending={pendingCookingMealIdsRef.current.size > 0}
-          />
-        </div>
-      ) : null}
-      {shouldRenderAppView ? (
-        <div
-          className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden"
-          style={{ paddingBottom: "84px" }}
-        >
-        <AppBar
-          titleFull={titleFull}
-          titleShort={titleShort}
-          onBack={navigateToPlanner}
-          onAddMeal={openMealAddSheet}
-          canAdd={authState === "authenticated"}
-        />
-
-        {/* Scrollable content area */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div
-            className="flex-1 overflow-y-auto overflow-x-hidden"
-            data-testid="meal-screen-scroll-area"
-          >
-            <div className="space-y-3 p-4">
-              {nutritionSummary}
-
-              {pendingCookingMealIdsRef.current.size > 0 ? (
-                <p aria-live="polite" className="rounded-[var(--radius-control)] bg-[var(--surface)] px-4 py-3 text-sm font-bold text-[var(--brand)]">
-                  요리 세션 생성 중…
-                </p>
-              ) : null}
-
-              {/* Loading skeletons */}
-              {isLoading ? <LoadingSkeleton /> : null}
-
-              {/* Error state */}
-              {screenState === "error" ? (
-                <div
-                  className="flex flex-col items-center justify-center py-12 text-center"
-                  data-testid="meal-screen-error"
-                >
-                  <p className="text-base text-[var(--text-3)]">
-                    식사 목록을 불러오지 못했어요.
-                  </p>
-                  {errorMessage ? (
-                    <p className="mt-1 text-sm text-[var(--text-3)]">{errorMessage}</p>
-                  ) : null}
-                  <button
-                    className="mt-4 min-h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-[var(--brand)]"
-                    onClick={() => void loadMeals()}
-                    type="button"
-                  >
-                    다시 시도
-                  </button>
-                </div>
-              ) : null}
-
-              {/* Empty state */}
-              {screenState === "empty" ? (
-                <div
-                  className="flex flex-col items-center justify-center py-12 text-center"
-                  data-testid="meal-screen-empty"
-                >
-                  <p className="text-base text-[var(--text-3)]">
-                    이 끼니에 등록된 식사가 없어요.
-                  </p>
-                </div>
-              ) : null}
-
-              {/* Meal cards */}
-              {screenState === "ready"
-                ? displayedMeals.map((meal) => (
-                    <MealCard
-                      key={meal.id}
-                      conflictError={conflictErrors[meal.id] ?? null}
-                      isPending={pendingMealIds.has(meal.id)}
-                      meal={meal}
-                      nutrition={initialMealNutrition[meal.id]}
-                      onCreateShopping={() => void createShoppingForMeal(meal)}
-                      onDelete={() => handleDeleteTap(meal.id)}
-                      onRecipeClick={() => router.push(`/meal/${meal.id}/recipe`)}
-                      onStartCook={() => void startMealCooking(meal)}
-                      onStepDown={() => handleStepperTap(meal, -1)}
-                      onStepUp={() => handleStepperTap(meal, 1)}
-                    />
-                  ))
-                : null}
-
-              {screenState === "ready"
-                ? displayedProductEntries.map((entry) => (
-                    <ProductPlannerEntryCard
-                      entry={entry}
-                      isPending={pendingProductIds.has(entry.id)}
-                      key={`product:${entry.id}`}
-                      onDelete={() => openProductDelete(entry)}
-                      onEditQuantity={() => openProductQuantityEdit(entry)}
-                    />
-                  ))
-                : null}
-
-            </div>
-          </div>
-
+      <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface)]" data-testid="planned-meal-page">
+        <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
+          <AppBar titleFull={selectedMealId ? "계획한 요리" : titleFull} titleShort={selectedMealId ? "계획한 요리" : titleShort} onBack={navigateToPlanner} onAddMeal={openMealAddSheet} canAdd={authState === "authenticated"} />
+          <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-4" data-testid="meal-screen-scroll-area">
+            {selectedMealId ? <p className="text-sm font-normal text-[var(--text-2)]">{titleFull}</p> : null}
+            {!selectedMealId ? <details className="rounded-xl bg-[var(--surface-fill)] px-4 py-3" data-testid="meal-compact-nutrition">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm font-medium"><span>계획한 전체 분량</span><span className="font-normal tabular-nums">{currentColumnNutrition ? formatPlannerNutritionValue("energy_kcal", currentColumnNutrition.values.energy_kcal) : nutritionStatus === "loading" ? <Skeleton className="h-5 w-24" /> : "영양 정보 없음"}</span><span aria-hidden="true">⌄</span></summary>
+              {currentColumnNutrition ? <dl className="mt-3 grid grid-cols-3 gap-3 text-sm font-normal">{([['carbohydrate_g', '탄수화물'], ['protein_g', '단백질'], ['fat_g', '지방']] as const).map(([code, label]) => <div key={code}><dt className="text-[var(--text-2)]">{label}</dt><dd className="mt-1">{formatPlannerNutritionValue(code, currentColumnNutrition.values[code])}</dd></div>)}</dl> : nutritionRequest.error ? <button className="min-h-11 text-sm text-[var(--brand)]" onClick={() => void nutritionRequest.retry()} type="button">영양 다시 확인</button> : null}
+            </details> : null}
+            {isLoading ? <LoadingSkeleton /> : null}
+            {screenState === "error" ? <div className="py-12 text-center" data-testid="meal-screen-error"><p>{errorMessage ?? "식사 목록을 불러오지 못했어요."}</p><button className="mt-3 min-h-11 px-4 text-[var(--brand)]" onClick={() => void loadMeals()} type="button">다시 시도</button></div> : null}
+            {!isLoading && screenState !== "error" && selectedMealId && !selectedMeal ? <div className="py-12 text-center"><p>{deletedMealId === selectedMealId ? "요리계획을 삭제했어요." : "이 날짜에 해당 계획이 없어요."}</p><button className="mt-3 min-h-11 text-[var(--brand)]" onClick={navigateToPlanner} type="button">요리계획으로 돌아가기</button></div> : null}
+            {screenState === "empty" && !selectedMealId ? <div className="py-12 text-center" data-testid="meal-screen-empty"><p>이 끼니에 등록된 식사가 없어요.</p><button className="mt-3 min-h-11 px-4 font-medium text-[var(--brand)]" onClick={openMealAddSheet} type="button">식사 추가하기</button></div> : null}
+            {screenState === "ready" ? (selectedMealId ? selectedMeal ? [selectedMeal] : [] : displayedMeals).map((meal) => <PlannedMealCard key={meal.id} meal={meal} detailed={Boolean(selectedMealId)} nutrition={initialMealNutrition[meal.id]} conflictError={conflictErrors[meal.id] ?? null} isPending={pendingMealIds.has(meal.id)} onOpen={() => openPlannedMeal(meal)} onRecipe={() => openPlannedRecipe(meal)} onDelete={() => handleDeleteTap(meal.id)} onStepDown={() => handleStepperTap(meal, -1)} onStepUp={() => handleStepperTap(meal, 1)} onAction={() => onMealAction(meal)} onShopping={() => void createShoppingForMeal(meal)} />) : null}
+            {screenState === "ready" && !selectedMealId ? displayedProductEntries.map((entry) => <ProductPlannerEntryCard entry={entry} isPending={pendingProductIds.has(entry.id)} key={`product:${entry.id}`} onDelete={() => openProductDelete(entry)} onEditQuantity={() => openProductQuantityEdit(entry)} />) : null}
+          </main>
         </div>
       </div>
-      ) : null}
 
-      {shouldRenderAppView ? (
-        <Wave1MobileBottomTab
-          ariaLabel="식사 화면 하단 내비게이션"
-          currentTab="planner"
-        />
-      ) : null}
-
-      {shouldRenderAppView && mealAddSheetOpen && !mealAddPickerMode ? (
+      {mealAddSheetOpen && !mealAddPickerMode ? (
         <MealAddOptionsSheet
           onClose={closeMealAddSheet}
           onPickerSelect={openMealAddPicker}
@@ -1856,7 +1160,7 @@ export function MealScreen({
         />
       ) : null}
 
-      {shouldRenderAppView && mealAddSheetOpen && mealAddPickerMode ? (
+      {mealAddSheetOpen && mealAddPickerMode ? (
         <MealAddPickerFlow
           columnId={columnId}
           entryMode={mealAddPickerMode}
@@ -1890,11 +1194,11 @@ export function MealScreen({
             {editingProduct.entry.product_name}의 저장된 영양 기준에 맞는 단위만 선택할 수 있어요.
           </p>
           <div className="mt-4 grid grid-cols-[minmax(0,1fr)_112px] gap-2">
-            <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
+            <label className="grid gap-1 text-xs font-medium text-[var(--text-2)]">
               수량
               <input
                 aria-label="완제품 변경 수량"
-                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none"
+                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-base outline-none"
                 disabled={pendingProductIds.has(editingProduct.entry.id)}
                 inputMode="decimal"
                 min={editingProduct.unit === "g" || editingProduct.unit === "ml" ? "1" : "0.01"}
@@ -1909,11 +1213,11 @@ export function MealScreen({
                 value={editingProduct.amount}
               />
             </label>
-            <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
+            <label className="grid gap-1 text-xs font-medium text-[var(--text-2)]">
               단위
               <select
                 aria-label="완제품 변경 수량 단위"
-                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none"
+                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-base outline-none"
                 disabled={pendingProductIds.has(editingProduct.entry.id)}
                 onChange={(event) =>
                   setEditingProduct((current) =>
@@ -1940,8 +1244,8 @@ export function MealScreen({
             </p>
           ) : null}
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={closeProductQuantityEdit} type="button">취소</button>
-            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={() => void handleProductQuantityConfirm()} type="button">수량 변경</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={closeProductQuantityEdit} type="button">취소</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={() => void handleProductQuantityConfirm()} type="button">수량 변경</button>
           </div>
         </CenterModal>
       ) : null}
@@ -1962,8 +1266,8 @@ export function MealScreen({
             </p>
           ) : null}
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold disabled:opacity-50" disabled={pendingProductIds.has(deletingProduct.id)} onClick={closeProductDelete} type="button">취소</button>
-            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--danger)] font-bold text-[var(--text-inverse)] disabled:opacity-50" data-testid="product-delete-confirm" disabled={pendingProductIds.has(deletingProduct.id)} onClick={() => void handleProductDeleteConfirm()} type="button">삭제</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium disabled:opacity-50" disabled={pendingProductIds.has(deletingProduct.id)} onClick={closeProductDelete} type="button">취소</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--danger)] font-medium text-[var(--text-inverse)] disabled:opacity-50" data-testid="product-delete-confirm" disabled={pendingProductIds.has(deletingProduct.id)} onClick={() => void handleProductDeleteConfirm()} type="button">삭제</button>
           </div>
         </CenterModal>
       ) : null}
@@ -1999,7 +1303,7 @@ export function MealScreen({
                 취소
               </button>
               <button
-                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand)] py-3.5 text-sm font-bold text-[var(--text-inverse)]"
+                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand)] py-3.5 text-sm font-medium text-[var(--text-inverse)]"
                 data-testid="serving-change-confirm"
                 onClick={handleServingChangeConfirm}
                 type="button"
@@ -2011,56 +1315,22 @@ export function MealScreen({
         )
       ) : null}
 
-      {/* Delete confirmation modal */}
+      {/* One deletion sheet across desktop and mobile, matching meal-log deletion. */}
       {modal?.type === "delete" ? (
-        isDesktopViewport ? (
-          <MealWebConfirmDialog
-            confirmLabel="삭제"
-            description="이 식사를 삭제하시겠어요?"
-            onCancel={handleModalCancel}
-            onConfirm={handleDeleteConfirm}
-            testId="delete-confirm"
-            title="식사 삭제"
-            titleId="delete-confirm-title"
-            variant="destructive"
-          />
-        ) : (
-          <CenterModal labelledBy="delete-confirm-title" onClose={handleModalCancel}>
-            <ModalHeader
-              title="이 식사를 삭제하시겠어요?"
-              titleId="delete-confirm-title"
-              leadingAction={
-                <span
-                  className="flex h-[42px] w-[42px] items-center justify-center rounded-[var(--radius-control)] bg-[var(--danger-soft)] text-[var(--danger)]"
-                  data-testid="delete-confirm-icon"
-                >
-                  <TrashIcon />
-                </span>
-              }
-              onClose={handleModalCancel}
-            />
-            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-              삭제하면 되돌릴 수 없어요.
-            </p>
-            <div className="mt-5 flex gap-2.5">
-              <button
-                className="flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface-alpha-60)] py-3.5 text-sm font-semibold text-[var(--foreground)]"
-                onClick={handleModalCancel}
-                type="button"
-              >
-                취소
-              </button>
-              <button
-                className="min-w-[104px] rounded-[var(--radius-card)] bg-[var(--danger)] px-5 py-3 text-sm font-bold text-[var(--text-inverse)]"
-                data-testid="delete-confirm"
-                onClick={handleDeleteConfirm}
-                type="button"
-              >
-                삭제
-              </button>
-            </div>
-          </CenterModal>
-        )
+        <PlannerTaskSheet
+          ariaLabelledBy="delete-confirm-title"
+          title={[formatDateLong(planDate), slotName].filter(Boolean).join(" ")}
+          onClose={handleModalCancel}
+          closeDisabled={pendingMealIds.has(modal.mealId)}
+          bodyClassName="space-y-5 pb-6"
+        >
+          <h3 className="text-xl font-medium">{meals.find((meal) => meal.id === modal.mealId)?.recipe_title ?? "선택한 요리"}</h3>
+          <p className="text-sm text-[var(--text-2)]">{meals.find((meal) => meal.id === modal.mealId)?.planned_servings}인분</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button className="min-h-12 rounded-xl border font-medium" disabled={pendingMealIds.has(modal.mealId)} onClick={handleModalCancel} type="button">취소</button>
+            <button className="min-h-12 rounded-xl bg-[var(--danger-strong)] px-4 font-medium text-white disabled:opacity-50" data-testid="delete-confirm" disabled={pendingMealIds.has(modal.mealId)} onClick={handleDeleteConfirm} type="button">삭제</button>
+          </div>
+        </PlannerTaskSheet>
       ) : null}
       {feedback ? (
         <AppFeedbackToast

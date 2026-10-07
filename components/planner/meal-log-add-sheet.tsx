@@ -3,6 +3,11 @@
 import { COOKED_BATCH_CHANGED_EVENT, readChangedCookedBatchId } from "@/lib/cooked-batch-events";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { fetchMealLogNutritionPreview } from "@/lib/api/meal-log-preview";
+import { MealLogMacroBar } from "@/components/planner/meal-log-nutrition-chart";
+import { formatMealLogNumber, MEAL_LOG_MACROS } from "@/lib/planner/meal-log-nutrition-presentation";
+import type { MealLogNutritionEvidence } from "@/types/meal-log";
+
 import { DecimalInput } from "@/components/shared/decimal-input";
 
 import Image from "next/image";
@@ -20,9 +25,10 @@ import { formatProductUnit } from "@/lib/planner/product-planner-entry-presentat
 import type { CookedBatchProjection } from "@/types/cooking";
 import type { MealLogColumn, MealLogRecentItem, MealLogSourceType } from "@/types/meal-log";
 
-type SourceTab = "cooked" | "catalog";
+type SourceTab = "recent" | "cooked" | "catalog";
 
 const SOURCE_TABS: Array<{ id: SourceTab; label: string }> = [
+  { id: "recent", label: "최근" },
   { id: "cooked", label: "요리한 음식" },
   { id: "catalog", label: "제품·재료" },
 ];
@@ -51,18 +57,11 @@ interface MealLogAddSheetProps {
   initialSuggestionConfirmed?: boolean;
   mutationEnabled?: boolean;
   onClose: () => void;
+  returnFocusTarget?: () => HTMLElement | null;
   onSave: (selection: MealLogSourceSelection, columnId: string, date: string) => Promise<void>;
-  onUnauthorized: (selection: MealLogSourceSelection | null, columnId: string) => void;
+  onUnauthorized: (selection: MealLogSourceSelection | null, columnId: string, date?: string) => void;
 }
 
-const DEPLETED_LABELS: Record<string, string> = {
-  consumed: "다 먹음",
-  discarded: "모두 버림",
-  mixed: "먹음·버림으로 소진",
-  consumed_unweighed: "무게 없이 다 먹음",
-  discarded_unweighed: "무게 없이 모두 버림",
-  mixed_unweighed: "무게 없이 먹고 버림",
-};
 
 function dateLabel(date: string) {
   const value = new Date(`${date}T00:00:00.000Z`);
@@ -79,12 +78,6 @@ function cookedDateLabel(value: string) {
     day: "numeric",
     timeZone: "UTC",
   }).format(new Date(value));
-}
-
-function batchNutritionLabel(status: CookedBatchProjection["nutrition_calculation_status"]) {
-  if (status === "complete") return "영양 계산 완료";
-  if (status === "partial") return "영양 일부 정보 없음";
-  return "영양 정보 준비 중";
 }
 
 function sourceName(item: FoodCatalogSearchItem) {
@@ -201,22 +194,22 @@ export function MealLogAddSheet({
   initialSuggestionConfirmed = true,
   mutationEnabled = true,
   onClose,
+  returnFocusTarget,
   onSave,
   onUnauthorized,
 }: MealLogAddSheetProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const viewportStyle = useDialogViewport();
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const restoredCookedBatchId = initialSelection?.type === "cooked_batch"
     ? initialSelection.id
     : null;
   const [tab, setTab] = useState<SourceTab>(
-    initialSelection?.type === "cooked_batch" ? "cooked" : initialSelection ? "catalog" : "cooked",
+    initialSelection?.type === "cooked_batch" ? "cooked" : initialSelection ? "catalog" : "recent",
   );
   const columnId = initialColumnId;
-  const [targetDate, setTargetDate] = useState(date);
-  const [targetColumnId, setTargetColumnId] = useState(initialColumnId);
   const [recent, setRecent] = useState<MealLogRecentItem[]>([]);
   const [recentCursor, setRecentCursor] = useState<string | null>(null);
   const [recentHasNext, setRecentHasNext] = useState(false);
@@ -232,8 +225,46 @@ export function MealLogAddSheet({
   const catalogRequestRef = useRef(0);
   const catalogAbortRef = useRef<AbortController | null>(null);
   const [selection, setSelection] = useState<MealLogSourceSelection | null>(initialSelection ?? null);
+  const [amountStep, setAmountStep] = useState(Boolean(initialSelection));
+  const [discardConfirm, setDiscardConfirm] = useState(false);
+  const sourceScrollRef = useRef<HTMLDivElement>(null);
+  const sourceScrollTop = useRef(0);
+  const [inputEdited, setInputEdited] = useState(false);
+  useEffect(() => {
+    if (selection?.id) setAmountStep(true);
+  }, [selection?.id, selection?.type]);
+  useEffect(() => {
+    const scroll = sourceScrollRef.current;
+    if (!scroll) return;
+    if (amountStep) { headingRef.current?.focus({ preventScroll: true }); sourceScrollTop.current = scroll.scrollTop; scroll.scrollTop = 0; }
+    else scroll.scrollTop = sourceScrollTop.current;
+  }, [amountStep]);
   const [amount, setAmount] = useState<number | null>(initialSelection?.amount ?? null);
   useLayoutEffect(() => setAmount(selection?.amount ?? null), [selection?.id, selection?.type, selection?.unit, selection?.amount]);
+  const [preview, setPreview] = useState<MealLogNutritionEvidence | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
+  const [previewRetry, setPreviewRetry] = useState(0);
+  const previewSourceType = selection?.type;
+  const previewSourceId = selection?.id;
+  const previewUnit = selection?.unit;
+  useEffect(() => {
+    setPreview(null);
+    setPreviewError(false);
+    if (!amountStep || !previewSourceType || !previewSourceId || !previewUnit || amount === null || !Number.isFinite(amount) || amount < 0.01) {
+      setPreviewLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setPreviewLoading(true);
+    const timer = window.setTimeout(() => {
+      void fetchMealLogNutritionPreview({ source: { type: previewSourceType, id: previewSourceId }, quantity: { amount, unit: previewUnit } }, controller.signal)
+        .then(result => { if (!controller.signal.aborted) setPreview(result.nutrition); })
+        .catch(() => { if (!controller.signal.aborted) setPreviewError(true); })
+        .finally(() => { if (!controller.signal.aborted) setPreviewLoading(false); });
+    }, 250);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [amount, amountStep, previewSourceId, previewSourceType, previewUnit, previewRetry]);
   const amountInvalid = amount === null || !Number.isFinite(amount) || amount < 0.01;
   const [restoredSourcePending, setRestoredSourcePending] = useState(Boolean(initialSelection));
   const [suggestionConfirmed, setSuggestionConfirmed] = useState(initialSuggestionConfirmed);
@@ -265,12 +296,20 @@ export function MealLogAddSheet({
     && selection?.type === initialSelection?.type
     && selection?.id === initialSelection?.id;
 
-  useDialogBoundary({
+  const requestClose = () => {
+    if (saving) return;
+    if (selection && (inputEdited || amount !== selection.amount)) {
+      setDiscardConfirm(true);
+    } else onClose();
+  };
+
+  const { setReturnFocusTarget } = useDialogBoundary({
     closeOnEscape: !saving,
     dialogRef,
     initialFocusRef: closeRef,
-    onClose,
+    onClose: requestClose,
   });
+  useEffect(() => { if (returnFocusTarget) setReturnFocusTarget(returnFocusTarget); }, [returnFocusTarget, setReturnFocusTarget]);
   useEffect(() => {
     if (!error) return;
     requestAnimationFrame(() => errorRef.current?.focus());
@@ -562,8 +601,6 @@ export function MealLogAddSheet({
         setError("이 음식은 현재 추가할 수 없어요. 요리한 음식 탭에서 상태를 확인해 주세요.");
         return;
       }
-      setTargetDate(date);
-      setTargetColumnId(initialColumnId);
     }
     setSelection({
       amount: item.last_quantity.amount,
@@ -579,6 +616,7 @@ export function MealLogAddSheet({
   }
 
   function chooseCatalog(item: FoodCatalogSearchItem) {
+    setAmountStep(true);
     cancelPendingSelection();
     setSelection({
       amount: item.type === "food_product" ? item.nutrition.basis.amount : 1,
@@ -610,12 +648,12 @@ export function MealLogAddSheet({
     try {
       await onSave(
         { ...selection, amount },
-        selection.type === "cooked_batch" ? targetColumnId : columnId,
-        selection.type === "cooked_batch" ? targetDate : date,
+        columnId,
+        date,
       );
     } catch (reason) {
       if (isMealLogApiError(reason) && reason.status === 401) {
-        onUnauthorized({ ...selection, amount }, columnId);
+        onUnauthorized({ ...selection, amount }, columnId, date);
         return;
       }
       setError(reason instanceof Error ? reason.message : "식사 기록을 저장하지 못했어요.");
@@ -623,27 +661,32 @@ export function MealLogAddSheet({
     }
   }
 
-  const recentSection = (
+  const visibleRecent = recent.filter((item) => {
+    if (tab !== "recent" && (item.source.type === "cooked_batch") !== (tab === "cooked")) return false;
+    if (item.source.type !== "cooked_batch") return true;
+    const batch = batches.find((row) => row.id === item.source.id);
+    return !unavailableRecentBatchIds.has(item.source.id) && batch?.status !== "eaten" && batch?.batch_status !== "depleted";
+  });
+  const recentSection = visibleRecent.length > 0 || recentHasNext ? (
     <div className="mt-5">
-      <h3 className="text-sm font-extrabold">최근·자주 먹은 음식</h3>
+      <h3 className="text-sm font-semibold">최근·자주 먹은 음식</h3>
       <ul className="mt-2 divide-y divide-[var(--line-strong)]">
-        {recent.filter((item) => (item.source.type === "cooked_batch") === (tab === "cooked")).map((item) => {
+        {visibleRecent.map((item) => {
           const batch = item.source.type === "cooked_batch" ? batches.find((row) => row.id === item.source.id) : null;
           const unavailable = item.source.type === "cooked_batch" && (
             item.last_quantity.unit !== "g"
             || unavailableRecentBatchIds.has(item.source.id)
             || Boolean(batch && !isAvailableCookedBatch(batch))
           );
-          if (item.source.type === "cooked_batch" && (unavailableRecentBatchIds.has(item.source.id) || batch?.status === "eaten" || batch?.batch_status === "depleted")) return null;
           return (
             <li key={`${item.source.type}-${item.source.id}`}>
               <button
                 className="min-h-11 w-full px-3 py-3 text-left disabled:text-[var(--text-3)]"
                 disabled={unavailable || checkingRecentId !== null}
-                onClick={() => void chooseRecent(item)}
+                onClick={() => { setAmountStep(true); void chooseRecent(item); }}
                 type="button"
               >
-                <span className="block font-bold">{item.display_name}</span>
+                <span className="block font-medium">{item.display_name}</span>
                 <span className="block text-xs text-[var(--text-2)]">{item.display_brand ? `${item.display_brand} · ` : ""}{recentSourceLabel(item.source.type)} · 최근 {item.last_quantity.amount}{quantityUnitLabel(item.last_quantity.unit)} · {item.frequency}회 기록</span>
               </button>
               {unavailable ? <p className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 추가할 수 없는 음식이에요. 요리한 음식 탭에서 상태를 확인해 주세요.</p>
@@ -654,35 +697,35 @@ export function MealLogAddSheet({
         })}
       </ul>
       {recentHasNext ? (
-        <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" disabled={loadingMore !== null} onClick={() => void loadMoreRecent()} type="button">
+        <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium" disabled={loadingMore !== null} onClick={() => void loadMoreRecent()} type="button">
           {loadingMore === "recent" ? "불러오는 중…" : "최근 음식 더 불러오기"}
         </button>
       ) : null}
     </div>
-  );
+  ) : null;
 
   return createPortal(
-    <div className="fixed inset-x-0 z-50 flex items-end justify-center overflow-hidden bg-[var(--foreground-alpha-40)] lg:items-center lg:p-6"
+    <div className="fixed inset-x-0 z-[70] flex items-end justify-center overflow-hidden bg-[var(--overlay-40)] lg:items-center lg:p-6"
+      onClick={(event) => { if (event.target === event.currentTarget) requestClose(); }}
       style={{ ...viewportStyle, top: "var(--dialog-viewport-top, 0px)", height: "var(--dialog-viewport-height, 100dvh)" }}>
       <div
         aria-label="먹은 음식 추가"
         aria-modal="true"
-        className="relative flex h-full max-h-full min-h-0 w-full flex-col bg-[var(--surface)] outline-none lg:max-h-[760px] lg:max-w-xl lg:rounded-[var(--radius-card)] lg:border lg:border-[var(--line-strong)]"
+        className="planner-task-sheet relative flex h-[78dvh] max-h-[calc(var(--dialog-viewport-height,100dvh)-32px)] min-h-0 w-full max-w-xl flex-col rounded-t-[var(--radius-sheet)] bg-[var(--surface)] outline-none lg:rounded-[var(--radius-card)] lg:border lg:border-[var(--line-strong)] [&_input]:text-base [&_select]:text-base"
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
       >
+        <div aria-hidden="true" className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-[var(--line-strong)]" />
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line-strong)] px-4 py-3">
-          <div className="min-w-0">
-            <h2 className="text-lg font-extrabold">먹은 음식 추가</h2>
-            <p className="text-xs text-[var(--text-2)]">
-              {dateLabel(date)} · {selectedColumn?.name ?? "끼니 선택"}
-            </p>
+          {amountStep && selection && !discardConfirm ? <button aria-label="음식 선택으로 돌아가기" disabled={saving} className="min-h-11 min-w-11 text-xl" onClick={() => { setAmountStep(false); setError(null); }} type="button">‹</button> : null}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold outline-none" ref={headingRef} tabIndex={-1}>{discardConfirm ? "변경사항을 버릴까요?" : `${dateLabel(date)} ${selectedColumn?.name ?? "끼니 선택"}`}</h2>
           </div>
           <button
-            className="min-h-11 min-w-11 rounded-full px-3 font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+            className="min-h-11 min-w-11 rounded-full px-3 font-medium outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
             disabled={saving}
-            onClick={onClose}
+            onClick={requestClose}
             ref={closeRef}
             type="button"
           >
@@ -690,12 +733,16 @@ export function MealLogAddSheet({
           </button>
         </header>
 
-        <div aria-label="음식 출처 선택" className="grid shrink-0 grid-cols-2 gap-1 border-b border-[var(--line-strong)] p-2" role="tablist">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-[calc(20px+env(safe-area-inset-bottom))]" data-testid="meal-log-source-scroll" ref={sourceScrollRef}>
+        {discardConfirm ? <div className="space-y-3 p-4"><button className="min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand)] font-medium text-white" onClick={() => setDiscardConfirm(false)} type="button">계속 편집</button><button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium" onClick={onClose} type="button">변경사항 버리기</button></div> : <>
+        {error ? <p className="mx-4 mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] p-3 text-sm" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
+        {!(amountStep && selection) ? <>
+        <div aria-label="음식 출처 선택" className="grid shrink-0 grid-cols-3 gap-1 border-b border-[var(--line-strong)] p-2" role="tablist">
           {SOURCE_TABS.map(({ id, label }, index) => (
             <button
               aria-controls={`meal-log-source-${id}`}
               aria-selected={tab === id}
-              className={`min-h-11 rounded-[var(--radius-control)] px-3 text-sm font-bold ${tab === id ? "bg-[var(--brand-soft)] text-[var(--brand-primary-text)]" : "text-[var(--text-2)]"}`}
+              className={`min-h-11 rounded-[var(--radius-control)] px-3 text-sm font-medium ${tab === id ? "bg-[var(--brand-soft)] text-[var(--brand-primary-text)]" : "text-[var(--text-2)]"}`}
               id={`meal-log-source-${id}-tab`}
               key={id}
               onClick={() => {
@@ -730,7 +777,7 @@ export function MealLogAddSheet({
 
         {tab === "catalog" ? (
           <div className="shrink-0 border-b border-[var(--line)] px-4 py-3">
-            <label className="block text-sm font-bold">
+            <label className="block text-sm font-medium">
               <span className="sr-only">제품·재료 검색</span>
               <input
                 className="h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-base font-normal"
@@ -744,14 +791,13 @@ export function MealLogAddSheet({
             </label>
           </div>
         ) : null}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4" data-testid="meal-log-source-scroll">
-          {error ? <p className="mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] p-3 text-sm" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
-          {loading && tab === "cooked" ? <div aria-busy="true" aria-label="음식 목록 불러오는 중" className="space-y-3 py-4" role="status"><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
+        <div className="px-4 py-4">
+          {loading && tab !== "catalog" ? <div aria-busy="true" aria-label="음식 목록 불러오는 중" className="space-y-3 py-4" role="status"><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
 
-          {tab === "cooked" ? (
+          {tab === "recent" ? <section aria-labelledby="meal-log-source-recent-tab" id="meal-log-source-recent" role="tabpanel">{recentSection}{!loading && visibleRecent.length === 0 && !recentHasNext ? <p className="py-8 text-center text-sm text-[var(--text-2)]">최근 기록한 음식이 없어요.</p> : null}<button className="mt-3 min-h-11 w-full text-[var(--brand)]" onClick={() => setTab("cooked")} type="button">요리한 음식 전체 보기</button></section> : tab === "cooked" ? (
             <section aria-labelledby="meal-log-source-cooked-tab" id="meal-log-source-cooked" role="tabpanel">
               {recentSection}
-              <h3 className="mt-5 text-sm font-extrabold">요리한 음식 전체</h3>
+              <h3 className="mt-5 text-sm font-semibold">요리한 음식 전체</h3>
               <ul className="divide-y divide-[var(--line-strong)]">
                 {batches.filter(batch => batch.status !== "eaten" && batch.batch_status !== "depleted").map((batch) => {
                   const selectable = batch.weight_status === "known"
@@ -761,15 +807,6 @@ export function MealLogAddSheet({
                   const weightEligible = batch.weight_status === "missing"
                     && batch.batch_status === "available"
                     && batch.revision !== null;
-                  const state = batch.weight_status === null || batch.batch_status === null
-                    ? "이전 기록 · 중량 상태를 확인할 수 없음"
-                    : batch.batch_status === "depleted"
-                      ? DEPLETED_LABELS[batch.depleted_reason ?? ""] ?? "소진됨"
-                      : batch.weight_status === "missing"
-                        ? "무게 입력 필요 · g 식사 기록 저장 불가"
-                        : batch.weight_status === "unrecoverable"
-                          ? "원래 무게 확인 불가 · g 식사 기록 저장 불가"
-                          : `남은 양 ${batch.remaining_weight_g}g`;
                   return (
                     <li className="py-3" key={batch.id}>
                       {selectable || legacySelectable ? (
@@ -777,6 +814,7 @@ export function MealLogAddSheet({
                           className="flex min-h-11 w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
                           onClick={() => {
                             cancelPendingSelection();
+                            setAmountStep(true);
                             setSelection({
                               amount: Math.min(100, batch.remaining_weight_g ?? 100),
                               brand: null,
@@ -787,33 +825,25 @@ export function MealLogAddSheet({
                               unit: "g",
                               unitOptions: ["g"],
                             });
-                            setTargetDate(date);
-                            setTargetColumnId(initialColumnId);
                             setSuggestionConfirmed(true);
                           }}
                           type="button"
                         >
                           <Image alt="" className="h-12 w-12 shrink-0 rounded-[var(--radius-card)] object-cover" height={48} src={resolveRecipeImage({ id: batch.recipe_id, thumbnail_url: batch.recipe_thumbnail_url })} unoptimized width={48} />
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate font-bold">{batch.recipe_title}</span>
-                            <span className="mt-1 block text-xs text-[var(--text-2)]">{cookedDateLabel(batch.cooked_at)} 조리 · {legacySelectable ? "이전 요리" : `남은 양 ${batch.remaining_weight_g}g`}</span>
+                            <span className="block truncate font-medium">{batch.recipe_title}</span>
+                            <span className="mt-1 block text-xs text-[var(--text-2)]">{cookedDateLabel(batch.cooked_at)} 조리 · {legacySelectable ? "이전 요리" : `남은 양 ${Math.round(batch.remaining_weight_g ?? 0).toLocaleString("ko-KR")}g`}</span>
                           </span>
-                          <span className="shrink-0 rounded-[var(--radius-control)] bg-[var(--brand)] px-4 py-2 font-bold text-[var(--text-inverse)]">추가</span>
+                          <span className="shrink-0 rounded-[var(--radius-control)] bg-[var(--brand)] px-4 py-2 font-medium text-[var(--text-inverse)]">추가</span>
                         </button>
                       ) : (
                         <div className="px-3 py-2 text-[var(--text-2)]">
-                          <span className="block font-bold">{batch.recipe_title}</span>
-                          <span className="mt-1 block text-xs">
-                            {cookedDateLabel(batch.cooked_at)} 조리 · {batch.finished_weight_g === null ? "완성 무게 확인 불가" : `완성 ${batch.finished_weight_g}g`} · {batchNutritionLabel(batch.nutrition_calculation_status)}
-                          </span>
-                          <span className="mt-1 block text-xs">{state}</span>
-                          {batch.weight_status === null || batch.batch_status === null ? (
-                            <><span className="mt-1 block text-xs">이전 기록이라 중량과 잔량 상태를 추정하지 않아요.</span><span className="mt-1 block text-xs">영양 상태를 확인할 수 없음</span></>
-                          ) : null}
+                          <span className="block font-medium">{batch.recipe_title}</span>
+                          <span className="mt-1 block text-xs">{cookedDateLabel(batch.cooked_at)} 조리 · {weightEligible ? "무게 입력 필요" : "무게 확인 불가"}</span>
                         </div>
                       )}
                       {weightEligible ? (
-                        <Link aria-label={`${batch.recipe_title} 완성 중량 입력`} className="mt-2 flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-sm font-bold" href="/leftovers">
+                        <Link aria-label={`${batch.recipe_title} 완성 중량 입력`} className="mt-2 flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-sm font-medium" href="/leftovers">
                           완성 중량 입력
                         </Link>
                       ) : null}
@@ -822,7 +852,7 @@ export function MealLogAddSheet({
                 })}
               </ul>
               {batchHasNext ? (
-                <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" disabled={loadingMore !== null} onClick={() => void loadMoreBatches()} type="button">
+                <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium" disabled={loadingMore !== null} onClick={() => void loadMoreBatches()} type="button">
                   {loadingMore === "batch" ? "불러오는 중…" : "요리한 음식 더 불러오기"}
                 </button>
               ) : null}
@@ -838,7 +868,6 @@ export function MealLogAddSheet({
               {!catalogSearching && !error && catalogLoadedQuery === query.trim() && catalog.length === 0 ? (
                 <p className="py-5 text-sm text-[var(--text-2)]" role="status">검색 결과가 없어요. 다른 제품·재료 이름으로 찾아보세요.</p>
               ) : null}
-              {query.trim() === "" ? <p className="mb-4 text-sm text-[var(--text-2)]">제품이나 재료 이름을 입력하면 검색할 수 있어요.</p> : null}
               {query.trim() === "" && catalog.length === 0 ? (
                 recentSection
               ) : (
@@ -847,14 +876,14 @@ export function MealLogAddSheet({
                     {catalog.map((item) => (
                       <li key={`${item.type}-${item.id}`}>
                         <button className="min-h-11 w-full px-3 py-3 text-left" onClick={() => chooseCatalog(item)} type="button">
-                          <span className="block font-bold">{sourceName(item)}</span>
+                          <span className="block font-medium">{sourceName(item)}</span>
                           <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{catalogSourceLabel(item)}{item.type === "ingredient" ? ` · 기본 단위 ${sourceUnit(item)}` : ""}</span>
                         </button>
                       </li>
                     ))}
                   </ul>
                   {catalogHasNext ? (
-                    <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" disabled={loadingMore !== null} onClick={() => void loadMoreCatalog()} type="button">
+                    <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium" disabled={loadingMore !== null} onClick={() => void loadMoreCatalog()} type="button">
                       {loadingMore === "catalog" ? "불러오는 중…" : "제품·재료 더 불러오기"}
                     </button>
                   ) : null}
@@ -864,22 +893,17 @@ export function MealLogAddSheet({
           )}
         </div>
 
-        {selection ? (
-          <footer className="shrink-0 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
-            <p className="font-bold">{selection.name}</p>
-            {selection.type === "cooked_batch" ? (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <label className="text-sm font-bold">먹은 날짜<input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onChange={(event) => setTargetDate(event.target.value)} type="date" value={targetDate} /></label>
-                <label className="text-sm font-bold">끼니<select className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => setTargetColumnId(event.target.value)} value={targetColumnId}>{columns.map((column) => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label>
-              </div>
-            ) : null}
+        </> : null}
+        {amountStep && selection ? (
+          <section className="shrink-0 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
+            <p className="font-medium">{selection.name}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <label className="text-sm font-bold">실제 양
-                <DecimalInput key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
+              <label className="text-sm font-medium">먹은 양
+                <DecimalInput key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setInputEdited(true); setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
               </label>
-              <label className="text-sm font-bold">단위
+              <label className="text-sm font-medium">단위
                 {(selection.unitOptions?.length ?? 0) > 1 ? (
-                  <select disabled={saving || amountInvalid} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => { if (amount === null) return; const unit = event.target.value; const nextAmount = convertSelectionAmount({ ...selection, amount }, unit); if (nextAmount === null || !Number.isFinite(nextAmount)) { setError("이 단위로 바꿀 수 있는 환산 정보가 없어요."); return; } setSelection({ ...selection, amount: nextAmount, unit }); setSuggestionConfirmed(true); }} value={selection.unit}>
+                  <select disabled={saving || amountInvalid} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => { if (amount === null) return; setInputEdited(true); const unit = event.target.value; const nextAmount = convertSelectionAmount({ ...selection, amount }, unit); if (nextAmount === null || !Number.isFinite(nextAmount)) { setError("이 단위로 바꿀 수 있는 환산 정보가 없어요."); return; } setSelection({ ...selection, amount: nextAmount, unit }); setSuggestionConfirmed(true); }} value={selection.unit}>
                     {selection.unitOptions?.map((unit) => <option key={unit} value={unit}>{quantityUnitLabel(unit)}</option>)}
                   </select>
                 ) : (
@@ -887,16 +911,23 @@ export function MealLogAddSheet({
                 )}
               </label>
             </div>
-            {!suggestionConfirmed ? <p className="mt-2 text-sm font-bold">제안된 양을 확인해 주세요.</p> : null}
+            {previewLoading ? <div aria-label="영양 미리보기 불러오는 중" className="mt-5 space-y-3" role="status"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4" /></div> : null}
+            {preview ? <section aria-label="입력한 양의 영양 미리보기" className="my-5 space-y-3"><div className="flex items-center justify-between text-sm"><span>{amount}{quantityUnitLabel(selection.unit)} 기준</span><span className="text-xl">{formatMealLogNumber(preview.calories_kcal)}{preview.calories_kcal !== null ? " kcal" : ""}</span></div><MealLogMacroBar nutrition={preview} thin /><dl className="flex justify-between gap-3 text-sm">{MEAL_LOG_MACROS.map(macro => <div key={macro.key} className="flex gap-1"><dt aria-label={macro.label}>{macro.short}</dt><dd>{formatMealLogNumber(preview[macro.key])}{preview[macro.key] !== null ? "g" : ""}</dd></div>)}</dl></section> : null}
+            {previewError ? <div className="mt-4 flex items-center justify-between gap-2 text-sm"><span>영양 미리보기를 불러오지 못했어요.</span><button className="min-h-11 shrink-0 text-[var(--brand)]" onClick={() => setPreviewRetry(current => current + 1)} type="button">다시 확인</button></div> : null}
+            {selection.maxAmount !== undefined && !amountInvalid && (amount ?? 0) <= selection.maxAmount ? <div className="mt-4 flex items-center justify-between text-sm"><span>기록 후 남을 양</span><span>{Math.round(selection.maxAmount - (amount ?? 0)).toLocaleString("ko-KR")}g</span></div> : null}
+            {selection.maxAmount !== undefined ? <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)]" disabled={saving} onClick={() => { setInputEdited(true); setAmount(selection.maxAmount!); setSuggestionConfirmed(true); }} type="button">남은 양 전부</button> : null}
+            {!suggestionConfirmed ? <p className="mt-2 text-sm font-medium">제안된 양을 확인해 주세요.</p> : null}
             {selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount ? (
-              <p className="mt-2 text-sm font-bold text-[var(--danger-strong)]" role="alert">남은 양 {selection.maxAmount}g 이하로 입력해 주세요.</p>
+              <p className="mt-2 text-sm font-medium text-[var(--danger-strong)]" role="alert">남은 양 {selection.maxAmount}g 이하로 입력해 주세요.</p>
             ) : null}
             <div className="mt-3 grid gap-2 min-[360px]:grid-cols-2">
-              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || restoredSelectionPending || !suggestionConfirmed || amountInvalid || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount) || !selection.unit.trim() || (selection.type === "cooked_batch" && (!targetDate || !targetColumnId))} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
-              <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={saving} onClick={onClose} type="button">취소</button>
+              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || restoredSelectionPending || !suggestionConfirmed || amountInvalid || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount) || !selection.unit.trim() || (selection.type === "cooked_batch" && (!date || !columnId))} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
+              <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-medium" disabled={saving} onClick={requestClose} type="button">취소</button>
             </div>
-          </footer>
+          </section>
         ) : null}
+        </>}
+        </div>
       </div>
     </div>,
     document.body,

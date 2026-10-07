@@ -27,10 +27,8 @@ describe("prelaunch meal log presentation", () => {
     const chip = await screen.findByRole("radio", { name: /9\/7 월요일 선택, 기록 있음/ });
     expect(within(chip).queryByText("700 kcal")).toBeNull();
     const summary = selectedSummary();
-    expect(within(summary).getByRole("img", { name: /총 칼로리 700 kcal/ })).toBeTruthy();
-    expect(within(summary.querySelector("dl")!).getByText("40g")).toBeTruthy();
-    expect(within(summary.querySelector("dl")!).getByText("25g")).toBeTruthy();
-    expect(within(summary.querySelector("dl")!).getByText("10g")).toBeTruthy();
+    expect(summary.textContent).toContain("700 kcal");
+    expect(Array.from(summary.querySelectorAll("dd"), item => item.textContent)).toEqual(["40g", "25g", "10g"]);
   });
   it("shows an add button for every active meal column when the day has no entries", async () => {
     api.fetch.mockImplementation(async (date: string) => date === "2026-09-07" ? {
@@ -50,16 +48,16 @@ describe("prelaunch meal log presentation", () => {
     expect(screen.getByRole("button", { name: "점심에 먹은 음식 추가" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "저녁에 먹은 음식 추가" })).toBeTruthy();
   });
-  it("shows daily nutrition as an always-visible macro chart and consumed grams per food", async () => {
+  it("shows daily nutrition as always-visible compact totals and consumed grams per food", async () => {
     render(<MealLogScreen {...props} />);
     const summary = await findSelectedSummary();
     expect(summary.closest("details")).toBeNull();
     expect(summary.querySelectorAll("dd")).toHaveLength(3);
-    expect(within(summary).getByRole("img", { name: /탄단지 열량 비율/ })).toBeTruthy();
+    expect(within(summary).queryByRole("img")).toBeNull();
     expect(screen.getByLabelText("먹은 양 125g")).toBeTruthy();
-    expect(within(summary).getByText("700 kcal")).toBeTruthy();
+    expect(summary.textContent).toContain("700 kcal");
   });
-  it("shows textual food macros with quantity and an icon delete action, without sodium or edit", async () => {
+  it("shows textual food macros with quantity and no list-row delete, sodium or edit", async () => {
     render(<MealLogScreen {...props} />);
     const quantity = await screen.findByLabelText("먹은 양 125g");
     const row = quantity.closest("li")!;
@@ -72,24 +70,24 @@ describe("prelaunch meal log presentation", () => {
     expect(within(row).queryByText(/나트륨/)).toBeNull();
     expect(within(row).queryByRole("button", { name: /식사 기록 수정/ })).toBeNull();
     expect(within(row).queryByRole("img", { name: /탄단지 열량 비율/ })).toBeNull();
-    expect(within(row).getByRole("button", { name: /식사 기록 삭제/ }).textContent).toBe("");
-    expect(within(row).getAllByRole("button")).toHaveLength(2);
+    expect(within(row).queryByRole("button", { name: /식사 기록 삭제/ })).toBeNull();
+    expect(within(row).getAllByRole("button")).toHaveLength(1);
   });
   it("keeps consumed quantity and calories directly with the food name", async () => {
     render(<MealLogScreen {...props} />);
     const food = await screen.findByRole("button", { name: /식사 기록 상세/ });
     expect(within(food).getByText("나의 비공개 닭고기 덮밥")).toBeTruthy();
     expect(within(food).getByLabelText("먹은 양 125g")).toBeTruthy();
-    expect(within(food).getByText("350").className).toContain("text-[var(--nutrition-number)]");
-    expect(within(food).getByText("kcal").className).not.toContain("text-[var(--nutrition-number)]");
+    expect(within(food.closest("li")!).getByText("350").className).toContain("text-[var(--nutrition-number)]");
+    expect(within(food.closest("li")!).getByText("kcal").className).not.toContain("text-[var(--nutrition-number)]");
     expect(within(food.closest("li")!).getByText("25").className).toContain("text-[var(--nutrition-number)]");
     expect(screen.getAllByLabelText("먹은 양 125g")).toHaveLength(1);
-    expect(screen.queryByRole("button", { name: /식사 기록 상세/, description: /125g.*350 kcal/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /식사 기록 상세/, description: /125g/ })).toBeTruthy();
   });
   it.each([
     ["complete", 0, 0, 0, 0, false],
     ["partial", 80, 10, null, 2, false],
-    ["partial", 80, 10, 3, 2, true],
+    ["partial", 80, 10, 3, 2, false],
     ["unavailable", null, null, null, null, false],
   ] as const)("preserves %s entry nutrition including zero and unknown (%s kcal)", async (status, kcal, carbs, protein, fat, hasChart) => {
     api.fetch.mockImplementation(async (date: string) => {
@@ -104,7 +102,7 @@ describe("prelaunch meal log presentation", () => {
     expect(row.textContent).toContain(protein === null ? "단 정보 준비 중" : `단 ${protein} g`);
     expect(row.textContent).not.toContain("나트륨");
   });
-  it("shows fullscreen food detail without sodium and restores focus when closed", async () => {
+  it("shows fullscreen food detail including sodium and restores focus when closed", async () => {
     const user = userEvent.setup();
     render(<MealLogScreen {...props} />);
     const invoker = await screen.findByRole("button", { name: /식사 기록 상세/ });
@@ -112,8 +110,8 @@ describe("prelaunch meal log presentation", () => {
     await user.click(invoker);
     const detail = screen.getByRole("dialog", { name: "식사 기록 상세" });
     expect(detail.className).toContain("fixed inset-0");
-    expect(within(detail).queryByText(/나트륨/)).toBeNull();
-    expect(within(detail).getByRole("img", { name: /총 칼로리 350 kcal/ })).toBeTruthy();
+    expect(within(detail).getByText("나트륨")).toBeTruthy();
+    expect(within(detail).getByRole("img", { name: /탄수화물 40g/ })).toBeTruthy();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(invoker));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -123,7 +121,7 @@ describe("prelaunch meal log presentation", () => {
     render(<MealLogScreen {...props} />);
     const summary = await findSelectedSummary();
     expect(within(summary).queryByRole("img")).toBeNull();
-    expect(within(summary).getAllByText("정보 준비 중")).toHaveLength(4);
+    expect(within(summary).getAllByText("정보 없음")).toHaveLength(4);
     expect(within(summary).queryByText("0 kcal")).toBeNull();
   });
   it("opens detail before editing and returns focus to the food after cancel", async () => {
@@ -131,7 +129,7 @@ describe("prelaunch meal log presentation", () => {
     render(<MealLogScreen {...props} />);
     await screen.findByLabelText("먹은 양 125g");
     expect(screen.getAllByRole("button", { name: /식사 기록 상세/ })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: /식사 기록 삭제/ })).toHaveLength(1);
+    expect(screen.queryAllByRole("button", { name: /식사 기록 삭제/ })).toHaveLength(0);
     expect(screen.getByRole("button", { name: /식사 기록 상세/ }).closest("details")).toBeNull();
     const edit = screen.getByRole("button", { name: /식사 기록 상세/ });
     await user.click(edit);
@@ -142,10 +140,11 @@ describe("prelaunch meal log presentation", () => {
     render(<MealLogScreen {...props} />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /식사 기록 상세/ }));
-    const dialog = screen.getByRole("dialog", { name: "식사 기록 상세" });
-    expect(within(dialog).getByText("g", { exact: true })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "식사 기록 수정" }));
+    const dialog = screen.getByRole("dialog", { name: /월 \d+일/ });
+    expect((within(dialog).getByRole("textbox", { name: "단위" }) as HTMLInputElement).readOnly).toBe(true);
     const input = within(dialog).getByRole<HTMLInputElement>("textbox", { name: "먹은 양" });
-    const save = within(dialog).getByRole<HTMLButtonElement>("button", { name: "먹은 양 수정" });
+    const save = within(dialog).getByRole<HTMLButtonElement>("button", { name: "수정 저장" });
     await user.clear(input);
     expect(input.value).toBe(""); expect(save.disabled).toBe(true);
     await user.type(input, "0"); expect(save.disabled).toBe(true);
@@ -166,8 +165,7 @@ describe("prelaunch meal log presentation", () => {
     await user.click(screen.getAllByRole("button", { name: /식사 기록 상세/ })[0]);
     expect(login).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("dialog")).toBeNull();
-    await user.click(screen.getAllByRole("button", { name: /식사 기록 삭제/ })[0]);
-    expect(login).toHaveBeenCalledTimes(3);
+    expect(screen.queryAllByRole("button", { name: /식사 기록 삭제/ })).toHaveLength(0);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(api.update).not.toHaveBeenCalled();
   });
@@ -210,8 +208,8 @@ describe("prelaunch meal log presentation", () => {
     await userEvent.setup().click(await screen.findByRole("button",{name:/식사 기록 상세/}));
     const detail = screen.getByRole("dialog", { name: "식사 기록 상세" });
     expect(detail.className).toContain("fixed inset-0");
-    expect(within(detail).getByRole("button", { name: "먹은 양 수정" })).toBeTruthy();
-    expect(screen.queryByText(/나트륨/)).toBeNull();
+    expect(within(detail).getByRole("button", { name: "식사 기록 수정" })).toBeTruthy();
+    expect(within(detail).getByText("나트륨")).toBeTruthy();
     expect(api.update).not.toHaveBeenCalled();
   });
 
@@ -220,7 +218,7 @@ describe("prelaunch meal log presentation", () => {
     const draft = { version: 1, action: "edit", date: "2026-09-07", entryId: "10000000-0000-4000-8000-000000000001", invoker: "entry-edit", draft: { amount: 80, unit: "g", columnId: "20000000-0000-4000-8000-000000000001" } };
     sessionStorage.setItem("homecook.meal-log-return-context.v1", JSON.stringify(draft));
     render(<MealLogScreen {...props} />);
-    expect((await screen.findByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("80");
+    expect((await screen.findByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("80");
     expect((screen.getByRole("textbox", { name: "단위" }) as HTMLInputElement).value).toBe("g");
     expect(sessionStorage.getItem("homecook.meal-log-return-context.v1")).toBeNull();
     expect(api.update).not.toHaveBeenCalled();

@@ -1,0 +1,20 @@
+{
+  "fixture_arithmetic": "PASS",
+  "foods_to_meals_to_day": "PASS",
+  "stew_300g_to_250g_preserves_composition": "PASS",
+  "calorie_axis": [
+    0,
+    200,
+    400,
+    600,
+    800
+  ],
+  "protein_axis": [
+    0,
+    10,
+    20,
+    30,
+    40
+  ],
+  "note": "수치 검산이다. 래스터 그림의 기하 정확성·실제 UI 사용성을 검증한 결과가 아니다."
+}

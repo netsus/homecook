@@ -1,3 +1,4 @@
+import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
 import { canonicalizeLegacyConsumedIngredientIds } from "@/lib/cooking/legacy-completion-payload";
@@ -97,6 +98,7 @@ export async function cancelSnapshotV2CookingSession(sessionId: string, idempote
     || data.status !== "cancelled"
   ) throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
   snapshotV2SessionModes.delete(sessionId);
+  notifyActionNotificationsChanged();
   return data;
 }
 
@@ -138,6 +140,7 @@ export async function completeSnapshotV2CookingSession(
     });
   }
   snapshotV2SessionModes.delete(sessionId);
+  notifyActionNotificationsChanged();
   return data;
 }
 
@@ -350,6 +353,7 @@ async function mutateCookedBatch(
     throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "중량·잔량 변경 결과를 확인하지 못했어요." });
   }
   notifyCookedBatchChanged(data.batch.id);
+  notifyActionNotificationsChanged();
   return data;
 }
 
@@ -471,7 +475,7 @@ export async function completeCookingSession(
       body.consumed_ingredient_ids,
     ),
   };
-  return requestCooking<CookingSessionCompleteData>(
+  const data = await requestCooking<CookingSessionCompleteData>(
     `/api/v1/cooking/sessions/${sessionId}/complete`,
     {
       method: "POST",
@@ -482,6 +486,8 @@ export async function completeCookingSession(
       body: JSON.stringify(canonicalBody),
     },
   );
+  notifyActionNotificationsChanged();
+  return data;
 }
 
 export async function cancelCookingSession(
@@ -517,7 +523,7 @@ export async function completeStandaloneCooking(body: {
       body.consumed_ingredient_ids,
     ),
   };
-  return requestCooking<CookingStandaloneCompleteData>(
+  const data = await requestCooking<CookingStandaloneCompleteData>(
     "/api/v1/cooking/standalone-complete",
     {
       method: "POST",
@@ -528,4 +534,6 @@ export async function completeStandaloneCooking(body: {
       body: JSON.stringify(canonicalBody),
     },
   );
+  notifyActionNotificationsChanged();
+  return data;
 }
