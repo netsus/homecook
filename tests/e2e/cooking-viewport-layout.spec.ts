@@ -14,7 +14,7 @@ test("all legacy cooking entry routes keep their notification bell hidden", asyn
   for (const [index, path] of [COOK_MODE_VISUAL_PATH, STANDALONE_COOK_MODE_VISUAL_PATH].entries()) {
     await page.goto(path);
     await expect(page.getByTestId("cook-mode-whole-board").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /YouTube 추출 알림/ })).toHaveCount(0);
+    await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
     if (testInfo.project.name !== "desktop-chrome") {
       expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
       const content = page.getByRole("main", { name: "요리 내용" });
@@ -35,7 +35,7 @@ test("snapshot cooking uses one content scroller and keeps the last step above i
   await page.goto("/cooking/session-attempts/layout-active/cook-mode");
   await expect(page.getByTestId("snapshot-v2-cook-mode")).toBeVisible();
   const main = page.getByRole("main", { name: "요리 내용" });
-  await expect(page.getByRole("button", { name: /YouTube 추출 알림/ })).toHaveCount(0);
+  await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
   const heights = testInfo.project.name === "desktop-chrome" ? [900] : [812, 420];
   for (const height of heights) {
     await page.setViewportSize({ width: testInfo.project.name === "desktop-chrome" ? 1280 : 375, height });
@@ -58,7 +58,7 @@ test("completed snapshots drop action-bar padding while keeping all content reac
   const main = page.getByRole("main", { name: "요리 내용" });
   expect(await main.evaluate(el => getComputedStyle(el).paddingBottom)).toBe("16px");
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
-  await expect(page.getByRole("button", { name: /YouTube 추출 알림/ })).toHaveCount(0);
+  await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "요리 완료", exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "돌아가기", exact: true }).scrollIntoViewIfNeeded();
   await main.locator(".cook-whole-step").last().scrollIntoViewIfNeeded();
@@ -90,7 +90,7 @@ test("meal details scroll their content rather than an empty outer page", async 
   const content = page.getByTestId("meal-screen-scroll-area");
   await expect(content).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
-  await expect(page.getByRole("button", { name: /YouTube 추출 알림/ })).toHaveCount(0);
+  await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
   await content.evaluate(el => { el.scrollTop = el.scrollHeight; });
   await page.screenshot({ path: testInfo.outputPath("meal-content-scroll.png") });
 });

@@ -121,7 +121,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-bold text-[var(--foreground)]">
+          <span className="block truncate text-[14px] font-medium text-[var(--foreground)]">
             {recipe.title}
           </span>
           <span
@@ -142,7 +142,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             />
             <span
               className={[
-                "relative ml-auto pr-2 text-[10px] font-extrabold",
+                "relative ml-auto pr-2 text-[10px] font-medium",
                 `pantry-match-progress-label-${scoreTone}`,
                 scoreToneClasses.label,
               ].join(" ")}
@@ -154,7 +154,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             className="mt-1.5 flex flex-wrap items-center gap-1"
             data-testid={`pantry-ingredient-summary-row-${recipe.id}`}
           >
-            <span className="mr-0.5 text-[11px] font-bold text-[var(--text-2)]">
+            <span className="mr-0.5 text-[11px] font-medium text-[var(--text-2)]">
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
             </span>
             {recipe.missing_ingredients.slice(0, 3).map((ingredient) => (
@@ -236,7 +236,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
   return (
     <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--shadow-color-soft)]">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="flex-1 line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
+        <h3 className="flex-1 line-clamp-2 text-2xl font-medium tracking-[-0.02em] text-[var(--foreground)]">
           {recipe.title}
         </h3>
         <MatchScoreBadge score={recipe.match_score} />
@@ -301,6 +301,7 @@ function ServingsModal({
       metaText="팬트리 추천"
       onCancel={onCancel}
       onConfirm={onConfirm}
+      recipeId={recipe.id}
       recipeTitle={recipe.title}
       targetLabel={slotLabel}
       thumbnail={
@@ -422,7 +423,7 @@ export function PantryMatchPicker({
       <div className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]">
         <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton onClick={onBack ?? onClose} />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-medium text-[var(--foreground)]">
             팬트리 추천
           </h1>
           <AppBackButtonSpacer />
@@ -450,7 +451,7 @@ export function PantryMatchPicker({
   if (presentation === "sheet") {
     return (
       <>
-        {content}
+        {selectedRecipe ? null : content}
         {selectedRecipe && (
           <ServingsModal
             isCreating={isCreating}
@@ -495,7 +496,7 @@ export function PantryMatchPicker({
       >
         <div className="flex items-center justify-between">
           <h2
-            className="text-xl font-bold text-[var(--foreground)]"
+            className="text-xl font-medium text-[var(--foreground)]"
             id="pantry-match-title"
           >
             팬트리 기반 추천

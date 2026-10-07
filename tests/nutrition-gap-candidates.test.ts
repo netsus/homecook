@@ -236,6 +236,233 @@ describe("nutrition gap candidate report", () => {
       .toBe(true);
   });
 
+  it.each([
+    {
+      name: "참깨",
+      aliases: ["참깨", "깨"],
+      wrongName: "멥쌀떡, 송편, 깨",
+      wrongComponents: ["멥쌀떡", "송편", "깨"],
+      correctName: "참깨, 흰색, 말린것",
+      correctKey: "677",
+    },
+    {
+      name: "두부",
+      aliases: ["두부"],
+      wrongName: "두부, 동두부, 동결건조",
+      wrongComponents: ["두부", "동두부", "동결건조"],
+      correctName: "두부",
+      correctKey: "565",
+    },
+    {
+      name: "양상추",
+      aliases: ["양상추"],
+      wrongName: "햄버거, 소고기패티, 토마토, 양상추, 양파",
+      wrongComponents: ["햄버거", "소고기패티", "토마토", "양상추", "양파"],
+      correctName: "상추, 결구(양상추), 녹색, 생것",
+      correctKey: "1027",
+    },
+  ])("keeps $name candidates tied to the food and preparation despite polluted aliases", async ({
+    name, aliases, wrongName, wrongComponents, correctName, correctKey,
+  }) => {
+    const candidateModule = await loadModule();
+    const buildReport = candidateModule.buildNutritionGapCandidateReport as (
+      input: Record<string, unknown>,
+    ) => CandidateReport;
+    // Existing source names may already have been imported as ingredient aliases.
+    const report = buildReport({
+      inventory: { rows: [{
+        ingredient_id: name,
+        ingredient_name: name,
+        normalized_names: [...aliases, wrongName, wrongName.replaceAll(/[^가-힣]/g, "")],
+        issue_codes: ["NUTRITION_PROFILE_MISSING"],
+        nutrients: {},
+      }] },
+      candidates: [
+        sourceCandidate({
+          external_item_key: "wrong",
+          external_name: wrongName,
+          name_components: wrongComponents,
+          match_scope_names: [name],
+          source_state: wrongComponents.slice(1).join(" "),
+        }),
+        sourceCandidate({
+          external_item_key: correctKey,
+          external_name: correctName,
+          name_components: correctName.split(/[,/]/),
+          source_state: correctName.split(/[,/]/).slice(1).join(" "),
+        }),
+      ],
+    });
+
+    expect(report.rows[0]).toMatchObject({
+      classification: "needs_review",
+      review_decision: null,
+      candidates: [{ external_item_key: correctKey }],
+    });
+    expect(report.rows[0].candidates).toHaveLength(1);
+  });
+
+  it.each([
+    ["두부", "두부", "565"],
+    ["참깨", "참깨, 흰색, 말린것", "677"],
+  ])("retains same-source nutrient completion for %s", async (name, externalName, key) => {
+    const candidateModule = await loadModule();
+    const buildReport = candidateModule.buildNutritionGapCandidateReport as (
+      input: Record<string, unknown>,
+    ) => CandidateReport;
+    const report = buildReport({
+      inventory: { rows: [{
+        ingredient_id: name,
+        ingredient_name: name,
+        normalized_names: [name],
+        basis_amount: 100,
+        basis_unit: "g",
+        current_source_provider: "농촌진흥청",
+        current_external_name: externalName,
+        issue_codes: ["NUTRIENT_VALUE_MISSING"],
+        missing_nutrients: ["fiber_g"],
+        nutrients: core,
+      }] },
+      candidates: [sourceCandidate({
+        external_item_key: key,
+        external_name: externalName,
+        name_components: externalName.split(/[,/]/),
+        source_state: externalName.split(/[,/]/).slice(1).join(" "),
+      })],
+    });
+
+    expect(report.rows[0]).toMatchObject({
+      classification: "approved_replacement",
+      review_decision: { external_item_key: key },
+    });
+  });
+
+  it.each([
+    ["청양고추", "고추, 청양고추, 생것", ["청양고추"]],
+    ["오트밀", "귀리, 오트밀", ["오트밀"]],
+    ["백김치", "김치, 백김치", ["백김치"]],
+    ["말린 녹두", "녹두, 말린것", ["말린 녹두", "녹두, 말린것"]],
+    ["국내산 동부모싯잎송편", "멥쌀떡, 모싯잎송편, 동부(국내산)", ["멥쌀떡, 모싯잎송편, 동부(국내산)"]],
+    ["수입산 동부모싯잎송편", "멥쌀떡, 모싯잎송편, 동부(수입산)", ["멥쌀떡, 모싯잎송편, 동부(수입산)"]],
+    ["현미가래떡", "멥쌀떡, 가래떡, 현미", ["멥쌀떡, 가래떡, 현미"]],
+    ["흑미가래떡", "멥쌀떡, 가래떡, 흑미", ["멥쌀떡, 가래떡, 흑미"]],
+    ["검정콩송편", "멥쌀떡, 송편, 검정콩", ["멥쌀떡, 송편, 검정콩"]],
+    ["검정콩백설기", "멥쌀떡, 백설기, 검정콩", ["멥쌀떡, 백설기, 검정콩"]],
+    ["인절미 찹쌀떡 팥고물", "찹쌀떡, 인절미, 팥고물", ["찹쌀떡, 인절미, 팥고물"]],
+    ["개피떡", "멥쌀떡, 개피떡(바람떡)", ["멥쌀떡, 개피떡(바람떡)"]],
+  ])("preserves existing non-composite subtype and source-alias matches for %s", async (
+    name, externalName, aliases,
+  ) => {
+    const candidateModule = await loadModule();
+    const buildReport = candidateModule.buildNutritionGapCandidateReport as (
+      input: Record<string, unknown>,
+    ) => CandidateReport;
+    const report = buildReport({
+      inventory: { rows: [{
+        ingredient_id: name,
+        ingredient_name: name,
+        normalized_names: aliases,
+        issue_codes: ["NUTRITION_PROFILE_MISSING"],
+        nutrients: {},
+      }] },
+      candidates: [sourceCandidate({
+        external_name: externalName,
+        name_components: externalName.split(/[,/]/),
+        source_state: externalName.split(/[,/]/).slice(1).join(" "),
+      })],
+    });
+
+    expect(report.rows[0].classification).toBe("needs_review");
+    expect(report.rows[0].candidates).toHaveLength(1);
+  });
+
+  it("rejects rice-cake toppings even when the full source name is an imported alias", async () => {
+    const candidateModule = await loadModule();
+    const buildReport = candidateModule.buildNutritionGapCandidateReport as (
+      input: Record<string, unknown>,
+    ) => CandidateReport;
+    const externalName = "찹쌀떡, 인절미, 콩고물";
+    const report = buildReport({
+      inventory: { rows: [{
+        ingredient_id: "soybean-powder",
+        ingredient_name: "콩고물",
+        normalized_names: ["콩고물", externalName],
+        issue_codes: ["NUTRITION_PROFILE_MISSING"],
+        nutrients: {},
+      }] },
+      candidates: [sourceCandidate({
+        external_name: externalName,
+        name_components: externalName.split(/[,/]/),
+        match_scope_names: ["콩고물"],
+      })],
+    });
+
+    expect(report.rows[0].classification).toBe("no_compatible_source");
+    expect(report.rows[0].candidates).toHaveLength(0);
+  });
+
+  it.each([
+    ["초코칩", "과자, 쿠키, 초코칩", ["초코칩", "과자, 쿠키, 초코칩"], "no_compatible_source"],
+    ["초코칩쿠키", "과자, 쿠키, 초코칩", ["과자, 쿠키, 초코칩"], "needs_review"],
+    ["쿠키", "과자, 쿠키, 초코칩", ["쿠키"], "needs_review"],
+    ["비스킷", "과자, 비스킷, 하드", ["비스킷"], "needs_review"],
+    ["비스킷 과자 소프트", "과자, 비스킷, 소프트", ["과자, 비스킷, 소프트"], "needs_review"],
+  ])("distinguishes cookie fillings from the whole food for %s", async (
+    name, externalName, aliases, classification,
+  ) => {
+    const candidateModule = await loadModule();
+    const buildReport = candidateModule.buildNutritionGapCandidateReport as (
+      input: Record<string, unknown>,
+    ) => CandidateReport;
+    const report = buildReport({
+      inventory: { rows: [{
+        ingredient_id: name,
+        ingredient_name: name,
+        normalized_names: aliases,
+        issue_codes: ["NUTRITION_PROFILE_MISSING"],
+        nutrients: {},
+      }] },
+      candidates: [sourceCandidate({
+        external_name: externalName,
+        name_components: externalName.split(/[,/]/),
+        match_scope_names: [name],
+      })],
+    });
+
+    expect(report.rows[0].classification).toBe(classification);
+    expect(report.rows[0].candidates).toHaveLength(classification === "needs_review" ? 1 : 0);
+  });
+
+  it.each([
+    ["햄버거", "햄버거, 소고기패티, 토마토, 양상추, 양파"],
+    ["송편", "멥쌀떡, 송편, 깨"],
+    ["동결두부", "동결두부"],
+    ["동두부", "두부, 동두부, 동결건조"],
+    ["멥쌀떡, 송편, 깨", "멥쌀떡, 송편, 깨"],
+  ])("allows an explicit whole-food request for %s", async (name, externalName) => {
+    const candidateModule = await loadModule();
+    const buildReport = candidateModule.buildNutritionGapCandidateReport as (
+      input: Record<string, unknown>,
+    ) => CandidateReport;
+    const report = buildReport({
+      inventory: { rows: [{
+        ingredient_id: name,
+        ingredient_name: name,
+        normalized_names: [name],
+        issue_codes: ["NUTRITION_PROFILE_MISSING"],
+        nutrients: {},
+      }] },
+      candidates: [sourceCandidate({
+        external_name: externalName,
+        name_components: externalName.split(/[,/]/),
+        source_state: externalName.split(/[,/]/).slice(1).join(" "),
+      })],
+    });
+
+    expect(report.rows[0].classification).toBe("needs_review");
+    expect(report.rows[0].candidates).toHaveLength(1);
+  });
+
   it("renders current and candidate nutrients inline with page-level scrolling", async () => {
     const candidateModule = await loadModule();
     expect(candidateModule.renderNutritionGapCandidateHtml).toBeTypeOf("function");

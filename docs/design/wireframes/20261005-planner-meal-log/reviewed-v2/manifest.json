@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-05",
+  "status": "final_wireframe_design_reviewed_not_implemented",
+  "generator": "built-in image_gen",
+  "palette": {
+    "carbohydrate": "#94C9FF",
+    "protein": "#FFA7C2",
+    "fat": "#FFD477"
+  },
+  "boards": [
+    {
+      "id": "01-overviews",
+      "title": "요리계획 · 식사기록",
+      "description": "주간 개요와 선택한 날, 짧은 음식별 탄단지 막대",
+      "file": "01-overviews.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-08911653-62a7-4590-9e74-d4447aaef467.png",
+      "sha256": "0c67de813e188d858993330b607e51d2fe1df061490bd4ec753e3abf51fb9cca"
+    },
+    {
+      "id": "02-plan-add",
+      "title": "요리계획 추가 모달",
+      "description": "레시피 선택 → 계획 인분 확인",
+      "file": "02-plan-add.png",
+      "source": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/02-plan-add.png",
+      "sha256": "482b38a76d902f14c5ac5219825824f85c6c423b4fbf11a1922f752579059c64"
+    },
+    {
+      "id": "03-plan-details",
+      "title": "요리계획 상세",
+      "description": "한 끼의 요리 목록 · 계획한 요리 한 건",
+      "file": "03-plan-details.png",
+      "source": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/03-plan-details.png",
+      "sha256": "c835a3c60f732994e742a7ff43e1427eacf0be850fbcb647fb332169f886af59"
+    },
+    {
+      "id": "04-food-selection",
+      "title": "식사기록 음식 선택",
+      "description": "최근 음식 · 제품/재료 검색",
+      "file": "04-food-selection.png",
+      "source": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/04-food-selection.png",
+      "sha256": "2273372d2172fadc3a14bfda99a8dc21fc6b85ebd30ae83810dc092f71bd7f77"
+    },
+    {
+      "id": "05-consumed-amount",
+      "title": "먹은 양 입력",
+      "description": "양 확인 · 키보드가 열린 상태",
+      "file": "05-consumed-amount.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-18108145-ebe1-4425-93cb-625f99246a51.png",
+      "sha256": "29b72a3f79595cade0cc108b4f475443a7667c63a7ccc4271bb1df7df2eaaaf7"
+    },
+    {
+      "id": "06-daily-nutrition",
+      "title": "하루 영양 상세",
+      "description": "끼니별 열량과 구성 · 선택한 영양소 비교",
+      "file": "06-daily-nutrition.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-faacb00b-f428-4d60-805d-27297f277924.png",
+      "sha256": "ea220e8dad1bc9ec726a498c823a030638e99c5f556e9ebd6d4ca861fad60e99"
+    },
+    {
+      "id": "07-record-details-edit",
+      "title": "음식 상세 · 수정",
+      "description": "기록된 음식 영양 · 먹은 양 수정 모달",
+      "file": "07-record-details-edit.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-ab6d7d6b-ca7c-45c5-974c-c0296046ec2e.png",
+      "sha256": "a46d5db987200daa1426d7b7e85a9447af31768859c1823fe16a23f8dfc58287"
+    },
+    {
+      "id": "08-delete-confirmations",
+      "title": "삭제 확인",
+      "description": "계획 한 건 삭제 · 식사기록 한 건 삭제",
+      "file": "08-delete-confirmations.png",
+      "source": "/Users/cwj/.codex/generated_images/01a0ddce-5f41-7853-8244-9d1ad469440c/exec-c4b9ea13-7183-49de-93ef-9575a0f2486b.png",
+      "sha256": "7d8e895e28e20310fcc19282f6b2dfc4d9795904de03a6580f79f3799e4dbbce"
+    }
+  ],
+  "review_thread_id": "01a10c58-5012-74a2-b106-c8d221c623ef",
+  "design_ready": true,
+  "review_rounds": 2,
+  "open_issues": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 1
+  },
+  "remaining_limits": [
+    "래스터 막대 픽셀 정밀도 및 비활성 배경의 이전 그래프",
+    "실제375px/iPhone 키보드·터치·스크롤·포커스 미검증"
+  ],
+  "calculation_source": "fixture-data.json",
+  "interaction_contract": "interaction-contract.md",
+  "review_report": "review-round-2.md"
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": "homecook-catalog-organization-result-v1",
+  "passed": true,
+  "applied_at": "2026-10-07T06:00:06.058Z",
+  "operation_checksum": "59619e307c98830a2df82e9f503ff390d9e061b0ec74f18f10addebf7aeec9cf",
+  "sql_sha256": "4251833c26f44894eb624ddfc765a134ef69e676cc7cdfa2da944d5ae2c02c0a",
+  "migration": {
+    "filename": "20261007143000_ingredient_catalog_organization.sql",
+    "sha256": "112342c3434080a8699f4de8f259f9d32664b62f9bfdb2d11e090cd465235fe8",
+    "body_sha256": "f5861cb852bc68676790e098d7ce5ecb59eef6120e5164ec4941ae97488c529f"
+  },
+  "counts": {
+    "groups": 867,
+    "entries": 1930,
+    "deleted": 2,
+    "renamed": 77,
+    "aliases": 20,
+    "presentations": {
+      "detail": 389,
+      "base": 1330,
+      "excluded": 90,
+      "prepared_food": 101,
+      "alias": 20
+    },
+    "review_states": {
+      "reviewed": 1732,
+      "needs_definition": 198
+    }
+  },
+  "ingredients_before": 1932,
+  "ingredients_after": 1930,
+  "old_name_aliases_added": 77,
+  "definition_primary": 198,
+  "legacy_excluded": 26,
+  "nutrition_and_history_unchanged": true,
+  "replay_writes": 0,
+  "backup": {
+    "bytes": 116705289,
+    "sha256": "50d43c19ccffb0a8703638fbbf710ff0cd9e6981ef46e156b586da6a8d23b93d",
+    "isolated_full_restore_verified": true
+  },
+  "verification": {
+    "tests": 43,
+    "test_files": 3,
+    "role_reads": [
+      "anon",
+      "authenticated",
+      "service_role"
+    ],
+    "unauthorized_writes_denied": 9,
+    "reference_json_columns": 42,
+    "new_fk_reference_blocked": true,
+    "private_receipt_reference_blocked": true,
+    "late_validation_atomic_rollback": true,
+    "late_alias_collision_blocked": true,
+    "late_ledger_conflict_atomic_rollback": true,
+    "representative_constraints": true,
+    "unclassified_fallback": true
+  },
+  "database_state": {
+    "groups": 867,
+    "entries": 1930,
+    "audit_count": 1,
+    "groups_hash": "780c4c74df7607ada89f9c5745d90eed",
+    "ingredients": 1930,
+    "entries_hash": "49d224bafe2e9c09bd83663cd28785b2",
+    "ledger_count": 1,
+    "presentations": {
+      "base": 1330,
+      "alias": 20,
+      "detail": 389,
+      "excluded": 90,
+      "prepared_food": 101
+    },
+    "review_states": {
+      "reviewed": 1732,
+      "needs_definition": 198
+    },
+    "relations_hash": "3eea0cefca75f66c978f02060f3697dd",
+    "legacy_excluded": 26,
+    "definition_primary": 198
+  },
+  "ui_catalog_integration_deployed": false,
+  "web_deployed": false,
+  "nutrition_after": {
+    "partial": 227,
+    "complete": 1482,
+    "unlinked": 221
+  }
+}

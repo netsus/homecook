@@ -1,11 +1,12 @@
 # 요리 계획·식사 기록 분리, 커스텀 레시피, 완제품 검색 통합 실행 계획
 
-- 작성일: 2026-07-22
-- 상태: 18차 독립 재검토 P0/P1 반영 완료 · application-controlled SECURITY DEFINER mutation 전수 hotfix 선행 필요 · 사용자 계약 변경 승인 대기
-- 구현 여부: 미착수
+- 작성일: 2026-07-22 · 사용자 계약 변경 승인: 2026-07-23
+- 문서 성격: 당시 설계·검토 이력을 보존한 역사 계획. 아래 본문의 미래형·미착수·Stage 조건은 작성 당시 기준이다.
+- 구현 진행: F0와 #1~#14의 15개 successor 작업은 구현 또는 검증 산출물이 병합됐다. 이는 모든 기능의 운영 활성화·실사용 완주 완료를 뜻하지 않는다.
+- 현재 기준: [공식 문서 목록](../../../sync/CURRENT_SOURCE_OF_TRUTH.md), [2026-09-22 상태 정리와 실행 기록](../../../engineering/beta-flow-gaps-20260922.md), [병합 지도](../../cooking-meal-log-cross-slice-release-qa/README.md#dependencies), [최종 QA 병합 기록](../../cooking-meal-log-cross-slice-release-qa/omo-report.md).
 - 범위: 공식 계약, DB/API, 요리 계획, 식사 기록, 커스텀 레시피, 완제품·재료 연결, 검색, 이관, QA
 
-> 이 문서는 구현 승인이 아니다. 현재 공식 계약에서 비목표인 실제 섭취 기록을 도입하는 `contract-evolution` 후보이며, `사용자 명시 승인 기록 → contract-evolution 공식 문서 PR → 각 successor Stage 1 + internal 1.5 docs gate → 구현` 순서를 통과하기 전에는 제품 코드·DB migration을 시작하지 않는다.
+> 선행 보안 hotfix와 7월 23일 승인은 완료된 이력이다. 이후 주간 식사기록, 개별 계획 영양, 이전 요리의 조건부 영양 계산 등은 후속 사용자 승인으로 바뀌었다. 현재 구현 판단은 최신 공식 문서를 따른다. 신규 작업에 과거 CI·Stage·workpack 승인 조건을 다시 적용하지 않으며 작업 절차는 현재 `AGENTS.md`를 따른다.
 
 ## 1. 결론부터
 

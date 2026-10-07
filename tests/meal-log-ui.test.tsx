@@ -9,10 +9,10 @@ import { renderMealLogShell } from "@/tests/fixtures/meal-log-ui-harness";
 describe("MEAL_LOG day-first screen", () => {
   afterEach(cleanup);
 
-  it("keeps all date headings and loads only the record bodies with skeletons", () => {
+  it("keeps the selected date heading and loads only its record body with skeletons", () => {
     renderMealLogShell();
-    expect(document.querySelectorAll("[data-planner-date]")).toHaveLength(7);
-    expect(screen.getAllByRole("status").filter(node => node.getAttribute("aria-busy") === "true")).toHaveLength(7);
+    expect(document.querySelectorAll("[data-planner-date]")).toHaveLength(1);
+    expect(screen.getAllByRole("status").filter(node => node.getAttribute("aria-busy") === "true")).toHaveLength(1);
     expect(screen.queryByText("기록을 불러오는 중이에요.")).toBeNull();
   });
   it("does not reposition the first day after the user starts scrolling during a read", async () => {

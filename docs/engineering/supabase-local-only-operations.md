@@ -110,3 +110,9 @@ PR #1346에서 remote/linked Supabase credential 또는 remote security gate가 
 이 DB dump는 schema+data를 포함하는 해당 변경 직전 snapshot이다. Storage payload·off-Mac·암호화·
 전체 플랫폼 복원에 관한 위 정책을 대체하지 않는다. DB 자동 reset/restore, 원격 DB, 파괴적 SQL,
 데이터 재작성은 허용하지 않는다. 앱 실패 시 호환성이 확인된 이전 웹만 복원하며 DB는 유지한다.
+
+## 2026-09-18 대용량 백업·출시 전 재개 보완
+
+백업·복원은 전체 plain SQL을 JavaScript 문자열로 읽지 않고 파일 스트림으로 처리한다. 새 v5 manifest는 `data_semantic_format=copy-row-sha256-multiset-v1`을 명시하며, 복원 시 행 순서가 바뀌어도 각 행 내용·중복 횟수·column/relation·non-COPY SQL이 모두 같아야 한다. 이전 marker 없는 v5는 기존 digest 규칙으로 검증하고 알 수 없는 semantic marker는 거부한다. 서명·HMAC·암호화·외장 사본·키 복구·신선도 검사는 유지한다.
+
+`prelaunch-full-local-resume.mjs`는 정식 promotion을 대신하지 않는다. 검증된 config와 inventory에 봉인된 기존 컨테이너 ID·이미지 digest·labels·volume·loopback binding만 확인하고, 존재하는 stopped 자원만 순서대로 재개한다. 누락되거나 binding이 달라지면 자동 재생성하지 않고 중단한다. 처음 봉인은 현재 자원이 모두 정상일 때만 하며, 실제 시작 전에 기존 전체 backup readiness 검증을 그대로 수행한다. 자세한 결과는 [출시 전 복구 기록](prelaunch-repair-20260918.md)을 따른다.

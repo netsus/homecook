@@ -26,6 +26,21 @@ const INVENTORY_PATH = process.env.SECURITY_FUNCTION_INVENTORY_PATH
   );
 const ADDITIVE_SOURCES = [
   {
+    manifestPath: path.join(REPO_ROOT, "docs/security/manual-recipe-publication-security-function-authorization-manifest.json"),
+  },
+  {
+    manifestPath: path.join(REPO_ROOT, "docs/security/recipe-fork-image-security-function-authorization-manifest.json"),
+  },
+  {
+    manifestPath: path.join(REPO_ROOT, "docs/security/recipe-future-save-repairs-security-function-authorization-manifest.json"),
+  },
+  {
+    manifestPath: path.join(
+      REPO_ROOT,
+      "docs/security/full-local-account-quarantine-security-function-authorization-manifest.json",
+    ),
+  },
+  {
     manifestPath: path.join(REPO_ROOT, "docs/security/marketing-round2-security-function-authorization-manifest.json"),
   },
   {
@@ -97,6 +112,15 @@ const ADDITIVE_SOURCES = [
       REPO_ROOT,
       "docs/security/legacy-product-compat-security-function-authorization-manifest.json",
     ),
+  },
+  {
+    manifestPath: path.join(REPO_ROOT, "docs/security/action-notifications-security-function-authorization-manifest.json"),
+  },
+  {
+    manifestPath: path.join(REPO_ROOT, "docs/security/meal-log-preview-security-function-authorization-manifest.json"),
+  },
+  {
+    manifestPath: path.join(REPO_ROOT, "docs/security/future-meal-key-security-function-authorization-manifest.json"),
   },
   {
     manifestPath: path.join(
@@ -710,9 +734,9 @@ function normalizeFunctionArgument(argument) {
     .toLowerCase();
 }
 
-function parseCreatedFunctionDefinitions(migration) {
+function parseCreatedFunctionDefinitions(migration, inheritedDefinitions = [], includeRenames = true) {
   const definitionPattern =
-    /create\s+or\s+replace\s+function\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(([\s\S]*?)\)\s*returns\b/giu;
+    /create\s+(?:or\s+replace\s+)?function\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(([\s\S]*?)\)\s*returns\b/giu;
   const definitions = [];
 
   for (const match of migration.matchAll(definitionPattern)) {
@@ -745,7 +769,7 @@ function parseCreatedFunctionDefinitions(migration) {
         .matchAll(/\b(set local role ([a-z_][a-z0-9_]*)|reset role)\s*;/giu),
     ];
     const latestRoleTransition = roleTransitions.at(-1);
-    const searchPathMatch = definitionSql.match(/set\s+search_path\s*=\s*([^\n]+)\n/iu);
+    const searchPathMatch = definitionSql.match(/set\s+search_path\s*=\s*(.*?)(?=\s+as\s+\$|\n)/iu);
     if (!searchPathMatch) {
       throw new Error(`function search_path is missing for ${match[1]}`);
     }
@@ -768,6 +792,8 @@ function parseCreatedFunctionDefinitions(migration) {
     });
   }
 
+  if (!includeRenames) return definitions;
+
   const renamePattern =
     /alter\s+function\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(([^)]*)\)\s+rename\s+to\s+([a-z_][a-z0-9_]*)\s*;/giu;
   for (const match of migration.matchAll(renamePattern)) {
@@ -781,7 +807,7 @@ function parseCreatedFunctionDefinitions(migration) {
           definition.signature === sourceSignature
           && definition.source_index < match.index,
       )
-      .at(-1);
+      .at(-1) ?? inheritedDefinitions.findLast((definition) => definition.signature === sourceSignature);
     if (!sourceDefinition) {
       throw new Error(`renamed function source is missing for ${sourceSignature}`);
     }
@@ -812,7 +838,7 @@ function parseExecuteAcl(migration, signature) {
   const statements = migration
     .split(";")
     .map(collapseSql)
-    .filter((statement) => statement.includes(`function ${normalizedSignature}`));
+    .filter((statement) => /\bon function\b/u.test(statement) && statement.includes(normalizedSignature));
   const allowed = new Set();
   const revoked = new Set();
 
@@ -839,6 +865,7 @@ function assertAdditiveContract(
   manifest,
   migration,
   classifiedSignatures,
+  inheritedDefinitions = [],
 ) {
   if (manifest.schema_version !== 1
     || !new Set(["pre-deployment", "post-migration"]).has(
@@ -896,7 +923,7 @@ function assertAdditiveContract(
     );
   }
 
-  const definitions = parseCreatedFunctionDefinitions(migration);
+  const definitions = parseCreatedFunctionDefinitions(migration, inheritedDefinitions);
   const definitionMap = new Map(definitions.map((entry) => [entry.signature, entry]));
   const unclassified = definitions
     .filter((entry) => !classifiedSignatures.has(entry.signature))
@@ -952,7 +979,10 @@ function assertAdditiveContract(
       );
       const normalizedMigration = collapseSql(migration);
       if (!normalizedMigration.includes(ownerStatement)
-        && definition.created_as_role !== entry.owner) {
+        && definition.created_as_role !== entry.owner
+        // Plain CREATE inherits the declared migration role. A SET LOCAL ROLE
+        // override must still match, and live metadata independently checks owner.
+        && !(definition.created_as_role === null && manifest.execution_role === entry.owner)) {
         throw new Error(`additive function owner drift for ${entry.signature}`);
       }
     }
@@ -1277,6 +1307,11 @@ const additiveSources = await Promise.all(
     );
     return {
       manifest,
+      // Context is used only to inspect an existing function before ALTER RENAME;
+      // it neither adds grants nor marks unrelated functions as classified.
+      inheritedDefinitions: (await Promise.all((manifest.context_migrations ?? []).map(async (sourcePath) =>
+        parseCreatedFunctionDefinitions(await readFile(path.join(REPO_ROOT, sourcePath), "utf8"), [], false)
+      ))).flat(),
       migration: (
       await Promise.all(
         sourcePaths.map((sourcePath) =>
@@ -1293,7 +1328,7 @@ const classifiedAdditiveSignatures = new Set(
     (manifest.functions ?? []).map((entry) => entry.signature)
   ),
 );
-const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigration }) => ({
+const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigration, inheritedDefinitions }) => ({
   slice: manifest.slice,
   expectedState: manifest.deployment_state,
   functions: assertAdditiveContract(
@@ -1301,6 +1336,7 @@ const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigr
     manifest,
     sourceMigration,
     classifiedAdditiveSignatures,
+    inheritedDefinitions,
   ),
 }));
 const additiveContractBySignature = new Map();

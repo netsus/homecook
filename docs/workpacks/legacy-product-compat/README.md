@@ -1,5 +1,11 @@
 # legacy-product-compat
 
+## 2026-09-22 현재 상태와 기록 해석
+
+PR #1369/#1371의 구현·검증과 병합은 완료됐다. 아래 Ready/merge pending은 당시 checkpoint이며 최신 병합 근거는 `omo-report.md`다. required-key 전환·구경로 제거 등의 별도 운영 조치가 모두 완료됐다는 뜻은 아니다.
+
+2026-09-21 22:37 KST 운영 DB 읽기 확인에서는 account capability가 `generation_active`였고, 직접 Postgres 연결의 recipe UI mode는 `legacy_v1`이었다. 앱 요청의 별도 설정은 확인하지 않았다. 과거 activation pending을 현재 F0 미활성으로 단정하지 않는다. [현재 실행 기록](../../engineering/beta-flow-gaps-20260922.md)을 함께 확인한다. 아래 Stage/CI 절차는 과거 기록이며 신규 작업에는 현재 `AGENTS.md`를 적용한다.
+
 ## Goal
 
 기존 완제품 계획과 v1/v2 cooking reader를 파괴적 정리 없이 호환 가능하게 유지한다. legacy product row는 pinned 과거 값을 read-only로 읽고 사용자가 삭제할 수 있으며, v1 stable key와 dormant v2 drain은 관측 가능한 단계별 gate로만 전환한다. 한 release 경과나 telemetry 0만으로 endpoint, row, parser 또는 cursor decoder를 제거하지 않는다.

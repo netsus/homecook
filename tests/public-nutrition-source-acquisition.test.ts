@@ -26,6 +26,29 @@ function fixture(name: string) {
   return JSON.parse(readFileSync(join(FIXTURE_DIR, name), "utf8"));
 }
 
+function rda104CitedInput() {
+  const input = fixture("mfds-source-sample.json");
+  Object.assign(input.source, {
+    provider: "농촌진흥청",
+    dataset: "국가표준식품성분 DB 10.4",
+    source_version: "10.4",
+  });
+  input.query = {
+    official_file_sha256: "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+  };
+  return input;
+}
+
+async function normalizeCitedInput(input: ReturnType<typeof rda104CitedInput>) {
+  const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
+  const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+  return normalizeNutritionBatch({
+    rawSnapshot: raw.rawSnapshot,
+    manifest: raw.manifest,
+    adapterSchemaVersion: "nutrition-source-row-v1",
+  });
+}
+
 function errorCode(run: () => unknown) {
   try {
     run();
@@ -398,6 +421,83 @@ describe("public nutrition source acquisition core", () => {
     expect(raw.business_key).toBe(cooked.business_key);
     expect(raw.content_hash).not.toBe(cooked.content_hash);
     expect(raw.fingerprint).not.toBe(cooked.fingerprint);
+  });
+
+  it("preserves cited/converted RDA values and trace without turning missing amounts into zero", async () => {
+    const input = rda104CitedInput();
+    Object.assign(input.pages[0].items[0].nutrients, {
+      energy: { value: "(0)", unit: "kcal" },
+      carbohydrate: { value: "(88.2)", unit: "g" },
+      protein: { value: "(Tr)", unit: "g" },
+      fat: { value: "Tr", unit: "g" },
+      sodium: { value: "-", unit: "mg" },
+      fiber: { value: "(0.01)", unit: "g" },
+    });
+    const normalized = await normalizeCitedInput(input);
+
+    expect(normalized.quarantined).toEqual([]);
+    expect(normalized.rows[0].values).toMatchObject({
+      energy_kcal: { amount: 0, source_token: "(0)", source_value_qualifier: "cited_or_converted" },
+      carbohydrate_g: { amount: 88.2, source_token: "(88.2)", source_value_qualifier: "cited_or_converted" },
+      protein_g: { amount: null, missing_reason: "trace", source_token: "(Tr)", source_value_qualifier: "cited_or_converted" },
+      fat_g: { amount: null, missing_reason: "trace", source_token: "Tr" },
+      sodium_mg: { amount: null, missing_reason: "dash", source_token: "-" },
+      fiber_g: { amount: 0.01, source_token: "(0.01)", source_value_qualifier: "cited_or_converted" },
+    });
+    expect(normalized.rows[0].values.fat_g).not.toHaveProperty("source_value_qualifier");
+    expect(normalized.rows[0].values.sodium_mg).not.toHaveProperty("source_value_qualifier");
+  });
+
+  it.each([
+    ["provider", "식품의약품안전처"],
+    ["dataset", "다른 국가표준식품성분 DB 10.4"],
+    ["source_version", "10.5"],
+    ["official_file_sha256", "a".repeat(64)],
+    ["official_file_sha256", undefined],
+  ])("rejects parenthesized values when RDA provenance %s does not match", async (field, value) => {
+    const input = rda104CitedInput();
+    if (field === "official_file_sha256") input.query[field] = value;
+    else input.source[field] = value;
+    input.pages[0].items[0].nutrients.energy.value = "(88.2)";
+    const normalized = await normalizeCitedInput(input);
+
+    expect(normalized.quarantined).toEqual([
+      expect.objectContaining({ external_item_key: "MFDS-001", reason_code: "malformed_nutrient" }),
+    ]);
+  });
+
+  it.each([
+    "(-1)", "()", "((1))", "(1)junk", "(1 g)", "(1e3)", "(0x10)",
+    "(NaN)", "(Infinity)", "(1,2)", "( )", "(1.2.3)", "(ND)", "(-)",
+  ])("rejects invalid cited RDA nutrient token %s", async (token) => {
+    const input = rda104CitedInput();
+    input.pages[0].items[0].nutrients.energy.value = token;
+    const normalized = await normalizeCitedInput(input);
+
+    expect(normalized.quarantined).toEqual([
+      expect.objectContaining({ external_item_key: "MFDS-001", reason_code: "malformed_nutrient" }),
+    ]);
+  });
+
+  it("still rejects unknown units for cited RDA values", async () => {
+    const input = rda104CitedInput();
+    input.pages[0].items[0].nutrients.energy = { value: "(88.2)", unit: "unknown" };
+    const normalized = await normalizeCitedInput(input);
+
+    expect(normalized.quarantined[0].reason_code).toBe("unit_mismatch");
+  });
+
+  it("leaves ordinary RDA tokens and their historical fingerprints unchanged", async () => {
+    const normalized = await normalizeCitedInput(rda104CitedInput());
+
+    expect(normalized.rows.map((row: { fingerprint: string; content_hash: string }) => ({
+      fingerprint: row.fingerprint,
+      content_hash: row.content_hash,
+    }))).toEqual([
+      { fingerprint: "b0a215db2089037bbd6baeda49f90c99d835094d5fb7aee11e9fcf26a7238088", content_hash: "5bcef99be9a2dde4cfbb24fd8017901037448459cbeb5f540196ba2ce9f9a376" },
+      { fingerprint: "d6ed28b5d7015424f2b1ee406db241f9eaf868fa25029976eb1b5a28b5ba41c2", content_hash: "500f3684495dcd4ac5696756f678588118e2a87c96a25a4e977c79e588b9cd5a" },
+    ]);
+    expect(JSON.stringify(normalized.rows)).not.toContain("source_value_qualifier");
   });
 
   it("quarantines basis parse, negative, unit mismatch, and malformed rows without guessing 100g", async () => {

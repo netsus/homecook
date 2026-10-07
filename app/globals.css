@@ -706,7 +706,10 @@
   }
 
   .mobile-recipebook-menu-button {
-    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--foreground);
+    box-shadow: 0 2px 6px var(--shadow-color-soft);
   }
 
   .mobile-recipebook-cover-image {
@@ -10055,7 +10058,12 @@ button {
     top: 8px;
     right: 8px;
     z-index: 2;
-    background: rgba(255, 255, 255, 0.78);
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--web-line);
+    background: var(--web-surface);
+    color: var(--web-text-1);
+    box-shadow: 0 2px 6px var(--shadow-color-soft);
   }
 
   .web-recipebook-menu-button:hover,
@@ -17651,7 +17659,7 @@ body:has(.mdv2-root) {
 }
 /* mumeok-funnel@3cf3336 visual baseline — end */
 
-body:has(.mdv2-root) [aria-label^="YouTube 추출"] {
+body:has(.mdv2-root) [data-youtube-extraction-trigger] {
   display: none !important;
 }
 
@@ -17746,4 +17754,12 @@ html[data-mobile-fullscreen-page="true"] body {
   overflow: hidden !important;
   overscroll-behavior: none;
   scroll-behavior: auto !important;
+}
+
+/* Planner redesign: local nutrition palette, not a theme change for other flows. */
+:where([data-testid="planner-screen"], [data-testid="planned-meal-page"], .planner-task-sheet, [aria-label="식사 기록 상세"], [aria-label="하루 영양 상세"]) {
+  --nutrition-carbohydrate: #94C9FF;
+  --nutrition-protein: #FFA7C2;
+  --nutrition-fat: #FFD477;
+  font-weight: 400;
 }

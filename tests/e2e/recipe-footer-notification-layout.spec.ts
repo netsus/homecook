@@ -17,7 +17,7 @@ test("recipe management scrolls with content and the last ingredient clears the 
   await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
   const management = page.getByRole("region", { name: "레시피 관리" });
   await expect(management.getByRole("button", { name: "편집", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /YouTube 추출 알림/ })).toHaveCount(0);
+  await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
   await management.scrollIntoViewIfNeeded();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const mobile = (page.viewportSize()?.width ?? 0) < 1024;
@@ -43,7 +43,7 @@ test("recipe management scrolls with content and the last ingredient clears the 
 
 test("home bell belongs to the header and scrolls away", async ({ page }, testInfo) => {
   await page.goto("/");
-  const bell = page.getByRole("button", { name: /YouTube 추출 알림/ }).filter({ visible: true });
+  const bell = page.locator("[data-youtube-extraction-trigger]").filter({ visible: true });
   await expect(bell).toBeVisible();
   expect(await bell.evaluate((element) => Boolean(element.closest("header")))).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("home-header-bell.png") });
@@ -65,7 +65,7 @@ test("saved meal recipe shows its stored quantities without overflow or a floati
   await expect(page.getByText("신김치", { exact: true })).toBeVisible();
   await expect(page.getByText("300g", { exact: true })).toBeVisible();
   await expect(page.getByText("재료를 넣고 끓여 주세요.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /YouTube 추출 알림/ })).toHaveCount(0);
+  await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("saved-meal-recipe.png"), fullPage: true });
 });

@@ -1146,22 +1146,28 @@ function MobileCustomBookCard({
         </div>
         <button
           aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
           aria-label={`${book.name} 옵션 메뉴`}
-          className="mobile-recipebook-menu-button absolute right-2 top-2 z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 text-[18px] font-bold leading-none text-[var(--text-4)]"
+          className="mobile-recipebook-menu-button absolute right-2 top-2 z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
           onClick={(event) => {
             event.preventDefault();
             onMenuOpen();
           }}
           type="button"
         >
-          ⋯
+          <svg aria-hidden="true" className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+            <circle cx="4" cy="10" r="1.75" />
+            <circle cx="10" cy="10" r="1.75" />
+            <circle cx="16" cy="10" r="1.75" />
+          </svg>
         </button>
+        <RecipeCountBadge count={book.recipe_count} />
       </div>
 
       {isMenuOpen ? (
         <div
           ref={menuRef}
-          className="absolute right-3 top-11 z-20 min-w-[120px] overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_2px_8px_var(--shadow-color-soft)]"
+          className="absolute right-2 top-14 z-20 min-w-[120px] overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_2px_8px_var(--shadow-color-soft)]"
           role="menu"
         >
           <button

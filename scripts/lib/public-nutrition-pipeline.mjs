@@ -455,7 +455,11 @@ function parseBasis(value) {
   return { amount, unit, source_text: value };
 }
 
-function normalizeNutrientToken(entry, expectedUnit, { optional = false } = {}) {
+function normalizeNutrientToken(
+  entry,
+  expectedUnit,
+  { optional = false, allowRdaCitedValues = false } = {},
+) {
   if (entry === undefined && optional) return null;
   if (entry === undefined) {
     return { amount: null, unit: expectedUnit, missing_reason: "absent", source_token: null };
@@ -469,6 +473,21 @@ function normalizeNutrientToken(entry, expectedUnit, { optional = false } = {}) 
   }
   const token = String(sourceToken).trim();
   const folded = token.toLocaleLowerCase("ko-KR");
+  // The pinned RDA workbook defines parentheses as cited or converted values.
+  // Keep this source-specific notation out of the general numeric parser.
+  const cited = allowRdaCitedValues ? /^\((\d+(?:\.\d+)?|Tr)\)$/i.exec(token) : null;
+  if (cited !== null) {
+    const isTrace = cited[1].toLowerCase() === "tr";
+    const amount = isTrace ? null : Number(cited[1]);
+    if (!isTrace && !Number.isFinite(amount)) throw new NutritionPipelineError("malformed_nutrient");
+    return {
+      amount,
+      unit: expectedUnit,
+      missing_reason: isTrace ? "trace" : null,
+      source_token: token,
+      source_value_qualifier: "cited_or_converted",
+    };
+  }
   if (token === "") {
     return { amount: null, unit: expectedUnit, missing_reason: "blank", source_token: "" };
   }
@@ -492,7 +511,7 @@ function normalizeNutrientToken(entry, expectedUnit, { optional = false } = {}) 
   return { amount, unit: expectedUnit, missing_reason: null, source_token: token };
 }
 
-function normalizeRow(row, sourceScope) {
+function normalizeRow(row, sourceScope, { allowRdaCitedValues = false } = {}) {
   if (!isRecord(row) || !isRecord(row.nutrients)) {
     throw new NutritionPipelineError("malformed_row");
   }
@@ -514,7 +533,9 @@ function normalizeRow(row, sourceScope) {
   const values = {};
   for (const [code, definition] of Object.entries(CORE_NUTRIENTS)) {
     values[code] = {
-      ...normalizeNutrientToken(row.nutrients[definition.source_key], definition.unit),
+      ...normalizeNutrientToken(row.nutrients[definition.source_key], definition.unit, {
+        allowRdaCitedValues,
+      }),
       source_nutrient_code: definition.source_key,
     };
   }
@@ -522,7 +543,7 @@ function normalizeRow(row, sourceScope) {
     const normalized = normalizeNutrientToken(
       row.nutrients[definition.source_key],
       definition.unit,
-      { optional: true },
+      { optional: true, allowRdaCitedValues },
     );
     if (normalized !== null) {
       values[code] = {
@@ -673,6 +694,11 @@ export function normalizeNutritionBatch({ rawSnapshot, manifest, adapterSchemaVe
   }
 
   const sourceScope = `${manifest.provider}:${manifest.dataset}:${manifest.source_version}`;
+  const allowRdaCitedValues = manifest.provider === "농촌진흥청" &&
+    manifest.dataset === "국가표준식품성분 DB 10.4" &&
+    manifest.source_version === "10.4" &&
+    manifest.query?.official_file_sha256 ===
+      "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50";
   const stagedRows = rawSnapshot.pages.flatMap((page) => page.items);
   const rows = [];
   const quarantined = [];
@@ -684,6 +710,7 @@ export function normalizeNutritionBatch({ rawSnapshot, manifest, adapterSchemaVe
       const normalized = normalizeRow(
         adaptInputRow(stagedRow, manifest.input_shape),
         sourceScope,
+        { allowRdaCitedValues },
       );
       const existing = firstByBusinessKey.get(normalized.business_key);
       if (existing?.content_hash === normalized.content_hash) {

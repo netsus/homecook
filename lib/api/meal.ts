@@ -1,3 +1,4 @@
+import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiResponse } from "@/types/api";
@@ -31,12 +32,12 @@ export function isMealApiError(error: unknown): error is MealApiError {
   return "status" in error && "code" in error;
 }
 
-export async function createMeal(body: MealCreateBody): Promise<MealCreateData> {
+export async function createMeal(body: MealCreateBody, idempotencyKey: string = crypto.randomUUID()): Promise<MealCreateData> {
   const response = await fetch(
     "/api/v1/meals",
     withE2EAuthOverrideHeaders({
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey },
       body: JSON.stringify(body),
     }),
   );
@@ -65,13 +66,14 @@ export async function createMeal(body: MealCreateBody): Promise<MealCreateData> 
   // All planner meal-add paths pass through createMeal, and refresh failure must not
   // affect the successful meal creation result.
   notifyGamificationSourceAction();
+  notifyActionNotificationsChanged();
 
   return payload.data;
 }
 
-export async function createMealSafe(body: MealCreateBody): Promise<ApiResponse<MealCreateData>> {
+export async function createMealSafe(body: MealCreateBody, idempotencyKey?: string): Promise<ApiResponse<MealCreateData>> {
   try {
-    const data = await createMeal(body);
+    const data = await createMeal(body, idempotencyKey);
     return { success: true, data, error: null };
   } catch (error) {
     if (isMealApiError(error)) {

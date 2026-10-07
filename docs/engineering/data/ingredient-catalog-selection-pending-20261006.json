@@ -1,0 +1,916 @@
+{
+  "status": "pending_coordinated_release",
+  "user_scope": "집밥·일상 베이킹 중심",
+  "hide_candidates": [
+    {
+      "id": "39efb905-aba4-4c3c-9b96-d64f7af68093",
+      "name": "가시오갈피 순",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 가시오갈피, 순, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "743e321b-95e8-4175-8f41-dac5f366922e",
+      "name": "구기자 순 재래종",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 구기자, 순, 재래종, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+      "name": "구기자 열매 재래종",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 구기자, 열매, 재래종, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+      "name": "구기자 잎 재래종",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 구기자, 잎, 재래종, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "dae930a9-7e30-458c-b238-2245e860a407",
+      "name": "꾸지뽕 열매",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 꾸지뽕, 열매, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "8db75524-02d0-41a8-84fe-36ffb9ff1caa",
+      "name": "꾸지뽕 잎",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 꾸지뽕, 잎, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "7217e4a9-87f9-460e-89a8-df95690544ff",
+      "name": "냉동 꾸지뽕 열매",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 꾸지뽕, 열매, 냉동. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "5780b50f-85ee-4a37-a05c-7727506db525",
+      "name": "말린 꾸지뽕 잎",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 꾸지뽕, 잎, 말린것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "b5394357-3449-4ab6-a18a-c41f6e9fd140",
+      "name": "삶은 꾸지뽕 잎",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 꾸지뽕, 잎, 삶은것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "73765314-cb0a-51a3-95b9-930ae56ca124",
+      "name": "꿀풀",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 꿀풀(하고초), 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "7a89d851-b8a6-4f14-a81f-24199a201951",
+      "name": "둥굴레 잎",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 둥굴레, 잎, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "559102ea-9576-4962-89f4-86955ed36bd1",
+      "name": "말린 둥굴레 잎",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 둥굴레, 잎, 말린것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "0de31949-a28a-537e-a366-23c86a6dcbd1",
+      "name": "백모근",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 백모근, 뿌리, 말린것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "189fcaee-24f3-5b80-b21d-1a17a1d594e0",
+      "name": "천마",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 천마, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "799227e7-ef6d-4c8a-8fc4-5ce489d6260b",
+      "name": "찐 천마",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 천마, 찐것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "8bf0bd13-aa03-42d1-b227-4779282ebba1",
+      "name": "상황버섯 추출",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 상황버섯, 추출. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "c9804d5f-bcd0-4c0b-add2-bc1681cc5b6b",
+      "name": "말린 상황버섯",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 상황버섯, 말린것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "67e1e449-193e-4a2b-ab40-8a2c3555d8a3",
+      "name": "영지버섯 추출",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 영지버섯, 추출. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "f724fa45-a101-443b-9ec5-707cf04cdcd7",
+      "name": "말린 영지버섯",
+      "action": "selection_hide_later",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 영지버섯, 말린것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "12c42af3-9cdd-578f-b036-1d4a6c97e588",
+      "name": "박쥐나무",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 박쥐나무, 잎, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "e9dc2e1c-5226-57e0-831e-e85ae21ef080",
+      "name": "참빗살나무",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 참빗살나무, 잎, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "b055be12-8c62-5987-82fe-337c0af8621a",
+      "name": "목화씨",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 목화씨, 구운것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "4b3d759f-0d97-5375-bc4e-4e3325316464",
+      "name": "삼붕냐와",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 삼붕냐와, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "75a0a4c9-2347-59fc-ac83-92ae7da3217b",
+      "name": "아이비카",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 아이비카, 닥풀, 말린것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "d9062036-0c22-53bd-86ef-02abf6387f33",
+      "name": "자운영",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 자운영, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "d3653f75-73c0-52a5-9b79-f16d023c601f",
+      "name": "누리장나무잎",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 누리장나무잎, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "84eace3d-2bfc-5694-9184-4f8dfc00d50b",
+      "name": "마가목 열매",
+      "action": "selection_hide_later",
+      "reason": "일상 집밥·베이킹 중심 범위 밖의 희귀 원재료으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 마가목 열매, 생것. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "41a5e41b-a738-4e63-8183-3786a5ac61c4",
+      "name": "갯나물 퉁퉁마디 노지",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 갯나물, 퉁퉁마디(함초), 노지, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "7a736fb6-2153-447c-afdc-b694debc6029",
+      "name": "갯나물 퉁퉁마디 하우스",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 갯나물, 퉁퉁마디(함초), 하우스, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "2cefb6ab-20b2-4cdd-8421-b1b890d26ac9",
+      "name": "배추 가을 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 가을 재배, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "424087fe-726d-4b9f-8b3f-f14fff3f6a90",
+      "name": "배추 봄 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 봄 재배, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "61bb65bd-9492-4eed-adb9-0c464da94cf2",
+      "name": "배추 여름 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 여름 재배, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "4e14c00f-5c00-4edd-868c-28345ef98c96",
+      "name": "배추 유기재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 유기재배, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "33d2e4af-94dd-4cbb-bd6c-b323549ccca1",
+      "name": "삶은 배추 가을 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 가을 재배, 삶은것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "4d8675e0-1603-4a51-a889-3600bbec781d",
+      "name": "삶은 배추 봄 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 봄 재배, 삶은것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "0c0d1f9e-9333-473b-ab11-aa375b07fed6",
+      "name": "삶은 배추 여름 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 여름 재배, 삶은것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "fb928c89-9a81-4a44-a510-8032ed104454",
+      "name": "염장 절임 배추 가을 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 가을 재배, 염절임. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "7f463bd5-f978-4762-ad78-f41746b5ff49",
+      "name": "염장 절임 배추 봄 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 봄 재배, 염절임. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "6411e8ee-dbf2-4819-b64c-a5efd33cd360",
+      "name": "염장 절임 배추 여름 재배",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 배추, 여름 재배, 염절임. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "6d95c7c4-ecfd-4247-8016-c45fbac59060",
+      "name": "시금치 노지",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 시금치, 노지, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "00bdab3d-a125-489d-a76a-cfb0f95174c8",
+      "name": "시금치 하우스",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 시금치, 하우스, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "5dc1a8e5-706c-4af0-a17c-4015590dece6",
+      "name": "데친 시금치 노지",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 시금치, 노지, 데친것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "6f90cc1c-9fb7-49bb-88f2-a5ffa8916b8a",
+      "name": "데친 시금치 하우스",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 시금치, 하우스, 데친것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "c90456c1-6397-4bc4-bcdb-bd6a5fb20a08",
+      "name": "수입산마늘",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 마늘, 깐마늘, 수입산, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "f2a528f8-07b6-4f85-af67-4f03ebaa35c5",
+      "name": "데친 수입산마늘",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 마늘, 깐마늘, 수입산, 데친것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "9f1581f2-e754-4f3a-b09c-c471194571c2",
+      "name": "수입산생강",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 생강, 뿌리줄기, 수입산, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "2573a60e-0389-4530-b66a-314c48dc5dbd",
+      "name": "말린 노란 대두 미국산",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 대두, 노란색, 미국산, 말린것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "cd72acb1-2cb2-41d0-9299-c97ce842588f",
+      "name": "말린 수입산동부",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 동부, 수입산, 말린것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "29bdb668-b302-4353-8902-1dd435183049",
+      "name": "삶은 수입산동부",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 동부, 수입산, 삶은것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "ebb5acb3-3a3b-409d-9fe3-8c5309940152",
+      "name": "말린 수입산무화과",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 무화과, 수입산, 말린것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "6fb60f34-dc94-4860-83cf-ffdd27d18372",
+      "name": "초록 상추 결구 유레이크",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 상추, 결구, 유레이크, 녹색, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "784c5e09-3ed1-4507-8434-1fdc63aa3f29",
+      "name": "초록 상추 결구 풍성",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 상추, 결구, 풍성, 녹색, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "400f43b8-5f37-4e79-a84d-54c82f3e0d98",
+      "name": "한가루 멥쌀 백미",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 멥쌀, 백미, 한가루, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "0dea7580-8caa-46e6-9a2b-78b2a0370c1e",
+      "name": "한가루 현미멥쌀",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 멥쌀, 현미, 한가루, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "dfb4db4e-0142-44d6-b567-a80f664261f9",
+      "name": "모시풀 잎 서방종",
+      "action": "selection_hide_later",
+      "reason": "재배조건·산지·세부품종에 따른 과도한 기본검색 세분으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 현재 recipe/pantry/shopping/meal/JSON 및 기타 업무 직접참조 0. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 모시풀, 잎, 서방종, 생것. 기본 재료·생것/데침/건조 등의 정상 조리상태는 유지하고 세부 재배조건만 검색정리; 서로 다른 원자료 영양값을 합치지 않음. 기존 검토표와 현재 재조회 대조 완료."
+    },
+    {
+      "id": "e16696d5-50f2-4667-b9f1-42edae11252b",
+      "name": "거위고기 살코기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "a6b05775-26e9-591a-b7de-b9d9b392b01d",
+      "name": "거위알",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "60e624b7-1147-58c6-b0dc-bacc02804e79",
+      "name": "고래고기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "e6d939c8-709d-4891-986e-6645c7bcbfe7",
+      "name": "구운 거위고기 살코기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "8129733c-2685-4031-9e32-8998d0a15f5f",
+      "name": "구운 송아지고기 수입산 갈비",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "2c99885d-ec4a-4ad0-893b-32bb0e415963",
+      "name": "구운 송아지고기 수입산 등심",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "bed17741-4f3c-4f09-99d7-f61c575b0119",
+      "name": "구운 송아지고기 수입산 어깨",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "097a16b3-1a0e-57cf-92ac-224e76a0a938",
+      "name": "기러기알",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "d1561af2-6cc5-4f52-9140-e7acc011230d",
+      "name": "끓인 토끼고기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "2588c0ae-f889-48f5-b8f4-c94ebec56cdc",
+      "name": "냉동 고래고기 붉은살",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "f51dbac3-6f53-5da9-a5e5-40dfca0a448a",
+      "name": "로열 젤리",
+      "action": "selection_hide_later",
+      "reason": "일상 조리용보다 별도 섭취용 원료 성격으로 이번 기본 재료 선택 범위 밖. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "e6cfcb34-0ea4-52c5-996a-541716ea224d",
+      "name": "복숭아씨기름",
+      "action": "selection_hide_later",
+      "reason": "일반 가정 조리용 오일 범위 밖의 특수 원료. 일반 식용유·견과 오일은 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "dbf04684-ecdd-41a1-8bc7-2427710d6ec4",
+      "name": "분유 1단계",
+      "action": "selection_hide_later",
+      "reason": "영유아 단계별 수유 제품으로 일상 베이킹용 분유와 구분해 기본 선택에서 제외. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "f39b28f2-1af0-4c27-b914-90699ffe4cb8",
+      "name": "분유 2단계",
+      "action": "selection_hide_later",
+      "reason": "영유아 단계별 수유 제품으로 일상 베이킹용 분유와 구분해 기본 선택에서 제외. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "231c7a3a-fe7e-4eb5-9b17-d354b3fbe917",
+      "name": "분유 3단계",
+      "action": "selection_hide_later",
+      "reason": "영유아 단계별 수유 제품으로 일상 베이킹용 분유와 구분해 기본 선택에서 제외. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "a6efa5ba-1828-41d3-a813-7f38ad8ad04f",
+      "name": "삶은 거위알",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "e2a9d793-14a0-4bdd-b1a1-83fd659f517e",
+      "name": "삶은 기러기알",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "07bccf3d-7699-438c-95a3-fefb2bbe3822",
+      "name": "삶은 송아지고기 수입산 갈비",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "ae551f2c-758e-4458-b232-1882f52f33d5",
+      "name": "삶은 송아지고기 수입산 등심",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "b0225d9d-4adc-47e7-9329-7645c1b4bac7",
+      "name": "삶은 송아지고기 수입산 살코기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "5bc83621-578b-49b4-b98b-90efbb12d0ab",
+      "name": "삶은 송아지고기 수입산 어깨",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "7a42e229-8f27-4a38-996b-98c7eb5680e0",
+      "name": "삶은 송아지고기 수입산 채끝",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "d2cd6149-b536-4c3b-a1a2-f63ade7fca04",
+      "name": "삶은 토끼고기 살코기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "7f7b8c86-e780-4e70-8738-c3aa33641910",
+      "name": "송아지고기 수입산 갈비",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "3de16d99-0442-493f-9b9a-6dd99ce1ed84",
+      "name": "송아지고기 수입산 등심",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "d0795631-b238-477a-82e5-2136e1eeb893",
+      "name": "송아지고기 수입산 살코기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "e8e6f360-e782-44fa-a9c6-fa872690a747",
+      "name": "송아지고기 수입산 어깨",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "a26c2384-04a3-4faa-99f2-0abebf56c235",
+      "name": "송아지고기 수입산 채끝",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "6680195c-265d-4c7e-b3ca-aab70bce19f6",
+      "name": "오븐에 구운 송아지고기 수입산 채끝",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "7263c440-877f-5ce7-9973-6112ad115d9f",
+      "name": "토끼고기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    },
+    {
+      "id": "18b501c8-7a5d-4699-a46e-942ca835e4e8",
+      "name": "토끼고기 살코기",
+      "action": "selection_hide_later",
+      "reason": "초보 집밥·일상 베이킹의 기본 선택 범위 밖인 특수 육류·알 또는 송아지 세부 부위/조리상태 항목. 일반 소·돼지·닭·오리·양고기 부위는 유지. 실사용·JSON 참조 0건. 영양/환산 등 참조가 있어 물리 삭제 금지; 향후 선택 목록 숨김만 검토."
+    }
+  ],
+  "duplicate_pairs": [
+    {
+      "source_ingredient_id": "9a132388-4e4b-49b4-b172-41998b7ce5c6",
+      "source_name": "백도 복숭아",
+      "representative_ingredient_id": "a985999a-77ef-5dc7-bb76-aeff5fe32937",
+      "representative_name": "백도",
+      "nutrition_source_item_id": "084e6a6e-de81-468e-a587-a21ce43d6a04",
+      "source_name_evidence": "복숭아, 백도, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "a44e53c7-afc6-4fc9-9468-c3342b159fe9",
+      "source_name": "치커리 잎",
+      "representative_ingredient_id": "f009c2f4-c381-55ff-8eb0-5b22c86f761d",
+      "representative_name": "치커리",
+      "nutrition_source_item_id": "aec41096-0cdb-4d5f-be6b-3cd8dc1c9ffb",
+      "source_name_evidence": "치커리, 잎, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "4ec1d93a-dcef-57e4-93e3-7bfbb3b1d3c6",
+      "source_name": "토마토 케첩",
+      "representative_ingredient_id": "7e82e446-7c89-4a68-89fc-6121bcf5b4a0",
+      "representative_name": "케첩",
+      "nutrition_source_item_id": "02e62cdd-9ae2-4c02-931a-786e9c203b60",
+      "source_name_evidence": "토마토 케첩",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "f71ba9ca-3a3d-52bc-8d15-d851cdd3a12d",
+      "source_name": "겨자 페이스트",
+      "representative_ingredient_id": "498a9166-aa75-43be-a721-8f012fb3724f",
+      "representative_name": "연겨자",
+      "nutrition_source_item_id": "b07c4181-dd61-47a4-84ff-bdc018262cff",
+      "source_name_evidence": "겨자 페이스트",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "d4cb7dcf-78ba-40c4-bdb4-8920f38c5502",
+      "source_name": "닭고기 가슴",
+      "representative_ingredient_id": "633ae22e-00f6-435c-8d05-b2d6e0842db9",
+      "representative_name": "닭가슴살",
+      "nutrition_source_item_id": "43030d80-210b-4f98-8ccb-88b4279aa04b",
+      "source_name_evidence": "닭고기, 가슴, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "d7aad4e2-4fe2-417f-9ba1-87bc34b2a425",
+      "source_name": "마늘종 꽃줄기",
+      "representative_ingredient_id": "5e148c02-c0a3-5f02-9534-4203fd5c5e3f",
+      "representative_name": "마늘종",
+      "nutrition_source_item_id": "73d6bfa7-350d-46f0-bfd0-7499a607f82a",
+      "source_name_evidence": "마늘종, 꽃줄기, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "e64a46b6-76f3-4561-a4b0-5e335c525cf0",
+      "source_name": "크래커 과자",
+      "representative_ingredient_id": "029a7140-6386-551d-bfdb-351bdcdfc5f4",
+      "representative_name": "크래커",
+      "nutrition_source_item_id": "b709a91c-eef7-4e0b-ba27-48642215113e",
+      "source_name_evidence": "과자, 크래커",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "0b7a6707-f41b-43d4-a3e4-08952d55c538",
+      "source_name": "닭발 닭 부산물",
+      "representative_ingredient_id": "cf803738-d45e-5f96-87e8-08d808a2035c",
+      "representative_name": "닭발",
+      "nutrition_source_item_id": "44d13168-cd2b-473b-8034-30091d8d2cfc",
+      "source_name_evidence": "닭 부산물, 닭발, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "0e45a421-1b8c-4386-b941-2847b842a900",
+      "source_name": "머핀 빵",
+      "representative_ingredient_id": "dfaa3ed8-cf79-5529-89d8-58643c3c2c07",
+      "representative_name": "머핀",
+      "nutrition_source_item_id": "5db5dad8-b7a3-4dcd-a37f-e3a4d6bc9923",
+      "source_name_evidence": "빵, 머핀",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "b7b6c809-9c1d-460c-90cb-428ae9790924",
+      "source_name": "슈가파우더",
+      "representative_ingredient_id": "1ea9eef9-0535-4607-9730-d996ae232196",
+      "representative_name": "가루 설탕",
+      "nutrition_source_item_id": "5b218a99-c79d-4f78-82c5-ae33ad141d21",
+      "source_name_evidence": "설탕, 가루",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "2229f813-58d5-430f-9f9c-edf021427f6b",
+      "source_name": "닭고기 날개",
+      "representative_ingredient_id": "0bffa490-9100-5e8a-99ac-6f2a9430ee67",
+      "representative_name": "닭날개",
+      "nutrition_source_item_id": "38697490-34ca-4f70-a542-a03c7c82a55a",
+      "source_name_evidence": "닭고기, 날개, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "30becbce-d263-42c7-94c9-a33066e24994",
+      "source_name": "시럽 단풍나무",
+      "representative_ingredient_id": "9ec88374-b398-45b2-bb81-ea0ad8e3ebbc",
+      "representative_name": "메이플시럽",
+      "nutrition_source_item_id": "1e9812d2-e20a-4f8f-857f-e6df62345ce2",
+      "source_name_evidence": "시럽, 단풍나무",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "5877ae00-8db4-4103-bc70-7ae7ef8b46f6",
+      "source_name": "코울슬로 양배추 샐러드",
+      "representative_ingredient_id": "d09f959a-6406-56a0-b558-647304547758",
+      "representative_name": "코울슬로",
+      "nutrition_source_item_id": "27bc87f1-084c-4021-acd7-cb6ced2836a0",
+      "source_name_evidence": "양배추 샐러드, 코울슬로",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "5b496afe-56e7-4cdf-b577-f182b61908cc",
+      "source_name": "말린 무말랭이",
+      "representative_ingredient_id": "46336984-96e8-5903-bedc-21b307f17602",
+      "representative_name": "무말랭이",
+      "nutrition_source_item_id": "44bd5381-2be1-4c06-bc8f-c282f83cc1bc",
+      "source_name_evidence": "무말랭이, 말린것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "704df4cf-78f0-4df5-95fd-af4e9a84b98b",
+      "source_name": "황도 복숭아",
+      "representative_ingredient_id": "3a2d919c-7f9d-545f-9f3d-659ae35e240d",
+      "representative_name": "황도",
+      "nutrition_source_item_id": "c1aacc9c-d32c-48ff-bb59-a22554fa3d7f",
+      "source_name_evidence": "복숭아, 황도, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "c11fa183-634a-403b-8cdb-9bcc372b5e6f",
+      "source_name": "붉은 양파",
+      "representative_ingredient_id": "b868d0a9-88c1-4c82-9595-796cf8076303",
+      "representative_name": "적양파",
+      "nutrition_source_item_id": "06737496-7f5d-42e7-9b66-feb9fa44e6fb",
+      "source_name_evidence": "양파, 적색, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "c788c2ef-8e6e-4448-a6bc-d57324d2879e",
+      "source_name": "유부 두부",
+      "representative_ingredient_id": "2e89002d-6a26-5161-ba52-19094d1c8f3d",
+      "representative_name": "유부",
+      "nutrition_source_item_id": "0476f7cd-fb96-412c-9383-69656fe0e93c",
+      "source_name_evidence": "두부, 유부",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "8b9eec49-1113-4e4f-9983-35110675782b",
+      "source_name": "토란대 줄기",
+      "representative_ingredient_id": "4ce2f05d-fde7-525c-a257-ddefc4a730df",
+      "representative_name": "토란대",
+      "nutrition_source_item_id": "6a6520a7-8ccc-4621-b63b-3e562c503ecf",
+      "source_name_evidence": "토란대, 줄기, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    },
+    {
+      "source_ingredient_id": "3418723f-d527-4b0f-8bda-86623248a9e2",
+      "source_name": "알배추",
+      "representative_ingredient_id": "c84a4656-448f-55f2-bd70-cf0068796436",
+      "representative_name": "알배기",
+      "nutrition_source_item_id": "bd7c8ae2-b773-4079-a063-418d7ef8c402",
+      "source_name_evidence": "배추, 알배기, 생것",
+      "reason": "식품·상태와 승인 원자료가 같은 미사용 중복. 영양 이력을 보존하고 대표 재료 별칭으로 선택 통합 예정."
+    }
+  ],
+  "used_candidate_holds": [
+    {
+      "id": "d3c7b0db-5e69-4ebb-8454-d930584d6075",
+      "name": "데친 가시오갈피 순",
+      "action": "retire_candidate",
+      "reason": "약용·건강식품 중심 항목으로 사용자가 선택한 집밥·일상 베이킹 중심 기본검색 범위 정리 후보. 실사용/역사 참조 pantry_items.ingredient_id=1: 삭제 불가. 기존 기록의 상세조회는 보존하고 신규선택 제외 여부를 따로 검토. 영양 연결 1개가 있어 DELETE_NOT_ALLOWED; 물리삭제하지 않고 기본검색 신규선택에서 숨기는 후속 정책 대상. 현재 원자료: 가시오갈피, 순, 데친것. 기존 검토표와 현재 재조회 대조 완료."
+    }
+  ],
+  "duplicate_holds": [
+    {
+      "names": [
+        "국간장",
+        "재래간장"
+      ],
+      "reason": "소스 동일만으로 종류/형태 의미를 합치지 않음"
+    },
+    {
+      "names": [
+        "돼지고기 삼겹살",
+        "삼겹살"
+      ],
+      "reason": "양쪽에 사용·내용 참조가 있어 단순 선택 제외 보류"
+    },
+    {
+      "names": [
+        "황태",
+        "황태채"
+      ],
+      "reason": "소스 동일만으로 종류/형태 의미를 합치지 않음"
+    },
+    {
+      "names": [
+        "쪽파",
+        "쪽파 파"
+      ],
+      "reason": "양쪽에 사용·내용 참조가 있어 단순 선택 제외 보류"
+    },
+    {
+      "names": [
+        "말린 파슬리",
+        "파슬리 가루"
+      ],
+      "reason": "소스 동일만으로 종류/형태 의미를 합치지 않음"
+    }
+  ],
+  "normalization_aliases_before_release": [
+    {
+      "ingredient_id": "34a6847d-8d9d-4847-993f-c55113ab4da9",
+      "canonical_name": "말린 토란대 (데친 것)",
+      "alias": "말린 뒤 데친 토란대 줄기",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "5c61578f-aab6-490e-9da0-811c4e8e6d97",
+      "canonical_name": "말린 강낭콩 (삶은 것)",
+      "alias": "말린 뒤 삶은 강낭콩",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "b13ef32c-4d24-4851-86dd-b78f522278b5",
+      "canonical_name": "말린 야생 고비 (삶은 것)",
+      "alias": "말린 뒤 삶은 고비 야생",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "84f6a9cf-c943-45f0-88d8-1f752eca5575",
+      "canonical_name": "마카로니 건면 (삶은 것)",
+      "alias": "말린 뒤 삶은 마카로니",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "ac009277-2970-40a7-90fd-e096f6a389bc",
+      "canonical_name": "메밀국수 건면 (삶은 것)",
+      "alias": "말린 뒤 삶은 메밀 국수",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "b0e4de5d-efb8-47a7-a0f9-c94664635c0c",
+      "canonical_name": "멥쌀국수 건면 (삶은 것)",
+      "alias": "말린 뒤 삶은 멥쌀 국수",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "ce736de8-0c13-4491-afd6-fad17e6185a7",
+      "canonical_name": "말린 병아리콩 (삶은 것)",
+      "alias": "말린 뒤 삶은 병아리콩",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "10e06724-5370-46d6-b12d-8032ab791c78",
+      "canonical_name": "말린 궁채 (삶은 것)",
+      "alias": "말린 뒤 삶은 상추 줄기상추 줄기",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "5f03e3d7-7068-446f-a903-6a0edc2747f4",
+      "canonical_name": "중면 건면 (삶은 것)",
+      "alias": "말린 뒤 삶은 소면 중면",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "c4545ee1-34b6-40c0-8fdb-8e42be8e000e",
+      "canonical_name": "에그누들 건면 (삶은 것)",
+      "alias": "말린 뒤 삶은 에그누들",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "bb1754c9-0ff4-4d29-aaa9-049ebf5436a6",
+      "canonical_name": "말린 완두 (삶은 것)",
+      "alias": "말린 뒤 삶은 완두",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "404a70c1-db36-4791-9a77-ea71e2654d16",
+      "canonical_name": "말린 참취 (삶은 것)",
+      "alias": "말린 뒤 삶은 취나물",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "c12979c9-850a-43f4-8cc6-3faff6139733",
+      "canonical_name": "칼국수 건면 (삶은 것)",
+      "alias": "말린 뒤 삶은 칼국수면",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "65944e20-a783-4210-ab8e-3238d45f6818",
+      "canonical_name": "스파게티 건면 (삶은 것)",
+      "alias": "말린 뒤 삶은 파스타면",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "b629e4e5-7ed2-449e-acb4-1e4c6648cc7a",
+      "canonical_name": "말린 표고버섯 (배지재배, 삶은 것)",
+      "alias": "말린 뒤 삶은 표고버섯 배지재배",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "9c1aabcd-cbcf-45fd-abdd-ebc1359f491c",
+      "canonical_name": "말린 표고버섯 대 (배지재배, 삶은 것)",
+      "alias": "말린 뒤 삶은 표고버섯 배지재배 대",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "eeb752ee-19ec-4512-999f-cde36804ddf1",
+      "canonical_name": "말린 표고버섯 (참나무재배, 삶은 것)",
+      "alias": "말린 뒤 삶은 표고버섯 참나무재배",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "64290f73-6357-4dd0-bc94-05eb438c4992",
+      "canonical_name": "삶아 말린 참취 (데친 것)",
+      "alias": "삶아 말린 뒤 데친 취나물",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "3d869cb0-9ad6-42b4-b872-bbff4f39bc4b",
+      "canonical_name": "삶아 말린 고구마 줄기 (삶은 것)",
+      "alias": "삶아 말린 뒤 삶은 고구마 줄기",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "03a156f5-8b03-44aa-aabe-e7fbff7a4aec",
+      "canonical_name": "삶아 말린 고구마 줄기 (껍질 포함, 삶은 것)",
+      "alias": "삶아 말린 뒤 삶은 고구마 줄기 껍질 포함",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "99cce9fe-f43d-4b36-8348-7b2b2e97763f",
+      "canonical_name": "삶아 말린 고춧잎 (삶은 것)",
+      "alias": "삶아 말린 뒤 삶은 고춧잎",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "89fed45a-5ae1-47d2-87b9-1d1cb621afab",
+      "canonical_name": "삶아 말린 뽕잎 (삶은 것)",
+      "alias": "삶아 말린 뒤 삶은 뽕잎",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "20f940b2-1d1b-4278-91ae-e6110541cd02",
+      "canonical_name": "삶아 말린 참죽나물 순 (삶은 것)",
+      "alias": "삶아 말린 뒤 삶은 참죽나물 순",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "ce85144b-63b6-4894-a1fd-afb86134620c",
+      "canonical_name": "삶아 말린 미역취 (삶은 것)",
+      "alias": "삶아 말린 뒤 삶은 취나물",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "32e309a1-62fd-4646-92ae-92857a445048",
+      "canonical_name": "메밀국수 생면 (삶은 것)",
+      "alias": "생것을 삶은 메밀 국수",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "40bbd6c0-f0bb-4bc2-adde-09aad4984255",
+      "canonical_name": "우동 생면 (삶은 것)",
+      "alias": "생것을 삶은 우동면",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "1752ec08-3bac-41b5-9a7b-e8a29a044979",
+      "canonical_name": "중식 생면 (삶은 것)",
+      "alias": "생것을 삶은 중식면",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    },
+    {
+      "ingredient_id": "59c087ef-4cb3-4875-a03a-be2cdd590f53",
+      "canonical_name": "칼국수 생면 (삶은 것)",
+      "alias": "생것을 삶은 칼국수면",
+      "reason": "새 원자료 이름 정규화 출력도 현재 교정된 같은 재료로 찾도록 하는 별칭"
+    }
+  ],
+  "release_requirements": [
+    "사용/JSON참조 재확인",
+    "대표 재료로 원래 이름·정확한 별칭 연결",
+    "정규화 표현 별칭 연결",
+    "TS 및 DB 선택 정책을 웹과 같은 묶음으로 적용"
+  ]
+}

@@ -443,7 +443,8 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
-    if (recipeResult.data.visibility === "public") {
+    // Picking a recipe is a read-only preview, not a detail-page visit.
+    if (recipeResult.data.visibility === "public" && new URL(request.url).searchParams.get("view") !== "preview") {
       try {
         const viewClient = createRecipeViewInternalClient();
         const result = await viewClient?.increment(id);

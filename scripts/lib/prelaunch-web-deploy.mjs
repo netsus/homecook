@@ -21,6 +21,7 @@ export function classifyPrelaunchScope(files, before, after) {
     "scripts/lib/ingredient-conversion-domain.mjs",
     "scripts/reconcile-recipe-nutrition-v2-data.mjs",
     "scripts/run-recipe-nutrition-postgres-integration.mjs",
+    "scripts/run-feedback-batch-tests.mjs",
     "scripts/sql/reconcile-recipe-nutrition-v2-data-20260915.sql",
     "scripts/validate-account-session-generation-inventory.mjs",
     "scripts/youtube-real-app-route-smoke.mjs",
@@ -52,15 +53,16 @@ export function assertFrontendScope(files, before, after) {
 }
 
 export function parsePrelaunchOptions(args) {
-  /** @type {{ref: string, refOption: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string}} */
+  /** @type {{ref: string, refOption: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string, testScript?: string, alreadyAppliedDb?: boolean, skipAutomatedTests?: boolean, reviewedRepairReadiness?: boolean, reviewedBetaReadiness?: boolean, reviewedFeedbackReadiness?: boolean}} */
   const options = { ref: "origin/master", refOption: "--ref" };
-  const names = { "--env-file": "envFile", "--db-config": "dbConfig", "--db-baseline": "dbBaseline", "--verify-script": "verifyScript" };
+  const names = { "--env-file": "envFile", "--db-config": "dbConfig", "--db-baseline": "dbBaseline", "--verify-script": "verifyScript", "--test-script": "testScript" };
   const seen = new Set();
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    if (key === "--db-compatible") {
-      if (options.dbCompatible) throw new DeploymentError("--db-compatible 옵션을 중복 지정했습니다.");
-      options.dbCompatible = true;
+    const flag = { "--db-compatible": "dbCompatible", "--already-applied-db": "alreadyAppliedDb", "--skip-automated-tests": "skipAutomatedTests", "--reviewed-repair-readiness": "reviewedRepairReadiness", "--reviewed-beta-readiness": "reviewedBetaReadiness", "--reviewed-feedback-readiness": "reviewedFeedbackReadiness" }[key];
+    if (flag) {
+      if (options[flag]) throw new DeploymentError("중복된 배포 옵션입니다.");
+      options[flag] = true;
       index -= 1;
       continue;
     }
@@ -72,12 +74,23 @@ export function parsePrelaunchOptions(args) {
     options[identity] = value;
     if (isRef) options.refOption = key;
   }
-  if ((options.dbBaseline || options.dbCompatible) && !options.dbConfig) throw new DeploymentError("DB 추가 옵션에는 --db-config가 함께 필요합니다.");
+  if (options.alreadyAppliedDb && options.dbBaseline) throw new DeploymentError("이미 적용된 DB 확인에는 baseline을 새로 만들 수 없습니다.");
+  if (options.reviewedRepairReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 복구 배포에는 --already-applied-db가 필요합니다.");
+  if (options.reviewedBetaReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 베타 배포에는 --already-applied-db가 필요합니다.");
+  if (options.reviewedFeedbackReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 피드백 배포에는 --already-applied-db가 필요합니다.");
+  if ([options.reviewedBetaReadiness, options.reviewedRepairReadiness, options.reviewedFeedbackReadiness].filter(Boolean).length > 1) throw new DeploymentError("서로 다른 한정 배포 검증을 함께 지정할 수 없습니다.");
+  if (options.reviewedFeedbackReadiness && (options.refOption !== "--reviewed-ref" || !/^[a-f0-9]{40}$/u.test(options.ref))) throw new DeploymentError("검토한 피드백 배포에는 --reviewed-ref의 정확한 SHA가 필요합니다.");
+  if (options.skipAutomatedTests && (options.testScript || options.verifyScript)) throw new DeploymentError("테스트 생략과 검증 스크립트는 함께 지정할 수 없습니다.");
+  if (options.testScript && !/^test(?::[a-z0-9:_-]+)?$/u.test(options.testScript)) throw new DeploymentError("--test-script에는 package.json의 test 명령 이름이 필요합니다.");
+  if ((options.dbBaseline || options.dbCompatible || options.alreadyAppliedDb) && !options.dbConfig) throw new DeploymentError("DB 추가 옵션에는 --db-config가 함께 필요합니다.");
   return options;
 }
 
-export function prelaunchVerificationScripts(scope, manifest, verifyScript) {
-  const scripts = [...new Set([...(scope.api.length ? ["test:product"] : []), ...(verifyScript ? [verifyScript] : [])])];
+export function prelaunchVerificationScripts(scope, manifest, verifyScript, skipAutomatedTests = false, testScript) {
+  if (skipAutomatedTests && (verifyScript || testScript)) throw new DeploymentError("테스트 생략과 검증 스크립트는 함께 지정할 수 없습니다.");
+  if (testScript && !/^test(?::[a-z0-9:_-]+)?$/u.test(testScript)) throw new DeploymentError("기본 검증에는 test 명령 이름이 필요합니다.");
+  const primary = testScript ?? (scope.api.length && !skipAutomatedTests ? "test:product" : undefined);
+  const scripts = [...new Set([...(primary ? [primary] : []), ...(verifyScript ? [verifyScript] : [])])];
   for (const script of scripts) {
     if (!/^(?:test(?::[a-z0-9:_-]+)?|verify:[a-z0-9:_-]+|marketing:(?:preview|production):[a-z0-9:_-]+)$/u.test(script)
       || typeof manifest.scripts?.[script] !== "string" || !manifest.scripts[script].trim()) throw new DeploymentError(`대상 package.json에 유효한 검증 명령이 필요합니다: ${script}`);

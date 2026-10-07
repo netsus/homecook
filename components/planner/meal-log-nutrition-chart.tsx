@@ -1,45 +1,22 @@
 import React from "react";
-
+import { formatMealLogNumber, MEAL_LOG_MACROS, mealLogMacroShares } from "@/lib/planner/meal-log-nutrition-presentation";
 import type { MealLogNutritionEvidence } from "@/types/meal-log";
 
-const format = (value: number) => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value);
+export function MealLogMacroBar({ nutrition, thin = false }: { nutrition: MealLogNutritionEvidence; thin?: boolean }) {
+  const shares = mealLogMacroShares(nutrition);
+  if (!shares) return nutrition.calculation_status !== "complete" ? <p className="text-xs text-[var(--text-2)]">일부 영양 정보 없음</p> : null;
+  return <div aria-label={MEAL_LOG_MACROS.map(macro => `${macro.label} ${formatMealLogNumber(nutrition[macro.key])}g`).join(" · ")} role="img" className="flex w-full overflow-hidden rounded-full" style={{ height: thin ? 4 : 12 }}>{MEAL_LOG_MACROS.map((macro, index) => <span aria-hidden="true" key={macro.key} style={{ background: macro.color, width: `${shares[index] * 100}%` }} />)}</div>;
+}
 
-/** Visualize the server's nutrient totals; never estimate missing nutrition. */
-export function MealLogNutritionChart({ nutrition }: { nutrition: MealLogNutritionEvidence }) {
-  const macros = [
-    { label: "탄수화물", value: nutrition.carbohydrate_g, factor: 4, color: "var(--nutrition-carbohydrate)" },
-    { label: "단백질", value: nutrition.protein_g, factor: 4, color: "var(--nutrition-protein)" },
-    { label: "지방", value: nutrition.fat_g, factor: 9, color: "var(--nutrition-fat)" },
-  ];
-  const available = nutrition.calculation_status !== "unavailable"
-    && macros.every((macro) => macro.value !== null);
-  const energy = available ? macros.reduce((sum, macro) => sum + macro.value! * macro.factor, 0) : 0;
-  const calorieLabel = nutrition.calories_kcal === null ? "정보 준비 중" : `${format(nutrition.calories_kcal)} kcal`;
-  let offset = 0;
-
-  return (
-    <div>
-      <div className="flex items-center gap-4 sm:gap-6">
-        <div className="w-28 shrink-0 text-center sm:w-32">
-          {available && energy > 0 ? (
-            <svg aria-label={`${nutrition.calculation_status === "partial" ? "확인된 영양 기준 · " : ""}${macros.map((macro) => `${macro.label} ${format(macro.value!)}g`).join(" · ")} · 탄단지 열량 비율 · 총 칼로리 ${calorieLabel}`} className="h-28 w-28 sm:h-32 sm:w-32" role="img" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="49" fill="none" stroke="var(--nutrition-chart-track)" strokeWidth="10" />
-              {macros.map((macro) => {
-                const share = macro.value! * macro.factor / energy * 100;
-                const start = offset;
-                offset += share;
-                return <circle key={macro.label} cx="60" cy="60" fill="none" pathLength="100" r="49" stroke={macro.color} strokeDasharray={`${Math.max(0, share - 1)} ${100 - Math.max(0, share - 1)}`} strokeDashoffset={-start} strokeWidth="10" transform="rotate(-90 60 60)" />;
-              })}
-              <text x="60" y="51" textAnchor="middle" fontSize="9" fill="var(--ui-slate-500)">{nutrition.calculation_status === "partial" ? "확인된 열량" : "총 섭취 열량"}</text>
-              <text x="60" y="70" textAnchor="middle" fontSize="13" fontWeight="800" fill="var(--brand-primary-text)">{calorieLabel}</text>
-            </svg>
-          ) : <div className="flex min-h-28 flex-col justify-center rounded-full bg-[var(--ui-sky-50)] px-2"><span className="text-[11px] text-[var(--ui-slate-500)]">총 섭취 열량</span><p className="mt-1 text-base font-extrabold text-[var(--brand-primary-text)]">{calorieLabel}</p></div>}
-        </div>
-        <dl className="min-w-0 flex-1 space-y-3 text-xs sm:text-sm lg:grid lg:grid-cols-3 lg:divide-x lg:divide-[var(--ui-slate-100)] lg:space-y-0">
-          {macros.map((macro) => <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 lg:flex-col lg:justify-center lg:gap-2 lg:px-2" key={macro.label}><dt className="flex items-center gap-2 text-[var(--ui-slate-600)]"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />{macro.label}</dt><dd className="font-extrabold tabular-nums text-[var(--brand-primary-text)] lg:text-2xl">{macro.value === null ? <span className="text-xs font-medium">정보 준비 중</span> : `${format(macro.value)}g`}</dd></div>)}
-        </dl>
-      </div>
-      {!available || energy <= 0 ? <p className="mt-3 text-xs text-[var(--ui-slate-500)]">영양 정보가 준비되면 그래프를 보여드릴게요.</p> : null}
-    </div>
-  );
+/** Compact totals; comparison charts belong in the day-detail view. */
+export function MealLogNutritionChart({ nutrition, compact = false, hideCalories = false, summaryLabels = false }: { nutrition: MealLogNutritionEvidence; compact?: boolean; hideCalories?: boolean; summaryLabels?: boolean }) {
+  return <div>
+    {!hideCalories ? <p className={`${compact ? "text-2xl" : "text-3xl"} font-semibold tabular-nums`}>{formatMealLogNumber(nutrition.calories_kcal)}{nutrition.calories_kcal !== null ? <span className="ml-1 text-base font-normal">kcal</span> : null}</p> : null}
+    {!compact ? <div className="mt-4"><MealLogMacroBar nutrition={nutrition} /></div> : null}
+    <dl className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">{MEAL_LOG_MACROS.map(macro => <div key={macro.key}>
+      <dt className="text-[var(--text-2)]">{summaryLabels ? <><span aria-hidden="true" className="mr-1.5 inline-block size-2 rounded-full" style={{ background: macro.color }} /><span aria-label={macro.label}>{macro.short}</span></> : macro.label}</dt>
+      <dd className={`mt-1 font-normal tabular-nums ${summaryLabels ? "text-lg text-[var(--ui-slate-800)]" : ""}`}>{formatMealLogNumber(nutrition[macro.key])}{nutrition[macro.key] !== null ? <span className={summaryLabels ? "ml-0.5 text-sm text-[var(--text-2)]" : undefined}>g</span> : null}</dd>
+    </div>)}</dl>
+    {nutrition.calculation_status !== "complete" ? <p className="mt-3 text-xs text-[var(--text-2)]">확인된 정보 기준</p> : null}
+  </div>;
 }

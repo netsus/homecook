@@ -11,10 +11,9 @@ import {
   useGlobalToastPresentationGrant,
 } from "@/components/shared/global-toast-presentation-slot";
 import { YoutubeExtractionProgressCard } from "@/components/youtube-extraction/youtube-extraction-progress-card";
-import {
-  HOMECOOK_APP_ACTION_NOTIFICATION_EVENT,
-  type AppActionNotificationEventDetail,
-} from "@/lib/app-action-notifications";
+import { useActionNotifications } from "@/components/notifications/use-action-notifications";
+import { useActionNotificationStore } from "@/stores/action-notification-store";
+import type { ActionNotification } from "@/types/action-notification";
 import {
   enqueueYoutubeExtraction,
   classifyYoutubeExtractionPollError,
@@ -138,10 +137,11 @@ export function YoutubeExtractionNotificationTrigger({
   const authenticated = useYoutubeExtractionStore((state) => state.authenticated);
   const items = useYoutubeExtractionStore((state) => state.items);
   const setOpen = useYoutubeExtractionStore((state) => state.setOpen);
-  const unseenCount = items.filter((item) => item.seen_at === null).length;
+  const actionUnreadCount = useActionNotificationStore((state) => state.unreadCount);
+  const unseenCount = items.filter((item) => item.seen_at === null).length + actionUnreadCount;
   const label = unseenCount > 0
-    ? `YouTube 추출 알림 ${unseenCount}개`
-    : "YouTube 추출 알림 없음";
+    ? `알림 ${unseenCount}개`
+    : "알림 없음";
 
   if (!authenticated || (pathname !== "/" && pathname !== "/planner")) return null;
 
@@ -286,7 +286,7 @@ function GrowthNotificationRow({ item }: { item: UserGamificationNotificationDat
   );
 }
 
-function AppActionNotificationRow({ item }: { item: AppActionNotificationEventDetail }) {
+function AppActionNotificationRow({ item, onNavigate }: { item: ActionNotification; onNavigate: () => void }) {
   return (
     <article
       aria-label={item.title}
@@ -302,17 +302,17 @@ function AppActionNotificationRow({ item }: { item: AppActionNotificationEventDe
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="break-keep text-sm font-bold text-[var(--foreground)] [overflow-wrap:anywhere]">
-            {item.title}
+            <Link href={item.target_path} prefetch={false} onClick={onNavigate}>{item.title}</Link>
           </h3>
           <p className="mt-1 break-keep text-sm leading-5 text-[var(--muted)] [overflow-wrap:anywhere]">
             {item.message}
           </p>
           <time
-            aria-label={`알림 시각 ${formatCompletedAt(item.createdAt)}`}
+            aria-label={`알림 시각 ${formatCompletedAt(item.created_at)}`}
             className="mt-1 block text-xs text-[var(--muted)]"
-            dateTime={item.createdAt}
+            dateTime={item.created_at}
           >
-            {formatCompletedAt(item.createdAt)}
+            {formatCompletedAt(item.created_at)}
           </time>
         </div>
       </div>
@@ -365,7 +365,6 @@ function YoutubeExtractionNotificationRuntime({
   const [growthData, setGrowthData] = useState<UserGamificationData | null>(null);
   const [growthLoading, setGrowthLoading] = useState(false);
   const [growthLoadError, setGrowthLoadError] = useState(false);
-  const [appActionItems, setAppActionItems] = useState<AppActionNotificationEventDetail[]>([]);
   const [registrationAckIds, setRegistrationAckIds] = useState<string[]>(
     () => readPendingYoutubeExtractionRegistrationAcks(),
   );
@@ -388,7 +387,16 @@ function YoutubeExtractionNotificationRuntime({
     () => selectGrowthNotifications(growthData, view),
     [growthData, view],
   );
-  const displayedAppActionItems = view === "archive" ? [] : appActionItems;
+  const clearIdentity = useCallback(() => {
+    setItems([]); setArchiveItems([]); setActiveJobs([]); setGrowthData(null);
+    setUnseenNextCursor(null); setArchiveNextCursor(null);
+    setOpen(false); setAuthenticatedLocal(false); setAuthenticated(false);
+    deliveredRef.current.clear(); retainedToastDeliveryKeysRef.current.clear();
+  }, [setItems, setOpen, setAuthenticated]);
+  const actionFeed = useActionNotifications({ authenticated, open,
+    view: view === "archive" ? "archive" : "unseen", listRef, onIdentityChange: clearIdentity });
+  const { epoch: identityEpoch, epochRef: identityEpochRef } = actionFeed;
+  const displayedAppActionItems = actionFeed.items;
   const toastCandidates = useMemo(
     () => items
       .filter((item) => item.seen_at === null
@@ -426,9 +434,10 @@ function YoutubeExtractionNotificationRuntime({
       return;
     }
     let current = true;
+    const identity = identityEpochRef.current;
     void fetchYoutubeExtractionNotifications("unseen-completed")
       .then((result) => {
-        if (!current) return;
+        if (!current || identity !== identityEpochRef.current) return;
         if (!result.success || !result.data) {
           if (classifyYoutubeExtractionPollError(result.error?.code) === "auth") {
             setAuthenticatedLocal(false);
@@ -446,25 +455,9 @@ function YoutubeExtractionNotificationRuntime({
     return () => {
       current = false;
     };
-  }, [resolveAuthenticatedOnClient, setUnseenItems]);
+  }, [resolveAuthenticatedOnClient, setUnseenItems, identityEpoch, identityEpochRef]);
 
   useEffect(() => setAuthenticated(authenticated), [authenticated, setAuthenticated]);
-
-  useEffect(() => {
-    const onAppActionNotification = (event: Event) => {
-      const detail = (event as CustomEvent<AppActionNotificationEventDetail>).detail;
-      if (
-        !detail ||
-        typeof detail.id !== "string" ||
-        typeof detail.title !== "string" ||
-        typeof detail.message !== "string" ||
-        typeof detail.createdAt !== "string"
-      ) return;
-      setAppActionItems((current) => [detail, ...current.filter((item) => item.id !== detail.id)].slice(0, 8));
-    };
-    window.addEventListener(HOMECOOK_APP_ACTION_NOTIFICATION_EVENT, onAppActionNotification);
-    return () => window.removeEventListener(HOMECOOK_APP_ACTION_NOTIFICATION_EVENT, onAppActionNotification);
-  }, []);
 
   const refresh = useCallback(async (
     nextView: YoutubeExtractionNotificationView,
@@ -475,7 +468,9 @@ function YoutubeExtractionNotificationRuntime({
       setLoading(true);
       setLoadError(null);
     }
+    const identity = identityEpochRef.current;
     const result = await fetchYoutubeExtractionNotifications(nextView);
+    if (identity !== identityEpochRef.current) return;
     if (!options.background) setLoading(false);
     if (!result.success || !result.data) {
       if (classifyYoutubeExtractionPollError(result.error?.code) === "auth") {
@@ -499,7 +494,7 @@ function YoutubeExtractionNotificationRuntime({
       setUnseenItems(result.data.items);
       setUnseenNextCursor(result.data.next_cursor);
     }
-  }, [authenticated, setItems, setUnseenItems]);
+  }, [authenticated, setItems, setUnseenItems, identityEpochRef]);
 
   useEffect(() => {
     void refresh("unseen-completed");
@@ -650,7 +645,7 @@ function YoutubeExtractionNotificationRuntime({
     return () => {
       current = false;
     };
-  }, [authenticated, open]);
+  }, [authenticated, open, identityEpoch]);
 
   useEffect(() => {
     if (!open) return;
@@ -907,7 +902,9 @@ function YoutubeExtractionNotificationRuntime({
     const scrollTop = list?.scrollTop ?? 0;
     setLoadingMore(true);
     setLoadError(null);
+    const identity = identityEpochRef.current;
     const result = await fetchYoutubeExtractionNotifications(view, { cursor: displayedNextCursor });
+    if (identity !== identityEpochRef.current) return;
     setLoadingMore(false);
     if (!result.success || !result.data) {
       setLoadError(result.error?.message ?? "알림을 더 불러오지 못했어요.");
@@ -925,7 +922,7 @@ function YoutubeExtractionNotificationRuntime({
       list.scrollTop = scrollTop;
       list.focus({ preventScroll: true });
     }
-  }, [displayedNextCursor, items, loadingMore, setUnseenItems, view]);
+  }, [displayedNextCursor, items, loadingMore, setUnseenItems, view, identityEpochRef]);
 
   if (authExpired) {
     const returnPath = typeof window === "undefined"
@@ -1016,7 +1013,7 @@ function YoutubeExtractionNotificationRuntime({
               <h2 className="text-lg font-bold" id="youtube-extraction-notifications-title">알림</h2>
               <button aria-label="알림 닫기" className="min-h-11 min-w-11 rounded-full text-xl" onClick={() => setOpen(false)} ref={closeButtonRef} type="button">×</button>
             </div>
-            <p className="shrink-0 px-4 pt-3 text-sm text-[var(--muted)]">진행 중 {activeJobs.length} · 새 소식 {items.filter((item) => item.seen_at === null).length + displayedGrowthItems.length + displayedAppActionItems.length}</p>
+            <p className="shrink-0 px-4 pt-3 text-sm text-[var(--muted)]">진행 중 {activeJobs.length} · 새 소식 {items.filter((item) => item.seen_at === null).length + (growthData?.notifications.unseen?.length ?? 0) + actionFeed.unreadCount}</p>
             <div aria-label="알림 보기" className="grid shrink-0 grid-cols-2 gap-1 border-b border-[var(--wave1-border)] p-2" role="tablist">
               <button aria-controls="youtube-extraction-unseen-panel" aria-selected={view === "unseen-completed"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" id="youtube-extraction-unseen-tab" onClick={() => handleView("unseen-completed")} onKeyDown={handleTabKeyDown} ref={unseenTabRef} role="tab" tabIndex={view === "unseen-completed" ? 0 : -1} type="button">새 알림</button>
               <button aria-controls="youtube-extraction-archive-panel" aria-selected={view === "archive"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" id="youtube-extraction-archive-tab" onClick={() => handleView("archive")} onKeyDown={handleTabKeyDown} ref={archiveTabRef} role="tab" tabIndex={view === "archive" ? 0 : -1} type="button">지난 알림</button>
@@ -1042,19 +1039,23 @@ function YoutubeExtractionNotificationRuntime({
                   </Link>
                 </section>
               ) : null}
+              {actionFeed.loading ? <div aria-label="활동 알림 불러오는 중" className="my-4 h-20 animate-pulse rounded-xl bg-[var(--surface-fill)]" /> : null}
+              {actionFeed.error ? <div className="py-3" role="status">{actionFeed.error}<button className="min-h-11 px-3 font-bold" onClick={() => void actionFeed.refresh()} type="button">활동 알림 다시 불러오기</button></div> : null}
+              {actionFeed.seenError ? <button className="min-h-11 px-3 font-bold" onClick={actionFeed.retrySeen} type="button">읽음 상태 다시 저장</button> : null}
               {displayedAppActionItems.length > 0 ? (
                 <section aria-label="활동 알림" className="border-b border-[var(--wave1-border)] pb-2">
                   <h3 className="py-3 text-xs font-extrabold uppercase tracking-[0.08em] text-[var(--muted)]">활동 알림</h3>
-                  {displayedAppActionItems.map((item) => <AppActionNotificationRow item={item} key={item.id} />)}
+                  {displayedAppActionItems.map((item) => <AppActionNotificationRow item={item} key={item.id} onNavigate={() => setOpen(false)} />)}
+                  {actionFeed.hasMore ? <button className="my-3 min-h-11 w-full rounded-full border px-4 font-bold" disabled={actionFeed.loading} onClick={() => void actionFeed.loadMore()} type="button">활동 알림 더 보기</button> : null}
                 </section>
               ) : null}
               {loading ? <p aria-live="polite" className="py-8 text-center text-sm text-[var(--muted)]">알림을 불러오는 중이에요…</p> : null}
               {activeJobsError ? <p className="py-3 text-sm text-[var(--danger)]" role="status">{activeJobsError}</p> : null}
               {loadError ? <div className="py-8 text-center"><p role="status">{loadError}</p><button className="mt-3 min-h-11 rounded-full border px-4 font-bold" onClick={() => refresh(view)} type="button">다시 불러오기</button></div> : null}
               {!loading && !loadError && view === "unseen-completed" ? activeJobs.map((job) => <ActiveJobRow job={job} key={job.job_id} />) : null}
-              {!growthLoading && !loading && !loadError && !activeJobsError && displayedGrowthItems.length === 0 && displayedAppActionItems.length === 0 && displayedItems.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
+              {!actionFeed.loading && !actionFeed.error && !growthLoading && !loading && !loadError && !activeJobsError && displayedGrowthItems.length === 0 && displayedAppActionItems.length === 0 && displayedItems.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
                 <p className="py-12 text-center text-sm text-[var(--muted)]">
-                  {view === "archive" ? "완료된 추출 작업이 없어요." : "표시할 알림이 없어요."}
+                  {view === "archive" ? "지난 알림이 없어요." : "표시할 알림이 없어요."}
                 </p>
               ) : null}
               {!loading && !loadError ? displayedItems.map((item) => <NotificationRow item={item} key={item.job_id} onRetry={handleRetry} />) : null}

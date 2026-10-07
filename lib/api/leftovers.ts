@@ -1,3 +1,4 @@
+import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
@@ -98,6 +99,7 @@ export async function eatLeftover(
   }
 
   notifyGamificationSourceAction();
+  notifyActionNotificationsChanged();
   notifyCookedBatchChanged(leftoverId);
 
   return payload.data;
@@ -163,5 +165,6 @@ export async function uneatLeftover(
   }
 
   notifyCookedBatchChanged(leftoverId);
+  notifyActionNotificationsChanged();
   return payload.data;
 }

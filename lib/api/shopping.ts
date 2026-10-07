@@ -1,3 +1,4 @@
+import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiError, ApiResponse } from "@/types/api";
@@ -89,6 +90,7 @@ export async function createShoppingList(body: ShoppingListCreateBody) {
     body: JSON.stringify(body),
   });
   notifyGamificationSourceAction();
+  notifyActionNotificationsChanged();
   return data;
 }
 
@@ -128,7 +130,7 @@ export async function reorderShoppingListItems(listId: string, body: ShoppingLis
 }
 
 export async function completeShoppingList(listId: string, body?: ShoppingListCompleteBody) {
-  return requestShopping<ShoppingListCompleteData>(
+  const data = await requestShopping<ShoppingListCompleteData>(
     `/api/v1/shopping/lists/${listId}/complete`,
     body === undefined
       ? {
@@ -140,6 +142,8 @@ export async function completeShoppingList(listId: string, body?: ShoppingListCo
           body: JSON.stringify(body),
         },
   );
+  notifyActionNotificationsChanged();
+  return data;
 }
 
 export async function fetchShoppingShareText(listId: string) {

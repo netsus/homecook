@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "round": 1,
+  "date": "2026-10-05",
+  "review_mode": "read_only_static_wireframe_ux",
+  "design_ready": false,
+  "verdict": "changes_required",
+  "priority_counts": {
+    "P1": 2,
+    "P2": 3,
+    "P3": 0
+  },
+  "inspected_images": [
+    {
+      "id": "01-overviews",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/01-overviews.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "d4856ebeabb5e2eeae366663518488154e64c9924cf8542dd46ebc82bf1fa88e",
+      "understood_flow": "주간 날짜와 선택일, 음식/하루 영양 진입",
+      "health": "수정 필요"
+    },
+    {
+      "id": "02-plan-add",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/02-plan-add.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "482b38a76d902f14c5ac5219825824f85c6c423b4fbf11a1922f752579059c64",
+      "understood_flow": "끼니 추가 → 레시피 선택 → 계획 인분 → 저장",
+      "health": "기본 흐름 양호"
+    },
+    {
+      "id": "03-plan-details",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/03-plan-details.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "c835a3c60f732994e742a7ff43e1427eacf0be850fbcb647fb332169f886af59",
+      "understood_flow": "한 끼 목록 → 요리 상세 → 상태별 행동",
+      "health": "기본 흐름 양호, 진입 표시 보완"
+    },
+    {
+      "id": "04-food-selection",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/04-food-selection.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "2273372d2172fadc3a14bfda99a8dc21fc6b85ebd30ae83810dc092f71bd7f77",
+      "understood_flow": "최근/요리한 음식/제품·재료 → 선택",
+      "health": "기본 흐름 양호"
+    },
+    {
+      "id": "05-consumed-amount",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/05-consumed-amount.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "a04a11f3e76bb04d557690a09798a238edf0e21c35d44aa607ef11ce9e0e3bdc",
+      "understood_flow": "먹은 양 → 영양/잔량 확인 → 기록 저장",
+      "health": "막대 수정 필요, 기기 미검증"
+    },
+    {
+      "id": "06-daily-nutrition",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/06-daily-nutrition.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "05ccda601065db5502d56b3cca1b6665989016f662b36d89a1d3b3452293526b",
+      "understood_flow": "끼니 kcal → 영양소 g → 기여 음식",
+      "health": "열량 축 수정 필요"
+    },
+    {
+      "id": "07-record-details-edit",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/07-record-details-edit.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "2cdf0a26f647e46181b098c6282223c0cfc24b3454073f8058d329472659e752",
+      "understood_flow": "기록 상세 → 양 수정 → 저장",
+      "health": "막대 수정 필요"
+    },
+    {
+      "id": "08-delete-confirmations",
+      "path": "/Users/cwj/01_vibe_coding/homecook/docs/design/wireframes/20261005-planner-meal-log/08-delete-confirmations.png",
+      "inspected": true,
+      "inspection_tool": "view_image",
+      "sha256": "d1921de171d0cda233238bea5d2565a8b7d682c231d46dcbc156be9e28b52f2f",
+      "understood_flow": "대상 확인 → 취소/삭제 → 같은 날짜 복귀",
+      "health": "잔량 복원 안내 보완"
+    }
+  ],
+  "excluded_evidence": [
+    "all-wireframes-v1.png"
+  ],
+  "findings": [
+    {
+      "id": "WF-001",
+      "priority": "P1",
+      "status": "open",
+      "title": "같은 음식의 영양 막대가 화면마다 다르고 열량 축도 고르지 않다",
+      "screen_and_location": "01 오른쪽 점심 김치찌개 작은 막대, 05 양 입력 영양 막대, 07 왼쪽 상세/오른쪽 수정 막대, 06 왼쪽 kcal 축 끝부분.",
+      "user_scenario": "김치찌개 300g을 기록한 뒤 상세를 열고 250g으로 수정한다. 또는 하루 영양에서 어떤 끼니를 많이 먹었는지 비교한다.",
+      "observation": "05와 07 왼쪽은 모두 탄수화물 14g·단백질 23g·지방 18g·310kcal인데, 05에서는 노랑이 약 절반이고 07에서는 분홍과 노랑이 비슷하다. 07의 250g 수정 미리보기 역시 같은 음식의 구성비가 바뀐다. 06의 0→200→400→600은 거의 일정 간격이지만 600→650 구간은 200 구간의 약 1/4보다 눈에 띄게 넓다.",
+      "problem_and_reason": "막대가 실제 열량 구성비라는 확정 계약과 다르다. 양만 줄여도 영양 조성이 바뀐 것처럼 보이며, 눈금 폭이 다르면 실제 열량 비교도 왜곡한다. 예시 숫자라도 사용자 판단을 위한 차트는 숫자와 맞아야 한다.",
+      "minimum_fix": "이 예시에서 4/4/9 환산값은 56/92/162kcal, 합계 310kcal이므로 파랑/분홍/노랑을 **약 18.1%/29.7%/52.3%**로 통일한다. 동일 음식의 양만 바뀌면 구성비는 그대로 둔다. 06은 균일한 kcal 간격을 사용하며, 예를 들어 0/200/400/600/800으로 정리한다. 음식별 수치→끼니별 합→하루 합이 같은 예시 데이터에 연결되도록 한다.",
+      "resolution_criteria": "01·05·07의 동일 음식이 같은 구성비이고, 양 수정 시 막대 비율이 유지된다. 06의 숫자 차와 눈금 거리가 비례한다. 새 이미지에서 직접 확인한다.",
+      "confidence_note": "높음. 픽셀 단위 자동 계측 결과가 아니라 직접 본 도형과 명시 숫자의 비교다."
+    },
+    {
+      "id": "WF-002",
+      "priority": "P1",
+      "status": "open",
+      "title": "일부 계획이 있는 날의 빈 끼니에 추가할 입구가 없다",
+      "screen_and_location": "01 왼쪽 선택일 상세는 10월 5일 제목 바로 아래 점심·저녁만 표시. 위 주간 목록은 계획 없는 날에만 + 표시. 02의 날짜·끼니는 이미 정해진 `10월 5일 · 점심`이다.",
+      "user_scenario": "월요일 점심·저녁 계획이 있는 사용자가 월요일 아침을 추가한다.",
+      "observation": null,
+      "problem_and_reason": "제시된 경로에는 아침 +도, 끼니 변경도 없다. 다른 날의 +를 쓰면 날짜가 달라지고 점심 +를 쓰면 점심으로 들어간다. 실제 앱이 막힌다고 단정하는 것이 아니라, **와이어프레임에 이 핵심 경로가 표현되지 않은 상태**다. 끼니를 숨기는 규칙대로 구현하면 추가가 막힌다.",
+      "minimum_fix": "선택한 날에는 사용자가 설정한 모든 끼니 제목과 +를 유지한다. 빈 끼니는 음식 카드 없이 `아침  +` 한 줄이면 충분하다. 주간 개요의 빈 날짜 +는 우선 그 날짜를 선택·펼치고 끼니 +를 고르게 하거나, 추가 모달 안에 명시적인 끼니 선택을 둔다. 앞의 안이 현재 구조를 덜 바꾼다.",
+      "resolution_criteria": "월요일 빈 아침과 완전히 빈 금요일에서 시작해 올바른 날짜·끼니에 계획을 넣는 경로가 화면 또는 주석으로 단일하게 정해진다.",
+      "confidence_note": "높음(제공 화면 범위)."
+    },
+    {
+      "id": "WF-003",
+      "priority": "P2",
+      "status": "open",
+      "title": "한 끼 상세로 들어가는 표시가 없다",
+      "screen_and_location": "01 왼쪽 `점심`/`저녁` 제목과 +, 03 왼쪽 한 끼 상세.",
+      "user_scenario": "점심 전체의 요리를 보고 준비 상태를 비교하거나 연결된 장보기 목록을 열고 싶다.",
+      "observation": null,
+      "problem_and_reason": "음식 행에는 >가 있어 한 요리 상세로 이동함을 알 수 있지만, 끼니 제목은 일반 제목처럼 보인다. +는 추가 의미다. 03 왼쪽 화면으로 들어가는 클릭 대상이 드러나지 않아 사용자가 음식 상세만 반복해서 열 수 있다.",
+      "minimum_fix": "끼니 제목 영역에 `점심 >`를 두고 제목 영역 전체를 한 끼 상세의 클릭 영역으로 삼는다. +는 별도 버튼으로 유지하고 클릭이 섞이지 않게 한다. 새 줄이나 큰 버튼은 불필요하다.",
+      "resolution_criteria": "제목 클릭은 한 끼 상세, 음식 클릭은 개별 요리 상세, +는 해당 끼니 추가로 구별된다. 각 상세의 뒤로는 선택일과 위치를 보존한다.",
+      "confidence_note": "높음(보이는 진입 표시의 부재)."
+    },
+    {
+      "id": "WF-004",
+      "priority": "P2",
+      "status": "open",
+      "title": "작은 막대의 의미가 화면 안에서 설명되지 않는다",
+      "screen_and_location": "01 오른쪽 음식 행의 동일 길이 3색 막대, 05·07의 g 숫자와 구성 막대.",
+      "user_scenario": "160kcal 현미밥과 310kcal 김치찌개의 막대 길이가 같은 이유를 이해하거나, 탄단지 g 숫자와 막대를 비교한다.",
+      "observation": null,
+      "problem_and_reason": "범례의 색은 알 수 있어도 길이가 절대량인지, g 구성인지, 열량 구성비인지 알 수 없다. 생성 지시의 정의는 앱 이용자가 읽을 수 없다. 목표 진행률의 빈 영역을 없앤 결정은 좋지만 의미의 모호함까지 없어지지는 않는다.",
+      "minimum_fix": "목록 전체에 한 번만 `막대: 탄·단·지 열량 비율`을 작게 표시하거나 하루 영양 옆 도움말에 같은 설명을 두고 접근 경로를 보인다. 상세에는 `열량 구성비`라는 짧은 라벨을 쓴다. 매 음식마다 긴 설명은 넣지 않는다.",
+      "resolution_criteria": "첫 이용자가 음식의 막대 길이를 섭취 열량 자체나 g 비율로 읽지 않도록 최소한의 화면 내 단서가 있다.",
+      "confidence_note": "중간~높음. 실제 사용자의 오해 빈도는 검증하지 않았다."
+    },
+    {
+      "id": "WF-005",
+      "priority": "P2",
+      "status": "open",
+      "title": "식사기록 삭제 확인에서 남은 양 복원 영향이 빠져 있다",
+      "screen_and_location": "08 오른쪽 `선택한 기록만 삭제하고 음식과 레시피는 남겨둬요` 안내.",
+      "user_scenario": "실제 먹은 음식은 그대로인데 기록만 잘못됐는지, 남은 음식을 버린 것인지 구분하며 삭제하려 한다.",
+      "observation": "`docs/engineering/feedback-meal-log-navigation-20260928.md`는 기록 삭제 시 요리한 음식의 섭취량 되돌림을 유지한다고 명시한다. 05·07은 잔량 변화를 핵심 정보로 보여주는데 삭제에서는 사라진다.",
+      "problem_and_reason": "삭제가 영양 기록에만 영향을 준다고 생각하면, 실제로는 남은 양이 늘어나는 결과를 예상하기 어렵다. 삭제 대상 자체는 현재처럼 날짜·끼니·음식·g로 충분히 명확하다.",
+      "minimum_fix": "요리한 음식에 연결된 기록일 때만 `삭제하면 남은 양이 300g 늘어나요` 또는 최신값을 확인한 `삭제 후 남은 양 600g`을 한 줄로 표시한다. 제품·재료 기록에는 이 줄을 표시하지 않는다. 삭제/버림을 새 복합 작업으로 합치지 않는다.",
+      "resolution_criteria": "08에서 섭취 기록 삭제와 실제 음식 폐기가 구별되며, 잔량 복원 효과가 명시된다. 서버 충돌 시 확정되지 않은 잔량을 성공으로 보여주지 않는다.",
+      "confidence_note": "높음. 실제 삭제는 실행하지 않았다."
+    }
+  ],
+  "preserve_decisions": [
+    "주간 개요 A안과 선택일만 펼침",
+    "짧은 음식 행과 작은 탄단지 열량 구성비 막대",
+    "탄수화물 #94C9FF, 단백질 #FFA7C2, 지방 #FFD477",
+    "배경을 남기는 추가/수정 하단 모달",
+    "계획 인분/요리 결과/개인 섭취량 분리",
+    "요리 완료 시 섭취 자동 기록 금지",
+    "상태별 행동, 완료 장보기 읽기 전용, 정확한 요리 이어하기",
+    "상세에서 삭제, 대상 날짜/끼니/음식/양 명시"
+  ],
+  "interaction_contract_notes": [
+    "빈 검색/최근 후보는 다음 행동 제공",
+    "소진 음식 제외 및 선택 후 잔량 변화 대응",
+    "제품/재료 지원 단위와 무게 미확인 처리",
+    "저장 중 중복 방지 및 실패 입력 보존, 같은 요청 재시도",
+    "계정/소유권/응답 세대 보호",
+    "뒤로/닫기/성공 후 날짜와 위치 복원",
+    "부분 영양 정보는 0 또는 완전한 구성비로 표시하지 않음",
+    "장보기 후 인분 변경의 실제 허용 조건을 버튼 상태에 연결"
+  ],
+  "verified": [
+    "8 original PNGs visually inspected",
+    "source brief and directly related behavior documents read",
+    "nutrition ratio arithmetic for 14g/23g/18g: 56/92/162 kcal = 310 kcal"
+  ],
+  "not_verified": [
+    "actual iPhone 13 mini behavior",
+    "keyboard and zoom",
+    "scrolling and focus",
+    "hit target dimensions",
+    "numeric contrast compliance",
+    "accessibility semantics",
+    "runtime save/delete/idempotency/ownership behavior"
+  ],
+  "changed_files": [
+    "/Users/cwj/01_vibe_coding/homecook/.omx/reviews/wireframes-20261005/round-1.md",
+    "/Users/cwj/01_vibe_coding/homecook/.omx/reviews/wireframes-20261005/round-1.json"
+  ],
+  "simplification": "전체 구조 변경 없이 빈 끼니 한 줄, 진입 표시, 짧은 범례와 잔량 안내, 차트 정합성 수정 제안",
+  "followup": "Re-evaluate WF-001 through WF-005 as resolved/partially_resolved/unresolved; assess regressions and reasoned rebuttals. Device verification remains separate.",
+  "markdown_report": "/Users/cwj/01_vibe_coding/homecook/.omx/reviews/wireframes-20261005/round-1.md"
+}

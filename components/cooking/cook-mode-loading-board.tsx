@@ -157,11 +157,14 @@ export function MobileCookModeLoadingBoard({
   return (
     <div
       aria-busy="true"
-      className="cook-mobile-whole-screen relative h-dvh min-h-dvh overflow-hidden"
+      aria-label="요리 화면"
+      className="cook-mobile-whole-screen relative h-dvh overflow-y-auto overscroll-y-contain"
+      role="region"
+      tabIndex={0}
       data-cook-theme="dark"
       data-testid={screenTestId}
     >
-      <div className="relative flex h-dvh min-h-0 flex-col pb-[92px]">
+      <div className="relative">
         <header className="px-4 pb-2 pt-[calc(10px+env(safe-area-inset-top))]">
           <div className="cook-mobile-whole-header-row flex min-h-12 items-center gap-3">
             <Skeleton
@@ -189,9 +192,8 @@ export function MobileCookModeLoadingBoard({
 
         <main
           aria-label="요리 내용"
-          className="min-h-0 flex-1 overflow-y-auto px-4 pb-5"
+          className="px-4 pb-5"
           data-testid={loadingTestId}
-          tabIndex={0}
         >
           <div className="cook-whole-board cook-whole-board-mobile cook-whole-loading-board-mobile">
             <section className="cook-whole-panel cook-whole-ingredient-panel">
@@ -235,7 +237,7 @@ export function MobileCookModeLoadingBoard({
         </main>
       </div>
 
-      <div className="cook-mobile-whole-bottom-bar fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
+      <div className="cook-mobile-whole-bottom-bar mx-auto w-full max-w-[430px] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] gap-2.5">
           <Skeleton
             className="cook-whole-loading-skeleton"

@@ -589,6 +589,13 @@ async function postMeals(request: Request) {
     ]);
   }
 
+  const idempotencyKey = request.headers.get("Idempotency-Key");
+  if (idempotencyKey !== null && !isUuid(idempotencyKey)) {
+    return fail("VALIDATION_ERROR", "요청 키를 확인해 주세요.", 422, [
+      { field: "Idempotency-Key", reason: "invalid_uuid" },
+    ]);
+  }
+
   const parsed = buildCreateValidationFields(body);
   if (parsed.fields.length > 0 || !parsed.plannedServings) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
@@ -654,62 +661,66 @@ async function postMeals(request: Request) {
     return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
   }
 
-  const recipeResult = await (routeClient as unknown as MealsDbClient)
-    .from("recipes")
-    .select("id")
-    .eq("id", parsed.recipeId)
-    .maybeSingle();
-
-  if (recipeResult.error || !recipeResult.data) {
-    const authorityError = createHybridAuthorityRouteError(recipeResult.error);
-    if (authorityError) {
-      return authorityError;
-    }
-    return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
-  }
-
-  const columnResult = await dbClient
-    .from("meal_plan_columns")
-    .select("id, user_id, name")
-    .eq("id", parsed.columnId)
-    .maybeSingle();
-
-  if (columnResult.error || !columnResult.data) {
-    const authorityError = createHybridAuthorityRouteError(columnResult.error);
-    if (authorityError) {
-      return authorityError;
-    }
-    return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
-  }
-
-  if (columnResult.data.user_id !== user.id) {
-    return fail("FORBIDDEN", "내 플래너 슬롯만 선택할 수 있어요.", 403);
-  }
-
-  if (parsed.leftoverDishId) {
-    const leftoverResult = await dbClient
-      .from("leftover_dishes")
-      .select("id, user_id, recipe_id, recipe_content_snapshot_id, status, remaining_weight_g, weight_status, batch_status, depleted_reason")
-      .eq("id", parsed.leftoverDishId)
+  // A successful keyed replay must remain available if its source is later removed.
+  // The new RPC validates ownership and source eligibility on the first creation.
+  if (idempotencyKey === null) {
+    const recipeResult = await (routeClient as unknown as MealsDbClient)
+      .from("recipes")
+      .select("id")
+      .eq("id", parsed.recipeId)
       .maybeSingle();
 
-    if (leftoverResult.error || !leftoverResult.data) {
-      const authorityError = createHybridAuthorityRouteError(leftoverResult.error);
+    if (recipeResult.error || !recipeResult.data) {
+      const authorityError = createHybridAuthorityRouteError(recipeResult.error);
       if (authorityError) {
         return authorityError;
       }
-      return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
+      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
     }
-    if (leftoverResult.data.user_id !== user.id) {
-      return fail("FORBIDDEN", "내 남은 요리만 플래너에 추가할 수 있어요.", 403);
+
+    const columnResult = await dbClient
+      .from("meal_plan_columns")
+      .select("id, user_id, name")
+      .eq("id", parsed.columnId)
+      .maybeSingle();
+
+    if (columnResult.error || !columnResult.data) {
+      const authorityError = createHybridAuthorityRouteError(columnResult.error);
+      if (authorityError) {
+        return authorityError;
+      }
+      return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
     }
-    if (leftoverResult.data.recipe_id !== parsed.recipeId) {
-      return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
-        { field: "leftover_dish_id", reason: "recipe_mismatch" },
-      ]);
+
+    if (columnResult.data.user_id !== user.id) {
+      return fail("FORBIDDEN", "내 플래너 슬롯만 선택할 수 있어요.", 403);
     }
-    if (!isMealEligibleLeftover(leftoverResult.data)) {
-      return fail("CONFLICT", "현재 상태의 남은 요리는 플래너에 추가할 수 없어요.", 409);
+
+    if (parsed.leftoverDishId) {
+      const leftoverResult = await dbClient
+        .from("leftover_dishes")
+        .select("id, user_id, recipe_id, recipe_content_snapshot_id, status, remaining_weight_g, weight_status, batch_status, depleted_reason")
+        .eq("id", parsed.leftoverDishId)
+        .maybeSingle();
+
+      if (leftoverResult.error || !leftoverResult.data) {
+        const authorityError = createHybridAuthorityRouteError(leftoverResult.error);
+        if (authorityError) {
+          return authorityError;
+        }
+        return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
+      }
+      if (leftoverResult.data.user_id !== user.id) {
+        return fail("FORBIDDEN", "내 남은 요리만 플래너에 추가할 수 있어요.", 403);
+      }
+      if (leftoverResult.data.recipe_id !== parsed.recipeId) {
+        return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
+          { field: "leftover_dish_id", reason: "recipe_mismatch" },
+        ]);
+      }
+      if (!isMealEligibleLeftover(leftoverResult.data)) {
+        return fail("CONFLICT", "현재 상태의 남은 요리는 플래너에 추가할 수 없어요.", 409);
+      }
     }
   }
   const serviceClient = createFutureMealWriteInternalClient();
@@ -719,11 +730,12 @@ async function postMeals(request: Request) {
 
   const createResult = await callFuturePropagationRpc(
     serviceClient as unknown as FuturePropagationRpcClient,
-    "write_future_meal_with_snapshot_authority",
+    idempotencyKey === null ? "write_future_meal_with_snapshot_authority" : "create_future_meal_idempotent",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
-      p_action: "create",
-      p_meal_id: null,
+      ...(idempotencyKey === null
+        ? { p_action: "create", p_meal_id: null }
+        : { p_idempotency_key: idempotencyKey.toLowerCase() }),
       p_recipe_id: parsed.recipeId,
       p_plan_date: parsed.planDate,
       p_column_id: parsed.columnId,

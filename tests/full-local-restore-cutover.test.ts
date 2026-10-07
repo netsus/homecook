@@ -503,6 +503,30 @@ hook-a
     expect(result.sql).toContain("COPY private.youtube_extraction_worker_credentials");
   });
 
+  it("preserves pending manual recipe image publication across restore", () => {
+    const journal = [
+      "COPY private.manual_recipe_publication_images (recipe_id, owner_uuid, account_generation, source_object_id, target_object_id, copy_plan, publication_committed, created_at) FROM stdin;",
+      'recipe-a\towner-a\t2\tsource-a\ttarget-a\t{"bucket":"recipe-shared"}\tt\t2026-09-28 00:00:00+00',
+      "\\.",
+      "",
+    ].join("\n");
+    const restored = buildSanitizedPlatformData(journal);
+
+    expect(restored.sql).toContain(journal.trim());
+    expect(restored.manifest.unclassified).toEqual([]);
+    expect(inventoryPlatformDataRelations(restored.sql)).toEqual([
+      expect.objectContaining({
+        relation: "private.manual_recipe_publication_images",
+        row_count: 1,
+      }),
+    ]);
+    // A durable publication journal is not permission to accept arbitrary private data.
+    expect(() => buildSanitizedPlatformData(journal.replaceAll(
+      "private.manual_recipe_publication_images",
+      "private.unreviewed_publication_journal",
+    ))).toThrow("Unclassified platform restore relation");
+  });
+
   it("inventories relation and column names without exposing row values", () => {
     expect(inventoryPlatformDataRelations(platformData)).toEqual(expect.arrayContaining([
       {

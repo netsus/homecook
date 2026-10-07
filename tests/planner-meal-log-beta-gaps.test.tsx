@@ -4,9 +4,10 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MealLogAddSheet } from "@/components/planner/meal-log-add-sheet";
 
-const mocks = vi.hoisted(() => ({ catalog: vi.fn(), source: vi.fn(), recent: vi.fn(), batches: vi.fn() }));
+const mocks = vi.hoisted(() => ({ catalog: vi.fn(), source: vi.fn(), recent: vi.fn(), batches: vi.fn(), preview: vi.fn() }));
 vi.mock("@/lib/api/food-catalog-search", () => ({ fetchFoodCatalogSearch: mocks.catalog, fetchFoodCatalogSource: mocks.source }));
 vi.mock("@/lib/api/meal-log", () => ({ fetchMealLogRecent: mocks.recent, isMealLogApiError: () => false }));
+vi.mock("@/lib/api/meal-log-preview", () => ({ fetchMealLogNutritionPreview: mocks.preview }));
 vi.mock("@/lib/api/cooking", () => ({ fetchCookedBatches: mocks.batches }));
 const page = (items: unknown[]) => ({ items, has_next: false, next_cursor: null });
 const product = {
@@ -27,6 +28,7 @@ function open() {
 async function flush() { await act(async () => Promise.resolve()); }
 beforeEach(() => {
   vi.useFakeTimers();
+  mocks.preview.mockReset().mockResolvedValue({ nutrition: { calculation_status: "complete", calories_kcal: 100, carbohydrate_g: 10, protein_g: 6, fat_g: 4, sodium_mg: 0 } });
   mocks.catalog.mockReset().mockResolvedValue(page([product]));
   mocks.source.mockReset().mockResolvedValue(product);
   mocks.recent.mockReset().mockResolvedValue(page([recent()]));
@@ -35,15 +37,48 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("meal log beta source selection", () => {
+  it("uses one dialog for amount, keeps search on back, and confirms dirty close inline", async () => {
+    open(); await flush();
+    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "제품·재료 검색" }), { target: { value: "요거트" } });
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    fireEvent.click(screen.getByRole("button", { name: /요거트/ }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    fireEvent.change(screen.getByRole("textbox", { name: "먹은 양" }), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "음식 선택으로 돌아가기" }));
+    expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("요거트");
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    expect(screen.getByText("변경사항을 버릴까요?")).toBeTruthy();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "계속 편집" }));
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+  });
+
+  it("cancels obsolete nutrition previews and never fills blank amounts with zero", async () => {
+    let resolveFirst!: (value: unknown) => void;
+    mocks.preview.mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }));
+    open(); await flush();
+    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    const firstSignal = mocks.preview.mock.calls[0]![1] as AbortSignal;
+    fireEvent.change(screen.getByRole("textbox", { name: "먹은 양" }), { target: { value: "" } });
+    expect(firstSignal.aborted).toBe(true);
+    await act(async () => resolveFirst({ nutrition: { calculation_status: "complete", calories_kcal: 999, carbohydrate_g: 1, protein_g: 1, fat_g: 1, sodium_mg: 1 } }));
+    expect(screen.queryByText("999 kcal")).toBeNull();
+    expect((screen.getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("");
+    expect(screen.queryByRole("region", { name: "입력한 양의 영양 미리보기" })).toBeNull();
+  });
   it("restores approved units for a recent product while retaining its last quantity", async () => {
     const onSave = open(); await flush();
     fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(mocks.source).toHaveBeenCalledWith("food_product", "product-1");
-    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("2");
+    expect((screen.getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("2");
     expect((screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(screen.getByRole("combobox", { name: "단위" }), { target: { value: "g" } });
-    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("300");
+    expect((screen.getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("300");
     fireEvent.click(screen.getByRole("button", { name: "기록 저장" })); await flush();
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ amount: 300, unit: "g", id: "product-1" }), "col", "2026-09-22");
   });
@@ -51,6 +86,7 @@ describe("meal log beta source selection", () => {
   it("keeps cooked recent foods only on the cooked tab", async () => {
     mocks.recent.mockResolvedValue(page([recent(), recent("cooked_batch", "batch-1", "어제 카레", "g")]));
     open(); await flush();
+    fireEvent.click(screen.getByRole("tab", { name: "요리한 음식" }));
     expect(screen.getByRole("button", { name: /어제 카레/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /요거트/ })).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
@@ -119,7 +155,7 @@ describe("meal log beta source selection", () => {
     fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
     fireEvent.click(screen.getByRole("button", { name: /쌀/ })); await flush();
     fireEvent.change(screen.getByRole("combobox", { name: "단위" }), { target: { value: "g" } });
-    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("2000");
+    expect((screen.getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("2000");
   });
 
   it("finds a renamed recent source by identity without searching its historical name", async () => {
@@ -129,7 +165,7 @@ describe("meal log beta source selection", () => {
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(mocks.source).toHaveBeenCalledWith("food_product", "product-1");
     expect(mocks.catalog).not.toHaveBeenCalled();
-    expect(screen.getByText("새 이름 요거트", { selector: "footer p" })).toBeTruthy();
+    expect(screen.getByText("새 이름 요거트", { selector: "section p" })).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "단위" })).toBeTruthy();
   });
 
@@ -190,7 +226,7 @@ describe("meal log beta source selection", () => {
     expect((screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => { finish(product); });
     fireEvent.change(screen.getByRole("combobox", { name: "단위" }), { target: { value: "g" } });
-    expect((screen.getByRole("textbox", { name: "실제 양" }) as HTMLInputElement).value).toBe("300");
+    expect((screen.getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("300");
     expect((screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled).toBe(false);
   });
 

@@ -1,7 +1,7 @@
 {
   "id": "recipe-visibility-read-hardening",
   "title": "Recipe visibility read hardening",
-  "summary": "private, deleted and quarantined-owner recipe/tag existence를 public read matrix에서 차단하고, generation-aware managed image registry와 ordered cleanup을 F0 lifecycle에 결합한다.",
+  "summary": "[과거 workflow 기록; 2026-09-22 상태 보정] private, deleted and quarantined-owner recipe/tag existence를 public read matrix에서 차단하고, generation-aware managed image registry와 ordered cleanup을 F0 lifecycle에 결합한다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -167,7 +167,8 @@
         "GitHub PR #1228 exact head 06269ce4d165a96fb750bb3aded951d2bb8091c3 completed 15 checks successfully with one intended full-regression skip and pending/fail/cancel 0",
         "docs/workpacks/recipe-visibility-read-hardening/evidence/2026-07-30-stage4-6-closeout.md records distinct native Codex code, security and exact-head Stage 6 reviewer tasks",
         "Local source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, closeout and diff validators passed",
-        "Production power/login/sleep, external heartbeat receiver, activation and irreversible old-path deletion remain Manual Only; production/staging writes remain zero"
+        "Production power/login/sleep, external heartbeat receiver, activation and irreversible old-path deletion remain Manual Only; production/staging writes remain zero",
+        "2026-09-22 current interpretation: docs/engineering/beta-flow-gaps-20260922.md; retained automated/runtime merge is complete, historical workflow fields are not current release gates. 2026-09-21 read-only production account capability=generation_active; direct Postgres recipe mode=legacy_v1; app request override unverified."
       ]
     },
     "merge_gate_projection": {
