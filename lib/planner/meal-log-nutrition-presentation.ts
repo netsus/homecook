@@ -8,14 +8,14 @@ export const MEAL_LOG_MACROS = [
 export type MealLogMetric = "calories_kcal" | typeof MEAL_LOG_MACROS[number]["key"];
 export const formatMealLogNumber = (value: number | null) => value === null || !Number.isFinite(value) ? "정보 없음" : Math.round(value).toLocaleString("ko-KR");
 
-/** Unknown components must never be normalized into a seemingly complete composition. */
+/** Use all three known macro values; partial results must be labelled by the view. */
 export function mealLogMacroShares(nutrition: MealLogNutritionEvidence): number[] | null {
-  if (nutrition.calculation_status !== "complete") return null;
+  if (nutrition.calculation_status === "unavailable") return null;
   const values = MEAL_LOG_MACROS.map(macro => nutrition[macro.key]);
   if (values.some(value => value === null || !Number.isFinite(value) || value < 0)) return null;
   const energies = values.map((value, index) => value! * MEAL_LOG_MACROS[index].factor);
   const total = energies.reduce((sum, value) => sum + value, 0);
-  return total > 0 ? energies.map(value => value / total) : null;
+  return Number.isFinite(total) && total > 0 ? energies.map(value => value / total) : null;
 }
 
 export function mealLogAxisMaximum(values: Array<number | null>): number {

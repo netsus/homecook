@@ -25,12 +25,23 @@ describe("meal-log nutrition calculations", () => {
     mealLogMacroShares(scaleMealLogNutrition(nutrition, 250 / 300))!.forEach((share, index) => expect(share).toBeCloseTo(shares[index], 12));
     expect(scaleMealLogNutrition(nutrition, 250 / 300).calories_kcal).toBeCloseTo(258.3333);
   });
-  it("does not normalize partial, missing, invalid or zero macros into a full bar", () => {
-    expect(mealLogMacroShares({ ...nutrition, calculation_status: "partial" })).toBeNull();
+  it("shows all known partial macros with an explicit qualified label", () => {
+    const partial = { ...nutrition, calculation_status: "partial" as const, calories_kcal: 613, carbohydrate_g: 45, protein_g: 35, fat_g: 32 };
+    expect(mealLogMacroShares(partial)).toEqual([180 / 608, 140 / 608, 288 / 608]);
+    render(<MealLogMacroBar nutrition={partial} thin />);
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("확인된 탄단지 기준");
+    expect(screen.getByText("확인된 탄단지 기준")).toBeTruthy();
+    expect(screen.queryByText("일부 영양 정보 없음")).toBeNull();
+    expect(partial.calculation_status).toBe("partial");
+  });
+  it("does not normalize missing, invalid, unavailable or zero macros into a full bar", () => {
+    expect(mealLogMacroShares({ ...nutrition, calculation_status: "unavailable" })).toBeNull();
     expect(mealLogMacroShares({ ...nutrition, fat_g: null })).toBeNull();
     expect(mealLogMacroShares({ ...nutrition, fat_g: -1 })).toBeNull();
+    expect(mealLogMacroShares({ ...nutrition, fat_g: Number.NaN })).toBeNull();
+    expect(mealLogMacroShares({ ...nutrition, fat_g: 1e308 })).toBeNull();
     expect(mealLogMacroShares({ ...nutrition, fat_g: 0, carbohydrate_g: 0, protein_g: 0 })).toBeNull();
-    render(<MealLogMacroBar nutrition={{ ...nutrition, calculation_status: "partial" }} thin />);
+    render(<MealLogMacroBar nutrition={{ ...nutrition, calculation_status: "partial", fat_g: null }} thin />);
     expect(screen.queryByRole("img")).toBeNull();
     expect(screen.getByText("일부 영양 정보 없음")).toBeTruthy();
   });
