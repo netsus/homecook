@@ -59,7 +59,7 @@ describe("meal log beta source selection", () => {
     let resolveFirst!: (value: unknown) => void;
     mocks.preview.mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }));
     open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     await act(async () => vi.advanceTimersByTimeAsync(250));
     const firstSignal = mocks.preview.mock.calls[0]![1] as AbortSignal;
@@ -72,7 +72,7 @@ describe("meal log beta source selection", () => {
   });
   it("restores approved units for a recent product while retaining its last quantity", async () => {
     const onSave = open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(mocks.source).toHaveBeenCalledWith("food_product", "product-1");
     expect((screen.getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("2");
@@ -83,21 +83,22 @@ describe("meal log beta source selection", () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ amount: 300, unit: "g", id: "product-1" }), "col", "2026-09-22");
   });
 
-  it("keeps cooked recent foods only on the cooked tab", async () => {
+  it("keeps all recent foods exclusively on the recent tab", async () => {
     mocks.recent.mockResolvedValue(page([recent(), recent("cooked_batch", "batch-1", "어제 카레", "g")]));
     open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "요리한 음식" }));
     expect(screen.getByRole("button", { name: /어제 카레/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /요거트/ })).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
     expect(screen.getByRole("button", { name: /요거트/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /어제 카레/ })).toBeNull();
+    for (const tab of ["요리한 음식", "제품·재료"]) {
+      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      expect(screen.queryByRole("button", { name: /어제 카레/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /요거트/ })).toBeNull();
+    }
   });
 
   it("does not restore a deleted, inaccessible, or mismatched catalog source", async () => {
     mocks.source.mockResolvedValue(null);
     open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(screen.queryByRole("button", { name: "기록 저장" })).toBeNull();
     expect(screen.getByRole("alert")).toBeTruthy();
@@ -106,7 +107,7 @@ describe("meal log beta source selection", () => {
   it("does not invent a conversion for a no longer supported recent unit", async () => {
     mocks.recent.mockResolvedValue(page([recent("food_product", "product-1", "요거트", "개")]));
     open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(screen.queryByRole("button", { name: "기록 저장" })).toBeNull();
     expect(screen.getByRole("alert")).toBeTruthy();
@@ -131,13 +132,14 @@ describe("meal log beta source selection", () => {
     expect(mocks.catalog).toHaveBeenCalledTimes(1);
   });
 
-  it("cancels a pending recent selection on composition start and lets the composing search choose another food", async () => {
+  it("cancels a pending recent selection when moving to search and lets Korean input choose another food", async () => {
     let finish!: (value: unknown) => void;
     mocks.source.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
     mocks.catalog.mockResolvedValue(page([{ ...product, id: "milk-1", name: "우유" }]));
     const onSave = open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
+    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
     const input = screen.getByRole("searchbox", { name: "제품·재료 검색" });
     fireEvent.compositionStart(input);
     await act(async () => { finish(product); });
@@ -152,7 +154,7 @@ describe("meal log beta source selection", () => {
     mocks.recent.mockResolvedValue(page([recent("ingredient", "ingredient-1", "쌀", "kg")]));
     mocks.source.mockResolvedValue({ type: "ingredient", id: "ingredient-1", standard_name: "쌀", default_unit: "개" });
     open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /쌀/ })); await flush();
     fireEvent.change(screen.getByRole("combobox", { name: "단위" }), { target: { value: "g" } });
     expect((screen.getByRole("textbox", { name: "먹은 양" }) as HTMLInputElement).value).toBe("2000");
@@ -161,7 +163,7 @@ describe("meal log beta source selection", () => {
   it("finds a renamed recent source by identity without searching its historical name", async () => {
     mocks.source.mockResolvedValue({ ...product, name: "새 이름 요거트" });
     open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(mocks.source).toHaveBeenCalledWith("food_product", "product-1");
     expect(mocks.catalog).not.toHaveBeenCalled();
@@ -173,7 +175,7 @@ describe("meal log beta source selection", () => {
     let finish!: (value: unknown) => void;
     mocks.source.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
     open(); await flush();
-    fireEvent.click(screen.getByRole("tab", { name: "제품·재료" }));
+    fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     fireEvent.click(screen.getByRole("tab", { name: "요리한 음식" }));
     await act(async () => { finish(product); });

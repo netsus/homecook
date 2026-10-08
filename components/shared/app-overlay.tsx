@@ -29,6 +29,7 @@ interface AppOverlayBaseProps {
   panelRef?: React.Ref<HTMLDivElement>;
   testId?: string;
   title: string;
+  hideTitle?: boolean;
   titleRef?: React.Ref<HTMLHeadingElement>;
   titleTabIndex?: number;
 }
@@ -108,6 +109,7 @@ export function AppBottomSheet({
   panelRef,
   testId,
   title,
+  hideTitle,
   titleRef,
   titleTabIndex,
 }: AppOverlayBaseProps) {
@@ -145,6 +147,7 @@ export function AppBottomSheet({
             leadingAction={leadingAction}
             onClose={onClose}
             title={title}
+            hideTitle={hideTitle}
             titleId={ariaLabelledBy}
             titleRef={titleRef}
             titleTabIndex={titleTabIndex}
@@ -195,6 +198,7 @@ export function AppCenterDialog({
   panelRef,
   testId,
   title,
+  hideTitle,
   titleRef,
   titleTabIndex,
 }: AppOverlayBaseProps) {
@@ -219,6 +223,7 @@ export function AppCenterDialog({
           leadingAction={leadingAction}
           onClose={onClose}
           title={title}
+          hideTitle={hideTitle}
           titleId={ariaLabelledBy}
           titleRef={titleRef}
           titleTabIndex={titleTabIndex}

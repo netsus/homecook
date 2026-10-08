@@ -3,7 +3,7 @@
 import { AppBackButton } from "@/components/shared/app-back-button";
 
 import { PlannerTaskSheet } from "@/components/planner/planner-task-sheet";
-import { PlannedMealCard } from "@/components/planner/planned-meal-card";
+import { PlannedMealCard, PlannedMealStatus } from "@/components/planner/planned-meal-card";
 import { formatPlannerNutritionValue } from "@/lib/planner/planner-nutrition-presentation";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
 
@@ -1132,9 +1132,9 @@ export function MealScreen({
     <>
       <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface)]" data-testid="planned-meal-page">
         <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
-          <AppBar titleFull={selectedMealId ? "계획한 요리" : titleFull} titleShort={selectedMealId ? "계획한 요리" : titleShort} onBack={navigateToPlanner} onAddMeal={openMealAddSheet} canAdd={authState === "authenticated"} />
+          <AppBar titleFull={titleFull} titleShort={titleShort} onBack={navigateToPlanner} onAddMeal={openMealAddSheet} canAdd={authState === "authenticated"} />
           <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-4" data-testid="meal-screen-scroll-area">
-            {selectedMealId ? <p className="text-sm font-normal text-[var(--text-2)]">{titleFull}</p> : null}
+            {selectedMeal ? <PlannedMealStatus status={selectedMeal.status} /> : null}
             {!selectedMealId ? <details className="rounded-xl bg-[var(--surface-fill)] px-4 py-3" data-testid="meal-compact-nutrition">
               <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm font-medium"><span>계획한 전체 분량</span><span className="font-normal tabular-nums">{currentColumnNutrition ? formatPlannerNutritionValue("energy_kcal", currentColumnNutrition.values.energy_kcal) : nutritionStatus === "loading" ? <Skeleton className="h-5 w-24" /> : "영양 정보 없음"}</span><span aria-hidden="true">⌄</span></summary>
               {currentColumnNutrition ? <dl className="mt-3 grid grid-cols-3 gap-3 text-sm font-normal">{([['carbohydrate_g', '탄수화물'], ['protein_g', '단백질'], ['fat_g', '지방']] as const).map(([code, label]) => <div key={code}><dt className="text-[var(--text-2)]">{label}</dt><dd className="mt-1">{formatPlannerNutritionValue(code, currentColumnNutrition.values[code])}</dd></div>)}</dl> : nutritionRequest.error ? <button className="min-h-11 text-sm text-[var(--brand)]" onClick={() => void nutritionRequest.retry()} type="button">영양 다시 확인</button> : null}

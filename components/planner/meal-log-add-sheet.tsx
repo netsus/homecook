@@ -662,14 +662,12 @@ export function MealLogAddSheet({
   }
 
   const visibleRecent = recent.filter((item) => {
-    if (tab !== "recent" && (item.source.type === "cooked_batch") !== (tab === "cooked")) return false;
     if (item.source.type !== "cooked_batch") return true;
     const batch = batches.find((row) => row.id === item.source.id);
     return !unavailableRecentBatchIds.has(item.source.id) && batch?.status !== "eaten" && batch?.batch_status !== "depleted";
   });
   const recentSection = visibleRecent.length > 0 || recentHasNext ? (
     <div className="mt-5">
-      <h3 className="text-sm font-semibold">최근·자주 먹은 음식</h3>
       <ul className="mt-2 divide-y divide-[var(--line-strong)]">
         {visibleRecent.map((item) => {
           const batch = item.source.type === "cooked_batch" ? batches.find((row) => row.id === item.source.id) : null;
@@ -686,7 +684,7 @@ export function MealLogAddSheet({
                 onClick={() => { setAmountStep(true); void chooseRecent(item); }}
                 type="button"
               >
-                <span className="block font-medium">{item.display_name}</span>
+                <span className="block truncate font-medium" title={item.display_name}>{item.display_name}</span>
                 <span className="block text-xs text-[var(--text-2)]">{item.display_brand ? `${item.display_brand} · ` : ""}{recentSourceLabel(item.source.type)} · 최근 {item.last_quantity.amount}{quantityUnitLabel(item.last_quantity.unit)} · {item.frequency}회 기록</span>
               </button>
               {unavailable ? <p className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 추가할 수 없는 음식이에요. 요리한 음식 탭에서 상태를 확인해 주세요.</p>
@@ -796,7 +794,6 @@ export function MealLogAddSheet({
 
           {tab === "recent" ? <section aria-labelledby="meal-log-source-recent-tab" id="meal-log-source-recent" role="tabpanel">{recentSection}{!loading && visibleRecent.length === 0 && !recentHasNext ? <p className="py-8 text-center text-sm text-[var(--text-2)]">최근 기록한 음식이 없어요.</p> : null}<button className="mt-3 min-h-11 w-full text-[var(--brand)]" onClick={() => setTab("cooked")} type="button">요리한 음식 전체 보기</button></section> : tab === "cooked" ? (
             <section aria-labelledby="meal-log-source-cooked-tab" id="meal-log-source-cooked" role="tabpanel">
-              {recentSection}
               <h3 className="mt-5 text-sm font-semibold">요리한 음식 전체</h3>
               <ul className="divide-y divide-[var(--line-strong)]">
                 {batches.filter(batch => batch.status !== "eaten" && batch.batch_status !== "depleted").map((batch) => {
@@ -831,14 +828,14 @@ export function MealLogAddSheet({
                         >
                           <Image alt="" className="h-12 w-12 shrink-0 rounded-[var(--radius-card)] object-cover" height={48} src={resolveRecipeImage({ id: batch.recipe_id, thumbnail_url: batch.recipe_thumbnail_url })} unoptimized width={48} />
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate font-medium">{batch.recipe_title}</span>
+                            <span className="block truncate font-medium" title={batch.recipe_title}>{batch.recipe_title}</span>
                             <span className="mt-1 block text-xs text-[var(--text-2)]">{cookedDateLabel(batch.cooked_at)} 조리 · {legacySelectable ? "이전 요리" : `남은 양 ${Math.round(batch.remaining_weight_g ?? 0).toLocaleString("ko-KR")}g`}</span>
                           </span>
                           <span className="shrink-0 rounded-[var(--radius-control)] bg-[var(--brand)] px-4 py-2 font-medium text-[var(--text-inverse)]">추가</span>
                         </button>
                       ) : (
                         <div className="px-3 py-2 text-[var(--text-2)]">
-                          <span className="block font-medium">{batch.recipe_title}</span>
+                          <span className="block truncate font-medium" title={batch.recipe_title}>{batch.recipe_title}</span>
                           <span className="mt-1 block text-xs">{cookedDateLabel(batch.cooked_at)} 조리 · {weightEligible ? "무게 입력 필요" : "무게 확인 불가"}</span>
                         </div>
                       )}
@@ -868,15 +865,13 @@ export function MealLogAddSheet({
               {!catalogSearching && !error && catalogLoadedQuery === query.trim() && catalog.length === 0 ? (
                 <p className="py-5 text-sm text-[var(--text-2)]" role="status">검색 결과가 없어요. 다른 제품·재료 이름으로 찾아보세요.</p>
               ) : null}
-              {query.trim() === "" && catalog.length === 0 ? (
-                recentSection
-              ) : (
+              {catalog.length > 0 ? (
                 <>
                   <ul className="mt-4 divide-y divide-[var(--line-strong)]">
                     {catalog.map((item) => (
                       <li key={`${item.type}-${item.id}`}>
                         <button className="min-h-11 w-full px-3 py-3 text-left" onClick={() => chooseCatalog(item)} type="button">
-                          <span className="block font-medium">{sourceName(item)}</span>
+                          <span className="block truncate font-medium" title={sourceName(item)}>{sourceName(item)}</span>
                           <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{catalogSourceLabel(item)}{item.type === "ingredient" ? ` · 기본 단위 ${sourceUnit(item)}` : ""}</span>
                         </button>
                       </li>
@@ -888,7 +883,7 @@ export function MealLogAddSheet({
                     </button>
                   ) : null}
                 </>
-              )}
+              ) : null}
             </section>
           )}
         </div>
@@ -896,7 +891,7 @@ export function MealLogAddSheet({
         </> : null}
         {amountStep && selection ? (
           <section className="shrink-0 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
-            <p className="font-medium">{selection.name}</p>
+            <p className="truncate font-medium" title={selection.name}>{selection.name}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-sm font-medium">먹은 양
                 <DecimalInput key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setInputEdited(true); setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
