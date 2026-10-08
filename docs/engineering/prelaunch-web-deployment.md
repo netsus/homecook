@@ -289,8 +289,10 @@ R2 원본 증거·검증 시각을 보존하고 현재 외부 manifest의 파일
 
 `--reviewed-ai-nutrition-readiness`는 비공개 manifest에 고정한 출발/도착 웹과 별도 통합 SQL 소스를 검증한다. `--reviewed-ref`, `--already-applied-db`, `--db-config`가 필요하다. 기존 204개 migration의 checksum을 보존하고 검토한 AI SQL 3개만 더한 실제 207개 ledger, 기존 R2 증거/데이터/권한과 내부 scope의 원본문 보존·정확히 두 delegate 추가를 확인한다. 원본 증명 시각을 새 검증 시각으로 바꾸지 않는다.
 
-현재 핀은 운영 웹 `974f52a426cf6877fff915fc3a020ec4be9dd625` → 웹 후보 `fe51f3c93ed608160650d818f01617f8f02e3bba`, 통합 소스 `ad86aa7c617011583bc2a57c352c49afefce5738`에만 유효하다. 과거 플랫폼/호스트 변경을 다시 배포하지 않도록 현재 웹에 검토한 AI 변경만 겹친 후보이며, 애플리케이션 트리는 통합 소스와 동일하다. 다른 후보·환경변수로 핀을 바꿀 수 없다.
+현재 핀은 운영 웹 `974f52a426cf6877fff915fc3a020ec4be9dd625` → 웹 후보 `7b672ef55370137367f4b77848feeb1416c9a2ea`, 통합 소스 `ad86aa7c617011583bc2a57c352c49afefce5738`에만 유효하다. 과거 플랫폼/호스트 변경을 다시 배포하지 않도록 현재 웹에 검토한 AI 변경만 겹친 후보이며, 애플리케이션 트리는 통합 소스와 동일하다. 다른 후보·환경변수로 핀을 바꿀 수 없다.
 
 Next 표준 앱 시작 파일 `instrumentation.ts`는 웹/API 코드로 분류해 관련 검사를 실행한다. 기존 호스트 시작 스크립트·Docker·별도 worker 구성을 허용하지 않는다. 과거 대표 영양/람부탄 render·SQL 4개는 실행하지 않는 감사 자료로만 분류한다.
 
 DB 설정은 준비 및 교체 직전까지 `enabled=false`여야 한다. 앱 환경 flag가 켜져 있어도 후보 포트에서 AI를 생성할 수 없다. 실제 웹 build/GET 검증 후 별도 통제 작업으로 활성화·두 재료 enqueue를 진행한다. 이 전용 경로는 SQL을 적용하거나 비활성 확인을 생략하지 않는다.
+
+이 후보의 `test:ingredient-ai-nutrition:web`은 웹 계산·모델·작업·표시 회귀를 실행한다. 과거 SQL 파일이 필요한 migration 정적 검사는 통합 소스의 `test:ingredient-ai-nutrition` 및 실제 격리 SQL 검사에서 수행한다. 검사를 통과시키기 위해 과거 플랫폼 SQL을 웹 후보에 복사하지 않는다.

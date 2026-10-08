@@ -10,7 +10,7 @@ import { BETA_ALIASES_UNROUTED_SQL, BETA_CANONICAL_POSTIMAGE_SQL } from "./prela
 
 // Filled only after the operator reviews the exact source pair and immutable
 // private manifest. Neither CLI flags nor environment variables override it.
-export const AI_NUTRITION_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/ingredient-ai-nutrition-20261008-xaPr1w/ai-readiness-review.json", sha256: "a1b4e801bbe7ac12cd05ec0c03394eb0af0c3f2f5469cbf147085180d3b05b9b" });
+export const AI_NUTRITION_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/ingredient-ai-nutrition-20261008-xaPr1w/ai-readiness-review.web-tests.json", sha256: "0461c187aa053d618907eb9f5b89355c813f100bace158605be08869bc6af3a0" });
 export const AI_NUTRITION_MIGRATIONS = Object.freeze([
   "20261008090000_ingredient_ai_nutrition.sql",
   "20261008091000_ai_nutrition_snapshot_evidence.sql",
