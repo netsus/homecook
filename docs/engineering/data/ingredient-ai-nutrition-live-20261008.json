@@ -1,0 +1,229 @@
+{
+  "schema_version": "homecook-ai-nutrition-final-live-summary-v1",
+  "queried_at": "2026-10-08T14:33:07.168889+00:00",
+  "queried_at_kst": "2026-10-08 23:33:07 KST",
+  "read_only": true,
+  "total_ingredients": 1930,
+  "quality_counts": {
+    "core_present": 1590,
+    "partial": 229,
+    "unlinked": 111
+  },
+  "core_present_sources": {
+    "approved_non_ai": 1588,
+    "ai_estimate": 2
+  },
+  "presentation_quality_counts": {
+    "base": {
+      "core_present": 967,
+      "partial": 184,
+      "unlinked": 16
+    },
+    "detail": {
+      "core_present": 398,
+      "partial": 26
+    },
+    "prepared_food": {
+      "core_present": 92,
+      "unlinked": 10,
+      "partial": 5
+    },
+    "excluded": {
+      "core_present": 100,
+      "partial": 12,
+      "unlinked": 12
+    },
+    "umbrella": {
+      "core_present": 13,
+      "unlinked": 73,
+      "partial": 2
+    },
+    "alias": {
+      "core_present": 20
+    }
+  },
+  "unlinked_counts": {
+    "base_and_detail": 16,
+    "base_product_holds": 16,
+    "outside_automatic_scope": 95,
+    "umbrella": 73,
+    "prepared_food": 10,
+    "excluded": 12,
+    "alias": 0
+  },
+  "ai_summary": {
+    "linked_ingredients": 2,
+    "total_value_rows": 16,
+    "estimated_value_rows": 16,
+    "observed_ai_value_rows": 0,
+    "outside_approved_targets": 0,
+    "successful_jobs": 2,
+    "attempts_each": 1,
+    "pending_recipe_refresh_ids": 0,
+    "settings_enabled": true
+  },
+  "ai_targets": [
+    {
+      "ingredient_id": "0131c023-576b-5b19-a17d-424e5012a210",
+      "name": "삼나물",
+      "source_id": "1b4abfef-1562-4694-b5e3-2e625158fff5",
+      "source_item_id": "a924ce8e-193f-4d48-9841-2a539f617992",
+      "profile_id": "fc2aed9c-b1b4-440f-9a23-bc155c09a1c8",
+      "link_id": "a7296bc4-e146-44a2-a95a-ac289f3409df",
+      "model": "gemini-3.1-flash-lite",
+      "policy_version": "ingredient-ai-v1",
+      "prompt_version": "ingredient-ai-prompt-v1",
+      "generated_at": "2026-10-08T14:31:10.71+00:00",
+      "assumption_count": 4,
+      "uncertainty": "medium",
+      "warning": "AI_NUTRITION_ESTIMATE_USED",
+      "value_count": 8,
+      "value_status": "estimated",
+      "core_count": 5,
+      "checks": {
+        "active_primary": true,
+        "source_eligible": true,
+        "provider_explicit": true,
+        "source_documentation": true,
+        "source_exact_name": true,
+        "item_approved": true,
+        "profile_eligible": true,
+        "basis_100g": true,
+        "eight_unique_codes": true,
+        "all_values_estimated": true,
+        "numeric_finite_bounded": true,
+        "matching_units": true,
+        "core_present": true,
+        "model_valid": true,
+        "policy_matching": true,
+        "prompt_version": true,
+        "timestamp_valid": true,
+        "assumptions_valid": true,
+        "uncertainty_valid": true,
+        "warning_present": true,
+        "macro_consistency": true
+      }
+    },
+    {
+      "ingredient_id": "6de713c8-44d8-44f4-a437-8b05c54f13c2",
+      "name": "열무김치 국물",
+      "source_id": "1b4abfef-1562-4694-b5e3-2e625158fff5",
+      "source_item_id": "d5fe8bfa-f49d-4e54-ab7f-7f82b6ab3b24",
+      "profile_id": "e437635a-6fd3-4fa3-8318-bc5f50d5cc58",
+      "link_id": "e16b6367-c37c-4ffc-820e-7d833da9f6f3",
+      "model": "gemini-3.1-flash-lite",
+      "policy_version": "ingredient-ai-v1",
+      "prompt_version": "ingredient-ai-prompt-v1",
+      "generated_at": "2026-10-08T14:30:08.23+00:00",
+      "assumption_count": 5,
+      "uncertainty": "medium",
+      "warning": "AI_NUTRITION_ESTIMATE_USED",
+      "value_count": 8,
+      "value_status": "estimated",
+      "core_count": 5,
+      "checks": {
+        "active_primary": true,
+        "source_eligible": true,
+        "provider_explicit": true,
+        "source_documentation": true,
+        "source_exact_name": true,
+        "item_approved": true,
+        "profile_eligible": true,
+        "basis_100g": true,
+        "eight_unique_codes": true,
+        "all_values_estimated": true,
+        "numeric_finite_bounded": true,
+        "matching_units": true,
+        "core_present": true,
+        "model_valid": true,
+        "policy_matching": true,
+        "prompt_version": true,
+        "timestamp_valid": true,
+        "assumptions_valid": true,
+        "uncertainty_valid": true,
+        "warning_present": true,
+        "macro_consistency": true
+      }
+    }
+  ],
+  "remaining_base_product_holds": [
+    {
+      "id": "df26beb3-3778-47b1-b2b0-65963ce25eeb",
+      "name": "고추청"
+    },
+    {
+      "id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+      "name": "다크 커버춰"
+    },
+    {
+      "id": "932abb06-4fee-48f7-a9f1-e2643e3a3eac",
+      "name": "바닐라 에센스"
+    },
+    {
+      "id": "775026fb-a00e-44f0-995d-dfc5599463b1",
+      "name": "바닐라 페이스트"
+    },
+    {
+      "id": "c1fe57ca-dc9c-4831-9cc3-96398b3c4df7",
+      "name": "베트남 고추"
+    },
+    {
+      "id": "b486109e-e04e-409a-924f-638dc78258e4",
+      "name": "사각어묵"
+    },
+    {
+      "id": "5d430d7a-525c-4185-91a8-1f5a035a7562",
+      "name": "생강술"
+    },
+    {
+      "id": "7761089f-2b38-51eb-9110-18ccaddf3a46",
+      "name": "수제비면"
+    },
+    {
+      "id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f",
+      "name": "조미김"
+    },
+    {
+      "id": "20212bd2-6a01-4a61-b45a-617fe9d87852",
+      "name": "초코 크런치"
+    },
+    {
+      "id": "e10a1b06-34ec-5078-9f92-bf6e548afb35",
+      "name": "초코칩"
+    },
+    {
+      "id": "b0e0a390-94ab-5f07-b900-57cc2bbc11a3",
+      "name": "콩국물"
+    },
+    {
+      "id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+      "name": "크림 소스"
+    },
+    {
+      "id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+      "name": "해물육수코인"
+    },
+    {
+      "id": "b3f706a6-0162-4323-8e3d-8fd93e87f086",
+      "name": "허브솔트"
+    },
+    {
+      "id": "74807485-7b47-4243-80c6-58bf5bd538ca",
+      "name": "훈제오리"
+    }
+  ],
+  "verification": {
+    "all_ai_checks_passed": true,
+    "ingredient_id_set_unchanged": true,
+    "only_approved_two_active_link_selections_changed": true,
+    "approved_non_ai_core_count_unchanged": true,
+    "partial_count_unchanged": true,
+    "product_hold_id_set_unchanged": true,
+    "source_history_preservation": "Full source and historical checksums are verified separately by the parent."
+  },
+  "notes": [
+    "핵심5종 숫자 보유1590개는 승인 비AI1588개와 AI추정2개의 합이다. AI값이 실측 또는 공식자료가 되었다는 뜻이 아니다.",
+    "제품 보류16개와 분류 밖95개는 미연결로 유지한다. 부분229개에는 AI로 결측 칸을 덧붙이지 않았다.",
+    "API 자격증명, lease token, 사용자 정보는 조회 결과와 산출물에 포함하지 않았다."
+  ]
+}

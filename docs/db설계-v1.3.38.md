@@ -1,5 +1,7 @@
 # DB 설계 v1.3.38
 
+> 2026-10-08 최종 운영 반영: AI SQL3개·원장207개, 추정프로필2개·16성분을 반영하고 자동 처리를 활성화했다. [실제 반영·보존·남은 결측](engineering/ingredient-ai-nutrition-rollout-20261008.md)이 아래 초기 미반영 기록보다 우선한다.
+
 ## 2026-10-08 추가 — AI 추정 성분과 영속 처리 (운영 미반영)
 
 새 private settings/jobs와 재료 INSERT trigger를 추가한다. 기존 영양 테이블을 재사용하며 HOMECOOK_AI_ESTIMATE 전용 estimated status, AI_NUTRITION_ESTIMATE_USED 경고, 선택적 contains_ai_estimate를 지원한다. 원자료/고정 기록을 일괄 변경하지 않고 공식 자료 우선과 기존 제품/권한/입력 검사를 유지한다. 정책 off가 기본이며 새3개 migration 및 웹 동시 배포 후 활성화한다. [정확한 계약·활성화·검증](engineering/ingredient-ai-nutrition-20261008.md)을 따른다.
