@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "status": "deployed_and_enabled",
+  "web_ref": "7b672ef55370137367f4b77848feeb1416c9a2ea",
+  "build_id": "prelaunch-7b672ef55370-va1zyI",
+  "integrated_application_source": "ad86aa7c617011583bc2a57c352c49afefce5738",
+  "pull_request": "https://github.com/netsus/homecook/pull/1597",
+  "schema_apply": {
+    "status": "passed",
+    "mode": "--apply",
+    "source_ref": "ad86aa7c617011583bc2a57c352c49afefce5738",
+    "migrations": [
+      {
+        "filename": "20261008090000_ingredient_ai_nutrition.sql",
+        "sha256": "b3966590e9a2df3127467149bcd00316575697a103974f2fa0d1a9685cc9f735"
+      },
+      {
+        "filename": "20261008091000_ai_nutrition_snapshot_evidence.sql",
+        "sha256": "4816852ec7bce4e15b1560b9755d070596312d6fcf3f9da01670a9b4fc156e2e"
+      },
+      {
+        "filename": "20261008092000_ai_nutrition_recipe_refresh.sql",
+        "sha256": "f1a1c8ca40a42f8128d4cf10e734431db36793feda72e05f4517ff71158de3aa"
+      }
+    ],
+    "ledger_count": 207,
+    "backup_sha256": "c3135f3d6070ad75d2639ab839b04a80d2a0de06ca94da4f934c78652f1bae53",
+    "original_nutrition_and_history_preserved": true,
+    "ai_enabled": false,
+    "finished_at": "2026-10-08T14:08:28.736Z"
+  },
+  "preservation": {
+    "status": "passed",
+    "verified_at": "2026-10-08T14:35:30.258Z",
+    "official_nutrition_and_links_unchanged": true,
+    "all_existing_historical_rows_unchanged": true,
+    "new_rows_observed_during_rollout": {
+      "table": "leftover_dishes",
+      "count": 1
+    },
+    "note": "Concurrent newly created cooked batch rows are outside the before-cohort. Every original row and all other protected fingerprints matched."
+  },
+  "data_api": [
+    {
+      "name": "anonymous",
+      "status": 500,
+      "result": "55000",
+      "message": "ACCOUNT_SESSION_STALE",
+      "passed": true
+    },
+    {
+      "name": "wrong_scope",
+      "status": 500,
+      "result": "55000",
+      "message": "ACCOUNT_SESSION_STALE",
+      "passed": true
+    },
+    {
+      "name": "disabled_valid_scope",
+      "status": 200,
+      "result": "disabled",
+      "message": null,
+      "passed": true
+    }
+  ],
+  "jobs": {
+    "succeeded": 2,
+    "attempts_each": 1,
+    "pending_recipe_refreshes": 0,
+    "claims_today_at_verification": 2
+  },
+  "verification": {
+    "integrated_tests": 313,
+    "deployed_web_tests": 296,
+    "deployment_tool_tests": 135,
+    "isolated_sql_suites": 4,
+    "actual_db_to_typescript": "passed",
+    "merged_ui_viewports": [
+      390,
+      1280
+    ],
+    "live_public_ui": "AI badge verified at both widths",
+    "typecheck": "passed",
+    "build": "passed_with_existing_eslint_plugin_resolution_warning"
+  },
+  "rollback": "Pre-AI automatic web rollback blocked by backwardCompatible=false after activation",
+  "private_operation_directory": "/Users/cwj/.homecook/operations/ingredient-ai-nutrition-20261008-xaPr1w"
+}

@@ -10,6 +10,10 @@
 소유자 전용 `GET/POST /api/v1/recipes/youtube/saved-drafts`, `GET/PATCH /api/v1/recipes/youtube/saved-drafts/{draft_id}`를 추가한다. POST는 extraction_id와 content, PATCH는 expected_revision과 content를 받는다. 쓰기는 UUID Idempotency-Key를 요구한다. content는 title/base_servings/tags와 안정된 row_id를 가진 ingredients/steps이며 미연결 값과 null 수량을 허용한다. 원본 source/evidence는 요청에서 받지 않고 소유 세션으로부터 서버가 보존한다. 기존 success/data/error 래퍼·계정 세대 권한·소유권·revision 보호를 유지한다. 정규 register API 계약은 변경하지 않는다.
 
 
+## 2026-10-08 — AI 추정 영양 근거 (운영 반영)
+
+기존 성공/오류 wrapper와 권한을 유지한다. 레시피·계획 영양에서 실제 AI 성분이 기여하면 `AI_NUTRITION_ESTIMATE_USED` 경고와 기존6키 출처(provider=`HOMECOOK_AI_ESTIMATE`)를 전달한다. 식사 기록·미리보기의 영양 evidence에 선택적 boolean `contains_ai_estimate`를 추가하며, 옛 응답의 누락은 false로 읽고 저장된 JSON을 재작성하지 않는다. 합계는 실제 포함 항목의 플래그를 OR로 전달한다. null은0으로 바꾸지 않으며 source/경고 일치와 exact-key 검증은 유지한다. 자동 작업9RPC는 service 전용 `ingredient-ai-nutrition` scope·정확POST경로로만 호출하며 사용자용 새 쓰기 API를 열지 않는다. [계약·운영 결과](engineering/ingredient-ai-nutrition-rollout-20261008.md) 참조.
+
 > 운영 반영(2026-09-28): 누적 피드백 후속을 웹 `8d9dc57efe22`·DB 이력198개에 반영했다. 아래 항목의 ‘미배포’는 구현 당시 상태다. [실제 반영·검증·남은 확인](engineering/feedback-batch-release-20260928.md)이 우선한다.
 
 ## 2026-09-28 추가 — 레시피북 개수·완료 직전 읽기·탈퇴 키

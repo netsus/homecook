@@ -22,6 +22,8 @@ export interface MealLogMutationInput {
 }
 
 export interface MealLogNutritionEvidence {
+  /** Frozen provenance; absent on older records means no recorded AI estimate. */
+  contains_ai_estimate?: boolean;
   calculation_status: MealLogNutritionStatus;
   calories_kcal: number | null;
   carbohydrate_g: number | null;

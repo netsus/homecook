@@ -23,6 +23,18 @@ describe("planner addition inside one sheet", () => {
     expect(screen.getByTestId("meal-add-target-badge").textContent).toBe("10/6 점심");
     expect(document.body.style.overflow).toBe("hidden");
   });
+  it("keeps the accessible step name while showing only back and target context", async () => {
+    openPicker();
+    const dialog = screen.getByRole("dialog", { name: "검색으로 추가" });
+    const heading = screen.getByRole("heading", { name: "검색으로 추가" });
+    expect(heading.className).toBe("sr-only");
+    const badge = screen.getByTestId("meal-add-target-badge");
+    expect(badge.textContent).toBe("10/6 점심");
+    expect(badge.parentElement?.querySelector("button")?.getAttribute("aria-label")).toBe("뒤로 가기");
+    fireEvent.click(await screen.findByRole("button", { name: "김치찌개 선택" }));
+    expect(screen.getByRole("dialog", { name: "계획에 추가" })).toBe(dialog);
+    expect(screen.getByRole("heading", { name: "계획에 추가" }).className).toBe("sr-only");
+  });
   it("replaces source content with quantity and retains query and draft on back", async () => {
     openPicker();
     const input = screen.getByRole("textbox", { name: "레시피 검색" });

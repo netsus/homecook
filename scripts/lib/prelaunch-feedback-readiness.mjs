@@ -8,10 +8,10 @@ import { inheritRound2Readiness } from "./prelaunch-web-deploy.mjs";
 import { createRecordingDockerAdapter, privatePath, IMMUTABLE_SCOPE_SQL, LEDGER_VALID_SQL } from "./marketing-round2-controlled-deploy.mjs";
 import { BETA_ALIASES_UNROUTED_SQL, BETA_CANONICAL_POSTIMAGE_SQL } from "./prelaunch-beta-readiness.mjs";
 
-export const FEEDBACK_LIVE_SHA = "8d9dc57efe223b8e14c41db0597b062f954ab18e";
+export const FEEDBACK_LIVE_SHA = "899954434a51a44770ea96d78c1e71ee51176cbe";
 // Fill only after the source pair, before/after DB evidence, and manifest bytes
 // have been reviewed. Neither CLI arguments nor environment may override pins.
-export const FEEDBACK_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/feedback-batch-20261007/readiness-review.v2.json", sha256: "831ec6ee98b6933ce480ab7231ef969f7008bfc63224872e345718c45684a40e" });
+export const FEEDBACK_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/ui-polish-20261008/readiness-review.json", sha256: "5454262f982dda4b053b93b7c13c7844ef747e1f377cd3e55045b7adb5c33f1b" });
 const SHA = /^[a-f0-9]{64}$/u;
 const REF = /^[a-f0-9]{40}$/u;
 const PROOFS = ["db_authority", "db_migration", "operator_approval", "privacy_consent", "retention_runbook", "turnstile_live"];
@@ -84,7 +84,7 @@ async function readPreApplyProof(review) {
   const proof = JSON.parse(bytes);
   requireValue(proof.schema === "homecook.prelaunch-feedback-db-before.v1"
     && typeof proof.observedAt === "string" && Number.isFinite(Date.parse(proof.observedAt))
-    && Array.isArray(proof.ledger) && proof.ledger.length === 201
+    && Array.isArray(proof.ledger) && proof.ledger.length === 204
     && SHA.test(proof.receiptSha256 ?? "") && SHA.test(proof.immutableScope ?? "")
     && SHA.test(proof.marketingPostimage ?? "") && SHA.test(proof.rowsSha256 ?? "")
     && Array.isArray(proof.scopeFunctions), "invalid pre-apply proof");

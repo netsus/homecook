@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "checked_at": "2026-10-08T10:44:27.187Z",
+  "environment": "network-isolated restored DB",
+  "production_changed": false,
+  "migrations": {
+    "20261008090000_ingredient_ai_nutrition.sql": "b3966590e9a2df3127467149bcd00316575697a103974f2fa0d1a9685cc9f735",
+    "20261008091000_ai_nutrition_snapshot_evidence.sql": "4816852ec7bce4e15b1560b9755d070596312d6fcf3f9da01670a9b4fc156e2e",
+    "20261008092000_ai_nutrition_recipe_refresh.sql": "f1a1c8ca40a42f8128d4cf10e734431db36793feda72e05f4517ff71158de3aa"
+  },
+  "historical_checksums_unchanged": true,
+  "sql_tests": {
+    "ingredient-ai-nutrition-verify.sql": "passed",
+    "ingredient-ai-nutrition-jobs.sql": "passed",
+    "ai-nutrition-snapshot-evidence.sql": "passed",
+    "ingredient-ai-nutrition-refresh.sql": "passed"
+  },
+  "manifest_function_count": 20,
+  "actual_db_to_typescript_roundtrip": {
+    "status": "passed",
+    "provider_output": "synthetic_fixture",
+    "profile_write": "real_complete_rpc",
+    "snapshot_calculation": "real_typescript_calculator",
+    "snapshot_write": "real_scoped_rpc",
+    "rollback_fixture_remaining": 0
+  },
+  "typecheck": "passed",
+  "security_function_contract": "passed",
+  "actual_provider_estimates": {
+    "status": "passed",
+    "count": 2,
+    "model": "gemini-3.1-flash-lite",
+    "primary_key_response": 402,
+    "secondary_key_response": "success",
+    "real_db_validation": "passed_rolled_back",
+    "production_applied": 0
+  },
+  "related_tests": {
+    "files": 21,
+    "passed": 309,
+    "includes_actual_db_to_ts_test": true
+  },
+  "build": {
+    "status": "passed",
+    "unrelated_existing_lint_warnings": 4
+  },
+  "browser": {
+    "status": "passed_with_documented_limits",
+    "viewports": [
+      390,
+      1280
+    ],
+    "scenarios": 22,
+    "horizontal_overflow": 0,
+    "page_errors": 0,
+    "api_data": "mocked_fixtures",
+    "detail": "ingredient-ai-nutrition-browser-20261008.json"
+  },
+  "production_read_only_confirmation": {
+    "ai_nutrition_sources": 0,
+    "ai_jobs_table_present": false
+  },
+  "isolated_test_container_removed": true
+}

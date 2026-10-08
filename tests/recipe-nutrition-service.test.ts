@@ -852,3 +852,71 @@ describe("recipe nutrition snapshot service", () => {
     }));
   });
 });
+
+
+describe("AI predecessor provenance", () => {
+  function aiLink(overrides: Parameters<typeof approvedNutritionLink>[0] = {}) {
+    const link = approvedNutritionLink(overrides);
+    link.nutrition_profiles.nutrition_source_items.nutrition_sources.provider_code = "HOMECOOK_AI_ESTIMATE";
+    link.nutrition_profiles.nutrition_values = coreValues.map((value) => ({ ...value, value_status: "estimated" }));
+    return link;
+  }
+
+  it("hydrates approved estimates and keeps existing input-guard fields", async () => {
+    const client = serviceClient({ nutritionLinks: [aiLink()] });
+    const prepared = await prepareRecipeNutritionSnapshot(client as never, "recipe-1");
+    expect(prepared.calculation).toMatchObject({ calculation_quality: "estimated", warnings: ["AI_NUTRITION_ESTIMATE_USED"] });
+    expect(prepared.inputGuard.recipe_ingredients[0]).toMatchObject({
+      nutrition_candidates: [expect.objectContaining({
+        nutrition_values: expect.arrayContaining([{ nutrient_code: "energy_kcal", amount: 100, value_status: "estimated" }]),
+        source: expect.objectContaining({ provider: "HOMECOOK_AI_ESTIMATE" }),
+      })],
+    });
+  });
+
+  it.each(["AI observed", "official estimated"])("rejects a %s candidate", async (kind) => {
+    const link = aiLink();
+    if (kind === "AI observed") link.nutrition_profiles.nutrition_values = coreValues;
+    else link.nutrition_profiles.nutrition_source_items.nutrition_sources.provider_code = "RDA";
+    const prepared = await prepareRecipeNutritionSnapshot(serviceClient({ nutritionLinks: [link] }) as never, "recipe-1");
+    expect(prepared.calculation.calculation_status).toBe("unavailable");
+    expect(prepared.inputGuard.recipe_ingredients[0].nutrition_candidates).toEqual([]);
+  });
+
+  it("does not fill missing official primary nutrients from an AI fallback", async () => {
+    const original = approvedNutritionLink();
+    const official = { ...original, nutrition_profiles: { ...original.nutrition_profiles,
+      nutrition_values: coreValues.map((value) => ({ ...value, amount: null, value_status: "missing" })),
+    } };
+    const prepared = await prepareRecipeNutritionSnapshot(serviceClient({ nutritionLinks: [official, aiLink({ id: "ai", profileId: "ai-profile" })] }) as never, "recipe-1");
+    expect(prepared.inputGuard.recipe_ingredients[0].selected_nutrition_link_id).toBe("link-1");
+    expect(prepared.calculation).toMatchObject({ calculation_status: "unavailable", sources: [] });
+    expect(prepared.calculation.warnings).not.toContain("AI_NUTRITION_ESTIMATE_USED");
+  });
+
+  it("preserves invalid product pins and never falls back to an AI generic candidate", async () => {
+    const pin = { id: "recipe-ingredient-1", ingredient_id: "ingredient-1", amount: 100, unit: "g", ingredient_type: "QUANT", scalable: true, sort_order: 0,
+      food_product_id: "product-1", food_product_nutrition_version_id: "product-version-1" };
+    const client = {
+      ...serviceClient({ ingredients: [pin], nutritionLinks: [aiLink()] }),
+      rpc: vi.fn(async () => ({ data: [{ id: pin.id, product_predecessor: null }], error: null })),
+    };
+    const prepared = await prepareRecipeNutritionSnapshot(client as never, "recipe-1");
+    expect(prepared.inputGuard.recipe_ingredients[0]).toMatchObject({
+      food_product_id: pin.food_product_id, food_product_nutrition_version_id: pin.food_product_nutrition_version_id, product_predecessor: null,
+    });
+    expect(prepared.calculation).toMatchObject({ calculation_status: "unavailable", sources: [], warnings: ["NUTRITION_PROFILE_MISSING"] });
+  });
+
+  it("keeps an official primary ahead of an AI profile even when AI matches the input unit", async () => {
+    const ai = aiLink({ id: "ai-volume", profileId: "ai-profile", basisUnit: "ml", normalizationMethod: "volume_100ml" });
+    const client = serviceClient({ nutritionLinks: [ai, approvedNutritionLink()],
+      ingredients: [{ id: "recipe-ingredient-1", ingredient_id: "ingredient-1", amount: 1, unit: "큰술", ingredient_type: "QUANT", scalable: true, sort_order: 0 }],
+      conversionAssignments: [approvedConversionAssignment()],
+    });
+    const prepared = await prepareRecipeNutritionSnapshot(client as never, "recipe-1");
+    expect(prepared.inputGuard.recipe_ingredients[0].selected_nutrition_link_id).toBe("link-1");
+    expect(prepared.calculation.warnings).toEqual(["REPRESENTATIVE_VOLUME_CONVERSION_USED"]);
+    expect(prepared.calculation.sources.some((source) => source.provider === "HOMECOOK_AI_ESTIMATE")).toBe(false);
+  });
+});

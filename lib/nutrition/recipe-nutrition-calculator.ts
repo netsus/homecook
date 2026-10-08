@@ -34,7 +34,7 @@ export interface RecipeNutritionSourceAttribution {
 
 export interface RecipeNutritionInputValue {
   amount: number | null;
-  value_status: "observed" | "missing" | "trace" | "parse_error";
+  value_status: "observed" | "estimated" | "missing" | "trace" | "parse_error";
 }
 
 export interface RecipeNutritionIngredientInput {
@@ -180,6 +180,7 @@ const WARNING_PRIORITY = [
   "TO_TASTE_EXCLUDED",
   "REPRESENTATIVE_VOLUME_CONVERSION_USED",
   "PIECE_WEIGHT_CONVERSION_USED",
+  "AI_NUTRITION_ESTIMATE_USED",
 ] as const;
 
 const WARNING_INDEX = new Map<string, number>(
@@ -589,16 +590,27 @@ function compareSourceAttribution(
   return 0;
 }
 
+function isAiNutrition(ingredient: RecipeNutritionIngredientInput) {
+  return ingredient.nutrition?.source.provider === "HOMECOOK_AI_ESTIMATE";
+}
+
+function hasCalculableValueStatus(
+  ingredient: RecipeNutritionIngredientInput,
+  value: RecipeNutritionInputValue | undefined,
+) {
+  return value?.value_status === (isAiNutrition(ingredient) ? "estimated" : "observed");
+}
+
 function outputNutrientCodes(input: RecipeNutritionCalculatorInput) {
   const optional = OPTIONAL_NUTRIENT_CODES.filter((code) =>
     input.ingredients.some((ingredient) => {
       if (!isApprovedNutrition(ingredient)) return false;
       const value = ingredient.nutrition?.profile.values[code];
       if (ingredient.ingredient_type === "TO_TASTE") {
-        return value?.value_status === "observed" && value.amount === 0;
+        return !isAiNutrition(ingredient) && value?.value_status === "observed" && value.amount === 0;
       }
       if (!resolveUnit(ingredient)) return false;
-      return value?.value_status === "observed" && value.amount !== null;
+      return hasCalculableValueStatus(ingredient, value) && value?.amount !== null;
     })
   );
   return [...CORE_NUTRIENT_CODES, ...optional] as RecipeNutrientCode[];
@@ -632,6 +644,8 @@ export function calculateRecipeNutrition(
   );
   let reflectedIngredientCount = 0;
   let targetIngredientCount = 0;
+  let hasAiContribution = false;
+  let hasOfficialContribution = false;
 
   for (const ingredient of sortedIngredients) {
     if (ingredient.ingredient_type === "TO_TASTE") {
@@ -643,6 +657,7 @@ export function calculateRecipeNutrition(
         const value = ingredient.nutrition?.profile.values[code];
         if (
           approved &&
+          !isAiNutrition(ingredient) &&
           value?.value_status === "observed" &&
           value.amount === 0
         ) {
@@ -659,6 +674,7 @@ export function calculateRecipeNutrition(
         missingReasons.push(`TO_TASTE_EXCLUDED:${ingredient.id}`);
       }
       if (hasObservedZero && ingredient.nutrition) {
+        hasOfficialContribution = true;
         qualities.add("direct");
         const attribution: RecipeNutritionSourceAttribution = {
           provider: ingredient.nutrition.source.provider,
@@ -697,7 +713,7 @@ export function calculateRecipeNutrition(
       const value = ingredient.nutrition!.profile.values[code];
       if (
         !value ||
-        value.value_status !== "observed" ||
+        !hasCalculableValueStatus(ingredient, value) ||
         value.amount === null ||
         !Number.isFinite(value.amount) ||
         value.amount < 0
@@ -717,7 +733,14 @@ export function calculateRecipeNutrition(
 
     if (ingredientReflected) {
       reflectedIngredientCount += 1;
-      qualities.add(unitResolution.quality);
+      if (isAiNutrition(ingredient)) {
+        hasAiContribution = true;
+        qualities.add("estimated");
+        warnings.push("AI_NUTRITION_ESTIMATE_USED");
+      } else {
+        hasOfficialContribution = true;
+        qualities.add(unitResolution.quality);
+      }
       const attribution: RecipeNutritionSourceAttribution = {
         provider: ingredient.nutrition!.source.provider,
         dataset: ingredient.nutrition!.source.dataset,
@@ -789,7 +812,7 @@ export function calculateRecipeNutrition(
       : "unavailable";
   const calculationQuality: CalculationQuality | null = calculationStatus === "unavailable"
     ? null
-    : qualities.size === 2
+    : (hasAiContribution && hasOfficialContribution) || qualities.size === 2
       ? "mixed"
       : qualities.has("estimated")
         ? "estimated"

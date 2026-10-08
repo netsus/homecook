@@ -354,3 +354,45 @@ describe("recipe nutrition snapshot writer", () => {
     }
   });
 });
+
+
+describe("AI snapshot contract", () => {
+  it.each(["estimated", "mixed"] as const)("accepts %s AI provenance with the existing source projection", (quality) => {
+    const result = completeCalculation();
+    result.calculation_quality = quality;
+    result.warnings = ["AI_NUTRITION_ESTIMATE_USED"];
+    result.sources = [{ ...SOURCE, provider: "HOMECOOK_AI_ESTIMATE" }];
+    if (quality === "mixed") {
+      result.sources.push(SOURCE);
+      result.reflected_ingredient_count = 2;
+      result.target_ingredient_count = 2;
+    }
+    expect(() => validateRecipeNutritionSnapshot(result)).not.toThrow();
+    expect(mapRecipeNutritionSnapshot({
+      id: "ai-snapshot", base_servings: result.base_servings,
+      scalable_values_json: result.scalable_values, fixed_values_json: result.fixed_values,
+      nutrient_status_json: result.values, calculation_status: result.calculation_status,
+      calculation_quality: quality, reflected_ingredient_count: result.reflected_ingredient_count,
+      target_ingredient_count: result.target_ingredient_count,
+      warnings_json: result.warnings, sources_json: result.sources, calculated_at: "2026-10-08T00:00:00Z",
+    }).calculation_quality).toBe(quality);
+  });
+
+  it("rejects AI calculation marked direct", () => {
+    const result = completeCalculation();
+    result.warnings = ["AI_NUTRITION_ESTIMATE_USED"];
+    result.sources = [{ ...SOURCE, provider: "HOMECOOK_AI_ESTIMATE" }];
+    expect(() => validateRecipeNutritionSnapshot(result)).toThrow();
+  });
+});
+
+
+describe("AI snapshot source consistency", () => {
+  it.each(["missing warning", "missing source", "AI-only mixed"])("rejects %s", (kind) => {
+    const result = completeCalculation();
+    result.calculation_quality = kind === "AI-only mixed" ? "mixed" : "estimated";
+    result.warnings = kind === "missing warning" ? ["REPRESENTATIVE_VOLUME_CONVERSION_USED"] : ["AI_NUTRITION_ESTIMATE_USED"];
+    result.sources = kind === "missing source" ? [SOURCE] : [{ ...SOURCE, provider: "HOMECOOK_AI_ESTIMATE" }];
+    expect(() => validateRecipeNutritionSnapshot(result)).toThrowError(expect.objectContaining({ code: "INVALID_SNAPSHOT_STATUS" }));
+  });
+});

@@ -69,3 +69,30 @@ for (const width of [375, 1280]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
+
+for (const width of [320, 375, 1280]) {
+  test(`selecting either end of a week preserves rail alignment ${width}px`, async ({page}, info) => {
+    await page.setViewportSize({width,height:812});
+    await setE2EAuthOverride(page, "guest");
+    await page.goto("/planner?segment=log&date=2026-10-08");
+    const rail=page.getByTestId("meal-log-week-date-rail");
+    const monday=rail.getByRole("radio",{name:"10/5 월요일 선택",exact:true});
+    const sunday=rail.getByRole("radio",{name:"10/11 일요일 선택",exact:true});
+    await expect(monday).toBeInViewport({ratio:1});
+    await expect(sunday).toBeInViewport({ratio:1});
+    const initial=await rail.evaluate(node=>node.scrollLeft);
+    for(const target of [sunday,monday,sunday]) {
+      await target.click();
+      await expect(target).toHaveAttribute("aria-checked","true");
+      await expect.poll(()=>rail.evaluate(node=>node.scrollLeft)).toBeCloseTo(initial,0);
+      const insets=await rail.evaluate(node=>{
+        const bounds=node.getBoundingClientRect();
+        const dates=[...node.querySelectorAll('[role="radio"]')].filter(n=>n.closest('ol')?.getAttribute('aria-hidden')!=="true");
+        return {left:dates[0].getBoundingClientRect().left-bounds.left,right:bounds.right-dates[6].getBoundingClientRect().right};
+      });
+      expect(insets.left).toBeGreaterThanOrEqual(4);
+      expect(Math.abs(insets.left-insets.right)).toBeLessThan(2);
+    }
+    await page.screenshot({path:info.outputPath(`stable-week-ends-${width}.png`)});
+  });
+}

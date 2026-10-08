@@ -24,6 +24,7 @@ const PLANNER_NUTRITION_UNITS: Record<PlannerNutritionCoreCode, string> = {
 };
 
 const WARNING_MESSAGES: Record<string, string> = {
+  AI_NUTRITION_ESTIMATE_USED: "AI 추정값 포함",
   INGREDIENT_NUTRITION_MISSING: "일부 재료의 영양 정보가 아직 준비되지 않았어요.",
   NUTRITION_PROFILE_MISSING: "일부 재료의 영양 정보가 아직 준비되지 않았어요.",
   PRODUCT_NUTRITION_MISSING: "일부 완제품의 영양 정보가 아직 준비되지 않았어요.",
@@ -83,4 +84,15 @@ export function buildPlannerNutritionWarningMessages(warnings: string[]) {
       ),
     ),
   ];
+}
+
+
+export function plannerAiEstimateNotice(
+  values: Record<string, PlannerNutritionValue>,
+  containsAiEstimate: boolean = false,
+): string | null {
+  if (!containsAiEstimate) return null;
+  return Object.values(values).some(value => value.status !== "complete")
+    ? "AI 추정값 포함 · 일부 영양정보가 빠진 추정값"
+    : "AI 추정값 포함";
 }

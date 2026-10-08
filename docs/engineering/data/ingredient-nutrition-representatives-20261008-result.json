@@ -1,0 +1,108 @@
+{
+  "schema_version": "homecook-nutrition-representatives-result-v1",
+  "passed": true,
+  "applied_at": "2026-10-07T15:43:32.478Z",
+  "operation_checksum": "5b350ef20678cc9441358ffda80ad4f09bcef50a6eccd4c970276c9953b0eb90",
+  "sql_sha256": "3c8edb61b6a3afd339d512d80aed8078b5380f45bc695b27f27f1114a54869f1",
+  "counts": {
+    "reviewed": 61,
+    "new_links": 42,
+    "product_required": 16,
+    "source_missing": 3,
+    "by_provider": {
+      "RDA": 27,
+      "MEXT": 3,
+      "USDA_SR": 11,
+      "OFFICIAL_DOP": 1
+    }
+  },
+  "representative_policy": {
+    "reference_type": "user_approved_representative",
+    "authorization": "2026-10-08 user approved representative-value plan",
+    "not_exact_product_measurement": true,
+    "no_new_unit_conversions": true,
+    "detail_ui": "deferred",
+    "food_product_search": "deferred",
+    "duplicate_synonym_integration": "deferred until nutrition batch complete"
+  },
+  "ingredients_before": 1930,
+  "ingredients_after": 1930,
+  "physical_deletes": 0,
+  "identity_review_pending_after": 0,
+  "existing_source_values_and_history_unchanged": true,
+  "nutrition_after": {
+    "partial": 228,
+    "complete": 1588,
+    "unlinked": 114
+  },
+  "values_verified": 336,
+  "replay_writes": 0,
+  "database_state": {
+    "audit_count": 1,
+    "groups_hash": "780c4c74df7607ada89f9c5745d90eed",
+    "ingredients": 1930,
+    "ledger_hash": "e372502f26ba5d4e534a48cd99861dc6",
+    "entries_hash": "a1cd77b2469cfa284e96b3f341ac0221",
+    "presentations": {
+      "base": 1167,
+      "alias": 20,
+      "detail": 424,
+      "excluded": 124,
+      "umbrella": 88,
+      "prepared_food": 107
+    },
+    "review_states": {
+      "reviewed": 1930
+    },
+    "alias_capacity": 512,
+    "new_ledger_count": 1,
+    "alias_search_indexes": 2,
+    "representatives_hash": "3eea0cefca75f66c978f02060f3697dd",
+    "values_checked": 336
+  },
+  "backup": {
+    "bytes": 117144780,
+    "sha256": "216bddc19ddf4767ab4073aa9c1c3b298771156362019644a17d50552a550c96",
+    "full_isolated_restore_verified": true
+  },
+  "verification": {
+    "checks": [
+      "catalog drift",
+      "late metadata error rolls back nutrition and catalog",
+      "source quality hold",
+      "exact values and all definitions",
+      "existing source values and app records unchanged",
+      "migration ledger unchanged",
+      "replay zero writes",
+      "umbrella cannot replace alias root",
+      "public writes denied"
+    ],
+    "independent_source_review": true
+  },
+  "ui_catalog_integration_deployed": false,
+  "web_deployed": false,
+  "recipe_nutrition_refresh": {
+    "count": 4,
+    "created": 4,
+    "replay_created": 0
+  },
+  "followup_rambutan": {
+    "result_file": "ingredient-nutrition-rambutan-20261008-result.json",
+    "new_links": 1
+  },
+  "combined_turn_summary": {
+    "new_links": 43,
+    "representative_links": 42,
+    "additional_official_raw_food_links": 1,
+    "primary_detail_unlinked_before": 61,
+    "primary_detail_unlinked_after": 18,
+    "product_required": 16,
+    "source_missing": 2,
+    "nutrition_after": {
+      "partial": 229,
+      "complete": 1588,
+      "unlinked": 113
+    },
+    "ledger_count_unchanged": 204
+  }
+}

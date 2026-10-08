@@ -235,9 +235,10 @@ export async function callMealLogRpc(client: MealLogRpcClient, name: string, arg
 }
 
 export function isMealLogNutritionEvidence(value: unknown): value is MealLogNutritionEvidence {
-  if (!isRecord(value) || !hasOnlyKeys(value, NUTRITION_KEYS)
+  if (!isRecord(value) || !hasOnlyKeys(value, [...NUTRITION_KEYS, "contains_ai_estimate"])
     || !NUTRITION_KEYS.every((key) => key in value)
     || !NUTRITION_STATUSES.includes(value.calculation_status as typeof NUTRITION_STATUSES[number])) return false;
+  if ("contains_ai_estimate" in value && typeof value.contains_ai_estimate !== "boolean") return false;
   return NUTRITION_KEYS.slice(1).every((key) => value[key] === null
     || (typeof value[key] === "number" && Number.isFinite(value[key])));
 }
@@ -245,6 +246,7 @@ export function isMealLogNutritionEvidence(value: unknown): value is MealLogNutr
 function projectMealLogNutrition(value: unknown): MealLogNutritionEvidence | null {
   if (!isMealLogNutritionEvidence(value)) return null;
   return {
+    ...(value.contains_ai_estimate === undefined ? {} : { contains_ai_estimate: value.contains_ai_estimate }),
     calculation_status: value.calculation_status,
     calories_kcal: value.calories_kcal,
     carbohydrate_g: value.carbohydrate_g,
@@ -320,10 +322,11 @@ function projectMealLogEntries(value: unknown): MealLogEntry[] | null {
 
 function projectMealLogDayTotal(value: unknown): MealLogDayTotal | null {
   if (!isRecord(value)
-    || !hasExactKeys(value, [...NUTRITION_KEYS, "incomplete_count"])
+    || !hasOnlyKeys(value, [...NUTRITION_KEYS, "incomplete_count", "contains_ai_estimate"])
     || !Number.isSafeInteger(value.incomplete_count)
     || Number(value.incomplete_count) < 0) return null;
-  const nutrition = Object.fromEntries(NUTRITION_KEYS.map((key) => [key, value[key]]));
+  const nutrition = { ...value };
+  delete nutrition.incomplete_count;
   const projected = projectMealLogNutrition(nutrition);
   return projected ? { ...projected, incomplete_count: value.incomplete_count as number } : null;
 }

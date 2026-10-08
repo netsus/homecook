@@ -1,0 +1,50 @@
+{
+  "status": "AI display and viewport checks passed; guest-notification console issue recorded",
+  "environment": "actual deployed 127.0.0.1:3100; no new server",
+  "read_only": true,
+  "mocking": false,
+  "qa_fixture": false,
+  "authentication_bypass": false,
+  "mutations_observed": 0,
+  "mutations_guard": "non-GET/HEAD/OPTIONS requests would be aborted; none occurred",
+  "recipe": "http://127.0.0.1:3100/recipe/9e9e82c1-f7bc-5372-9588-0f242cc8239d",
+  "about": "http://127.0.0.1:3100/about/ai-nutrition",
+  "viewports": [
+    390,
+    1280
+  ],
+  "recipe_AI_notice_visible": true,
+  "recipe_observed_display": "1인분192kcal; 탄수화물23.1g·단백질12g·지방7g; AI추정값포함",
+  "horizontal_overflow": false,
+  "uncaught_page_errors": 0,
+  "request_failures": 0,
+  "findings": [
+    {
+      "severity": "information",
+      "finding": "제공된복수형/recipes/<id>는404.기존단수형/recipe/<id>는200이며정상AI카드표시.",
+      "evidence": "390-report.json and1280-report.json retain first wrong-route results"
+    },
+    {
+      "severity": "low",
+      "finding": "비로그인공통알림이 /api/v1/users/me/youtube-extraction-jobs?view=unseen-completed 로GET하여401console을남김.",
+      "occurrences": 4,
+      "impact": "레시피AI카드와about본문은정상.로그인/모의응답으로숨기지않고원문로그보존."
+    }
+  ],
+  "screenshots": [
+    "canonical/1280-about-full.png",
+    "canonical/1280-about-target.png",
+    "canonical/1280-about-viewport.png",
+    "canonical/1280-recipe-full.png",
+    "canonical/1280-recipe-target.png",
+    "canonical/1280-recipe-viewport.png",
+    "canonical/390-about-full.png",
+    "canonical/390-about-target.png",
+    "canonical/390-about-viewport.png",
+    "canonical/390-recipe-full.png",
+    "canonical/390-recipe-target.png",
+    "canonical/390-recipe-viewport.png"
+  ],
+  "browser_closed": true,
+  "code_or_database_changes": false
+}

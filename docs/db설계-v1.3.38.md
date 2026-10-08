@@ -10,6 +10,12 @@
 `public.youtube_saved_recipe_results`에 owner_user_id/account_generation/extraction_session_id, 불변 source_snapshot_json, 수정 가능한 editable_content_json 및 hash/revision을 저장한다. 원본 작업 세션 삭제와 독립적으로 보존하되 소유자 삭제에 연동한다. private mutation 원장으로 동일 키/내용 재시도와 충돌을 구분한다. 직접 테이블 접근을 금지하고 정확한 내부 RPC·세션 권한 경계에서만 접근한다. 기존 정규 재료 FK·수량·snapshot 제약은 완화하지 않는다. 새 migration은 격리 검증 후 별도 통제 절차로 반영하며 현재 운영 미반영이다.
 
 
+> 2026-10-08 최종 운영 반영: AI SQL3개·원장207개, 추정프로필2개·16성분을 반영하고 자동 처리를 활성화했다. [실제 반영·보존·남은 결측](engineering/ingredient-ai-nutrition-rollout-20261008.md)이 아래 초기 미반영 기록보다 우선한다.
+
+## 2026-10-08 추가 — AI 추정 성분과 영속 처리 (운영 미반영)
+
+새 private settings/jobs와 재료 INSERT trigger를 추가한다. 기존 영양 테이블을 재사용하며 HOMECOOK_AI_ESTIMATE 전용 estimated status, AI_NUTRITION_ESTIMATE_USED 경고, 선택적 contains_ai_estimate를 지원한다. 원자료/고정 기록을 일괄 변경하지 않고 공식 자료 우선과 기존 제품/권한/입력 검사를 유지한다. 정책 off가 기본이며 새3개 migration 및 웹 동시 배포 후 활성화한다. [정확한 계약·활성화·검증](engineering/ingredient-ai-nutrition-20261008.md)을 따른다.
+
 > 운영 반영(2026-09-28): 누적 피드백 후속을 웹 `8d9dc57efe22`·DB 이력198개에 반영했다. 아래 항목의 ‘미배포’는 구현 당시 상태다. [실제 반영·검증·남은 확인](engineering/feedback-batch-release-20260928.md)이 우선한다.
 
 ## 2026-09-28 추가 — 승인한 테스트 음식 정리
@@ -3552,3 +3558,9 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 `ingredient_synonyms.synonym` 용량은512자다. 해외 공식명4개의 전체 원문이 기존100자를 초과해 승인 writer의 정확한 식품명 확인을 가능하게 한 변경이다. `search_name` 저장 표현식/순서와 두검색 인덱스를 동일하게 복원하며, 기존 별칭 내용·권한·영양명 검증은 유지한다. 이번 반영의 임시 원자료명 별칭은 제거해 최종 검색 별칭을 늘리지 않는다.
 
 [공식 영양자료 확장 적용·검증 기록](engineering/ingredient-nutrition-expansion-20261007.md)을 따른다.
+
+## 2026-10-08 사용자 승인 대표 영양 참고값
+
+공식 표본의 품종·색·크기·재배/등급 차이는 검토한 일반 대표기준으로 사용할 수 있다. 연결별 decision_reason에 `user_approved_representative:`와 적용 범위를 기록하고 공개 definition에도 기본 참고조건을 명시한다. `manual_source` 승인 경로를 재사용하며 실제 제품 등급/원산지·배합을 확정한 것으로 표시하지 않는다. 공유 source_item의 기존 provenance를 고쳐 쓰지 않고 관계별 사유와 운영 감사에 승인 근거를 남긴다.
+
+동일 식품·가식부·생건조·지방 정선·농축 조건은 보존하며 단위/부피/개당 무게를 자동 상속하지 않는다. 제품표가 필요한 항목과 원자료 미확보를 별도 기록하며, 결측/미량을0으로 채우지 않는다. 이번 후속은 데이터만 변경하고 스키마/ledger/기존 ID와 기록은 유지한다. 상세 화면·별도음식제품검색·중복동의어통합은 이번 영양 우선 작업 범위 밖이다. [기준·43개 보완·남은18개](engineering/ingredient-nutrition-representatives-20261008.md)를 따른다.

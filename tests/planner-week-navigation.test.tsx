@@ -64,6 +64,14 @@ describe("planner week navigation restoration", () => {
     expect(screen.getByTestId("meal-log-week-date-rail").scrollLeft).toBe(320);
   });
 
+  it("centers the week relative to the rail, not the page's offset parent", () => {
+    render(<PlannerWeekNavigation {...createProps()} mode="log" />);
+    const rail = screen.getByTestId("meal-log-week-date-rail");
+    [...rail.children].forEach((page, index) => Object.defineProperty(page, "offsetLeft", { configurable: true, value: 24 + index * 320 }));
+    fireEvent(window, new Event("resize"));
+    expect(rail.scrollLeft).toBe(320);
+  });
+
   it("uses the bright official brand accent for the selected planner date", () => {
     render(<PlannerWeekNavigation {...createProps()} />);
 

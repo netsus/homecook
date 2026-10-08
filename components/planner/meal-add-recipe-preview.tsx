@@ -33,6 +33,7 @@ export function MealAddRecipePreview({ recipeId, servings }: { recipeId: string;
       <ul className="space-y-3 pb-3 text-sm">{recipe.ingredients.map(ingredient => <li key={ingredient.id}>{formatScaledIngredient(ingredient, recipe.base_servings, servings)}</li>)}</ul>
     </details>
     <div className="flex items-center justify-between gap-3"><span className="text-sm">예상 영양 · {servings}인분</span><span className="text-xl tabular-nums">{integerCalories}</span></div>
-    {recipe.nutrition.calculation_status !== "complete" ? <p className="text-xs text-[var(--text-2)]">일부 영양 정보 없음</p> : null}
+    {nutrition.aiEstimateText ? <p className="text-xs text-[var(--brand-primary-text)]">{nutrition.aiEstimateText}{recipe.nutrition.calculation_status !== "complete" || Object.values(recipe.nutrition.values).some(value => value.status !== "complete") ? " · 일부 영양정보가 빠진 추정값" : ""}</p> : null}
+    {!nutrition.aiEstimateText && recipe.nutrition.calculation_status !== "complete" ? <p className="text-xs text-[var(--text-2)]">일부 영양 정보 없음</p> : null}
   </div>;
 }
