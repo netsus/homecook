@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { beforeAll, describe, expect, it } from "vitest";
@@ -19,6 +19,37 @@ function psql(sql: string) {
   ], { input: sql, encoding: "utf8", timeout: 30_000 });
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim();
+}
+
+function psqlFile(file: string, variables: Record<string, string> = {}, prefix = "") {
+  const variableArgs = Object.entries(variables).flatMap(([key, value]) => ["-v", `${key}=${value}`]);
+  const result = spawnSync("docker", [
+    "exec", "-i", container, "psql", "-X", "-U", "supabase_admin", "-d", "postgres",
+    "-Atq", "-v", "ON_ERROR_STOP=1", ...variableArgs, "--file=-",
+  ], { input: Buffer.concat([Buffer.from(prefix), readFileSync(file)]), encoding: "utf8", timeout: 30_000 });
+  expect(result.status, result.stderr).toBe(0);
+  return result.stdout.trim();
+}
+
+function lastJson(output: string) {
+  const lines = output.split("\n").map((line) => line.trim()).filter(Boolean);
+  return JSON.parse(lines.at(-1)!);
+}
+
+function psqlFileAsync(file: string, variables: Record<string, string>) {
+  const variableArgs = Object.entries(variables).flatMap(([key, value]) => ["-v", `${key}=${value}`]);
+  return new Promise<string>((resolve, reject) => {
+    const child = spawn("docker", [
+      "exec", "-i", container, "psql", "-X", "-U", "supabase_admin", "-d", "postgres",
+      "-Atq", "-v", "ON_ERROR_STOP=1", ...variableArgs, "--file=-",
+    ], { stdio: ["pipe", "pipe", "pipe"] });
+    const stdout: Buffer[] = []; const stderr: Buffer[] = [];
+    child.stdout.on("data", (chunk) => stdout.push(chunk)); child.stderr.on("data", (chunk) => stderr.push(chunk));
+    child.once("error", reject); child.once("close", (code) => code === 0
+      ? resolve(Buffer.concat(stdout).toString("utf8").trim())
+      : reject(new Error(Buffer.concat(stderr).toString("utf8"))));
+    child.stdin.end(readFileSync(file));
+  });
 }
 
 // The gate supplies a newly replayed, uniquely named container. Never connect
@@ -136,5 +167,61 @@ describe.skipIf(!enabled)("YouTube catalog after all current migrations", () => 
       rollback;
     `);
     expect(fingerprint).toBe(expectedSchema.catalog_fingerprint);
+  });
+
+  it("preserves Luna quantity metadata through the real worker resolver fence", () => {
+    const workerId = "trial-quantity-worker";
+    const jobId = "13000000-0000-4000-8000-000000000001";
+    const ownerId = "13000000-0000-4000-8000-000000000002";
+    psql(`
+      begin;
+      update private.youtube_extraction_current_policy set enabled=true,updated_at=clock_timestamp() where policy_key='primary';
+      update private.youtube_extraction_worker_credentials credential
+      set current_generation=1,current_jti_hash=repeat('a',64),expires_at=clock_timestamp()+interval '2 hours',
+          release_sha=repeat('1',40),schema_identity='youtube-extraction-worker-schema-v2',
+          allowed_snapshot_digest=private.youtube_extraction_policy_snapshot_digest(
+            policy.extractor_mode,policy.pipeline_identity,policy.result_affecting_options,policy.policy_version)
+      from private.youtube_extraction_current_policy policy where credential.credential_name='primary' and policy.policy_key='primary';
+      delete from public.youtube_extractor_permits;
+      insert into public.youtube_extractor_permits(permit_key,permit_generation) values ('primary',0);
+      insert into public.users(id,nickname,social_provider,social_id) values ('${ownerId}','trial-quantity','google','trial-quantity') on conflict (id) do nothing;
+      insert into public.youtube_extraction_jobs(
+        id,user_id,youtube_video_id,request_fingerprint,request_fingerprint_key_version,release_policy_key,
+        policy_version,policy_snapshot_digest,extractor_mode,pipeline_identity,result_affecting_options,
+        submission_mode,status,attempt_count,max_attempts,available_at
+      ) select '${jobId}', '${ownerId}', 'trialbridge', repeat('c',64),policy.fingerprint_key_version,'primary',
+        policy.policy_version,private.youtube_extraction_policy_snapshot_digest(policy.extractor_mode,policy.pipeline_identity,policy.result_affecting_options,policy.policy_version),
+        policy.extractor_mode,policy.pipeline_identity,policy.result_affecting_options,'background_notify','queued',0,3,clock_timestamp()
+      from private.youtube_extraction_current_policy policy where policy.policy_key='primary';
+      commit;
+    `);
+    const digest = psql("select allowed_snapshot_digest from private.youtube_extraction_worker_credentials where credential_name='primary';").split("\n").at(-1)!;
+    const claims = JSON.stringify({ role: "youtube_extraction_worker", scope: "youtube-extraction-worker",
+      iss: "https://worker.mumeok.kr", aud: "youtube-extraction", jti_hash: "a".repeat(64),
+      release_sha: "1".repeat(40), schema_identity: "youtube-extraction-worker-schema-v2",
+      allowed_snapshot_digest: digest, generation: 1, exp: Math.floor(Date.now()/1000)+3600 }).replaceAll("'", "''");
+    const claim = lastJson(psql(`begin; set local role youtube_extraction_worker; set local request.jwt.claims='${claims}'; select public.claim_youtube_extraction_job('${workerId}','${digest}',300)::text; commit;`));
+    const permit = lastJson(psql(`begin; set local role youtube_extraction_worker; set local request.jwt.claims='${claims}'; select public.claim_youtube_extractor_permit('${workerId}',300)::text; commit;`));
+    const started = lastJson(psql(`begin; set local role youtube_extraction_worker; set local request.jwt.claims='${claims}'; select public.start_youtube_extraction_attempt('${jobId}','${workerId}',${claim.lease_generation},${permit.permit_generation})::text; commit;`));
+    expect(started.started).toBe(true);
+    expect(lastJson(psqlFile("tests/sql/youtube-luna-trial-quantity-bridge.sql", {
+      job_id: jobId, worker_id: workerId, lease_generation: String(claim.lease_generation),
+      permit_generation: String(permit.permit_generation), youtube_video_id: "trialbridge",
+    }, `select set_config('request.jwt.claims','${claims}',false);\n`)).status).toBe("PASS");
+  });
+
+  it("validates the saved-result postimage, canonical authority, and concurrent ensure", async () => {
+    expect(lastJson(psqlFile("tests/sql/youtube-saved-recipe-results-verify.sql")).status).toBe("PASS");
+    psqlFile("tests/sql/youtube-saved-recipe-results-isolated-authority-fixture.sql");
+    expect(lastJson(psqlFile("tests/sql/youtube-saved-recipe-results-authority-verify.sql")).status).toBe("PASS");
+    psqlFile("tests/sql/youtube-saved-recipe-results-concurrency-setup.sql");
+    const [left, right] = await Promise.all([
+      psqlFileAsync("tests/sql/youtube-saved-recipe-results-concurrency-call.sql", { idempotency_key: "62000000-0000-4000-8000-000000000001" }),
+      psqlFileAsync("tests/sql/youtube-saved-recipe-results-concurrency-call.sql", { idempotency_key: "62000000-0000-4000-8000-000000000002" }),
+    ]);
+    const leftId = left.split("\n").map((line) => line.trim()).filter(Boolean).at(-1)!;
+    const rightId = right.split("\n").map((line) => line.trim()).filter(Boolean).at(-1)!;
+    expect(leftId).toMatch(/^[0-9a-f-]{36}$/u); expect(rightId).toBe(leftId);
+    expect(lastJson(psqlFile("tests/sql/youtube-saved-recipe-results-concurrency-assert.sql")).status).toBe("PASS");
   });
 });

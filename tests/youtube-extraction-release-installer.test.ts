@@ -194,6 +194,12 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       pipeline_identity: pipelineIdentity,
       policy_version: 2,
     });
+    const helper = join(outputDir,
+      "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/prebuilt/darwin-arm64/macos-vision-ocr");
+    expect(lstatSync(helper).mode & 0o777).toBe(0o555);
+    const helperSmoke = spawnSync(helper, [], { encoding: "utf8", timeout: 5_000 });
+    expect(helperSmoke.error?.message ?? "").not.toMatch(/EACCES|permission denied/iu);
+    expect(helperSmoke.status).not.toBeNull();
   });
 
   it("issues an exact ES256 local-only worker credential with a bounded lifetime", () => {
