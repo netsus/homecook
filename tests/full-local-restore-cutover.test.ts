@@ -329,6 +329,39 @@ ${platformData}\\unrestrict alpha-123
     )).toThrow("Unclassified platform restore relation: auth.future_unknown_relation");
   });
 
+  it("preserves persistent AI nutrition and saved YouTube mutation state", () => {
+    const result = buildSanitizedPlatformData(`${platformData}
+COPY private.ingredient_ai_nutrition_settings (singleton, enabled, policy_version) FROM stdin;
+t\tt\tingredient-ai-v1
+\\.
+COPY private.ingredient_ai_nutrition_jobs (id, ingredient_id, status) FROM stdin;
+job-a\tingredient-a\tsucceeded
+\\.
+COPY private.youtube_saved_recipe_result_mutations (owner_uuid, source_session_id, idempotency_key) FROM stdin;
+owner-a\tsession-a\tmutation-a
+\\.
+`);
+
+    for (const relation of [
+      "private.ingredient_ai_nutrition_settings",
+      "private.ingredient_ai_nutrition_jobs",
+      "private.youtube_saved_recipe_result_mutations",
+    ]) {
+      expect(result.sql).toContain(`COPY ${relation}`);
+      expect(result.manifest.relations).toContainEqual(expect.objectContaining({
+        action: "include",
+        relation,
+      }));
+    }
+    expect(result.manifest.unclassified).toEqual([]);
+  });
+
+  it("still fails closed for an unknown private persistent relation", () => {
+    expect(() => buildSanitizedPlatformData(
+      `${platformData}COPY private.future_persistent_state (id) FROM stdin;\nrow-a\n\\.\n`,
+    )).toThrow("Unclassified platform restore relation: private.future_persistent_state");
+  });
+
   it("excludes provider configuration and every observed remote session companion", () => {
     const result = buildSanitizedPlatformData(`${platformData}
 COPY auth.custom_oauth_providers (id) FROM stdin;

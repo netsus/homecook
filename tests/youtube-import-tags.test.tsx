@@ -9,6 +9,7 @@ import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import * as asyncApi from "@/lib/api/youtube-extraction-jobs";
 import * as youtubeApi from "@/lib/api/youtube-import";
+import * as savedRecipeApi from "@/lib/api/youtube-saved-recipes";
 
 const mockRouterReplace = vi.fn();
 
@@ -36,6 +37,11 @@ vi.mock("@/lib/api/youtube-import", () => ({
 
 vi.mock("@/lib/api/youtube-extraction-jobs", () => ({
   fetchYoutubeExtractionSession: vi.fn(),
+}));
+vi.mock("@/lib/api/youtube-saved-recipes", () => ({
+  ensureYoutubeSavedRecipe: vi.fn(),
+  fetchYoutubeSavedRecipe: vi.fn(),
+  updateYoutubeSavedRecipe: vi.fn(),
 }));
 
 function installMatchMedia(matchesDesktop = false) {
@@ -76,7 +82,7 @@ function mockYoutubeDraft(tags = ["유튜브레시피", "디저트"]) {
   const extractionResult: Awaited<ReturnType<typeof youtubeApi.extractYoutubeRecipe>> = {
     success: true,
     data: {
-      extraction_id: "ext-tags",
+      extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       title: "바삭 쿠키",
       base_servings: 2,
       thumbnail_url: "https://i.ytimg.com/vi/recipe12345/hqdefault.jpg",
@@ -177,6 +183,32 @@ describe("YoutubeImportScreen tag review", () => {
     vi.mocked(youtubeApi.createYoutubeCandidateDraft).mockReset();
     vi.mocked(youtubeApi.registerYoutubeIngredient).mockReset();
     vi.mocked(youtubeApi.registerYoutubeIngredientsBulk).mockReset();
+    vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockReset();
+    vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        draft_id: "11111111-1111-4111-8111-111111111111",
+        revision: 1,
+        created_at: "2026-10-08T00:00:00.000Z",
+        updated_at: "2026-10-08T00:00:00.000Z",
+        content: { title: "바삭 쿠키", base_servings: 2, tags: ["유튜브레시피", "디저트"], ingredients: [], steps: [] },
+        source: { extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", youtube_url: "", youtube_video_id: "", thumbnail_url: null },
+      },
+      error: null,
+    });
+    vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mockReset();
+    vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mockImplementation(async (_id, revision, content) => ({
+      success: true,
+      data: {
+        draft_id: "11111111-1111-4111-8111-111111111111",
+        revision: revision + 1,
+        created_at: "2026-10-08T00:00:00.000Z",
+        updated_at: "2026-10-08T00:01:00.000Z",
+        content,
+        source: { extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", youtube_url: "", youtube_video_id: "", thumbnail_url: null },
+      },
+      error: null,
+    }));
   });
 
   afterEach(() => {
@@ -186,23 +218,18 @@ describe("YoutubeImportScreen tag review", () => {
   it("shows session tags and omits tags from register when unchanged", async () => {
     mockYoutubeDraft();
 
-    const user = userEvent.setup();
     render(
       <YoutubeImportScreen
         columnId="column-breakfast"
-        initialExtractionId="ext-tags"
+        initialExtractionId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
         planDate="2026-04-18"
         slotName="아침"
       />,
     );
 
-    expect(await screen.findByRole("button", { name: "유튜브레시피 삭제" })).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "등록" }));
-
-    await waitFor(() => {
-      expect(youtubeApi.registerYoutubeRecipe).toHaveBeenCalled();
-    });
-    expect(vi.mocked(youtubeApi.registerYoutubeRecipe).mock.calls[0][0].tags).toBeUndefined();
+    expect(await screen.findByText("#유튜브레시피")).toBeTruthy();
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
   });
 
   it("sends reviewed tags when the user edits YouTube tags", async () => {
@@ -212,21 +239,23 @@ describe("YoutubeImportScreen tag review", () => {
     render(
       <YoutubeImportScreen
         columnId="column-breakfast"
-        initialExtractionId="ext-tags"
+        initialExtractionId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
         planDate="2026-04-18"
         slotName="아침"
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: "디저트 삭제" }));
+    await user.click(await screen.findByRole("button", { name: "기본 정보 수정" }));
+    await user.click(screen.getByRole("button", { name: "디저트 삭제" }));
     await user.type(screen.getByLabelText("태그 추가"), "#바삭");
     await user.click(screen.getByRole("button", { name: "태그 추가하기" }));
-    await user.click(screen.getByRole("button", { name: "등록" }));
+    await user.click(screen.getByRole("button", { name: "수정 완료" }));
+    await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
 
     await waitFor(() => {
-      expect(youtubeApi.registerYoutubeRecipe).toHaveBeenCalled();
+      expect(savedRecipeApi.updateYoutubeSavedRecipe).toHaveBeenCalled();
     });
-    expect(vi.mocked(youtubeApi.registerYoutubeRecipe).mock.calls[0][0].tags).toEqual([
+    expect(vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mock.calls[0][2].tags).toEqual([
       "유튜브레시피",
       "바삭",
     ]);

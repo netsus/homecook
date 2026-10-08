@@ -213,7 +213,7 @@ describe("YTASYNC Stage 3 API revise RED", () => {
       const rotatedPolicyRpc = vi.fn(async () => ({
         data: {
           ...(await rpc()).data as Record<string, unknown>,
-          policy_version: 2,
+          policy_version: 4,
           policy_snapshot_digest: "d".repeat(64),
           allowed_snapshot_digest: "d".repeat(64),
         },

@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -961,6 +962,53 @@ describe("YTASYNC-WORKER standalone runner", () => {
       },
     })).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });
     expect(existsSync(providerMarker)).toBe(false);
+  });
+
+  it("canonicalizes the macOS temp workspace before evaluating the worker direct-run guard", async () => {
+    const realTempRoot = mkdtempSync(join(tmpdir(), "yta-real-temp-root-"));
+    const aliasedTempRoot = `${realTempRoot}-alias`;
+    symlinkSync(realTempRoot, aliasedTempRoot, "dir");
+    tempDirs.push(aliasedTempRoot, realTempRoot);
+    vi.stubEnv("TMPDIR", aliasedTempRoot);
+    const root = mkdtempSync(join(tmpdir(), "yta-child-canonical-workspace-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    const workerPath = join(bundle, "worker.mjs");
+    writeFileSync(workerPath, `
+      import { writeFile } from "node:fs/promises";
+      import path from "node:path";
+      import { pathToFileURL } from "node:url";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+        await writeFile(args.result, JSON.stringify({ canonicalWorkspaceGuardRan: true }));
+      }
+    `);
+    chmodSync(workerPath, 0o555);
+    const extractor = createStandaloneYoutubeI031Extractor({
+      artifactRoot: root,
+      workerEnv: { NODE_ENV: "test" },
+      verifyPreflight: vi.fn(async () => ({
+        codexBin: "/opt/homebrew/bin/codex",
+        codexCliVersion: "0.154.0-alpha.6.2",
+      })),
+    });
+    try {
+      await expect(extractor.extract({
+        videoId: "abc123DEF45",
+        signal: new AbortController().signal,
+        claimedJob: { jobId: "77777777-7777-4777-8777-777777777777", videoId: "abc123DEF45", workerId: "worker-canonical", leaseGeneration: 1 },
+        workerRpcClient: {
+          accessCache: vi.fn(), reserveQuota: vi.fn(), recordEvent: vi.fn(),
+          resolveMethods: vi.fn(), updateTitle: vi.fn(),
+        },
+      })).resolves.toMatchObject({ canonicalWorkspaceGuardRan: true });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("fenced-persists provider video title before a later extraction failure", async () => {

@@ -1072,7 +1072,7 @@ export function createStandaloneYoutubeI031Extractor({
       if (!record(claimedJob) || !workerRpcClient) {
         throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE");
       }
-      const workspace = await mkdtemp(path.join(tmpdir(), "homecook-youtube-worker-"));
+      const workspace = await realpath(await mkdtemp(path.join(tmpdir(), "homecook-youtube-worker-")));
       const resultPath = path.join(workspace, "result.json");
       const metadataPath = path.join(workspace, "metadata.json");
       const errorPath = path.join(workspace, "error.json");

@@ -77,6 +77,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
   return (
     <main>
       <YoutubeImportScreen
+        entryContext={date || columnId ? "planner" : "standalone"}
         initialExtractionId={extractionId ?? ""}
         initialYoutubeUrl={youtubeUrl ?? ""}
         planDate={date ?? ""}
