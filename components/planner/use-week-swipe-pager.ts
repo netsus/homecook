@@ -6,22 +6,11 @@ const SETTLE_MS = 180;
 function pageOffset(rail: HTMLElement, index: number) {
   const page = rail.children.item(index) as HTMLElement | null;
   if (!page) return rail.clientWidth * index;
-  // jsdom has no layout and reports every offsetLeft as zero.
-  return index > 0 && page.offsetLeft === 0
-    ? rail.clientWidth * index
-    : page.offsetLeft;
-}
-
-function revealSelectedDate(rail: HTMLElement) {
-  const selected = rail.querySelector<HTMLElement>('[aria-current="date"]');
-  if (!selected) return;
-  const railRect = rail.getBoundingClientRect();
-  const selectedRect = selected.getBoundingClientRect();
-  if (selectedRect.left < railRect.left) {
-    rail.scrollLeft -= railRect.left - selectedRect.left + 4;
-  } else if (selectedRect.right > railRect.right) {
-    rail.scrollLeft += selectedRect.right - railRect.right + 4;
-  }
+  const firstPage = rail.children.item(0) as HTMLElement;
+  const offset = page.offsetLeft - firstPage.offsetLeft;
+  // Offsets share an offset parent, which need not be the scrolling rail.
+  // jsdom has no layout and reports zero for all pages.
+  return index > 0 && offset === 0 ? rail.clientWidth * index : offset;
 }
 
 function addDays(date: string, days: number) {
@@ -49,7 +38,6 @@ export function useWeekSwipePager(startDate: string, onShiftWeek: (days: number)
     const rail = railRef.current;
     if (rail && rail.children.length > 1) {
       rail.scrollLeft = pageOffset(rail, 1);
-      revealSelectedDate(rail);
     }
     committingRef.current = false;
   }, [clearTimer]);

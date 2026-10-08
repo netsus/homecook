@@ -24,8 +24,6 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   const completionRefreshRef = useRef(false);
   const [completionSubmitting, setCompletionSubmitting] = useState(false);
   const [completionError, setCompletionError] = useState<CookedBatchCompletionError | null>(null);
-  const [completionNotice, setCompletionNotice] = useState<string | null>(null);
-  const notifiedSessionRef = useRef<string | null>(null);
   const cancelKeyRef = useRef<string | null>(null);
   const completeAttemptRef = useRef<{ key: string; payload: string } | null>(null);
   const completeInFlightRef = useRef(false);
@@ -64,12 +62,6 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
     }
   }, [state]);
 
-  useEffect(() => {
-    if (!completionNotice) return;
-    const timeout = window.setTimeout(() => setCompletionNotice(null), 5_000);
-    return () => window.clearTimeout(timeout);
-  }, [completionNotice]);
-
   const returnPath = `/cooking/session-attempts/${sessionId}/cook-mode`;
   const loginHref = `/login?next=${encodeURIComponent(returnPath)}`;
 
@@ -97,20 +89,7 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
     setCompletionSubmitting(true);
     setCompletionError(null);
     void completeSnapshotV2CookingSession(sessionId, body, attempt.key)
-      .then((result) => {
-        if (notifiedSessionRef.current !== result.session_id) {
-          notifiedSessionRef.current = result.session_id;
-          const servings = result.cooked_batch.cooking_servings ?? data.recipe.cooking_servings;
-          const lines = [`${result.cooked_batch.recipe_title} ${servings}인분을 완성했어요.`];
-          if (result.pantry_removed > 0) {
-            const selected = new Set(body.consumed_pantry_item_ids);
-            const removed = data.pantry_candidates.filter((item) => selected.has(item.pantry_item_id));
-            const names = removed.map((item) => item.name || item.standard_name).filter(Boolean);
-            const label = names.length === result.pantry_removed ? names.join(", ") : `재료 ${result.pantry_removed}개`;
-            lines.push(`팬트리에서 ${label} 차감했어요.`);
-          }
-          setCompletionNotice(lines.join("\n"));
-        }
+      .then(() => {
         setCompletionOpen(false);
         setData((current) => current ? { ...current, status: "completed" } : current);
       })
@@ -181,7 +160,6 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
         returnHref={appReturn.href}
       />
       {preparationError ? <AppFeedbackToast message={preparationError} position="bottom" tone="error" /> : null}
-      {completionNotice ? <AppFeedbackToast className="pointer-events-none whitespace-pre-line" message={completionNotice} position="bottom" testId="cooking-completion-notice" tone="success" /> : null}
       {completionOpen ? (
         <CookedBatchCompletionSheet
           candidates={data.pantry_candidates}

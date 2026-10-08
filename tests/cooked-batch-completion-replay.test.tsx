@@ -93,17 +93,15 @@ describe("cooked batch completion replay", () => {
       expect.any(String),
     );
 
-    const notice = await screen.findByTestId("cooking-completion-notice");
-    expect(notice.textContent).toBe(`${snapshot.recipe.title} 2인분을 완성했어요.`);
-    expect(screen.getAllByTestId("cooking-completion-notice")).toHaveLength(1);
-    expect(notice.textContent).not.toContain("팬트리");
+    await screen.findByRole("link", { name: "식사 기록하기" });
+    expect(screen.queryByTestId("cooking-completion-notice")).toBeNull();
     expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "요리 완료" })).toBeNull();
     expect(screen.getByRole("link", { name: "식사 기록하기" }).getAttribute("href")).toBe("/planner?segment=log");
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.queryByRole("link", { name: "돌아가기" })).toBeNull();
   });
-  it("shows one two-line notice only after a successful retry and names only confirmed pantry rows", async () => {
+  it("retains pantry deduction and the retry key without showing a completion popup", async () => {
     const user = userEvent.setup();
     const candidate = { pantry_item_id: "pantry-a", ingredient_id: snapshot.recipe.ingredients[0].ingredient_id, item_type: "ingredient", standard_name: "닭가슴살", name: "닭가슴살", brand: null, food_product_id: null, food_product_nutrition_version_id: null };
     cookingApi.fetchSnapshotV2CookMode.mockResolvedValue({ ...snapshot, pantry_candidates: [candidate] });
@@ -115,9 +113,9 @@ describe("cooked batch completion replay", () => {
     await screen.findByText("요리 완료를 저장하지 못했어요.");
     expect(screen.queryByTestId("cooking-completion-notice")).toBeNull();
     await user.dblClick(screen.getByRole("button", { name: "완료 저장" }));
-    const notice = await screen.findByTestId("cooking-completion-notice");
-    expect(notice.textContent).toBe(`${snapshot.recipe.title} 2인분을 완성했어요.\n팬트리에서 닭가슴살 차감했어요.`);
-    expect(screen.getAllByTestId("cooking-completion-notice")).toHaveLength(1);
+    await screen.findByRole("link", { name: "식사 기록하기" });
+    expect(screen.queryByTestId("cooking-completion-notice")).toBeNull();
+    expect(cookingApi.completeSnapshotV2CookingSession.mock.calls[1][1].consumed_pantry_item_ids).toEqual(["pantry-a"]);
     expect(cookingApi.completeSnapshotV2CookingSession).toHaveBeenCalledTimes(2);
     expect(cookingApi.completeSnapshotV2CookingSession.mock.calls[0][2]).toBe(cookingApi.completeSnapshotV2CookingSession.mock.calls[1][2]);
   });

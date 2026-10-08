@@ -2459,7 +2459,6 @@ function MyPagePreferencesSurface({
     <div className="web-mypage-subsurface" data-testid="mypage-preferences-tab">
       <div className="web-mypage-section-head">
         <h2>환경설정</h2>
-        <p>끼니 관리, 요리모드 화면 켜둠, 계정 상태를 관리해요.</p>
       </div>
 
       <section

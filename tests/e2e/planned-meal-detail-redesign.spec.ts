@@ -64,7 +64,7 @@ for (const width of [375, 1280]) {
     await expect(page).toHaveURL(new RegExp(`mealId=${readyId}`));
     const focused = new URL(page.url());
     expect(focused.searchParams.get("returnTo")).toBe(wholePath);
-    await expect(page.getByRole("heading", { name: "계획한 요리" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "10월 5일 · 점심" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "김치찌개", exact: true })).toBeVisible();
     await expect(page.getByText("계란말이", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "김치찌개 이 계획에서 삭제" })).toBeVisible();

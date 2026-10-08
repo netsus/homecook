@@ -91,3 +91,25 @@ it("keeps the selected date heading while only the records have skeletons and no
   expect(container.querySelectorAll('[aria-busy="true"]')).toHaveLength(1);
   expect(container.textContent).not.toMatch(/불러오는 중/);
 });
+
+
+it("keeps actual configured meal names on cold load while records remain skeletons", () => {
+  api.fetch.mockImplementation(() => new Promise(() => {}));
+  const columns = [{ id: "brunch", name: "브런치", sort_order: 0 }, { id: "night", name: "야식", sort_order: 1 }];
+  render(<MealLogScreen {...props} activeColumns={columns} />);
+  expect(screen.getByRole("heading", { name: "브런치" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "야식" })).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "아침" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /먹은 음식 추가/ })).toBeNull();
+});
+
+it("retains only meal headings when the next week's records are pending", async () => {
+  const view = render(<MealLogScreen {...props} />);
+  await screen.findByText("그릭요거트 볼");
+  api.fetch.mockImplementation(() => new Promise(() => {}));
+  view.rerender(<MealLogScreen {...props} date="2026-09-07" />);
+  for (const name of ["아침", "점심", "저녁"]) expect(screen.getByRole("heading", { name })).toBeTruthy();
+  expect(screen.queryByText("그릭요거트 볼")).toBeNull();
+  expect(screen.queryByRole("button", { name: /식사 기록 상세/ })).toBeNull();
+  expect(screen.getByRole("status").getAttribute("aria-busy")).toBe("true");
+});

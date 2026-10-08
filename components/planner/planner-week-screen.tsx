@@ -725,6 +725,7 @@ export function PlannerWeekScreen({
 
       {activeSegment === "log" ? (
         <MealLogScreen
+          activeColumns={columns.length > 0 ? columns : undefined}
           guest={guest}
           showDateNavigation={false}
           onDayRef={(date, node) => { logDayRefs.current[date] = node; }}
