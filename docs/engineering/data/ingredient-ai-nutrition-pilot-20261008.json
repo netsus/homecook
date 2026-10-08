@@ -1,0 +1,21 @@
+{
+  "status": "provider_unavailable_no_values_generated",
+  "provider": "HOMECOOK_AI_ESTIMATE",
+  "policy_version": "ingredient-ai-v1",
+  "prompt_version": "ingredient-ai-prompt-v1",
+  "notes": "AI estimates, not measured or verified food-composition data. Production DB unchanged.",
+  "records": [
+    {
+      "name": "열무김치 국물",
+      "error_code": "AI_NUTRITION_PROVIDER_FAILED",
+      "http_status": 402,
+      "provider_error_status": "RESOURCE_EXHAUSTED"
+    },
+    {
+      "name": "삼나물",
+      "error_code": "AI_NUTRITION_PROVIDER_FAILED",
+      "http_status": 402,
+      "provider_error_status": "RESOURCE_EXHAUSTED"
+    }
+  ]
+}

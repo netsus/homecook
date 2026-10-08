@@ -4,7 +4,7 @@ import React from "react";
 
 import type { MealListItemData } from "@/types/meal";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
-import { formatPlannerNutritionValue } from "@/lib/planner/planner-nutrition-presentation";
+import { formatPlannerNutritionValue, plannerAiEstimateNotice } from "@/lib/planner/planner-nutrition-presentation";
 
 const statusLabels = { registered: "등록", shopping_done: "장보기 완료", cook_done: "요리 완료" };
 const statusColors = { registered: "bg-[var(--brand-soft)] text-[var(--brand)]", shopping_done: "bg-[var(--success-soft)] text-[var(--success)]", cook_done: "bg-[var(--surface-fill)] text-[var(--text-2)]" };
@@ -24,6 +24,7 @@ export function PlannedMealCard({ meal, nutrition, detailed, conflictError, isPe
   onShopping: () => void;
 }) {
   const matches = nutrition?.plannedServings === meal.planned_servings;
+  const aiNotice = matches && nutrition ? plannerAiEstimateNotice(nutrition.values, nutrition.containsAiEstimate) : null;
   const energy = matches ? nutrition?.values.energy_kcal : undefined;
   const perServingEnergy = energy ? {
     ...energy,
@@ -55,6 +56,7 @@ export function PlannedMealCard({ meal, nutrition, detailed, conflictError, isPe
           <span className="text-sm font-medium">예상 영양 · {meal.planned_servings}인분</span>
           <span className="text-right"><span className="block text-lg font-normal tabular-nums">{energy ? formatPlannerNutritionValue("energy_kcal", energy) : "정보 준비 중"}</span>{perServingEnergy ? <span className="text-sm font-normal text-[var(--text-2)]">1인분 {formatPlannerNutritionValue("energy_kcal", perServingEnergy)}</span> : null}</span>
         </div>
+        {aiNotice ? <p className="mt-2 text-xs text-[var(--brand-primary-text)]">{aiNotice}</p> : null}
         {matches && nutrition ? <dl className="mt-3 grid grid-cols-3 gap-3 text-sm">{([['carbohydrate_g', '탄수화물'], ['protein_g', '단백질'], ['fat_g', '지방']] as const).map(([code, label]) => <div key={code}><dt className="font-normal text-[var(--text-2)]">{label}</dt><dd className="mt-1 font-normal">{nutrition.values[code] ? formatPlannerNutritionValue(code, nutrition.values[code]) : '정보 없음'}</dd></div>)}</dl> : null}
       </section>
       {detailed ? <>

@@ -221,7 +221,7 @@ function createPlannerNutritionData() {
     calculation_status: "complete" as const,
     calculation_quality: "direct" as const,
     incomplete_entry_count: 0,
-    warnings: [],
+    warnings: [] as string[],
     sources: [],
   };
 
@@ -322,6 +322,18 @@ describe("MealScreen", () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it("shows the AI notice next to the current compact meal total while collapsed", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [buildMeal()], product_entries: [] });
+    const data = createPlannerNutritionData();
+    data.days[0].columns[0].nutrition.warnings = ["AI_NUTRITION_ESTIMATE_USED"];
+    fetchPlannerNutrition.mockResolvedValue(data);
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await screen.findByText("김치찌개");
+    expect(await screen.findByText("AI 추정값 포함")).toBeTruthy();
+    expect(screen.getByTestId("meal-compact-nutrition").hasAttribute("open")).toBe(false);
   });
 
   // ── Auth states ─────────────────────────────────────────────────────────

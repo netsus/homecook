@@ -8,6 +8,16 @@ export const MEAL_LOG_MACROS = [
 export type MealLogMetric = "calories_kcal" | typeof MEAL_LOG_MACROS[number]["key"];
 export const formatMealLogNumber = (value: number | null) => value === null || !Number.isFinite(value) ? "정보 없음" : Math.round(value).toLocaleString("ko-KR");
 
+/** Provenance is independent of coverage and of quantity-conversion estimates. */
+export function mealLogNutritionNotice(nutrition: MealLogNutritionEvidence): string | null {
+  if (nutrition.contains_ai_estimate === true) {
+    return nutrition.calculation_status === "complete"
+      ? "AI 추정값 포함"
+      : "AI 추정값 포함 · 일부 영양정보가 빠진 추정값";
+  }
+  return nutrition.calculation_status !== "complete" ? "확인된 정보 기준" : null;
+}
+
 /** Unknown components must never be normalized into a seemingly complete composition. */
 export function mealLogMacroShares(nutrition: MealLogNutritionEvidence): number[] | null {
   if (nutrition.calculation_status !== "complete") return null;

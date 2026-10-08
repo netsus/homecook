@@ -331,3 +331,18 @@ describe("meal-log UI API contract", () => {
     });
   });
 });
+
+it("accepts frozen AI flags in entries and totals without weakening unknown-key rejection", async () => {
+  const aiNutrition = { ...nutrition, contains_ai_estimate: true };
+  const aiEntry = { ...entry, nutrition: aiNutrition };
+  const aiDay = { ...day, entries: [aiEntry], deleted_column_sections: [{ ...day.deleted_column_sections[0], entries: [aiEntry], subtotal: aiNutrition }], day_total: { ...day.day_total, contains_ai_estimate: true } };
+  const fetcher = vi.fn().mockImplementation(async () => success(aiDay));
+  vi.stubGlobal("fetch", fetcher);
+  await expect(fetchMealLogDay(day.date)).resolves.toEqual(aiDay);
+  for (const flag of [null, "true", 1]) {
+    fetcher.mockImplementation(async () => success({ ...aiDay, day_total: { ...aiDay.day_total, contains_ai_estimate: flag } }));
+    await expect(fetchMealLogDay(day.date)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  }
+  fetcher.mockImplementation(async () => success({ ...aiDay, day_total: { ...aiDay.day_total, unknown: true } }));
+  await expect(fetchMealLogDay(day.date)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+});

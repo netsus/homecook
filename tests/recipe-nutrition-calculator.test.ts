@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { calculateRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-calculator";
 
 type NutrientCode =
   | "energy_kcal"
@@ -10,7 +11,7 @@ type NutrientCode =
 
 type NutrientValue = {
   amount: number | null;
-  value_status: "observed" | "missing" | "trace" | "parse_error";
+  value_status: "observed" | "estimated" | "missing" | "trace" | "parse_error";
 };
 
 type CalculatorIngredient = {
@@ -926,5 +927,199 @@ describe("recipe nutrition calculator", () => {
       expect(result.calculation_status).toBe("unavailable");
       expect(result.values.energy_kcal.amount).toBeNull();
     }
+  });
+});
+
+
+describe("AI nutrition provenance", () => {
+  function aiIngredient(overrides: Partial<CalculatorIngredient> = {}) {
+    const ingredient = directIngredient(overrides, Object.fromEntries(
+      Object.entries(CORE_VALUES).map(([code, value]) => [code, { ...value, value_status: "estimated" }]),
+    ));
+    ingredient.nutrition!.source.provider = "HOMECOOK_AI_ESTIMATE";
+    return ingredient;
+  }
+
+  it("preserves the v2 official gram calculation and canonical hash", () => {
+    expect(calculateRecipeNutrition({ ...recipeInput([directIngredient()]), calculation_version: "recipe-nutrition-v2" }))
+      .toMatchInlineSnapshot(`
+        {
+          "base_servings": 2,
+          "basis": {
+            "amount": 2,
+            "unit": "serving",
+          },
+          "calculation_quality": "direct",
+          "calculation_status": "complete",
+          "calculation_version": "recipe-nutrition-v2",
+          "fixed_values": {
+            "carbohydrate_g": 0,
+            "energy_kcal": 0,
+            "fat_g": 0,
+            "protein_g": 0,
+            "sodium_mg": 0,
+            "sugars_g": 0,
+          },
+          "input_hash": "a70d22f21cde1b4afb00cbba85a755c4836dac766b56beac3b349ee2bbd84c0c",
+          "missing_reasons": [],
+          "reflected_ingredient_count": 1,
+          "rounding_policy_version": "display-v1",
+          "scalable_values": {
+            "carbohydrate_g": 20,
+            "energy_kcal": 100,
+            "fat_g": 5,
+            "protein_g": 10,
+            "sodium_mg": 50,
+            "sugars_g": 0,
+          },
+          "sources": [
+            {
+              "data_basis_date": null,
+              "dataset": "test-dataset",
+              "license": "test-license",
+              "provider": "MFDS",
+              "source_url": "https://example.test/source",
+              "source_version": "2026-07-15",
+            },
+          ],
+          "target_ingredient_count": 1,
+          "values": {
+            "carbohydrate_g": {
+              "amount": 20,
+              "display_mode": "total",
+              "known_amount": null,
+              "status": "complete",
+            },
+            "energy_kcal": {
+              "amount": 100,
+              "display_mode": "total",
+              "known_amount": null,
+              "status": "complete",
+            },
+            "fat_g": {
+              "amount": 5,
+              "display_mode": "total",
+              "known_amount": null,
+              "status": "complete",
+            },
+            "protein_g": {
+              "amount": 10,
+              "display_mode": "total",
+              "known_amount": null,
+              "status": "complete",
+            },
+            "sodium_mg": {
+              "amount": 50,
+              "display_mode": "total",
+              "known_amount": null,
+              "status": "complete",
+            },
+            "sugars_g": {
+              "amount": 0,
+              "display_mode": "total",
+              "known_amount": null,
+              "status": "complete",
+            },
+          },
+          "warnings": [],
+        }
+      `);
+  });
+
+  it("counts approved AI gram values including estimated zero and preserves source's six public keys", () => {
+    const result = calculateRecipeNutrition(recipeInput([aiIngredient({ amount: 50 })]));
+    expect(result).toMatchObject({ calculation_status: "complete", calculation_quality: "estimated", reflected_ingredient_count: 1,
+      warnings: ["AI_NUTRITION_ESTIMATE_USED"], values: { energy_kcal: { amount: 50 }, sugars_g: { amount: 0, status: "complete" } } });
+    expect(Object.keys(result.sources[0]).sort()).toEqual(["data_basis_date", "dataset", "license", "provider", "source_url", "source_version"]);
+  });
+
+  it.each([
+    ["MFDS", "estimated"], ["HOMECOOK_AI_ESTIMATE", "observed"],
+  ] as const)("does not calculate mismatched provider %s and value status %s", (provider, status) => {
+    const ingredient = aiIngredient();
+    ingredient.nutrition!.source.provider = provider;
+    for (const value of Object.values(ingredient.nutrition!.profile.values)) value!.value_status = status;
+    const result = calculateRecipeNutrition(recipeInput([ingredient]));
+    expect(result).toMatchObject({ calculation_status: "unavailable", calculation_quality: null, reflected_ingredient_count: 0, sources: [] });
+    expect(result.warnings).not.toContain("AI_NUTRITION_ESTIMATE_USED");
+  });
+
+  it("keeps AI partial nutrients null and combines official contributions as mixed", () => {
+    const ai = aiIngredient({ id: "ai" });
+    ai.nutrition!.profile.values.sodium_mg = { amount: null, value_status: "missing" };
+    const result = calculateRecipeNutrition(recipeInput([directIngredient({ id: "official" }), ai]));
+    expect(result).toMatchObject({ calculation_status: "partial", calculation_quality: "mixed", reflected_ingredient_count: 2,
+      values: { energy_kcal: { amount: 200 }, sodium_mg: { amount: null, known_amount: 50, status: "partial" } } });
+    expect(result.sources).toHaveLength(2);
+  });
+
+  it("does not treat to-taste AI zero as an observed zero", () => {
+    const ai = aiIngredient({ ingredient_type: "TO_TASTE", amount: null, unit: null });
+    for (const value of Object.values(ai.nutrition!.profile.values)) value!.amount = 0;
+    const result = calculateRecipeNutrition(recipeInput([ai]));
+    expect(result).toMatchObject({ calculation_status: "unavailable", calculation_quality: null, target_ingredient_count: 0, sources: [], warnings: ["TO_TASTE_EXCLUDED"] });
+    expect(result.values.energy_kcal.amount).toBeNull();
+    expect(result.values.sugars_g).toBeUndefined();
+  });
+
+  it("does not attribute unconvertible or all-missing AI values", () => {
+    const unconvertible = aiIngredient({ unit: "개" });
+    const missing = aiIngredient({ id: "missing" });
+    for (const code of Object.keys(missing.nutrition!.profile.values) as NutrientCode[]) {
+      missing.nutrition!.profile.values[code] = { amount: null, value_status: "missing" };
+    }
+    const result = calculateRecipeNutrition(recipeInput([unconvertible, missing]));
+    expect(result.sources).toEqual([]);
+    expect(result.calculation_quality).toBeNull();
+    expect(result.warnings).not.toContain("AI_NUTRITION_ESTIMATE_USED");
+  });
+
+  it("calculates AI piece conversion without treating its measurement source as official nutrient input", () => {
+    const ai = aiIngredient({ amount: 2, unit: "개" });
+    ai.piece_weight = {
+      id: "piece-ai", ingredient_id: ai.ingredient_id, preparation_state: ai.preparation_state, size_code: "medium",
+      weight_g: 40, review_status: "approved", is_active: true,
+      evidence: { review_status: "approved", is_active: true, source: measurementEvidenceSource() },
+    };
+    const result = calculateRecipeNutrition(recipeInput([ai]));
+    expect(result.calculation_quality).toBe("estimated");
+    expect(result.values.energy_kcal.amount).toBe(80);
+    expect(result.sources).toHaveLength(2);
+    expect(result.warnings).toEqual(["PIECE_WEIGHT_CONVERSION_USED", "AI_NUTRITION_ESTIMATE_USED"]);
+  });
+
+  it("reflects quantified AI zero but not zero quantity or invalid numeric estimates", () => {
+    const ai = aiIngredient();
+    for (const value of Object.values(ai.nutrition!.profile.values)) value!.amount = 0;
+    const result = calculateRecipeNutrition(recipeInput([ai]));
+    expect(result).toMatchObject({ calculation_status: "complete", calculation_quality: "estimated", reflected_ingredient_count: 1,
+      values: { energy_kcal: { amount: 0 } }, warnings: ["AI_NUTRITION_ESTIMATE_USED"] });
+    ai.amount = 0;
+    expect(calculateRecipeNutrition(recipeInput([ai]))).toMatchObject({ calculation_status: "unavailable", sources: [], warnings: ["INVALID_QUANTITY"] });
+    ai.amount = 100;
+    for (const invalid of [NaN, Infinity, -1]) {
+      for (const value of Object.values(ai.nutrition!.profile.values)) value!.amount = invalid;
+      const rejected = calculateRecipeNutrition(recipeInput([ai]));
+      expect(rejected).toMatchObject({ calculation_status: "unavailable", sources: [] });
+      expect(rejected.warnings).not.toContain("AI_NUTRITION_ESTIMATE_USED");
+    }
+  });
+
+  it("keeps AI converted values estimated but marks converted official plus AI as mixed", () => {
+    const ai = aiIngredient({ id: "ai", amount: 1, unit: "큰술" });
+    ai.conversion_assignment = {
+      id: "conversion-ai", ingredient_id: ai.ingredient_id, preparation_state: ai.preparation_state,
+      review_status: "approved", is_active: true,
+      profile: { code: "VOLUME_G15", basis_volume_ml: 15, representative_weight_g: 15, is_active: true },
+      evidence: { normalized_g_per_15ml: 15, review_status: "approved", is_active: true, source: measurementEvidenceSource() },
+    };
+    const onlyAi = calculateRecipeNutrition(recipeInput([ai]));
+    expect(onlyAi.calculation_quality).toBe("estimated");
+    expect(onlyAi.values.energy_kcal.amount).toBe(15);
+    expect(onlyAi.warnings).toEqual(["REPRESENTATIVE_VOLUME_CONVERSION_USED", "AI_NUTRITION_ESTIMATE_USED"]);
+    const official = directIngredient({ id: "official", unit: "큰술", amount: 1, conversion_assignment: ai.conversion_assignment });
+    const mixed = calculateRecipeNutrition(recipeInput([ai, official]));
+    expect(mixed.calculation_quality).toBe("mixed");
+    expect(mixed.values.energy_kcal.amount).toBe(30);
   });
 });
