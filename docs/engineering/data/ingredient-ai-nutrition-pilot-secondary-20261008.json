@@ -1,0 +1,66 @@
+{
+  "status": "draft_not_applied",
+  "provider": "HOMECOOK_AI_ESTIMATE",
+  "policy_version": "ingredient-ai-v1",
+  "prompt_version": "ingredient-ai-prompt-v1",
+  "notes": "AI estimates, not measured or verified food-composition data. Production DB unchanged.",
+  "records": [
+    {
+      "ingredient_id": "6de713c8-44d8-44f4-a437-8b05c54f13c2",
+      "name": "열무김치 국물",
+      "definition": "열무김치에서 열무 등 건더기를 제외한 국물. 물김치 또는 일반 열무김치의 국물인지와 희석 전후를 사용 기록에 보존한다.",
+      "model": "gemini-3.1-flash-lite",
+      "generated_at": "2026-10-08T10:50:39.236Z",
+      "basis": {
+        "amount": 100,
+        "unit": "g"
+      },
+      "values": {
+        "energy_kcal": 25,
+        "carbohydrate_g": 4.5,
+        "protein_g": 1.2,
+        "fat_g": 0.2,
+        "sodium_mg": 850,
+        "sugars_g": 1.5,
+        "fiber_g": 0.5,
+        "saturated_fat_g": 0.05
+      },
+      "assumptions": [
+        "열무김치 국물 100g 기준 추정치입니다.",
+        "일반적인 열무김치 담금 시 사용되는 고춧가루, 마늘, 생강, 멸치액젓, 밀가루풀 등이 포함된 국물 상태를 가정했습니다.",
+        "염도는 일반적인 가정식 열무김치 국물의 평균적인 농도를 반영했습니다.",
+        "발효 과정에서 생성된 유기산과 당분 함량을 고려했습니다.",
+        "건더기가 완전히 제거된 액체 상태를 기준으로 산출했습니다."
+      ],
+      "uncertainty": "medium"
+    },
+    {
+      "ingredient_id": "0131c023-576b-5b19-a17d-424e5012a210",
+      "name": "삼나물",
+      "definition": "삼나물로 유통되는 식용 나물. 생나물과 말린 나물은 별도 상태.",
+      "model": "gemini-3.1-flash-lite",
+      "generated_at": "2026-10-08T10:50:42.509Z",
+      "basis": {
+        "amount": 100,
+        "unit": "g"
+      },
+      "values": {
+        "energy_kcal": 35,
+        "carbohydrate_g": 7.5,
+        "protein_g": 2.8,
+        "fat_g": 0.3,
+        "sodium_mg": 15,
+        "sugars_g": 1.2,
+        "fiber_g": 3.5,
+        "saturated_fat_g": 0.1
+      },
+      "assumptions": [
+        "눈개승마(삼나물) 생나물 100g 기준 추정치입니다.",
+        "일반적인 산채류의 영양 성분 데이터를 기반으로 산출하였습니다.",
+        "조리되지 않은 생나물 상태를 가정하였습니다.",
+        "수분 함량은 약 85-90%로 가정하였습니다."
+      ],
+      "uncertainty": "medium"
+    }
+  ]
+}

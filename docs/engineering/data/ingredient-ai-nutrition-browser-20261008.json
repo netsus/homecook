@@ -1,0 +1,79 @@
+{
+  "status": "passed_scoped_browser_review",
+  "viewports": [
+    390,
+    1280
+  ],
+  "scenario_captures": 22,
+  "png_count": 66,
+  "variants": [
+    "AI complete",
+    "AI partial",
+    "official legacy/no AI flag"
+  ],
+  "browser_surfaces": [
+    "recipe app390/web1280",
+    "meal log day total, section subtotal and individual record",
+    "meal log day detail(partial AI)",
+    "actual meal-screen compact plan aggregate",
+    "about/ai-nutrition"
+  ],
+  "checks": {
+    "horizontal_overflow": 0,
+    "uncaught_page_errors": 0,
+    "console_warnings_or_errors": 0,
+    "failed_requests": 0,
+    "http_error_responses": 0,
+    "AI_label_matches_states": true,
+    "recipe_AI_label_not_covered_by_fixed_footer_after_normal_scroll": true,
+    "optional_recipe_nutrients_toggle_open_close": true,
+    "meal_day_detail_open_close": true
+  },
+  "resolved_findings": [
+    {
+      "severity": "medium",
+      "file": "components/planner/meal-screen.tsx",
+      "finding": "현재 실제 계획 합계는 공통 Summary 컴포넌트를 쓰지 않아 AI 표시 누락",
+      "fix": "접힌 합계 아래 항상 보이는 공통 안내 한 줄 추가",
+      "verified": "390/1280 actual meal route screenshot and regression test"
+    },
+    {
+      "severity": "medium",
+      "file": "components/planner/meal-add-recipe-preview.tsx",
+      "finding": "레시피 추가 미리보기의 직접 칼로리 표시에 AI 안내 누락",
+      "fix": "기존 recipe display flag 재사용해 AI 및 partial 안내 추가",
+      "verified": "focused render regression test"
+    }
+  ],
+  "limitations": [
+    "브라우저 API는 기존 프로젝트 fixture 패턴으로 mocking했으며 실제 DB·계정·운영 연결을 검증한 것이 아님.",
+    "개별 계획 카드의 SSR pinned 영양은 실DB 없이 주입하지 않아 이 브라우저 실행에서는 정보 준비 중으로 표시됨. 해당 AI 플래그 렌더링·stale servings 숨김은 단위테스트로 별도 확인했다.",
+    "레시피 추가 미리보기의 AI 문구는 렌더 단위테스트로 확인했으며 브라우저 스크린샷은 이번 범위에 포함하지 않았다.",
+    "외부 음식 이미지는 로컬 응답 이미지로 대체했으므로 운영 이미지 품질은 검증하지 않음."
+  ],
+  "environment": {
+    "base_url": "http://127.0.0.1:3338",
+    "production_credentials_used": false,
+    "production_db_used": false,
+    "persistent_test_route_added": false,
+    "server_stopped": true,
+    "framework": "Next15 webpack dev; Turbopack shared-node_modules symlink unsupported",
+    "automation": "existing Playwright CLI; js_repl unavailable"
+  },
+  "artifact_directory": "/tmp/homecook-ai-nutrition-visual-20261008/",
+  "reports": [
+    "390-report.json",
+    "1280-report.json"
+  ],
+  "key_screenshots": [
+    "390-recipe-ai-partial-target.png",
+    "1280-recipe-ai-partial-target.png",
+    "390-meal-log-ai-partial-target.png",
+    "1280-meal-log-ai-partial-target.png",
+    "390-planner-ai-partial-viewport.png",
+    "1280-planner-ai-partial-viewport.png",
+    "390-meal-detail-ai-partial-target.png",
+    "390-about-official-target.png",
+    "1280-about-official-target.png"
+  ]
+}

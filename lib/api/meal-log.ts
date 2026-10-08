@@ -122,7 +122,10 @@ function isApiError(value: unknown): value is ApiError {
 }
 
 function isNutrition(value: unknown): boolean {
-  if (!isRecord(value) || !hasExactKeys(value, NUTRITION_KEYS)) return false;
+  if (!isRecord(value)) return false;
+  const keys = "contains_ai_estimate" in value ? [...NUTRITION_KEYS, "contains_ai_estimate"] : NUTRITION_KEYS;
+  if (!hasExactKeys(value, keys)
+    || ("contains_ai_estimate" in value && typeof value.contains_ai_estimate !== "boolean")) return false;
   return NUTRITION_STATUSES.includes(value.calculation_status as never)
     && NUTRITION_KEYS.slice(1).every((key) => isNullableFiniteNumber(value[key]));
 }
@@ -216,11 +219,10 @@ function isDeletedSection(value: unknown): boolean {
 }
 
 function isDayTotal(value: unknown): boolean {
-  return isRecord(value)
-    && hasExactKeys(value, [...NUTRITION_KEYS, "incomplete_count"])
-    && NUTRITION_STATUSES.includes(value.calculation_status as never)
-    && NUTRITION_KEYS.slice(1).every((key) => isNullableFiniteNumber(value[key]))
-    && isNonNegativeInteger(value.incomplete_count);
+  if (!isRecord(value) || !isNonNegativeInteger(value.incomplete_count)) return false;
+  const nutrition = { ...value };
+  delete nutrition.incomplete_count;
+  return isNutrition(nutrition);
 }
 
 function isMealLogDayData(value: unknown): value is MealLogDayData {

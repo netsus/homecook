@@ -80,6 +80,10 @@ export function RecipeNutritionCard({
         selectedServings={selectedServings}
       />
 
+      {display.aiEstimateText ? (
+        <p className="mt-2 text-[12px] font-semibold text-[var(--brand-primary-text)]">{display.aiEstimateText}{hasIncompleteNutrition ? " · 일부 영양정보가 빠진 추정값" : ""}</p>
+      ) : null}
+
       {display.optionalNutrients.length > 0 || hasIncompleteNutrition ? (
         <details className="group mt-2 text-[12px] text-[var(--text-2)]">
           <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]">
@@ -94,7 +98,9 @@ export function RecipeNutritionCard({
           </summary>
           {hasIncompleteNutrition ? (
             <p className="leading-5">
-              일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요.
+              {display.aiEstimateText
+                ? "일부 영양정보를 계산하지 못했어요."
+                : "일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요."}
             </p>
           ) : null}
           {display.optionalNutrients.length > 0 ? (

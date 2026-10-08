@@ -136,3 +136,18 @@ describe("meal-log redesigned detail flow", () => {
     expect(screen.queryByText(/돌려놓아요/)).toBeNull();
   });
 });
+
+
+it("shows frozen AI notices in meal records, day totals and comparison detail", async () => {
+  const aiEntry: MealLogEntry = { ...entry, nutrition: { ...nutrition, calculation_status: "partial", contains_ai_estimate: true } };
+  api.fetch.mockImplementation(async (date: string) => ({ ...day(aiEntry), date }));
+  const view = render(<MealLogScreen {...props} />);
+  await screen.findByText("김치찌개");
+  expect(within(screen.getByRole("region", { name: "하루 영양" })).getByText(/AI 추정값 포함/)).toBeTruthy();
+  expect(within(screen.getByLabelText("점심의 김치찌개 영양정보")).getByText(/AI 추정값 포함/)).toBeTruthy();
+  view.unmount();
+  render(<MealLogDayNutritionDetail day={day(aiEntry)} onClose={vi.fn()} onEntry={vi.fn()} />);
+  expect(within(screen.getByRole("region", { name: "하루 영양 합계" })).getByText(/AI 추정값 포함/)).toBeTruthy();
+  expect(screen.queryByText("확인된 정보 기준")).toBeNull();
+  expect(screen.getByRole("img", { name: "끼니별 열량 그래프" }).getAttribute("aria-describedby")).toBeTruthy();
+});

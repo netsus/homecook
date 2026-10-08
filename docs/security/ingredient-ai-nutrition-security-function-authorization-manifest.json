@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "slice": "ingredient-ai-nutrition",
+  "migrations": [
+    "supabase/migrations/20261008090000_ingredient_ai_nutrition.sql",
+    "supabase/migrations/20261008091000_ai_nutrition_snapshot_evidence.sql",
+    "supabase/migrations/20261008092000_ai_nutrition_recipe_refresh.sql"
+  ],
+  "context_migrations": [
+    "supabase/migrations/20261006130000_future_meal_create_idempotency.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "execution_role": "postgres",
+  "authorization_rationale": "Only service_role may execute the nine new public RPCs, behind the exact ingredient-ai-nutrition POST scope and path guard. Lease/context/policy checks gate completion; succeeded-job membership gates current-recipe refresh. Private helpers and both renamed scope delegates deny direct PUBLIC/anon/authenticated/service_role execution. Disabled-by-default settings and bounded claims retain the existing operator boundary. The refresh-job listing is a mutation because it updates retry scheduling and rotates pending IDs.",
+  "existing_contracts_reused": [
+    "private.verify_full_local_internal_scope() and existing 091000 nutrition/meal-log functions retain their prior function-authorization entries, signatures, owners, search paths and role ACLs; they are intentionally not duplicated here."
+  ],
+  "verification": [
+    "tests/ingredient-ai-nutrition-migration.test.ts",
+    "tests/ai-nutrition-snapshot-evidence-migration.test.ts",
+    "tests/ingredient-ai-nutrition-refresh-migration.test.ts",
+    "tests/sql/ingredient-ai-nutrition-verify.sql",
+    "tests/sql/ai-nutrition-snapshot-evidence.sql",
+    "node scripts/validate-security-function-authorization.mjs --contract-only"
+  ],
+  "functions": [
+    {
+      "signature": "private.validate_ai_nutrition_value_source()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.require_ingredient_ai_scope(text)",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.ingredient_ai_nutrition_context(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.ingredient_ai_nutrition_skip_reason(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.enqueue_ingredient_ai_nutrition_id(uuid)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.enqueue_new_ingredient_ai_nutrition()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.enqueue_ingredient_ai_nutrition(uuid[])",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.claim_ingredient_ai_nutrition_job(text, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.get_ingredient_ai_nutrition_context(uuid, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.complete_ingredient_ai_nutrition_job(uuid, uuid, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.fail_ingredient_ai_nutrition_job(uuid, uuid, text, boolean)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.list_ingredient_ai_nutrition_refresh_jobs(integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.acknowledge_ingredient_ai_nutrition_refresh(uuid, uuid[])",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.verify_scope_pre_ingredient_ai_20261008()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.require_ingredient_ai_recipe_refresh(uuid, uuid)",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.ingredient_ai_recipe_refresh_source(nutrition_sources)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.get_ingredient_ai_recipe_refresh_input(uuid, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.write_ingredient_ai_recipe_refresh(uuid, uuid, jsonb, timestamp with time zone, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.verify_scope_pre_ai_refresh_20261008()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.preferred_meal_log_ingredient_profile(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}

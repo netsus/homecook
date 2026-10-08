@@ -274,3 +274,22 @@ describe("meal-log core", () => {
     })).toBeNull();
   });
 });
+
+
+test("preserves frozen optional AI evidence on entries, subtotals and day totals", () => {
+  const nutrition = { ...compactNutrition, contains_ai_estimate: true };
+  const entry = { ...entryProjection, nutrition };
+  expect(mealLog.projectMealLogData({ entry })).toEqual({ entry });
+  const day = {
+    ...dayProjection,
+    entries: [entry],
+    active_sections: dayProjection.active_sections.map(section => ({ ...section, entries: [entry], subtotal: nutrition })),
+    day_total: { ...dayProjection.day_total, contains_ai_estimate: true },
+  };
+  expect(mealLog.projectMealLogData(day)).toEqual(day);
+  expect(mealLog.projectMealLogData({ ...day, day_total: { ...day.day_total, contains_ai_estimate: "true" } })).toBeNull();
+  expect(mealLog.projectMealLogData({ ...day, day_total: { ...day.day_total, unknown: true } })).toBeNull();
+  const incompleteShape: Partial<typeof day.day_total> = { ...day.day_total };
+  delete incompleteShape.protein_g;
+  expect(mealLog.projectMealLogData({ ...day, day_total: incompleteShape })).toBeNull();
+});

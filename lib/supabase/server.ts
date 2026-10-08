@@ -406,6 +406,7 @@ export function createDataServiceRoleClient() {
 
 type LocalInternalScope =
   | "action-notifications"
+  | "ingredient-ai-nutrition"
   | "account-lifecycle"
   | "admin-data"
   | "auth-callback"
@@ -1016,4 +1017,23 @@ export async function getServerAuthUser() {
 
 export function createActionNotificationsInternalClient() {
   return createScopedInternalRpcClient("action-notifications");
+}
+
+const INGREDIENT_AI_NUTRITION_RPCS = new Set([
+  "enqueue_ingredient_ai_nutrition", "claim_ingredient_ai_nutrition_job",
+  "get_ingredient_ai_nutrition_context", "complete_ingredient_ai_nutrition_job",
+  "fail_ingredient_ai_nutrition_job", "list_ingredient_ai_nutrition_refresh_jobs",
+  "acknowledge_ingredient_ai_nutrition_refresh", "get_ingredient_ai_recipe_refresh_input",
+  "write_ingredient_ai_recipe_refresh",
+]);
+
+export function createIngredientAiNutritionInternalClient() {
+  const client = createScopedDataServiceRoleClient("ingredient-ai-nutrition");
+  if (!client) return null;
+  return {
+    rpc(functionName: string, args: Record<string, unknown>) {
+      if (!INGREDIENT_AI_NUTRITION_RPCS.has(functionName)) throw new Error("AI_NUTRITION_RPC_SCOPE_DENIED");
+      return client.rpc(functionName, args).abortSignal(AbortSignal.timeout(15_000));
+    },
+  };
 }

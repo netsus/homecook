@@ -22,7 +22,7 @@ vi.mock("@/scripts/lib/recipe-nutrition-predecessor.mjs", () => ({
   loadRecipeNutritionPredecessors: mocks.loadRecipeNutritionPredecessors,
 }));
 
-import { loadPlannerMealNutritionForServer } from "@/lib/server/planner-meal-nutrition-view";
+import { loadPlannerMealNutritionForServer, readPlannerMealNutrition } from "@/lib/server/planner-meal-nutrition-view";
 
 const range = { startDate: "2026-09-07", endDate: "2026-09-13" };
 
@@ -89,4 +89,16 @@ describe("planner RSC meal nutrition authentication", () => {
     mocks.readPlannerRecipeNutritionEntries.mockRejectedValue(new Error("private database payload"));
     await expect(loadPlannerMealNutritionForServer(range)).resolves.toEqual({});
   });
+});
+
+
+it("reads AI provenance exclusively from the pinned nutrition warning", async () => {
+  for (const warnings of [[], ["AI_NUTRITION_ESTIMATE_USED"]]) {
+    mocks.readPlannerRecipeNutritionEntries.mockResolvedValue([{
+      mealId: "meal-1", plannedServings: 1, baseServings: 1, ingredients: [],
+      entry: { values: {}, warnings },
+    }]);
+    const view = await readPlannerMealNutrition({ from: vi.fn() }, "owner", range);
+    expect(view["meal-1"].containsAiEstimate ?? false).toBe(warnings.length > 0);
+  }
 });

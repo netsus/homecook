@@ -4,7 +4,7 @@ import { AppBackButton } from "@/components/shared/app-back-button";
 
 import { PlannerTaskSheet } from "@/components/planner/planner-task-sheet";
 import { PlannedMealCard, PlannedMealStatus } from "@/components/planner/planned-meal-card";
-import { formatPlannerNutritionValue } from "@/lib/planner/planner-nutrition-presentation";
+import { formatPlannerNutritionValue, plannerAiEstimateNotice } from "@/lib/planner/planner-nutrition-presentation";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -1139,6 +1139,7 @@ export function MealScreen({
               <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm font-medium"><span>계획한 전체 분량</span><span className="font-normal tabular-nums">{currentColumnNutrition ? formatPlannerNutritionValue("energy_kcal", currentColumnNutrition.values.energy_kcal) : nutritionStatus === "loading" ? <Skeleton className="h-5 w-24" /> : "영양 정보 없음"}</span><span aria-hidden="true">⌄</span></summary>
               {currentColumnNutrition ? <dl className="mt-3 grid grid-cols-3 gap-3 text-sm font-normal">{([['carbohydrate_g', '탄수화물'], ['protein_g', '단백질'], ['fat_g', '지방']] as const).map(([code, label]) => <div key={code}><dt className="text-[var(--text-2)]">{label}</dt><dd className="mt-1">{formatPlannerNutritionValue(code, currentColumnNutrition.values[code])}</dd></div>)}</dl> : nutritionRequest.error ? <button className="min-h-11 text-sm text-[var(--brand)]" onClick={() => void nutritionRequest.retry()} type="button">영양 다시 확인</button> : null}
             </details> : null}
+            {!selectedMealId && currentColumnNutrition?.warnings.includes("AI_NUTRITION_ESTIMATE_USED") ? <p className="mt-2 text-xs text-[var(--brand-primary-text)]">{plannerAiEstimateNotice(currentColumnNutrition.values, true)}</p> : null}
             {isLoading ? <LoadingSkeleton /> : null}
             {screenState === "error" ? <div className="py-12 text-center" data-testid="meal-screen-error"><p>{errorMessage ?? "식사 목록을 불러오지 못했어요."}</p><button className="mt-3 min-h-11 px-4 text-[var(--brand)]" onClick={() => void loadMeals()} type="button">다시 시도</button></div> : null}
             {!isLoading && screenState !== "error" && selectedMealId && !selectedMeal ? <div className="py-12 text-center"><p>{deletedMealId === selectedMealId ? "요리계획을 삭제했어요." : "이 날짜에 해당 계획이 없어요."}</p><button className="mt-3 min-h-11 text-[var(--brand)]" onClick={navigateToPlanner} type="button">요리계획으로 돌아가기</button></div> : null}

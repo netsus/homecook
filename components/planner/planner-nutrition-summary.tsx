@@ -7,6 +7,7 @@ import { AppCenterDialog } from "@/components/shared/app-overlay";
 import {
   buildPlannerNutritionWarningMessages,
   formatPlannerNutritionEnergy,
+  plannerAiEstimateNotice,
 } from "@/lib/planner/planner-nutrition-presentation";
 import {
   type PlannerNutritionAggregate,
@@ -68,6 +69,8 @@ export function PlannerWeekNutritionSummary({
         ) : null}
       </div>
 
+      {nutrition?.warnings.includes("AI_NUTRITION_ESTIMATE_USED") ? <p className="mt-2 text-[11px] font-bold text-[var(--brand-primary-text)]">{plannerAiEstimateNotice(nutrition.values, true)}</p> : null}
+
       {status === "error" ? (
         <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2 text-[12px] text-[var(--text-3)] max-[359px]:text-[11px]">
           <span>{showInitialError ? "" : error ?? "계획 영양을 불러오지 못했어요."}</span>
@@ -100,6 +103,7 @@ export function PlannerDayNutritionSummary({
   return (
     <span className="flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-bold text-[var(--text-3)]">
       <span>{formatPlannerNutritionEnergy(nutrition.values.energy_kcal)}</span>
+      {nutrition.warnings.includes("AI_NUTRITION_ESTIMATE_USED") ? <span className="text-[var(--brand-primary-text)]">{plannerAiEstimateNotice(nutrition.values, true)}</span> : null}
       {nutrition.incomplete_entry_count > 0 ? (
         <span className="rounded-full bg-[var(--brand-primary-soft)] px-2 py-0.5 text-[var(--brand-primary-text)]">
           {nutrition.incomplete_entry_count}개 확인 필요
@@ -236,7 +240,7 @@ export function MealNutritionSummary({
         className="relative rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 shadow-[0_1px_3px_var(--shadow-color-subtle)]"
         data-testid="meal-nutrition-summary"
       >
-        <PlannerNutritionChart values={nutrition.values} />
+        <PlannerNutritionChart values={nutrition.values} containsAiEstimate={nutrition.warnings.includes("AI_NUTRITION_ESTIMATE_USED")} />
 
         {messages.length > 0 ? (
           <button

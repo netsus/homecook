@@ -1,5 +1,5 @@
 import React from "react";
-import { formatPlannerNutritionValue } from "@/lib/planner/planner-nutrition-presentation";
+import { formatPlannerNutritionValue, plannerAiEstimateNotice } from "@/lib/planner/planner-nutrition-presentation";
 import type { PlannerNutritionValue } from "@/types/planner-nutrition";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
 
@@ -9,7 +9,8 @@ const macros = [
   { code: "fat_g", label: "지방", factor: 9, color: "var(--nutrition-fat)" },
 ] as const;
 
-export function PlannerNutritionChart({ values }: { values: Record<string, PlannerNutritionValue> }) {
+export function PlannerNutritionChart({ values, containsAiEstimate = false }: { values: Record<string, PlannerNutritionValue>; containsAiEstimate?: boolean }) {
+  const aiNotice = plannerAiEstimateNotice(values, containsAiEstimate);
   const displayedAmount = (code: (typeof macros)[number]["code"]) => {
     const value = values[code];
     const amount = value?.amount ?? value?.known_amount;
@@ -25,8 +26,9 @@ export function PlannerNutritionChart({ values }: { values: Record<string, Plann
     .filter(({ code }) => displayedAmount(code) !== null)
     .map(({ label }) => label);
   return <div className="mt-3">
+    {aiNotice ? <p className="mb-2 pr-8 text-xs font-semibold text-[var(--brand-primary-text)]">{aiNotice}</p> : null}
     <p className="text-xl font-extrabold tabular-nums text-[var(--brand-primary-text)]">{values.energy_kcal ? formatPlannerNutritionValue("energy_kcal", values.energy_kcal) : "열량 정보 준비 중"}</p>
-    <div aria-label={availableLabels.length > 0 ? `확인된 ${availableLabels.join("·")} 열량 비율` : "영양 정보 준비 중인 그래프"} className="mt-3 flex h-3 overflow-hidden rounded-full bg-[var(--line-strong)]" role="img">
+    <div aria-label={availableLabels.length > 0 ? `${containsAiEstimate ? "추정" : "확인된"} ${availableLabels.join("·")} 열량 비율` : "영양 정보 준비 중인 그래프"} className="mt-3 flex h-3 overflow-hidden rounded-full bg-[var(--line-strong)]" role="img">
       {macros.map(({ code, factor, color }) => {
         const amount = displayedAmount(code) ?? 0;
         return <span key={code} style={{ backgroundColor: color, width: `${energy > 0 ? amount * factor / energy * 100 : 0}%` }} />;
@@ -49,6 +51,6 @@ export function MealPinnedNutrition({ nutrition, servings, title }: {
   const matches = nutrition?.plannedServings === servings;
   return <section aria-label={`${title} 계획 영양정보`} className="border-t border-[var(--line-strong)] bg-[var(--surface-subtle)] p-3.5">
     <h2 className="text-xs font-bold text-[var(--text-2)]">계획한 {servings}인분의 예상 영양</h2>
-    {!matches ? <p className="mt-3 text-sm text-[var(--text-2)]">{nutrition ? "영양 정보를 다시 확인하고 있어요." : "영양 정보 준비 중"}</p> : <PlannerNutritionChart values={nutrition.values} />}
+    {!matches ? <p className="mt-3 text-sm text-[var(--text-2)]">{nutrition ? "영양 정보를 다시 확인하고 있어요." : "영양 정보 준비 중"}</p> : <PlannerNutritionChart values={nutrition.values} containsAiEstimate={nutrition.containsAiEstimate} />}
   </section>;
 }
