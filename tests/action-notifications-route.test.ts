@@ -1,3 +1,4 @@
+import { AuthSessionMissingError } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ user: vi.fn(), verified: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -7,6 +8,8 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/server/account-generation/session-authority", () => ({ readVerifiedAccountGenerationSession: mocks.verified }));
 import { decodeActionNotificationCursor, listActionNotifications, markActionNotificationsSeen, projectActionNotificationPage } from "@/lib/server/action-notifications";
 import type { ActionNotification } from "@/types/action-notification";
+import { GET } from "@/app/api/v1/users/me/action-notifications/route";
+import { POST } from "@/app/api/v1/users/me/action-notifications/seen/route";
 const id = "11111111-1111-4111-8111-111111111111";
 beforeEach(() => {
   vi.clearAllMocks();
@@ -14,6 +17,28 @@ beforeEach(() => {
   mocks.verified.mockResolvedValue({ ok: true, sessionAuthority: { ownerUuid: id, authIdentityCreatedAt: "2026-01-01T00:00:00Z", sessionKeyHash: "verified", hmacKeyVersion: 1, sessionIssuedAt: "2026-01-01T00:00:00Z" } });
 });
 describe("action notification API", () => {
+  const notificationRequests = [
+    ["GET", () => GET(new Request("http://localhost/api/v1/users/me/action-notifications"))],
+    ["POST seen", () => POST(new Request("http://localhost/api/v1/users/me/action-notifications/seen", {
+      method: "POST", body: JSON.stringify({ ids: [id] }),
+    }))],
+  ] as const;
+  it.each(notificationRequests)("%s returns 401 for the SDK's missing session error", async (_name, request) => {
+    mocks.user.mockResolvedValueOnce({ data: { user: null }, error: new AuthSessionMissingError() });
+    const response = await request();
+    expect(response.status).toBe(401);
+    expect((await response.json()).error.code).toBe("UNAUTHORIZED");
+    expect(mocks.verified).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+  it.each(notificationRequests)("%s retains 503 for an authentication transport failure", async (_name, request) => {
+    mocks.user.mockResolvedValueOnce({ data: { user: null }, error: new Error("network timeout") });
+    const response = await request();
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("SERVICE_UNAVAILABLE");
+    expect(mocks.verified).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
   it("uses only verified owner authority and retains microsecond cursor order", async () => {
     const row = { id, created_at: "2026-09-28T01:02:03.123456+00:00" } as ActionNotification;
     const page = projectActionNotificationPage([row, row], 2, 1);

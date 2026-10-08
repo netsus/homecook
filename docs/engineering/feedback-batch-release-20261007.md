@@ -1,4 +1,4 @@
-# 2026-10-07 화면 개선·재료 DB 작업 통합 배포
+# 2026-10-07~08 화면 개선·재료 DB 작업 통합 배포
 
 사용자가 현재 화면 개선 전체와 완료된 재료 DB 작업을 함께 머지·배포하도록 요청했다. 유튜브 추출 재설계의 미완성 작업과 과거 보존 작업트리는 제외한다.
 
@@ -29,4 +29,32 @@
 
 ## 반영 결과
 
-아직 실행 전이다. 머지·SQL 적용·웹 배포 후 정확한 PR/commit/build와 확인 결과를 갱신한다.
+2026-10-08 최종 웹 배포까지 완료했다.
+
+- 통합 PR: [#1593](https://github.com/netsus/homecook/pull/1593), merge `15c975cf9a7bae87b058791f77118620193bd2db`.
+- 통합 앱/SQL 소스: `0549174660f866e4ae55ba45187f55cfc156db83`.
+- 1차 웹: `9ad9d2ed9a9741f936facc701345c1719c347d80` / `prelaunch-9ad9d2ed9a97-KJlf4T`.
+- 실서비스 점검 후 날짜 레일 표시와 비로그인 알림 상태 분류를 보완한 [후속 PR #1594](https://github.com/netsus/homecook/pull/1594), 코드 소스 `f6e616586`.
+- **최종 웹: `2744e9a15e5502fe9f47797212aa44c853d316da` / `prelaunch-2744e9a15e55-EEpivH`**.
+- 실행 경로: `/Users/cwj/.homecook/prelaunch-web/releases/2744e9a15e55-EEpivH/checkout`.
+- 최종 상태: loaded=true, recoveryPending=false, rollbackAvailable=true.
+- DB 실제 원장 **201→204개**. 기존 재료SQL3개와 데이터는 재실행하지 않았다. 웹 도구의 changed=false는 별도 통제SQL 적용 후 웹만 바꾼 결과이며 DB가 미반영됐다는 뜻이 아니다.
+
+최종 웹 후보에서 관련1,246개 검사(재료129, 웹1,013, 직접등록9, 계획91, 레시피GET4)와 production 컴파일·타입·정적생성·별도포트·실행build/정적파일 확인을 통과했다. 통합소스에서 별도로 실행한 재료SQL계약20개와 실제격리SQL33개는 웹 후보에 SQL을 섞지 않아 재실행하지 않았다.
+
+기존과 같이 별도배포폴더의 Next 내장 ESLint가 react-hooks 플러그인을 해석하지 못하는 경고를 냈다. 로컬 변경파일 검사와 타입검사는 통과했고 배포 빌드도 성공했다. 내장 ESLint까지 통과했다고 표현하지 않는다.
+
+실제 HTTPS Chrome에서 로그인된 계정의 요리계획/식사기록/알림/재료검색을 확인했다. 미리보기 API 주소에 대한 브라우저 자동화 접근이 차단돼 실제 인증 영양미리보기의 완료는 확인하지 못했다. 해당 브라우저 조작은 중단했다. 이 제한을 운영 API 성공으로 기록하지 않는다. 격리SQL9개 및 실제두부 원천계산(100g 97kcal)은 별도로 확인했다. 운영에 테스트 식사 저장/삭제는 하지 않았다.
+
+실제 로컬HTTP는 홈/공개레시피200, 비로그인 알림/영양미리보기401을 확인했다. 최종 날짜 레일 수정은 모바일/PC 전환·다음주이동4개 브라우저 검사와 운영새페이지의 현재주 표시로 확인했다.
+
+## 복구·근거
+
+- 신규 논리 dump SHA256: `dfae1ef341c6e0343a92afe42f65ff030fb771fffba3012b2d8a3bb8a53b85a8`.
+- 격리SQL postimage/rollback 보고서 SHA256: `6fd5022eaaf8ebe5cbdede1cb48ee110a28f98d3fdd631fc7cd0dd07e85b90e6`.
+- source/권한 검토 manifest SHA256: `831ec6ee98b6933ce480ab7231ef969f7008bfc63224872e345718c45684a40e`.
+- 비공개 증거: `/Users/cwj/.homecook/operations/feedback-batch-20261007/`.
+- 최종 웹 배포 로그: `/Users/cwj/.homecook/prelaunch-web/deploy-1791386163936.log`.
+- 웹 복구는 직전9ad9버전을 유지한다. DB 자동복원·초기화는 하지 않는다.
+- 영양 원본 작업트리와 미완성 유튜브/과거 작업트리는 보존했다. 현재 합의한 변경은 통합 PR에 포함했다.
+

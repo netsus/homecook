@@ -10,10 +10,14 @@ export function MealLogNutritionNote({ nutrition }: { nutrition: MealLogNutritio
 export function MealLogMacroBar({ nutrition, thin = false, showAiNotice = true }: { nutrition: MealLogNutritionEvidence; thin?: boolean; showAiNotice?: boolean }) {
   const shares = mealLogMacroShares(nutrition);
   const showAi = showAiNotice && nutrition.contains_ai_estimate === true;
+  const qualifier = nutrition.calculation_status === "partial"
+    ? (nutrition.contains_ai_estimate ? "추정 탄단지 기준" : "확인된 탄단지 기준") : null;
   return <>
     {showAi ? <MealLogNutritionNote nutrition={nutrition} /> : null}
-    {!shares ? (!showAi && nutrition.calculation_status !== "complete" ? <p className="text-xs text-[var(--text-2)]">일부 영양 정보 없음</p> : null) :
-      <div aria-label={MEAL_LOG_MACROS.map(macro => `${macro.label} ${formatMealLogNumber(nutrition[macro.key])}g`).join(" · ")} role="img" className="flex w-full overflow-hidden rounded-full" style={{ height: thin ? 4 : 12 }}>{MEAL_LOG_MACROS.map((macro, index) => <span aria-hidden="true" key={macro.key} style={{ background: macro.color, width: `${shares[index] * 100}%` }} />)}</div>}
+    {!shares ? (!showAi && nutrition.calculation_status !== "complete" ? <p className="text-xs text-[var(--text-2)]">일부 영양 정보 없음</p> : null) : <>
+      <div aria-label={(qualifier ? qualifier + " · " : "") + MEAL_LOG_MACROS.map(macro => macro.label + " " + formatMealLogNumber(nutrition[macro.key]) + "g").join(" · ")} role="img" className="flex w-full overflow-hidden rounded-full" style={{ height: thin ? 4 : 12 }}>{MEAL_LOG_MACROS.map((macro, index) => <span aria-hidden="true" key={macro.key} style={{ background: macro.color, width: (shares[index] * 100) + "%" }} />)}</div>
+      {qualifier ? <p className="mt-1 text-xs text-[var(--text-2)]">{qualifier}</p> : null}
+    </>}
   </>;
 }
 

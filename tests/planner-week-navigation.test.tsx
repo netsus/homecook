@@ -46,6 +46,24 @@ describe("planner week navigation restoration", () => {
     expect(props.onDateSelect).toHaveBeenCalledWith("2026-03-26");
   });
 
+  it("centers a newly revealed rail and restores its resize and swipe lifecycle", () => {
+    const props = createProps();
+    const view = render(<PlannerWeekNavigation {...props} hideDateRail />);
+    expect(screen.queryByTestId("meal-log-week-date-rail")).toBeNull();
+    view.rerender(<PlannerWeekNavigation {...props} mode="log" />);
+    const rail = screen.getByTestId("meal-log-week-date-rail");
+    expect(rail.scrollLeft).toBe(320);
+    rail.scrollLeft = 0;
+    fireEvent(window, new Event("resize"));
+    expect(rail.scrollLeft).toBe(320);
+    scrollToPage(rail, 2);
+    act(() => vi.advanceTimersByTime(500));
+    expect(props.onShiftWeek).toHaveBeenCalledExactlyOnceWith(7);
+    view.rerender(<PlannerWeekNavigation {...props} hideDateRail />);
+    view.rerender(<PlannerWeekNavigation {...props} mode="log" />);
+    expect(screen.getByTestId("meal-log-week-date-rail").scrollLeft).toBe(320);
+  });
+
   it("uses the bright official brand accent for the selected planner date", () => {
     render(<PlannerWeekNavigation {...createProps()} />);
 
