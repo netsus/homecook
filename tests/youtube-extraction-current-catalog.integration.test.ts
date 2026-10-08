@@ -20,6 +20,11 @@ function psql(sql: string) {
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim();
 }
+function psqlFailure(sql: string) {
+  const result = spawnSync("docker", ["exec", "-i", container, "psql", "-X", "-U", "supabase_admin", "-d", "postgres", "-Atq", "-v", "ON_ERROR_STOP=1"],
+    { input: sql, encoding: "utf8", timeout: 30_000 });
+  expect(result.status).not.toBe(0); return result.stderr;
+}
 
 function psqlFile(file: string, variables: Record<string, string> = {}, prefix = "") {
   const variableArgs = Object.entries(variables).flatMap(([key, value]) => ["-v", `${key}=${value}`]);
@@ -208,6 +213,29 @@ describe.skipIf(!enabled)("YouTube catalog after all current migrations", () => 
       job_id: jobId, worker_id: workerId, lease_generation: String(claim.lease_generation),
       permit_generation: String(permit.permit_generation), youtube_video_id: "trialbridge",
     }, `select set_config('request.jwt.claims','${claims}',false);\n`)).status).toBe("PASS");
+  });
+
+  it("atomically rotates the reviewed policy and credential under real manager authority and rolls back", () => {
+    const oldPipeline = "5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c";
+    const newPipeline = "1c9c47074da3bf1c55ed83f1ba5131d9d48ad486503919c554a5530d7972d935";
+    const newDigest = "e40c9f4ef0d8a9241e49635f0fc906fe92a20f57a46e005fa4dd308805a191c0";
+    psql(`begin; update private.youtube_extraction_current_policy set policy_version=2,pipeline_identity='${oldPipeline}',enabled=true,updated_at=clock_timestamp() where policy_key='primary';
+      update private.youtube_extraction_worker_credentials c set current_generation=44,current_jti_hash=repeat('d',64),expires_at='2026-09-28T17:44:54Z',release_sha='b5f4d13c0d2586c6ba666bbe4939beb33de21c07',schema_identity='youtube-extraction-worker-schema-v2',allowed_snapshot_digest=private.youtube_extraction_policy_snapshot_digest(p.extractor_mode,p.pipeline_identity,p.result_affecting_options,p.policy_version) from private.youtube_extraction_current_policy p where c.credential_name='primary' and p.policy_key='primary'; commit;`);
+    const managerClaims = JSON.stringify({ role:"youtube_extraction_credential_manager",scope:"youtube-extraction-credential-manager",
+      iss:"https://worker.mumeok.kr",aud:"youtube-extraction",exp:Math.floor(Date.now()/1000)+300 }).replaceAll("'","''");
+    const positive = lastJson(psql(`begin; select pg_advisory_xact_lock(86120317); select 1 from private.youtube_extraction_current_policy where policy_key='primary' for update; select 1 from private.youtube_extraction_worker_credentials where credential_name='primary' for update;
+      update private.youtube_extraction_current_policy set policy_version=3,pipeline_identity='${newPipeline}',updated_at=clock_timestamp() where policy_key='primary' and policy_version=2 and pipeline_identity='${oldPipeline}';
+      set local role youtube_extraction_credential_manager; set local request.jwt.claims='${managerClaims}';
+      select public.rotate_youtube_extraction_worker_credential(44,45,repeat('e',64),now()+interval '12 hours','370483030665cb25548c40865544c3b6f4f49cbc','youtube-extraction-worker-schema-v2','${newDigest}')::text; reset role;
+      select jsonb_build_object('version',policy_version,'pipeline',pipeline_identity,'generation',(select current_generation from private.youtube_extraction_worker_credentials where credential_name='primary')) from private.youtube_extraction_current_policy where policy_key='primary'; rollback;`));
+    expect(positive).toEqual({ version:3,pipeline:newPipeline,generation:45 });
+    expect(lastJson(psql("select jsonb_build_object('version',p.policy_version,'generation',c.current_generation) from private.youtube_extraction_current_policy p cross join private.youtube_extraction_worker_credentials c where p.policy_key='primary' and c.credential_name='primary';"))).toEqual({version:2,generation:44});
+    expect(psqlFailure(`begin; set local role youtube_extraction_credential_manager; set local request.jwt.claims='${managerClaims.replace("worker.mumeok.kr","wrong.example")}'; select public.rotate_youtube_extraction_worker_credential(44,45,repeat('e',64),now()+interval '1 day','370483030665cb25548c40865544c3b6f4f49cbc','youtube-extraction-worker-schema-v2','${newDigest}'); commit;`)).toMatch(/YOUTUBE_EXTRACTION_CREDENTIAL_MANAGER_UNAUTHORIZED/u);
+    expect(psqlFailure(`begin; set local role youtube_extraction_credential_manager; set local request.jwt.claims='${managerClaims}'; select public.rotate_youtube_extraction_worker_credential(44,45,repeat('e',64),now()+interval '8 days','370483030665cb25548c40865544c3b6f4f49cbc','youtube-extraction-worker-schema-v2','${newDigest}'); commit;`)).toMatch(/VALIDATION_ERROR/u);
+    const stale = lastJson(psql(`begin; update private.youtube_extraction_current_policy set policy_version=3,pipeline_identity='${newPipeline}' where policy_key='primary'; set local role youtube_extraction_credential_manager; set local request.jwt.claims='${managerClaims}'; select public.rotate_youtube_extraction_worker_credential(43,44,repeat('e',64),now()+interval '1 day','370483030665cb25548c40865544c3b6f4f49cbc','youtube-extraction-worker-schema-v2','${newDigest}')::text; rollback;`));
+    expect(stale).toEqual({rotated:false,current_generation:43});
+    expect(lastJson(psql(`with changed as (update private.youtube_extraction_current_policy set policy_version=3 where policy_key='primary' and policy_version=999 returning 1) select count(*) from changed;`))).toBe(0);
+    expect(lastJson(psql("select jsonb_build_object('version',p.policy_version,'generation',c.current_generation) from private.youtube_extraction_current_policy p cross join private.youtube_extraction_worker_credentials c where p.policy_key='primary' and c.credential_name='primary';"))).toEqual({version:2,generation:44});
   });
 
   it("validates the saved-result postimage, canonical authority, and concurrent ensure", async () => {
