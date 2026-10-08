@@ -28,3 +28,15 @@ describe("readonly meal nutrition preview",()=>{
     await expect(fetchMealLogNutritionPreview(input)).rejects.toMatchObject({code:"INVALID_RESPONSE"});
   });
 });
+
+it("preserves an AI preview boolean and rejects malformed provenance and unknown evidence", async () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  const response = (evidence: unknown) => ({ ok: true, status: 200, json: async () => ({ success: true, data: { ...input, nutrition: evidence } }) });
+  fetcher.mockResolvedValue(response({ ...nutrition, contains_ai_estimate: true }));
+  expect((await fetchMealLogNutritionPreview(input)).nutrition.contains_ai_estimate).toBe(true);
+  for (const invalid of [{ contains_ai_estimate: "true" }, { contains_ai_estimate: null }, { unknown: true }]) {
+    fetcher.mockResolvedValue(response({ ...nutrition, ...invalid }));
+    await expect(fetchMealLogNutritionPreview(input)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  }
+});

@@ -50,6 +50,7 @@ export interface RecipeNutritionDisplay {
   nutrients: RecipeNutrientDisplayItem[];
   optionalNutrients: RecipeNutrientDisplayItem[];
   qualityText: string | null;
+  aiEstimateText: string | null;
   reflectedText: string | null;
 }
 
@@ -84,6 +85,7 @@ export function buildRecipeNutritionDisplay(
         hasValidSelectedServings,
       )),
     qualityText: qualityText(nutrition.calculation_quality),
+    aiEstimateText: nutrition.warnings.includes("AI_NUTRITION_ESTIMATE_USED") ? "AI 추정값 포함" : null,
     reflectedText: reflectedText(nutrition),
   };
 }

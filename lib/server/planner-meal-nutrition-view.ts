@@ -102,6 +102,7 @@ export async function readPlannerMealNutrition(
     mealId,
     {
       plannedServings,
+      ...(entry.warnings?.includes("AI_NUTRITION_ESTIMATE_USED") ? { containsAiEstimate: true } : {}),
       totalWeightGrams: Number.isFinite(weightsByMeal.get(mealId))
         ? weightsByMeal.get(mealId)!
         : null,

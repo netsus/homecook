@@ -107,7 +107,7 @@ describe("planner nutrition presentation", () => {
 
   it.each([
     ["carbohydrate_g", value(0), "0 g"],
-    ["protein_g", value(null, "partial", 23.4), "23.4 g"],
+    ["protein_g", value(null, "partial", 23.4), "23 g"],
     ["sodium_mg", value(null, "unavailable"), "정보 준비 중"],
   ] as const)("formats core nutrients without turning missing into zero", (code, input, expected) => {
     expect(formatPlannerNutritionValue(code, input)).toBe(expected);

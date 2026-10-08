@@ -6,7 +6,7 @@ import type { MealLogNutritionEvidence } from "@/types/meal-log";
 
 import type { MealListItemData } from "@/types/meal";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
-import { formatPlannerNutritionValue } from "@/lib/planner/planner-nutrition-presentation";
+import { formatPlannerNutritionValue, plannerAiEstimateNotice } from "@/lib/planner/planner-nutrition-presentation";
 
 const statusLabels = { registered: "등록", shopping_done: "장보기 완료", cook_done: "요리 완료" };
 const statusColors = { registered: "bg-[var(--brand-soft)] text-[var(--brand)]", shopping_done: "bg-[var(--success-soft)] text-[var(--success)]", cook_done: "bg-[var(--surface-fill)] text-[var(--text-2)]" };
@@ -30,6 +30,7 @@ export function PlannedMealCard({ meal, nutrition, detailed, conflictError, isPe
   onShopping: () => void;
 }) {
   const matches = nutrition?.plannedServings === meal.planned_servings;
+  const aiNotice = matches && nutrition ? plannerAiEstimateNotice(nutrition.values, nutrition.containsAiEstimate) : null;
   const energy = matches ? nutrition?.values.energy_kcal : undefined;
   const perServingEnergy = energy ? {
     ...energy,
@@ -42,6 +43,7 @@ export function PlannedMealCard({ meal, nutrition, detailed, conflictError, isPe
     return value?.status === "complete" ? value.amount : value?.status === "partial" ? value.known_amount : null;
   };
   const macroEvidence: MealLogNutritionEvidence = {
+    contains_ai_estimate: matches && nutrition?.containsAiEstimate === true,
     calculation_status: !matches || !nutrition ? "unavailable" : Object.values(nutrition.values).every(value => value.status === "complete") ? "complete" : "partial",
     calories_kcal: knownValue("energy_kcal"),
     carbohydrate_g: knownValue("carbohydrate_g"),
@@ -74,7 +76,8 @@ export function PlannedMealCard({ meal, nutrition, detailed, conflictError, isPe
           <span className="text-sm font-medium">예상 영양 · {meal.planned_servings}인분</span>
           <span className={detailed ? "block" : "text-right"}><span className={detailed ? "block text-3xl font-semibold tabular-nums" : "block text-lg font-normal tabular-nums"}>{energy ? formatPlannerNutritionValue("energy_kcal", energy) : "정보 준비 중"}</span>{perServingEnergy ? <span className="text-sm font-normal text-[var(--text-2)]">1인분 {formatPlannerNutritionValue("energy_kcal", perServingEnergy)}</span> : null}</span>
         </div>
-        {detailed && matches && nutrition ? <div className="mt-4"><MealLogMacroBar nutrition={macroEvidence} /></div> : null}
+        {aiNotice ? <p className="mt-2 text-xs text-[var(--brand-primary-text)]">{aiNotice}</p> : null}
+        {detailed && matches && nutrition ? <div className="mt-4"><MealLogMacroBar nutrition={macroEvidence} showAiNotice={false} /></div> : null}
         {matches && nutrition ? <dl className={detailed ? "mt-4 grid grid-cols-3 gap-3 text-center text-sm" : "mt-3 grid grid-cols-3 gap-3 text-sm"}>{([['carbohydrate_g', '탄수화물'], ['protein_g', '단백질'], ['fat_g', '지방']] as const).map(([code, label]) => <div key={code}><dt className="font-normal text-[var(--text-2)]">{label}</dt><dd className={detailed ? "mt-1 text-lg font-normal tabular-nums" : "mt-1 font-normal"}>{nutrition.values[code] ? formatPlannerNutritionValue(code, nutrition.values[code]) : '정보 없음'}</dd></div>)}</dl> : null}
       </section>
       {detailed ? <>

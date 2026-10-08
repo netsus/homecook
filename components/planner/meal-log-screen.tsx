@@ -14,7 +14,7 @@ import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/plann
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogDayNutritionDetail } from "@/components/planner/meal-log-day-nutrition-detail";
 import { formatMealLogNumber, MEAL_LOG_MACROS, scaleMealLogNutrition } from "@/lib/planner/meal-log-nutrition-presentation";
-import { MealLogMacroBar, MealLogNutritionChart } from "@/components/planner/meal-log-nutrition-chart";
+import { MealLogMacroBar, MealLogNutritionChart, MealLogNutritionNote } from "@/components/planner/meal-log-nutrition-chart";
 import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { createGuestMealLogDay, createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
@@ -270,6 +270,7 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDetail
         </div>
         <button aria-label={`${section.slot_name_snapshot}에 먹은 음식 추가`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--ui-slate-300)] bg-[var(--ui-white)] text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm outline-none hover:border-[var(--brand)] hover:bg-[var(--ui-slate-50)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={sectionAddActionId(section.meal_plan_column_id, date)} onClick={onAdd} type="button">+</button>
       </div>
+      {section.entries.length > 0 && section.subtotal.contains_ai_estimate ? <MealLogNutritionNote nutrition={section.subtotal} /> : null}
       {section.incomplete_count > 0 ? <p className="sr-only">일부 정보 없음 {section.incomplete_count}건</p> : null}
       <ul className="divide-y divide-[var(--ui-slate-100)]">
         {section.entries.map((entry) => <EntryRow disabled={disabled} entry={entry} guest={guest} key={entry.id} onDetail={() => onDetail(entry)} />)}
@@ -316,6 +317,7 @@ function DeletedSection({ date, disabled, section, onDetail }: {
         <p className="text-sm font-medium">{number(section.subtotal.calories_kcal, " kcal")}</p>
       </div>
       <p className="mt-1 text-xs text-[var(--text-2)]">새 음식 추가 없음</p>
+      {section.entries.length > 0 && section.subtotal.contains_ai_estimate ? <MealLogNutritionNote nutrition={section.subtotal} /> : null}
       {section.incomplete_count > 0 ? <p className="sr-only">일부 정보 없음 {section.incomplete_count}건</p> : null}
       <ul className="mt-2 divide-y divide-[var(--line-strong)]">
         {section.entries.map((entry) => <EntryRow disabled={disabled} entry={entry} key={entry.id} onDetail={() => onDetail(entry)} />)}
@@ -549,7 +551,7 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
   const restoredContextRef = useRef(false);
   const guestRef = useRef(guest);
   guestRef.current = guest;
-  const guestDays = useMemo(() => {
+  const guestDays = useMemo<Record<string, MealLogDayData>>(() => {
     if (!guest) return {};
     const sampleDate = dates.includes(todayKey) ? todayKey : dates[0];
     return Object.fromEntries(dates.map((item) => {

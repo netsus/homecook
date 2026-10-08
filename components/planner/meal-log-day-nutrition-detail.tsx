@@ -3,7 +3,7 @@ import React, { useId, useRef, useState } from "react";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { MealLogNutritionChart } from "@/components/planner/meal-log-nutrition-chart";
-import { MEAL_LOG_MACROS, formatMealLogNumber, mealLogAxisMaximum, mealLogMacroShares, type MealLogMetric } from "@/lib/planner/meal-log-nutrition-presentation";
+import { MEAL_LOG_MACROS, formatMealLogNumber, mealLogAxisMaximum, mealLogMacroShares, mealLogNutritionNotice, type MealLogMetric } from "@/lib/planner/meal-log-nutrition-presentation";
 import type { MealLogDayData, MealLogEntry } from "@/types/meal-log";
 
 export function MealLogDayNutritionDetail({ day, onClose, onEntry, active = true }: { active?: boolean; day: MealLogDayData; onClose: () => void; onEntry: (entry: MealLogEntry) => void }) {
@@ -32,7 +32,8 @@ export function MealLogDayNutritionDetail({ day, onClose, onEntry, active = true
       <h3 className="mb-5 text-lg font-medium">끼니별 {label}</h3>
       <p id={chartDescriptionId} className="sr-only">{sections.map(section => {
         const value = section.subtotal?.[metric];
-        const amount = !section.entries.length ? "기록 없음" : value === null || value === undefined ? "정보 없음" : `${formatMealLogNumber(value)}${unit}${section.subtotal?.calculation_status !== "complete" ? " (확인된 정보 기준)" : ""}`;
+        const notice = section.subtotal ? mealLogNutritionNotice(section.subtotal) : null;
+        const amount = !section.entries.length ? "기록 없음" : value === null || value === undefined ? "정보 없음" : `${formatMealLogNumber(value)}${unit}${notice ? ` (${notice})` : ""}`;
         return `${section.slot_name_snapshot}: ${amount}`;
       }).join(". ")}</p>
       <div aria-label={`끼니별 ${label} 그래프`} aria-describedby={chartDescriptionId} role="img" className="space-y-5">
@@ -40,15 +41,15 @@ export function MealLogDayNutritionDetail({ day, onClose, onEntry, active = true
           const value = section.subtotal?.[metric] ?? null;
           const shares = section.subtotal ? mealLogMacroShares(section.subtotal) : null;
           const noRecord = !section.entries.length;
-          const incomplete = section.subtotal?.calculation_status !== "complete";
+          const notice = section.subtotal ? mealLogNutritionNotice(section.subtotal) : null;
           return <div key={`${section.slot_name_snapshot}-${index}`} className="grid grid-cols-[88px_1fr] items-center gap-3">
             <div className="text-sm"><p className="font-medium">{section.slot_name_snapshot}</p>{!noRecord && value !== null ? <p className="mt-1 tabular-nums">{formatMealLogNumber(value)} {unit}</p> : null}</div>
-            <div className="min-w-0 border-l border-[var(--line-strong)] py-2">{noRecord ? <span className="pl-3 text-sm text-[var(--text-2)]">기록 없음</span> : value === null ? <span className="pl-3 text-sm text-[var(--text-2)]">정보 없음</span> : <><div className="flex h-7 overflow-hidden rounded-r" style={{ width: `${Math.max(0, value) / maximum * 100}%`, background: macro?.color ?? "var(--ui-slate-200)" }}>{!macro && shares ? MEAL_LOG_MACROS.map((part, partIndex) => <span key={part.key} style={{ width: `${shares[partIndex] * 100}%`, background: part.color }} />) : null}</div>{incomplete ? <span className="sr-only">확인된 정보 기준</span> : null}</>}</div>
+            <div className="min-w-0 border-l border-[var(--line-strong)] py-2">{noRecord ? <span className="pl-3 text-sm text-[var(--text-2)]">기록 없음</span> : value === null ? <span className="pl-3 text-sm text-[var(--text-2)]">정보 없음</span> : <><div className="flex h-7 overflow-hidden rounded-r" style={{ width: `${Math.max(0, value) / maximum * 100}%`, background: macro?.color ?? "var(--ui-slate-200)" }}>{!macro && shares ? MEAL_LOG_MACROS.map((part, partIndex) => <span key={part.key} style={{ width: `${shares[partIndex] * 100}%`, background: part.color }} />) : null}</div>{notice ? <span className={section.subtotal?.contains_ai_estimate ? "pl-2 text-xs text-[var(--text-2)]" : "sr-only"}>{notice}</span> : null}</>}</div>
           </div>;
         })}
         <div aria-hidden="true" className="ml-[100px] flex justify-between border-t border-[var(--line-strong)] pt-2 text-xs tabular-nums">{[0, 1, 2, 3, 4].map(tick => <span key={tick}>{new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(maximum * tick / 4)}</span>)}</div><p className="text-right text-xs text-[var(--text-2)]">{unit}</p>
       </div>
-      <section className="mt-8"><h3 className="text-lg font-medium">{macro ? `${label}을 섭취한 음식` : "기록한 음식"}</h3><ul className="mt-3 divide-y divide-[var(--line-strong)]">{contributors.map(entry => <li key={entry.id}><button data-meal-log-contributor={entry.id} type="button" className="flex min-h-14 w-full items-center justify-between gap-4 py-3 text-left" onClick={() => onEntry(entry)}><span className="min-w-0"><span className="block font-medium">{entry.display_name}</span><span className="text-sm text-[var(--text-2)]">{entry.slot_name_snapshot}</span></span><span className="shrink-0 tabular-nums">{formatMealLogNumber(entry.nutrition[metric])}{entry.nutrition[metric] !== null ? ` ${unit}` : ""} ›</span></button></li>)}</ul></section>
+      <section className="mt-8"><h3 className="text-lg font-medium">{macro ? `${label}을 섭취한 음식` : "기록한 음식"}</h3><ul className="mt-3 divide-y divide-[var(--line-strong)]">{contributors.map(entry => <li key={entry.id}><button data-meal-log-contributor={entry.id} type="button" className="flex min-h-14 w-full items-center justify-between gap-4 py-3 text-left" onClick={() => onEntry(entry)}><span className="min-w-0"><span className="block font-medium">{entry.display_name}</span><span className="text-sm text-[var(--text-2)]">{entry.slot_name_snapshot}</span>{entry.nutrition.contains_ai_estimate ? <span className="block text-xs text-[var(--text-2)]">{mealLogNutritionNotice(entry.nutrition)}</span> : null}</span><span className="shrink-0 tabular-nums">{formatMealLogNumber(entry.nutrition[metric])}{entry.nutrition[metric] !== null ? ` ${unit}` : ""} ›</span></button></li>)}</ul></section>
     </div>
   </div>;
 }

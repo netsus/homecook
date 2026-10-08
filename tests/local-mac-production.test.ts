@@ -163,6 +163,7 @@ describe("local Mac production environment", () => {
         "HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V1=fingerprint-secret-that-is-at-least-32-bytes",
         "HOMECOOK_YOUTUBE_EXTRACTION_CURSOR_HMAC_KEY_V1=cursor-secret-that-is-at-least-32-bytes",
         "GEMINI_API_KEY=gemini-secret",
+        "AI_NUTRITION_ESTIMATION_ENABLED=1",
         "GH_TOKEN=must-not-copy",
         "HOMECOOK_MAINTENANCE_WORKER_SECRET=must-not-copy",
         "HOMECOOK_STORAGE_LIVE_SERVICE_ROLE_KEY=must-not-copy",
@@ -187,6 +188,7 @@ describe("local Mac production environment", () => {
         "DATA_SUPABASE_PUBLISHABLE_KEY=",
         "DATA_SUPABASE_SECRET_KEY=",
         "GEMINI_API_KEY=",
+        "AI_NUTRITION_ESTIMATION_ENABLED=",
         "NEXT_PUBLIC_APP_URL=",
       ].join("\n"),
       origin: "http://127.0.0.1:3100",
@@ -195,6 +197,7 @@ describe("local Mac production environment", () => {
     expect(result.contents).toContain("NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321");
     expect(result.contents).toContain("SUPABASE_SERVICE_ROLE_KEY=service-secret");
     expect(result.contents).toContain("HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION=1");
+    expect(result.contents).toContain("AI_NUTRITION_ESTIMATION_ENABLED=1");
     expect(result.contents).toContain(
       "HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH=/Users/tester/.homecook/youtube/app.json",
     );

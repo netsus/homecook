@@ -32,10 +32,12 @@ const ALLOWED_WARNINGS = new Set([
   "TO_TASTE_EXCLUDED",
   "REPRESENTATIVE_VOLUME_CONVERSION_USED",
   "PIECE_WEIGHT_CONVERSION_USED",
+  "AI_NUTRITION_ESTIMATE_USED",
 ]);
 const ESTIMATED_WARNINGS = new Set([
   "REPRESENTATIVE_VOLUME_CONVERSION_USED",
   "PIECE_WEIGHT_CONVERSION_USED",
+  "AI_NUTRITION_ESTIMATE_USED",
 ]);
 const MISSING_REASON_PATTERN = /^(?:(?:TO_TASTE_EXCLUDED|PREDECESSOR_NOT_APPROVED|NUTRITION_PROFILE_MISSING|INVALID_QUANTITY|UNIT_CONVERSION_MISSING|PIECE_WEIGHT_REQUIRED):[0-9A-Za-z-]+|NUTRIENT_VALUE_MISSING:[0-9A-Za-z-]+:(?:energy_kcal|carbohydrate_g|protein_g|fat_g|sodium_mg|sugars_g|saturated_fat_g|fiber_g))$/;
 
@@ -212,11 +214,16 @@ export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalc
   const warnings = calculation.warnings;
   const missingReasons = calculation.missing_reasons;
   const hasEstimatedWarning = warnings.some((warning) => ESTIMATED_WARNINGS.has(warning));
+  const hasAiSource = calculation.sources.some((source) => source?.provider === "HOMECOOK_AI_ESTIMATE");
+  const hasOtherSource = calculation.sources.some((source) => source?.provider !== "HOMECOOK_AI_ESTIMATE");
   if (warnings.some((warning) => !ALLOWED_WARNINGS.has(warning)) ||
     new Set(warnings).size !== warnings.length ||
     missingReasons.some((reason) => !MISSING_REASON_PATTERN.test(reason)) ||
     new Set(missingReasons).size !== missingReasons.length ||
     JSON.stringify([...missingReasons].sort()) !== JSON.stringify(missingReasons) ||
+    (warnings.includes("AI_NUTRITION_ESTIMATE_USED") !== hasAiSource) ||
+    (hasAiSource && !["estimated", "mixed"].includes(calculation.calculation_quality ?? "")) ||
+    (hasAiSource && !hasOtherSource && calculation.calculation_quality !== "estimated") ||
     (calculation.calculation_quality === "direct" && hasEstimatedWarning) ||
     (["estimated", "mixed"].includes(calculation.calculation_quality ?? "") && !hasEstimatedWarning) ||
     (calculation.calculation_status === "unavailable" && calculation.sources.length > 0)) {

@@ -150,16 +150,17 @@ function nutritionCandidate(row) {
 
   if (!Array.isArray(profile.nutrition_values)) return null;
   const values = {};
+  const numericStatus = source.provider_code === "HOMECOOK_AI_ESTIMATE" ? "estimated" : "observed";
   for (const value of profile.nutrition_values) {
     if (!isRecord(value) || value.profile_id !== undefined && value.profile_id !== profile.id ||
       !ALLOWED_NUTRIENT_CODES.has(value.nutrient_code) ||
-      !["observed", "missing", "trace", "parse_error"].includes(value.value_status) ||
+      ![numericStatus, "missing", "trace", "parse_error"].includes(value.value_status) ||
       Object.hasOwn(values, value.nutrient_code)) {
       return null;
     }
     const amount = value.amount === null ? null : safeNumber(value.amount);
-    if ((value.value_status === "observed" && (amount === null || amount < 0)) ||
-      (value.value_status !== "observed" && value.amount !== null)) {
+    if ((value.value_status === numericStatus && (amount === null || amount < 0)) ||
+      (value.value_status !== numericStatus && value.amount !== null)) {
       return null;
     }
     values[value.nutrient_code] = {
@@ -344,10 +345,18 @@ function isPieceUnit(unit) {
 }
 
 function selectRecipeNutritionPredecessor(ingredient, predecessor) {
-  const massCandidates = predecessor.nutrition_candidates.filter((candidate) =>
+  // AI is a fallback; it must not outrank an approved official/product source
+  // merely because its basis unit happens to match the ingredient quantity.
+  const officialCandidates = predecessor.nutrition_candidates.filter((candidate) =>
+    candidate.nutrition.source.provider !== "HOMECOOK_AI_ESTIMATE"
+  );
+  const nutritionCandidates = officialCandidates.length > 0
+    ? officialCandidates
+    : predecessor.nutrition_candidates;
+  const massCandidates = nutritionCandidates.filter((candidate) =>
     candidate.nutrition.profile.basis_unit === "g"
   );
-  const volumeCandidates = predecessor.nutrition_candidates.filter((candidate) =>
+  const volumeCandidates = nutritionCandidates.filter((candidate) =>
     candidate.nutrition.profile.basis_unit === "ml"
   );
   const volumeInput = isVolumeUnit(ingredient.unit);
