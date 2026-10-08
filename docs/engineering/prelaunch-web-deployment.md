@@ -284,3 +284,13 @@ R2 원본 증거·검증 시각을 보존하고 현재 외부 manifest의 파일
 ## 2026-10-08 — UI 피드백9개 웹 전용 반영
 
 현재 검토 고정 대상은 `899954434a51a44770ea96d78c1e71ee51176cbe` → `974f52a426cf6877fff915fc3a020ec4be9dd625`, 통합소스 `b62d320e017dea4cded0b86a3f71f7994ae04ee5`다. 보호파일은 `app/globals.css`의 모바일 책 전용 선택자 변경뿐이며 마케팅/동의 화면과 관련없음을 검토했다. 운영 원장204개·권한검사14개·기존R2자료를 읽기만 해서 확인하고 그대로 보존한다. 이번 반영에 신규 SQL·데이터 변경·백업/복원 반복은 없다. `--reviewed-feedback-readiness --already-applied-db`는 검토한 CSS와 변경없는204개DB를 대조할 뿐 SQL을 실행하지 않는다. 일반 보호파일 거부규칙과 정확한source·파일hash·증거검사는 유지한다.
+
+## 2026-10-08 — AI 영양의 한정된 배포 검증
+
+`--reviewed-ai-nutrition-readiness`는 비공개 manifest에 고정한 출발/도착 웹과 별도 통합 SQL 소스를 검증한다. `--reviewed-ref`, `--already-applied-db`, `--db-config`가 필요하다. 기존 204개 migration의 checksum을 보존하고 검토한 AI SQL 3개만 더한 실제 207개 ledger, 기존 R2 증거/데이터/권한과 내부 scope의 원본문 보존·정확히 두 delegate 추가를 확인한다. 원본 증명 시각을 새 검증 시각으로 바꾸지 않는다.
+
+현재 핀은 운영 웹 `974f52a426cf6877fff915fc3a020ec4be9dd625` → 웹 후보 `fe51f3c93ed608160650d818f01617f8f02e3bba`, 통합 소스 `ad86aa7c617011583bc2a57c352c49afefce5738`에만 유효하다. 과거 플랫폼/호스트 변경을 다시 배포하지 않도록 현재 웹에 검토한 AI 변경만 겹친 후보이며, 애플리케이션 트리는 통합 소스와 동일하다. 다른 후보·환경변수로 핀을 바꿀 수 없다.
+
+Next 표준 앱 시작 파일 `instrumentation.ts`는 웹/API 코드로 분류해 관련 검사를 실행한다. 기존 호스트 시작 스크립트·Docker·별도 worker 구성을 허용하지 않는다. 과거 대표 영양/람부탄 render·SQL 4개는 실행하지 않는 감사 자료로만 분류한다.
+
+DB 설정은 준비 및 교체 직전까지 `enabled=false`여야 한다. 앱 환경 flag가 켜져 있어도 후보 포트에서 AI를 생성할 수 없다. 실제 웹 build/GET 검증 후 별도 통제 작업으로 활성화·두 재료 enqueue를 진행한다. 이 전용 경로는 SQL을 적용하거나 비활성 확인을 생략하지 않는다.
