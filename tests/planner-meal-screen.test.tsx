@@ -725,6 +725,27 @@ describe("MealScreen", () => {
     expect(screen.getByTestId("meal-screen-header").contains(screen.getByTestId("meal-screen-add-cta"))).toBe(true);
   });
 
+  it("uses the date/meal heading and pinned known macros on the focused plan", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ mealId: "meal-1" }));
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [buildMeal({ id: "meal-1", recipe_title: "김치찌개", planned_servings: 2 })] });
+    const complete = (amount: number) => ({ amount, known_amount: amount, status: "complete" as const, display_mode: "total" as const });
+    const pinned = { plannedServings: 2, values: {
+      energy_kcal: complete(450), carbohydrate_g: complete(40), protein_g: complete(20),
+      fat_g: { amount: null, known_amount: 12, status: "partial" as const, display_mode: "minimum" as const },
+    } };
+    const { rerender } = render(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={{ "meal-1": pinned }} />);
+    const section = await screen.findByLabelText("김치찌개 계획 영양정보");
+    expect(screen.getByRole("heading", { name: "4월 18일 · 아침" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "계획한 요리" })).toBeNull();
+    expect(screen.getAllByText("등록")).toHaveLength(1);
+    expect(within(screen.getByLabelText("김치찌개 식사 카드")).queryByText("등록")).toBeNull();
+    expect(within(section).getByRole("img").getAttribute("aria-label")).toContain("지방 12g");
+    expect(within(section).getByText("12 g")).toBeTruthy();
+    rerender(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={{ "meal-1": { ...pinned, values: { ...pinned.values, fat_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null } } } }} />);
+    expect(within(section).queryByRole("img")).toBeNull();
+  });
+
   it.each([[false, false], [true, false], [false, true], [true, true]])("shows inline nutrition and hides stale servings until refresh (desktop=%s, foodDetail=%s)", async (desktop, foodDetail) => {
     setDesktopViewport(desktop);
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams(foodDetail ? { mealId: "meal-1" } : {}));

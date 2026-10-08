@@ -107,3 +107,25 @@ it("labels AI values in the add-to-plan recipe preview", async () => {
   expect(await screen.findByText(/AI 추정값 포함/)).toBeTruthy();
   expect(screen.getByText(/일부 영양정보가 빠진 추정값/)).toBeTruthy();
 });
+
+it("keeps ordinary incomplete notices screen-reader-only but AI provenance visible", () => {
+  const officialPartial = { ...historicalMeal, calculation_status: "partial" as const };
+  const view = render(<MealLogNutritionChart nutrition={officialPartial} compact />);
+  expect(screen.getByText("확인된 정보 기준").className).toBe("sr-only");
+  view.rerender(<MealLogNutritionChart nutrition={{ ...officialPartial, contains_ai_estimate: true }} compact />);
+  expect(screen.getByText(/AI 추정값 포함/).className).not.toContain("sr-only");
+  expect(screen.queryByText("확인된 정보 기준")).toBeNull();
+});
+
+it("preserves the new detailed plan card while carrying AI provenance into its macro bar", () => {
+  const handlers = { onOpen: vi.fn(), onRecipe: vi.fn(), onDelete: vi.fn(), onStepDown: vi.fn(), onStepUp: vi.fn(), onAction: vi.fn(), onShopping: vi.fn() };
+  const item = { id: "meal", recipe_id: "recipe", recipe_title: "볶음밥", recipe_thumbnail_url: null, planned_servings: 1, status: "registered" as const, is_leftover: false, revision: 1 };
+  const partialValues = { ...values, protein_g: { amount: null, known_amount: 12, status: "partial" as const, display_mode: "minimum" as const } };
+  render(<PlannedMealCard meal={item} nutrition={{ plannedServings: 1, values: partialValues, containsAiEstimate: true }} detailed conflictError={null} isPending={false} {...handlers} />);
+  expect(screen.getByRole("region", { name: "볶음밥 계획 영양정보" }).className).toContain("bg-[var(--ui-sky-50)]");
+  expect(screen.getByRole("img", { name: /AI 추정 탄단지 기준/ })).toBeTruthy();
+  expect(screen.getByText("AI 추정 탄단지 기준").className).toBe("sr-only");
+  expect(screen.queryByRole("img", { name: /확인된/ })).toBeNull();
+  expect(screen.getAllByText(/AI 추정값 포함/)).toHaveLength(1);
+  expect(screen.getByText(/AI 추정값 포함/).className).not.toContain("sr-only");
+});

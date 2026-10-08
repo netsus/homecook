@@ -25,12 +25,12 @@ describe("meal-log nutrition calculations", () => {
     mealLogMacroShares(scaleMealLogNutrition(nutrition, 250 / 300))!.forEach((share, index) => expect(share).toBeCloseTo(shares[index], 12));
     expect(scaleMealLogNutrition(nutrition, 250 / 300).calories_kcal).toBeCloseTo(258.3333);
   });
-  it("shows all known partial macros with an explicit qualified label", () => {
+  it("shows all known partial macros with a screen-reader qualifier only", () => {
     const partial = { ...nutrition, calculation_status: "partial" as const, calories_kcal: 613, carbohydrate_g: 45, protein_g: 35, fat_g: 32 };
     expect(mealLogMacroShares(partial)).toEqual([180 / 608, 140 / 608, 288 / 608]);
     render(<MealLogMacroBar nutrition={partial} thin />);
     expect(screen.getByRole("img").getAttribute("aria-label")).toContain("확인된 탄단지 기준");
-    expect(screen.getByText("확인된 탄단지 기준")).toBeTruthy();
+    expect(screen.getByText("확인된 탄단지 기준").className).toBe("sr-only");
     expect(screen.queryByText("일부 영양 정보 없음")).toBeNull();
     expect(partial.calculation_status).toBe("partial");
   });
@@ -43,7 +43,7 @@ describe("meal-log nutrition calculations", () => {
     expect(mealLogMacroShares({ ...nutrition, fat_g: 0, carbohydrate_g: 0, protein_g: 0 })).toBeNull();
     render(<MealLogMacroBar nutrition={{ ...nutrition, calculation_status: "partial", fat_g: null }} thin />);
     expect(screen.queryByRole("img")).toBeNull();
-    expect(screen.getByText("일부 영양 정보 없음")).toBeTruthy();
+    expect(screen.getByText("일부 영양 정보 없음").className).toBe("sr-only");
   });
   it("chooses a shared zero-based numeric scale and ignores unknown values", () => {
     expect(mealLogAxisMaximum([430, 620, 400, null])).toBe(800);
@@ -81,6 +81,25 @@ describe("meal-log redesigned detail flow", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "하루 영양 상세 보기" }));
     expect(screen.getByRole("dialog", { name: "하루 영양 상세" })).toBeTruthy();
   });
+  it("keeps incomplete nutrition semantics without repeated visible warning labels", async () => {
+    const partial = { ...nutrition, calculation_status: "partial" as const, sodium_mg: null };
+    api.fetch.mockImplementation(async (date: string) => {
+      const data = day({ ...entry, nutrition: partial });
+      return { ...data, date, day_total: { ...partial, incomplete_count: 1 }, active_sections: data.active_sections.map(section => ({ ...section, incomplete_count: 1 })) };
+    });
+    render(<MealLogScreen {...props} />);
+    await screen.findByText("김치찌개");
+    expect(screen.getByText("일부 정보 없음 1건").className).toBe("sr-only");
+    expect(screen.getByText("확인된 정보 기준").className).toBe("sr-only");
+    expect(screen.getByText("확인된 탄단지 기준").className).toBe("sr-only");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "하루 영양 상세 보기" }));
+    const detail = screen.getByRole("dialog", { name: "하루 영양 상세" });
+    for (const qualifier of within(detail).getAllByText("확인된 정보 기준")) expect(qualifier.className).toBe("sr-only");
+    expect(within(detail).getByRole("img").getAttribute("aria-describedby")).toBeTruthy();
+    expect(partial.sodium_mg).toBeNull();
+  });
+
   it("shows read-only entry detail, edits in a sheet, and preserves an uncertain retry key", async () => {
     const user = userEvent.setup(); render(<MealLogScreen {...props} />);
     await user.click(await screen.findByRole("button", { name: /김치찌개 식사 기록 상세/ }));

@@ -40,7 +40,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const first = renderMealLogShell({ unauthorized: "create" });
 
     await openBreakfast(user);
-    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.click(screen.getByRole("tab", { name: "최근" }));
     await user.click(await screen.findByRole("button", { name: /달걀/u }));
     await user.click(screen.getByRole("textbox", { name: "먹은 양" }));
     await user.tab();

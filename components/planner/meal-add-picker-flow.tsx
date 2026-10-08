@@ -56,9 +56,9 @@ function PickerSheet({
   return (
     <PlannerTaskSheet
       ariaLabelledBy={ariaLabelledBy}
-      badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
       bodyClassName="pb-[calc(20px+env(safe-area-inset-bottom))]"
-      leadingAction={<AppBackButton disabled={closeDisabled} onClick={onBack} />}
+      leadingAction={<div className="flex min-w-0 items-center gap-2"><AppBackButton disabled={closeDisabled} onClick={onBack} /><MealAddTargetBadge label={targetLabel} /></div>}
+      hideTitle
       closeDisabled={closeDisabled}
       onClose={onClose}
       panelClassName="h-[78dvh]"
