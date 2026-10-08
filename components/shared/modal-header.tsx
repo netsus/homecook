@@ -4,6 +4,8 @@ import React from "react";
 
 interface ModalHeaderProps {
   title: string;
+  /** Keep the accessible heading without repeating it visually. */
+  hideTitle?: boolean;
   titleId?: string;
   /** Helper copy rendered below the title in muted text-sm */
   description?: string;
@@ -23,6 +25,7 @@ interface ModalHeaderProps {
 export function ModalHeader({
   title,
   titleId,
+  hideTitle = false,
   description,
   descriptionClassName,
   badge,
@@ -39,7 +42,7 @@ export function ModalHeader({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <h2
-            className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--wave1-ink)] outline-none"
+            className={hideTitle ? "sr-only" : "min-w-0 flex-1 truncate text-lg font-bold text-[var(--wave1-ink)] outline-none"}
             id={titleId}
             ref={titleRef}
             tabIndex={titleTabIndex}

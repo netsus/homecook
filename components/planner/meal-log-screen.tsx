@@ -35,6 +35,7 @@ import type {
 interface MealLogScreenProps {
   date: string;
   guest?: boolean;
+  activeColumns?: MealLogDayData["active_columns"];
   showDateNavigation?: boolean;
   onDayRef?: (date: string, node: HTMLElement | null) => void;
   onDaysReady?: (weekStart: string) => void;
@@ -269,7 +270,7 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDetail
         </div>
         <button aria-label={`${section.slot_name_snapshot}에 먹은 음식 추가`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--ui-slate-300)] bg-[var(--ui-white)] text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm outline-none hover:border-[var(--brand)] hover:bg-[var(--ui-slate-50)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={sectionAddActionId(section.meal_plan_column_id, date)} onClick={onAdd} type="button">+</button>
       </div>
-      {section.incomplete_count > 0 ? <p className="mt-2 text-xs font-medium text-[var(--ui-slate-500)]">일부 정보 없음 {section.incomplete_count}건</p> : null}
+      {section.incomplete_count > 0 ? <p className="sr-only">일부 정보 없음 {section.incomplete_count}건</p> : null}
       <ul className="divide-y divide-[var(--ui-slate-100)]">
         {section.entries.map((entry) => <EntryRow disabled={disabled} entry={entry} guest={guest} key={entry.id} onDetail={() => onDetail(entry)} />)}
       </ul>
@@ -315,7 +316,7 @@ function DeletedSection({ date, disabled, section, onDetail }: {
         <p className="text-sm font-medium">{number(section.subtotal.calories_kcal, " kcal")}</p>
       </div>
       <p className="mt-1 text-xs text-[var(--text-2)]">새 음식 추가 없음</p>
-      {section.incomplete_count > 0 ? <p className="mt-1 text-xs font-medium">일부 정보 없음 {section.incomplete_count}건</p> : null}
+      {section.incomplete_count > 0 ? <p className="sr-only">일부 정보 없음 {section.incomplete_count}건</p> : null}
       <ul className="mt-2 divide-y divide-[var(--line-strong)]">
         {section.entries.map((entry) => <EntryRow disabled={disabled} entry={entry} key={entry.id} onDetail={() => onDetail(entry)} />)}
       </ul>
@@ -527,7 +528,7 @@ function EntryDialog({
   </>;
 }
 
-export function MealLogScreen({ date, guest = false, showDateNavigation = true, onDayRef, onDaysReady, onLoginRequired, onFoodLoginRequired, onDateChange, onUnauthorized }: MealLogScreenProps) {
+export function MealLogScreen({ date, guest = false, activeColumns, showDateNavigation = true, onDayRef, onDaysReady, onLoginRequired, onFoodLoginRequired, onDateChange, onUnauthorized }: MealLogScreenProps) {
   const weekKey = weekDates(date)[0];
   const dates = useMemo(() => weekDates(weekKey), [weekKey]);
   const [days, setDays] = useState<Record<string, MealLogDayData>>({});
@@ -560,7 +561,8 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
   }, [dates, guest, todayKey]);
   const displayDays = guest ? guestDays : days;
   const day = displayDays[date];
-  const isLoading = !guest && loading;
+  const isLoading = !guest && (loading || weekLoadRef.current?.key !== weekKey);
+  const loadingColumns = activeColumns ?? Object.values(days).at(-1)?.active_columns ?? [];
   useEffect(() => {
     if (guest || (!loading && weekLoadRef.current?.key === weekKey && dates.every((key) => Boolean(days[key]) || failedDates.has(key)))) onDaysReady?.(weekKey);
   }, [days, dates, failedDates, guest, loading, onDaysReady, weekKey]);
@@ -783,7 +785,13 @@ export function MealLogScreen({ date, guest = false, showDateNavigation = true, 
               <h2 aria-label={`${longDate(dayKey)} 식사 기록`} className="text-base font-medium text-[var(--ui-slate-800)]" id={titleId}>{dayKey === todayKey ? "오늘 · " : ""}{Number(dayKey.slice(5, 7))}/{Number(dayKey.slice(8, 10))} ({WEEKDAYS[new Date(`${dayKey}T00:00:00.000Z`).getUTCDay()]})</h2>
               {cardDay && !isLoading ? <span aria-label={`기록한 끼니 ${cardSections.filter((section) => section.entries.length > 0).length}개, 전체 ${cardSections.length}개`} className="shrink-0 text-xs tabular-nums text-[var(--ui-slate-500)]">{cardSections.filter((section) => section.entries.length > 0).length} / {cardSections.length}</span> : null}
             </div>
-            {isLoading && !cardDay ? <div aria-busy="true" aria-label={`${longDate(dayKey)} 기록 불러오는 중`} className="space-y-3 p-4" role="status"><Skeleton className="h-16 rounded-xl" /><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map(index => <Skeleton className="h-20 rounded-xl" key={index} />)}</div></div> : cardDay ? <div className="p-3 lg:p-4">
+            {isLoading && !cardDay ? <div aria-busy="true" aria-label={`${longDate(dayKey)} 기록 불러오는 중`} className="space-y-5 p-4" role="status">
+              <Skeleton className="h-16 rounded-xl" />
+              {loadingColumns.length > 0 ? loadingColumns.map(column => <section key={column.id} aria-labelledby={`meal-log-loading-${dayKey}-${column.id}`}>
+                <h2 id={`meal-log-loading-${dayKey}-${column.id}`} className="mb-3 font-medium text-[var(--ui-slate-800)]">{column.name}</h2>
+                <Skeleton className="h-20 rounded-xl" />
+              </section>) : [0, 1, 2].map(index => <Skeleton className="h-20 rounded-xl" key={index} />)}
+            </div> : cardDay ? <div className="p-3 lg:p-4">
               {cardDay.entries.length > 0 ? <section aria-label="하루 영양" className="mb-6 rounded-2xl bg-[var(--ui-sky-50)] p-4">
                 <button aria-label="하루 영양 상세 보기" type="button" onClick={() => setNutritionDate(dayKey)} className="w-full text-left">
                   <span className="flex items-center gap-3">

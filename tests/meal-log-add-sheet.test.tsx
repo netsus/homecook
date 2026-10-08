@@ -103,7 +103,7 @@ describe("MEAL_LOG add sheet", () => {
     const user = userEvent.setup();
     const { fetchMock } = renderMealLogShell();
     await openBreakfast(user);
-    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.click(screen.getByRole("tab", { name: "최근" }));
     await user.click(await screen.findByRole("button", { name: /달걀/u }));
     const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "먹은 양" });
     const save = screen.getByRole<HTMLButtonElement>("button", { name: "기록 저장" });
@@ -141,7 +141,33 @@ describe("MEAL_LOG add sheet", () => {
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "제품·재료" }).getAttribute("aria-selected"))
       .toBe("true");
-    expect(await screen.findByText("최근·자주 먹은 음식")).toBeTruthy();
+    expect(screen.queryByText("최근·자주 먹은 음식")).toBeNull();
+    expect(screen.queryByRole("button", { name: /달걀/ })).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "최근" }));
+    expect(await screen.findByRole("button", { name: /달걀/ })).toBeTruthy();
+    expect(screen.queryByText("최근·자주 먹은 음식")).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "요리한 음식" }));
+    expect(screen.queryByRole("button", { name: /달걀/ })).toBeNull();
+  });
+
+  it("truncates long recent names visually while retaining the full accessible name", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderMealLogShell();
+    const original = fetchMock.getMockImplementation()!;
+    const title = "정말 길어서 한 줄을 넘을 수 있는 내가 직접 만든 달걀 요리 이름";
+    fetchMock.mockImplementation(async (input, init) => {
+      const response = await original(input, init);
+      if (!String(input).includes("/meal-log/recent")) return response;
+      const body = await response.json();
+      body.data.items[0].display_name = title;
+      return new Response(JSON.stringify(body), { status: 200 });
+    });
+    await openBreakfast(user);
+    await user.click(screen.getByRole("tab", { name: "최근" }));
+    const button = await screen.findByRole("button", { name: new RegExp(title) });
+    const name = within(button).getByText(title);
+    expect(name.className).toContain("truncate");
+    expect(name.getAttribute("title")).toBe(title);
   });
 
   it("requires the suggested recent amount to be reviewed before save", async () => {
@@ -149,7 +175,7 @@ describe("MEAL_LOG add sheet", () => {
     renderMealLogShell();
 
     await openBreakfast(user);
-    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.click(screen.getByRole("tab", { name: "최근" }));
     await user.click(await screen.findByRole("button", { name: /달걀/u }));
     const save = screen.getByRole("button", { name: "기록 저장" }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
@@ -196,10 +222,11 @@ describe("MEAL_LOG add sheet", () => {
     await user.click(await screen.findByRole("button", { name: "요리한 음식 더 불러오기" }));
     expect(await screen.findByRole("button", { name: /카레/u })).toBeTruthy();
 
-    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.click(screen.getByRole("tab", { name: "최근" }));
     await user.click(await screen.findByRole("button", { name: "최근 음식 더 불러오기" }));
     expect(await screen.findByRole("button", { name: /바나나/u })).toBeTruthy();
 
+    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     await user.type(screen.getByRole("searchbox", { name: "제품·재료 검색" }), "시");
     expect(await screen.findByRole("button", { name: /시금치/u })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "제품·재료 더 불러오기" }));
@@ -222,6 +249,7 @@ describe("MEAL_LOG add sheet", () => {
     expect(screen.queryByText(/g 식사 기록 저장 불가|완성 무게 확인 불가|이전 기록이라 중량/)).toBeNull();
     expect((await screen.findByRole("link", { name: /된장찌개 완성 중량 입력/u })).getAttribute("href"))
       .toBe("/leftovers");
+    await user.click(screen.getByRole("tab", { name: "최근" }));
     const unmatched = await screen.findByRole("button", { name: /예전 카레/u });
     expect((unmatched as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("현재 추가할 수 없는 음식이에요. 요리한 음식 탭에서 상태를 확인해 주세요.")).toBeTruthy();
@@ -232,9 +260,10 @@ describe("MEAL_LOG add sheet", () => {
     renderMealLogShell({ catalogBadges: true });
 
     await openBreakfast(user);
-    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.click(screen.getByRole("tab", { name: "최근" }));
     expect(await screen.findByText("무먹식품 · 제품 · 최근 2개 · 3회 기록")).toBeTruthy();
 
+    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
     await user.type(screen.getByRole("searchbox", { name: "제품·재료 검색" }), "요거트");
     expect(await screen.findByText("공공브랜드 · 제품 · 공공 영양DB")).toBeTruthy();
     expect(screen.getByText("동네브랜드 · 제품 · 사용자 등록")).toBeTruthy();

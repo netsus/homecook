@@ -98,7 +98,7 @@ describe("prelaunch meal log presentation", () => {
     render(<MealLogScreen {...props} />);
     const row = (await screen.findByLabelText("먹은 양 125g")).closest("li")!;
     expect(Boolean(within(row).queryByRole("img"))).toBe(hasChart);
-    if (hasChart && status === "partial") expect(within(row).getByText("확인된 탄단지 기준")).toBeTruthy();
+    if (hasChart && status === "partial") expect(within(row).getByText("확인된 탄단지 기준").className).toBe("sr-only");
     expect(row.textContent).toContain(kcal === null ? "정보 준비 중" : `${kcal} kcal`);
     expect(row.textContent).toContain(protein === null ? "단 정보 준비 중" : `단 ${protein} g`);
     expect(row.textContent).not.toContain("나트륨");

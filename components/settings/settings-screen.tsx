@@ -605,7 +605,6 @@ export function SettingsScreen({
 
         <div className="web-settings-header">
           <h1>환경설정</h1>
-          <p>끼니 관리, 요리모드 화면 켜둠, 계정 상태를 관리해요.</p>
         </div>
 
         {readyToast ? (
@@ -1023,7 +1022,6 @@ function SettingsDesktopLoadingShell() {
 
         <div className="web-settings-header">
           <h1>환경설정</h1>
-          <p>끼니 관리, 요리모드 화면 켜둠, 계정 상태를 관리해요.</p>
         </div>
 
         <section className="web-settings-section" aria-label="끼니 관리 로딩">
