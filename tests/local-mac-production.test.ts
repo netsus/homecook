@@ -188,6 +188,7 @@ describe("local Mac production environment", () => {
         "DATA_SUPABASE_PUBLISHABLE_KEY=",
         "DATA_SUPABASE_SECRET_KEY=",
         "GEMINI_API_KEY=",
+        "AI_NUTRITION_ESTIMATION_ENABLED=",
         "NEXT_PUBLIC_APP_URL=",
       ].join("\n"),
       origin: "http://127.0.0.1:3100",
