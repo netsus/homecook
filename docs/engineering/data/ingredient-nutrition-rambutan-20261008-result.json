@@ -1,0 +1,59 @@
+{
+  "schema_version": "homecook-rambutan-supplement-result-v1",
+  "passed": true,
+  "applied_at": "2026-10-07T16:05:59.332Z",
+  "operation_checksum": "f2fa39588898025377c219dec0717c89809cb859bda14c0169ce225307c34800",
+  "sql_sha256": "0b990a687da8697d5ca77932d476efec94c7a565b1e8ccca4a542e151a45e32b",
+  "new_links": 1,
+  "nutrition_after": {
+    "partial": 229,
+    "complete": 1588,
+    "unlinked": 113
+  },
+  "values_verified": 8,
+  "missing_total_carbohydrate_preserved": true,
+  "saturated_fat_zero_source_imputed": true,
+  "energy_conversion": "312 kJ / 4.184 = 74.569790 kcal",
+  "recipe_nutrition_refresh": {
+    "count": 0,
+    "created": 0
+  },
+  "replay_writes": 0,
+  "existing_source_values_and_history_unchanged": true,
+  "source_sheet_locator_corrected": true,
+  "verification": [
+    "catalog drift",
+    "late metadata error rolls back nutrition and catalog",
+    "exact values and all definitions",
+    "existing source values and app records unchanged",
+    "migration ledger unchanged",
+    "replay zero writes",
+    "umbrella cannot replace alias root",
+    "public writes denied"
+  ],
+  "backup_sha256": "216bddc19ddf4767ab4073aa9c1c3b298771156362019644a17d50552a550c96",
+  "rehearsal_note": "Original full backup restored; extra repeat omits only unrelated product-search GIN index",
+  "database_state": {
+    "audit_count": 1,
+    "groups_hash": "780c4c74df7607ada89f9c5745d90eed",
+    "ingredients": 1930,
+    "ledger_hash": "e372502f26ba5d4e534a48cd99861dc6",
+    "entries_hash": "00af2e05226e8a5d4182efca00bc7e8e",
+    "presentations": {
+      "base": 1167,
+      "alias": 20,
+      "detail": 424,
+      "excluded": 124,
+      "umbrella": 88,
+      "prepared_food": 107
+    },
+    "review_states": {
+      "reviewed": 1930
+    },
+    "alias_capacity": 512,
+    "new_ledger_count": 1,
+    "alias_search_indexes": 2,
+    "representatives_hash": "3eea0cefca75f66c978f02060f3697dd",
+    "values_checked": 8
+  }
+}

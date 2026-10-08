@@ -1,0 +1,681 @@
+{
+  "schema_version": "homecook-nutrition-rambutan-20261008",
+  "expected_ingredients_checksum": "d8019677a472339dc33d7e7aefc49de4",
+  "expected_entries_checksum": "1bf552670f3855f1a22aa1b699336a6f",
+  "decisions": [
+    {
+      "id": "dba88bd6-bade-57f4-8638-921b256365cb",
+      "name": "람부탄",
+      "decision": "link",
+      "provider": "FSANZ_AFCD",
+      "source_id": "F007612",
+      "source_name": "Rambutan, raw",
+      "source_url": "https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/search/food/F007612",
+      "dataset": "Australian Food Composition Database",
+      "source_version": "Release 3",
+      "source_country": "Australia",
+      "dataset_release_year": 2025,
+      "sample_year": 1984,
+      "definition_scope": "생람부탄의 껍질과 씨를 제외한 과육 가식부100g. 통조림·시럽·건조품 아님.",
+      "basis_amount": 100,
+      "basis_unit": "g",
+      "edible_portion": {
+        "analysed": "40% (flesh)",
+        "unanalysed": "60% (skin & seed)",
+        "note": "전체 열매중 과육비율40%는 폐기율 정보. 이미 가식부100g 영양값이므로 0.4를 다시 곱하지 않음."
+      },
+      "derivation": "Analysed",
+      "sampling_details": "The majority of nutrient data were derived from samples of red and yellow skinned rambutans obtained by QLD Department of Primary Industries, Kamerunga Horticultural Research Station in Cairns in 1984 (Wills et al.). Alpha-tocopherol and tryptophan were estimated as the average of watermelon, mango, kiwi fruit, feijoa, grape, nectarine and peach. Folate, B6 and P were borrowed from USDA SR Legacy, FDC ID 168167 - Rambutan, canned, syrup packed. Alcohol, caffeine, cholesterol, fatty acids, vitamins (B12, D, folic acid, retinol), I and Se were imputed zero.",
+      "source_license": {
+        "label": "CC BY 4.0",
+        "authority_url": "https://www.foodstandards.gov.au/legal-policies/copyright",
+        "observed_policy": "FSANZ 웹사이트 자체 자료는 별도 표시가 없으면 CC BY 4.0, 상업·비상업 이용과 수정 허용 및 Food Standards Australia New Zealand 출처표시 필요. 로고 및 제3자 자료 예외.",
+        "attribution": "Food Standards Australia New Zealand. Australian Food Composition Database, Release 3 (2025).",
+        "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/fsanz-copyright.html",
+        "sha256": "3da9c1ffdbc44fc157d1449c3201ce4758b29e3f984cc391029867404ff133d8"
+      },
+      "values": {
+        "energy_kcal": {
+          "amount": 74.56979,
+          "unit": "kcal",
+          "source_token": "312",
+          "source_label": "Energy with dietary fibre, equated \n(kJ)",
+          "source_cell": "E711",
+          "source_sheet": "All solids & liquids per 100 g",
+          "native_unit": "kJ",
+          "status": "unit_converted",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "conversion": {
+            "operation": "divide",
+            "factor": "4.184",
+            "formula": "312 / 4.184",
+            "decimal_places": 6,
+            "note": "단위 변환만 적용. 에너지를 영양소 합으로 재계산하지 않음."
+          },
+          "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+        },
+        "protein_g": {
+          "amount": 1,
+          "unit": "g",
+          "source_token": "1",
+          "source_label": "Protein \n(g)",
+          "source_cell": "H711",
+          "source_sheet": "All solids & liquids per 100 g",
+          "native_unit": "g",
+          "status": "observed",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+        },
+        "fat_g": {
+          "amount": 0.4,
+          "unit": "g",
+          "source_token": "0.4",
+          "source_label": "Fat, total \n(g)",
+          "source_cell": "J711",
+          "source_sheet": "All solids & liquids per 100 g",
+          "native_unit": "g",
+          "status": "observed",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+        },
+        "fiber_g": {
+          "amount": 2.8,
+          "unit": "g",
+          "source_token": "2.8",
+          "source_label": "Total dietary fibre \n(g)",
+          "source_cell": "L711",
+          "source_sheet": "All solids & liquids per 100 g",
+          "native_unit": "g",
+          "status": "observed",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+        },
+        "sugars_g": {
+          "amount": 15.7,
+          "unit": "g",
+          "source_token": "15.7",
+          "source_label": "Total sugars (g)",
+          "source_cell": "T711",
+          "source_sheet": "All solids & liquids per 100 g",
+          "native_unit": "g",
+          "status": "observed",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+        },
+        "sodium_mg": {
+          "amount": 2,
+          "unit": "mg",
+          "source_token": "2",
+          "source_label": "Sodium (Na) \n(mg)",
+          "source_cell": "BU711",
+          "source_sheet": "All solids & liquids per 100 g",
+          "native_unit": "mg",
+          "status": "observed",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+        },
+        "saturated_fat_g": {
+          "amount": 0,
+          "unit": "g",
+          "source_token": "0",
+          "source_label": "Total saturated fatty acids, equated \n(g)",
+          "source_cell": "GJ711",
+          "source_sheet": "All solids & liquids per 100 g",
+          "native_unit": "g",
+          "status": "imputed",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "derivation": "FSANZ source-imputed zero",
+          "note": "정부 원자료의 0을 그대로 보존. 측정값 또는 모델이 만든 0으로 표기하지 않음.",
+          "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+        },
+        "carbohydrate_g": {
+          "amount": null,
+          "unit": "g",
+          "source_token": null,
+          "source_label": null,
+          "native_unit": "g",
+          "status": "missing",
+          "note": "AFCD에 total carbohydrate 미수록. Available carbohydrate 15.7g를 총탄수로 직접 연결하거나 섬유를 더해 생성하지 않음.",
+          "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx"
+        }
+      },
+      "native_extra_values": {
+        "available_carbohydrate_without_sugar_alcohols": {
+          "source_token": "15.7",
+          "unit": "g",
+          "label": "Available carbohydrate, without sugar alcohols \n(g)",
+          "source_cell": "AM711",
+          "canonical_mapping": "not mapped to total carbohydrate"
+        },
+        "available_carbohydrate_with_sugar_alcohols": {
+          "source_token": "15.7",
+          "unit": "g",
+          "label": "Available carbohydrate, with sugar alcohols \n(g)",
+          "source_cell": "AN711",
+          "canonical_mapping": "not mapped to total carbohydrate"
+        }
+      },
+      "raw_sources": [
+        {
+          "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Food%20Details.xlsx",
+          "path": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/food-details.xlsx",
+          "sha256": "69aa096c45cb0699db60a9c544442312e9ff09af587b99c42dc78bc26f689629"
+        },
+        {
+          "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "path": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+          "sha256": "14cb3e73dbf58987b440e6299624c0fefd7a4e61591fc1f753995d9534e0efc9"
+        },
+        {
+          "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20details.xlsx",
+          "path": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-details.xlsx",
+          "sha256": "7c455129a90e65d29840ecd188fa223cca8bdf0729b21efebc286884d69fafaa"
+        }
+      ],
+      "evidence": [
+        "FSANZ 공식 데이터 파일 목록: https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/data-files",
+        "Nutrient profiles sheet2 A1은 per100g, 711행 FoodKey F007612 및 Rambutan,raw 일치. Food details711행의 동일키·이름·과육40%·껍질씨60% 대조.",
+        "7개 숫자는 전부 AFCD Release3에서만 취득. 총탄수는null. TBCA·말레이시아·USDA 값을 보충하거나 혼합하지 않음.",
+        "AFCD의 일부 비선정 비타민/인 성분은 통조림 자료를 차용했다고 기록돼 있으나 이번8필드에 해당하지 않는다. 선택 포화지방0은 정부가impute한것임을 별도보존."
+      ],
+      "excluded_source": "TBCA BRC0306C는 상업제한(CC BY-NC-ND) 표기로 이번 입력에서 제외; 해당 에너지/총탄수/당류는 전혀 사용하지 않음.",
+      "database_mutations": 0,
+      "existing_42_item_patch_modified": false
+    }
+  ],
+  "catalog_updates": [
+    {
+      "id": "dba88bd6-bade-57f4-8638-921b256365cb",
+      "name": "람부탄",
+      "definition": "람부탄 생과일의 식용 과육. 통조림·시럽제품은 별도 식품. 영양 출처: 호주 FSANZ 생과육100g. 총탄수는 미제공이며 포화지방0은 기관추정값이다.",
+      "display_name": "람부탄",
+      "presentation": "base",
+      "review_state": "reviewed",
+      "retain_dimensions": [
+        "원료/조리 상태: 통조림"
+      ],
+      "previous_catalog": {
+        "group_id": "602412fb-924a-5e26-9db5-a48d3484dde1",
+        "definition": "람부탄 생과일의 식용 과육. 통조림·시럽제품은 별도 식품.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "람부탄",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "dba88bd6-bade-57f4-8638-921b256365cb",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "원료/조리 상태: 통조림"
+        ],
+        "representative_ingredient_id": null
+      }
+    }
+  ],
+  "source_manifests": {
+    "FSANZ_AFCD": {
+      "provider_code": "FSANZ_AFCD",
+      "dataset_name": "Australian Food Composition Database",
+      "source_version": "Release 3 (2025)",
+      "source_url": "https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/data-files",
+      "data_basis_date": null,
+      "license_name": "CC BY 4.0",
+      "license_url": "https://www.foodstandards.gov.au/legal-policies/copyright",
+      "priority_rank": 3,
+      "raw_sources": [
+        {
+          "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Food%20Details.xlsx",
+          "sha256": "69aa096c45cb0699db60a9c544442312e9ff09af587b99c42dc78bc26f689629"
+        },
+        {
+          "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+          "sha256": "14cb3e73dbf58987b440e6299624c0fefd7a4e61591fc1f753995d9534e0efc9"
+        },
+        {
+          "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20details.xlsx",
+          "sha256": "7c455129a90e65d29840ecd188fa223cca8bdf0729b21efebc286884d69fafaa"
+        }
+      ],
+      "sample_year": 1984
+    }
+  },
+  "patch": {
+    "schema_version": "homecook-nutrition-review-apply-v1",
+    "reviewed_by": "1ae7bee7-57fe-41ce-8ff5-315724600476",
+    "reviewed_at": "2026-10-07T16:00:37.564Z",
+    "decision_reason": "대표값 검토 후 추가로 확보한 생람부탄 공식 원자료 보완. 기존42개 작업은 변경하지 않음.",
+    "source_report_checksum": "bceba87da26bc80c88686da2fc0080a785733930b1df1ce334df30d36bfda19b",
+    "entries": [
+      {
+        "ingredient_id": "dba88bd6-bade-57f4-8638-921b256365cb",
+        "ingredient_name": "람부탄",
+        "preparation_state": "as_published",
+        "resolution_kind": "official_candidate",
+        "decision_reason": "Official raw-fruit reference: FSANZ F007612 생람부탄 과육100g, 총탄수 미제공 유지, energy 단위변환만. 포화0은 기관추정값으로 보존.",
+        "source": {
+          "provider_code": "FSANZ_AFCD",
+          "dataset_name": "Australian Food Composition Database",
+          "source_version": "Release 3 (2025)",
+          "source_url": "https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/data-files",
+          "data_basis_date": null,
+          "license_name": "CC BY 4.0",
+          "license_url": "https://www.foodstandards.gov.au/legal-policies/copyright",
+          "priority_rank": 3,
+          "manifest_sha256": "1035e24fc95b5cdc9ab5fcce00f2eb9cb74aee3c4497fc25067261ab3dcdef99"
+        },
+        "source_item": {
+          "external_item_key": "F007612",
+          "external_name": "Rambutan, raw",
+          "source_basis_text": "per 100g edible portion",
+          "edible_portion_text": "생람부탄의 껍질과 씨를 제외한 과육 가식부100g. 통조림·시럽·건조품 아님.",
+          "stable_fingerprint": "ff7e83b4a269fe88f66648a3fc7a448b9ea5735db7852fd843772586d198dc2c",
+          "content_hash": "39aa27c7258b8f2e875475e056752c3e5795c806d07259616e4b8b867230dfc3",
+          "provenance": {
+            "review_operation": "ingredient-rambutan-supplement-20261008",
+            "source_url": "https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/search/food/F007612",
+            "original_cells": {
+              "energy_kcal": {
+                "amount": 74.56979,
+                "unit": "kcal",
+                "source_token": "312",
+                "source_label": "Energy with dietary fibre, equated \n(kJ)",
+                "source_cell": "E711",
+                "source_sheet": "All solids & liquids per 100 g",
+                "native_unit": "kJ",
+                "status": "unit_converted",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                "conversion": {
+                  "operation": "divide",
+                  "factor": "4.184",
+                  "formula": "312 / 4.184",
+                  "decimal_places": 6,
+                  "note": "단위 변환만 적용. 에너지를 영양소 합으로 재계산하지 않음."
+                },
+                "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+              },
+              "protein_g": {
+                "amount": 1,
+                "unit": "g",
+                "source_token": "1",
+                "source_label": "Protein \n(g)",
+                "source_cell": "H711",
+                "source_sheet": "All solids & liquids per 100 g",
+                "native_unit": "g",
+                "status": "observed",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+              },
+              "fat_g": {
+                "amount": 0.4,
+                "unit": "g",
+                "source_token": "0.4",
+                "source_label": "Fat, total \n(g)",
+                "source_cell": "J711",
+                "source_sheet": "All solids & liquids per 100 g",
+                "native_unit": "g",
+                "status": "observed",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+              },
+              "fiber_g": {
+                "amount": 2.8,
+                "unit": "g",
+                "source_token": "2.8",
+                "source_label": "Total dietary fibre \n(g)",
+                "source_cell": "L711",
+                "source_sheet": "All solids & liquids per 100 g",
+                "native_unit": "g",
+                "status": "observed",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+              },
+              "sugars_g": {
+                "amount": 15.7,
+                "unit": "g",
+                "source_token": "15.7",
+                "source_label": "Total sugars (g)",
+                "source_cell": "T711",
+                "source_sheet": "All solids & liquids per 100 g",
+                "native_unit": "g",
+                "status": "observed",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+              },
+              "sodium_mg": {
+                "amount": 2,
+                "unit": "mg",
+                "source_token": "2",
+                "source_label": "Sodium (Na) \n(mg)",
+                "source_cell": "BU711",
+                "source_sheet": "All solids & liquids per 100 g",
+                "native_unit": "mg",
+                "status": "observed",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+              },
+              "saturated_fat_g": {
+                "amount": 0,
+                "unit": "g",
+                "source_token": "0",
+                "source_label": "Total saturated fatty acids, equated \n(g)",
+                "source_cell": "GJ711",
+                "source_sheet": "All solids & liquids per 100 g",
+                "native_unit": "g",
+                "status": "imputed",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                "derivation": "FSANZ source-imputed zero",
+                "note": "정부 원자료의 0을 그대로 보존. 측정값 또는 모델이 만든 0으로 표기하지 않음.",
+                "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+              },
+              "carbohydrate_g": {
+                "amount": null,
+                "unit": "g",
+                "source_token": null,
+                "source_label": null,
+                "native_unit": "g",
+                "status": "missing",
+                "note": "AFCD에 total carbohydrate 미수록. Available carbohydrate 15.7g를 총탄수로 직접 연결하거나 섬유를 더해 생성하지 않음.",
+                "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx"
+              }
+            },
+            "original_source_evidence": {
+              "id": "dba88bd6-bade-57f4-8638-921b256365cb",
+              "name": "람부탄",
+              "decision": "link",
+              "provider": "FSANZ_AFCD",
+              "source_id": "F007612",
+              "source_name": "Rambutan, raw",
+              "source_url": "https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/search/food/F007612",
+              "dataset": "Australian Food Composition Database",
+              "source_version": "Release 3",
+              "source_country": "Australia",
+              "dataset_release_year": 2025,
+              "sample_year": 1984,
+              "definition_scope": "생람부탄의 껍질과 씨를 제외한 과육 가식부100g. 통조림·시럽·건조품 아님.",
+              "basis_amount": 100,
+              "basis_unit": "g",
+              "edible_portion": {
+                "analysed": "40% (flesh)",
+                "unanalysed": "60% (skin & seed)",
+                "note": "전체 열매중 과육비율40%는 폐기율 정보. 이미 가식부100g 영양값이므로 0.4를 다시 곱하지 않음."
+              },
+              "derivation": "Analysed",
+              "sampling_details": "The majority of nutrient data were derived from samples of red and yellow skinned rambutans obtained by QLD Department of Primary Industries, Kamerunga Horticultural Research Station in Cairns in 1984 (Wills et al.). Alpha-tocopherol and tryptophan were estimated as the average of watermelon, mango, kiwi fruit, feijoa, grape, nectarine and peach. Folate, B6 and P were borrowed from USDA SR Legacy, FDC ID 168167 - Rambutan, canned, syrup packed. Alcohol, caffeine, cholesterol, fatty acids, vitamins (B12, D, folic acid, retinol), I and Se were imputed zero.",
+              "source_license": {
+                "label": "CC BY 4.0",
+                "authority_url": "https://www.foodstandards.gov.au/legal-policies/copyright",
+                "observed_policy": "FSANZ 웹사이트 자체 자료는 별도 표시가 없으면 CC BY 4.0, 상업·비상업 이용과 수정 허용 및 Food Standards Australia New Zealand 출처표시 필요. 로고 및 제3자 자료 예외.",
+                "attribution": "Food Standards Australia New Zealand. Australian Food Composition Database, Release 3 (2025).",
+                "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/fsanz-copyright.html",
+                "sha256": "3da9c1ffdbc44fc157d1449c3201ce4758b29e3f984cc391029867404ff133d8"
+              },
+              "values": {
+                "energy_kcal": {
+                  "amount": 74.56979,
+                  "unit": "kcal",
+                  "source_token": "312",
+                  "source_label": "Energy with dietary fibre, equated \n(kJ)",
+                  "source_cell": "E711",
+                  "source_sheet": "All solids & liquids per 100 g",
+                  "native_unit": "kJ",
+                  "status": "unit_converted",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "conversion": {
+                    "operation": "divide",
+                    "factor": "4.184",
+                    "formula": "312 / 4.184",
+                    "decimal_places": 6,
+                    "note": "단위 변환만 적용. 에너지를 영양소 합으로 재계산하지 않음."
+                  },
+                  "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+                },
+                "protein_g": {
+                  "amount": 1,
+                  "unit": "g",
+                  "source_token": "1",
+                  "source_label": "Protein \n(g)",
+                  "source_cell": "H711",
+                  "source_sheet": "All solids & liquids per 100 g",
+                  "native_unit": "g",
+                  "status": "observed",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+                },
+                "fat_g": {
+                  "amount": 0.4,
+                  "unit": "g",
+                  "source_token": "0.4",
+                  "source_label": "Fat, total \n(g)",
+                  "source_cell": "J711",
+                  "source_sheet": "All solids & liquids per 100 g",
+                  "native_unit": "g",
+                  "status": "observed",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+                },
+                "fiber_g": {
+                  "amount": 2.8,
+                  "unit": "g",
+                  "source_token": "2.8",
+                  "source_label": "Total dietary fibre \n(g)",
+                  "source_cell": "L711",
+                  "source_sheet": "All solids & liquids per 100 g",
+                  "native_unit": "g",
+                  "status": "observed",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+                },
+                "sugars_g": {
+                  "amount": 15.7,
+                  "unit": "g",
+                  "source_token": "15.7",
+                  "source_label": "Total sugars (g)",
+                  "source_cell": "T711",
+                  "source_sheet": "All solids & liquids per 100 g",
+                  "native_unit": "g",
+                  "status": "observed",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+                },
+                "sodium_mg": {
+                  "amount": 2,
+                  "unit": "mg",
+                  "source_token": "2",
+                  "source_label": "Sodium (Na) \n(mg)",
+                  "source_cell": "BU711",
+                  "source_sheet": "All solids & liquids per 100 g",
+                  "native_unit": "mg",
+                  "status": "observed",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+                },
+                "saturated_fat_g": {
+                  "amount": 0,
+                  "unit": "g",
+                  "source_token": "0",
+                  "source_label": "Total saturated fatty acids, equated \n(g)",
+                  "source_cell": "GJ711",
+                  "source_sheet": "All solids & liquids per 100 g",
+                  "native_unit": "g",
+                  "status": "imputed",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "derivation": "FSANZ source-imputed zero",
+                  "note": "정부 원자료의 0을 그대로 보존. 측정값 또는 모델이 만든 0으로 표기하지 않음.",
+                  "source_sheet_title": "Release 3 - Nutrient profiles (per 100 g)"
+                },
+                "carbohydrate_g": {
+                  "amount": null,
+                  "unit": "g",
+                  "source_token": null,
+                  "source_label": null,
+                  "native_unit": "g",
+                  "status": "missing",
+                  "note": "AFCD에 total carbohydrate 미수록. Available carbohydrate 15.7g를 총탄수로 직접 연결하거나 섬유를 더해 생성하지 않음.",
+                  "source_url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "raw_file": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx"
+                }
+              },
+              "native_extra_values": {
+                "available_carbohydrate_without_sugar_alcohols": {
+                  "source_token": "15.7",
+                  "unit": "g",
+                  "label": "Available carbohydrate, without sugar alcohols \n(g)",
+                  "source_cell": "AM711",
+                  "canonical_mapping": "not mapped to total carbohydrate"
+                },
+                "available_carbohydrate_with_sugar_alcohols": {
+                  "source_token": "15.7",
+                  "unit": "g",
+                  "label": "Available carbohydrate, with sugar alcohols \n(g)",
+                  "source_cell": "AN711",
+                  "canonical_mapping": "not mapped to total carbohydrate"
+                }
+              },
+              "raw_sources": [
+                {
+                  "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Food%20Details.xlsx",
+                  "path": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/food-details.xlsx",
+                  "sha256": "69aa096c45cb0699db60a9c544442312e9ff09af587b99c42dc78bc26f689629"
+                },
+                {
+                  "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20profiles.xlsx",
+                  "path": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-profiles.xlsx",
+                  "sha256": "14cb3e73dbf58987b440e6299624c0fefd7a4e61591fc1f753995d9534e0efc9"
+                },
+                {
+                  "url": "https://www.foodstandards.gov.au/sites/default/files/2025-12/AFCD%20Release%203%20-%20Nutrient%20details.xlsx",
+                  "path": "/tmp/homecook-nutrition-representatives-20261008/rambutan-raw/nutrient-details.xlsx",
+                  "sha256": "7c455129a90e65d29840ecd188fa223cca8bdf0729b21efebc286884d69fafaa"
+                }
+              ],
+              "evidence": [
+                "FSANZ 공식 데이터 파일 목록: https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/data-files",
+                "Nutrient profiles sheet2 A1은 per100g, 711행 FoodKey F007612 및 Rambutan,raw 일치. Food details711행의 동일키·이름·과육40%·껍질씨60% 대조.",
+                "7개 숫자는 전부 AFCD Release3에서만 취득. 총탄수는null. TBCA·말레이시아·USDA 값을 보충하거나 혼합하지 않음.",
+                "AFCD의 일부 비선정 비타민/인 성분은 통조림 자료를 차용했다고 기록돼 있으나 이번8필드에 해당하지 않는다. 선택 포화지방0은 정부가impute한것임을 별도보존."
+              ],
+              "excluded_source": "TBCA BRC0306C는 상업제한(CC BY-NC-ND) 표기로 이번 입력에서 제외; 해당 에너지/총탄수/당류는 전혀 사용하지 않음.",
+              "database_mutations": 0,
+              "existing_42_item_patch_modified": false
+            },
+            "energy_conversion": {
+              "native_amount": 312,
+              "native_unit": "kJ",
+              "factor": 4.184,
+              "normalized_unit": "kcal"
+            },
+            "saturated_fat_qualifier": "source_imputed_zero",
+            "missing_total_carbohydrate": true,
+            "recipe_or_edible_yield_not_applied": true
+          }
+        },
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": {
+          "energy_kcal": {
+            "amount": 74.56979,
+            "unit": "kcal",
+            "source_token": "312",
+            "source_nutrient_code": "Energy with dietary fibre, equated \n(kJ)",
+            "missing_reason": null
+          },
+          "protein_g": {
+            "amount": 1,
+            "unit": "g",
+            "source_token": "1",
+            "source_nutrient_code": "Protein \n(g)",
+            "missing_reason": null
+          },
+          "fat_g": {
+            "amount": 0.4,
+            "unit": "g",
+            "source_token": "0.4",
+            "source_nutrient_code": "Fat, total \n(g)",
+            "missing_reason": null
+          },
+          "fiber_g": {
+            "amount": 2.8,
+            "unit": "g",
+            "source_token": "2.8",
+            "source_nutrient_code": "Total dietary fibre \n(g)",
+            "missing_reason": null
+          },
+          "sugars_g": {
+            "amount": 15.7,
+            "unit": "g",
+            "source_token": "15.7",
+            "source_nutrient_code": "Total sugars (g)",
+            "missing_reason": null
+          },
+          "sodium_mg": {
+            "amount": 2,
+            "unit": "mg",
+            "source_token": "2",
+            "source_nutrient_code": "Sodium (Na) \n(mg)",
+            "missing_reason": null
+          },
+          "saturated_fat_g": {
+            "amount": 0,
+            "unit": "g",
+            "source_token": "0",
+            "source_nutrient_code": "Total saturated fatty acids, equated \n(g)",
+            "missing_reason": null
+          },
+          "carbohydrate_g": {
+            "amount": null,
+            "unit": "g",
+            "source_token": "",
+            "source_nutrient_code": "AFCD:unreported:total_carbohydrate",
+            "missing_reason": "not_provided"
+          }
+        }
+      }
+    ],
+    "summary": {
+      "total_count": 1,
+      "apply_count": 1,
+      "approved_candidate_count": 1,
+      "manual_resolution_count": 0,
+      "keep_current_count": 0,
+      "hold_count": 0
+    },
+    "payload_checksum": "6dde1e0e4cf29c008b722c6ed4a9f0ef2dab22ec34f1d47f8820bd55fd50b352"
+  },
+  "expected_links": [
+    {
+      "ingredient_id": "dba88bd6-bade-57f4-8638-921b256365cb",
+      "standard_name": "람부탄",
+      "active_links": []
+    }
+  ],
+  "revocations": [],
+  "invalid_aliases": [],
+  "counts": {
+    "reviewed": 1,
+    "new_links": 1
+  },
+  "operation_checksum": "f2fa39588898025377c219dec0717c89809cb859bda14c0169ce225307c34800"
+}
