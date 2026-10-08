@@ -29,7 +29,6 @@ import {
   validateYoutubeUrl,
   extractYoutubeRecipe,
   createYoutubeCandidateDraft,
-  registerYoutubeRecipe,
   registerYoutubeIngredient,
   registerYoutubeIngredientsBulk,
 } from "@/lib/api/youtube-import";
@@ -39,10 +38,14 @@ import {
   fetchYoutubeExtractionJob,
   fetchYoutubeExtractionSession,
 } from "@/lib/api/youtube-extraction-jobs";
+import {
+  ensureYoutubeSavedRecipe,
+  fetchYoutubeSavedRecipe,
+  updateYoutubeSavedRecipe,
+} from "@/lib/api/youtube-saved-recipes";
 import type {
   BulkRegistrationRowResult,
 } from "@/lib/api/youtube-import";
-import { createMealSafe } from "@/lib/api/meal";
 import { showActionConfirmation } from "@/stores/ui-store";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
@@ -54,7 +57,6 @@ import {
   type IngredientSubcategoryOption,
 } from "@/lib/ingredient-categories";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
-import { buildReviewedRecipeTagsPayload } from "@/lib/recipe-tag-input";
 import { stripMatchingSectionPrefix } from "@/lib/recipe-section-labels";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
@@ -74,12 +76,14 @@ import type {
 import type {
   YoutubeExtractionJobData,
 } from "@/types/youtube-extraction";
+import type { YoutubeSavedRecipeEditableContent, YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface YoutubeImportScreenProps {
   entryContext?: "planner" | "standalone";
   initialExtractionId?: string;
+  initialSavedDraftId?: string;
   initialYoutubeUrl?: string;
   onRequestClose?: () => void;
   planDate: string;
@@ -109,6 +113,7 @@ type Step =
   | "extracting"
   | "accepted"
   | "session-loading"
+  | "saving-result"
   | "session-status"
   | "review"
   | "complete";
@@ -121,8 +126,8 @@ type ModalMode =
   | "bulk-register"
   | "step-add"
   | "step-edit"
-  | "servings-input"
   | "register-error"
+  | "save-conflict"
   | "confirm-back";
 
 interface TempIngredient extends ManualRecipeIngredientInput {
@@ -153,6 +158,7 @@ type IngredientQuantityPatch = Partial<
     | "quantity_source"
     | "quantity_user_confirmed"
     | "quantity_confirmation_status"
+    | "standard_name"
   >
 >;
 
@@ -174,8 +180,12 @@ function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
     return `${ingredient.standard_name} 약간`;
   }
 
-  const amount = ingredient.amount ?? 0;
-  const unit = ingredient.unit ?? "g";
+  if (ingredient.amount === null || !ingredient.unit) {
+    return ingredient.standard_name;
+  }
+
+  const amount = ingredient.amount;
+  const unit = ingredient.unit;
   return `${ingredient.standard_name} ${amount}${unit}`;
 }
 
@@ -189,11 +199,8 @@ function getIngredientUnitOptions(unit: string | null) {
 }
 
 function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
-  const amount =
-    typeof ingredient.amount === "number" && ingredient.amount > 0
-      ? ingredient.amount
-      : 100;
-  const unit = ingredient.unit ?? "g";
+  const amount = typeof ingredient.amount === "number" ? ingredient.amount : null;
+  const unit = ingredient.unit?.trim() || null;
 
   return {
     ...ingredient,
@@ -215,6 +222,13 @@ function applyIngredientQuantityPatch(
 ): TempIngredient {
   const next = { ...ingredient, ...patch };
 
+  if ("standard_name" in patch && !("amount" in patch) && !("unit" in patch) && !("ingredient_type" in patch)) {
+    return {
+      ...next,
+      display_text: formatIngredientDisplayText(next),
+    };
+  }
+
   if (next.ingredient_type === "TO_TASTE") {
     return {
       ...next,
@@ -232,8 +246,8 @@ function applyIngredientQuantityPatch(
   }
 
   if ("amount" in patch) {
-    const amount = typeof next.amount === "number" ? next.amount : 0;
-    const unit = next.unit ?? "g";
+    const amount = typeof next.amount === "number" ? next.amount : null;
+    const unit = next.unit?.trim() || null;
 
     return {
       ...next,
@@ -259,33 +273,7 @@ interface TempStep extends Omit<ManualRecipeStepInput, "cooking_method_id"> {
   is_incomplete?: boolean;
   missing_fields?: YoutubeExtractedStep["missing_fields"];
   raw_text?: string;
-}
-
-function getYoutubeRegisterRequirements({
-  title,
-  baseServings,
-  ingredients,
-  steps,
-}: {
-  title: string;
-  baseServings: number;
-  ingredients: TempIngredient[];
-  steps: TempStep[];
-}) {
-  const requirements: string[] = [];
-
-  if (title.trim().length === 0) requirements.push("레시피명");
-  if (baseServings < 1) requirements.push("기본 인분");
-  if (ingredients.length === 0) requirements.push("재료");
-  if (steps.length === 0) requirements.push("만들기");
-  if (ingredients.some((ingredient) => !isIngredientReadyForRegister(ingredient))) {
-    requirements.push("확인 필요한 재료");
-  }
-  if (steps.some((step) => !isStepReadyForRegister(step))) {
-    requirements.push("필수 만들기");
-  }
-
-  return requirements;
+  source_step_index?: number | null;
 }
 
 const STEP_FIELD_LABELS: Record<
@@ -299,27 +287,6 @@ const STEP_FIELD_LABELS: Record<
 };
 
 const STEP_BLOCKING_FIELDS = new Set(["instruction", "cooking_method"]);
-
-function isIngredientReadyForRegister(ingredient: TempIngredient) {
-  if (!isIngredientResolvedForRegister(ingredient)) {
-    return false;
-  }
-
-  if (ingredient.quantity_review_required === true && ingredient.quantity_user_confirmed !== true) {
-    return false;
-  }
-
-  if (ingredient.ingredient_type === "TO_TASTE") {
-    return true;
-  }
-
-  return (
-    typeof ingredient.amount === "number" &&
-    ingredient.amount > 0 &&
-    typeof ingredient.unit === "string" &&
-    ingredient.unit.trim().length > 0
-  );
-}
 
 function isIngredientResolvedForRegister(ingredient: TempIngredient) {
   return (
@@ -335,7 +302,7 @@ function getIngredientResolutionLabel(ingredient: TempIngredient) {
   }
 
   if (ingredient.resolution_status === "unresolved") {
-    return "재료를 찾지 못했어요";
+    return "원문 이름으로 보관해요";
   }
 
   return null;
@@ -371,28 +338,6 @@ function getQuantityEditPatch(ingredient: TempIngredient): IngredientQuantityPat
   };
 }
 
-function getQuantityConfirmationStatus(
-  ingredient: TempIngredient,
-): YoutubeQuantityConfirmationStatus {
-  if (ingredient.quantity_review_required !== true) {
-    return "not_required";
-  }
-
-  if (ingredient.quantity_confirmation_status) {
-    return ingredient.quantity_confirmation_status;
-  }
-
-  if (ingredient.ingredient_type === "TO_TASTE") {
-    return "cleared_to_taste";
-  }
-
-  if (ingredient.quantity_user_confirmed === true) {
-    return "confirmed_suggestion";
-  }
-
-  return "not_required";
-}
-
 function getStepBlockingFields(step: TempStep) {
   const missingFields = step.missing_fields ?? [];
 
@@ -405,42 +350,8 @@ function getStepWarningFields(step: TempStep) {
   return missingFields.filter((field) => !STEP_BLOCKING_FIELDS.has(field));
 }
 
-function isStepReadyForRegister(step: TempStep) {
-  return (
-    step.instruction.trim().length > 0 &&
-    Boolean(step.cooking_method?.id) &&
-    getStepBlockingFields(step).length === 0
-  );
-}
-
 function formatStepFieldList(fields: NonNullable<YoutubeExtractedStep["missing_fields"]>) {
   return fields.map((field) => STEP_FIELD_LABELS[field]).join(", ");
-}
-
-function formatYoutubeBlockingIssue(issue: string) {
-  if (issue === "MULTI_CANDIDATE_REVIEW_REQUIRED") {
-    return "저장할 요리를 먼저 선택해 주세요.";
-  }
-
-  if (issue === "ingredients") {
-    return "재료를 하나 이상 추가해 주세요.";
-  }
-
-  if (issue === "steps") {
-    return "만들기를 하나 이상 추가해 주세요.";
-  }
-
-  const ingredientMatch = issue.match(/^ingredients\[(\d+)\]\.ingredient_id$/u);
-  if (ingredientMatch) {
-    return `${Number(ingredientMatch[1]) + 1}번째 재료를 검색해서 확정해 주세요.`;
-  }
-
-  const stepInstructionMatch = issue.match(/^steps\[(\d+)\]\.instruction$/u);
-  if (stepInstructionMatch) {
-    return `${Number(stepInstructionMatch[1]) + 1}번째 만들기 설명을 입력해 주세요.`;
-  }
-
-  return issue;
 }
 
 function getApiErrorMessage(defaultMessage: string, message?: string | null) {
@@ -451,7 +362,7 @@ const YOUTUBE_STEP_LABELS = [
   { id: "url-input", label: "링크 입력" },
   { id: "preview", label: "미리보기" },
   { id: "extracting", label: "분석" },
-  { id: "review", label: "검토" },
+  { id: "review", label: "결과" },
   { id: "complete", label: "완료" },
 ] as const;
 
@@ -464,7 +375,7 @@ function getYoutubeStepIndex(step: Step) {
   if (step === "non-recipe-warning") return 2;
   if (step === "extracting") return 2;
   if (step === "accepted") return 2;
-  if (step === "session-loading" || step === "session-status") return 3;
+  if (step === "session-loading" || step === "saving-result" || step === "session-status") return 3;
   if (step === "review") return 3;
   if (step === "complete") return 4;
   return 0;
@@ -478,9 +389,10 @@ interface AppBarProps {
   onRegister?: () => void;
   canRegister?: boolean;
   isRegistering?: boolean;
+  saveLabel?: string;
 }
 
-function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBarProps) {
+function AppBar({ step, onBack, onRegister, canRegister, isRegistering, saveLabel = "저장" }: AppBarProps) {
   return (
     <div className="shrink-0 border-b border-[var(--line)] bg-[var(--surface)]">
       <div className="flex min-h-14 items-center gap-2 px-2 py-2">
@@ -492,10 +404,10 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
           />
         )}
         <h1 className="min-w-0 flex-1 break-keep text-base font-semibold leading-tight text-[var(--foreground)] sm:text-lg">
-          {step === "review" ? "추출 결과 확인" : "유튜브 가져오기"}
+          {step === "review" ? "내 레시피" : "유튜브 가져오기"}
         </h1>
         {step !== "review" ? <span aria-hidden="true" className="h-[44px] w-[44px] shrink-0" /> : null}
-        {step === "review" && (
+        {step === "review" && canRegister && (
           <button
             className={[
               "h-[var(--control-height-md)] rounded-[var(--radius-sm)] px-4 text-base font-semibold",
@@ -507,7 +419,7 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
             disabled={!canRegister || isRegistering}
             type="button"
           >
-            {isRegistering ? "등록 중..." : "등록"}
+            {isRegistering ? "저장 중..." : saveLabel}
           </button>
         )}
       </div>
@@ -931,6 +843,8 @@ function ExtractionSessionStatus({
 // ─── Step 3: Review / Edit ────────────────────────────────────────────────────
 
 interface ReviewStepProps {
+  editingSection: "basic" | "ingredients" | "steps" | null;
+  onEditingSectionChange: (section: "basic" | "ingredients" | "steps" | null) => void;
   headingRef?: React.Ref<HTMLHeadingElement>;
   title: string;
   onTitleChange: (title: string) => void;
@@ -942,7 +856,6 @@ interface ReviewStepProps {
   classificationStatus: YoutubeRecipeClassificationStatus | null;
   classificationReasons: string[];
   draftWarnings: string[];
-  blockingIssues: string[];
   recipeCandidates: YoutubeRecipeCandidate[];
   selectedCandidateId: string | null;
   isPromotingCandidate: boolean;
@@ -957,14 +870,11 @@ interface ReviewStepProps {
     candidate: YoutubeIngredientCandidate,
   ) => void;
   onReplaceIngredient: (tempId: string) => void;
-  onRegisterIngredient: (tempId: string) => void;
   onRemoveIngredient: (tempId: string) => void;
   onRemoveStep: (tempId: string) => void;
   onAddIngredient: () => void;
   onAddStep: () => void;
   onEditStep: (tempId: string) => void;
-  onBulkRegister?: () => void;
-  bulkEligibleCount?: number;
 }
 
 interface ReviewIngredientRowProps {
@@ -976,7 +886,7 @@ interface ReviewIngredientRowProps {
     candidate: YoutubeIngredientCandidate,
   ) => void;
   onReplaceIngredient: (tempId: string) => void;
-  onRegisterIngredient: (tempId: string) => void;
+  onRegisterIngredient?: (tempId: string) => void;
   onRemoveIngredient: (tempId: string) => void;
 }
 
@@ -1017,9 +927,13 @@ function ReviewIngredientRow({
     >
       <div className="grid grid-cols-[minmax(3.5rem,1fr)_4.25rem_auto_2.5rem] items-center gap-1.5">
         <div className="min-w-0">
-          <span className="block truncate text-[14px] font-semibold text-[var(--foreground)]">
-            {ingredientName}
-          </span>
+          <input
+            aria-label={`${ingredientName} 재료명`}
+            className="h-9 w-full min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+            onChange={(event) => onUpdateIngredient(ingredient.tempId, { standard_name: event.target.value })}
+            type="text"
+            value={ingredient.standard_name}
+          />
           {quantitySourceLabel || ingredient.quantity_review_required || ingredient.quantity_user_confirmed ? (
             <span className="mt-1 flex flex-wrap gap-1.5">
               {quantitySourceLabel ? (
@@ -1065,7 +979,7 @@ function ReviewIngredientRow({
                 amount,
                 ingredient_type: "QUANT",
                 scalable: true,
-                unit: ingredient.unit ?? "g",
+                unit: ingredient.unit,
                 ...getQuantityEditPatch(ingredient),
               });
             }}
@@ -1082,16 +996,16 @@ function ReviewIngredientRow({
         </div>
         <div
           aria-label={`${ingredientName} 단위`}
-          className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
+          className="flex w-20 shrink-0 flex-wrap gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
           role="group"
         >
           {unitOptions.map((option) => (
             <button
               aria-label={`${ingredientName} ${option}`}
-              aria-pressed={(ingredient.unit ?? "g") === option}
+              aria-pressed={ingredient.unit === option}
               className={[
                 "h-9 min-w-9 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
-                (ingredient.unit ?? "g") === option
+                ingredient.unit === option
                   ? "bg-[var(--brand)] text-[var(--text-inverse)]"
                   : "text-[var(--text-2)] hover:bg-[var(--surface)]",
               ].join(" ")}
@@ -1110,6 +1024,18 @@ function ReviewIngredientRow({
               {option}
             </button>
           ))}
+          <input
+            aria-label={`${ingredientName} 단위 직접 입력`}
+            className="h-8 w-full min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface)] px-2 text-sm"
+            maxLength={20}
+            onChange={(event) => onUpdateIngredient(ingredient.tempId, {
+              ingredient_type: "QUANT",
+              unit: event.target.value || null,
+              ...getQuantityEditPatch(ingredient),
+            })}
+            placeholder="단위"
+            value={ingredient.unit ?? ""}
+          />
         </div>
         <button
           aria-label={`${ingredientName} 삭제`}
@@ -1127,7 +1053,7 @@ function ReviewIngredientRow({
           data-testid={`quantity-review-${ingredient.tempId}`}
         >
           <p className="text-[12px] font-semibold text-[var(--warning)]">
-            화면/추정 수량을 저장 전에 확인해 주세요.
+            미확인 분량은 그대로 보관하고 나중에 수정할 수 있어요.
           </p>
           {quantityEvidenceSnippet ? (
             <p className="mt-1 text-[12px] text-[var(--text-2)]">
@@ -1206,7 +1132,7 @@ function ReviewIngredientRow({
             >
               재료 검색으로 교체
             </button>
-            {ingredient.draft_ingredient_id ? (
+            {ingredient.draft_ingredient_id && onRegisterIngredient ? (
               <button
                 className="text-[12px] font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
                 onClick={() => onRegisterIngredient(ingredient.tempId)}
@@ -1293,7 +1219,7 @@ function ReviewCookingStepRow({
       {blockingFields.length > 0 ? (
         <div className="mt-3 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] p-3">
           <p className="text-[12px] font-semibold text-[var(--danger)]">
-            등록 전 필수 입력: {formatStepFieldList(blockingFields)}
+            저장 전 필수 입력: {formatStepFieldList(blockingFields)}
           </p>
           {step.raw_text ? (
             <p className="mt-1 text-[12px] text-[var(--text-2)]">
@@ -1319,6 +1245,8 @@ function ReviewCookingStepRow({
 }
 
 function ReviewStep({
+  editingSection,
+  onEditingSectionChange,
   headingRef,
   title,
   onTitleChange,
@@ -1330,7 +1258,6 @@ function ReviewStep({
   classificationStatus,
   classificationReasons,
   draftWarnings,
-  blockingIssues,
   recipeCandidates,
   selectedCandidateId,
   isPromotingCandidate,
@@ -1342,30 +1269,15 @@ function ReviewStep({
   onUpdateIngredient,
   onResolveIngredientCandidate,
   onReplaceIngredient,
-  onRegisterIngredient,
   onRemoveIngredient,
   onRemoveStep,
   onAddIngredient,
   onAddStep,
   onEditStep,
-  onBulkRegister,
-  bulkEligibleCount,
 }: ReviewStepProps) {
-  const registerRequirements = getYoutubeRegisterRequirements({
-    title,
-    baseServings,
-    ingredients,
-    steps,
-  });
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
-      {headingRef ? (
-        <h2 className="pt-4 text-base font-normal text-[var(--text-2)]" ref={headingRef} tabIndex={-1}>추출 결과를 확인해 주세요</h2>
-      ) : (
-        <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해 주세요</p>
-      )}
-
       {thumbnailUrl ? (
         <div
           className="mt-4 overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-fill)]"
@@ -1383,14 +1295,47 @@ function ReviewStep({
         </div>
       ) : null}
 
-      <div data-testid="youtube-draft-tags">
-        <RecipeTagEditor
-          className="mt-3"
-          errorMessage={tagErrorMessage}
-          onChange={onTagsChange}
-          suggestedTags={tags}
-          tags={tags}
-        />
+      <div className="mt-5" data-testid="youtube-result-summary">
+        <h2
+          className="text-2xl font-bold leading-tight text-[var(--foreground)] outline-none"
+          ref={headingRef}
+          tabIndex={headingRef ? -1 : undefined}
+        >
+          {title || "이름 없는 레시피"}
+        </h2>
+        <p className="mt-2 text-sm font-medium text-[var(--text-2)]">기본 {baseServings}인분</p>
+        {tags.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2" data-testid="youtube-draft-tags">
+            {tags.map((tag) => (
+              <span className="rounded-full bg-[var(--surface-fill)] px-3 py-1 text-xs font-semibold text-[var(--text-2)]" key={tag}>
+                #{tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {tagErrorMessage ? <p className="mt-2 text-sm text-[var(--danger)]">{tagErrorMessage}</p> : null}
+        <button
+          className="mt-3 min-h-10 rounded-full border border-[var(--line)] px-4 text-sm font-semibold text-[var(--brand)]"
+          onClick={() => onEditingSectionChange(editingSection === "basic" ? null : "basic")}
+          type="button"
+        >
+          {editingSection === "basic" ? "수정 완료" : "기본 정보 수정"}
+        </button>
+        {editingSection === "basic" ? (
+          <div className="mt-4 space-y-4 rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-4">
+            <label className="block text-sm font-semibold text-[var(--text-2)]">
+              레시피명
+              <input
+                aria-label="레시피명"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-base text-[var(--foreground)]"
+                onChange={(event) => onTitleChange(event.target.value)}
+                value={title}
+              />
+            </label>
+            <NumericStepperCompact value={baseServings} min={1} onChange={onServingsChange} unit="인분" />
+            <RecipeTagEditor errorMessage={tagErrorMessage} onChange={onTagsChange} suggestedTags={tags} tags={tags} />
+          </div>
+        ) : null}
       </div>
 
       {classificationStatus === "uncertain" ? (
@@ -1479,84 +1424,48 @@ function ReviewStep({
         </div>
       ) : null}
 
-      {blockingIssues.length > 0 && registerRequirements.length > 0 ? (
-        <div
-          className="mt-4 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] px-4 py-3"
-          role="alert"
-        >
-          <p className="text-[13px] font-semibold leading-[1.45] text-[var(--danger)]">
-            등록 전에 꼭 채워야 하는 항목이 있어요.
-          </p>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-[var(--danger)]">
-            {blockingIssues.map((issue) => (
-              <li key={issue}>{formatYoutubeBlockingIssue(issue)}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {registerRequirements.length > 0 ? (
-        <div
-          className="mt-4 rounded-[var(--radius-card)] bg-[var(--surface-fill)] px-4 py-3"
-          data-testid="youtube-register-requirements"
-          role="status"
-        >
-          <p className="text-[13px] font-semibold leading-[1.45] text-[var(--text-2)]">
-            등록하려면 아래 항목을 확인해 주세요.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {registerRequirements.map((requirement) => (
-              <span
-                className="rounded-[var(--radius-control)] bg-[var(--surface)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)]"
-                key={requirement}
-              >
-                {requirement}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Title */}
-      <div className="mt-6">
-        <label className="text-sm font-medium text-[var(--text-2)]">레시피명</label>
-        <input
-          aria-label="레시피명"
-          type="text"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          className="mt-1 w-full rounded-[var(--radius-sm)] bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none transition-colors focus:border-2 focus:border-[var(--brand)]"
-        />
-      </div>
-
-      {/* Base servings */}
-      <div className="mt-4">
-        <label className="text-sm font-medium text-[var(--text-2)]">기본 인분</label>
-        <div className="mt-1">
-          <NumericStepperCompact
-            value={baseServings}
-            min={1}
-            onChange={onServingsChange}
-            unit="인분"
-          />
-        </div>
-      </div>
-
       {/* Ingredients */}
       <div className="mt-6">
-        <h3 className="text-lg font-semibold text-[var(--foreground)]">
-          재료 ({ingredients.length}개)
-        </h3>
-        {onBulkRegister && typeof bulkEligibleCount === "number" && bulkEligibleCount >= 2 && (
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-[var(--foreground)]">재료 ({ingredients.length}개)</h3>
           <button
-            className="mt-3 w-full rounded-[var(--radius-sm)] bg-[var(--brand)] py-3 text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
-            onClick={onBulkRegister}
+            className="min-h-10 rounded-full border border-[var(--line)] px-4 text-sm font-semibold text-[var(--brand)]"
+            onClick={() => onEditingSectionChange(editingSection === "ingredients" ? null : "ingredients")}
             type="button"
-            data-testid="bulk-register-cta"
           >
-            미등록 재료 {bulkEligibleCount}건 일괄 등록
+            {editingSection === "ingredients" ? "수정 완료" : "재료 수정"}
           </button>
-        )}
+        </div>
+        {editingSection !== "ingredients" ? (
+          <div className="mt-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]" data-testid="youtube-result-ingredients">
+            {ingredients.length === 0 ? (
+              <p className="px-4 py-5 text-sm text-[var(--muted)]">추출된 재료가 없어요.</p>
+            ) : ingredients.map((ingredient, index) => {
+              const name = getIngredientName(ingredient);
+              const hasKnownQuantity = ingredient.ingredient_type === "TO_TASTE" || (
+                typeof ingredient.amount === "number" && ingredient.amount > 0 && Boolean(ingredient.unit?.trim())
+              );
+              const quantity = (ingredient.quantity_review_required === true && ingredient.quantity_user_confirmed !== true) || !hasKnownQuantity
+                ? "분량 확인 필요"
+                : ingredient.ingredient_type === "TO_TASTE"
+                  ? "약간"
+                  : `${ingredient.amount}${ingredient.unit}`;
+              return (
+                <div className={[
+                  "flex items-start justify-between gap-4 px-4 py-3",
+                  index > 0 ? "border-t border-[var(--line)]" : "",
+                ].join(" ")} key={ingredient.tempId}>
+                  <span className="min-w-0 break-words text-[15px] font-medium text-[var(--foreground)]">{name}</span>
+                  <span className={[
+                    "shrink-0 text-right text-sm",
+                    quantity === "분량 확인 필요" ? "font-semibold text-[var(--warning)]" : "text-[var(--text-2)]",
+                  ].join(" ")}>{quantity}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <>
         {ingredients.length === 0 ? (
           <p className="py-4 text-sm text-[var(--muted)]">
             설명란에서 재료를 찾지 못했어요. 아래 버튼으로 직접 추가할 수 있어요
@@ -1585,7 +1494,6 @@ function ReviewStep({
                   <ReviewIngredientRow
                     ingredient={ing}
                     onRemoveIngredient={onRemoveIngredient}
-                    onRegisterIngredient={onRegisterIngredient}
                     onReplaceIngredient={onReplaceIngredient}
                     onResolveIngredientCandidate={onResolveIngredientCandidate}
                     onUpdateIngredient={onUpdateIngredient}
@@ -1603,13 +1511,40 @@ function ReviewStep({
         >
           + 재료 추가
         </button>
+          </>
+        )}
       </div>
 
       {/* Steps */}
       <div className="mt-6">
-        <h3 className="text-lg font-semibold text-[var(--foreground)]">
-          만들기 ({steps.length}단계)
-        </h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-[var(--foreground)]">만들기 ({steps.length}단계)</h3>
+          <button
+            className="min-h-10 rounded-full border border-[var(--line)] px-4 text-sm font-semibold text-[var(--brand)]"
+            onClick={() => onEditingSectionChange(editingSection === "steps" ? null : "steps")}
+            type="button"
+          >
+            {editingSection === "steps" ? "수정 완료" : "만들기 수정"}
+          </button>
+        </div>
+        {editingSection !== "steps" ? (
+          <ol className="mt-3 space-y-4" data-testid="youtube-result-steps">
+            {steps.length === 0 ? (
+              <li className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-5 text-sm text-[var(--muted)]">추출된 만들기가 없어요.</li>
+            ) : steps.map((step, index) => (
+              <li className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3" key={step.tempId}>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-soft)] text-sm font-bold text-[var(--brand)]">{index + 1}</span>
+                <div className="pt-1">
+                  <p className="whitespace-pre-wrap break-words text-base leading-relaxed text-[var(--foreground)]">
+                    {stripMatchingSectionPrefix(step.instruction, step.component_label)?.trim() || step.raw_text?.trim() || "만들기 설명 확인 필요"}
+                  </p>
+                  {step.duration_text ? <p className="mt-1 text-sm text-[var(--text-3)]">{step.duration_text}</p> : null}
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <>
         {steps.length === 0 && ingredients.length > 0 ? (
           <div
             className="mt-3 rounded-[var(--radius-card)] border border-[color:var(--warning-border)] bg-[color:var(--warning-soft)] px-4 py-3"
@@ -1666,58 +1601,8 @@ function ReviewStep({
         >
           + 만들기 추가
         </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Step 4: Registration Complete ────────────────────────────────────────────
-
-interface CompleteStepProps {
-  recipeTitle: string;
-  hasPlanContext: boolean;
-  onMealAdd: () => void;
-  onViewDetail: () => void;
-  onClose: () => void;
-}
-
-function CompleteStep({ recipeTitle, hasPlanContext, onMealAdd, onViewDetail, onClose }: CompleteStepProps) {
-  return (
-    <div className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] p-6 shadow-[var(--shadow-2)]">
-        <div className="text-center">
-          <div className="mx-auto flex h-[var(--control-height-lg)] w-12 items-center justify-center">
-            <svg className="h-[var(--control-height-lg)] w-12 text-[var(--brand)]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="3" fill="none" />
-              <path d="M14 24l7 7 13-13" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-            </svg>
-          </div>
-          <h2 className="mt-4 text-xl font-semibold text-[var(--foreground)]">
-            레시피가 등록됐어요
-          </h2>
-          <p className="mt-2 text-base text-[var(--text-2)]">
-            &lsquo;{recipeTitle}&rsquo;가
-            <br />
-            레시피북에 저장됐어요
-          </p>
-        </div>
-        <div className="mt-6 space-y-3">
-          {hasPlanContext && (
-            <Button fullWidth onClick={onMealAdd}>
-              이 끼니에 추가
-            </Button>
-          )}
-          <Button fullWidth variant={hasPlanContext ? "secondary" : "primary"} onClick={onViewDetail}>
-            레시피 상세 보기
-          </Button>
-          <button
-            className="w-full py-3 text-center text-base text-[var(--text-2)]"
-            onClick={onClose}
-            type="button"
-          >
-            닫기
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1752,7 +1637,7 @@ function StepAddModal({
   );
 
   const handleAdd = () => {
-    if (!selectedMethod || !instruction.trim()) return;
+    if (!instruction.trim()) return;
     onAdd({
       instruction: instruction.trim(),
       cooking_method: selectedMethod,
@@ -1836,7 +1721,7 @@ function StepAddModal({
           </div>
         </div>
         <div className="mt-6">
-          <Button fullWidth onClick={handleAdd} disabled={!selectedMethod || !instruction.trim()}>
+          <Button fullWidth onClick={handleAdd} disabled={!instruction.trim()}>
             {isEditing ? "수정 완료" : "추가"}
           </Button>
         </div>
@@ -2428,7 +2313,7 @@ function RegisterErrorModal({ errorMessage, onRetry, onClose }: RegisterErrorMod
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
       <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
-        <ModalHeader title="레시피 등록 실패" onClose={onClose} />
+        <ModalHeader title="레시피 저장 실패" onClose={onClose} />
         <p className="mt-4 text-base text-[var(--text-2)]">
           {errorMessage}
           <br />
@@ -2441,6 +2326,41 @@ function RegisterErrorModal({ errorMessage, onRetry, onClose }: RegisterErrorMod
           <Button fullWidth variant="neutral" onClick={onClose}>
             닫기
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SaveConflictModal({
+  errorMessage,
+  actionLabel,
+  onLoadLatest,
+  onClose,
+}: {
+  errorMessage: string;
+  actionLabel: string;
+  onLoadLatest: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
+      <div
+        aria-labelledby="youtube-save-conflict-title"
+        aria-modal="true"
+        className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]"
+        role="alertdialog"
+      >
+        <ModalHeader title="다른 곳에서 변경됐어요" titleId="youtube-save-conflict-title" onClose={onClose} />
+        <p className="mt-4 text-base text-[var(--text-2)]">{errorMessage}</p>
+        <p className="mt-2 text-sm font-semibold text-[var(--danger)]">
+          {actionLabel === "최신 내용 불러오기"
+            ? "최신 내용을 불러오면 지금 수정한 내용은 사라져요."
+            : "보관 목록으로 이동하면 지금 수정 중인 화면을 떠나게 돼요."}
+        </p>
+        <div className="mt-6 space-y-3">
+          <Button fullWidth onClick={onLoadLatest}>{actionLabel}</Button>
+          <Button fullWidth variant="neutral" onClick={onClose}>계속 수정하기</Button>
         </div>
       </div>
     </div>
@@ -2472,41 +2392,6 @@ function ConfirmBackModal({ onConfirm, onCancel }: ConfirmBackModalProps) {
   );
 }
 
-// ─── Servings Input Modal ───────────────────────────────────────────────────
-
-interface ServingsInputModalProps {
-  onConfirm: (servings: number) => void;
-  onCancel: () => void;
-  defaultServings: number;
-  isCreating: boolean;
-  error: string | null;
-}
-
-function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, error }: ServingsInputModalProps) {
-  const [servings, setServings] = useState(defaultServings);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
-      <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
-        <ModalHeader title="이 끼니에 추가" description="계획 인분을 정해 주세요" onClose={onCancel} />
-        <div className="mt-6">
-          <NumericStepperCompact value={servings} min={1} onChange={setServings} unit="인분" disabled={isCreating} />
-        </div>
-        {error && (
-          <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]" role="alert">
-            {error}
-          </div>
-        )}
-        <div className="mt-6">
-          <Button fullWidth onClick={() => onConfirm(servings)} loading={isCreating} disabled={isCreating}>
-            추가
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function YoutubeImportScreen(props: YoutubeImportScreenProps) {
@@ -2516,6 +2401,7 @@ export function YoutubeImportScreen(props: YoutubeImportScreenProps) {
 function ActiveYoutubeImportScreen({
   entryContext = "planner",
   initialExtractionId = "",
+  initialSavedDraftId = "",
   initialYoutubeUrl = "",
   onRequestClose,
   planDate,
@@ -2529,7 +2415,7 @@ function ActiveYoutubeImportScreen({
   const appReturn = useAppReturn({
     fallback:
       isStandalone
-        ? "/"
+        ? initialSavedDraftId ? "/recipes/youtube/saved" : "/"
         : planDate && columnId
         ? `/planner/${planDate}/${columnId}${slotName ? `?slot=${encodeURIComponent(slotName)}` : ""}`
         : "/planner",
@@ -2542,9 +2428,10 @@ function ActiveYoutubeImportScreen({
 
   // Step state
   const [currentStep, setCurrentStep] = useState<Step>(
-    initialExtractionId ? "session-loading" : "url-input",
+    initialExtractionId || initialSavedDraftId ? "session-loading" : "url-input",
   );
   const [modalMode, setModalMode] = useState<ModalMode>("none");
+  const [editingSection, setEditingSection] = useState<"basic" | "ingredients" | "steps" | null>(null);
 
   // Step 1 state
   const [youtubeUrl, setYoutubeUrl] = useState(initialYoutubeUrl);
@@ -2572,7 +2459,6 @@ function ActiveYoutubeImportScreen({
   const [sessionError, setSessionError] = useState<string | null>(null);
   const reviewHeadingRef = useRef<HTMLHeadingElement>(null);
   const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
-  const [blockingIssues, setBlockingIssues] = useState<string[]>([]);
 
   // Step 3 state (review/edit)
   const [extractionId, setExtractionId] = useState("");
@@ -2587,7 +2473,7 @@ function ActiveYoutubeImportScreen({
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [draftThumbnailUrl, setDraftThumbnailUrl] = useState<string | null>(null);
   const [draftTags, setDraftTags] = useState<string[]>([]);
-  const [areDraftTagsDirty, setAreDraftTagsDirty] = useState(false);
+  const [, setAreDraftTagsDirty] = useState(false);
   const [tagSubmitError, setTagSubmitError] = useState<string | null>(null);
   const [replacingIngredientId, setReplacingIngredientId] = useState<string | null>(null);
   const [registeringIngredientId, setRegisteringIngredientId] = useState<string | null>(null);
@@ -2596,15 +2482,73 @@ function ActiveYoutubeImportScreen({
   // Registration state
   const [isRegistering, setIsRegistering] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
-  const [registeredRecipeId, setRegisteredRecipeId] = useState<string | null>(null);
-  const [registeredRecipeTitle, setRegisteredRecipeTitle] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [savedDraftId, setSavedDraftId] = useState(initialSavedDraftId);
+  const [savedDraftRevision, setSavedDraftRevision] = useState<number | null>(null);
+  const savedRowIdsRef = useRef(new Map<string, string>());
+  const originalIngredientNamesRef = useRef(new Map<string, string>());
+  const saveAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
+  const ensureAttemptRef = useRef<{ extractionId: string; key: string } | null>(null);
+  const ensureInFlightRef = useRef<string | null>(null);
+  const ensureRequestTokenRef = useRef(0);
+  const [ensureError, setEnsureError] = useState<{ message: string; unauthorized: boolean } | null>(null);
 
   // API data
   const [cookingMethods, setCookingMethods] = useState<CookingMethodItem[]>([]);
 
-  // Meal add flow
-  const [isCreatingMeal, setIsCreatingMeal] = useState(false);
-  const [mealAddError, setMealAddError] = useState<string | null>(null);
+  const applySavedResult = useCallback((saved: YoutubeSavedRecipeResult) => {
+    originalIngredientNamesRef.current.clear();
+    savedRowIdsRef.current.clear();
+    setSavedDraftId(saved.draft_id);
+    setSavedDraftRevision(saved.revision);
+    setEditingSection(null);
+    setHasUnsavedChanges(false);
+    setExtractionId(saved.source.extraction_id);
+    setYoutubeUrl(saved.source.youtube_url);
+    setTitle(saved.content.title);
+    setBaseServings(saved.content.base_servings);
+    setDraftThumbnailUrl(saved.source.thumbnail_url);
+    setDraftTags(saved.content.tags);
+    setAreDraftTagsDirty(false);
+    setDraftWarnings([]);
+    setIngredients(saved.content.ingredients.map((ingredient, index) => {
+      originalIngredientNamesRef.current.set(ingredient.row_id, ingredient.standard_name);
+      return {
+        tempId: ingredient.row_id,
+        draft_ingredient_id: ingredient.source_draft_ingredient_id ?? undefined,
+        ingredient_id: "",
+        standard_name: ingredient.standard_name,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        ingredient_type: ingredient.quantity_mode === "to_taste" ? "TO_TASTE" as const : "QUANT" as const,
+        display_text: ingredient.display_text,
+        component_label: ingredient.component_label,
+        sort_order: index + 1,
+        scalable: ingredient.quantity_mode === "quantity",
+        confidence: null,
+        resolution_status: "unresolved" as const,
+        raw_text: ingredient.standard_name,
+        quantity_review_required: ingredient.quantity_mode === "unknown",
+        quantity_user_confirmed: ingredient.quantity_mode !== "unknown",
+      };
+    }));
+    setSteps(saved.content.steps.map((step, index) => ({
+      tempId: step.row_id,
+      step_number: index + 1,
+      instruction: step.instruction,
+      cooking_method: null,
+      ingredients_used: [],
+      heat_level: null,
+      duration_seconds: null,
+      duration_text: step.duration_text,
+      component_label: step.component_label,
+      raw_text: step.instruction,
+      source_step_index: step.source_step_index,
+    })));
+    setEnsureError(null);
+    setCurrentStep("review");
+  }, []);
+
 
   useEffect(() => {
     if (initialExtractionId) return;
@@ -2646,7 +2590,7 @@ function ActiveYoutubeImportScreen({
       }
 
       setCurrentStep((prev) => {
-        if (prev === "review") {
+        if (prev === "review" && hasUnsavedChanges) {
           setModalMode("confirm-back");
           // Push state again to keep the user on the page
           window.history.pushState({ step: "review" }, "");
@@ -2663,7 +2607,7 @@ function ActiveYoutubeImportScreen({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isEmbedded]);
+  }, [hasUnsavedChanges, isEmbedded]);
 
   // Push history state on step change
   const pushStep = useCallback((step: Step) => {
@@ -2692,7 +2636,6 @@ function ActiveYoutubeImportScreen({
     setIsValidating(true);
     setUrlError(null);
     setDraftWarnings([]);
-    setBlockingIssues([]);
     setExtractionError(null);
     setParentExtractionId(null);
     setRecipeCandidates([]);
@@ -2752,6 +2695,8 @@ function ActiveYoutubeImportScreen({
   }, [initialExtractionId, initialYoutubeUrl, handleValidate]);
 
   const applyExtractDataToReview = useCallback((data: YoutubeRecipeExtractData) => {
+    setEditingSection(null);
+    setHasUnsavedChanges(false);
     setExtractionId(data.extraction_id);
     setTitle(data.title);
     setBaseServings(data.base_servings ?? 1);
@@ -2764,18 +2709,21 @@ function ActiveYoutubeImportScreen({
     setAreDraftTagsDirty(false);
     setTagSubmitError(null);
     setDraftWarnings(data.draft_warnings ?? []);
-    setBlockingIssues(data.blocking_issues ?? []);
 
     setIngredients(
-      data.ingredients.map((ing: YoutubeExtractedIngredient, idx: number) => ({
-        ...ing,
-        ingredient_id: ing.ingredient_id ?? "",
-        standard_name: ing.standard_name ?? "",
-        display_text: ing.display_text ?? ing.raw_text ?? null,
-        resolution_status: ing.resolution_status ?? "resolved",
-        component_label: ing.component_label ?? null,
-        tempId: `yt-ing-${idx}`,
-      })),
+      data.ingredients.map((ing: YoutubeExtractedIngredient, idx: number) => {
+        const tempId = `yt-ing-${idx}`;
+        originalIngredientNamesRef.current.set(tempId, ing.standard_name || ing.raw_text || "");
+        return {
+          ...ing,
+          ingredient_id: ing.ingredient_id ?? "",
+          standard_name: ing.standard_name || ing.raw_text || "",
+          display_text: ing.display_text ?? ing.raw_text ?? null,
+          resolution_status: ing.resolution_status ?? "resolved",
+          component_label: ing.component_label ?? null,
+          tempId,
+        };
+      }),
     );
 
     setSteps(
@@ -2801,6 +2749,7 @@ function ActiveYoutubeImportScreen({
         is_incomplete: step.is_incomplete,
         missing_fields: step.missing_fields ?? [],
         raw_text: step.raw_text,
+        source_step_index: idx,
       })),
     );
   }, []);
@@ -2844,7 +2793,7 @@ function ActiveYoutubeImportScreen({
         setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
         setCandidatePromotionError(null);
         applyExtractDataToReview(data);
-        pushStep("review");
+        pushStep("saving-result");
         return true;
       };
 
@@ -2995,7 +2944,7 @@ function ActiveYoutubeImportScreen({
       setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
       setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
       applyExtractDataToReview(data);
-      setCurrentStep("review");
+      setCurrentStep("saving-result");
     });
     return () => {
       current = false;
@@ -3003,9 +2952,71 @@ function ActiveYoutubeImportScreen({
   }, [applyExtractDataToReview, initialExtractionId]);
 
   useEffect(() => {
-    if (!initialExtractionId || currentStep !== "review") return;
+    if (!initialSavedDraftId) return;
+    let current = true;
+    void fetchYoutubeSavedRecipe(initialSavedDraftId).then((result) => {
+      if (!current) return;
+      if (!result.success || !result.data) {
+        setSessionRecipePath(null);
+        setSessionError(result.error?.message ?? "보관한 레시피를 불러오지 못했어요.");
+        setCurrentStep("session-status");
+        return;
+      }
+
+      applySavedResult(result.data);
+    });
+    return () => {
+      current = false;
+    };
+  }, [applySavedResult, initialSavedDraftId]);
+
+  const retryEnsureSavedResult = useCallback(() => {
+    if (!extractionId || initialSavedDraftId) return;
+    if (ensureInFlightRef.current === extractionId) return;
+    setEnsureError(null);
+    setCurrentStep("saving-result");
+    const previous = ensureAttemptRef.current;
+    const idempotencyKey = previous?.extractionId === extractionId
+      ? previous.key
+      : crypto.randomUUID();
+    ensureAttemptRef.current = { extractionId, key: idempotencyKey };
+    ensureInFlightRef.current = extractionId;
+    const requestToken = ++ensureRequestTokenRef.current;
+
+    void ensureYoutubeSavedRecipe(extractionId, idempotencyKey).then((result) => {
+      if (requestToken !== ensureRequestTokenRef.current) return;
+      ensureInFlightRef.current = null;
+      if (!result.success || !result.data) {
+        setEnsureError({
+          message: getApiErrorMessage("추출한 레시피를 저장하지 못했어요.", result.error?.message),
+          unauthorized: result.error?.code === "UNAUTHORIZED" || result.error?.code === "AUTH_REQUIRED",
+        });
+        return;
+      }
+      applySavedResult(result.data);
+      router.replace(`/recipes/youtube/saved/${result.data.draft_id}`);
+    });
+  }, [applySavedResult, extractionId, initialSavedDraftId, router]);
+
+  useEffect(() => {
+    if (currentStep !== "saving-result" || !extractionId || initialSavedDraftId || savedDraftId || ensureError) return;
+    retryEnsureSavedResult();
+  }, [currentStep, ensureError, extractionId, initialSavedDraftId, retryEnsureSavedResult, savedDraftId]);
+
+  useEffect(() => {
+    if ((!initialExtractionId && !initialSavedDraftId) || currentStep !== "review") return;
     reviewHeadingRef.current?.focus({ preventScroll: true });
-  }, [currentStep, initialExtractionId]);
+  }, [currentStep, initialExtractionId, initialSavedDraftId]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const handleSelectCandidate = useCallback(async (candidateId: string) => {
     const parentId = parentExtractionId ?? extractionId;
@@ -3031,7 +3042,10 @@ function ActiveYoutubeImportScreen({
 
     setParentExtractionId(result.data.parent_extraction_id);
     setSelectedCandidateId(result.data.candidate_id);
+    setSavedDraftId("");
+    setSavedDraftRevision(null);
     applyExtractDataToReview(result.data.draft);
+    setCurrentStep("saving-result");
   }, [
     applyExtractDataToReview,
     extractionId,
@@ -3042,6 +3056,7 @@ function ActiveYoutubeImportScreen({
   // ─── Step 3 handlers ───────────────────────────────────────────────
 
   const handleAddIngredient = useCallback((newIngredients: ManualRecipeIngredientInput[]) => {
+    setHasUnsavedChanges(true);
     if (replacingIngredientId) {
       const replacement = newIngredients[0];
       if (!replacement) return;
@@ -3089,6 +3104,7 @@ function ActiveYoutubeImportScreen({
 
   const handleUpdateIngredient = useCallback(
     (tempId: string, patch: IngredientQuantityPatch) => {
+      setHasUnsavedChanges(true);
       setIngredients((prev) =>
         prev.map((ingredient) =>
           ingredient.tempId === tempId
@@ -3101,7 +3117,32 @@ function ActiveYoutubeImportScreen({
   );
 
   const handleRemoveIngredient = useCallback((tempId: string) => {
+    setHasUnsavedChanges(true);
     setIngredients((prev) => prev.filter((ing) => ing.tempId !== tempId));
+  }, []);
+
+  const handleAddBlankIngredient = useCallback(() => {
+    setHasUnsavedChanges(true);
+    setIngredients((prev) => [
+      ...prev,
+      {
+        tempId: crypto.randomUUID(),
+        draft_ingredient_id: undefined,
+        ingredient_id: "",
+        standard_name: "",
+        amount: null,
+        unit: null,
+        ingredient_type: "QUANT",
+        display_text: "",
+        sort_order: prev.length + 1,
+        scalable: false,
+        confidence: null,
+        resolution_status: "unresolved",
+        raw_text: "",
+        quantity_review_required: true,
+        quantity_user_confirmed: false,
+      },
+    ]);
   }, []);
 
   const handleResolveIngredientCandidate = useCallback(
@@ -3137,11 +3178,6 @@ function ActiveYoutubeImportScreen({
     setModalMode("ingredient-register");
   }, [ingredients, replacingIngredientId]);
 
-  const handleRegisterIngredient = useCallback((tempId: string) => {
-    setRegisteringIngredientId(tempId);
-    setModalMode("ingredient-register");
-  }, []);
-
   const canRegisterReplacingIngredient = replacingIngredientId
     ? ingredients.some(
         (ingredient) =>
@@ -3151,7 +3187,6 @@ function ActiveYoutubeImportScreen({
 
   const handleIngredientRegistered = useCallback(
     (tempId: string, ingredientId: string, standardName: string) => {
-      const targetIndex = ingredients.findIndex((ingredient) => ingredient.tempId === tempId);
       setIngredients((prev) =>
         prev.map((ingredient) =>
           ingredient.tempId === tempId
@@ -3166,26 +3201,11 @@ function ActiveYoutubeImportScreen({
             : ingredient,
         ),
       );
-      if (targetIndex >= 0) {
-        const ingredientIssue = `ingredients[${targetIndex}].ingredient_id`;
-        setBlockingIssues((prev) => prev.filter((issue) => issue !== ingredientIssue));
-      }
       setRegisteringIngredientId(null);
       setModalMode("none");
     },
-    [ingredients],
+    [],
   );
-
-  const bulkEligibleIngredients = ingredients.filter(
-    (ing) =>
-      ing.draft_ingredient_id &&
-      (ing.resolution_status === "unresolved" || ing.resolution_status === "needs_review"),
-  );
-  const bulkEligibleCount = bulkEligibleIngredients.length;
-
-  const handleBulkRegister = useCallback(() => {
-    setModalMode("bulk-register");
-  }, []);
 
   const handleBulkComplete = useCallback(
     (
@@ -3196,9 +3216,6 @@ function ActiveYoutubeImportScreen({
       }>,
     ) => {
       for (const result of results) {
-        const targetIndex = ingredients.findIndex(
-          (ingredient) => ingredient.tempId === result.tempId,
-        );
         setIngredients((prev) =>
           prev.map((ingredient) =>
             ingredient.tempId === result.tempId
@@ -3213,19 +3230,14 @@ function ActiveYoutubeImportScreen({
               : ingredient,
           ),
         );
-        if (targetIndex >= 0) {
-          const ingredientIssue = `ingredients[${targetIndex}].ingredient_id`;
-          setBlockingIssues((prev) =>
-            prev.filter((issue) => issue !== ingredientIssue),
-          );
-        }
       }
       setModalMode("none");
     },
-    [ingredients],
+    [],
   );
 
   const handleAddStep = useCallback((step: Omit<TempStep, "tempId" | "step_number">) => {
+    setHasUnsavedChanges(true);
     if (editingStepId) {
       setSteps((prev) =>
         prev.map((currentStep) => {
@@ -3260,6 +3272,7 @@ function ActiveYoutubeImportScreen({
   }, [editingStepId]);
 
   const handleRemoveStep = useCallback((tempId: string) => {
+    setHasUnsavedChanges(true);
     setSteps((prev) => {
       const updated = prev.filter((s) => s.tempId !== tempId);
       return updated.map((s, idx) => ({ ...s, step_number: idx + 1 }));
@@ -3267,140 +3280,131 @@ function ActiveYoutubeImportScreen({
   }, []);
 
   const handleDraftTagsChange = useCallback((nextTags: string[]) => {
+    setHasUnsavedChanges(true);
     setDraftTags(nextTags);
     setAreDraftTagsDirty(true);
     setTagSubmitError(null);
   }, []);
 
-  const canRegister =
-    getYoutubeRegisterRequirements({
-      title,
-      baseServings,
-      ingredients,
-      steps,
-    }).length === 0;
+  const canSave = hasUnsavedChanges && Boolean(savedDraftId) && savedDraftRevision !== null && title.trim().length > 0;
 
   // ─── Registration ──────────────────────────────────────────────────
 
-  const handleRegister = useCallback(async () => {
-    if (!canRegister) return;
-
-    setIsRegistering(true);
-    setRegisterError(null);
-
-    const reviewedTagPayload = buildReviewedRecipeTagsPayload({
-      isDirty: areDraftTagsDirty,
-      tags: draftTags,
-    });
-    const result = await registerYoutubeRecipe({
-      extraction_id: extractionId,
-      title: title.trim(),
-      base_servings: baseServings,
-      youtube_url: youtubeUrl.trim(),
-      ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
-      ingredients: ingredients.map((ing, idx) => ({
-        ingredient_id: ing.ingredient_id,
-        standard_name: ing.standard_name,
-        amount: ing.amount,
-        unit: ing.unit,
-        ingredient_type: ing.ingredient_type,
-        display_text: ing.display_text,
-        component_label: ing.component_label ?? null,
-        scalable: ing.scalable,
-        sort_order: idx + 1,
-        draft_ingredient_id: ing.draft_ingredient_id ?? "",
-        quantity_confirmation_status: getQuantityConfirmationStatus(ing),
-      })),
-      steps: steps.map((step) => ({
-        step_number: step.step_number,
-        instruction: step.instruction,
-        component_label: step.component_label ?? null,
-        cooking_method_id: step.cooking_method?.id ?? "",
-        ingredients_used: step.ingredients_used,
-        heat_level: step.heat_level,
-        duration_seconds: step.duration_seconds,
-        duration_text: step.duration_text,
-      })),
-    });
-
-    setIsRegistering(false);
-
+  const handleLoadLatestSaved = useCallback(async () => {
+    if (!savedDraftId) {
+      router.replace("/recipes/youtube/saved");
+      return;
+    }
+    const result = await fetchYoutubeSavedRecipe(savedDraftId);
     if (!result.success || !result.data) {
-      if (result.error?.fields?.some((field) => field.field === "tags")) {
-        setTagSubmitError(result.error.message);
-        return;
-      }
-
-      setRegisterError(
-        getApiErrorMessage("레시피를 등록하지 못했어요.", result.error?.message),
-      );
+      setRegisterError(result.error?.message ?? "최신 내용을 불러오지 못했어요.");
       setModalMode("register-error");
       return;
     }
 
-    setRegisteredRecipeId(result.data.recipe_id);
-    setRegisteredRecipeTitle(result.data.title);
-    pushStep("complete");
+    applySavedResult(result.data);
+    saveAttemptRef.current = null;
+    setRegisterError(null);
+    setModalMode("none");
+    showActionConfirmation("최신 내용을 불러왔어요.");
+  }, [applySavedResult, router, savedDraftId]);
+
+  const handleSave = useCallback(async () => {
+    if (!title.trim() || !extractionId) return;
+    setIsRegistering(true);
+    setRegisterError(null);
+
+    const getStableRowId = (tempId: string) => {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tempId)) {
+        return tempId;
+      }
+      const existing = savedRowIdsRef.current.get(tempId);
+      if (existing) return existing;
+      const created = crypto.randomUUID();
+      savedRowIdsRef.current.set(tempId, created);
+      return created;
+    };
+    const content: YoutubeSavedRecipeEditableContent = {
+      title: title.trim(),
+      base_servings: Math.max(1, baseServings),
+      tags: draftTags,
+      ingredients: ingredients.map((ing) => ({
+        row_id: getStableRowId(ing.tempId),
+        source_draft_ingredient_id:
+          ing.draft_ingredient_id &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ing.draft_ingredient_id) &&
+          originalIngredientNamesRef.current.get(ing.tempId) === getIngredientName(ing)
+            ? ing.draft_ingredient_id
+            : null,
+        standard_name: getIngredientName(ing),
+        quantity_mode:
+          ing.quantity_review_required === true && ing.quantity_user_confirmed !== true
+            ? "unknown"
+            : ing.ingredient_type === "TO_TASTE"
+              ? "to_taste"
+              : typeof ing.amount === "number" && ing.amount > 0 && Boolean(ing.unit?.trim())
+                ? "quantity"
+                : "unknown",
+        amount: ing.amount,
+        unit: ing.unit,
+        display_text: ing.display_text,
+        component_label: ing.component_label ?? null,
+      })),
+      steps: steps.map((step) => ({
+        row_id: getStableRowId(step.tempId),
+        source_step_index: step.source_step_index ?? null,
+        instruction: step.instruction,
+        component_label: step.component_label ?? null,
+        duration_text: step.duration_text,
+      })),
+    };
+    const fingerprint = JSON.stringify({ savedDraftId, savedDraftRevision, content });
+    const previousAttempt = saveAttemptRef.current;
+    const idempotencyKey = previousAttempt?.fingerprint === fingerprint
+      ? previousAttempt.key
+      : crypto.randomUUID();
+    saveAttemptRef.current = { fingerprint, key: idempotencyKey };
+    if (!savedDraftId || savedDraftRevision === null) {
+      setIsRegistering(false);
+      setRegisterError("저장이 끝난 뒤 수정해 주세요.");
+      setModalMode("register-error");
+      return;
+    }
+    const result = await updateYoutubeSavedRecipe(savedDraftId, savedDraftRevision, content, idempotencyKey);
+
+    setIsRegistering(false);
+
+    if (!result.success || !result.data) {
+      const isConflict = result.error?.code === "STALE_REVISION" || result.error?.code === "CONFLICT";
+      setRegisterError(isConflict
+        ? "서버의 최신 내용을 먼저 확인하거나, 창을 닫고 현재 수정 내용을 따로 비교해 주세요."
+        : getApiErrorMessage("레시피를 저장하지 못했어요.", result.error?.message));
+      setModalMode(isConflict ? "save-conflict" : "register-error");
+      return;
+    }
+
+    setSavedDraftId(result.data.draft_id);
+    setSavedDraftRevision(result.data.revision);
+    setHasUnsavedChanges(false);
+    saveAttemptRef.current = null;
+    showActionConfirmation("변경사항을 저장했어요.");
+    router.replace(`/recipes/youtube/saved/${result.data.draft_id}`);
   }, [
-    areDraftTagsDirty,
-    canRegister,
     draftTags,
     extractionId,
     title,
     baseServings,
-    youtubeUrl,
     ingredients,
     steps,
-    pushStep,
+    savedDraftId,
+    savedDraftRevision,
+    router,
   ]);
-
-  // ─── Step 4 handlers ───────────────────────────────────────────────
-
-  const hasPlanContext = Boolean(planDate && columnId);
-
-  const handleMealAdd = useCallback(() => {
-    if (!hasPlanContext) return;
-    setMealAddError(null);
-    setModalMode("servings-input");
-  }, [hasPlanContext]);
-
-  const handleServingsConfirm = useCallback(async (servings: number) => {
-    if (!registeredRecipeId) return;
-
-    setIsCreatingMeal(true);
-    setMealAddError(null);
-
-    const response = await createMealSafe({
-      recipe_id: registeredRecipeId,
-      plan_date: planDate,
-      column_id: columnId,
-      planned_servings: servings,
-    });
-
-    if (!response.success) {
-      setMealAddError(response.error?.message ?? "식사를 추가하지 못했어요.");
-      setIsCreatingMeal(false);
-      return;
-    }
-
-    showActionConfirmation("요리계획에 추가했어요.");
-    const slotSuffix = slotName ? `?slot=${encodeURIComponent(slotName)}` : "";
-    router.replace(`/planner/${planDate}/${columnId}${slotSuffix}`);
-  }, [registeredRecipeId, planDate, columnId, slotName, router]);
-
-  const handleViewDetail = useCallback(() => {
-    if (!registeredRecipeId) return;
-    router.replace(`/recipe/${registeredRecipeId}`);
-  }, [registeredRecipeId, router]);
-
-  const handleClose = useCallback(() => {
-    exitImportFlow();
-  }, [exitImportFlow]);
 
   // ─── Back handling ─────────────────────────────────────────────────
 
   const handleBack = useCallback(() => {
-    if (currentStep === "review") {
+    if (currentStep === "review" && hasUnsavedChanges) {
       setModalMode("confirm-back");
     } else if (currentStep === "preview" || currentStep === "non-recipe-warning") {
       setCurrentStep("url-input");
@@ -3409,7 +3413,7 @@ function ActiveYoutubeImportScreen({
     } else {
       exitImportFlow();
     }
-  }, [currentStep, exitImportFlow, extractionError]);
+  }, [currentStep, exitImportFlow, extractionError, hasUnsavedChanges]);
 
   const handleConfirmBack = useCallback(() => {
     setModalMode("none");
@@ -3433,7 +3437,6 @@ function ActiveYoutubeImportScreen({
     setClassificationReasons([]);
     setExtractionError(null);
     setDraftWarnings([]);
-    setBlockingIssues([]);
     setParentExtractionId(null);
     setRecipeCandidates([]);
     setSelectedCandidateId(null);
@@ -3487,13 +3490,6 @@ function ActiveYoutubeImportScreen({
   const editingStep = editingStepId
     ? steps.find((step) => step.tempId === editingStepId) ?? null
     : null;
-  const desktopRegisterRequirements = getYoutubeRegisterRequirements({
-    title,
-    baseServings,
-    ingredients,
-    steps,
-  });
-
   const DesktopImportFrame: React.ElementType<{
     children: React.ReactNode;
     className?: string;
@@ -3505,7 +3501,7 @@ function ActiveYoutubeImportScreen({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="web-yt-stepper" aria-label="유튜브 가져오기 단계">
+      {currentStep !== "review" ? <div className="web-yt-stepper" aria-label="유튜브 가져오기 단계">
         {YOUTUBE_STEP_LABELS.map((step, index) => (
           <span
             className={[
@@ -3519,7 +3515,7 @@ function ActiveYoutubeImportScreen({
             {step.label}
           </span>
         ))}
-      </div>
+      </div> : null}
 
       {currentStep === "url-input" ? (
         <section className="web-yt-content web-yt-url">
@@ -3663,6 +3659,33 @@ function ActiveYoutubeImportScreen({
         </section>
       ) : null}
 
+      {currentStep === "saving-result" ? (
+        <section className="web-yt-content" aria-busy={ensureError ? undefined : "true"}>
+          {ensureError ? (
+            <div className="web-yt-error" role="alert">
+              <h2>레시피 저장을 마치지 못했어요</h2>
+              <p>{ensureError.message}</p>
+              <div className="web-yt-actions">
+                {ensureError.unauthorized ? (
+                  <Link
+                    className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 font-semibold text-white"
+                    href={`/login?next=${encodeURIComponent(typeof window === "undefined" ? "/menu/add/youtube" : `${window.location.pathname}${window.location.search}`)}`}
+                  >
+                    로그인하고 돌아오기
+                  </Link>
+                ) : (
+                  <WebButton onClick={retryEnsureSavedResult}>다시 시도</WebButton>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="py-12 text-center text-[var(--muted)]" aria-live="polite">
+              추출한 레시피를 내 레시피에 저장하는 중이에요…
+            </p>
+          )}
+        </section>
+      ) : null}
+
       {currentStep === "session-status" ? (
         <section className="web-yt-content">
           <ExtractionSessionStatus error={sessionError} recipePath={sessionRecipePath} />
@@ -3671,41 +3694,36 @@ function ActiveYoutubeImportScreen({
 
       {currentStep === "review" ? (
         <section className="web-yt-content web-yt-review">
-          <div>
-            <h2 ref={reviewHeadingRef} tabIndex={-1}>추출 결과를 확인해 주세요</h2>
-            <p>영상에서 찾은 재료와 만들기를 등록 전에 확인해요.</p>
-          </div>
-          {desktopRegisterRequirements.length > 0 ? (
-            <div
-              className="web-menu-add-error"
-              data-testid="youtube-register-requirements"
-              role="status"
-            >
-              등록 전 확인 필요: {desktopRegisterRequirements.join(", ")}
-            </div>
-          ) : null}
-          {isEmbedded ? (
+          {isEmbedded && canSave ? (
             <div className="web-yt-actions" data-testid="youtube-embedded-review-actions">
               <WebButton
-                disabled={!canRegister || isRegistering}
-                onClick={handleRegister}
+                disabled={!canSave || isRegistering}
+                onClick={handleSave}
               >
-                {isRegistering ? "등록 중..." : "등록"}
+                {isRegistering ? "저장 중..." : savedDraftId ? "변경사항 저장" : "저장"}
               </WebButton>
             </div>
           ) : null}
           <ReviewStep
+            editingSection={editingSection}
+            onEditingSectionChange={setEditingSection}
+            headingRef={reviewHeadingRef}
             title={title}
-            onTitleChange={setTitle}
+            onTitleChange={(nextTitle) => {
+              setHasUnsavedChanges(true);
+              setTitle(nextTitle);
+            }}
             baseServings={baseServings}
-            onServingsChange={setBaseServings}
+            onServingsChange={(nextServings) => {
+              setHasUnsavedChanges(true);
+              setBaseServings(nextServings);
+            }}
             thumbnailUrl={draftThumbnailUrl}
             tags={draftTags}
             tagErrorMessage={tagSubmitError}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}
-            blockingIssues={blockingIssues}
             recipeCandidates={recipeCandidates}
             selectedCandidateId={selectedCandidateId}
             isPromotingCandidate={isPromotingCandidate}
@@ -3717,41 +3735,18 @@ function ActiveYoutubeImportScreen({
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}
             onReplaceIngredient={handleReplaceIngredient}
-            onRegisterIngredient={handleRegisterIngredient}
             onRemoveIngredient={handleRemoveIngredient}
             onRemoveStep={handleRemoveStep}
-            onAddIngredient={() => setModalMode("ingredient-add")}
+            onAddIngredient={handleAddBlankIngredient}
             onAddStep={() => setModalMode("step-add")}
             onEditStep={(tempId) => {
               setEditingStepId(tempId);
               setModalMode("step-edit");
             }}
-            onBulkRegister={handleBulkRegister}
-            bulkEligibleCount={bulkEligibleCount}
           />
         </section>
       ) : null}
 
-      {currentStep === "complete" && registeredRecipeId ? (
-        <section className="web-yt-content web-yt-complete">
-          <h2>레시피가 등록됐어요</h2>
-          <p>&lsquo;{registeredRecipeTitle}&rsquo;가 레시피북에 저장됐어요.</p>
-          <div className="web-yt-actions">
-            {hasPlanContext ? (
-              <WebButton onClick={handleMealAdd}>이 끼니에 추가</WebButton>
-            ) : null}
-            <WebButton
-              onClick={handleViewDetail}
-              variant={hasPlanContext ? "secondary" : "primary"}
-            >
-              레시피 상세 보기
-            </WebButton>
-            <WebButton onClick={handleClose} variant="ghost">
-              닫기
-            </WebButton>
-          </div>
-        </section>
-      ) : null}
     </DesktopImportFrame>
   );
 
@@ -3809,24 +3804,23 @@ function ActiveYoutubeImportScreen({
           errorMessage={registerError}
           onRetry={() => {
             setModalMode("none");
-            handleRegister();
+            handleSave();
           }}
           onClose={() => setModalMode("none")}
+        />
+      )}
+      {modalMode === "save-conflict" && registerError && (
+        <SaveConflictModal
+          actionLabel={savedDraftId ? "최신 내용 불러오기" : "보관한 결과 확인"}
+          errorMessage={registerError}
+          onClose={() => setModalMode("none")}
+          onLoadLatest={handleLoadLatestSaved}
         />
       )}
       {modalMode === "confirm-back" && (
         <ConfirmBackModal
           onConfirm={handleConfirmBack}
           onCancel={() => setModalMode("none")}
-        />
-      )}
-      {modalMode === "servings-input" && (
-        <ServingsInputModal
-          onConfirm={handleServingsConfirm}
-          onCancel={() => setModalMode("none")}
-          defaultServings={baseServings}
-          isCreating={isCreatingMeal}
-          error={mealAddError}
         />
       )}
     </>
@@ -3866,9 +3860,13 @@ function ActiveYoutubeImportScreen({
 
           <div className="web-yt-head">
             <div>
-              <p className="web-menu-add-eyebrow">유튜브 가져오기</p>
-              <h1>영상 링크에서 레시피를 추출해요</h1>
-              <p>링크 입력부터 결과 검토까지 한 화면 흐름으로 이어집니다.</p>
+              <p className="web-menu-add-eyebrow">{currentStep === "review" ? "내 레시피" : "유튜브 가져오기"}</p>
+              {currentStep !== "review" ? (
+                <>
+                  <h1>영상 링크에서 레시피를 추출해요</h1>
+                  <p>영상 링크에서 찾은 레시피를 바로 확인하고 저장할 수 있어요.</p>
+                </>
+              ) : null}
             </div>
             <div className="web-manual-actions">
               {currentStep !== "complete" ? (
@@ -3876,12 +3874,12 @@ function ActiveYoutubeImportScreen({
                   뒤로
                 </WebButton>
               ) : null}
-              {currentStep === "review" ? (
+              {currentStep === "review" && canSave ? (
                 <WebButton
-                  disabled={!canRegister || isRegistering}
-                  onClick={handleRegister}
+                  disabled={!canSave || isRegistering}
+                  onClick={handleSave}
                 >
-                  {isRegistering ? "등록 중..." : "등록"}
+                  {isRegistering ? "저장 중..." : savedDraftId ? "변경사항 저장" : "저장"}
                 </WebButton>
               ) : null}
             </div>
@@ -3904,10 +3902,11 @@ function ActiveYoutubeImportScreen({
         }}
       >
         <AppBar
-          canRegister={canRegister}
+          canRegister={canSave}
           isRegistering={isRegistering}
           onBack={handleBack}
-          onRegister={handleRegister}
+          onRegister={handleSave}
+          saveLabel={savedDraftId ? "변경사항 저장" : "저장"}
           step={currentStep}
         />
         <div className="yt-mobile-import-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-5">
@@ -3934,9 +3933,10 @@ function ActiveYoutubeImportScreen({
         <AppBar
           step={currentStep}
           onBack={handleBack}
-          onRegister={handleRegister}
-          canRegister={canRegister}
+          onRegister={handleSave}
+          canRegister={canSave}
           isRegistering={isRegistering}
+          saveLabel={savedDraftId ? "변경사항 저장" : "저장"}
         />
       )}
 
@@ -4014,18 +4014,25 @@ function ActiveYoutubeImportScreen({
 
         {currentStep === "review" && (
           <ReviewStep
+            editingSection={editingSection}
+            onEditingSectionChange={setEditingSection}
             headingRef={reviewHeadingRef}
             title={title}
-            onTitleChange={setTitle}
+            onTitleChange={(nextTitle) => {
+              setHasUnsavedChanges(true);
+              setTitle(nextTitle);
+            }}
             baseServings={baseServings}
-            onServingsChange={setBaseServings}
+            onServingsChange={(nextServings) => {
+              setHasUnsavedChanges(true);
+              setBaseServings(nextServings);
+            }}
             thumbnailUrl={draftThumbnailUrl}
             tags={draftTags}
             tagErrorMessage={tagSubmitError}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}
-            blockingIssues={blockingIssues}
             recipeCandidates={recipeCandidates}
             selectedCandidateId={selectedCandidateId}
             isPromotingCandidate={isPromotingCandidate}
@@ -4037,29 +4044,17 @@ function ActiveYoutubeImportScreen({
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}
             onReplaceIngredient={handleReplaceIngredient}
-            onRegisterIngredient={handleRegisterIngredient}
             onRemoveIngredient={handleRemoveIngredient}
             onRemoveStep={handleRemoveStep}
-            onAddIngredient={() => setModalMode("ingredient-add")}
+            onAddIngredient={handleAddBlankIngredient}
             onAddStep={() => setModalMode("step-add")}
             onEditStep={(tempId) => {
               setEditingStepId(tempId);
               setModalMode("step-edit");
             }}
-            onBulkRegister={handleBulkRegister}
-            bulkEligibleCount={bulkEligibleCount}
           />
         )}
 
-        {currentStep === "complete" && registeredRecipeId && (
-          <CompleteStep
-            recipeTitle={registeredRecipeTitle}
-            hasPlanContext={hasPlanContext}
-            onMealAdd={handleMealAdd}
-            onViewDetail={handleViewDetail}
-            onClose={handleClose}
-          />
-        )}
       </div>
 
       {/* Modals */}
@@ -4114,24 +4109,23 @@ function ActiveYoutubeImportScreen({
           errorMessage={registerError}
           onRetry={() => {
             setModalMode("none");
-            handleRegister();
+            handleSave();
           }}
           onClose={() => setModalMode("none")}
+        />
+      )}
+      {modalMode === "save-conflict" && registerError && (
+        <SaveConflictModal
+          actionLabel={savedDraftId ? "최신 내용 불러오기" : "보관한 결과 확인"}
+          errorMessage={registerError}
+          onClose={() => setModalMode("none")}
+          onLoadLatest={handleLoadLatestSaved}
         />
       )}
       {modalMode === "confirm-back" && (
         <ConfirmBackModal
           onConfirm={handleConfirmBack}
           onCancel={() => setModalMode("none")}
-        />
-      )}
-      {modalMode === "servings-input" && (
-        <ServingsInputModal
-          onConfirm={handleServingsConfirm}
-          onCancel={() => setModalMode("none")}
-          defaultServings={baseServings}
-          isCreating={isCreatingMeal}
-          error={mealAddError}
         />
       )}
     </div>

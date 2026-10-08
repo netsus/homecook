@@ -1,5 +1,15 @@
 # API\_설계\_v1.2.43
 
+## 2026-10-08 사용자 정정 — 자동 저장된 레시피로 이동
+
+최초 수동 저장 단계는 없앤다. 추출 결과를 열 때 소유 원문으로 자동 저장하거나 기존 최신 저장본을 찾아 상세 화면으로 이동한다. 저장 확인 전에는 처리/오류 상태를 보여주며 저장 완료로 표시하지 않는다. 읽기 상태에는 저장 버튼이 없고 사용자가 수정했을 때만 변경사항 저장을 표시한다. 반복 열기·새로고침은 기존 사용자 편집을 덮어쓰지 않는다. source-only POST `{extraction_id}`와 기존 PATCH의 소유권·계정 세대·동시성 보호를 따른다. 아래 최초 수동 저장 설명은 이 정정으로 대체하며 운영 미반영이다.
+
+
+## 2026-10-08 — 유튜브 결과 우선·개인 보관 계약 (로컬 구현 완료, 미배포)
+
+소유자 전용 `GET/POST /api/v1/recipes/youtube/saved-drafts`, `GET/PATCH /api/v1/recipes/youtube/saved-drafts/{draft_id}`를 추가한다. POST는 extraction_id와 content, PATCH는 expected_revision과 content를 받는다. 쓰기는 UUID Idempotency-Key를 요구한다. content는 title/base_servings/tags와 안정된 row_id를 가진 ingredients/steps이며 미연결 값과 null 수량을 허용한다. 원본 source/evidence는 요청에서 받지 않고 소유 세션으로부터 서버가 보존한다. 기존 success/data/error 래퍼·계정 세대 권한·소유권·revision 보호를 유지한다. 정규 register API 계약은 변경하지 않는다.
+
+
 > 운영 반영(2026-09-28): 누적 피드백 후속을 웹 `8d9dc57efe22`·DB 이력198개에 반영했다. 아래 항목의 ‘미배포’는 구현 당시 상태다. [실제 반영·검증·남은 확인](engineering/feedback-batch-release-20260928.md)이 우선한다.
 
 ## 2026-09-28 추가 — 레시피북 개수·완료 직전 읽기·탈퇴 키
