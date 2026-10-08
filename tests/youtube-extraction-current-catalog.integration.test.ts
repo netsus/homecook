@@ -238,6 +238,35 @@ describe.skipIf(!enabled)("YouTube catalog after all current migrations", () => 
     expect(lastJson(psql("select jsonb_build_object('version',p.policy_version,'generation',c.current_generation) from private.youtube_extraction_current_policy p cross join private.youtube_extraction_worker_credentials c where p.policy_key='primary' and c.credential_name='primary';"))).toEqual({version:2,generation:44});
   });
 
+  it("repairs deployment-role ownership without opening direct table access", () => {
+    psql(`
+      alter table private.youtube_saved_recipe_result_mutations owner to supabase_admin;
+      revoke all on table private.youtube_saved_recipe_result_mutations from postgres;
+    `);
+    expect(psqlFailure(`
+      begin;
+      set local role postgres;
+      insert into private.youtube_saved_recipe_result_mutations default values;
+      rollback;
+    `)).toMatch(/permission denied for table youtube_saved_recipe_result_mutations/u);
+
+    psqlFile("supabase/migrations/20261009003000_youtube_saved_recipe_result_owner_correction.sql");
+    const authority = lastJson(psql(`
+      select jsonb_build_object(
+        'private_owner',(select pg_get_userbyid(c.relowner) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='private' and c.relname='youtube_saved_recipe_result_mutations'),
+        'postgres_private_access',has_table_privilege('postgres','private.youtube_saved_recipe_result_mutations','SELECT,INSERT,UPDATE,DELETE'),
+        'authenticated_private_access',has_table_privilege('authenticated','private.youtube_saved_recipe_result_mutations','SELECT,INSERT,UPDATE,DELETE'),
+        'service_private_access',has_table_privilege('service_role','private.youtube_saved_recipe_result_mutations','SELECT,INSERT,UPDATE,DELETE')
+      );
+    `));
+    expect(authority).toEqual({
+      private_owner: "postgres", postgres_private_access: true,
+      authenticated_private_access: false, service_private_access: false,
+    });
+    expect(psql(`begin; set local role postgres; select has_table_privilege(current_user,'private.youtube_saved_recipe_result_mutations','INSERT,UPDATE'); rollback;`)).toBe("t");
+    psqlFile("supabase/migrations/20261009003000_youtube_saved_recipe_result_owner_correction.sql");
+  });
+
   it("validates the saved-result postimage, canonical authority, and concurrent ensure", async () => {
     expect(lastJson(psqlFile("tests/sql/youtube-saved-recipe-results-verify.sql")).status).toBe("PASS");
     psqlFile("tests/sql/youtube-saved-recipe-results-isolated-authority-fixture.sql");

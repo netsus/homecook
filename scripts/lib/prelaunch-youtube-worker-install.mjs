@@ -195,7 +195,7 @@ function launchctl(args) {
   return execFileSync("/bin/launchctl", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
-export async function awaitPrelaunchYoutubeWorkerRunning({ readStatus, wait = (ms) => delay(ms), attempts = 64 } = {}) {
+export async function awaitPrelaunchYoutubeWorkerRunning({ readStatus, wait = (ms) => delay(ms), attempts = 64 }) {
   let consecutive = 0; let latest = null;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     latest = await readStatus();
