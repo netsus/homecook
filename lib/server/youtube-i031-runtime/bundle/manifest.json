@@ -1,17 +1,27 @@
 {
   "schemaVersion": 1,
   "files": {
+    "lib/server/owner-result-cache.mjs": "8b6d1410c2dbca325c0ed74c68578dcaed80d67708056b6a67cef4fd5b3931e1",
+    "lib/server/parallel-media-preparation.mjs": "feee2cbf9c97ee3c51d8a3b81f7245821631b8c048c11d5b12826cfbffe4f135",
     "lib/server/recipe-extraction-lab/candidate-packets.mjs": "ebb575b134210cab9720e33eecd7942a89ba568c61423d3e7ec9c032ff85d071",
-    "lib/server/recipe-extraction-lab/extract.mjs": "b855e59fb26a3ce6dd362376fe7e9d5b6c4be760c3f8af6add6ff4c1be535b72",
+    "lib/server/recipe-extraction-lab/extract.mjs": "cbed908cd363aae05a621a77cd48e76d48d8be6841772e5b0d6e14b3f635464d",
     "lib/server/recipe-extraction-lab/prompt.mjs": "3a162eb134b9fe12c36d3850f5fec93592e710ce1cfcf845589f50e4e177e029",
     "lib/server/recipe-extraction-lab/public-source-packets.mjs": "d5bd5b6aee3cdc6f870651c1e7bd8815a11a26455c1faceacfd62d67e2e1c1bc",
+    "lib/server/recipe-extraction-lab/quantity-evidence.mjs": "1ab113eb0978bf93fa074244ffef7b7db76dfd02825aedb528eecccffb3b090c",
     "lib/server/recipe-extraction-lab/source-evidence.mjs": "106c4d861722229d16ea8ad176f09c7aaa11e95c701425d15042ffb1522cd367",
-    "scripts/recipe-loop/extract-video-frames.py": "11801cfad505705921ec6f1319caac28c71891708b098782be485990de1f54ca",
-    "scripts/recipe-loop/lib/codex-vision-client.mjs": "afef25d8204435ba57a9774e507041df5b49727b1f2778a18408f851d0622d9a",
-    "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs": "b5d2d2d15042289fa8ae7022fc7e2a1802b58ac154ec1722c2f17566820a672b",
-    "scripts/recipe-loop/lib/screen-ocr-scout.mjs": "d57f3a610dcd9958a9c96759e011f98722cd60b16e6eb2461bf858593a17608c",
+    "scripts/recipe-loop/extract-video-frames.py": "9169c5def40ec53fe92715d6284a602e1770cb2cb976597c7244c8bf641ea701",
+    "scripts/recipe-loop/lib/codex-vision-client.mjs": "744de1371e6be5dba756edaebf9bacebf72a77bc0199c59b1fee02063f1c9340",
+    "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs": "18328f4b18ac4b4c1c87359eead6408f40e5c846f79ad6a234bec6d907c4d513",
+    "scripts/recipe-loop/lib/ingredient-event-selector.mjs": "1bc9c42b4de7e96b0385664cbfde67dd1efc4a8ab44909c52f5d21b6752606b1",
+    "scripts/recipe-loop/lib/literal-quantity-grammar.mjs": "4b8c0bf7ee629dc5883925c1df19aa4dae73d8d8f18049253a983a04d6ea8c2e",
+    "scripts/recipe-loop/lib/screen-ocr-scout.mjs": "df1ec8df291d7f45ab2e43eea5f806f2c74d0950988695a4a71321f50e440406",
+    "scripts/recipe-loop/lib/single-pass-vision.mjs": "3932b5dff7c1b2601792373473525d889292a792d5e437f9d5497d15f339acd9",
+    "scripts/recipe-loop/lib/source-anchored-vision.mjs": "2963d14702ee5f4f9977e3eed8d40a16ead907917dd6ac2cb74e2a8c67a41a28",
+    "scripts/recipe-loop/lib/source-quantity-owner-hints.mjs": "605c368fa320c2cce0d8086d38345b860c72b2e946e374755939303ce2a1bde5",
     "scripts/recipe-loop/macos-vision-ocr.swift": "b9a99806eea9866a630fecba851e29b847f9b4f1e4212bede634396bd0d20892",
-    "scripts/recipe-loop/snapshot-video.mjs": "f8fb30b727f9b12f697e23ae1cf71803bf838cea7692ebe9e5d83f0b079dbd4a",
-    "worker.mjs": "bb33dbda311934e5664a7615153c5ab5d1cfe29cfe6e22a642cc26ac46bc404e"
+    "scripts/recipe-loop/prebuilt/darwin-arm64/macos-vision-ocr": "8566a27c3ec91a93b0a98dc5acc523d2d4aedd73575b9ecf70d2f401e7bb3c4a",
+    "scripts/recipe-loop/prebuilt/darwin-arm64/manifest.json": "da3673810ce31fc03662a4c8d2ebcc90673db7f163c89a1682a9fdfc2ff9d019",
+    "scripts/recipe-loop/snapshot-video.mjs": "d338969907f6af13e098b41fcdbb76e252eee6af64cd682704528f996fdc8b63",
+    "worker.mjs": "df98afa793f7a100a5206d44d32a4c9963af8bd2a895be9f176d2e5641ba4c1f"
   }
 }

@@ -25,6 +25,7 @@ import subprocess
 import sys
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -123,6 +124,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--storyboard-max-frames", type=int, default=None)
     parser.add_argument("--video-format", default="mp4")
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--download-only", action="store_true")
+    parser.add_argument("--prepared-source-manifest", type=Path, default=None)
+    parser.add_argument("--prepared-source-root", type=Path, default=None)
     parser.add_argument("--screen-ocr-scan", action="store_true")
     parser.add_argument("--screen-ocr-candidate-limit", type=int, default=SCREEN_OCR_DEFAULT_CANDIDATE_LIMIT)
     parser.add_argument("--screen-ocr-change-threshold", type=float, default=SCREEN_OCR_DEFAULT_CHANGE_THRESHOLD)
@@ -278,6 +282,9 @@ def valid_source_cache(source_dir: Path, identity: dict) -> dict | None:
 
 
 def prepare_managed_source(args: argparse.Namespace, request_key: str) -> dict:
+    prepared_manifest = getattr(args, "prepared_source_manifest", None)
+    if prepared_manifest is not None:
+        return read_prepared_source(args)
     identity = source_identity(args)
     source_key = source_identity_key(identity)
     if args.no_cache:
@@ -347,6 +354,46 @@ def prepare_managed_source(args: argparse.Namespace, request_key: str) -> dict:
     return payload
 
 
+def read_prepared_source(args: argparse.Namespace) -> dict:
+    """Reuse exactly one request's completed download, including storyboard fallback."""
+    root_arg = getattr(args, "prepared_source_root", None)
+    if root_arg is None:
+        fail("prepared source requires its request root")
+    root = root_arg.resolve(strict=True)
+    # A prepared source may only live in this worker's temporary workspace.
+    try:
+        root.relative_to(Path.cwd().resolve())
+        args.prepared_source_manifest.resolve(strict=True).relative_to(root)
+    except ValueError:
+        fail("prepared source escaped its request root")
+    if not root.is_dir() or not root.name.startswith(".prepared-media-"):
+        fail("invalid prepared source root")
+    payload = json.loads(args.prepared_source_manifest.read_text(encoding="utf-8"))
+    if (
+        payload.get("schemaVersion") != 1
+        or payload.get("videoId") != args.video_id
+        or payload.get("source") != args.source
+        or not re.fullmatch(r"[A-Za-z0-9_-]{11}", args.video_id)
+    ):
+        fail("prepared source identity mismatch")
+    source_path = payload.get("sourcePath")
+    if source_path is not None:
+        video_path = Path(source_path).resolve(strict=True)
+        try:
+            video_path.relative_to(root)
+        except ValueError:
+            fail("prepared video escaped its request root")
+        if not video_path.is_file() or video_path.stat().st_size <= 0:
+            fail("prepared video is missing or empty")
+        if file_sha256(video_path) != payload.get("sourceFingerprint"):
+            fail("prepared video fingerprint mismatch")
+    elif payload.get("sourceFingerprint") != hashlib.sha256(f"storyboard-fallback:{args.source}".encode("utf-8")).hexdigest():
+        fail("prepared storyboard identity mismatch")
+    # Download latency is measured by the parallel branch; counting it again in
+    # frame extraction would make the summed timings misleading.
+    return {**payload, "sourceVideoCacheHit": False, "sourcePrepareMs": 0}
+
+
 def managed_frame_key(args: argparse.Namespace, source_fingerprint: str) -> str:
     payload = {
         "extractorVersion": EXTRACTOR_VERSION,
@@ -397,7 +444,8 @@ def run_managed(args: argparse.Namespace) -> None:
     if args.cache_root is None:
         fail("managed frame extraction에는 --cache-root가 필요합니다.")
     request_key = args.request_key or uuid.uuid4().hex
-    emit_progress("video_download")
+    if getattr(args, "prepared_source_manifest", None) is None:
+        emit_progress("video_download")
     source_result = prepare_managed_source(args, request_key)
     emit_progress("frame_extraction", source_result.get("videoDurationSeconds"))
     source_fingerprint = source_result["sourceFingerprint"]
@@ -1345,34 +1393,80 @@ def select_scene_candidates(candidates: list[SceneCandidate], max_frames: int, s
     return [candidates[index] for index in sorted(used)]
 
 
-def save_scene_frames(cv2, video_path: Path, out_dir: Path, candidates: list[SceneCandidate], downselected: bool) -> list[FrameInfo]:
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        fail(f"OpenCV가 영상을 열지 못했습니다: {video_path}")
+FRAME_WRITE_WORKERS = 4
 
-    frames: list[FrameInfo] = []
-    for candidate in candidates:
-        cap.set(cv2.CAP_PROP_POS_MSEC, candidate.timestamp_sec * 1000)
-        ok, frame = cap.read()
-        if not ok:
-            continue
-        reason = candidate.reason
-        if downselected and "balanced" not in reason:
-            reason = f"{reason}:balanced"
-        actual_timestamp_sec = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
-        frames.append(save_frame(
-            cv2,
-            frame,
-            out_dir / "frames",
-            len(frames) + 1,
-            candidate.timestamp_sec,
-            reason,
-            candidate.scene_score,
-            actual_timestamp_sec=actual_timestamp_sec,
-            timestamp_source="opencv_seek_pos_msec",
-        ))
-    cap.release()
-    return frames
+
+def _save_scene_frame_lane(cv2, video_path: Path, frames_dir: Path, lane):
+    cap = cv2.VideoCapture(str(video_path))
+    saved = []
+    try:
+        if not cap.isOpened():
+            fail(f"OpenCV가 영상을 열지 못했습니다: {video_path}")
+        for original_index, candidate in lane:
+            cap.set(cv2.CAP_PROP_POS_MSEC, candidate.timestamp_sec * 1000)
+            ok, frame = cap.read()
+            if not ok:
+                continue
+            actual_timestamp_sec = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+            temporary_path = frames_dir / f".parallel-frame-{original_index:04d}.jpg"
+            ok = cv2.imwrite(str(temporary_path), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+            if not ok:
+                fail(f"프레임 저장 실패: {temporary_path}")
+            saved.append((original_index, candidate, actual_timestamp_sec, temporary_path))
+    finally:
+        cap.release()
+    return saved
+
+
+def save_scene_frames(cv2, video_path: Path, out_dir: Path, candidates: list[SceneCandidate], downselected: bool) -> list[FrameInfo]:
+    frames_dir = out_dir / "frames"
+    lanes = [[] for _ in range(FRAME_WRITE_WORKERS)]
+    for original_index, candidate in enumerate(candidates):
+        lanes[original_index % FRAME_WRITE_WORKERS].append((original_index, candidate))
+
+    created_final_paths: list[Path] = []
+    try:
+        with ThreadPoolExecutor(max_workers=FRAME_WRITE_WORKERS, thread_name_prefix="frame-writer") as executor:
+            lane_results = list(executor.map(
+                lambda lane: _save_scene_frame_lane(cv2, video_path, frames_dir, lane),
+                [lane for lane in lanes if lane],
+            ))
+
+        frames: list[FrameInfo] = []
+        saved = sorted((item for lane in lane_results for item in lane), key=lambda item: item[0])
+        for index, (_, candidate, actual_timestamp_sec, temporary_path) in enumerate(saved, start=1):
+            canonical_timestamp = (
+                float(actual_timestamp_sec)
+                if math.isfinite(float(actual_timestamp_sec))
+                else float(candidate.timestamp_sec)
+            )
+            final_path = frames_dir / f"frame_{index:04d}_{canonical_timestamp:09.3f}.jpg"
+            if os.path.lexists(final_path):
+                fail(f"기존 프레임 파일을 덮어쓸 수 없습니다: {final_path}")
+            os.replace(temporary_path, final_path)
+            created_final_paths.append(final_path)
+            reason = candidate.reason
+            if downselected and "balanced" not in reason:
+                reason = f"{reason}:balanced"
+            frames.append(FrameInfo(
+                index=index,
+                timestamp_sec=round(canonical_timestamp, 3),
+                timestamp=format_timestamp(canonical_timestamp),
+                path=str(final_path.resolve()),
+                reason=reason,
+                scene_score=round(candidate.scene_score, 4) if candidate.scene_score is not None else None,
+                requested_timestamp_sec=round(float(candidate.timestamp_sec), 3),
+                actual_timestamp_sec=round(canonical_timestamp, 3),
+                timestamp_source="opencv_seek_pos_msec",
+            ))
+        return frames
+    except BaseException:
+        for final_path in created_final_paths:
+            final_path.unlink(missing_ok=True)
+        raise
+    finally:
+        for temporary_path in frames_dir.glob(".parallel-frame-*.jpg"):
+            temporary_path.unlink(missing_ok=True)
 
 
 def extract_scene_frames(cv2, video_path: Path, out_dir: Path, args: argparse.Namespace):
@@ -1462,7 +1556,9 @@ def select_hybrid_candidates(
     stats = {
         "scene_candidate_count": len(scene_candidates),
         "interval_anchor_count": len(anchors),
-        "hybrid_deduped_count": len(scene_candidates) + len(anchors) - len(selected),
+        # This legacy counter includes both duplicates and budget exclusions.
+        # OCR candidates also enter selected, so they must enter its population.
+        "hybrid_deduped_count": len(scene_candidates) + len(anchors) + len(screen_ocr_candidates) - len(selected),
         "hybrid_selected_count": len(selected),
         "timeline_coverage_ratio": round(coverage_ratio, 4),
         "last_frame_sec": round(last_timestamp, 3),
@@ -1647,6 +1743,16 @@ def extract_storyboard_frames(cv2, source: str, out_dir: Path, max_frames: int):
 
 def main() -> None:
     args = apply_scene_preset(parse_args())
+    if args.download_only:
+        if args.out_dir is None or args.cache_root is not None or args.prepared_source_manifest is not None:
+            fail("download-only requires --out-dir without managed/prepared options")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{11}", args.video_id):
+            fail("invalid video id")
+        if args.source != f"https://www.youtube.com/watch?v={args.video_id}":
+            fail("download-only requires the canonical YouTube URL")
+        emit_progress("video_download")
+        print(json.dumps(prepare_source(args), ensure_ascii=False))
+        return
     if args.interval <= 0:
         fail("--interval은 0보다 커야 합니다.")
     if args.max_frames < 0:

@@ -11,15 +11,15 @@ export const I031_CODEX_CLI_VERSION = "0.154.0-alpha.6.2";
 export const I031_TOTAL_TIMEOUT_MS = 20 * 60 * 1000;
 
 export const I031_EXACT_IDENTITY = Object.freeze({
-  pipelineVersion: "i031-sol-v1",
+  pipelineVersion: "vision-evidence-v2-source-anchored",
   provider: "codex-vision-keyframes",
-  model: "gpt-5.6-sol",
+  model: "gpt-5.6-luna",
   selectorModel: "gpt-5.6-sol",
-  sourcePromptVersion: "single-recipe-four-source-v2",
-  selectorPromptVersion: "keyframe-selector-v6-single-compact-json",
-  finalPromptVersion: "keyframe-final-v44-explicit-action-clause",
-  clientVersion: "codex-vision-keyframes-client-v20-structured-final",
-  executionConfigSignature: "143d3570f6a3c1cbf7680851",
+  sourcePromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
+  selectorPromptVersion: "deterministic-evidence-v3-ingredient-event-preserving-largest-gap",
+  finalPromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
+  clientVersion: "codex-vision-source-anchored-v63-cited-conflict-guard",
+  executionConfigSignature: "bec9d13ac2b89d5e37e5838b",
   frameExtractorVersion: "extract-video-frames-v7-adaptive-screen-ocr",
   frameMode: "hybrid",
   interval: 4,
@@ -56,6 +56,23 @@ export interface YoutubeI031Ingredient {
   unit: string | null;
   optional: boolean;
   groupLabel: string | null;
+  quantityState?: "explicit" | "estimated" | "to_taste" | "unknown" | "conflicting";
+  amountBasis?: string | null;
+  originalName?: string;
+  alternativeNames?: string[];
+  evidenceRefs?: YoutubeI031EvidenceRef[];
+}
+
+export interface YoutubeI031EvidenceRef {
+  source_method: "description" | "comment" | "caption" | "visual";
+  source_provider: string;
+  snippet: string;
+  line_index?: number | null;
+  start_ms?: number | null;
+  end_ms?: number | null;
+  frame_ts_ms?: number | null;
+  locator_hash?: string | null;
+  evidence_id?: string;
 }
 
 export interface YoutubeI031Recipe {
@@ -229,6 +246,74 @@ function nullableDuration(value: unknown, field: string) {
   return value;
 }
 
+const QUANTITY_STATES = new Set(["explicit", "estimated", "to_taste", "unknown", "conflicting"]);
+const SOURCE_METHODS = new Set(["description", "comment", "caption", "visual"]);
+
+function boundedEvidenceString(value: unknown, field: string, maxLength: number): string;
+function boundedEvidenceString(value: unknown, field: string, maxLength: number, nullable: true): string | null;
+function boundedEvidenceString(value: unknown, field: string, maxLength: number, nullable = false): string | null {
+  if (nullable && value === null) return null;
+  if (typeof value !== "string" || value.length > maxLength || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(value)) {
+    throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 output field is invalid: ${field}`);
+  }
+  return value;
+}
+
+function optionalBoundedString(value: unknown, field: string, maxLength: number) {
+  if (value === undefined) return undefined;
+  return boundedEvidenceString(value, field, maxLength);
+}
+
+function optionalNullableString(value: unknown, field: string, maxLength: number) {
+  if (value === undefined) return undefined;
+  return boundedEvidenceString(value, field, maxLength, true);
+}
+
+function optionalSourceIndex(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 86_400_000) {
+    throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 output field is invalid: ${field}`);
+  }
+  return Number(value);
+}
+
+function parseEvidenceRefs(value: unknown, ingredientIndex: number): YoutubeI031EvidenceRef[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > 6) {
+    throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 evidence refs are invalid: ${ingredientIndex}`);
+  }
+  return value.map((entry, evidenceIndex) => {
+    if (!isRecord(entry) || typeof entry.source_method !== "string" || !SOURCE_METHODS.has(entry.source_method)) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 evidence ref is invalid: ${ingredientIndex}:${evidenceIndex}`);
+    }
+    const reference: YoutubeI031EvidenceRef = {
+      source_method: entry.source_method as YoutubeI031EvidenceRef["source_method"],
+      source_provider: boundedEvidenceString(entry.source_provider, `evidenceRefs[${evidenceIndex}].source_provider`, 80),
+      snippet: boundedEvidenceString(entry.snippet, `evidenceRefs[${evidenceIndex}].snippet`, 200),
+    };
+    for (const key of ["line_index", "start_ms", "end_ms", "frame_ts_ms"] as const) {
+      const parsed = optionalSourceIndex(entry[key], `evidenceRefs[${evidenceIndex}].${key}`);
+      if (parsed !== undefined) reference[key] = parsed;
+    }
+    if (reference.start_ms !== undefined && reference.start_ms !== null
+      && reference.end_ms !== undefined && reference.end_ms !== null
+      && reference.end_ms < reference.start_ms) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 evidence interval is invalid: ${ingredientIndex}:${evidenceIndex}`);
+    }
+    const locatorHash = optionalNullableString(entry.locator_hash, `evidenceRefs[${evidenceIndex}].locator_hash`, 128);
+    if (locatorHash !== undefined) reference.locator_hash = locatorHash;
+    const evidenceId = optionalBoundedString(entry.evidence_id, `evidenceRefs[${evidenceIndex}].evidence_id`, 80);
+    if (evidenceId !== undefined) {
+      if (!/^[A-Za-z0-9_-]{1,80}$/u.test(evidenceId)) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 evidence id is invalid: ${ingredientIndex}:${evidenceIndex}`);
+      }
+      reference.evidence_id = evidenceId;
+    }
+    return reference;
+  });
+}
+
 function assertExactIdentity(identity: unknown): YoutubeI031WorkerOutput["identity"] {
   if (!isRecord(identity)) {
     throw new YoutubeI031RuntimeError(
@@ -296,12 +381,76 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
       );
     }
 
+    const quantityState = optionalBoundedString(ingredient.quantityState, `ingredients[${index}].quantityState`, 20);
+    if (quantityState !== undefined && !QUANTITY_STATES.has(quantityState)) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 quantity state is invalid: ${index}`);
+    }
+    const amount = nullableString(ingredient.amount, `ingredients[${index}].amount`, 40);
+    const unit = nullableString(ingredient.unit, `ingredients[${index}].unit`, 40);
+    const evidenceRefs = parseEvidenceRefs(ingredient.evidenceRefs, index);
+    const amountBasis = optionalNullableString(ingredient.amountBasis, `ingredients[${index}].amountBasis`, 80);
+    const hasQuantityMetadata = ["quantityState", "amountBasis", "originalName", "alternativeNames", "evidenceRefs"]
+      .some((key) => Object.prototype.hasOwnProperty.call(ingredient, key));
+    if (hasQuantityMetadata && quantityState === undefined) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 quantity state is required: ${index}`);
+    }
+    if (quantityState === "explicit" && (amount === null || unit === null || !evidenceRefs?.length)) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 explicit quantity evidence is invalid: ${index}`);
+    }
+    if (["unknown", "conflicting", "to_taste"].includes(quantityState ?? "") && (amount !== null || unit !== null)) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 nonnumeric quantity is invalid: ${index}`);
+    }
+    const textSource = (reference: YoutubeI031EvidenceRef) => reference.source_method !== "visual"
+      || reference.source_provider === "macos-vision-ocr";
+    if (quantityState === "explicit") {
+      const allowedBasis = new Set(["stated", "spoken", "onscreen"]);
+      if (amountBasis === undefined || amountBasis === null || !allowedBasis.has(amountBasis)) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 explicit amount basis is invalid: ${index}`);
+      }
+      const compatible = evidenceRefs?.some((reference) => amountBasis === "stated"
+        ? ["description", "comment"].includes(reference.source_method)
+        : amountBasis === "spoken"
+          ? reference.source_method === "caption"
+          : reference.source_method === "visual" && reference.source_provider === "macos-vision-ocr");
+      if (!compatible) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 explicit evidence source is invalid: ${index}`);
+      }
+    }
+    if (quantityState === "estimated") {
+      const allowedBasis = new Set(["visual-estimate", "source-approximate", "source-adjustable"]);
+      if (amount === null || unit === null || amountBasis === undefined || amountBasis === null
+        || !allowedBasis.has(amountBasis) || !evidenceRefs?.length) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 estimated quantity evidence is invalid: ${index}`);
+      }
+      const compatible = evidenceRefs.some((reference) => amountBasis === "visual-estimate"
+        ? reference.source_method === "visual"
+        : textSource(reference));
+      if (!compatible) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 estimated evidence source is invalid: ${index}`);
+      }
+    }
+    if (["unknown", "conflicting", "to_taste"].includes(quantityState ?? "") && amountBasis !== null) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 nonnumeric amount basis is invalid: ${index}`);
+    }
+    let alternativeNames: string[] | undefined;
+    if (ingredient.alternativeNames !== undefined) {
+      if (!Array.isArray(ingredient.alternativeNames) || ingredient.alternativeNames.length > 4) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 alternative names are invalid: ${index}`);
+      }
+      alternativeNames = ingredient.alternativeNames.map((name, alternativeIndex) =>
+        boundedEvidenceString(name, `ingredients[${index}].alternativeNames[${alternativeIndex}]`, 160));
+    }
     return {
       name: requiredString(ingredient.name, `ingredients[${index}].name`, 100),
-      amount: nullableString(ingredient.amount, `ingredients[${index}].amount`, 40),
-      unit: nullableString(ingredient.unit, `ingredients[${index}].unit`, 40),
+      amount,
+      unit,
       optional: ingredient.optional,
       groupLabel: nullableString(ingredient.groupLabel, `ingredients[${index}].groupLabel`, 80),
+      ...(quantityState !== undefined ? { quantityState: quantityState as YoutubeI031Ingredient["quantityState"] } : {}),
+      ...(ingredient.amountBasis !== undefined ? { amountBasis } : {}),
+      ...(ingredient.originalName !== undefined ? { originalName: boundedEvidenceString(ingredient.originalName, `ingredients[${index}].originalName`, 160) } : {}),
+      ...(alternativeNames !== undefined ? { alternativeNames } : {}),
+      ...(evidenceRefs !== undefined ? { evidenceRefs } : {}),
     };
   });
 
