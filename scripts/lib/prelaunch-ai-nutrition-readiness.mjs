@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { inheritRound2Readiness } from "./prelaunch-web-deploy.mjs";
+import { DeploymentError, inheritRound2Readiness } from "./prelaunch-web-deploy.mjs";
 import { createRecordingDockerAdapter, privatePath, IMMUTABLE_SCOPE_SQL, LEDGER_VALID_SQL } from "./marketing-round2-controlled-deploy.mjs";
 import { BETA_ALIASES_UNROUTED_SQL, BETA_CANONICAL_POSTIMAGE_SQL } from "./prelaunch-beta-readiness.mjs";
 
@@ -23,7 +23,7 @@ const SHA = /^[a-f0-9]{64}$/u;
 const REF = /^[a-f0-9]{40}$/u;
 const PROOFS = ["db_authority", "db_migration", "operator_approval", "privacy_consent", "retention_runbook", "turnstile_live"];
 const PROXY_PROOFS = ["direct_access_denial", "header_overwrite", "launch_binding"];
-const requireValue = (value, message) => { if (!value) throw new Error(`Reviewed AI nutrition readiness: ${message}`); };
+const requireValue = (value, message) => { if (!value) throw new DeploymentError(`Reviewed AI nutrition readiness: ${message}`); };
 const hash = value => createHash("sha256").update(value).digest("hex");
 const sorted = values => [...values].sort();
 
@@ -161,6 +161,14 @@ export async function assertAiNutritionDisabled(adapter) {
   requireValue(await adapter.query(AI_NUTRITION_DISABLED_SQL) === "disabled", "AI worker must remain disabled until live web verification");
 }
 
+export async function captureAiNutritionDatabaseAfter(adapter) {
+  // The recording adapter establishes its target during inspect(). Collecting
+  // evidence first both initializes that target and retains the readonly fence.
+  const observed = await captureAiNutritionDatabaseEvidence(adapter);
+  await assertAiNutritionDisabled(adapter);
+  return observed;
+}
+
 function gitAt(repositoryRoot) {
   return args => execFileSync("git", ["-C", repositoryRoot, ...args], { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] });
 }
@@ -240,8 +248,7 @@ export async function reviewedAiNutritionReadiness({ readiness, previous, next, 
   const authority = JSON.parse(readFileSync(readiness.proofs.db_authority.path, "utf8"));
   const before = await readPreApplyProof(review);
   const adapter = await createRecordingDockerAdapter({ configPath, backupDirectory: dirname(review.preApplyProof.path) });
-  await assertAiNutritionDisabled(adapter);
-  const observed = await captureAiNutritionDatabaseEvidence(adapter);
+  const observed = await captureAiNutritionDatabaseAfter(adapter);
   requireValue(isDeepStrictEqual(observed.target, before.target) && isDeepStrictEqual(observed.target, authority.target), "database target drift");
   requireValue(isDeepStrictEqual(observed.ledger, databasePlan.applied), "database ledger changed after verification");
   requireValue(observed.receiptSha256 === before.receiptSha256 && observed.immutableScope === before.immutableScope

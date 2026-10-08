@@ -6,9 +6,10 @@ import {
   AI_NUTRITION_ROWS_SQL, AI_NUTRITION_SCOPE_SQL, aiNutritionScopeEvidence,
   assertAiNutritionAppliedLedger, assertAiNutritionApplicationTree, assertAiNutritionDisabled,
   assertAiNutritionMigrationTransition, assertAiNutritionReview, assertAiNutritionReviewPin,
-  assertAiNutritionScopePreserved, assertAiNutritionSource, captureAiNutritionDatabaseBefore,
+  assertAiNutritionScopePreserved, assertAiNutritionSource, captureAiNutritionDatabaseAfter,
+  captureAiNutritionDatabaseBefore,
 } from "../scripts/lib/prelaunch-ai-nutrition-readiness.mjs";
-import { classifyPrelaunchScope, parsePrelaunchOptions, prelaunchVerificationScripts } from "../scripts/lib/prelaunch-web-deploy.mjs";
+import { DeploymentError, classifyPrelaunchScope, parsePrelaunchOptions, prelaunchVerificationScripts } from "../scripts/lib/prelaunch-web-deploy.mjs";
 import { IMMUTABLE_SCOPE_SQL, LEDGER_VALID_SQL } from "../scripts/lib/marketing-round2-controlled-deploy.mjs";
 import { BETA_CANONICAL_POSTIMAGE_SQL } from "../scripts/lib/prelaunch-beta-readiness.mjs";
 
@@ -74,6 +75,7 @@ describe("reviewed AI nutrition deployment boundaries", () => {
     for (const pin of [{ path: null, sha256: null }, { path: "review.json", sha256: sha("review") }, { path: "/private/review.json", sha256: "changed" }])
       expect(() => assertAiNutritionReviewPin(pin)).toThrow("not configured");
     expect(() => assertAiNutritionReviewPin({ path: "/private/review.json", sha256: sha("review") })).not.toThrow();
+    expect(() => assertAiNutritionReviewPin({ path: null, sha256: null })).toThrow(DeploymentError);
   });
 
   it("admits only the pinned three SQL additions and rejects all infrastructure", () => {
@@ -156,6 +158,34 @@ describe("reviewed AI nutrition deployment boundaries", () => {
     values.set(AI_NUTRITION_LEDGER_SQL, JSON.stringify(beforeLedger()));
     values.set(BETA_CANONICAL_POSTIMAGE_SQL, sha("changed catalog"));
     await expect(captureAiNutritionDatabaseBefore(adapter)).rejects.toThrow("receipt no longer matches");
+  });
+
+  it("initializes the recording adapter before its first post-apply query", async () => {
+    const receipt = { immutableScopeHash: sha("authority"), postimage: sha("marketing") };
+    const values = new Map([
+      [LEDGER_VALID_SQL, "t"], [AI_NUTRITION_LEDGER_SQL, JSON.stringify([...beforeLedger(), ...newLedger()])],
+      ["SELECT receipt FROM marketing_round2_deploy.receipt WHERE singleton;", JSON.stringify(receipt)],
+      [IMMUTABLE_SCOPE_SQL, receipt.immutableScopeHash], [BETA_CANONICAL_POSTIMAGE_SQL, receipt.postimage],
+      [AI_NUTRITION_ROWS_SQL, '{"marketing_round2_events":{"count":0,"sha256":"empty"}}'],
+      [AI_NUTRITION_SCOPE_SQL, JSON.stringify([scope("verify_full_local_internal_scope", "reviewed active")])],
+      [AI_NUTRITION_DISABLED_SQL, "disabled"],
+    ]);
+    let initialized = false;
+    const adapter = {
+      inspect: vi.fn(async () => { initialized = true; return { postgresContainerId: "exact-local" }; }),
+      query: vi.fn(async (sql: string) => {
+        if (!initialized) throw new TypeError("Target not initialized");
+        return values.get(sql)!;
+      }),
+    };
+    const result = await captureAiNutritionDatabaseAfter(adapter);
+    expect(result.ledger).toHaveLength(207);
+    expect(adapter.inspect).toHaveBeenCalledOnce();
+    expect(adapter.query).toHaveBeenCalledWith(AI_NUTRITION_DISABLED_SQL);
+    expect(adapter.query.mock.calls.every(([sql]) => sql.startsWith("SELECT "))).toBe(true);
+    initialized = false;
+    values.set(AI_NUTRITION_DISABLED_SQL, "unsafe");
+    await expect(captureAiNutritionDatabaseAfter(adapter)).rejects.toThrow("remain disabled");
   });
 
   it("wires the separate gate before preparation and rechecks before activation", () => {
