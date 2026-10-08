@@ -1010,7 +1010,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       expectedSchemaPath: inputs.expectedSchemaPath,
       secretRoot: privateDir,
       homeDir,
-      nodeBin: "/opt/homebrew/bin/node",
+      nodeBin: "/Users/tester/.nvm/versions/node/v22.19.0/bin/node",
       rootDir: inputs.artifactDir,
     });
 
@@ -1018,7 +1018,8 @@ describe("YTASYNC-OPS launchd contract", () => {
     expect(plist).toContain("<string>/usr/bin/env</string>");
     expect(plist).toContain("<string>-i</string>");
     expect(plist).toContain(`<string>HOME=${homeDir}</string>`);
-    expect(plist).toContain("<string>/opt/homebrew/bin/node</string>");
+    expect(plist).toContain("<string>/Users/tester/.nvm/versions/node/v22.19.0/bin/node</string>");
+    expect(plist).toContain("<string>PATH=/Users/tester/.nvm/versions/node/v22.19.0/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin</string>");
     expect(plist).toContain("<string>run</string>");
     expect(plist).toContain("<string>--secret-root</string>");
     expect(plist).toContain(`<string>${realpathSync(privateDir)}</string>`);
