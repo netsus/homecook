@@ -408,8 +408,8 @@ function matchesIngredientQuery(
   }
 
   return (
-    ingredient.standard_name.includes(query)
-    || synonyms.some((synonym) => synonym.includes(query))
+    normalizeIngredientSearchName(ingredient.standard_name).includes(query)
+    || synonyms.some((synonym) => normalizeIngredientSearchName(synonym).includes(query))
   );
 }
 
@@ -417,7 +417,7 @@ export function getMockIngredientList(
   query?: string | null,
   category?: string | null,
 ): IngredientListData {
-  const normalizedQuery = query?.trim() ?? "";
+  const normalizedQuery = normalizeIngredientSearchName(query ?? "");
   const normalizedCategory = category?.trim() ?? "";
 
   const items = fixtureData.ingredients
@@ -443,7 +443,7 @@ export function getQaFixturePantryItems({
   q?: string | null;
 } = {}): PantryListData {
   const normalizedCategory = category?.trim() ?? "";
-  const normalizedQuery = q?.trim() ?? "";
+  const matchingIngredientIds = new Set(getMockIngredientList(q).items.map((item) => item.id));
   const fixtureNames = new Set<string>(QA_FIXTURE_PANTRY_INGREDIENT_NAMES);
 
   const items = fixtureData.ingredients
@@ -452,8 +452,7 @@ export function getQaFixturePantryItems({
     .filter((ingredient) => {
       const matchesCategory =
         normalizedCategory.length === 0 || ingredient.category === normalizedCategory;
-      const matchesQuery =
-        normalizedQuery.length === 0 || ingredient.standard_name.includes(normalizedQuery);
+      const matchesQuery = matchingIngredientIds.has(ingredient.ingredient_id);
 
       return matchesCategory && matchesQuery;
     });

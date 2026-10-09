@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type { RecipeCardItem, RecipeDetail } from "@/types/recipe";
+import { normalizeIngredientSearchName } from "../../../lib/ingredient-search";
 
 import { installEmptyYoutubeNotificationRoutes } from "./youtube-background-extraction";
 
@@ -2001,10 +2002,10 @@ export async function installPantryShoppingVisualRoutes(page: Page) {
       return;
     }
 
-    const query = requestUrl.searchParams.get("q")?.trim() ?? "";
+    const query = normalizeIngredientSearchName(requestUrl.searchParams.get("q") ?? "");
     const category = requestUrl.searchParams.get("category")?.trim() ?? "";
     const items = PANTRY_VISUAL_ITEMS.filter((item) => {
-      const matchesQuery = query === "" || item.standard_name.includes(query);
+      const matchesQuery = normalizeIngredientSearchName(item.standard_name).includes(query);
       const matchesCategory = category === "" || item.category === category;
       return matchesQuery && matchesCategory;
     });
@@ -2020,10 +2021,10 @@ export async function installPantryShoppingVisualRoutes(page: Page) {
 
   await page.route("**/api/v1/ingredients**", async (route) => {
     const requestUrl = new URL(route.request().url());
-    const query = requestUrl.searchParams.get("q")?.trim() ?? "";
+    const query = normalizeIngredientSearchName(requestUrl.searchParams.get("q") ?? "");
     const category = requestUrl.searchParams.get("category")?.trim() ?? "";
     const items = PANTRY_VISUAL_INGREDIENTS.filter((item) => {
-      const matchesQuery = query === "" || item.standard_name.includes(query);
+      const matchesQuery = normalizeIngredientSearchName(item.standard_name).includes(query);
       const matchesCategory = category === "" || item.category === category;
       return matchesQuery && matchesCategory;
     });

@@ -1,5 +1,9 @@
 # DB 설계 v1.3.38
 
+## 2026-10-09 — 동의어와 대표 검색 연결 (구현·운영 미반영)
+
+새 migration `20261009090000_ingredient_canonical_search.sql`은 공통 문자 정규화, 공개 alias view의 대표 정보 3열, 옛 이름 17개의 동의어 추가, 대표 exact/ranked 조회와 필요한 읽기 권한을 반영한다. 기존 20개 ID·영양·과거 참조를 보존한다. 비동기 resolver 소유자는 alias 관계의 3열과 alias 행만 SELECT할 수 있으며 비공개 근거·수정 권한은 제공하지 않는다. [SQL·검증·배포경계](engineering/ingredient-canonical-search-20261009.md)를따른다.
+
 > 2026-10-08 최종 운영 반영: AI SQL3개·원장207개, 추정프로필2개·16성분을 반영하고 자동 처리를 활성화했다. [실제 반영·보존·남은 결측](engineering/ingredient-ai-nutrition-rollout-20261008.md)이 아래 초기 미반영 기록보다 우선한다.
 
 ## 2026-10-08 추가 — AI 추정 성분과 영속 처리 (운영 미반영)

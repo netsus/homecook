@@ -54,6 +54,8 @@ function createSelectQuery<T>(results: Array<QueryResult<T[]>>) {
   const query = {
     eq: vi.fn(() => query),
     ilike: vi.fn(() => query),
+    like: vi.fn(() => query),
+    range: vi.fn(() => query),
     in: vi.fn(() => query),
     order: vi.fn(() => query),
     then(
@@ -247,6 +249,9 @@ describe("13 pantry core backend", () => {
       },
       from: vi.fn((table: string) => {
         if (table === "pantry_items") return pantryItemsTable;
+        if (table === "ingredient_catalog_aliases") {
+          return createTable({ selectResults: [{ data: [], error: null }] });
+        }
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -311,6 +316,10 @@ describe("13 pantry core backend", () => {
       },
       from: vi.fn((table: string) => {
         if (table === "pantry_items") return pantryItemsTable;
+        if (table === "ingredient_catalog_aliases" || table === "ingredient_synonyms") {
+          return createTable({ selectResults: [{ data: [], error: null }] });
+        }
+        if (table === "ingredients") return createTable({ selectResults: [{ data: [{ id: "ing-onion", standard_name: "양파" }], error: null }] });
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -326,16 +335,6 @@ describe("13 pantry core backend", () => {
       success: true,
       data: {
         items: [
-          {
-            id: "pantry-2",
-            ingredient_id: "ing-tofu",
-            standard_name: "두부",
-            category: "단백질",
-            category_group_code: "protein",
-            category_code: null,
-            category_label: "단백질",
-            created_at: "2026-04-28T09:00:00Z",
-          },
           {
             id: "pantry-1",
             ingredient_id: "ing-onion",
@@ -353,8 +352,8 @@ describe("13 pantry core backend", () => {
     });
     const selectQuery = pantryItemsTable.select.mock.results[0]?.value;
     expect(selectQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(selectQuery.ilike).toHaveBeenCalledWith("ingredients.standard_name", "%양%");
-    expect(selectQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
+    expect(selectQuery.in).toHaveBeenCalledWith("ingredient_id", ["ing-onion"]);
+    expect(selectQuery.eq).not.toHaveBeenCalledWith("ingredients.category", "채소");
   });
 
   it("GET /pantry retries with the legacy select when category_code is not in the schema cache", async () => {
@@ -388,6 +387,9 @@ describe("13 pantry core backend", () => {
       },
       from: vi.fn((table: string) => {
         if (table === "pantry_items") return pantryItemsTable;
+        if (table === "ingredient_catalog_aliases") {
+          return createTable({ selectResults: [{ data: [], error: null }] });
+        }
         throw new Error(`unexpected table: ${table}`);
       }),
     });

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { stripIngredientFormatCharacters } from "@/lib/ingredient-search";
 
 export const FOOD_CATALOG_SEARCH_ALGORITHM_VERSION = 2;
 export const FOOD_CATALOG_SEARCH_QUERY_MAX_LENGTH = 120;
@@ -71,7 +72,7 @@ function isBoundedInteger(
 }
 
 export function normalizeFoodCatalogSearchQuery(value: string) {
-  return value
+  return stripIngredientFormatCharacters(value.normalize("NFKC"))
     .normalize("NFKC")
     .toLocaleLowerCase("ko-KR")
     .trim()
