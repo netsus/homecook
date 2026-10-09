@@ -1,3 +1,4 @@
+import { formatEnergyKcal } from "@/lib/nutrition/energy-display";
 import {
   FOOD_PRODUCT_BASIS_UNITS,
   type FoodProductBasisUnit,
@@ -131,10 +132,11 @@ export function formatProductExpectedEnergy(
   value: FoodProductNutrientValue | undefined,
 ) {
   if (value?.status === "complete" && isObserved(value.amount)) {
-    return `예상 열량 ${formatAmount(Math.round(value.amount))} kcal`;
+    return `예상 열량 ${formatEnergyKcal(value.amount)}`;
   }
   if (value?.status === "partial" && isObserved(value.known_amount)) {
-    return `예상 열량 최소 ${formatAmount(Math.round(value.known_amount))} kcal`;
+    if (value.known_amount > 0 && value.known_amount < 5) return `예상 열량 · ${formatEnergyKcal(value.known_amount, { partial: true })}`;
+    return `예상 열량 최소 ${formatEnergyKcal(value.known_amount)}`;
   }
   return "예상 열량 정보 준비 중";
 }

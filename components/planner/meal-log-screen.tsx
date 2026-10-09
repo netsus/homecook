@@ -13,7 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogDayNutritionDetail } from "@/components/planner/meal-log-day-nutrition-detail";
-import { formatMealLogNumber, MEAL_LOG_MACROS, scaleMealLogNutrition } from "@/lib/planner/meal-log-nutrition-presentation";
+import { formatMealLogEnergy, MEAL_LOG_MACROS, scaleMealLogNutrition } from "@/lib/planner/meal-log-nutrition-presentation";
 import { MealLogMacroBar, MealLogNutritionChart, MealLogNutritionNote } from "@/components/planner/meal-log-nutrition-chart";
 import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { createGuestMealLogDay, createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
@@ -242,7 +242,7 @@ function EntryRow({ disabled, entry, guest = false, onDetail }: {
       <span className="flex items-start gap-3">
         {thumbnail ? <Image alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" height={48} src={thumbnail} width={48} /> : null}
         <span className="min-w-0 flex-1"><span className="block break-words text-base font-medium leading-6 text-[var(--ui-slate-800)]">{entry.display_name}</span>{entry.display_brand ? <span className="mt-0.5 block text-xs text-[var(--ui-slate-500)]">{entry.display_brand}</span> : null}<span id={`meal-log-entry-${entry.id}-quantity`} className="mt-1 block text-xs leading-5 text-[var(--ui-slate-600)]" aria-label={`먹은 양 ${number(entry.quantity.amount, entry.quantity.unit)}`}>{number(entry.quantity.amount, entry.quantity.unit)}</span></span>
-        <span className="shrink-0 pt-0.5 text-right text-lg leading-6">{foodNutritionValue(entry.nutrition.calories_kcal, "kcal")}<span aria-hidden="true" className="ml-2 text-[var(--text-2)]">›</span></span>
+        <span className="min-w-0 max-w-[50%] break-words pt-0.5 text-right text-lg leading-6">{formatMealLogEnergy(entry.nutrition)}<span aria-hidden="true" className="ml-2 text-[var(--text-2)]">›</span></span>
       </span>
       <div aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 영양정보`} className={`${thumbnail ? "ml-[60px]" : ""} mt-3 text-xs leading-5 text-[var(--ui-slate-600)]`}>
         <MealLogMacroBar nutrition={entry.nutrition} thin />
@@ -266,7 +266,7 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDetail
       <div className={`flex items-center justify-between gap-2 pb-1 ${section.entries.length > 0 ? "border-b border-[var(--ui-slate-100)]" : ""}`}>
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <h2 className="font-medium text-[var(--ui-slate-800)] [overflow-wrap:anywhere]" id={`meal-log-section-${date}-${section.meal_plan_column_id}`} tabIndex={-1}>{section.slot_name_snapshot}</h2>
-          {section.entries.length > 0 ? <p className="text-lg">{foodNutritionValue(section.subtotal.calories_kcal, "kcal")}</p> : null}
+          {section.entries.length > 0 ? <p className="text-lg">{formatMealLogEnergy(section.subtotal)}</p> : null}
         </div>
         <button aria-label={`${section.slot_name_snapshot}에 먹은 음식 추가`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--ui-slate-300)] bg-[var(--ui-white)] text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm outline-none hover:border-[var(--brand)] hover:bg-[var(--ui-slate-50)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={sectionAddActionId(section.meal_plan_column_id, date)} onClick={onAdd} type="button">+</button>
       </div>
@@ -314,7 +314,7 @@ function DeletedSection({ date, disabled, section, onDetail }: {
     <section aria-labelledby={headingId} className="rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-[var(--surface)] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-medium" id={headingId} tabIndex={-1}>삭제된 끼니의 기록 · {section.slot_name_snapshot}</h2>
-        <p className="text-sm font-medium">{number(section.subtotal.calories_kcal, " kcal")}</p>
+        <p className="text-sm font-medium">{formatMealLogEnergy(section.subtotal)}</p>
       </div>
       <p className="mt-1 text-xs text-[var(--text-2)]">새 음식 추가 없음</p>
       {section.entries.length > 0 && section.subtotal.contains_ai_estimate ? <MealLogNutritionNote nutrition={section.subtotal} /> : null}
@@ -814,7 +814,7 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
                 <button aria-label="하루 영양 상세 보기" type="button" onClick={() => setNutritionDate(dayKey)} className="w-full text-left">
                   <span className="flex items-center gap-3">
                     <span className="flex-1 text-base font-medium text-[var(--ui-slate-700)]">{Number(dayKey.slice(5, 7))}월 {Number(dayKey.slice(8, 10))}일</span>
-                    <span className="text-2xl font-semibold tabular-nums text-[var(--ui-slate-800)]">{formatMealLogNumber(cardDay.day_total.calories_kcal)}<span className="ml-1 text-sm font-normal text-[var(--text-2)]">{cardDay.day_total.calories_kcal !== null ? " kcal" : ""}</span></span>
+                    <span className="min-w-0 max-w-[60%] break-words text-right text-2xl font-semibold tabular-nums text-[var(--ui-slate-800)]">{formatMealLogEnergy(cardDay.day_total)}</span>
                     <span aria-hidden="true" className="text-xl font-normal text-[var(--ui-slate-500)]">›</span>
                   </span>
                   <MealLogNutritionChart nutrition={cardDay.day_total} compact hideCalories summaryLabels />

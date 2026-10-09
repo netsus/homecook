@@ -1,3 +1,4 @@
+import { formatEnergyKcal } from "@/lib/nutrition/energy-display";
 import type {
   RecipeNutrition,
   RecipeNutritionQuality,
@@ -51,10 +52,19 @@ export interface RecipeNutritionDisplay {
   optionalNutrients: RecipeNutrientDisplayItem[];
   qualityText: string | null;
   aiEstimateText: string | null;
+  representativeNutritionText: string | null;
   reflectedText: string | null;
 }
 
 const UNAVAILABLE_TEXT = "정보 준비 중";
+
+// Nutrition and measurement sources share the same attribution shape. Only
+// identified nutrition datasets qualify; the provider also supplies weights.
+const REPRESENTATIVE_NUTRITION_DATASETS = new Set([
+  "Homecook 제품 라벨 기반 서비스 대표 예시 20261010",
+  "Homecook 대표재료 영양 프로필",
+  "Homecook 사용자 승인 영양 프로필",
+]);
 
 export function buildRecipeNutritionDisplay(
   nutrition: RecipeNutrition,
@@ -86,6 +96,9 @@ export function buildRecipeNutritionDisplay(
       )),
     qualityText: qualityText(nutrition.calculation_quality),
     aiEstimateText: nutrition.warnings.includes("AI_NUTRITION_ESTIMATE_USED") ? "AI 추정값 포함" : null,
+    representativeNutritionText: nutrition.sources.some(source =>
+      source.provider === "HOMECOOK_USER_STANDARD" && REPRESENTATIVE_NUTRITION_DATASETS.has(source.dataset),
+    ) ? "일부 재료는 승인된 대표 영양값으로 계산했어요. 실제 제품·종류에 따라 달라질 수 있어요." : null,
     reflectedText: reflectedText(nutrition),
   };
 }
@@ -139,6 +152,7 @@ function formatPerServing(
   return formatNutrientAmount(
     numericValue / baseServings,
     unit,
+    value?.status === "partial",
   );
 }
 
@@ -163,13 +177,15 @@ function formatSelectedTotal(
     return UNAVAILABLE_TEXT;
   }
 
-  return formatNutrientAmount(selectedTotal, unit);
+  return formatNutrientAmount(selectedTotal, unit, value?.status === "partial");
 }
 
 function formatNutrientAmount(
   amount: number,
   unit: RecipeNutrientMeta["unit"],
+  partial = false,
 ) {
+  if (unit === "kcal") return formatEnergyKcal(amount, { partial });
   const maximumFractionDigits = unit === "g" ? 1 : 0;
   const formatted = new Intl.NumberFormat("ko-KR", {
     maximumFractionDigits,

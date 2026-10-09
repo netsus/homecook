@@ -1,4 +1,5 @@
 import React from "react";
+import { SMALL_ENERGY_DISPLAY_NOTICE } from "@/lib/nutrition/energy-display";
 import type { ReactNode } from "react";
 
 import type { RecipeNutrition } from "@/types/recipe";
@@ -85,34 +86,37 @@ export function RecipeNutritionCard({
         <p className="mt-2 text-[12px] font-semibold text-[var(--brand-primary-text)]">{display.aiEstimateText}{hasIncompleteNutrition ? " · 일부 영양정보가 빠진 추정값" : ""}</p>
       ) : null}
 
-      {display.optionalNutrients.length > 0 || hasIncompleteNutrition ? (
-        <details className="group mt-2 text-[12px] text-[var(--text-2)]">
-          <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]">
-            <span>영양성분 더 보기</span>
-            <span
-              aria-hidden="true"
-              className="ml-auto text-[16px] transition-transform group-open:rotate-180"
-              data-testid="optional-nutrition-disclosure-icon"
-            >
-              ⌄
-            </span>
-          </summary>
-          {hasIncompleteNutrition ? (
-            <p className="leading-5">
-              {display.aiEstimateText
-                ? "일부 영양정보를 계산하지 못했어요."
-                : "일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요."}
-            </p>
-          ) : null}
-          {display.optionalNutrients.length > 0 ? (
-            <NutritionTable
-              label="추가 영양성분"
-              nutrients={display.optionalNutrients}
-              selectedServings={selectedServings}
-            />
-          ) : null}
-        </details>
-      ) : null}
+      <details className="group mt-2 text-[12px] text-[var(--text-2)]">
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]">
+          <span>영양성분 더 보기</span>
+          <span
+            aria-hidden="true"
+            className="ml-auto text-[16px] transition-transform group-open:rotate-180"
+            data-testid="optional-nutrition-disclosure-icon"
+          >
+            ⌄
+          </span>
+        </summary>
+        <p className="leading-5">{SMALL_ENERGY_DISPLAY_NOTICE}</p>
+        {display.representativeNutritionText ? <p className="leading-5">{display.representativeNutritionText}</p> : null}
+        {nutrition.warnings.some(warning => warning === "PIECE_WEIGHT_CONVERSION_USED" || warning === "REPRESENTATIVE_VOLUME_CONVERSION_USED") ? (
+          <p className="leading-5">개수·부피로 입력한 재료는 승인된 대표 중량으로 환산했어요. 실제 무게와 다를 수 있어요.</p>
+        ) : null}
+        {hasIncompleteNutrition ? (
+          <p className="leading-5">
+            {display.aiEstimateText
+              ? "일부 영양정보를 계산하지 못했어요."
+              : "일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요."}
+          </p>
+        ) : null}
+        {display.optionalNutrients.length > 0 ? (
+          <NutritionTable
+            label="추가 영양성분"
+            nutrients={display.optionalNutrients}
+            selectedServings={selectedServings}
+          />
+        ) : null}
+      </details>
 
     </section>
   );
@@ -130,7 +134,7 @@ function NutritionGraph({
   const baseServings = nutrition.base_servings;
   const coreByCode = new Map(coreNutrients.map((item) => [item.code, item]));
   const energyDisplay = coreByCode.get("energy_kcal");
-  const energy = selectedNutritionAmount(nutrition, "energy_kcal", selectedServings, baseServings);
+  const energyText = energyDisplay?.selectedTotalText ?? "정보 준비 중";
   const macroValues = MEAL_LOG_MACROS.map((macro) => ({
     ...macro,
     amount: selectedNutritionAmount(nutrition, macro.key, selectedServings, baseServings),
@@ -146,7 +150,7 @@ function NutritionGraph({
         {energyDisplay ? <span>1인분 {energyDisplay.perServingText}</span> : null}
       </div>
       <p className="mt-3 break-words text-3xl font-semibold leading-tight tabular-nums text-[var(--foreground)]">
-        {energy === null ? "정보 준비 중" : <>{formatNutritionNumber(energy)}<span className="ml-1 text-base font-normal">kcal</span></>}
+        {energyText.endsWith(" kcal") ? <>{energyText.slice(0, -5)}<span className="ml-1 text-base font-normal">kcal</span></> : energyText}
       </p>
       {macroEnergy > 0 && Number.isFinite(macroEnergy) ? (
         <div aria-label="탄수화물 단백질 지방 비율" className="mt-4 flex h-3 overflow-hidden rounded-full" role="img">
