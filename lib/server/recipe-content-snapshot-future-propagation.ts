@@ -590,6 +590,8 @@ export async function calculateRecipeDraftNutrition(
           ? { product_predecessor: guard.product_predecessor } : {}),
         nutrition_candidates: guard.nutrition_candidates,
         conversion_candidates: guard.conversion_candidates,
+        piece_candidates: guard.piece_candidates,
+        selected_piece_weight_id: guard.selected_piece_weight_id,
         selected_nutrition_link_id: guard.selected_nutrition_link_id,
         selected_conversion_assignment_id:
           guard.selected_conversion_assignment_id,

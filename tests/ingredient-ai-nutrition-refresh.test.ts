@@ -29,6 +29,7 @@ function bundle() {
       nutrition_candidates: [{ link_id: "link-1", profile_id: "profile-1", source_item_id: "item-1", source_id: "source-1",
         preparation_state: "raw", normalization_method: "mass_100g", basis_amount: 100, basis_unit: "g",
         nutrition_values: VALUES, source: SOURCE }], conversion_candidates: [],
+      piece_candidates: [], selected_piece_weight_id: null,
       selected_nutrition_link_id: "link-1", selected_conversion_assignment_id: null }] },
   };
 }
@@ -52,7 +53,7 @@ describe("job-scoped AI recipe refresh", () => {
     expect(client.rpc.mock.calls.map(([name]) => name)).toEqual(["get_ingredient_ai_recipe_refresh_input", "write_ingredient_ai_recipe_refresh"]);
     expect(client.rpc.mock.calls[1][1]).toMatchObject({ p_job_id: JOB, p_recipe_id: RECIPE,
       p_expected_recipe_updated_at: UPDATED, p_input_guard: input.input_guard,
-      p_snapshot: { calculation_version: "recipe-nutrition-v2", calculation_quality: "estimated",
+      p_snapshot: { calculation_version: "recipe-nutrition-v3", calculation_quality: "estimated",
         scalable_values: { energy_kcal: 50 }, warnings: ["AI_NUTRITION_ESTIMATE_USED"], calculated_at: options.calculatedAt } });
   });
 

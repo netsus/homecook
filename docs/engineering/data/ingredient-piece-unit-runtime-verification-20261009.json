@@ -1,0 +1,67 @@
+{
+  "schema": "homecook.ingredient-piece-unit-runtime-verification.v1",
+  "verified_at": "2026-10-09T12:20:42.260Z",
+  "status": "passed",
+  "deployment_status": "not_deployed",
+  "production_writes": 0,
+  "ai_provider_calls": 0,
+  "live_read_only": {
+    "ai_enabled": false,
+    "migration_count": 212,
+    "new_helper_absent": true,
+    "new_migration_absent": true
+  },
+  "migration": "supabase/migrations/20261009130000_ingredient_piece_unit_evidence.sql",
+  "sql_sha256": "cf17e3c267baa14e557063d4b9d1a05ddd31029e0614528ca013fa53281f6904",
+  "regression": {
+    "red_unit_cases": 11,
+    "red_draft_projection_cases": 2,
+    "unit_test_files": 11,
+    "unit_tests_passed": 152,
+    "sql_checks_passed": 14,
+    "typecheck": "passed",
+    "changed_files_lint": "passed",
+    "security_authorization_contract": "passed",
+    "independent_review": "completed"
+  },
+  "actual_recipe_parity": {
+    "passed": true,
+    "verified_at": "2026-10-09T12:10:06.450Z",
+    "recipe_count": 53,
+    "recipe_rows": 516,
+    "guards_equal": 53,
+    "source_lists_equal": 53,
+    "production_writes": 0
+  },
+  "draft_parity": {
+    "total": 53,
+    "valid_guards_equal": 48,
+    "existing_duplicate_groups_rejected": 5
+  },
+  "stale_write": {
+    "passed": true,
+    "stale_piece_evidence_rejected": true,
+    "valid_v3_snapshot_written": true,
+    "replay_created": false,
+    "rolled_back": true,
+    "production_writes": 0
+  },
+  "sql_postimage": {
+    "passed": true,
+    "final_sql_sha256": "cf17e3c267baa14e557063d4b9d1a05ddd31029e0614528ca013fa53281f6904",
+    "functions": 6,
+    "postimage_equal": true,
+    "owner_acl_preserved": true,
+    "production_writes": 0
+  },
+  "history_policy": "Same-source/same-quantity historical nutrition stays frozen; invalid changed-quantity evidence is rejected.",
+  "new_private_invoker_helpers": 5,
+  "existing_consumers_preserved_owner_acl": 6,
+  "backup_reused_for_isolated_restore": true,
+  "owned_isolated_test_container_removed": true,
+  "limitations": [
+    "Current runtime remains unchanged until SQL and web are deployed together.",
+    "Existing duplicate-group draft records are not repaired in this task.",
+    "Household spoon and cup volume assumptions are unchanged."
+  ]
+}

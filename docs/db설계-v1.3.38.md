@@ -1,5 +1,9 @@
 # DB 설계 v1.3.38
 
+## 2026-10-09 — 개수 단위 계열과 관측 근거 검증 (구현·운영 미반영)
+
+승인된 관측 단위 계열·수량1·무게·재료상태·크기가 맞는 유일한 근거만 사용한다. 대파 줌은handful30g, 대는medium100g을 구분한다. 실제/초안guard에piece후보/선택ID를 포함하고 식사 미리보기/저장도 동기화한다. 신규 계산은v3, 과거 동일수량 기록은 저장 영양을 보존한다. 제품라벨·권한·오류wrapper·AI비활성 정책은 유지한다. [구현·SQL·검증](engineering/ingredient-piece-unit-runtime-20261009.md)을 따른다.
+
 ## 2026-10-09 — 동의어와 대표 검색 연결 (운영 반영)
 
 새 migration `20261009090000_ingredient_canonical_search.sql`은 공통 문자 정규화, 공개 alias view의 대표 정보 3열, 옛 이름 17개의 동의어 추가, 대표 exact/ranked 조회와 필요한 읽기 권한을 반영한다. 기존 20개 ID·영양·과거 참조를 보존한다. 비동기 resolver 소유자는 alias 관계의 3열과 alias 행만 SELECT할 수 있으며 비공개 근거·수정 권한은 제공하지 않는다. [SQL·검증·배포경계](engineering/ingredient-canonical-search-20261009.md)를따른다.

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "slice": "ingredient-piece-unit-evidence",
+  "migrations": [
+    "supabase/migrations/20261009130000_ingredient_piece_unit_evidence.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "authorization_rationale": "Five private invoker helpers read approved piece evidence and compare semantic unit families. Only postgres can execute; no new public route or API privilege. Existing six consumers retain owner, ACL, security mode, search_path and request/session boundaries. Pinned historical nutrition is reused for unchanged quantities; new calculation uses exact observation family, amount and weight. AI policy remains disabled.",
+  "functions": [
+    {
+      "signature": "private.ingredient_piece_unit_family(text, boolean)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.ingredient_piece_default_size(text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.ingredient_piece_observation_matches(text, text, numeric, text, numeric, numeric)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.ingredient_piece_candidates(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "private.select_ingredient_piece_candidate(jsonb, text, text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ]
+    }
+  ]
+}

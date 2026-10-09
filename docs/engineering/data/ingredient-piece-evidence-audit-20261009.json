@@ -1,0 +1,533 @@
+{
+  "schema": "homecook.ingredient-piece-evidence-audit.v1",
+  "reviewed_on": "2026-10-09",
+  "scope": "read_only_inventory_and_official_primary_sources",
+  "db_mutations": 0,
+  "input_snapshot_sha256": "45138d58a53857f3052fad02e39a35402736a2ff8cf1d26930cadf90d21f896d",
+  "summary": {
+    "active_approved_assignments_reviewed": 14,
+    "distinct_ingredients": 13,
+    "user_approved_service_defaults": 14,
+    "numeric_or_id_chain_failures": 0,
+    "new_ready_piece_candidates": 1,
+    "universal_ml_equals_g_added": false
+  },
+  "policy": [
+    "기존 승인14건의 숫자는 유지하되 서비스 대표값이라는 출처등급을 표시한다.",
+    "source original amount/unit/state/size와 적용값을 분리하며 반올림값을 공식 원문값으로 기록하지 않는다.",
+    "g 병기 원문은 해당 레시피에 우선. 다른 레시피 전역기준으로 확장하려면 별도 대표값 결정과 근거가 필요하다.",
+    "한 줌·꼬집은 size가 아니라 계량표현으로도 검사하여 장·대·개와 혼용하지 않는다.",
+    "마늘쪽/통, 양배추통/장, 잘게썬/통째, 생/익힌, 껍데기포함/가식부를 섞지 않는다."
+  ],
+  "existing_assignments": [
+    {
+      "ingredient_id": "1e49f4be-6b94-4e7f-a492-a68134881e98",
+      "ingredient_name": "청양고추",
+      "assignment_id": "9c922c29-189d-42ba-ae7d-a07ae7edd71f",
+      "evidence_id": "20a26666-1748-4767-8671-8480cce4396b",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 10,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1개",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자 승인 10g/개. 식약처 공개 레시피 병기는 보조 사례이며 모든 크기의 실측 표준이 아니다.",
+        "꼭지 제거 등 가식부 범위와 크기 경계는 구조화되지 않았다."
+      ]
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440010",
+      "ingredient_name": "양파",
+      "assignment_id": "9765295b-11e9-4212-902a-e132424458b8",
+      "evidence_id": "54b8893b-69be-401e-a89c-0d59920c6ecc",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 160,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1개",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자 승인 중간 150~175g 분포의 서비스 대표값 160g. 국가 공식 계량값으로 표기하지 않는다."
+      ]
+    },
+    {
+      "ingredient_id": "335eff99-f04c-4942-adee-5aea91c32dd9",
+      "ingredient_name": "통밀 식빵",
+      "assignment_id": "32e2ad6a-df18-4d3b-a753-bc741e6ed30f",
+      "evidence_id": "3e160368-5bf8-490d-a8f4-6cbb5d21165f",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 40,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1장",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자가 허용한 식빵 계열 대표값 40g/장. 제품·두께별 실제 중량과 다를 수 있다."
+      ]
+    },
+    {
+      "ingredient_id": "fc8c99dd-cae6-46d2-9380-8fead38b9509",
+      "ingredient_name": "호밀빵",
+      "assignment_id": "063dfc8a-5481-4220-bfa8-7ea9952d75b4",
+      "evidence_id": "a2da7682-df30-477c-8086-6bdda496f4ab",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 40,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1장",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자가 허용한 식빵 계열 대표값 40g/장. 제품·두께별 실제 중량과 다를 수 있다."
+      ]
+    },
+    {
+      "ingredient_id": "a1ee7317-14cc-4803-92f0-70e090827d84",
+      "ingredient_name": "식빵",
+      "assignment_id": "b432c6c8-7eb7-4c0c-a7f3-679bd3c6d592",
+      "evidence_id": "7c6b261e-5c1e-4958-9974-e1718fb631eb",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 40,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1장",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자가 허용한 식빵 계열 대표값 40g/장. 제품·두께별 실제 중량과 다를 수 있다."
+      ]
+    },
+    {
+      "ingredient_id": "57d5d75f-3fa5-4540-aac7-9ec97e8ddcb6",
+      "ingredient_name": "양배추",
+      "assignment_id": "e5f07671-e66c-435f-a436-fd03bc49d2a4",
+      "evidence_id": "23058564-1c87-4ed6-b3b5-f9afb12a50ac",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 900,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1통",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://fdc.nal.usda.gov/food-details/169975/nutrients",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "USDA FDC 169975의 중간 통 908g을 사용자 승인으로 900g 반올림한 서비스값. raw source observed_weight_g에 900을 넣었으므로 공식 원문값과 적용값을 구분해야 한다.",
+        "USDA 원자료의 head와 leaf 단위는 별개. 900g/통을 장에 적용하면 안 된다."
+      ]
+    },
+    {
+      "ingredient_id": "025bc5c9-fcf0-500a-a32e-8fc8bb64ded5",
+      "ingredient_name": "레몬",
+      "assignment_id": "cb4a2c23-4935-4267-b3f8-e70ddf76c79f",
+      "evidence_id": "cfe1def1-6a6f-490f-bb53-ea429c24befd",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 60,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1개",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://fdc.nal.usda.gov/food-details/167746/nutrients",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "USDA FDC 167746의 껍질 없는 지름 2-1/8인치 과실 58g을 사용자 승인으로 60g 반올림. source URL만 보고 공식 원문 60g이라고 표시하면 안 된다.",
+        "껍질 포함 통째 무게·레몬즙과 다르다. USDA는 medium이 아닌 과실 지름으로 정의한다."
+      ]
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440017",
+      "ingredient_name": "두부",
+      "assignment_id": "b53e94ce-dca3-4ab3-b4b0-8d8561d4b295",
+      "evidence_id": "2b53fc54-74cd-4741-a1b2-32480eb1eab5",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 300,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1모",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자 승인 300g/모. 포장·제품에 따라 1모 중량이 다르며 제조사 포장 무게와 동일하다고 보장하지 않는다."
+      ]
+    },
+    {
+      "ingredient_id": "f15beb06-d859-455e-980c-f51715603d9a",
+      "ingredient_name": "대파",
+      "assignment_id": "eee8e9a7-833a-450c-84da-c0ba0b809036",
+      "evidence_id": "cb0e36c6-94d6-4648-a0b1-595213d8ddb2",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 100,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1대",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자 승인 100g/대. 전체 대와 손질 조각 한 줌을 구분해야 한다."
+      ]
+    },
+    {
+      "ingredient_id": "0e0de2a4-913c-4127-bfce-740daa6181c8",
+      "ingredient_name": "청오이",
+      "assignment_id": "2d8331fb-bd04-4fcc-9af1-55d9d58c14eb",
+      "evidence_id": "122f1aeb-885e-4289-99dd-e5b181ff97ee",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 200,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1개",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-14-homecook-default-weight-standard.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "사용자 승인 200g/개. 기존 특정 레시피의 120g/개를 다른 레시피 전역값으로 확장하지 않았다."
+      ]
+    },
+    {
+      "ingredient_id": "ddf68557-ec77-5047-93c6-d0cb6c292c6d",
+      "ingredient_name": "전복",
+      "assignment_id": "dece2077-458a-44ae-bbd4-878ae72f596f",
+      "evidence_id": "a36d83d4-75a5-4461-b6b3-c1f8490b24eb",
+      "source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "weight_g": 100,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1개",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "시연/레시피 계산용 사용자 승인 100g/개. 크기 규격·껍데기/내장 제거 범위가 명확하지 않아 가식부 상태 재확인 우선순위가 높다."
+      ]
+    },
+    {
+      "ingredient_id": "a2fa3c29-96ec-4d90-936c-7a4d2e9d35bb",
+      "ingredient_name": "달걀",
+      "assignment_id": "016a991d-7603-4269-b665-f8619d4c864f",
+      "evidence_id": "86c86465-7bd6-45b7-86b0-519bef796604",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "weight_g": 50,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1개",
+      "size_code": "medium",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "user://chat/2026-09-17-demo-youtube-7BMW72C1Evc",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "시연용 사용자 승인 50g/개. USDA raw whole egg 50g은 large이며 medium은 44g. 서비스 medium 레이블을 USDA medium으로 해석하면 안 된다.",
+        "USDA 가식부는 껍데기 제외. 현재 user://chat 근거에는 가식부 상태가 구조화돼 있지 않다.",
+        "DB에는 승인 흔적이 있으나 공개 원문 URL이 아니다. 이번 감사는 사용자 발언 원문을 새로 검증했다고 주장하지 않는다."
+      ]
+    },
+    {
+      "ingredient_id": "f15beb06-d859-455e-980c-f51715603d9a",
+      "ingredient_name": "대파",
+      "assignment_id": "f3dd5df4-3587-4d67-9c8b-544541dad65b",
+      "evidence_id": "8f5aaacd-06f4-45cd-8a2c-2d759d0f4018",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "weight_g": 30,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1줌",
+      "size_code": "handful",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "user://chat/2026-09-17-demo-youtube-7BMW72C1Evc",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "시연용 사용자 승인 대파 30g/줌. 대파 100g/대와 별개 표현이며 약간·적당량으로 확장하지 않는다.",
+        "썬 모양·손 크기·가식부 처리 상태가 구조화되지 않았고 원문 user://chat은 공개 재확인할 수 없다.",
+        "DB에는 승인 흔적이 있으나 공개 원문 URL이 아니다. 이번 감사는 사용자 발언 원문을 새로 검증했다고 주장하지 않는다."
+      ]
+    },
+    {
+      "ingredient_id": "0ab7b211-7e75-4972-9822-c54c9b67ca4b",
+      "ingredient_name": "소금",
+      "assignment_id": "e6f5e7ce-74a6-4acd-9c2f-a7322895788c",
+      "evidence_id": "7d6b0a31-0541-4ed3-92bd-0c956175101d",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "weight_g": 0.3,
+      "source_observed_amount": 1,
+      "source_observed_unit": "1꼬집",
+      "size_code": "pinch",
+      "preparation_state": "as_published",
+      "provider_code": "HOMECOOK_USER_STANDARD",
+      "source_url": "user://chat/2026-09-17-demo-youtube-7BMW72C1Evc",
+      "provenance_grade": "user_approved_service_default",
+      "numeric_chain_matches": true,
+      "identity_chain_matches": true,
+      "status_chain_approved_active": true,
+      "decision": "retain_existing_value_and_label_service_default",
+      "findings": [
+        "시연용 사용자 승인 0.3g/꼬집. 소금 입자·손가락·동작 차이가 있으며 약간/적당량과 동치가 아니다.",
+        "DB에는 승인 흔적이 있으나 공개 원문 URL이 아니다. 이번 감사는 사용자 발언 원문을 새로 검증했다고 주장하지 않는다."
+      ]
+    }
+  ],
+  "new_or_corroborating_candidates": [
+    {
+      "ingredient_id": "17c42094-d0da-4d2e-a26a-fe553ed1070c",
+      "ingredient_name": "양송이버섯",
+      "candidate_status": "ready_for_reviewed_append",
+      "source_provider": "USDA",
+      "source_title": "FoodData Central SR Legacy April 2018",
+      "source_url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "source_food_id": "169251",
+      "source_food_name": "Mushrooms, white, raw",
+      "source_portion_id": "84529",
+      "source_observed_amount": 1,
+      "source_observed_unit": "medium",
+      "unit": "개",
+      "size_code": "medium",
+      "preparation_state": "raw",
+      "edible_basis": "가식부; USDA NDB11260 원표의 손질 폐기부율 3%를 별도로 또 빼지 않는다.",
+      "weight_g": 18,
+      "evidence": "food.csv 식품명과 food_portion.csv의 84529행 직접 확인. USDA SR28 PDF에서 Agaricus bisporus 명칭과 가식부 표기 대조.",
+      "capture_path": "/tmp/homecook-unit-audit-20261009/piece-sources/usda-piece-portions.json",
+      "applicability": "일반 생 흰 양송이버섯 1개. 갈색양송이·포토벨로·삶은양송이에 확장 금지. 기존 as_published profile과 원재료 상태가 같은지 연결 시 확인.",
+      "missing_recipe_rows": 1
+    },
+    {
+      "ingredient_name": "마늘",
+      "candidate_status": "source_confirmed_wait_for_exact_clove_unit_support",
+      "source_provider": "USDA / Health Canada",
+      "source_url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "corroborating_url": "https://aliments-nutrition.canada.ca/cnf-fce/serving-portion?id=2394&lang=eng&wbdisable=true",
+      "source_food_id": "169230",
+      "source_food_name": "Garlic, raw",
+      "source_portion_id": "84480",
+      "source_observed_amount": 1,
+      "source_observed_unit": "clove",
+      "unit": "쪽",
+      "size_code": null,
+      "preparation_state": "raw",
+      "weight_g": 3,
+      "capture_path": "/tmp/homecook-unit-audit-20261009/piece-sources/usda-piece-portions.json",
+      "applicability": "깐 생마늘 한 쪽만 해당. 통마늘 한 통이나 다진마늘10개 오류행에 적용 금지. 무근거 medium 규격으로 변경하지 않는다."
+    },
+    {
+      "ingredient_name": "달걀",
+      "candidate_status": "corroboration_only_no_overwrite",
+      "source_provider": "USDA",
+      "source_url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "source_food_id": "171287",
+      "source_food_name": "Egg, whole, raw, fresh",
+      "source_portion_id": "88374",
+      "source_observed_amount": 1,
+      "source_observed_unit": "large",
+      "unit": "개/알",
+      "size_code": "large",
+      "preparation_state": "raw",
+      "weight_g": 50,
+      "capture_path": "/tmp/homecook-unit-audit-20261009/piece-sources/usda-piece-portions.json",
+      "applicability": "껍데기 제외 large. 현재 서비스 medium50g을 공식 medium50g으로 승격하지 않는다. 같은식품의 개/알을 연결하는 단위 처리와 근거 변경은 분리한다."
+    }
+  ],
+  "unresolved_or_unit_only": [
+    {
+      "ingredient_name": "깻잎",
+      "missing_recipe_rows": 1,
+      "decision": "keep_unresolved_until_recipe_specific_source_or_reviewed_measured_default",
+      "reason": "식약처 동일 책의 장당 환산이 약0.83~6g으로 달라 전역 중간크기 하나를 공식 기준이라고 확정할 수 없다. 원문 g 병기는 해당 레시피에만 직접 적용 가능.",
+      "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+      "capture_path": "/tmp/homecook-unit-audit-20261009/piece-sources/mfds-samsam-2.pdf",
+      "observations": [
+        {
+          "pdf_page_1based": 25,
+          "published_page": 48,
+          "amount": 12,
+          "unit": "장",
+          "weight_g": 10
+        },
+        {
+          "pdf_page_1based": 35,
+          "published_page": 68,
+          "amount": 2,
+          "unit": "장",
+          "weight_g": 2
+        },
+        {
+          "pdf_page_1based": 48,
+          "published_page": 94,
+          "amount": 2,
+          "unit": "장",
+          "weight_g": 3
+        },
+        {
+          "pdf_page_1based": 70,
+          "published_page": 138,
+          "amount": 10,
+          "unit": "장",
+          "weight_g": 10
+        },
+        {
+          "pdf_page_1based": 94,
+          "published_page": 186,
+          "amount": 10,
+          "unit": "장",
+          "weight_g": 60
+        },
+        {
+          "pdf_page_1based": 97,
+          "published_page": 192,
+          "amount": 2,
+          "unit": "장",
+          "weight_g": 10
+        }
+      ]
+    },
+    {
+      "ingredient_name": "월계수잎",
+      "missing_recipe_rows": 1,
+      "decision": "keep_unresolved",
+      "reason": "공식 USDA FDC170917의 전체 portion 두 행은 부순잎 tsp0.6g/tbsp1.8g뿐. 0.6g을 잎1장으로 바꾸지 않는다. 조리후 제거 여부도 별도 확인 대상.",
+      "source_url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "capture_path": "/tmp/homecook-unit-audit-20261009/piece-sources/usda-piece-portions.json"
+    },
+    {
+      "ingredient_name": "통후추",
+      "missing_recipe_rows": 1,
+      "decision": "keep_unresolved",
+      "reason": "통후추 알 단위에 정확히 대응하는 공식 중량을 이번 검토에서 확보하지 못함. 후추가루 큰술 또는 teaspoon 무게를 알로 환산하지 않는다."
+    },
+    {
+      "ingredient_name": "다진마늘",
+      "missing_recipe_rows": 1,
+      "decision": "review_original_ingredient_and_unit",
+      "reason": "다진마늘10개는 재료 매칭/원문 단위 검토가 먼저다. 생마늘쪽3g을 가져와 자동 계산하지 않는다."
+    },
+    {
+      "ingredient_name": "대파",
+      "missing_recipe_rows": 1,
+      "decision": "wire_existing_exact_handful_evidence_after_unit_regression_tests",
+      "reason": "30g/줌 근거는 이미 있으나 사용자 시연값이며 공식값이 아니다. 100g/대 대신 exact handful30g만 선택해야 한다."
+    },
+    {
+      "ingredient_name": "고추",
+      "missing_recipe_rows_in_inventory": 1,
+      "decision": "do_not_inherit_cheongyang_weight",
+      "reason": "일반고추 개수에 청양고추10g을 자동 공유하지 않는다. root actual calculator 평가에서는6개 blocker에 포함되지 않아 이 행의 실제상태 판단은 상위집계 우선."
+    }
+  ],
+  "captures": [
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "sha256": "b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0",
+      "bytes": 6074592
+    },
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/mfds-samsam-2.pdf",
+      "sha256": "f3ae4dce2cbde7e8024932ee7e87d20bd76230009848dbc7b3813dd4e4e42f6c",
+      "bytes": 14277486
+    },
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/mfds-samsam-2.txt",
+      "sha256": "562046a3d0a39da6e0193712b08e6a7fbfec2c8f99131270ff3060f1505e795b",
+      "bytes": 167942
+    },
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/sr28fg01.pdf",
+      "sha256": "10c238291008ab06e351188c6170c042d12068fe1b569ebe67d80649a8b3a30c",
+      "bytes": 2753576
+    },
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/sr28fg02.pdf",
+      "sha256": "a3671c827247adbcc806c7a3db05eed074c7ade10540dc01db70c47cbae9d6a4",
+      "bytes": 558254
+    },
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/sr28fg09.pdf",
+      "sha256": "e0b48c1df61eadc85d169203483deeb922ca77897c3e9887b471a8976746d12a",
+      "bytes": 3113727
+    },
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/sr28fg11.pdf",
+      "sha256": "ecb7fc1f7c0613225fc381042454fe29e17a702ae96cfc3e51f5b756a7adb161",
+      "bytes": 7580900
+    },
+    {
+      "path": "/tmp/homecook-unit-audit-20261009/piece-sources/usda-piece-portions.json",
+      "sha256": "771f580b071ec84b3a22b9c25990b8785dcced5390d06ca03436a0c2d814add9",
+      "bytes": 11032
+    }
+  ],
+  "verification_limits": [
+    "사용자 승인 여부는 기존 DB approved 및 repository 기록에 의존했고 오래된 대화 user:// 원문은 새로 검증하지 않았다.",
+    "공식기관 레시피의 한 사례는 공식적인 일반 크기 표준과 다르다.",
+    "이번 조사에서 확보 못한 근거를 세상에 없는 근거로 단정하지 않는다.",
+    "적용·원장·현재레시피 재계산은 부모 작업의 검증과 운영반영 절차가 맡는다."
+  ]
+}

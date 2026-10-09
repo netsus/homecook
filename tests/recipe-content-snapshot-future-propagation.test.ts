@@ -330,12 +330,52 @@ describe("recipe content snapshot future propagation public contract", () => {
         food_product_id: productId,
         food_product_nutrition_version_id: selectedVersionId,
         product_predecessor: null,
+        piece_candidates: [],
+        selected_piece_weight_id: null,
       }),
     ]);
     expect(result.nutritionSnapshot.calculation_status).toBe("unavailable");
     expect(result.predecessorGuard.recipe_ingredients[0]).not.toMatchObject({
       food_product_id: null,
       food_product_nutrition_version_id: null,
+    });
+  });
+
+  it("keeps the selected handful evidence in the actual draft nutrition guard", async () => {
+    const ingredientId = "550e8400-e29b-41d4-a716-446655440106";
+    const approved = { review_status: "approved", is_active: true };
+    const source = { ...approved, id: "source", provider_code: "HOMECOOK_USER_STANDARD",
+      dataset_name: "Approved handful", source_version: "1", data_basis_date: null,
+      license_name: "internal", source_url: "https://example.test/evidence", freshness_status: "current" };
+    const rows: Record<string, unknown[]> = {
+      ingredient_nutrition_profiles: [{ ...approved, id: "link", ingredient_id: ingredientId,
+        nutrition_profile_id: "profile", preparation_state: "raw", is_primary: true,
+        nutrition_profiles: { ...approved, id: "profile", source_item_id: "item",
+          profile_kind: "ingredient_source", normalization_method: "mass_100g", basis_amount: 100, basis_unit: "g",
+          nutrition_values: ["energy_kcal", "carbohydrate_g", "protein_g", "fat_g", "sodium_mg"].map((nutrient_code) => (
+            { profile_id: "profile", nutrient_code, amount: 100, value_status: "observed" })),
+          nutrition_source_items: { id: "item", source_id: "source", review_status: "approved", nutrition_sources: source },
+        } }],
+      ingredient_conversion_assignments: [],
+      piece_unit_weights: [{ ...approved, id: "handful-piece", ingredient_id: ingredientId,
+        evidence_id: "handful-evidence", preparation_state: "raw", size_code: "handful", weight_g: 30,
+        measurement_source_evidence: { ...approved, id: "handful-evidence", source_id: "source", evidence_kind: "piece_weight",
+          preparation_state: "raw", size_code: "handful", source_observed_amount: 1, source_observed_unit: "1줌",
+          observed_weight_g: 30, nutrition_sources: source } }],
+    };
+    const client = { from: (table: string) => {
+      const query = { select: () => query, in: () => query, eq: () => query, order: () => query,
+        range: async () => ({ data: rows[table] ?? [], error: null }) };
+      return query;
+    } };
+    const { calculateRecipeDraftNutrition } = await import("@/lib/server/recipe-content-snapshot-future-propagation");
+    const result = await calculateRecipeDraftNutrition(client, { recipeId, baseRecipeRevision: 1,
+      draft: { title: "대파 한 줌", base_servings: 1, steps: [], ingredients: [{ ingredient_id: ingredientId,
+        amount: 1, unit: "줌", ingredient_type: "QUANT", scalable: true }] } });
+    expect(result.nutritionSnapshot.scalable_values.energy_kcal).toBe(30);
+    expect(result.predecessorGuard.recipe_ingredients[0]).toMatchObject({
+      selected_piece_weight_id: "handful-piece", piece_candidates: [{ piece_weight_id: "handful-piece",
+        source_observed_amount: 1, source_observed_unit: "1줌", observed_weight_g: 30 }],
     });
   });
 

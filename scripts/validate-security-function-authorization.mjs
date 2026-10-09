@@ -26,6 +26,9 @@ const INVENTORY_PATH = process.env.SECURITY_FUNCTION_INVENTORY_PATH
   );
 const ADDITIVE_SOURCES = [
   {
+    manifestPath: path.join(REPO_ROOT, "docs/security/ingredient-piece-unit-security-function-authorization-manifest.json"),
+  },
+  {
     manifestPath: path.join(REPO_ROOT, "docs/security/ingredient-canonical-search-security-function-authorization-manifest.json"),
   },
   {
