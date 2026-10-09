@@ -371,12 +371,21 @@ export async function verifyYoutubeResolutionAppliedDatabase({ repositoryRoot, c
   return { baselineRequired: false, pending: [], applied: source, source, migrationSourceRef: releaseSha };
 }
 
+export function assertOriginalReadinessBytes(bytes, readiness, expectedSha256) {
+  requireValue(hash(bytes) === expectedSha256
+    && isDeepStrictEqual(JSON.parse(bytes.toString("utf8")), readiness),
+  "original R2 readiness changed");
+}
+
 export async function reviewedYoutubeResolutionReadiness({
   readiness, previous, next, liveSha, releaseSha, files, databasePlan,
   databaseDeployment, repositoryRoot,
 }) {
   const review = await loadYoutubeResolutionReview();
-  requireValue(hash(JSON.stringify(readiness)) === review.originalReadinessSha256, "original R2 readiness changed");
+  const originalPath = previous.EnvironmentVariables?.MUMEOK_ROUND2_READINESS_PATH;
+  requireValue(typeof originalPath === "string", "original R2 readiness path missing");
+  await privatePath(originalPath);
+  assertOriginalReadinessBytes(readFileSync(originalPath), readiness, review.originalReadinessSha256);
   requireValue(liveSha === review.contract.from && releaseSha === review.contract.to, "unreviewed source pair");
   requireValue(databaseDeployment === false && databasePlan?.baselineRequired === false
     && databasePlan.pending?.length === 0 && databasePlan.applied?.length === 215

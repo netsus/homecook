@@ -11,6 +11,7 @@ import {
 import {
   assertYoutubeResolutionWorkerInstallResult,
   assertReadonlyArtifactFile,
+  assertOriginalReadinessBytes,
   assertYoutubeResolutionReviewPin,
   YOUTUBE_RESOLUTION_REVIEW_PIN,
 } from "../scripts/lib/prelaunch-youtube-resolution-readiness.mjs";
@@ -24,6 +25,14 @@ const manifest = {
 };
 
 describe("reviewed YouTube resolution deploy option", () => {
+  it("checks the pinned original readiness bytes, not a different JSON serialization", () => {
+    const readiness = { version: 1, profile: "production" };
+    const bytes = Buffer.from(`${JSON.stringify(readiness, null, 2)}\n`);
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    expect(() => assertOriginalReadinessBytes(bytes, readiness, digest)).not.toThrow();
+    expect(() => assertOriginalReadinessBytes(bytes, { ...readiness, version: 2 }, digest)).toThrow("changed");
+    expect(() => assertOriginalReadinessBytes(Buffer.from(JSON.stringify(readiness)), readiness, digest)).toThrow("changed");
+  });
   it("accepts owned immutable artifacts without treating them as mutable private secrets", () => {
     const directory = mkdtempSync(join(realpathSync(tmpdir()), "resolution-artifact-"));
     const file = join(directory, "artifact.json");
