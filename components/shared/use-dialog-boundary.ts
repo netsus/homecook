@@ -28,6 +28,43 @@ function lockBodyScroll(body: HTMLElement) {
   };
 }
 
+// Isolation belongs to the top dialog, not to each dialog's lifetime. Restoring
+// per-dialog snapshots can otherwise leave a replacement portal permanently inert.
+const activeDialogs: HTMLElement[] = [];
+const dialogPriorities = new WeakMap<HTMLElement, number>();
+let isolatedElements: Array<{ element: HTMLElement; inert: boolean; ariaHidden: string | null }> = [];
+
+function updateDialogIsolation(preferredFocus?: () => HTMLElement | null) {
+  for (const { element, inert, ariaHidden } of isolatedElements.reverse()) {
+    element.inert = inert;
+    if (ariaHidden === null) element.removeAttribute("aria-hidden");
+    else element.setAttribute("aria-hidden", ariaHidden);
+  }
+  isolatedElements = [];
+  const topDialog = activeDialogs.at(-1);
+  if (!topDialog) return;
+  // Move focus out of the background before marking its ancestors aria-hidden.
+  // Chrome rejects aria-hidden on a node that still contains the active element.
+  const preferredTarget = preferredFocus?.();
+  if (preferredTarget && topDialog.contains(preferredTarget) && isVisibleFocusTarget(preferredTarget, topDialog)) {
+    preferredTarget.focus({ preventScroll: true });
+  } else if (!topDialog.contains(document.activeElement)) {
+    (focusableElements(topDialog)[0] ?? topDialog).focus({ preventScroll: true });
+  }
+  let branch = topDialog;
+  while (branch.parentElement) {
+    const parent = branch.parentElement;
+    for (const sibling of Array.from(parent.children)) {
+      if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
+      isolatedElements.push({ element: sibling, inert: sibling.inert, ariaHidden: sibling.getAttribute("aria-hidden") });
+      sibling.inert = true;
+      sibling.setAttribute("aria-hidden", "true");
+    }
+    if (parent === document.body) break;
+    branch = parent;
+  }
+}
+
 function isVisibleFocusTarget(element: HTMLElement, dialog: HTMLElement) {
   for (let node: HTMLElement | null = element; node; node = node.parentElement) {
     if (node.hidden || node.inert || node.getAttribute("aria-hidden") === "true") return false;
@@ -45,6 +82,7 @@ function focusableElements(dialog: HTMLElement) {
 
 export function useDialogBoundary({
   active = true,
+  priority = 0,
   closeOnEscape = true,
   dialogRef,
   fallbackFocusRef,
@@ -52,6 +90,7 @@ export function useDialogBoundary({
   onClose,
 }: {
   active?: boolean;
+  priority?: number;
   closeOnEscape?: boolean;
   dialogRef: RefObject<HTMLElement | null>;
   fallbackFocusRef?: RefObject<HTMLElement | null>;
@@ -84,38 +123,22 @@ export function useDialogBoundary({
       invokerFocusRef.current = activeElement;
     }
     const releaseBodyScroll = lockBodyScroll(document.body);
-    const isolated: Array<{
-      element: HTMLElement;
-      inert: boolean;
-      ariaHidden: string | null;
-    }> = [];
-
-    const initialTarget = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
-    initialTarget.focus({ preventScroll: true });
+    dialogPriorities.set(dialog, priority);
+    const insertionIndex = activeDialogs.findIndex((other) =>
+      dialog.contains(other) || (dialogPriorities.get(other) ?? 0) > priority);
+    if (insertionIndex < 0) activeDialogs.push(dialog);
+    else activeDialogs.splice(insertionIndex, 0, dialog);
+    updateDialogIsolation(activeDialogs.at(-1) === dialog
+      ? () => initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog
+      : undefined);
     const focusGuardFrame = requestAnimationFrame(() => {
-      if (!dialog.isConnected || dialog.contains(document.activeElement)) return;
+      if (activeDialogs.at(-1) !== dialog || !dialog.isConnected || dialog.contains(document.activeElement)) return;
       const target = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
       target.focus({ preventScroll: true });
     });
 
-    let branch: HTMLElement = dialog;
-    while (branch.parentElement) {
-      const parent = branch.parentElement;
-      for (const sibling of Array.from(parent.children)) {
-        if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
-        isolated.push({
-          element: sibling,
-          inert: sibling.inert,
-          ariaHidden: sibling.getAttribute("aria-hidden"),
-        });
-        sibling.inert = true;
-        sibling.setAttribute("aria-hidden", "true");
-      }
-      if (parent === document.body) break;
-      branch = parent;
-    }
-
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (activeDialogs.at(-1) !== dialog) return;
       if (event.key === "Escape") {
         if (event.isComposing || event.keyCode === 229) return;
         event.preventDefault();
@@ -149,26 +172,34 @@ export function useDialogBoundary({
       cancelAnimationFrame(focusGuardFrame);
       document.removeEventListener("keydown", handleKeyDown, true);
       releaseBodyScroll();
-      for (const { element, inert, ariaHidden } of isolated.reverse()) {
-        element.inert = inert;
-        if (ariaHidden === null) element.removeAttribute("aria-hidden");
-        else element.setAttribute("aria-hidden", ariaHidden);
-      }
+      const wasTop = activeDialogs.at(-1) === dialog;
+      const index = activeDialogs.indexOf(dialog);
+      if (index >= 0) activeDialogs.splice(index, 1);
+      updateDialogIsolation(wasTop ? () => {
+        const requested = typeof requestedReturnFocusRef.current === "function"
+          ? requestedReturnFocusRef.current()
+          : requestedReturnFocusRef.current;
+        return requested?.isConnected ? requested : invokerFocusRef.current;
+      } : undefined);
       requestAnimationFrame(() => {
         const requestedTarget = typeof requestedReturnFocusRef.current === "function"
           ? requestedReturnFocusRef.current()
           : requestedReturnFocusRef.current;
         const returnTarget = invokerFocusRef.current;
-        if (!dialog.isConnected) {
+        if (wasTop && !dialog.isConnected) {
           const target = requestedTarget?.isConnected
             ? requestedTarget
             : returnTarget?.isConnected ? returnTarget : fallbackFocusTarget;
-          if (target && !target.closest("[inert], [aria-hidden='true']")) target.focus({ preventScroll: true });
+          const nextDialog = activeDialogs.at(-1);
+          const focusTarget = nextDialog && (!target || !nextDialog.contains(target))
+            ? focusableElements(nextDialog)[0] ?? nextDialog
+            : target;
+          if (focusTarget && !focusTarget.closest("[inert], [aria-hidden='true']")) focusTarget.focus({ preventScroll: true });
           invokerFocusRef.current = null;
         }
       });
     };
-  }, [active, dialogRef, fallbackFocusRef, initialFocusRef]);
+  }, [active, dialogRef, fallbackFocusRef, initialFocusRef, priority]);
 
   return { setReturnFocusTarget };
 }

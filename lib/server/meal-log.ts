@@ -211,6 +211,16 @@ function errorText(value: unknown) {
 }
 
 function mealLogRpcError(value: unknown) {
+  // The meal-log RPC uses this exact pair for a quantity exceeding the batch balance.
+  // Other numeric overflows must remain internal errors, not user quantity errors.
+  if (isRecord(value) && value.code === "22003" && value.message === "CONFLICT") {
+    return fail(
+      "CONFLICT",
+      "이 음식에서 기록할 수 있는 양을 초과했어요. 입력한 양을 줄여 주세요.",
+      409,
+      [{ field: "quantity.amount", reason: "exceeds_available_amount" }],
+    );
+  }
   const text = errorText(value);
   if (/40P01|deadlock detected/i.test(text)) {
     const [status, message] = RPC_ERRORS.CONFLICT;

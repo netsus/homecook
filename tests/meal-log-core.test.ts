@@ -183,6 +183,63 @@ describe("meal-log core", () => {
     }
   });
 
+  test("identifies a cooked batch quantity conflict without reporting a concurrent edit", async () => {
+    const client = {
+      rpc: async () => ({
+        data: null,
+        error: { code: "22003", message: "CONFLICT", details: null, hint: null },
+      }),
+    };
+    const result = await mealLog.callMealLogRpc(client, "mutate_meal_log_entry", {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.response.status).toBe(409);
+      expect(await result.response.json()).toEqual({
+        success: false,
+        data: null,
+        error: {
+          code: "CONFLICT",
+          message: "이 음식에서 기록할 수 있는 양을 초과했어요. 입력한 양을 줄여 주세요.",
+          fields: [{ field: "quantity.amount", reason: "exceeds_available_amount" }],
+        },
+      });
+    }
+  });
+
+  test.each(["40001", "55000", "40P01"])("preserves other PostgreSQL conflicts (%s)", async (code) => {
+    const client = {
+      rpc: async () => ({
+        data: null,
+        error: { code, message: code === "40P01" ? "deadlock detected" : "CONFLICT", details: null, hint: null },
+      }),
+    };
+    const result = await mealLog.callMealLogRpc(client, "mutate_meal_log_entry", {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.response.status).toBe(409);
+      expect(await result.response.json()).toMatchObject({
+        error: { code: "CONFLICT", message: "다른 변경이 먼저 반영됐어요.", fields: [] },
+      });
+    }
+  });
+
+  test("does not classify unexpected numeric overflow as an available quantity conflict", async () => {
+    const client = {
+      rpc: async () => ({
+        data: null,
+        error: { code: "22003", message: "numeric field overflow", details: null, hint: null },
+      }),
+    };
+    const result = await mealLog.callMealLogRpc(client, "mutate_meal_log_entry", {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.response.status).toBe(500);
+      expect(await result.response.json()).toMatchObject({
+        error: { code: "INTERNAL_ERROR", message: "요청을 처리하지 못했어요.", fields: [] },
+      });
+    }
+  });
+
   test("validates every mutation entry field through the shared runtime contract", () => {
     expect(mealLog.projectMealLogData({ entry: entryProjection })).toEqual({ entry: entryProjection });
     const missingId: Record<string, unknown> = { ...entryProjection };

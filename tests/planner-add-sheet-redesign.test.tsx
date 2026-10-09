@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
+import userEvent from "@testing-library/user-event";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
@@ -9,7 +10,7 @@ vi.mock("@/lib/api/recipe", () => ({ fetchRecipes: api.search, fetchRecipePrevie
 vi.mock("@/lib/api/meal", () => ({ createMealSafe: api.create }));
 const recipe = { id: "recipe-a", title: "김치찌개", base_servings: 2, thumbnail_url: null, tags: [], source_type: "system", view_count: 0, save_count: 0, like_count: 0 };
 beforeEach(() => {
-  api.preview.mockResolvedValue({ ...recipe, ingredients: [], nutrition: { base_servings: 2, values: {}, calculation_status: "unavailable" } });
+  api.preview.mockResolvedValue({ ...recipe, ingredients: [], nutrition: { warnings: [], base_servings: 2, values: {}, calculation_status: "unavailable" } });
   api.search.mockResolvedValue({ success: true, data: { items: [recipe], has_next: false, next_cursor: null } });
   api.create.mockResolvedValue({ success: false, error: { message: "잠시 후 다시 시도해 주세요." } });
 });
@@ -52,7 +53,7 @@ describe("planner addition inside one sheet", () => {
   it("scales selected ingredients and nutrition from authoritative preview without inventing missing values", async () => {
     api.preview.mockResolvedValue({ ...recipe,
       ingredients: [{ id: "rice", standard_name: "쌀", ingredient_type: "QUANT", amount: 200, unit: "g", scalable: true }, { id: "salt", standard_name: "소금", ingredient_type: "QUANT", amount: 2, unit: "g", scalable: false }],
-      nutrition: { base_servings: 2, values: { energy_kcal: { amount: 500, known_amount: 500, status: "complete" } }, scalable_values: { energy_kcal: 400 }, fixed_values: { energy_kcal: 100 }, calculation_status: "complete" },
+      nutrition: { warnings: [], base_servings: 2, values: { energy_kcal: { amount: 500, known_amount: 500, status: "complete" } }, scalable_values: { energy_kcal: 400 }, fixed_values: { energy_kcal: 100 }, calculation_status: "complete" },
     });
     openPicker();
     fireEvent.click(await screen.findByRole("button", { name: "김치찌개 선택" }));
@@ -85,13 +86,13 @@ describe("planner addition inside one sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "추가하기" }));
     expect((await screen.findByRole("alert")).textContent).toContain("잠시 후");
     expect(api.create).toHaveBeenCalledWith(expect.objectContaining({ planned_servings: 3, plan_date: "2026-10-06", column_id: "column" }), expect.any(String));
-    fireEvent.keyDown(document, { key: "Escape" });
+    await userEvent.setup().keyboard("{Escape}");
     expect(screen.getByText("변경사항을 버릴까요?")).toBeTruthy();
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(close).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "계속 편집" }));
     expect(screen.getByLabelText("3인분")).toBeTruthy();
-    fireEvent.keyDown(document, { key: "Escape" });
+    await userEvent.setup().keyboard("{Escape}");
     fireEvent.click(screen.getByRole("button", { name: "변경사항 버리기" }));
     await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
   });

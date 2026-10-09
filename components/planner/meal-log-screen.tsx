@@ -339,6 +339,7 @@ function EntryDialog({
   returnFocusTarget,
   inactive = false,
   onRemoved,
+  onEntryUpdated,
 }: {
   day: MealLogDayData;
   fallbackFocusRef: React.RefObject<HTMLElement | null>;
@@ -352,6 +353,7 @@ function EntryDialog({
   returnFocusTarget: () => HTMLElement | null;
   inactive?: boolean;
   onRemoved?: () => void;
+  onEntryUpdated: (entry: MealLogEntry) => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
@@ -376,6 +378,7 @@ function EntryDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const operation = useRef<{ fingerprint: string; key: string } | null>(null);
+  const mutationInFlight = useRef(false);
   const columnValid = mode === "delete"
     || day.active_columns.some((column) => column.id === columnId);
   const { setReturnFocusTarget } = useDialogBoundary({
@@ -409,10 +412,12 @@ function EntryDialog({
   }
 
   async function mutate() {
-    if (pending || !mutationEnabled || (mode !== "delete" && (!columnValid || amountInvalid || !unit.trim()))) return;
+    if (mutationInFlight.current || pending || action === null || discard || !mutationEnabled || (mode !== "delete" && (!columnValid || amountInvalid || !unit.trim()))) return;
+    mutationInFlight.current = true;
     setPending(true);
     setError(null);
     try {
+      let savedEntry: MealLogEntry | null = null;
       if (mode === "delete") {
         const fingerprint = JSON.stringify({ entryId: entry.id, expectedRevision: revision, type: "delete" });
         if (operation.current?.fingerprint !== fingerprint) {
@@ -434,18 +439,22 @@ function EntryDialog({
         if (operation.current?.fingerprint !== fingerprint) {
           operation.current = { fingerprint, key: crypto.randomUUID() };
         }
-        await updateMealLogEntry(entry.id, input, operation.current.key);
+        savedEntry = await updateMealLogEntry(entry.id, input, operation.current.key);
       }
       const refreshedDay = await onComplete();
       onFeedback(mode === "delete" ? "식사 기록을 삭제했어요." : "식사 기록을 수정했어요.");
       clearReturnContext();
       if (mode === "edit") {
-        const updatedEntry = refreshedDay.entries.find((item) => item.id === entry.id);
+        const refreshedEntry = refreshedDay.entries.find((item) => item.id === entry.id);
+        // A delayed read must not replace the server-acknowledged mutation version.
+        const updatedEntry = savedEntry && (!refreshedEntry || savedEntry.revision > refreshedEntry.revision) ? savedEntry : refreshedEntry;
         if (updatedEntry) {
           setAuthorityEntry(updatedEntry);
           setRevision(updatedEntry.revision);
           setAmount(updatedEntry.quantity.amount);
           setUnit(updatedEntry.quantity.unit);
+          setColumnId(updatedEntry.meal_plan_column_id ?? "");
+          onEntryUpdated(updatedEntry);
         }
         operation.current = null;
         setPending(false);
@@ -468,7 +477,8 @@ function EntryDialog({
         }
         return;
       }
-      if (isMealLogApiError(reason) && reason.status === 409) {
+      const excessiveAmount = isMealLogApiError(reason) && reason.fields?.some(field => field.field === "quantity.amount" && field.reason === "exceeds_available_amount");
+      if (isMealLogApiError(reason) && reason.status === 409 && reason.code === "CONFLICT" && !excessiveAmount) {
         try {
           const latestDay = await onComplete();
           const latestEntry = latestDay.entries.find((item) => item.id === entry.id);
@@ -492,6 +502,8 @@ function EntryDialog({
         setError(reason instanceof Error ? reason.message : "요청을 처리하지 못했어요.");
       }
       setPending(false);
+    } finally {
+      mutationInFlight.current = false;
     }
   }
 
@@ -517,7 +529,11 @@ function EntryDialog({
         {requiresColumnSelection && day.active_columns.length === 0 ? <p role="alert" className="text-sm text-[var(--danger-strong)]">옮길 수 있는 현재 끼니가 없어 저장할 수 없어요.</p> : null}
         <label className="block font-medium">먹은 양
           <span className="app-field-input mt-2 flex items-center rounded-xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] px-3 transition-[border-color,box-shadow]">
-            <DecimalInput disabled={pending} aria-label="먹은 양" className="min-h-12 min-w-0 flex-1 bg-transparent text-base font-normal" style={{ border: 0, outline: "none", boxShadow: "none" }} min="0.01" onValueChange={setAmount} step="any" value={amount} />
+            <DecimalInput disabled={pending} aria-label="먹은 양" className="min-h-12 min-w-0 flex-1 bg-transparent text-base font-normal" style={{ border: 0, outline: "none", boxShadow: "none" }} min="0.01" onValueChange={setAmount} step="any" value={amount} onKeyDown={event => {
+              if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
+              event.preventDefault();
+              if (!event.repeat) void mutate();
+            }} />
             <input aria-label="단위" readOnly tabIndex={-1} className="w-12 bg-transparent text-right text-base font-normal text-[var(--text-2)]" style={{ border: 0, outline: "none", boxShadow: "none" }} value={unit} />
           </span>
         </label>
@@ -815,9 +831,9 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
       </div>
 
       {nutritionDate && displayDays[nutritionDate] ? <MealLogDayNutritionDetail active={!dialog} day={displayDays[nutritionDate]} onClose={() => setNutritionDate(null)} onEntry={entry => openDialog({ type: "detail", entry }, nutritionDate)} /> : null}
-      {!guest && dialog?.type === "add" && dialog.backgroundEntry && dialogDay ? <EntryDialog inactive day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={false} state={{ type: "detail", entry: dialog.backgroundEntry, guestPreview: false }} onClose={() => {}} onAdd={() => {}} onComplete={reloadSelected} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => null} /> : null}
+      {!guest && dialog?.type === "add" && dialog.backgroundEntry && dialogDay ? <EntryDialog inactive day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={false} state={{ type: "detail", entry: dialog.backgroundEntry, guestPreview: false }} onClose={() => {}} onAdd={() => {}} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => null} /> : null}
       {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed returnFocusTarget={() => dialog.backgroundEntry ? null : document.getElementById(sectionAddActionId(dialog.columnId, dialogDate))} mutationEnabled={dialogMutationEnabled} onClose={closeAdd} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
-      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onRemoved={() => { setDialog(null); setNutritionDate(null); }} onAdd={columnId => openDialog({ type: "add", columnId, backgroundEntry: dialog.entry }, dialogDate)} onComplete={reloadSelected} onFeedback={showSuccess} onUnauthorized={loseAuthorization} returnFocusTarget={() => (nutritionDate ? document.querySelector<HTMLElement>(`[data-meal-log-contributor="${dialog.entry.id}"]`) : null) ?? document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, "edit")}"]`)} state={dialog} /> : null}
+      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onRemoved={() => { setDialog(null); setNutritionDate(null); }} onAdd={columnId => openDialog({ type: "add", columnId, backgroundEntry: dialog.entry }, dialogDate)} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => (nutritionDate ? document.querySelector<HTMLElement>(`[data-meal-log-contributor="${dialog.entry.id}"]`) : null) ?? document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, "edit")}"]`)} state={dialog} /> : null}
     </main>
     </>
   );

@@ -44,6 +44,18 @@ describe("app overlay primitives", () => {
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
+  it("only dismisses a backdrop tap, not a selection drag released outside", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<AppBottomSheet ariaLabelledBy="drag-title" title="입력" onClose={onClose}><input aria-label="양" defaultValue="200" /></AppBottomSheet>);
+    const input = screen.getByRole("textbox", { name: "양" });
+    const backdrop = screen.getByRole("dialog").parentElement!;
+    await user.pointer([{ target: input, keys: "[MouseLeft>]" }, { target: backdrop, keys: "[/MouseLeft]" }]);
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(backdrop);
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("renders center dialogs and footer actions from the same overlay family", async () => {
     const handleCancel = vi.fn();
     const handleConfirm = vi.fn();
