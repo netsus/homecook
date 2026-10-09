@@ -51,13 +51,16 @@ function validHashMap(value, expectedCount = null) {
       && !path.split("/").includes("..") && SHA64.test(digest));
 }
 
-export function assertResolutionReview(review) {
+export function assertResolutionReview(review, { phase = "post-db" } = {}) {
   exactKeys(review, [
     "schema", "from", "to", "integrationSourceRef", "previousMigrationCount",
     "migrationCount", "migrations", "sourceBackfill", "files", "protectedSources",
     "runtimeFiles", "artifact", "previousWorker", "catalog", "policy", "credential", "proofs",
   ], "review");
-  requireValue(review.schema === "homecook.prelaunch-youtube-resolution-review.v1", "review schema mismatch");
+  const expectedSchema = phase === "precutover"
+    ? "homecook.prelaunch-youtube-resolution-precutover-authority.v1"
+    : "homecook.prelaunch-youtube-resolution-review.v1";
+  requireValue(review.schema === expectedSchema, "review schema mismatch");
   requireValue(review.from === LIVE_WEB_SHA && SHA40.test(review.to ?? "") && review.to !== review.from,
     "source pair mismatch");
   requireValue(SHA40.test(review.integrationSourceRef ?? ""), "integration source ref missing");
@@ -104,7 +107,9 @@ export function assertResolutionReview(review) {
     && review.credential.schemaIdentity === SCHEMA_IDENTITY
     && Number.isInteger(review.credential.maxTtlSeconds) && review.credential.maxTtlSeconds > 0
     && review.credential.maxTtlSeconds <= 7 * 24 * 60 * 60, "credential scope mismatch");
-  const proofNames = ["platformBackup", "isolatedRestore", "dbBefore", "enqueueClosure", "dbApplyReceipt", "workerArtifact", "appDescriptor"];
+  const proofNames = phase === "precutover"
+    ? ["platformBackup", "isolatedRestore", "dbBefore", "enqueueClosure", "workerArtifact", "appDescriptor"]
+    : ["platformBackup", "isolatedRestore", "dbBefore", "enqueueClosure", "dbApplyReceipt", "workerArtifact", "appDescriptor"];
   exactKeys(review.proofs, proofNames, "proofs");
   for (const proof of Object.values(review.proofs)) {
     exactKeys(proof, ["path", "sha256"], "proof");
@@ -208,7 +213,9 @@ export function assertWorkerInstallAuthority(review, authority) {
 }
 
 export function assertEnqueueClosureEvidence(review, evidence) {
-  assertResolutionReview(review);
+  assertResolutionReview(review, {
+    phase: review?.schema === "homecook.prelaunch-youtube-resolution-precutover-authority.v1" ? "precutover" : "post-db",
+  });
   exactKeys(evidence, [
     "schema", "webReleaseSha", "descriptorFileSha256", "closedAt", "httpProbe",
     "enqueueWriteDelta", "observations", "activeEnqueueSessions", "workerStopped",

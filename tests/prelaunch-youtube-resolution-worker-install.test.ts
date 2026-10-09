@@ -2,12 +2,14 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
   assertYoutubeResolutionWorkerInstallPin,
   assertYoutubeResolutionWorkerJwtClaims,
   assertYoutubeResolutionLauncherPreserved,
+  assertYoutubeResolutionWorkerInstallManifest,
   assertYoutubeResolutionWorkerRestored,
   awaitYoutubeResolutionWorkerRunning,
   decodeYoutubeResolutionWorkerJwt,
@@ -24,11 +26,18 @@ import {
   YOUTUBE_RESOLUTION_WORKER_INSTALL_CONFIRMATION,
 } from "../scripts/lib/prelaunch-youtube-resolution-worker-install.mjs";
 import {
+  assembleYoutubeResolutionCredentialExecutionAuthority,
+  assembleYoutubeResolutionRolloutReview,
+  assembleYoutubeResolutionWebActivation,
+  assembleYoutubeResolutionWorkerInstallManifest,
+} from "../scripts/lib/prelaunch-youtube-resolution-manifest-assembly.mjs";
+import {
   LIVE_CATALOG_FINGERPRINT, LIVE_PIPELINE_IDENTITY, LIVE_POLICY_SNAPSHOT_DIGEST, LIVE_WEB_SHA,
   LIVE_WORKER_SHA, MIGRATIONS, SCHEMA_IDENTITY, SOURCE_BACKFILL, TARGET_CATALOG_FINGERPRINT,
   YOUTUBE_RESOLUTION_FUNCTION_SIGNATURES,
 } from "../scripts/lib/prelaunch-youtube-resolution-contract.mjs";
 
+const credentialWriterPath = "/Users/cwj/.codex/worktrees/youtube-display-release/homecook/.omx/cost-efficient-p5-20261010/credential-preparation/execute-approved-credential-rotation.mjs";
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 const jwt = (claims: object) => [
   Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
@@ -98,11 +107,101 @@ function prepareFixture(root: string) {
     credentialBefore: contract.previousWorker && { generation: 45, releaseSha: LIVE_WORKER_SHA, schemaIdentity: SCHEMA_IDENTITY,
       allowedSnapshotDigest: LIVE_POLICY_SNAPSHOT_DIGEST, expiresAt: "2026-10-14T17:14:32.000Z", role: "youtube_extraction_worker" },
     credentialAfter: { generation: 46, releaseSha: contract.to, schemaIdentity: SCHEMA_IDENTITY,
-      allowedSnapshotDigest: LIVE_POLICY_SNAPSHOT_DIGEST, expiresAt: "2026-10-14T17:14:32.000Z", role: "youtube_extraction_worker" } };
+      allowedSnapshotDigest: LIVE_POLICY_SNAPSHOT_DIGEST, expiresAt: "2026-10-14T17:14:32.000Z", role: "youtube_extraction_worker" },
+    i031Preflight: { ready: true, codexCliVersion: "0.154.0-alpha.6.2", chatGptLogin: true, toolsReady: true } };
   return { manifest, authority, previousBytes };
 }
 
 describe("YouTube resolution worker installer", () => {
+  it("consumes the credential writer receipt in the actual manifest assembler", async () => {
+    const root = mkdtempSync(join(tmpdir(), "resolution-worker-writer-reader-"));
+    try {
+      const fixture = prepareFixture(root);
+      const precutover = {
+        ...fixture.manifest.review.contract,
+        schema: "homecook.prelaunch-youtube-resolution-precutover-authority.v1",
+        proofs: Object.fromEntries(Object.entries(fixture.manifest.review.contract.proofs)
+          .filter(([name]) => name !== "dbApplyReceipt")),
+      };
+      const rollout = assembleYoutubeResolutionRolloutReview({
+        precutoverAuthority: precutover,
+        dbApplyReceiptProof: fixture.manifest.review.contract.proofs.dbApplyReceipt,
+        originalReadinessSha256: fixture.manifest.review.originalReadinessSha256,
+        proofDigests: fixture.manifest.review.proofDigests,
+        artifactPaths: fixture.manifest.review.artifactPaths,
+        databaseBefore: fixture.manifest.review.databaseBefore,
+        expectedFunctionEvidence: fixture.manifest.review.expectedFunctionEvidence,
+      });
+      const { buildCredentialTransitionReceipt } = await import(pathToFileURL(credentialWriterPath).href);
+      const transition = buildCredentialTransitionReceipt({
+        registeredAt: fixture.manifest.reviewedAt,
+        before: fixture.manifest.credentialBefore,
+        after: fixture.manifest.credentialAfter,
+        tokenSha256: sha("token"), metadataSha256: sha("metadata"), configSha256: sha("config"),
+      });
+      expect(assembleYoutubeResolutionCredentialExecutionAuthority({
+        releaseSha: fixture.manifest.review.contract.to,
+        rootApprovalProof: { path: "/private/root.json", sha256: sha("root") },
+        enqueueClosureProof: fixture.manifest.review.contract.proofs.enqueueClosure,
+        dbApplyReceiptProof: fixture.manifest.review.contract.proofs.dbApplyReceipt,
+        approvedAt: fixture.manifest.reviewedAt,
+      })).toMatchObject({
+        schema: "homecook.youtube-resolution-credential-execution-authority.v1",
+        approved: true,
+        releaseSha: fixture.manifest.review.contract.to,
+      });
+      const assembled = assembleYoutubeResolutionWorkerInstallManifest({
+        review: rollout,
+        rootApproval: {
+          approved: true,
+          releaseSha: fixture.manifest.review.contract.to,
+          workerPaths: Object.fromEntries(Object.entries(fixture.manifest.paths)
+            .filter(([key]) => !["artifact", "descriptor", "expectedSchema"].includes(key))),
+          i031Preflight: fixture.manifest.i031Preflight,
+        },
+        credentialTransition: transition,
+        dbApplyReceiptProof: fixture.manifest.review.contract.proofs.dbApplyReceipt,
+        enqueueClosureProof: fixture.manifest.review.contract.proofs.enqueueClosure,
+      });
+      expect(assembled.credentialAfter).toEqual(fixture.manifest.credentialAfter);
+      expect(() => assertYoutubeResolutionWorkerInstallManifest(assembled)).not.toThrow();
+      const installResult = {
+        schema: "homecook.prelaunch-youtube-resolution-worker-install-result.v1",
+        status: "installed-verified",
+        releaseSha: rollout.contract.to,
+        artifactIdentitySha256: rollout.contract.artifact.identitySha256,
+        artifactFileSha256: rollout.contract.artifact.fileSha256,
+        descriptorFileSha256: rollout.contract.artifact.descriptorFileSha256,
+        expectedSchemaSha256: rollout.contract.artifact.expectedSchemaSha256,
+        credentialGeneration: 46,
+        policyVersion: rollout.contract.policy.version,
+        pipelineIdentity: rollout.contract.policy.pipelineIdentity,
+        snapshotDigest: rollout.contract.policy.snapshotDigest,
+        plistSha256: sha("installed-plist"),
+        runningObservations: [
+          { loaded: true, state: "running", pid: 42 },
+          { loaded: true, state: "running", pid: 42 },
+        ],
+        authenticatedPreRequest: true,
+        emptyClaimSucceeded: true,
+        queue: { queued: 0, processing: 0 },
+        permitFree: true,
+        installedAt: "2026-10-10T00:00:01.000Z",
+        changed: true,
+      };
+      expect(assembleYoutubeResolutionWebActivation({
+        rolloutReviewProof: { path: "/private/rollout.json", sha256: sha("rollout") },
+        rolloutReview: rollout,
+        workerInstallResultProof: { path: "/private/install.json", sha256: sha("install") },
+        workerInstallResult: installResult,
+      })).toEqual({
+        schema: "homecook.prelaunch-youtube-resolution-web-activation.v1",
+        rolloutReview: { path: "/private/rollout.json", sha256: sha("rollout") },
+        workerInstallResult: { path: "/private/install.json", sha256: sha("install") },
+      });
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
   it("inspects the real adapter target before querying and compares expiry instants", async () => {
     const target = { database: { systemIdentifier: "7669475895419854882", major: 17 } };
     const state = { generation: 46, jti_sha256: sha("jti"),

@@ -51,7 +51,7 @@ const R2_PROOF_NAMES = [
   "direct_access_denial", "header_overwrite", "launch_binding",
 ].sort();
 
-const FUNCTION_EVIDENCE_SQL = `WITH expected(signature) AS (VALUES
+export const YOUTUBE_RESOLUTION_FUNCTION_EVIDENCE_SQL = `WITH expected(signature) AS (VALUES
   ('public.ingredient_lookup_name_candidates(text,text,text)'),
   ('public.match_ingredient_name_exact_with_context(text,text,text)'),
   ('public.match_ingredient_name_exact(text)'),
@@ -300,7 +300,7 @@ export async function collectYoutubeResolutionDatabase(adapter) {
     adapter.query("SELECT jsonb_build_object('queued',count(*) filter(where status='queued'),'processing',count(*) filter(where status='processing')) FROM public.youtube_extraction_jobs;").then(JSON.parse),
     adapter.query("SELECT EXISTS(SELECT 1 FROM public.youtube_extractor_permits WHERE permit_key='primary' AND owner_id IS NOT NULL);").then((value) => value === "t"),
     adapter.query("SELECT jsonb_build_object('enabled',coalesce(bool_or(enabled),false),'count',count(*)) FROM private.ingredient_ai_nutrition_settings;").then(JSON.parse),
-    adapter.query(FUNCTION_EVIDENCE_SQL).then(JSON.parse),
+    adapter.query(YOUTUBE_RESOLUTION_FUNCTION_EVIDENCE_SQL).then(JSON.parse),
   ]);
   return { target, ledger, readiness, policy, credential, queue, permitHeld: permit, ai, functions };
 }

@@ -27,7 +27,7 @@ const ledger = Array.from({ length: 213 }, (_, index) => ({ filename: `${String(
 const migrations = MIGRATIONS.map((filename) => ({ filename, sha256: sha(filename) }));
 const runtimeFiles = Object.fromEntries(Array.from({ length: 22 }, (_, index) => [`runtime/${index}`, sha(`r${index}`)]));
 const review = {
-  schema: "homecook.prelaunch-youtube-resolution-review.v1",
+  schema: "homecook.prelaunch-youtube-resolution-precutover-authority.v1",
   from: LIVE_WEB_SHA,
   to: "a".repeat(40),
   integrationSourceRef: "b".repeat(40),
@@ -43,7 +43,7 @@ const review = {
   catalog: { before: LIVE_CATALOG_FINGERPRINT, after: TARGET_CATALOG_FINGERPRINT },
   policy: { version: 3, pipelineIdentity: LIVE_PIPELINE_IDENTITY, snapshotDigest: LIVE_POLICY_SNAPSHOT_DIGEST },
   credential: { beforeGeneration: 45, afterGeneration: 46, schemaIdentity: SCHEMA_IDENTITY, maxTtlSeconds: 604800 },
-  proofs: Object.fromEntries(["platformBackup","isolatedRestore","dbBefore","enqueueClosure","dbApplyReceipt","workerArtifact","appDescriptor"].map((name) => [name, { path: `/private/${name}`, sha256: sha(name === "workerArtifact" ? "afile" : name === "appDescriptor" ? "desc" : name) }])),
+  proofs: Object.fromEntries(["platformBackup","isolatedRestore","dbBefore","enqueueClosure","workerArtifact","appDescriptor"].map((name) => [name, { path: `/private/${name}`, sha256: sha(name === "workerArtifact" ? "afile" : name === "appDescriptor" ? "desc" : name) }])),
 };
 const closure = {
   schema: "homecook.youtube-resolution-enqueue-closure.v1", webReleaseSha: LIVE_WEB_SHA,
@@ -72,6 +72,7 @@ const clone = {
 };
 const prestate = {
   target: { systemId: YOUTUBE_RESOLUTION_TARGET_SYSTEM_ID, postgresMajor: YOUTUBE_RESOLUTION_POSTGRES_MAJOR }, ledger, catalogFingerprint: LIVE_CATALOG_FINGERPRINT,
+  synonymCount: 4146,
   aiAutomaticEnabled: false, policyVersion: 3, pipelineIdentity: LIVE_PIPELINE_IDENTITY,
   snapshotDigest: LIVE_POLICY_SNAPSHOT_DIGEST, queue: { queued: 0, processing: 0 },
   permitHeld: false, activeEnqueueSessions: 0, workerStopped: true,

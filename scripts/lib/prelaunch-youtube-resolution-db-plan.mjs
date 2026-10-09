@@ -2,7 +2,6 @@
 import { isDeepStrictEqual } from "node:util";
 
 import {
-  assertDatabaseTransition,
   assertEnqueueClosureEvidence,
   assertResolutionReview,
   LIVE_CATALOG_FINGERPRINT,
@@ -21,14 +20,14 @@ export const YOUTUBE_RESOLUTION_BASELINE_FUNCTION_SQL = `WITH expected(signature
 ), resolved AS (
   SELECT signature, to_regprocedure(signature) AS oid FROM expected
 )
-SELECT jsonb_agg(CASE WHEN oid IS NULL THEN jsonb_build_object(
-  'signature',signature,'exists',false
+SELECT jsonb_agg(CASE WHEN resolved.oid IS NULL THEN jsonb_build_object(
+  'signature',resolved.signature,'exists',false
 ) ELSE jsonb_build_object(
-  'signature',signature,'exists',true,
-  'definitionSha256',encode(extensions.digest(convert_to(pg_get_functiondef(oid),'UTF8'),'sha256'),'hex'),
+  'signature',resolved.signature,'exists',true,
+  'definitionSha256',encode(extensions.digest(convert_to(pg_get_functiondef(resolved.oid),'UTF8'),'sha256'),'hex'),
   'owner',pg_get_userbyid(proowner),'acl',coalesce(to_jsonb(proacl),'null'::jsonb),
   'securityDefiner',prosecdef,'config',coalesce(to_jsonb(proconfig),'null'::jsonb)
-) END ORDER BY signature)
+) END ORDER BY resolved.signature)
 FROM resolved LEFT JOIN pg_proc ON pg_proc.oid=resolved.oid;`;
 export const YOUTUBE_RESOLUTION_DB_LOCK_SQL = Object.freeze([
   "BEGIN ISOLATION LEVEL READ COMMITTED",
@@ -79,7 +78,7 @@ export function buildYoutubeResolutionDbPlan({
   backupArchiveSha256,
   expectedFunctionEvidence,
 }) {
-  assertResolutionReview(review);
+  assertResolutionReview(review, { phase: "precutover" });
   assertEnqueueClosureEvidence(review, closureEvidence);
   assertCloneEvidence(backupCloneEvidence, review);
   requireValue(SHA.test(backupArchiveSha256 ?? "")
@@ -91,6 +90,7 @@ export function buildYoutubeResolutionDbPlan({
     && isDeepStrictEqual(sourceLedger.slice(213), review.migrations),
   "213 predecessor or 215 source closure mismatch");
   requireValue(prestate.catalogFingerprint === review.catalog.before
+    && prestate.synonymCount === 4146
     && prestate.aiAutomaticEnabled === false
     && prestate.policyVersion === review.policy.version
     && prestate.pipelineIdentity === review.policy.pipelineIdentity
@@ -129,6 +129,7 @@ export function buildYoutubeResolutionDbPlan({
     before: {
       ledgerCount: 213,
       catalogFingerprint: review.catalog.before,
+      synonymCount: 4146,
       policyVersion: review.policy.version,
       pipelineIdentity: review.policy.pipelineIdentity,
       snapshotDigest: review.policy.snapshotDigest,
@@ -170,6 +171,7 @@ export function assertYoutubeResolutionLockedPrestate(plan, locked) {
   requireValue(isDeepStrictEqual(locked.target, plan.target)
     && isDeepStrictEqual(locked.ledger, plan.sourceLedger.slice(0, 213))
     && locked.catalogFingerprint === plan.before.catalogFingerprint
+    && locked.synonymCount === plan.before.synonymCount
     && locked.aiAutomaticEnabled === false && locked.queue.queued === 0
     && locked.queue.processing === 0 && locked.permitHeld === false
     && locked.activeEnqueueSessions === 0 && locked.workerStopped === true
@@ -183,17 +185,11 @@ export function assertYoutubeResolutionLockedPrestate(plan, locked) {
 }
 
 export function assertYoutubeResolutionDbPoststate(review, plan, observed) {
-  assertResolutionReview(review);
-  assertDatabaseTransition(review, {
-    ledgerCount: plan.before.ledgerCount,
-    catalogFingerprint: plan.before.catalogFingerprint,
-    aiAutomaticEnabled: false,
-  }, {
-    ledgerCount: observed.ledger.length,
-    catalogFingerprint: observed.catalogFingerprint,
-    aiAutomaticEnabled: observed.aiAutomaticEnabled,
-    migrationFiles: plan.expectedAfter.migrations.map((row) => row.filename),
-  });
+  assertResolutionReview(review, { phase: "precutover" });
+  requireValue(plan.before.ledgerCount === 213 && plan.before.catalogFingerprint === review.catalog.before
+    && observed.ledger.length === 215 && observed.catalogFingerprint === review.catalog.after
+    && observed.aiAutomaticEnabled === false,
+  "DB poststate ledger/catalog/AI mismatch");
   requireValue(isDeepStrictEqual(observed.ledger, plan.sourceLedger)
     && isDeepStrictEqual(observed.preservation, plan.expectedAfter.preservation)
     && isDeepStrictEqual(observed.functionEvidence, plan.expectedAfter.functionEvidence)
