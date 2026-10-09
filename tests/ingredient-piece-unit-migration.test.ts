@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const migration = readFileSync('supabase/migrations/20261009130000_ingredient_piece_unit_evidence.sql', 'utf8');
+const youtubeCatalogGate = readFileSync('scripts/verify-youtube-extraction-current-catalog.mjs', 'utf8');
 
 describe('piece unit evidence migration boundary', () => {
   it('fails closed on the exact six current consumer definitions and keeps owners and ACLs', () => {
@@ -25,5 +26,18 @@ describe('piece unit evidence migration boundary', () => {
     expect(migration).toContain('mutate_meal_log_entry_prelaunch_20260919');
     expect(migration).not.toContain('v_evidence:=v_entry.nutrition_evidence_json');
     expect(migration).not.toContain('basis_relations');
+  });
+
+  it('reproduces only the reviewed fresh-replay legacy alias before applying the immutable migration', () => {
+    expect(youtubeCatalogGate).toContain('pieceUnitFreshReplayPredecessorFixture');
+    expect(youtubeCatalogGate).toContain('4afb4fcc84f7da82ee0a442266d4a504');
+    expect(youtubeCatalogGate).toContain('12d47c748c9b09f7fafdfa4c09404ec4570d06f3e6f5059d22d6af2f3e338074');
+    expect(youtubeCatalogGate).toContain('86f9d5ecc2b115aadc00df99dfd70d58');
+    expect(youtubeCatalogGate).toContain('06159ee35b958c1980c962aca09dda551949b3dcea9bc989a99971fc7990b88b');
+    expect(youtubeCatalogGate).toContain("procedure.proacl = array['postgres=X/postgres']::aclitem[]");
+    expect(youtubeCatalogGate).toContain("procedure.proconfig = array['search_path=pg_catalog, public, pg_temp']::text[]");
+    expect(youtubeCatalogGate).toContain('set search_path = pg_catalog, public;');
+    expect(youtubeCatalogGate).toContain('PIECE_UNIT_FRESH_REPLAY_PREDECESSOR_DRIFT');
+    expect(youtubeCatalogGate).toContain('PIECE_UNIT_FRESH_REPLAY_PREDECESSOR_RESTORE_FAILED');
   });
 });

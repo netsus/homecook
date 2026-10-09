@@ -19,7 +19,12 @@ import {
   isSelectableIngredientName,
   normalizeIngredientCatalogName,
 } from "@/lib/ingredient-catalog-policy";
-import { normalizeIngredientSearchName } from "@/lib/ingredient-search";
+import {
+  buildIngredientLookupNameCandidates,
+  buildIngredientLookupResultKey,
+  normalizeIngredientSearchName,
+  type IngredientLookupContext,
+} from "@/lib/ingredient-search";
 import { canonicalizeIngredient, loadIngredientAliases } from "@/lib/server/ingredient-canonical-search";
 import {
   adaptCandidateToFlatDraft,
@@ -8131,24 +8136,32 @@ export async function handleYoutubeValidate(request: Request) {
   return ok(data);
 }
 
-export async function findIngredientIds(dbClient: DbClient, ingredientNames: string[]) {
-  const lookupKeyToOriginalNames = new Map<string, Set<string>>();
+export async function findIngredientIds(
+  dbClient: DbClient,
+  ingredientInputs: Array<string | IngredientLookupContext>,
+) {
+  const candidateRanksByResultKey = new Map<string, Map<string, number>>();
+  for (const input of ingredientInputs) {
+    const resultKey = buildIngredientLookupResultKey(input);
+    const rankedCandidates = new Map<string, number>();
+    buildIngredientLookupNameCandidates(input).forEach((candidate, candidateRank) => {
+      const key = normalizeIngredientSearchName(candidate);
+      if (key && !rankedCandidates.has(key)) rankedCandidates.set(key, candidateRank);
+    });
+    if (rankedCandidates.size === 0) continue;
+    candidateRanksByResultKey.set(resultKey, rankedCandidates);
+  }
 
-  for (const name of ingredientNames) {
-    const key = normalizeIngredientSearchName(name);
-    if (!key) {
-      continue;
-    }
-
-    const originals = lookupKeyToOriginalNames.get(key);
-    if (originals) {
-      originals.add(name);
-    } else {
-      lookupKeyToOriginalNames.set(key, new Set([name]));
+  const lookupKeyTargets = new Map<string, Map<string, number>>();
+  for (const [resultKey, rankedCandidates] of candidateRanksByResultKey) {
+    for (const [key, candidateRank] of rankedCandidates) {
+      const targets = lookupKeyTargets.get(key) ?? new Map<string, number>();
+      targets.set(resultKey, candidateRank);
+      lookupKeyTargets.set(key, targets);
     }
   }
 
-  const lookupKeys = [...lookupKeyToOriginalNames.keys()];
+  const lookupKeys = [...lookupKeyTargets.keys()];
 
   if (lookupKeys.length === 0) {
     return {
@@ -8186,6 +8199,7 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
   }
 
   const matchesByName: IngredientMatchesByName = new Map();
+  const winningRankByName = new Map<string, number>();
   const attach = (
     lookupKey: string,
     ingredientId: string,
@@ -8195,11 +8209,18 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
     if (!isSelectableIngredientId(ingredientId)) {
       return;
     }
-    for (const originalName of lookupKeyToOriginalNames.get(normalizeIngredientSearchName(lookupKey)) ?? []) {
-      let bucket = matchesByName.get(originalName);
+    const targets = lookupKeyTargets.get(normalizeIngredientSearchName(lookupKey)) ?? new Map();
+    for (const [resultKey, candidateRank] of targets) {
+      const winningRank = winningRankByName.get(resultKey);
+      if (winningRank !== undefined && candidateRank > winningRank) continue;
+      if (winningRank === undefined || candidateRank < winningRank) {
+        matchesByName.delete(resultKey);
+        winningRankByName.set(resultKey, candidateRank);
+      }
+      let bucket = matchesByName.get(resultKey);
       if (!bucket) {
         bucket = new Map<string, IngredientMatch>();
-        matchesByName.set(originalName, bucket);
+        matchesByName.set(resultKey, bucket);
       }
 
       // Canonical names take precedence over noisy aliases. Keep multiple
@@ -8609,6 +8630,7 @@ function buildInitialQuantityEvidenceRef({
 export function buildExtractedIngredient({
   matchesByName,
   name,
+  lookupKey = name,
   amount,
   unit,
   ingredientType,
@@ -8626,6 +8648,7 @@ export function buildExtractedIngredient({
 }: {
   matchesByName: IngredientMatchesByName;
   name: string;
+  lookupKey?: string;
   amount: number | null;
   unit: string | null;
   ingredientType: "QUANT" | "TO_TASTE";
@@ -8642,7 +8665,7 @@ export function buildExtractedIngredient({
   quantityReviewRequiredOverride?: boolean;
 }): YoutubeExtractedIngredient {
   const sortedMatches = sortIngredientMatches(
-    Array.from(matchesByName.get(name)?.entries() ?? [])
+    Array.from(matchesByName.get(lookupKey)?.entries() ?? [])
       .map(([ingredientId, match]) => ({
         ingredientId,
         standardName: match.standardName,
@@ -8709,6 +8732,11 @@ function buildExtractedIngredients(
     buildExtractedIngredient({
       matchesByName,
       name: ingredient.name,
+      lookupKey: buildIngredientLookupResultKey({
+        name: ingredient.name,
+        unit: ingredient.unit,
+        rawText: ingredient.rawText,
+      }),
       amount: ingredient.amount,
       unit: ingredient.unit,
       ingredientType: ingredient.ingredientType,
@@ -8922,7 +8950,7 @@ async function buildExtractedRecipeCandidate({
   const parsedIngredients = rawCandidate.draft.ingredients.map(adaptFlatDraftIngredient);
   const ingredientLookup = await findIngredientIds(
     ingredientDbClient,
-    parsedIngredients.map((ingredient) => ingredient.name),
+    parsedIngredients.map(({ name, unit, rawText }) => ({ name, unit, rawText })),
   );
 
   if (ingredientLookup.error) {
@@ -9273,7 +9301,7 @@ async function handleYoutubeI031Extract({
   const parsedRecipe = buildI031ParsedRecipe(extraction);
   const ingredientLookup = await findIngredientIds(
     userDbClient,
-    parsedRecipe.ingredients.map((ingredient) => ingredient.name),
+    parsedRecipe.ingredients.map(({ name, unit, rawText }) => ({ name, unit, rawText })),
   );
   if (ingredientLookup.error) {
     return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
@@ -9661,7 +9689,7 @@ export async function handleYoutubeExtract(request: Request) {
 
   const ingredientLookup = await findIngredientIds(
     userDbClient,
-    finalParsedRecipe.ingredients.map((ingredient) => ingredient.name),
+    finalParsedRecipe.ingredients.map(({ name, unit, rawText }) => ({ name, unit, rawText })),
   );
   if (ingredientLookup.error) {
     return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
