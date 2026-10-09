@@ -32,12 +32,33 @@ export function validateRecoveryPlan(plan) {
   const values = plan.inserts.filter((op) => op.table === 'nutrition_values');
   if (values.length !== 16 || values.filter((op) => op.row.amount === null).length !== 3) throw Error('RECOVERY_NUTRIENT_SCOPE');
   for (const { row } of values) if ((row.amount === null) !== (row.value_status === 'missing') || (row.amount !== null && (!Number.isFinite(row.amount) || row.amount < 0))) throw Error('RECOVERY_NUTRIENT_VALUE');
+  const jobPolicy = { ingredient_ids: ['89b15f30-81cd-587a-abd7-301bf93661b5', 'd75a9492-4964-5a2f-a576-287511f07e4a'],
+    policy_version: 'ingredient-ai-v1', from_status: 'queued', to_status: 'skipped', reason: 'NON_AI_PRIMARY_EXISTS', expected_attempt_count: 0, preserve_existing_jobs: true };
+  if (JSON.stringify(plan.ai_job_cleanup) !== JSON.stringify(jobPolicy)
+    || JSON.stringify(plan.inserts.filter(op => op.table === 'ingredients').map(op => op.row.id).sort()) !== JSON.stringify(jobPolicy.ingredient_ids)) throw Error('RECOVERY_AI_JOB_SCOPE');
   return plan;
 }
 export function renderRecoverySql(input, { reviewedBy } = {}) {
   validateRecoveryPlan(input);
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewedBy ?? '')) throw Error('RECOVERY_REVIEWER_REQUIRED');
   const p = JSON.parse(JSON.stringify(input).replaceAll('__PRIVATE_REVIEWER__', reviewedBy));
+  const jobIds = p.ai_job_cleanup.ingredient_ids.map(id => `${literal(id)}::uuid`).join(',');
+  const jobPolicy = literal(p.ai_job_cleanup.policy_version);
+  const jobsDigest = `(SELECT md5(coalesce(string_agg(md5(to_jsonb(j)::text),'' ORDER BY md5(to_jsonb(j)::text)),'')) FROM private.ingredient_ai_nutrition_jobs j WHERE j.ingredient_id NOT IN (${jobIds}))`;
+  const aiDisabled = assertion(`(SELECT count(*)<>1 OR bool_or(enabled) OR bool_or(policy_version<>${jobPolicy}) FROM private.ingredient_ai_nutrition_settings)`, 'RECOVERY_AI_SETTINGS_DRIFT');
+  const jobPostimage = status => assertion(`(SELECT count(*) FROM private.ingredient_ai_nutrition_jobs WHERE ingredient_id IN (${jobIds}))<>2 OR EXISTS(SELECT 1 FROM private.ingredient_ai_nutrition_jobs WHERE ingredient_id IN (${jobIds}) AND (
+    status<>${literal(status)} OR policy_version<>${jobPolicy} OR attempt_count<>0 OR max_attempts<>3
+    OR worker_id IS NOT NULL OR lease_token IS NOT NULL OR lease_expires_at IS NOT NULL OR completion_token IS NOT NULL
+    OR context_hash IS NOT NULL OR ingredient_name IS NOT NULL OR prompt_version IS NOT NULL OR model_id IS NOT NULL
+    OR cardinality(pending_recipe_ids)<>0 OR result IS NOT NULL
+    OR last_error_code IS DISTINCT FROM ${status === 'queued' ? 'NULL' : "'NON_AI_PRIMARY_EXISTS'"}
+    OR private.ingredient_ai_nutrition_skip_reason(ingredient_id) IS DISTINCT FROM 'NON_AI_PRIMARY_EXISTS'))`, 'RECOVERY_AI_JOB_POSTIMAGE');
+  const finishNewJobs = `${aiDisabled}
+${jobPostimage('queued')}
+UPDATE private.ingredient_ai_nutrition_jobs SET status='skipped', last_error_code='NON_AI_PRIMARY_EXISTS', updated_at=clock_timestamp()
+WHERE ingredient_id IN (${jobIds}) AND policy_version=${jobPolicy} AND status='queued' AND attempt_count=0;
+${jobPostimage('skipped')}
+IF v_jobs_before IS DISTINCT FROM ${jobsDigest} THEN RAISE EXCEPTION 'RECOVERY_EXISTING_AI_JOBS_CHANGED'; END IF;`;
   const allOps = [...p.updates.map((op) => ({ table: op.table, row: op.after })), ...p.inserts];
   const post = allOps.map(({ table, row }) => assertion(`${comparable(actual(table, row))} IS DISTINCT FROM ${comparable(json(row))}`, 'RECOVERY_POSTIMAGE')).concat(p.deletes.map(({ table, row }) => assertion(`EXISTS(SELECT 1 FROM public.${table} t WHERE ${where(table, row)})`, 'RECOVERY_DELETED_ALIAS_REAPPEARED'))).join('\n');
   const exclude = (table) => [...p.inserts.filter((op) => op.table === table).map((op) => op.row), ...p.updates.filter((op) => op.table === table).map((op) => op.before), ...p.deletes.filter((op) => op.table === table).map((op) => op.row)].map((row) => `(${where(table, row)})`).join(' OR ') || 'false';
@@ -74,16 +95,21 @@ SET LOCAL standard_conforming_strings=on;
 SET LOCAL lock_timeout='10s';
 SET LOCAL statement_timeout='180s';
 DO $recovery$
-DECLARE v_cutover uuid; v_preserved jsonb;
+DECLARE v_cutover uuid; v_preserved jsonb; v_jobs_before text;
 BEGIN
 PERFORM pg_advisory_xact_lock(hashtextextended('homecook:ingredient-exclusion-recovery-20261010',0));
 LOCK TABLE ${[...tables, 'nutrition_sources', 'ingredient_catalog_groups'].map((table) => `public.${table}`).join(',')} IN SHARE ROW EXCLUSIVE MODE;
 IF EXISTS(SELECT 1 FROM public.operational_events WHERE event_type='ingredient_exclusion_recovery_applied' AND metadata_json->>'operation_checksum'=${literal(p.operation_checksum)}) THEN
 ${post}
+${aiDisabled}
+${jobPostimage('skipped')}
 RAISE NOTICE 'Recovery already applied; verified postimage, no writes'; RETURN;
 END IF;
 ${guards}
 ${pre}
+${aiDisabled}
+IF EXISTS(SELECT 1 FROM private.ingredient_ai_nutrition_jobs WHERE ingredient_id IN (${jobIds})) THEN RAISE EXCEPTION 'RECOVERY_AI_JOB_PREEXISTS'; END IF;
+SELECT ${jobsDigest} INTO v_jobs_before;
 SELECT jsonb_build_object(${preserve}) INTO v_preserved;
 SELECT current_cutover_attempt_id INTO v_cutover FROM public.account_generation_capability_state WHERE singleton AND state='generation_active' FOR KEY SHARE;
 IF v_cutover IS NULL THEN RAISE EXCEPTION 'RECOVERY_WRITER_UNAVAILABLE'; END IF;
@@ -91,11 +117,12 @@ PERFORM public.set_account_generation_internal_writer_marker(v_cutover,true);
 ${updates}
 ${deletes}
 ${inserts}
+${finishNewJobs}
 ${post}
 ${oldRelations}
 IF v_preserved IS DISTINCT FROM jsonb_build_object(${preserve}) THEN RAISE EXCEPTION 'RECOVERY_PRESERVATION_FAILED'; END IF;
 INSERT INTO public.operational_events(event_type,severity,source,actor_user_id,message_summary,metadata_json)
-VALUES('ingredient_exclusion_recovery_applied','info','ingredient-exclusion-recovery-20261010',${literal(p.reviewed_by)}::uuid,'Restore reviewed everyday ingredients and exact official nutrition without rewriting history',${json({ operation_checksum: p.operation_checksum, decisions: p.decisions, removed_aliases: p.deletes.map((op) => op.row) })});
+VALUES('ingredient_exclusion_recovery_applied','info','ingredient-exclusion-recovery-20261010',${literal(p.reviewed_by)}::uuid,'Restore reviewed everyday ingredients and exact official nutrition without rewriting history',${json({ operation_checksum: p.operation_checksum, decisions: p.decisions, removed_aliases: p.deletes.map((op) => op.row), ai_job_cleanup: p.ai_job_cleanup })});
 PERFORM public.set_account_generation_internal_writer_marker(v_cutover,false);
 PERFORM pg_notify('pgrst','reload schema');
 END;

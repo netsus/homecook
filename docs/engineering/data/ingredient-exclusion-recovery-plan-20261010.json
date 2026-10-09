@@ -1253,5 +1253,17 @@
       "ingredient_id": "41a5e41b-a738-4e63-8183-3786a5ac61c4"
     }
   ],
-  "operation_checksum": "0a2bb9e3acf47eda98ce2544f8c596dca15ee294c40488789e0f846f6045fe27"
+  "ai_job_cleanup": {
+    "ingredient_ids": [
+      "89b15f30-81cd-587a-abd7-301bf93661b5",
+      "d75a9492-4964-5a2f-a576-287511f07e4a"
+    ],
+    "policy_version": "ingredient-ai-v1",
+    "from_status": "queued",
+    "to_status": "skipped",
+    "reason": "NON_AI_PRIMARY_EXISTS",
+    "expected_attempt_count": 0,
+    "preserve_existing_jobs": true
+  },
+  "operation_checksum": "f59883e7f90852840d9e8a7895d90e75838d6dd1907c2d7718415168bb887072"
 }

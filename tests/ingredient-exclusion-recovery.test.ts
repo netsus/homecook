@@ -57,4 +57,30 @@ describe('reviewed ingredient exclusion recovery', () => {
     expect(sql).toContain('set_account_generation_internal_writer_marker(v_cutover,true)');
     expect(sql).not.toMatch(/DISABLE TRIGGER|session_replication_role|UPDATE public\.nutrition_|DELETE FROM public\.(ingredients|nutrition_)/);
   });
+  it('restricts automatic queue cleanup to the two new officially linked ingredients', () => {
+    const expected = ['89b15f30-81cd-587a-abd7-301bf93661b5', 'd75a9492-4964-5a2f-a576-287511f07e4a'];
+    expect(original.ai_job_cleanup.ingredient_ids).toEqual(expected);
+    for (const field of ['ingredient_ids', 'reason', 'from_status', 'to_status', 'expected_attempt_count', 'preserve_existing_jobs']) {
+      const plan=copy(); plan.ai_job_cleanup[field]=field==='ingredient_ids' ? [reviewer.reviewedBy] : 'changed';
+      expect(() => renderRecoverySql(checksum(plan),reviewer)).toThrow('RECOVERY_AI_JOB_SCOPE');
+    }
+    const absent=copy(); delete absent.ai_job_cleanup;
+    expect(() => renderRecoverySql(checksum(absent),reviewer)).toThrow('RECOVERY_AI_JOB_SCOPE');
+  });
+  it('checks official primary nutrition before skipping untouched new jobs and preserves all previous jobs', () => {
+    const sql=renderRecoverySql(original,reviewer);
+    const update="UPDATE private.ingredient_ai_nutrition_jobs SET status='skipped', last_error_code='NON_AI_PRIMARY_EXISTS'";
+    expect(sql).toContain(update);
+    expect(sql.indexOf(update)).toBeGreaterThan(sql.lastIndexOf('INSERT INTO public.ingredient_nutrition_profiles'));
+    expect(sql).toContain("private.ingredient_ai_nutrition_skip_reason(ingredient_id) IS DISTINCT FROM 'NON_AI_PRIMARY_EXISTS'");
+    expect(sql).toContain("AND status='queued' AND attempt_count=0");
+    expect(sql).toContain('RECOVERY_AI_JOB_PREEXISTS');
+    expect(sql).toContain('RECOVERY_EXISTING_AI_JOBS_CHANGED');
+    expect(sql).toContain('RECOVERY_AI_SETTINGS_DRIFT');
+    expect(sql).toContain('lease_token IS NOT NULL');
+    expect(sql).not.toContain('DELETE FROM private.ingredient_ai_nutrition_jobs');
+    expect(sql).not.toContain('UPDATE private.ingredient_ai_nutrition_settings');
+    expect(sql).not.toContain('DISABLE TRIGGER');
+  });
+
 });
