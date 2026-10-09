@@ -1,3 +1,4 @@
+import { formatEnergyKcal } from "@/lib/nutrition/energy-display";
 import type { MealLogNutritionEvidence } from "@/types/meal-log";
 
 export const MEAL_LOG_MACROS = [
@@ -7,6 +8,10 @@ export const MEAL_LOG_MACROS = [
 ] as const;
 export type MealLogMetric = "calories_kcal" | typeof MEAL_LOG_MACROS[number]["key"];
 export const formatMealLogNumber = (value: number | null) => value === null || !Number.isFinite(value) ? "정보 없음" : Math.round(value).toLocaleString("ko-KR");
+
+export function formatMealLogEnergy(nutrition: MealLogNutritionEvidence): string {
+  return formatEnergyKcal(nutrition.calories_kcal, { partial: nutrition.calculation_status === "partial", unavailableText: "정보 없음" });
+}
 
 /** Provenance is independent of coverage and of quantity-conversion estimates. */
 export function mealLogNutritionNotice(nutrition: MealLogNutritionEvidence): string | null {

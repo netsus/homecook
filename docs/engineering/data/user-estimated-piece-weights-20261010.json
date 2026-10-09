@@ -1,0 +1,103 @@
+{
+  "schema": "homecook.user-estimated-piece-weights.v1",
+  "reviewed_at": "2026-10-09T18:34:55.000Z",
+  "reviewer": "__PRIVATE_REVIEWER_UUID__",
+  "source": {
+    "provider_code": "HOMECOOK_USER_STANDARD",
+    "dataset_name": "사용자 승인 AI 추정 중량: 월계수잎·깻잎·통후추",
+    "source_version": "2026-10-10-user-estimated-piece-v1",
+    "data_basis_date": "2026-10-10",
+    "source_url": "https://github.com/netsus/homecook/blob/master/docs/engineering/data/user-estimated-piece-weights-20261010.json",
+    "license_name": "Homecook user-approved estimate; not an official measured reference",
+    "decision_reason": "사용자가 전달한 Gemini 결과의 근사 중량과 후속 승인에 따른 서비스 기본값. 공식 실측 중량이나 공식 영양성분으로 주장하지 않는다. 기존 100g당 영양자료는 변경하지 않고 중량 환산에만 사용한다. 자동 AI 호출 없음."
+  },
+  "policy": {
+    "append_only": true,
+    "preserve_official_nutrition": true,
+    "preserve_recipe_inputs": true,
+    "preserve_historical_records": true,
+    "no_ai_calls": true,
+    "garlic_pending_original_review": true
+  },
+  "items": [
+    {
+      "ingredient_id": "81dd8c7e-319a-5f81-bf3e-4bd21b06d1d5",
+      "standard_name": "월계수잎",
+      "preparation_state": "as_published",
+      "actual_state": "dried",
+      "size_code": "medium",
+      "observed_unit": "장",
+      "observed_amount": 1,
+      "weight_g": 0.5,
+      "original_user_report": {
+        "source": "사용자 전달 Gemini 결과; 원문 서비스 응답 직접 조회 없음",
+        "amount": 1,
+        "unit": "장",
+        "approximate_weight_g": 0.5
+      },
+      "expected_nutrition": {
+        "profile_id": "980e5bcf-d08b-4b32-8328-4d4e2490b2b4",
+        "source_item_id": "7ee1e985-be64-49f1-add4-5d71047cd051",
+        "external_name": "월계수, 잎, 말린것",
+        "provider_code": "RDA_10_4",
+        "basis_amount": 100,
+        "basis_unit": "g"
+      },
+      "decision_reason": "사용자 승인 AI 추정 중량. 마른 식용 월계수잎 1장 약 0.5g. 생잎에는 적용하지 않는다. 실제 측정 g 입력을 우선하며 개수 입력은 추정 품질로 계산한다."
+    },
+    {
+      "ingredient_id": "78deadf1-4645-5854-9abc-39cffe996567",
+      "standard_name": "깻잎",
+      "preparation_state": "as_published",
+      "actual_state": "raw",
+      "size_code": "medium",
+      "observed_unit": "장",
+      "observed_amount": 1,
+      "weight_g": 1,
+      "original_user_report": {
+        "source": "사용자 전달 Gemini 결과; 원문 서비스 응답 직접 조회 없음",
+        "amount": 10,
+        "unit": "장",
+        "approximate_weight_g": 10,
+        "weight_range_g": [
+          7,
+          10
+        ]
+      },
+      "expected_nutrition": {
+        "profile_id": "381777e7-7570-4eb2-b53f-454505875750",
+        "source_item_id": "bc4a979e-0081-482a-bf3c-cdc1ca5154e1",
+        "external_name": "들깻잎, 생것",
+        "provider_code": "RDA_10_4",
+        "basis_amount": 100,
+        "basis_unit": "g"
+      },
+      "decision_reason": "사용자 승인 AI 추정 중량. 사용자 제공 범위 10장 약 7~10g 중 후속 승인된 10g을 서비스 기본값으로 선택. 1장 1g으로 환산하며 잎 크기 차이를 반영한 실측값은 아니다. 실제 측정 g 입력을 우선하며 개수 입력은 추정 품질로 계산한다."
+    },
+    {
+      "ingredient_id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+      "standard_name": "통후추",
+      "preparation_state": "as_published",
+      "actual_state": "dried_black",
+      "size_code": "medium",
+      "observed_unit": "알",
+      "observed_amount": 1,
+      "weight_g": 0.067,
+      "original_user_report": {
+        "source": "사용자 전달 Gemini 결과; 원문 서비스 응답 직접 조회 없음",
+        "amount": 3,
+        "unit": "알",
+        "approximate_weight_g": 0.2
+      },
+      "expected_nutrition": {
+        "profile_id": "ff69e97e-dd87-475c-bf05-1f6c1ea48976",
+        "source_item_id": "2fc470c7-6dac-436f-bc9e-579220696efc",
+        "external_name": "Spices, pepper, black",
+        "provider_code": "USDA_FDC_SR_LEGACY",
+        "basis_amount": 100,
+        "basis_unit": "g"
+      },
+      "decision_reason": "사용자 승인 AI 추정 중량. 건조 검정 통후추 3알 약 0.2g. 저장 중량 소수 셋째 자리 제약으로 1알 0.067g이며 3알 계산값은 0.201g이다. 백후추·혼합·가염 제품으로 확대하지 않는다. 실제 측정 g 입력을 우선하며 개수 입력은 추정 품질로 계산한다."
+    }
+  ]
+}

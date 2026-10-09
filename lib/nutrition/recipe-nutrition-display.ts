@@ -1,3 +1,4 @@
+import { formatEnergyKcal } from "@/lib/nutrition/energy-display";
 import type {
   RecipeNutrition,
   RecipeNutritionQuality,
@@ -139,6 +140,7 @@ function formatPerServing(
   return formatNutrientAmount(
     numericValue / baseServings,
     unit,
+    value?.status === "partial",
   );
 }
 
@@ -163,13 +165,15 @@ function formatSelectedTotal(
     return UNAVAILABLE_TEXT;
   }
 
-  return formatNutrientAmount(selectedTotal, unit);
+  return formatNutrientAmount(selectedTotal, unit, value?.status === "partial");
 }
 
 function formatNutrientAmount(
   amount: number,
   unit: RecipeNutrientMeta["unit"],
+  partial = false,
 ) {
+  if (unit === "kcal") return formatEnergyKcal(amount, { partial });
   const maximumFractionDigits = unit === "g" ? 1 : 0;
   const formatted = new Intl.NumberFormat("ko-KR", {
     maximumFractionDigits,

@@ -96,6 +96,14 @@ function createEntry(
 describe("prepared food planner presentation", () => {
   afterEach(() => cleanup());
 
+  it("displays small product energy while preserving the product nutrition", () => {
+    const entry = createEntry();
+    entry.nutrition.values.energy_kcal = { amount: 4.99, known_amount: null, status: "complete", display_mode: "total" };
+    render(<ProductPlannerEntryCard entry={entry} isPending={false} onDelete={vi.fn()} onEditQuantity={vi.fn()} />);
+    expect(screen.getByText("예상 열량 5 kcal 미만")).toBeTruthy();
+    expect(entry.nutrition.values.energy_kcal.amount).toBe(4.99);
+  });
+
   it.each([
     [
       { amount: 0, known_amount: null, status: "complete", display_mode: "total" },

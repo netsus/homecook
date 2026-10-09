@@ -38,7 +38,7 @@ describe("AI nutrition provenance is separate from completeness and quantity con
   it.each(["app", "web"] as const)("labels complete %s recipe estimates without changing numbers", variant => {
     render(<RecipeNutritionCard nutrition={recipe} selectedServings={1} onRetry={vi.fn()} variant={variant} />);
     expect(screen.getByText("AI 추정값 포함")).toBeTruthy();
-    expect(screen.getByText("100 kcal")).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.tagName === "P" && /^100\s*kcal$/.test(element.textContent ?? ""))).toBeTruthy();
   });
   it("does not describe partial AI recipe values as only verified values", () => {
     render(<RecipeNutritionCard nutrition={{ ...recipe, calculation_status: "partial" }} selectedServings={1} onRetry={vi.fn()} />);
