@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "catalog_snapshot": {
+    "source": "docs/engineering/data/ingredient-catalog-organization-20261007.json",
+    "source_sha256": "ff468e3a40e4a76966522bfacdffd7f0559b5dadf9f524f5c865003f7499ef00",
+    "reviewed_at": "2026-10-09",
+    "ingredients": [
+      { "id": "550e8400-e29b-41d4-a716-446655440017", "standard_name": "두부" },
+      { "id": "d8e4b087-3629-4f58-8ccd-2185a07d3da5", "standard_name": "맛술" },
+      { "id": "3b93c08e-fb48-4eae-8595-f5e5789c52ab", "standard_name": "파스타면" },
+      { "id": "0d9c596d-68a0-58b0-9f36-a5d33c05985d", "standard_name": "바질" },
+      { "id": "35743c94-4a2c-4a81-a12a-6b9a18ca7d44", "standard_name": "바질 잎" },
+      { "id": "7d1408f1-43bd-4399-a240-117ab14a5a23", "standard_name": "올리브 오일" },
+      { "id": "00000000-0000-4000-8000-000000000071", "standard_name": "대파" },
+      { "id": "00000000-0000-4000-8000-000000000072", "standard_name": "쪽파" }
+    ],
+    "synonyms": [
+      { "ingredient_id": "d8e4b087-3629-4f58-8ccd-2185a07d3da5", "synonym": "미림" },
+      { "ingredient_id": "d8e4b087-3629-4f58-8ccd-2185a07d3da5", "synonym": "맛술(미림)" },
+      { "ingredient_id": "3b93c08e-fb48-4eae-8595-f5e5789c52ab", "synonym": "스파게티면" },
+      { "ingredient_id": "3b93c08e-fb48-4eae-8595-f5e5789c52ab", "synonym": "스파게티 면" },
+      { "ingredient_id": "7d1408f1-43bd-4399-a240-117ab14a5a23", "synonym": "올리브유" },
+      { "ingredient_id": "7d1408f1-43bd-4399-a240-117ab14a5a23", "synonym": "올리브오일" },
+      { "ingredient_id": "00000000-0000-4000-8000-000000000071", "synonym": "파" },
+      { "ingredient_id": "00000000-0000-4000-8000-000000000072", "synonym": "파" }
+    ]
+  },
+  "frozen_sources": [
+    {
+      "video_id": "tqpwhtw54mQ",
+      "candidate": "v59-source-first-quantity",
+      "archived_output_sha256": "e8918b290d2dca5e71a16ed00d50df455e0f95ba5bc7cff5260d12d4b58005ce",
+      "frozen_grader_output_sha256": "81898474b0293d06b4c3b42118b73cc6f8323f9ee88a278d9b4660e926427db7",
+      "frozen_golden_sha256": "e74bf109ec371154198e7d7dbfddbfd415424a5b6a3d54f550f60a5b5f464218"
+    },
+    {
+      "video_id": "eJyoszbyNNQ",
+      "candidate": "v59-source-first-quantity",
+      "archived_output_sha256": "c80875c37293f8f1efadf02608eb5bd35748e5f1b5d9e40b821ceb5b6f3e09a0",
+      "frozen_grader_output_sha256": "cbd53ca9dccccf9aca3ab55939ac5dd6f544fd1334bc67eecb6d6e8de4659c5f",
+      "frozen_golden_sha256": "9744977ffa04046c4fc327811ce756cd1e4fc57a083a8d03899e35cc450d5939"
+    }
+  ],
+  "semantic_cases": [
+    {
+      "id": "tofu-size-qualifier",
+      "video_id": "tqpwhtw54mQ",
+      "extracted_name": "큰 사이즈 두부",
+      "golden_name": "두부",
+      "golden_aliases": ["tofu"],
+      "source_evidence": {
+        "original_name": "큰 사이즈 두부",
+        "unit": "모",
+        "raw_text": "큰 사이즈 두부 1모(550g)",
+        "snippet": "큰 사이즈 두부 1모(550g)"
+      },
+      "adjudication": {
+        "reviewers": ["catalog_ids:gpt-5.6-sol/high", "orchestrator:source-and-catalog-review"],
+        "catalog_basis": "catalog snapshot entry 550e8400-e29b-41d4-a716-446655440017 (두부)",
+        "reason": "크기와 1모(550g)는 이 occurrence의 포장·수량 근거이며 두부 정체성을 바꾸지 않는다."
+      },
+      "frozen_strict_name_match": false,
+      "reviewed_semantically_equivalent": true,
+      "expected_status": "resolved",
+      "acceptable_candidate_ids": ["550e8400-e29b-41d4-a716-446655440017"],
+      "acceptable_final_ids": ["550e8400-e29b-41d4-a716-446655440017"],
+      "before": { "status": "unresolved", "candidate_ids": [], "final_id": null }
+    },
+    {
+      "id": "cooking-wine-parenthetical-alias",
+      "video_id": "tqpwhtw54mQ",
+      "extracted_name": "맛술(미림)",
+      "golden_name": "맛술",
+      "golden_aliases": ["미림"],
+      "source_evidence": {
+        "original_name": "맛술(미림)",
+        "unit": "스푼",
+        "raw_text": "맛술(미림) 5스푼(50g)",
+        "snippet": "맛술(미림) 5스푼(50g)"
+      },
+      "adjudication": {
+        "reviewers": ["catalog_ids:gpt-5.6-sol/high", "orchestrator:source-and-catalog-review"],
+        "catalog_basis": "catalog snapshot entry d8e4b087-3629-4f58-8ccd-2185a07d3da5 (맛술) and existing 미림 synonym",
+        "reason": "괄호 안 미림은 같은 행에서 맛술의 명시 별칭으로 사용됐다."
+      },
+      "frozen_strict_name_match": false,
+      "reviewed_semantically_equivalent": true,
+      "expected_status": "resolved",
+      "acceptable_candidate_ids": ["d8e4b087-3629-4f58-8ccd-2185a07d3da5"],
+      "acceptable_final_ids": ["d8e4b087-3629-4f58-8ccd-2185a07d3da5"],
+      "before": { "status": "unresolved", "candidate_ids": [], "final_id": null }
+    },
+    {
+      "id": "spaghetti-context-only-equivalence",
+      "video_id": "eJyoszbyNNQ",
+      "extracted_name": "스파게티",
+      "golden_name": "스파게티면",
+      "golden_aliases": ["Spaghetti", "spaghetti"],
+      "source_evidence": {
+        "original_name": "Spaghetti",
+        "unit": "g",
+        "raw_text": "Spaghetti 250g",
+        "snippet": "1/2 lb | 250g Spaghetti"
+      },
+      "adjudication": {
+        "reviewers": ["catalog_ids:gpt-5.6-sol/high", "orchestrator:source-and-catalog-review"],
+        "catalog_basis": "catalog snapshot entry 3b93c08e-fb48-4eae-8595-f5e5789c52ab (파스타면, 상태 미확정)",
+        "reason": "영문 원문과 질량 근거는 면 재료임을 지지하지만 건면·생면·삶은 상태는 확정하지 않는다."
+      },
+      "frozen_strict_name_match": false,
+      "reviewed_semantically_equivalent": true,
+      "lookup_context": {
+        "unit": "g",
+        "raw_text": "Spaghetti 250g"
+      },
+      "expected_status": "resolved",
+      "acceptable_candidate_ids": ["3b93c08e-fb48-4eae-8595-f5e5789c52ab"],
+      "acceptable_final_ids": ["3b93c08e-fb48-4eae-8595-f5e5789c52ab"],
+      "before": { "status": "unresolved", "candidate_ids": [], "final_id": null }
+    },
+    {
+      "id": "fresh-basil-leaf-specific-id",
+      "video_id": "eJyoszbyNNQ",
+      "extracted_name": "바질 잎",
+      "golden_name": "바질",
+      "golden_aliases": ["Basil Leaves", "basil"],
+      "source_evidence": {
+        "original_name": "Basil Leaves",
+        "unit": "Handful",
+        "raw_text": "1 Handful Basil Leaves",
+        "snippet": "1 Handful Basil Leaves"
+      },
+      "adjudication": {
+        "reviewers": ["catalog_ids:gpt-5.6-sol/high", "orchestrator:source-and-catalog-review"],
+        "catalog_basis": "catalog snapshot entry 35743c94-4a2c-4a81-a12a-6b9a18ca7d44 (바질 잎; 부위 잎, 상태 생것)",
+        "reason": "원문이 Leaves를 명시하므로 일반 바질이 아니라 보존된 잎 전용 ID를 사용한다."
+      },
+      "frozen_strict_name_match": false,
+      "reviewed_semantically_equivalent": true,
+      "expected_status": "resolved",
+      "acceptable_candidate_ids": ["35743c94-4a2c-4a81-a12a-6b9a18ca7d44"],
+      "acceptable_final_ids": ["35743c94-4a2c-4a81-a12a-6b9a18ca7d44"],
+      "before": {
+        "status": "resolved",
+        "candidate_ids": ["35743c94-4a2c-4a81-a12a-6b9a18ca7d44"],
+        "final_id": "35743c94-4a2c-4a81-a12a-6b9a18ca7d44"
+      }
+    },
+    {
+      "id": "olive-oil-existing-canonical",
+      "video_id": "eJyoszbyNNQ",
+      "extracted_name": "올리브 오일",
+      "golden_name": "올리브유",
+      "golden_aliases": ["Olive Oil"],
+      "source_evidence": {
+        "original_name": "Olive Oil",
+        "unit": null,
+        "raw_text": "Olive Oil",
+        "snippet": "add a few tablespoons, don’t worry about measuring"
+      },
+      "adjudication": {
+        "reviewers": ["catalog_ids:gpt-5.6-sol/high", "orchestrator:source-and-catalog-review"],
+        "catalog_basis": "catalog snapshot entry 7d1408f1-43bd-4399-a240-117ab14a5a23 (올리브 오일) and existing 올리브유 synonym",
+        "reason": "추출명과 영문 원문이 기존 대표 이름·동의어 관계에 정확히 대응한다."
+      },
+      "frozen_strict_name_match": false,
+      "reviewed_semantically_equivalent": true,
+      "expected_status": "resolved",
+      "acceptable_candidate_ids": ["7d1408f1-43bd-4399-a240-117ab14a5a23"],
+      "acceptable_final_ids": ["7d1408f1-43bd-4399-a240-117ab14a5a23"],
+      "before": {
+        "status": "resolved",
+        "candidate_ids": ["7d1408f1-43bd-4399-a240-117ab14a5a23"],
+        "final_id": "7d1408f1-43bd-4399-a240-117ab14a5a23"
+      }
+    }
+  ],
+  "ambiguity_controls": [
+    {
+      "name": "파",
+      "expected_status": "needs_review",
+      "expected_candidate_ids": [
+        "00000000-0000-4000-8000-000000000071",
+        "00000000-0000-4000-8000-000000000072"
+      ]
+    }
+  ],
+  "unresolved_controls": [
+    "곰곰 두부",
+    "스파게티 볼로네제",
+    "말린 바질 잎",
+    "올리브 오일 마요네즈",
+    "엑스트라버진 올리브 오일"
+  ]
+}

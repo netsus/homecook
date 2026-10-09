@@ -2512,11 +2512,12 @@ function ActiveYoutubeImportScreen({
     setAreDraftTagsDirty(false);
     setDraftWarnings([]);
     setIngredients(saved.content.ingredients.map((ingredient, index) => {
+      const ingredientLink = saved.ingredient_links?.[ingredient.row_id];
       originalIngredientNamesRef.current.set(ingredient.row_id, ingredient.standard_name);
       return {
         tempId: ingredient.row_id,
         draft_ingredient_id: ingredient.source_draft_ingredient_id ?? undefined,
-        ingredient_id: "",
+        ingredient_id: ingredientLink?.ingredient_id ?? "",
         standard_name: ingredient.standard_name,
         amount: ingredient.amount,
         unit: ingredient.unit,
@@ -2525,8 +2526,9 @@ function ActiveYoutubeImportScreen({
         component_label: ingredient.component_label,
         sort_order: index + 1,
         scalable: ingredient.quantity_mode === "quantity",
-        confidence: null,
-        resolution_status: "unresolved" as const,
+        confidence: ingredientLink?.resolution_status === "resolved" ? 1 : null,
+        resolution_status: ingredientLink?.resolution_status ?? "unresolved" as const,
+        candidates: ingredientLink?.candidates ?? [],
         raw_text: ingredient.standard_name,
         quantity_review_required: ingredient.quantity_mode === "unknown",
         quantity_user_confirmed: ingredient.quantity_mode !== "unknown",

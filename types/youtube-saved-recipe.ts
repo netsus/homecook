@@ -1,3 +1,8 @@
+import type {
+  YoutubeIngredientCandidate,
+  YoutubeIngredientResolutionStatus,
+} from "@/types/recipe";
+
 export interface YoutubeSavedRecipeIngredientInput {
   row_id: string;
   source_draft_ingredient_id: string | null;
@@ -7,6 +12,12 @@ export interface YoutubeSavedRecipeIngredientInput {
   unit: string | null;
   display_text: string | null;
   component_label: string | null;
+}
+
+export interface YoutubeSavedRecipeIngredientLink {
+  ingredient_id: string | null;
+  resolution_status: YoutubeIngredientResolutionStatus;
+  candidates: YoutubeIngredientCandidate[];
 }
 
 export interface YoutubeSavedRecipeStepInput {
@@ -38,6 +49,11 @@ export interface YoutubeSavedRecipeResult {
   created_at: string;
   updated_at: string;
   content: YoutubeSavedRecipeEditableContent;
+  /**
+   * Read-only catalog projection keyed by the current editable row id.
+   * Older deployments may omit it while the additive DB migration rolls out.
+   */
+  ingredient_links?: Record<string, YoutubeSavedRecipeIngredientLink>;
   source: YoutubeSavedRecipeSource;
 }
 

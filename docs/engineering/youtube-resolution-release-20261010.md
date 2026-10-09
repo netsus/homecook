@@ -50,6 +50,8 @@ DB 연결 검사에는 기존 결과를 재사용한다. 새 영상 처리와 �
 
 ## 검증 상태
 
+- 통과: 제품 변경 관련28파일407검사, 타입·대상 lint.30영상/344행 회귀 보고서를 다시 생성해 원본과 바이트 일치를 확인했다. 원본 미커밋 작업19파일의 최초 snapshot 대비 변경은0개다.
+
 - 통과: 후보 production build, 전체215개 migration 격리 replay, 실제 RPC 통합8검사, 운영 backup 전체 restore clone, 실제 추출·자동 저장·수정·재열기, 모바일390px·데스크톱1280px 확인.
 - 통과: 운영자 검토 `CLEAR`, 14개 Node 검사와18개 Vitest 검사. 별도 대상 lint도 통과했다.
 - 제한: clean deploy의 ESLint loader는 `eslint-plugin-react-hooks`가 없어 실행되지 않았다. 따라서 “fresh deploy 전체 lint 통과”로 기록하지 않는다.
@@ -75,7 +77,7 @@ DB 연결 검사에는 기존 결과를 재사용한다. 새 영상 처리와 �
 
 Stage 1은 웹·워커·DB를 같은 호환 묶음으로 반영했다. worker generation46은 기존과 같은 권한이며 signing key 교체, 권한 확대, 새 유료 API 활성화는 없었다. 운영 reset 없이 backup·restore clone을 먼저 확인했고 기존 사용자 draft를 보존했다.
 
-이번 반영은 재료 연결과 저장 조회 보완이다. private saved recipe를 공개·정규 레시피로 승격하지 않으며 v64 장면 선택·OCR·분량 표시를 포함하지 않는다. 문제가 생기면 DB를 되돌리는 대신 호환되는 이전 웹·워커 또는 forward fix를 사용한다.
+이번 반영은 재료 연결과 저장 조회 보완이다. private saved recipe를 공개·정규 레시피로 승격하지 않으며 v64 장면 선택·OCR·분량 표시를 포함하지 않는다. 문제가 생기면 이번 DB215·generation46과 호환되는 묶음으로 수정 배포한다. 호환되지 않는 예전 웹·워커의 단독 복원은 차단한다.
 
 ## 추가 진단
 

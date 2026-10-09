@@ -1,0 +1,221 @@
+{
+  "schema": "homecook.youtube-development30-error-classification.v1",
+  "created_at_kst": "2026-10-10",
+  "status": "bounded_complete_existing_cache_only",
+  "scope": {
+    "candidate": "v59-source-first-quantity",
+    "development_video_count": 30,
+    "new_video_calls": 0,
+    "new_model_calls": 0,
+    "new_extractions": 0,
+    "production_reads_or_writes": 0,
+    "known6_or_holdout_access": false,
+    "human_review_complete": false,
+    "golden_or_grading_modified": false
+  },
+  "lineage": {
+    "collection_state": {
+      "path": "p5/b0-v59-dev30-development-20261008/collection/state.json",
+      "sha256": "f0161aeacfc65ca2d21a77eacaa9b5d5e15a6b7ca636e5d2332af33291b36ff5"
+    },
+    "grade_report": {
+      "path": "p5/b0-v59-dev30-grading-20261008/grade-report-r2.json",
+      "sha256": "743882d9297fb044ad286b06d63ec1bdd20cd39edccbbf591fe38a7cd887886f"
+    },
+    "grade_archive_manifest": {
+      "path": "p5/b0-v59-dev30-grading-20261008/grade-report-r2.json.legacy-v2.json.inputs/manifest.json",
+      "sha256": "a6e8b4d737879d007c1b02240bc2b2c27b7304c64266249e559bfaa7d0d684b1"
+    },
+    "residual_diagnosis": {
+      "path": "p5/v59-dev30-residual-diagnosis-20261008/data.json",
+      "sha256": "95ed87dcfd32626cc4ce6a6fe9279abb2538fe9d7ac6adf886c7abc7dbe49b74"
+    },
+    "semantic_fixture": {
+      "path": "tests/fixtures/youtube-ingredient-resolution/reviewed-v1.json",
+      "sha256": "f654ea456ca4449fb9e39e798e500f54cd3d58348efc801d9f5cd91438a2cdfb",
+      "reviewer_kind": "agent_orchestrator",
+      "human_review_status": "pending"
+    },
+    "resolver_delta": {
+      "path": "docs/engineering/data/youtube-ingredient-resolution-v59-dev30-regression-20261009.json",
+      "sha256": "9f1129269a8b2ac11d4ab896c541d6091050d78c521efe84926fd1e83c39409d"
+    },
+    "v63_replay": {
+      "path": "p5/v63-cited-conflict-guard-prototype-20261009/replay-results.json",
+      "sha256": "d9db71f6e2fb50991dc029b78bda412dafe01e8501d5d72ad1c9ea658eefeb02"
+    },
+    "v64_selection_audit": {
+      "path": ".omx/youtube-speed-quality-20261009/stage2/all30-selection-audit.json",
+      "sha256": "d98d2e784491c2f2d2a950a5cbc9ca4fd73981392f0f8d4ba558b3a645fb9b98"
+    },
+    "v64_paired_identity": {
+      "path": ".omx/youtube-speed-quality-20261009/stage2/paired-identity/comparison-summary.json",
+      "sha256": "79857b012b77952a0823e9156b5a9b20f40cbbe1b5947cabe77321f5409766b5"
+    }
+  },
+  "denominators": {
+    "strict_name": {
+      "golden_occurrences": 359,
+      "predicted_occurrences": 344,
+      "strict_matches": 296,
+      "golden_unmatched": 63,
+      "predicted_unmatched": 48,
+      "meaning": "Frozen strict name alignment only; it is not semantic or DB-ID accuracy."
+    },
+    "reviewed_quantity": {
+      "audited_rows": 258,
+      "exact_evaluable_rows": 174,
+      "exact_matches": 139,
+      "exact_errors": 35,
+      "source_unavailable_rows": 6,
+      "independent_whole_source_audits": 0
+    },
+    "legacy_quantity": {
+      "explicit_evaluable_rows": 237,
+      "explicit_quantity_matches": 151,
+      "meaning": "Separate legacy counter; do not combine with the reviewed 139/174 metric."
+    },
+    "steps": {
+      "golden_steps": 284,
+      "step_labeled_recipes": 0,
+      "critical_action_labels": 24,
+      "critical_action_matches": 0,
+      "numeric_labels": 3,
+      "numeric_matches": 0,
+      "order_labels": 3,
+      "order_matches": 0,
+      "interpretation": "unevaluated_no_recipe_level_step_labels"
+    },
+    "latency_ms": {
+      "videos": 30,
+      "min": 14870,
+      "p50": 32480,
+      "p95": 48556,
+      "max": 49297,
+      "mean": 32343.9
+    }
+  },
+  "tuple_shapes": {
+    "per_video.strict": ["golden", "predicted", "matched"],
+    "per_video.quantity": ["audited", "exact_denominator", "exact_matched", "exact_errors", "source_unavailable"],
+    "per_video.steps": ["golden_steps", "step_labeled_recipes", "critical_labels", "critical_matches", "numeric_labels", "numeric_matches", "order_labels", "order_matches"]
+  },
+  "per_video": [
+    {"video_id":"YUdJBeOdrMY","stratum":"service-train9","latency_ms":37958,"strict":[11,12,11],"quantity":[4,3,3,0,1],"steps":[11,0,2,0,0,0,0,0]},
+    {"video_id":"J5Rmux3ttaY","stratum":"service-train9","latency_ms":48556,"strict":[9,9,8],"quantity":[0,0,0,0,0],"steps":[14,0,0,0,0,0,0,0]},
+    {"video_id":"DnQ09ZZCjCs","stratum":"service-train9","latency_ms":29162,"strict":[11,11,11],"quantity":[11,11,11,0,0],"steps":[7,0,2,0,0,0,1,0]},
+    {"video_id":"tqpwhtw54mQ","stratum":"service-train9","latency_ms":27200,"strict":[13,13,11],"quantity":[13,10,5,5,0],"steps":[12,0,3,0,0,0,0,0]},
+    {"video_id":"vqb3WyZmL_8","stratum":"service-train9","latency_ms":30076,"strict":[15,16,15],"quantity":[15,13,13,0,0],"steps":[12,0,3,0,1,0,0,0]},
+    {"video_id":"5NSTRKouSWs","stratum":"service-train9","latency_ms":33446,"strict":[9,10,8],"quantity":[8,8,8,0,0],"steps":[11,0,1,0,2,0,0,0]},
+    {"video_id":"QF0gBfW3od4","stratum":"service-train9","latency_ms":32263,"strict":[23,18,17],"quantity":[17,7,4,3,1],"steps":[9,0,2,0,0,0,1,0]},
+    {"video_id":"rKfLY_Lg1-Q","stratum":"service-train9","latency_ms":49297,"strict":[15,9,9],"quantity":[1,0,0,0,0],"steps":[12,0,0,0,0,0,0,0]},
+    {"video_id":"eJyoszbyNNQ","stratum":"service-train9","latency_ms":36180,"strict":[11,11,7],"quantity":[9,3,2,1,0],"steps":[7,0,1,0,0,0,0,0]},
+    {"video_id":"Egpjve8caK0","stratum":"service-former-validation8","latency_ms":17145,"strict":[12,12,9],"quantity":[0,0,0,0,0],"steps":[8,0,0,0,0,0,0,0]},
+    {"video_id":"rkOEBmECi_o","stratum":"service-former-validation8","latency_ms":14870,"strict":[9,9,9],"quantity":[8,8,8,0,0],"steps":[7,0,3,0,0,0,0,0]},
+    {"video_id":"fnhLXA-bSu8","stratum":"service-former-validation8","latency_ms":22154,"strict":[12,12,12],"quantity":[11,7,4,3,0],"steps":[10,0,1,0,0,0,0,0]},
+    {"video_id":"gChK94Ai-TE","stratum":"service-former-validation8","latency_ms":33571,"strict":[14,13,13],"quantity":[12,11,11,0,0],"steps":[10,0,0,0,0,0,0,0]},
+    {"video_id":"YZ8KSZboJeM","stratum":"service-former-validation8","latency_ms":41999,"strict":[11,10,9],"quantity":[9,9,9,0,0],"steps":[13,0,0,0,0,0,0,0]},
+    {"video_id":"oe_WhcK2X4Q","stratum":"service-former-validation8","latency_ms":40306,"strict":[13,12,12],"quantity":[10,2,0,2,0],"steps":[15,0,3,0,0,0,0,0]},
+    {"video_id":"jenDETSgvz4","stratum":"service-former-validation8","latency_ms":27662,"strict":[16,12,12],"quantity":[15,9,8,1,3],"steps":[12,0,0,0,0,0,0,0]},
+    {"video_id":"nE7ANT3uGMQ","stratum":"service-former-validation8","latency_ms":33148,"strict":[10,10,8],"quantity":[8,6,2,4,0],"steps":[13,0,3,0,0,0,1,0]},
+    {"video_id":"61fdQEWjRcA","stratum":"additional-experiment-train13","latency_ms":31048,"strict":[11,11,11],"quantity":[9,3,2,1,0],"steps":[6,0,0,0,0,0,0,0]},
+    {"video_id":"P4NpBdKZRP8","stratum":"additional-experiment-train13","latency_ms":31148,"strict":[8,8,8],"quantity":[6,5,5,0,0],"steps":[6,0,0,0,0,0,0,0]},
+    {"video_id":"LoBVK5Pl9H0","stratum":"additional-experiment-train13","latency_ms":29302,"strict":[12,14,11],"quantity":[11,5,5,0,0],"steps":[9,0,0,0,0,0,0,0]},
+    {"video_id":"F9pLTQ2Er6M","stratum":"additional-experiment-train13","latency_ms":40629,"strict":[7,8,6],"quantity":[3,3,3,0,0],"steps":[5,0,0,0,0,0,0,0]},
+    {"video_id":"yOMFp6kasf0","stratum":"additional-experiment-train13","latency_ms":33412,"strict":[15,14,13],"quantity":[9,9,9,0,0],"steps":[9,0,0,0,0,0,0,0]},
+    {"video_id":"Ti0nyZU2X58","stratum":"additional-experiment-train13","latency_ms":28171,"strict":[13,13,9],"quantity":[4,3,0,3,0],"steps":[6,0,0,0,0,0,0,0]},
+    {"video_id":"Y7jLMxZa8TQ","stratum":"additional-experiment-train13","latency_ms":33269,"strict":[13,12,10],"quantity":[9,8,6,2,0],"steps":[7,0,0,0,0,0,0,0]},
+    {"video_id":"Up1qwLrKJ3M","stratum":"additional-experiment-train13","latency_ms":30075,"strict":[7,7,5],"quantity":[7,4,1,3,0],"steps":[8,0,0,0,0,0,0,0]},
+    {"video_id":"XQT9MWZypkw","stratum":"additional-experiment-train13","latency_ms":36443,"strict":[15,13,13],"quantity":[12,0,0,0,1],"steps":[16,0,0,0,0,0,0,0]},
+    {"video_id":"K9jWk6e9K6c","stratum":"additional-experiment-train13","latency_ms":32480,"strict":[7,7,4],"quantity":[5,3,2,1,0],"steps":[7,0,0,0,0,0,0,0]},
+    {"video_id":"t-9PDq-LF6A","stratum":"additional-experiment-train13","latency_ms":35365,"strict":[9,11,9],"quantity":[7,7,6,1,0],"steps":[7,0,0,0,0,0,0,0]},
+    {"video_id":"fKSWjNMmNRU","stratum":"additional-experiment-train13","latency_ms":20565,"strict":[6,5,2],"quantity":[5,1,1,0,0],"steps":[7,0,0,0,0,0,0,0]},
+    {"video_id":"b-EfvcyNNao","stratum":"additional-experiment-train13","latency_ms":33417,"strict":[22,22,14],"quantity":[20,16,11,5,0],"steps":[8,0,0,0,0,0,0,0]}
+  ],
+  "strict_unmatched_classification": {
+    "policy": "Expected labels are frozen golden/source annotations. Resolver results are observations only and never supply gold labels.",
+    "agent_orchestrator_name_candidates": [
+      {"video_id":"tqpwhtw54mQ","golden_name":"두부","predicted_name":"큰 사이즈 두부","classification":"legitimate_source_qualifier_candidate","evidence":["큰 사이즈 두부 1모(550g)"],"human_review_status":"pending"},
+      {"video_id":"tqpwhtw54mQ","golden_name":"맛술","predicted_name":"맛술(미림)","classification":"source_parenthetical_alias_candidate","evidence":["맛술(미림) 5스푼(50g)"],"human_review_status":"pending"},
+      {"video_id":"eJyoszbyNNQ","golden_name":"스파게티면","predicted_name":"스파게티","classification":"contextual_semantic_equivalence_candidate","evidence":["1/2 lb | 250g Spaghetti"],"human_review_status":"pending"},
+      {"video_id":"eJyoszbyNNQ","golden_name":"바질","predicted_name":"바질 잎","classification":"leaf_specific_semantic_candidate","evidence":["1 Handful Basil Leaves"],"human_review_status":"pending"},
+      {"video_id":"eJyoszbyNNQ","golden_name":"올리브유","predicted_name":"올리브 오일","classification":"semantic_translation_candidate","evidence":["Olive Oil"],"human_review_status":"pending"},
+      {"video_id":"eJyoszbyNNQ","golden_name":"양파","predicted_name":"노란 양파","classification":"legitimate_translated_qualifier_candidate","evidence_ids":["S0077"],"human_review_status":"pending"},
+      {"video_id":"J5Rmux3ttaY","golden_name":"올리고당","predicted_name":"올리고당이나 물엿","classification":"choice_display_mismatch_candidate","evidence_ids":["S0154","S0155"],"human_review_status":"pending"},
+      {"video_id":"QF0gBfW3od4","golden_name":"소주","predicted_name":"소주/맛술","classification":"choice_display_mismatch_candidate","evidence_ids":["S0015","S0014"],"human_review_status":"pending"}
+    ],
+    "annotated_fixed_row_absences": [
+      {"video_id":"QF0gBfW3od4","golden_name":"방아잎","predicted_name":null,"presence_verdict":"absent","source_scope":"partial_optional_noisy","product_error_verdict":"uncertain","human_review_status":"pending"},
+      {"video_id":"rKfLY_Lg1-Q","golden_name":"대파","predicted_name":null,"presence_verdict":"absent","source_scope":"partial_noisy","product_error_verdict":"uncertain","human_review_status":"pending"},
+      {"video_id":"rKfLY_Lg1-Q","golden_name":"된장","predicted_name":null,"presence_verdict":"absent","source_scope":"partial_noisy","product_error_verdict":"uncertain","human_review_status":"pending"}
+    ],
+    "established_wrong_ingredient_in_reviewed_train9_losses": 0,
+    "unclassified_after_known_pairing": {
+      "golden_side": 52,
+      "predicted_side": 40,
+      "derivation": "63 golden-unmatched - 8 paired name candidates - 3 annotated absences; 48 predicted-unmatched - 8 paired name candidates",
+      "verdict": "uncertain"
+    }
+  },
+  "db_link_classification": {
+    "reviewed_denominator": 5,
+    "before_correct_final_ids": 2,
+    "after_correct_final_ids": 5,
+    "human_review_status": "pending",
+    "rows": [
+      {"video_id":"tqpwhtw54mQ","name":"큰 사이즈 두부","expected_id":"550e8400-e29b-41d4-a716-446655440017","before":"unresolved","after":"resolved","label_origin":"agent_orchestrator_fixture"},
+      {"video_id":"tqpwhtw54mQ","name":"맛술(미림)","expected_id":"d8e4b087-3629-4f58-8ccd-2185a07d3da5","before":"unresolved","after":"resolved","label_origin":"agent_orchestrator_fixture"},
+      {"video_id":"eJyoszbyNNQ","name":"스파게티","expected_id":"3b93c08e-fb48-4eae-8595-f5e5789c52ab","before":"unresolved","after":"resolved","label_origin":"agent_orchestrator_fixture"},
+      {"video_id":"eJyoszbyNNQ","name":"바질 잎","expected_id":"35743c94-4a2c-4a81-a12a-6b9a18ca7d44","before":"resolved","after":"resolved","label_origin":"agent_orchestrator_fixture"},
+      {"video_id":"eJyoszbyNNQ","name":"올리브 오일","expected_id":"7d1408f1-43bd-4399-a240-117ab14a5a23","before":"resolved","after":"resolved","label_origin":"agent_orchestrator_fixture"}
+    ],
+    "development30_delta": {"predicted_occurrences":344,"policy_unchanged":341,"policy_delta_eligible":3,"newly_resolved":3,"harmful_transition_observed":0},
+    "whole_corpus_accuracy": "unavailable_no_historical_full_id_or_synonym_snapshot"
+  },
+  "quantity_classification": {
+    "all_35_error_rows": {
+      "by_video": {"tqpwhtw54mQ":5,"QF0gBfW3od4":3,"eJyoszbyNNQ":1,"fnhLXA-bSu8":3,"oe_WhcK2X4Q":2,"jenDETSgvz4":1,"nE7ANT3uGMQ":4,"61fdQEWjRcA":1,"Ti0nyZU2X58":3,"Y7jLMxZa8TQ":2,"Up1qwLrKJ3M":3,"K9jWk6e9K6c":1,"t-9PDq-LF6A":1,"b-EfvcyNNao":5},
+      "predicted_alignment_missing": 15,
+      "disposition": {"exact-current":30,"other-literal":5},
+      "assessment": {"not-explicit":33,"unassessed":2},
+      "source_scope": {"partial":35}
+    },
+    "existing_source_diagnosed_rows": [
+      {"video_id":"fnhLXA-bSu8","name":"새송이버섯","kind":"residual","allowed":"5/개","observed":"conflicting null/null","classification":"identical_pairs_misread_as_conflict","human_review_status":"pending"},
+      {"video_id":"fnhLXA-bSu8","name":"간장","kind":"new_loss","allowed":"2/큰술","observed":"unknown null/null","classification":"intentional_unresolved_choice_boundary","human_review_status":"pending"},
+      {"video_id":"fnhLXA-bSu8","name":"식용유","kind":"new_loss","allowed":"1/큰술","observed":"unknown null/null","classification":"quantity_name_binding_false_negative_candidate","human_review_status":"pending"},
+      {"video_id":"oe_WhcK2X4Q","name":"돼지고기 앞다리살","kind":"new_loss","allowed":"600/g","observed":"unknown null/null","classification":"approximate_context_or_evidence_selection","human_review_status":"pending"},
+      {"video_id":"oe_WhcK2X4Q","name":"식초","kind":"residual","allowed":"2/숟갈","observed":"unknown null/null","classification":"cross_line_binding_rejected","human_review_status":"pending"},
+      {"video_id":"jenDETSgvz4","name":"다진 마늘","kind":"residual","allowed":"1/숟","observed":"conflicting null/null","classification":"equivalent_name_unit_forms_misread_as_conflict","human_review_status":"pending"},
+      {"video_id":"nE7ANT3uGMQ","name":"올리브유","kind":"residual","allowed":"35/ml","observed":"not_aligned","classification":"name_alignment_and_alternative_literal","human_review_status":"pending"},
+      {"video_id":"nE7ANT3uGMQ","name":"마늘","kind":"new_loss","allowed":"1/통","observed":"1/head explicit","classification":"translated_unit_representation_mismatch","human_review_status":"pending"},
+      {"video_id":"nE7ANT3uGMQ","name":"펜네","kind":"new_loss","allowed":"200/g or 2/컵","observed":"unknown null/null","classification":"quantity_name_binding_evidence_selection","human_review_status":"pending"},
+      {"video_id":"nE7ANT3uGMQ","name":"레몬 제스트","kind":"residual","allowed":"1/2/개 분량","observed":"not_aligned","classification":"malformed_atomic_pair_and_name_alignment","human_review_status":"pending"}
+    ],
+    "remaining_without_specific_source_diagnosis": 25
+  },
+  "step_classification": {
+    "verdict": "unevaluated",
+    "reason": "The packet has 284 golden step strings but zero step-labeled recipes. Sparse action/numeric/order counters cannot be promoted to a step-accuracy score.",
+    "human_review_status": "pending"
+  },
+  "comparison_availability": {
+    "v59": {"availability":"full_cached_development30","videos":30,"graded":true,"latency_available":true},
+    "v63": {"availability":"offline_trace_replay_only","traces":30,"model_calls":0,"changed_from_v59":1,"changed_video_ids":["fnhLXA-bSu8"],"change":"식용유 unknown/null/null -> explicit/1/큰술 via v61; v63 adds no further closed-trace delta","fresh_grade":false,"fresh_latency":false},
+    "v64": {"availability":"one_video_paired_identity_plus_model_free_selection_plan","full_development30_outputs":false,"full_grade":false,"all30_selection_plan":{"changed":24,"unchanged":6,"identity_event_rows":["oe_WhcK2X4Q"]},"paired_video":"oe_WhcK2X4Q","baseline_identity":"배 2/2","candidate_ocr_identity":"배 음료 2/2","unsupported_quantity_added":false,"formal_p5_passed":false}
+  },
+  "proposed_representative_pilot": [
+    {"video_id":"tqpwhtw54mQ","why":["2 agent-reviewed name candidates","2 DB-link deltas","5/10 reviewed quantity errors"],"closed_test_status":"proposal_only"},
+    {"video_id":"eJyoszbyNNQ","why":["4 strict golden and 4 predicted unmatched","3 agent-reviewed name candidates","1/3 reviewed quantity error","36.180s cached latency"],"closed_test_status":"proposal_only"},
+    {"video_id":"fnhLXA-bSu8","why":["strict names 12/12","3/7 reviewed quantity errors","only v63 replay-changed video","22.154s cached latency"],"closed_test_status":"proposal_only"},
+    {"video_id":"oe_WhcK2X4Q","why":["2/2 reviewed quantity errors","40.306s cached latency","only v64 all30 identity-event row","paired v64 identity evidence exists"],"closed_test_status":"proposal_only"},
+    {"video_id":"rKfLY_Lg1-Q","why":["6 golden-side strict absences","two annotated noisy-source absences","maximum cached latency 49.297s"],"closed_test_status":"proposal_only"},
+    {"video_id":"b-EfvcyNNao","why":["8 golden and 8 predicted strict unmatched","5/16 reviewed quantity errors","dense multi-role ingredient case"],"closed_test_status":"proposal_only"},
+    {"video_id":"DnQ09ZZCjCs","why":["clean control: strict 11/11 and quantity 11/11","29.162s cached latency","v64 selection plan changed without identity event"],"closed_test_status":"proposal_only"}
+  ],
+  "unresolved": {
+    "human_adjudication": ["8 name/display candidates","3 partial/noisy fixed-row absences","5 DB-ID labels","35 quantity errors if a human-reviewed score is required","step labels"],
+    "cannot_be_closed_from_existing_cache": ["whole-corpus semantic-name accuracy","whole-corpus DB-ID accuracy","full-source omission precision","step accuracy","v63 or v64 Development30 quality/latency comparison"],
+    "anti_leak_rule": "Resolver before/after observations must remain separate from labels and must never populate acceptable IDs or semantic verdicts."
+  }
+}
