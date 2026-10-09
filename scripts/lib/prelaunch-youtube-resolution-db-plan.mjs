@@ -49,6 +49,29 @@ const PROTECTED_RELATIONS = [
 ].sort();
 const requireValue = (value, message) => { if (!value) throw new Error(`YouTube resolution DB plan: ${message}`); };
 
+export function preserveReviewedBaselineFunctionAcl(reviewed, baseline) {
+  const preserved = new Set([
+    "public.read_youtube_extraction_enqueue_readiness()",
+    "public.resolve_youtube_extraction_job_draft(uuid,text,bigint,bigint,text,jsonb)",
+  ]);
+  return reviewed.map((row) => {
+    if (!preserved.has(row.signature)) return row;
+    const previous = baseline.find((candidate) => candidate.signature === row.signature);
+    requireValue(previous?.exists === true && previous.owner === row.owner
+      && previous.securityDefiner === row.securityDefiner
+      && isDeepStrictEqual(previous.config, row.config)
+      && Array.isArray(previous.acl) && Array.isArray(row.acl),
+    "existing RPC authority differs from reviewed source");
+    const extra = previous.acl.filter((grant) => !row.acl.includes(grant));
+    requireValue(row.acl.every((grant) => previous.acl.includes(grant))
+      && extra.length <= 1 && extra.every((grant) => grant === `postgres=X/${row.owner}`),
+    "unreviewed baseline RPC permission difference");
+    // CREATE OR REPLACE preserves these existing ACLs. Definition hashes remain
+    // the independently reviewed postimage; never learn them from live output.
+    return { ...row, acl: [...previous.acl] };
+  });
+}
+
 function assertCloneEvidence(evidence, review) {
   requireValue(evidence?.status === "PASS" && evidence.source?.ledger_count === 213
     && evidence.source.catalog_fingerprint === LIVE_CATALOG_FINGERPRINT
@@ -140,7 +163,7 @@ export function buildYoutubeResolutionDbPlan({
       ledgerCount: 215,
       catalogFingerprint: review.catalog.after,
       migrations: review.migrations,
-      functionEvidence: expectedFunctionEvidence,
+      functionEvidence: preserveReviewedBaselineFunctionAcl(expectedFunctionEvidence, prestate.functionEvidence),
       preservation: prestate.preservation,
     },
     enqueueClosure: closureEvidence,

@@ -432,9 +432,13 @@ async function execute(confirmation) {
   const closure = JSON.parse(closureBytes);
   assertEnqueueClosureEvidence(finalPlan.review, closure);
   const bundle = migrationBundle();
-  const adapter = await createRecordingDockerAdapter({ configPath: CONFIG_PATH, backupDirectory: BACKUP_DIR });
   const before = JSON.parse(await fs.readFile(BEFORE_PATH));
   return withRecordingInvocation(OPERATION_DIR, async () => {
+    // Every guarded retry keeps its own create-only snapshot. Never overwrite
+    // or delete a verified snapshot from an earlier rolled-back attempt.
+    const backupDirectory = await fs.mkdtemp(path.join(BACKUP_DIR, "attempt-"));
+    await fs.chmod(backupDirectory, 0o700);
+    const adapter = await createRecordingDockerAdapter({ configPath: CONFIG_PATH, backupDirectory });
     const target = await adapter.inspect();
     const session = openDedicatedAdminSession(target.postgresContainerId, `youtube-resolution-${randomUUID().slice(0, 8)}`);
     let commitDispatched = false; let backup = null;
@@ -451,6 +455,20 @@ async function execute(confirmation) {
       await session.query(`INSERT INTO homecook_deploy.migrations(filename,sha256) VALUES ${bundle.map((row) => `(${sqlLiteral(row.filename)},${sqlLiteral(row.sha256)})`).join(",")};`);
       const post = { ...(await collectSessionDatabase(session, finalPlan.plan.target, { post: true })), workerStopped: true };
       post.synonymInsertDelta = post.synonymCount - before.prestate.synonymCount;
+      await durableJson(path.join(OPERATION_DIR, `db-poststate-observation-${randomUUID()}.json`), {
+        observed: post,
+        checks: {
+          ledger: isDeepStrictEqual(post.ledger, finalPlan.plan.sourceLedger),
+          preservation: isDeepStrictEqual(post.preservation, finalPlan.plan.expectedAfter.preservation),
+          functions: isDeepStrictEqual(post.functionEvidence, finalPlan.plan.expectedAfter.functionEvidence),
+          policy: post.policyVersion === finalPlan.review.policy.version
+            && post.pipelineIdentity === finalPlan.review.policy.pipelineIdentity
+            && post.snapshotDigest === finalPlan.review.policy.snapshotDigest,
+          quiescence: post.queue.queued === 0 && post.queue.processing === 0
+            && post.permitHeld === false && post.activeEnqueueSessions === 0,
+          synonym: post.synonymCount === 4147 && post.synonymInsertDelta === 1,
+        },
+      }, true);
       assertYoutubeResolutionDbPoststate(finalPlan.review, finalPlan.plan, post);
       await durableJson(JOURNAL_PATH, { state: "commit-intent", releaseSha: RELEASE_SHA, backup,
         poststate: post, transactionAtomic: true, dbRollbackPerformed: false });

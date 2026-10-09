@@ -33,7 +33,7 @@ async function rollout() {
     proofDigests: approval.value.r2.proofDigests,
     artifactPaths: approval.value.artifactPaths,
     databaseBefore: approval.value.databaseBefore,
-    expectedFunctionEvidence: approval.value.expectedFunctionEvidence,
+    expectedFunctionEvidence: plan.value.plan.expectedAfter.functionEvidence,
   });
   await durableJson(PATHS.rolloutReview, review, true); return review;
 }

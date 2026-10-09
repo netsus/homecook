@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   buildYoutubeResolutionDbPlan,
+  preserveReviewedBaselineFunctionAcl,
   assertYoutubeResolutionDbPoststate,
   assertYoutubeResolutionLockedPrestate,
   YOUTUBE_RESOLUTION_POSTGRES_MAJOR,
@@ -23,6 +24,21 @@ import {
 } from "../scripts/lib/prelaunch-youtube-resolution-contract.mjs";
 
 const sha = (value) => createHash("sha256").update(value).digest("hex");
+
+test("preserves only the pinned existing postgres execute grant, not new permissions or body hashes", () => {
+  const row = { signature: "public.read_youtube_extraction_enqueue_readiness()",
+    owner: "youtube_extraction_credential_manager_rpc_owner", securityDefiner: true,
+    config: ["search_path=\"\""], definitionSha256: sha("reviewed post body"),
+    acl: ["authenticated=X/youtube_extraction_credential_manager_rpc_owner"] };
+  const oldGrant = `postgres=X/${row.owner}`;
+  const before = { ...row, exists: true, definitionSha256: sha("old body"), acl: [...row.acl, oldGrant] };
+  const [after] = preserveReviewedBaselineFunctionAcl([row], [before]);
+  assert.equal(after.definitionSha256, row.definitionSha256);
+  assert.deepEqual(after.acl, before.acl);
+  assert.throws(() => preserveReviewedBaselineFunctionAcl([row], [{ ...before,
+    acl: [...before.acl, `anon=X/${row.owner}`] }]), /unreviewed baseline/u);
+  assert.throws(() => preserveReviewedBaselineFunctionAcl([row], [{ ...before, owner: "other" }]), /authority differs/u);
+});
 const ledger = Array.from({ length: 213 }, (_, index) => ({ filename: `${String(index).padStart(14, "0")}_old.sql`, sha256: sha(String(index)) }));
 const migrations = MIGRATIONS.map((filename) => ({ filename, sha256: sha(filename) }));
 const runtimeFiles = Object.fromEntries(Array.from({ length: 22 }, (_, index) => [`runtime/${index}`, sha(`r${index}`)]));
@@ -79,12 +95,12 @@ const prestate = {
   functionEvidence: YOUTUBE_RESOLUTION_FUNCTION_SIGNATURES.map((signature) =>
     YOUTUBE_RESOLUTION_BASELINE_ABSENT_FUNCTIONS.includes(signature)
       ? { signature, exists: false }
-      : { signature, exists: true, definitionSha256: sha(signature), owner: "postgres", acl: null, securityDefiner: true, config: [] }),
+      : { signature, exists: true, definitionSha256: sha(signature), owner: "postgres", acl: ["postgres=X/postgres"], securityDefiner: true, config: ["search_path=pg_catalog"] }),
   preservation: protectedDigests,
 };
 const expectedFunctionEvidence = YOUTUBE_RESOLUTION_FUNCTION_SIGNATURES.map((signature, index) => ({
   signature, definitionSha256: sha(`new${index}`), owner: "postgres",
-  acl: null, securityDefiner: index > 4, config: ["search_path=pg_catalog"],
+  acl: ["postgres=X/postgres"], securityDefiner: true, config: ["search_path=pg_catalog"],
 }));
 
 test("builds a fail-closed 213-to-215 transaction plan", () => {
