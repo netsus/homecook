@@ -226,6 +226,183 @@ describe("YouTube result-first UI", () => {
     expect(youtubeApi.registerYoutubeRecipe).not.toHaveBeenCalled();
   });
 
+  it("hydrates saved catalog links and does not restore a source link after the user renames a row", async () => {
+    const draftId = "11111111-1111-4111-8111-111111111112";
+    const resolvedRowId = "22222222-2222-4222-8222-222222222223";
+    const ambiguousRowId = "33333333-3333-4333-8333-333333333334";
+    const unresolvedRowId = "44444444-4444-4444-8444-444444444445";
+    const savedResult = {
+      draft_id: draftId,
+      revision: 1,
+      created_at: "2026-10-10T00:00:00.000Z",
+      updated_at: "2026-10-10T00:00:00.000Z",
+      content: {
+        title: "연결 상태 레시피",
+        base_servings: 2,
+        tags: [],
+        ingredients: [
+          {
+            row_id: resolvedRowId,
+            source_draft_ingredient_id: "55555555-5555-4555-8555-555555555556",
+            standard_name: "두부",
+            quantity_mode: "quantity" as const,
+            amount: 200,
+            unit: "g",
+            display_text: "두부 200g",
+            component_label: null,
+          },
+          {
+            row_id: ambiguousRowId,
+            source_draft_ingredient_id: "66666666-6666-4666-8666-666666666667",
+            standard_name: "파",
+            quantity_mode: "quantity" as const,
+            amount: 1,
+            unit: "대",
+            display_text: "파 1대",
+            component_label: null,
+          },
+          {
+            row_id: unresolvedRowId,
+            source_draft_ingredient_id: "77777777-7777-4777-8777-777777777778",
+            standard_name: "영상 속 양념",
+            quantity_mode: "unknown" as const,
+            amount: null,
+            unit: null,
+            display_text: "영상 속 양념",
+            component_label: null,
+          },
+        ],
+        steps: [{
+          row_id: "88888888-8888-4888-8888-888888888889",
+          source_step_index: 0,
+          instruction: "섞는다.",
+          component_label: null,
+          duration_text: null,
+        }],
+      },
+      ingredient_links: {
+        [resolvedRowId]: {
+          ingredient_id: "99999999-9999-4999-8999-999999999991",
+          resolution_status: "resolved" as const,
+          candidates: [],
+        },
+        [ambiguousRowId]: {
+          ingredient_id: null,
+          resolution_status: "needs_review" as const,
+          candidates: [
+            { ingredient_id: "99999999-9999-4999-8999-999999999992", standard_name: "대파", confidence: 1 },
+            { ingredient_id: "99999999-9999-4999-8999-999999999993", standard_name: "쪽파", confidence: 1 },
+          ],
+        },
+        [unresolvedRowId]: {
+          ingredient_id: null,
+          resolution_status: "unresolved" as const,
+          candidates: [],
+        },
+      },
+      source: {
+        extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
+        youtube_url: "https://www.youtube.com/watch?v=abcdefghijk",
+        youtube_video_id: "abcdefghijk",
+        thumbnail_url: null,
+      },
+    };
+    vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockResolvedValueOnce({
+      success: true,
+      data: savedResult,
+      error: null,
+    });
+    vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mockImplementationOnce(async (_id, revision, content) => ({
+      success: true,
+      data: {
+        ...savedResult,
+        revision: revision + 1,
+        content,
+        ingredient_links: Object.fromEntries(content.ingredients.map((ingredient) => [
+          ingredient.row_id,
+          {
+            ingredient_id: ingredient.row_id === resolvedRowId
+              ? "99999999-9999-4999-8999-999999999991"
+              : null,
+            resolution_status: ingredient.row_id === resolvedRowId ? "resolved" : "unresolved",
+            candidates: [],
+          },
+        ])),
+      },
+      error: null,
+    }));
+
+    const user = userEvent.setup();
+    const view = render(
+      <YoutubeImportScreen
+        columnId=""
+        entryContext="standalone"
+        initialSavedDraftId={draftId}
+        planDate=""
+        slotName=""
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "연결 상태 레시피" })).toBeTruthy();
+    expect(screen.getByText("두부")).toBeTruthy();
+    expect(screen.getByText("200g")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "재료 수정" }));
+    expect(screen.getByRole("button", { name: "대파 선택" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "쪽파 선택" })).toBeTruthy();
+    expect(screen.getAllByText("원문 이름으로 보관해요")).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "쪽파 선택" }));
+    expect(screen.queryByRole("button", { name: "대파 선택" })).toBeNull();
+
+    const selectedNameInput = screen.getByLabelText("쪽파 재료명");
+    await user.clear(selectedNameInput);
+    await user.type(selectedNameInput, "사용자 양념");
+    await user.click(screen.getByRole("button", { name: "수정 완료" }));
+    await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
+
+    await waitFor(() => expect(savedRecipeApi.updateYoutubeSavedRecipe).toHaveBeenCalledTimes(1));
+    const savedContent = vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mock.calls[0][2];
+    expect(savedContent.ingredients[1]).toMatchObject({
+      standard_name: "사용자 양념",
+      source_draft_ingredient_id: null,
+      amount: 1,
+      unit: "대",
+    });
+    vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        ...savedResult,
+        revision: 2,
+        content: savedContent,
+        ingredient_links: Object.fromEntries(savedContent.ingredients.map((ingredient) => [
+          ingredient.row_id,
+          {
+            ingredient_id: ingredient.row_id === resolvedRowId
+              ? "99999999-9999-4999-8999-999999999991"
+              : null,
+            resolution_status: ingredient.row_id === resolvedRowId ? "resolved" : "unresolved",
+            candidates: [],
+          },
+        ])),
+      },
+      error: null,
+    });
+    view.unmount();
+    render(
+      <YoutubeImportScreen
+        columnId=""
+        entryContext="standalone"
+        initialSavedDraftId={draftId}
+        planDate=""
+        slotName=""
+      />,
+    );
+    expect(await screen.findByText("사용자 양념")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "대파 선택" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "재료 수정" }));
+    expect(screen.getAllByText("원문 이름으로 보관해요")).toHaveLength(2);
+  });
+
   it("requires an explicit latest read before saving a conflicted result with a new revision and key", async () => {
     const savedResult = {
       draft_id: "22222222-2222-4222-8222-222222222222",

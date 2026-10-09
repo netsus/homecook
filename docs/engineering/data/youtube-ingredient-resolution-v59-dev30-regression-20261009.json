@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "kind": "youtube-ingredient-resolution-regression-delta",
+  "candidate": "v59-source-first-quantity",
+  "scope": {
+    "video_count": 30,
+    "ingredient_occurrence_count": 344,
+    "unique_normalized_name_count": 164,
+    "policy_unchanged_occurrence_count": 341,
+    "policy_delta_eligible_occurrence_count": 3
+  },
+  "lineage": {
+    "grade_report": "grade-report-r2.json",
+    "grade_report_sha256": "743882d9297fb044ad286b06d63ec1bdd20cd39edccbbf591fe38a7cd887886f",
+    "archive_manifest": "grade-report-r2.json.legacy-v2.json.inputs/manifest.json",
+    "archive_manifest_sha256": "a6e8b4d737879d007c1b02240bc2b2c27b7304c64266249e559bfaa7d0d684b1",
+    "archived_outputs_verified": 30,
+    "source_outputs_modified": false
+  },
+  "catalog_basis": {
+    "kind": "independently-reviewed-affected-identity-slice",
+    "fixture": "tests/fixtures/youtube-ingredient-resolution/reviewed-v1.json",
+    "fixture_sha256": "f654ea456ca4449fb9e39e798e500f54cd3d58348efc801d9f5cd91438a2cdfb",
+    "source": "docs/engineering/data/ingredient-catalog-organization-20261007.json",
+    "source_sha256": "ff468e3a40e4a76966522bfacdffd7f0559b5dadf9f524f5c865003f7499ef00",
+    "note": "The repository has no frozen full synonym dump. Only policy-delta rows are resolved against this reviewed slice; unchanged rows are not assigned synthetic accuracy outcomes."
+  },
+  "evaluation_contract": {
+    "model_calls": 0,
+    "video_downloads": 0,
+    "frozen_strict_grading_changed": false,
+    "accuracy_claim_for_unreviewed_rows": false,
+    "original_outputs_overwritten": false,
+    "lookup_context_reconstruction": "rawText = originalName + amountRawText; name, unit and quantity fields remain unchanged",
+    "invariant": "rank 0 exact matches win before rank 1 fallbacks, so an existing exact link cannot switch IDs through candidate expansion"
+  },
+  "transition_summary": {
+    "newly_resolved": 3,
+    "resolved_id_changed": 0,
+    "resolved_to_needs_review": 0,
+    "resolved_to_unresolved": 0,
+    "needs_review_to_resolved": 0,
+    "needs_review_candidates_changed": 0,
+    "newly_needs_review": 0,
+    "other_status_change": 0,
+    "unchanged_delta_eligible": 0
+  },
+  "changed_rows": [
+    {
+      "video_id": "tqpwhtw54mQ",
+      "recipe_index": 0,
+      "ingredient_index": 0,
+      "name": "큰 사이즈 두부",
+      "original_name": "큰 사이즈 두부",
+      "unit": "모",
+      "amount_raw_text": "1모",
+      "lookup_raw_text": "큰 사이즈 두부 1모",
+      "lookup_candidates": [
+        "큰 사이즈 두부",
+        "두부"
+      ],
+      "policy_delta_eligible": true,
+      "archived_output_sha256": "e8918b290d2dca5e71a16ed00d50df455e0f95ba5bc7cff5260d12d4b58005ce",
+      "before": {
+        "status": "unresolved",
+        "candidate_ids": [],
+        "final_id": null
+      },
+      "after": {
+        "status": "resolved",
+        "candidate_ids": [
+          "550e8400-e29b-41d4-a716-446655440017"
+        ],
+        "final_id": "550e8400-e29b-41d4-a716-446655440017"
+      },
+      "transition": "newly_resolved"
+    },
+    {
+      "video_id": "tqpwhtw54mQ",
+      "recipe_index": 0,
+      "ingredient_index": 8,
+      "name": "맛술(미림)",
+      "original_name": "맛술(미림)",
+      "unit": "스푼",
+      "amount_raw_text": "5스푼",
+      "lookup_raw_text": "맛술(미림) 5스푼",
+      "lookup_candidates": [
+        "맛술(미림)"
+      ],
+      "policy_delta_eligible": true,
+      "archived_output_sha256": "e8918b290d2dca5e71a16ed00d50df455e0f95ba5bc7cff5260d12d4b58005ce",
+      "before": {
+        "status": "unresolved",
+        "candidate_ids": [],
+        "final_id": null
+      },
+      "after": {
+        "status": "resolved",
+        "candidate_ids": [
+          "d8e4b087-3629-4f58-8ccd-2185a07d3da5"
+        ],
+        "final_id": "d8e4b087-3629-4f58-8ccd-2185a07d3da5"
+      },
+      "transition": "newly_resolved"
+    },
+    {
+      "video_id": "eJyoszbyNNQ",
+      "recipe_index": 0,
+      "ingredient_index": 0,
+      "name": "스파게티",
+      "original_name": "Spaghetti",
+      "unit": "g",
+      "amount_raw_text": "250g",
+      "lookup_raw_text": "Spaghetti 250g",
+      "lookup_candidates": [
+        "스파게티",
+        "스파게티면"
+      ],
+      "policy_delta_eligible": true,
+      "archived_output_sha256": "c80875c37293f8f1efadf02608eb5bd35748e5f1b5d9e40b821ceb5b6f3e09a0",
+      "before": {
+        "status": "unresolved",
+        "candidate_ids": [],
+        "final_id": null
+      },
+      "after": {
+        "status": "resolved",
+        "candidate_ids": [
+          "3b93c08e-fb48-4eae-8595-f5e5789c52ab"
+        ],
+        "final_id": "3b93c08e-fb48-4eae-8595-f5e5789c52ab"
+      },
+      "transition": "newly_resolved"
+    }
+  ],
+  "reviewed_stable_exact_rows": [
+    {
+      "name": "바질 잎",
+      "final_id": "35743c94-4a2c-4a81-a12a-6b9a18ca7d44",
+      "reason": "exact rank-0 policy is unchanged; lower-ranked candidates cannot replace an existing exact match"
+    },
+    {
+      "name": "올리브 오일",
+      "final_id": "7d1408f1-43bd-4399-a240-117ab14a5a23",
+      "reason": "exact rank-0 policy is unchanged; lower-ranked candidates cannot replace an existing exact match"
+    }
+  ],
+  "limitations": [
+    "This is a model-free resolver delta scan, not an extraction-quality or whole-corpus ID-accuracy score.",
+    "Rows without independent expected IDs are counted only as policy-unchanged or delta-eligible; they are not labeled correct or incorrect.",
+    "Full-catalog baseline/candidate SQL behavior is checked separately in the isolated migration replay; no production database was queried or changed."
+  ]
+}
