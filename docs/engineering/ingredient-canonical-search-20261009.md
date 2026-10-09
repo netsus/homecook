@@ -1,6 +1,6 @@
 # 재료 검색 정규화와 대표 이름 통합 — 2026-10-09
 
-상태: 작업 브랜치 `codex/ingredient-search-canonical-20261009`에서 구현·격리 검증 완료. **운영 DB·웹에는 아직 반영하지 않았다.** 자동 Gemini 영양 생성은 사용자 요청대로 꺼진 상태를 유지한다.
+상태: **2026-10-09 운영 DB·웹 반영 완료.** 웹 `4fe84f825c547904c4af969c8c72756d4e59a54b`, 빌드 `prelaunch-4fe84f825c54-kc39oX`. 자동 Gemini 영양 생성은 사용자 요청대로 꺼진 상태를 유지한다.
 
 ## 사용자가 겪은 현상과 확인 결과
 
@@ -51,4 +51,12 @@ PostgreSQL의 [문자열 정규화](https://www.postgresql.org/docs/current/func
 - 넓은 API suite의 레시피 생성13건·팬트리3건 실패는 수정 전 기준 checkout에서도 재현됐다. 이번 검색 대상은 통과했고, 나머지 생성/삭제 계약의 오래된 fixture 기대는 이번 범위에서 변경하지 않았다. 전체 suite 통과로 표현하지 않는다.
 - 실제 운영에서 사용자가 겪었던 과거 추출 사례는 재료명이 없어 동일 원인인지 확정하지 못했다.
 
-[격리 DB 검증 결과](data/ingredient-canonical-search-verification-20261009.json). 배포할 때는 DB와 웹을 함께 반영해야 하며, DB만 먼저 반영하면 옛 웹은 대표 통합을 아직 사용하지 못할 수 있다. 공개 canonical metadata 조회와 실제 비동기 resolver를 반영 후 확인한다. 현재 운영 쓰기·AI 호출·별도 예약 작업은 없다.
+[격리 DB 검증 결과](data/ingredient-canonical-search-verification-20261009.json)는 배포 전 기록이다. [운영 반영 결과](data/ingredient-canonical-search-production-20261009.json)에서 최종 상태를 확인한다.
+
+## 운영 반영 결과
+
+최신 운영DB의 전체 백업·격리 복원과 실제 역할 검사 후 SQL 하나를 적용했다. migration 원장은211→212개, 동의어는4,129→4,146개다. 재료1,930개와 기존 영양·사용 기록의 체크섬을 보존했다. 별도 SQL 적용 후 웹을 교체했고 준비/교체 직전/완료 후 AI 자동 실행이 꺼져 있음을 확인했다.
+
+운영 주소에서20쌍 모두 대표ID 하나만 반환하고 옛ID는 반환하지 않았다. 슈가파우더·다진마늘의 띄어쓰기/숨은 문자 변형도 같은 결과를 냈다. 실제 추출 역할에서20쌍과 숨은 문자 매칭을 읽기 전용으로 확인했다. 새 영상 추출·외부 모델 호출은 실행하지 않았다. 웹 후보225개와 배포 검증117개 검사가 통과했고 production build·별도 포트·운영 GET 확인을 마쳤다. 배포 폴더의 Next 내장 lint는 기존 eslint-plugin-react-hooks 경로 오류로 실행되지 않았으며, 별도 변경 파일 lint와 타입 검사는 통과했다.
+
+이 작업이 만든 격리 DB 컨테이너는 제거했고 운영 백업은 보관한다. 다른 작업의 미반영 UI 수정과 기존 Luna worker 설정은 변경하지 않았다. [PR #1599](https://github.com/netsus/homecook/pull/1599).
