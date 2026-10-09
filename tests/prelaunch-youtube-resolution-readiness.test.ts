@@ -13,6 +13,11 @@ import {
   assertReadonlyArtifactFile,
   assertOriginalReadinessBytes,
   assertYoutubeResolutionReviewPin,
+  loadYoutubeResolutionReview,
+  youtubeResolutionAppliedDatabaseState,
+  youtubeResolutionDatabaseStateFromReview,
+  YOUTUBE_RESOLUTION_RELEASE_SHA,
+  YOUTUBE_RESOLUTION_ROLLBACK_REASON,
   YOUTUBE_RESOLUTION_REVIEW_PIN,
 } from "../scripts/lib/prelaunch-youtube-resolution-readiness.mjs";
 
@@ -94,6 +99,27 @@ describe("reviewed YouTube resolution deploy option", () => {
     expect(() => assertYoutubeResolutionReviewPin({ path: null, sha256: null }))
       .toThrow("not configured");
     expect(() => assertYoutubeResolutionReviewPin(YOUTUBE_RESOLUTION_REVIEW_PIN)).not.toThrow();
+  });
+
+  it("derives the exact non-rollback DB215 status from the pinned apply receipt", async () => {
+    const review = await loadYoutubeResolutionReview({ requireWorkerInstall: false });
+    const database = youtubeResolutionDatabaseStateFromReview(review);
+    expect(database).toEqual({
+      changed: true,
+      applied: review.contract.migrations,
+      backwardCompatible: false,
+      reason: YOUTUBE_RESOLUTION_ROLLBACK_REASON,
+      releaseSha: YOUTUBE_RESOLUTION_RELEASE_SHA,
+      ledgerCount: 215,
+      catalogFingerprint: review.contract.catalog.after,
+      receipt: review.contract.proofs.dbApplyReceipt,
+    });
+    const plan = { baselineRequired: false, pending: [], applied: Array.from({ length: 213 }, (_, index) => ({
+      filename: `${String(index).padStart(14, "0")}_old.sql`, sha256: sha(String(index)),
+    })).concat(review.contract.migrations), migrationSourceRef: review.contract.to };
+    expect(youtubeResolutionAppliedDatabaseState({ ...plan, source: plan.applied }, review)).toEqual(database);
+    expect(() => youtubeResolutionAppliedDatabaseState({ ...plan, source: plan.applied.slice(1) }, review))
+      .toThrow("source/ledger");
   });
 
   it("accepts only an exact post-install health receipt before web activation", () => {

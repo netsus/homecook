@@ -165,6 +165,28 @@ export function shouldRequireDatabaseRecovery(record) {
   return !(record.changed === false && record.outcome === "rolled_back");
 }
 
+export function currentDatabaseState({ currentRef, reviewedReleaseSha, reviewedDatabase, recordedDatabase }) {
+  if (currentRef !== reviewedReleaseSha) return recordedDatabase ?? null;
+  if (reviewedDatabase?.releaseSha !== currentRef || reviewedDatabase.backwardCompatible !== false
+    || !Number.isInteger(reviewedDatabase.ledgerCount)) {
+    throw new DeploymentError("현재 검토 배포의 DB 상태 증명이 일치하지 않습니다.");
+  }
+  if ((recordedDatabase?.releaseSha && recordedDatabase.releaseSha !== currentRef)
+    || (Number.isInteger(recordedDatabase?.ledgerCount) && recordedDatabase.ledgerCount > reviewedDatabase.ledgerCount)) {
+    throw new DeploymentError("기록된 DB 상태가 현재 검토 배포보다 새로워 자동으로 덮어쓸 수 없습니다.");
+  }
+  return reviewedDatabase;
+}
+
+export function assertDatabaseRollbackCompatible(stateDatabase, recordedDatabase) {
+  for (const database of [stateDatabase, recordedDatabase]) {
+    if (database && database.backwardCompatible !== true) {
+      throw new DeploymentError(database.reason || "이 DB 변경의 이전 웹 호환성이 확인되지 않아 자동 rollback할 수 없습니다.");
+    }
+  }
+  return recordedDatabase ?? stateDatabase ?? null;
+}
+
 /** @param {{required: boolean, open: () => unknown, gate?: () => Promise<void>, compatibilityConfirmed?: boolean, onApplied?: (record: Record<string, unknown>) => Promise<void>}} options */
 export async function prepareDatabaseDeployment({ required, open, gate, compatibilityConfirmed, onApplied = async () => {} }) {
   if (!required) return null;

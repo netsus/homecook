@@ -37,7 +37,9 @@ export const YOUTUBE_RESOLUTION_WEB_ACTIVATION_PIN = Object.freeze({
   sha256: "28daf06c55eba93973c82729aae66c4aa64ed09bda28568be9619e88b3f12fb3",
 });
 export const YOUTUBE_RESOLUTION_LIVE_SHA = LIVE_WEB_SHA;
+export const YOUTUBE_RESOLUTION_RELEASE_SHA = "c51d53871f31c7840fe24792b46b191ca963b11b";
 export const YOUTUBE_RESOLUTION_TARGET_CATALOG = TARGET_CATALOG_FINGERPRINT;
+export const YOUTUBE_RESOLUTION_ROLLBACK_REASON = "YouTube resolver catalog 81362d requires the matching c51d web and worker artifact; an older web/worker cannot be restored independently of DB215.";
 export const YOUTUBE_RESOLUTION_LEDGER_SQL = "SELECT coalesce(json_agg(t ORDER BY filename),'[]'::json) FROM (SELECT filename,sha256 FROM homecook_deploy.migrations) t;";
 const SHA = /^[a-f0-9]{64}$/u;
 const REF = /^[a-f0-9]{40}$/u;
@@ -369,6 +371,31 @@ export async function verifyYoutubeResolutionAppliedDatabase({ repositoryRoot, c
     "queue/permit not drained");
   requireValue(isDeepStrictEqual(observed.functions, review.expectedFunctionEvidence), "function body/authority poststate drift");
   return { baselineRequired: false, pending: [], applied: source, source, migrationSourceRef: releaseSha };
+}
+
+export function youtubeResolutionDatabaseStateFromReview(review) {
+  assertYoutubeResolutionRolloutReview(review);
+  const applied = review.contract.migrations;
+  requireValue(applied.length === 2 && isDeepStrictEqual(applied.map((row) => row.filename), MIGRATIONS),
+    "exact two-migration DB boundary required");
+  return {
+    changed: true,
+    applied,
+    backwardCompatible: false,
+    reason: YOUTUBE_RESOLUTION_ROLLBACK_REASON,
+    releaseSha: review.contract.to,
+    ledgerCount: 215,
+    catalogFingerprint: review.contract.catalog.after,
+    receipt: review.contract.proofs.dbApplyReceipt,
+  };
+}
+
+export function youtubeResolutionAppliedDatabaseState(plan, review) {
+  requireValue(plan?.baselineRequired === false && Array.isArray(plan.pending) && plan.pending.length === 0
+    && plan.applied?.length === 215 && plan.migrationSourceRef === review.contract.to,
+  "verified resolution database plan required");
+  requireValue(isDeepStrictEqual(plan.applied, plan.source), "resolution source/ledger differs");
+  return youtubeResolutionDatabaseStateFromReview(review);
 }
 
 export function assertOriginalReadinessBytes(bytes, readiness, expectedSha256) {

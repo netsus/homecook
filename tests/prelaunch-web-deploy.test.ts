@@ -13,6 +13,8 @@ import {
   parsePrelaunchOptions,
   prepareDatabaseDeployment,
   shouldRequireDatabaseRecovery,
+  currentDatabaseState,
+  assertDatabaseRollbackCompatible,
   retargetPlist,
   retargetRound2Release,
   inheritRound2Readiness,
@@ -38,6 +40,35 @@ const plist = {
 };
 
 describe("prelaunch web deployment", () => {
+  it("prefers the reviewed DB215 state over stale recorded deployment metadata", () => {
+    const releaseSha = "c".repeat(40);
+    const reviewedDatabase = { releaseSha, backwardCompatible: false, ledgerCount: 215 };
+    const staleDatabase = { backwardCompatible: false, applied: [{ filename: "old.sql" }] };
+    expect(currentDatabaseState({ currentRef: releaseSha, reviewedReleaseSha: releaseSha,
+      reviewedDatabase, recordedDatabase: staleDatabase })).toBe(reviewedDatabase);
+    expect(() => currentDatabaseState({ currentRef: releaseSha, reviewedReleaseSha: releaseSha,
+      reviewedDatabase: staleDatabase, recordedDatabase: staleDatabase })).toThrow("증명");
+    expect(currentDatabaseState({ currentRef: "a".repeat(40), reviewedReleaseSha: releaseSha,
+      reviewedDatabase: null, recordedDatabase: staleDatabase })).toBe(staleDatabase);
+    expect(() => currentDatabaseState({ currentRef: releaseSha, reviewedReleaseSha: releaseSha,
+      reviewedDatabase, recordedDatabase: { releaseSha, backwardCompatible: false, ledgerCount: 216 } }))
+      .toThrow("새로워");
+    expect(() => currentDatabaseState({ currentRef: releaseSha, reviewedReleaseSha: releaseSha,
+      reviewedDatabase, recordedDatabase: { releaseSha: "d".repeat(40), backwardCompatible: false } }))
+      .toThrow("새로워");
+  });
+
+  it("blocks rollback at the separately recorded incompatible database boundary", () => {
+    expect(() => assertDatabaseRollbackCompatible({ backwardCompatible: true }, {
+      backwardCompatible: false, reason: "DB215 requires c51d",
+    })).toThrow("DB215 requires c51d");
+    expect(() => assertDatabaseRollbackCompatible({ backwardCompatible: false, reason: "state boundary" }, {
+      backwardCompatible: true,
+    })).toThrow("state boundary");
+    expect(assertDatabaseRollbackCompatible({ backwardCompatible: true }, null))
+      .toEqual({ backwardCompatible: true });
+  });
+
   it("preserves Korean and newline-containing Git paths without broadening the deploy scope", () => {
     const repository = mkdtempSync(join(tmpdir(), "prelaunch-paths-"));
     const git = (args: string[]) => execFileSync("git", ["-C", repository, ...args], { encoding: "utf8" });
