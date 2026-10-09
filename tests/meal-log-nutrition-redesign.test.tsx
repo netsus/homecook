@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, render, screen, within, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MealLogScreen } from "@/components/planner/meal-log-screen";
@@ -15,7 +15,7 @@ const nutrition: MealLogNutritionEvidence = { calculation_status: "complete", ca
 const entry: MealLogEntry = { id: "10000000-0000-4000-8000-000000000001", revision: 1, consumed_at: null, consumed_local_date: "2026-10-05", timezone_name_snapshot: "Asia/Seoul", meal_plan_column_id: "20000000-0000-4000-8000-000000000001", slot_name_snapshot: "점심", source: { type: "cooked_batch", id: "30000000-0000-4000-8000-000000000001" }, quantity: { amount: 300, unit: "g" }, display_name: "김치찌개", display_brand: null, nutrition, created_at: "2026-10-05T00:00:00Z", updated_at: "2026-10-05T00:00:00Z" };
 function day(record = entry): MealLogDayData { return { date: record.consumed_local_date, active_columns: [{ id: record.meal_plan_column_id!, name: "점심", sort_order: 0 }, { id: "empty", name: "저녁", sort_order: 1 }], active_sections: [{ meal_plan_column_id: record.meal_plan_column_id!, slot_name_snapshot: "점심", sort_order: 0, entries: [record], subtotal: record.nutrition, incomplete_count: 0 }], deleted_column_sections: [], entries: [record], day_total: { ...record.nutrition, incomplete_count: 0 } }; }
 const props = { date: "2026-10-05", showDateNavigation: false, onDateChange: vi.fn(), onUnauthorized: vi.fn() };
-beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear(); api.fetch.mockImplementation(async (date: string) => ({ ...day(), date })); api.update.mockResolvedValue({ entry }); api.remove.mockResolvedValue({}); });
+beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear(); api.fetch.mockImplementation(async (date: string) => ({ ...day(), date })); api.update.mockResolvedValue(entry); api.remove.mockResolvedValue({}); });
 afterEach(cleanup);
 describe("meal-log nutrition calculations", () => {
   it("uses precise 4/4/9 composition independent of label calories", () => {
@@ -119,6 +119,61 @@ describe("meal-log redesigned detail flow", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "10월 5일 점심" })).toBeNull());
     expect(api.update.mock.calls[1][2]).toBe(firstKey);
     expect(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByText("250g")).toBeTruthy();
+  });
+  it("keeps the acknowledged revision for a second edit even if the read response is older", async () => {
+    const user = userEvent.setup();
+    api.update.mockResolvedValueOnce({ ...entry, revision: 2, quantity: { amount: 250, unit: "g" } });
+    api.update.mockResolvedValueOnce({ ...entry, revision: 3, quantity: { amount: 200, unit: "g" } });
+    render(<MealLogScreen {...props} />);
+    await user.click(await screen.findByRole("button", { name: /김치찌개 식사 기록 상세/ }));
+    await user.click(screen.getByRole("button", { name: "식사 기록 수정" }));
+    let sheet = screen.getByRole("dialog", { name: "10월 5일 점심" });
+    await user.clear(within(sheet).getByRole("textbox", { name: "먹은 양" }));
+    await user.type(within(sheet).getByRole("textbox", { name: "먹은 양" }), "250");
+    await user.click(within(sheet).getByRole("button", { name: "수정 저장" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "10월 5일 점심" })).toBeNull());
+    expect(within(screen.getByRole("dialog", { name: "식사 기록 상세" })).getByText("250g")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "식사 기록 수정" }));
+    sheet = screen.getByRole("dialog", { name: "10월 5일 점심" });
+    const amount = within(sheet).getByRole("textbox", { name: "먹은 양" });
+    await user.clear(amount); await user.type(amount, "200");
+    await user.click(within(sheet).getByRole("button", { name: "수정 저장" }));
+    await waitFor(() => expect(api.update).toHaveBeenCalledTimes(2));
+    expect(api.update.mock.calls[1][1]).toMatchObject({ expectedRevision: 2, quantity: { amount: 200, unit: "g" } });
+    expect(api.update.mock.calls[1][2]).not.toBe(api.update.mock.calls[0][2]);
+  });
+  it("submits a valid edit with Enter but not composition, repeats, invalid input or duplicate presses", async () => {
+    const user = userEvent.setup();
+    api.update.mockImplementation(() => new Promise(() => {}));
+    render(<MealLogScreen {...props} />);
+    await user.click(await screen.findByRole("button", { name: /김치찌개 식사 기록 상세/ }));
+    await user.click(screen.getByRole("button", { name: "식사 기록 수정" }));
+    const amount = screen.getByRole("textbox", { name: "먹은 양" });
+    fireEvent.keyDown(amount, { key: "Enter", isComposing: true });
+    fireEvent.keyDown(amount, { key: "Enter", keyCode: 229 });
+    fireEvent.keyDown(amount, { key: "Enter", repeat: true });
+    expect(api.update).not.toHaveBeenCalled();
+    await user.clear(amount); fireEvent.keyDown(amount, { key: "Enter" });
+    expect(api.update).not.toHaveBeenCalled();
+    await user.type(amount, "250");
+    fireEvent.keyDown(amount, { key: "Enter" }); fireEvent.keyDown(amount, { key: "Enter" });
+    await waitFor(() => expect(api.update).toHaveBeenCalledTimes(1));
+  });
+  it("keeps an excessive amount editable without claiming another record revision changed", async () => {
+    const user = userEvent.setup();
+    const message = "이 음식에서 기록할 수 있는 양을 초과했어요. 입력한 양을 줄여 주세요.";
+    api.update.mockRejectedValueOnce(Object.assign(new Error(message), { status: 409, code: "CONFLICT", fields: [{ field: "quantity.amount", reason: "exceeds_available_amount" }] }));
+    render(<MealLogScreen {...props} />);
+    await user.click(await screen.findByRole("button", { name: /김치찌개 식사 기록 상세/ }));
+    await user.click(screen.getByRole("button", { name: "식사 기록 수정" }));
+    const amount = screen.getByRole("textbox", { name: "먹은 양" });
+    await user.clear(amount); await user.type(amount, "500");
+    const reads = api.fetch.mock.calls.length;
+    await user.click(screen.getByRole("button", { name: "수정 저장" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(message);
+    expect((amount as HTMLInputElement).value).toBe("500");
+    expect(api.fetch).toHaveBeenCalledTimes(reads);
+    expect(screen.queryByText(/다른 변경의 최신 기록/)).toBeNull();
   });
   it("explains only the restored consumed amount for cooked sources", async () => {
     const user = userEvent.setup(); render(<MealLogScreen {...props} />);

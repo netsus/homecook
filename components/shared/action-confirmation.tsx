@@ -9,7 +9,7 @@ export function ActionConfirmation() {
   const message = useActionConfirmationStore((state) => state.message);
   const dismiss = useActionConfirmationStore((state) => state.dismiss);
   const dialogRef = useRef<HTMLDivElement>(null);
-  useDialogBoundary({ active: Boolean(message), dialogRef, onClose: dismiss });
+  useDialogBoundary({ active: Boolean(message), priority: 120, dialogRef, onClose: dismiss });
 
   if (!message || typeof document === "undefined") return null;
 

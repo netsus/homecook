@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, screen, within, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -40,6 +40,43 @@ describe("MEAL_LOG add sheet", () => {
       meal_plan_column_id: "20000000-0000-4000-8000-000000000001",
       quantity: { amount: 50, unit: "g" },
     });
+  });
+
+  it("submits the amount with Enter but ignores composition, repeat, and an invalid amount", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderMealLogShell({ includeCookedBatch: true });
+    await openBreakfast(user);
+    await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
+    const amount = screen.getByRole("textbox", { name: "먹은 양" });
+    const saves = () => fetchMock.mock.calls.filter(([url, init]) => String(url).includes("/meal-log/entries") && init?.method === "POST");
+    await user.clear(amount);
+    fireEvent.keyDown(amount, { key: "Enter" });
+    expect(saves()).toHaveLength(0);
+    await user.type(amount, "50");
+    fireEvent.keyDown(amount, { key: "Enter", isComposing: true });
+    fireEvent.keyDown(amount, { key: "Enter", keyCode: 229 });
+    fireEvent.keyDown(amount, { key: "Enter", repeat: true });
+    expect(saves()).toHaveLength(0);
+    fireEvent.keyDown(amount, { key: "Enter" });
+    fireEvent.keyDown(amount, { key: "Enter" });
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    expect(JSON.parse(String(saves()[0][1]?.body)).quantity).toEqual({ amount: 50, unit: "g" });
+  });
+
+  it("retains the amount sheet when selection dragging ends on the backdrop", async () => {
+    const user = userEvent.setup();
+    renderMealLogShell({ includeCookedBatch: true });
+    await openBreakfast(user);
+    await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
+    const dialog = screen.getByRole("dialog", { name: "먹은 음식 추가" });
+    const amount = within(dialog).getByRole("textbox", { name: "먹은 양" });
+    await user.clear(amount);
+    await user.type(amount, "50");
+    await user.pointer([{ target: amount, keys: "[MouseLeft>]" }, { target: dialog.parentElement!, keys: "[/MouseLeft]" }]);
+    expect(screen.getByRole("textbox", { name: "먹은 양" })).toBe(amount);
+    expect(screen.queryByRole("button", { name: "계속 편집" })).toBeNull();
+    await user.click(dialog.parentElement!);
+    expect(screen.getByRole("button", { name: "계속 편집" })).toBeTruthy();
   });
 
   it("hides depleted foods instead of offering an action that will fail", async () => {

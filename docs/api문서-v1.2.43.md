@@ -5780,3 +5780,7 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 ## 2026-10-06 — 계획·식사기록 설계 적용 (미배포)
 
 선택일 중심 요리계획/식사기록, 간결한 상세·모달, 실제 영양 그래프를 적용한다. 레시피 `view=preview`는 조회수 없는 동일 권한 읽기, `/meal-log/nutrition-preview`는 현재 소유자·세대의 읽기 전용 영양 계산이다. 계획 POST는 선택적 `Idempotency-Key`로 동일 시도 결과를 재사용한다. [상세 계약·검증·제한](engineering/planner-meal-log-redesign-20261006.md)을 따르며 웹과 새 SQL2개는 추후 묶음 배포한다.
+
+### 2026-10-09 식사기록 양 초과 오류 구분 (미배포)
+
+식사기록 mutation RPC에서 SQLSTATE22003와 CONFLICT가 함께 반환되면 HTTP409/codeCONFLICT를 유지하고 `fields: [{field: "quantity.amount", reason: "exceeds_available_amount"}]`를 제공한다. 이 경우 UI는 양을 줄이라는 안내를 표시하며 ‘다른 변경의 최신 기록 반영’으로 바꾸지 않는다. 실제 revision 충돌과 계정 권한·세대 검사는 유지한다. SQL/DB 변경 없음.

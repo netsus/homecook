@@ -9,7 +9,7 @@ vi.mock("@/lib/api/recipe", () => ({ fetchRecipes: api.search, fetchRecipePrevie
 vi.mock("@/lib/api/meal", () => ({ createMealSafe: api.create }));
 const recipe = { id: "recipe-a", title: "김치찌개", base_servings: 2, thumbnail_url: null, tags: [], source_type: "system", view_count: 0, save_count: 0, like_count: 0 };
 beforeEach(() => {
-  api.preview.mockResolvedValue({ ...recipe, ingredients: [], nutrition: { base_servings: 2, values: {}, calculation_status: "unavailable" } });
+  api.preview.mockResolvedValue({ ...recipe, ingredients: [], nutrition: { warnings: [], base_servings: 2, values: {}, calculation_status: "unavailable" } });
   api.search.mockResolvedValue({ success: true, data: { items: [recipe], has_next: false, next_cursor: null } });
   api.create.mockResolvedValue({ success: false, error: { message: "잠시 후 다시 시도해 주세요." } });
 });
@@ -52,7 +52,7 @@ describe("planner addition inside one sheet", () => {
   it("scales selected ingredients and nutrition from authoritative preview without inventing missing values", async () => {
     api.preview.mockResolvedValue({ ...recipe,
       ingredients: [{ id: "rice", standard_name: "쌀", ingredient_type: "QUANT", amount: 200, unit: "g", scalable: true }, { id: "salt", standard_name: "소금", ingredient_type: "QUANT", amount: 2, unit: "g", scalable: false }],
-      nutrition: { base_servings: 2, values: { energy_kcal: { amount: 500, known_amount: 500, status: "complete" } }, scalable_values: { energy_kcal: 400 }, fixed_values: { energy_kcal: 100 }, calculation_status: "complete" },
+      nutrition: { warnings: [], base_servings: 2, values: { energy_kcal: { amount: 500, known_amount: 500, status: "complete" } }, scalable_values: { energy_kcal: 400 }, fixed_values: { energy_kcal: 100 }, calculation_status: "complete" },
     });
     openPicker();
     fireEvent.click(await screen.findByRole("button", { name: "김치찌개 선택" }));

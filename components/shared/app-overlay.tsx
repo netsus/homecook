@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useBackdropDismiss } from "@/components/shared/use-backdrop-dismiss";
 
 import {
   ModalFooterActions,
@@ -71,8 +72,10 @@ function AppOverlayBackdrop({
   onClose: () => void;
   variant: "bottom" | "center";
 }) {
+  const backdropDismiss = useBackdropDismiss(onClose);
   return (
     <div
+      {...backdropDismiss}
       className={[
         "fixed inset-0 flex bg-[var(--overlay-40)]",
         backdropLayerClassName,
@@ -80,7 +83,6 @@ function AppOverlayBackdrop({
           ? "items-end justify-center"
           : "items-center justify-center p-4",
       ].join(" ")}
-      onClick={onClose}
       style={style}
     >
       {children}
