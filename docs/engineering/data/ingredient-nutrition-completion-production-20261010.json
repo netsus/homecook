@@ -1,0 +1,123 @@
+{
+  "schema": "homecook.nutrition-recovery-final-audit.v1",
+  "verified_at": "2026-10-09T23:28:04.995Z",
+  "sourceRef": "e954bedc8e7602df89cb60bb361d1e6484ac1ca4",
+  "inventory": {
+    "ledger": 216,
+    "pieces": 19,
+    "aliases": 4179,
+    "sources": 26,
+    "evidence": 51,
+    "ai_enabled": false,
+    "ingredients": 1932
+  },
+  "summary": {
+    "recipes": 53,
+    "ingredient_rows": 516,
+    "statuses": {
+      "complete": 40,
+      "partial": 13
+    },
+    "causes": {
+      "NUTRIENT_VALUE_MISSING": {
+        "occurrences": 62,
+        "rows": 33,
+        "ingredients": 20
+      },
+      "NUTRITION_PROFILE_MISSING": {
+        "occurrences": 11,
+        "rows": 11,
+        "ingredients": 9
+      },
+      "TO_TASTE_EXCLUDED": {
+        "occurrences": 9,
+        "rows": 9,
+        "ingredients": 6
+      }
+    }
+  },
+  "pepper": {
+    "amount": 2,
+    "unit": "개",
+    "weight_g": 30,
+    "source_piece_weight_g": 15,
+    "api_nutrition_matches": true
+  },
+  "notes": [
+    "Coverage is limited to the 53 current recipes and 516 rows. Missing-profile rows and unspecified amounts are separate from supported conversions.",
+    "Original official values and historical nutrition/meal payload preservation were verified inside each applied transaction."
+  ],
+  "status": "passed",
+  "environment": "full-local-production",
+  "web_ref": "3039f75bb5ee819ea2fc3de8719a0819d15a77e1",
+  "build_id": "prelaunch-3039f75bb5ee-KCAfLS",
+  "data_refs": {
+    "recovery": "e954bedc8e7602df89cb60bb361d1e6484ac1ca4",
+    "nutrition": "8dcd25fc9fa48a9fb89e2a0c892f3f8104394dc9",
+    "pepper": "d0704b413570dc1d7320005940f81e8497257a07"
+  },
+  "changes": {
+    "restored_existing": 5,
+    "new_ingredients": 2,
+    "synonyms_added": 38,
+    "synonyms_removed": 6,
+    "nutrition_targets": 11,
+    "new_profiles": 8,
+    "new_values": 64,
+    "missing_product_fiber_values_preserved": 6,
+    "new_piece_weights": 4,
+    "recipe_rows_corrected": 3,
+    "current_recipes_refreshed": 7,
+    "new_nutrition_snapshots": 8,
+    "new_content_snapshots": 3
+  },
+  "verification": {
+    "fresh_signed_platform_backup_and_off_mac_restore": true,
+    "isolated_apply_replay_and_failure_rollback": true,
+    "original_sources_and_historical_payloads_preserved": true,
+    "web": {
+      "public_recipes_verified": 6,
+      "private_recipe_anonymous_404": 1,
+      "nutrition_matches_clone": true,
+      "garlic_display": "다진마늘 1숟가락",
+      "desktop": true,
+      "mobile_viewport": {
+        "width": 390,
+        "height": 844,
+        "client_width": 375,
+        "scroll_width": 375
+      },
+      "representative_notices_visible": true,
+      "viewport_reset": true
+    },
+    "search": [
+      {
+        "query": "등갈비",
+        "matched": "돼지고기 등갈비",
+        "passed": true
+      },
+      {
+        "query": "일당귀잎",
+        "matched": "일당귀 잎",
+        "passed": true
+      },
+      {
+        "query": "돼지고기 앞다리 수육용",
+        "matched": "돼지고기 앞다리 수육용",
+        "passed": true
+      }
+    ],
+    "targeted_tests": {
+      "web": 191,
+      "readiness": 19,
+      "recovery": 22,
+      "nutrition_completion": 16,
+      "green_pepper_and_existing_piece": 14
+    },
+    "build": "passed",
+    "typecheck": "passed",
+    "changed_files_lint": "passed",
+    "build_embedded_lint": "Existing deployment-only eslint-plugin-react-hooks resolution error; separate changed-file lint passed."
+  },
+  "owned_clone_removed": true
+}
