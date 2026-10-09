@@ -1,0 +1,3081 @@
+{
+  "schema": "homecook.ingredient-exclusion-animal-review.v1",
+  "review_date": "2026-10-10",
+  "status": "review_only_not_applied",
+  "scope": "excluded 동물·육류·알류 전체45행과 관련 검색누락43행",
+  "user_priority": "일상 요리·베이킹에서 쓰는 재료와 흔한 별칭 우선; 상세 조리상태는 보류",
+  "summary": {
+    "retain_excluded": 39,
+    "redirect_alias": 5,
+    "restore_base": 1
+  },
+  "counts": {
+    "excluded_animal_rows": 45,
+    "legacy_blocked_animal_rows": 18,
+    "missed_animal_synonym_rows": 43,
+    "new_exact_ingredient_candidates": 1
+  },
+  "catalog_vs_selection": "catalog.presentation=excluded 분류와 SQL/TypeScript legacy26 선택차단은 별도 장치다. 분류만 base로 바꿔도 legacy18 동물 ID는 선택되지 않는다. 원자료 영양 보유와 선택 가능 여부도 별개다.",
+  "items": [
+    {
+      "ingredient_id": "e16696d5-50f2-4667-b9f1-42edae11252b",
+      "name": "거위고기 살코기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1631",
+        "external_name": "거위고기, 살코기, 생것",
+        "source_item_id": "bb6fd7d6-6ee8-4963-9a66-db32ccb56ff6",
+        "profile_id": "fe25b637-d4ee-4945-9c48-626c6547f335",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 7.13,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 22.75,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 87,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 161,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 2.79,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "a6b05775-26e9-591a-b7de-b9d9b392b01d",
+      "name": "거위알",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2055",
+        "external_name": "거위알, 생것",
+        "source_item_id": "c9e206aa-c0c6-43f0-aee2-2bac9b51e247",
+        "profile_id": "8fbeea49-2483-4f97-9f25-d5854f5ed6c5",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 14.1,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 13.2,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 45,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 193,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0.8,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": null,
+            "status": "missing"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "60e624b7-1147-58c6-b0dc-bacc02804e79",
+      "name": "고래고기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1634",
+        "external_name": "고래고기, 생것",
+        "source_item_id": "0ac044b0-4f3a-4bdc-8165-f962488a19dd",
+        "profile_id": "20a1d93e-a984-4092-a1c7-358074600035",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 0.5,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 26.5,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 78,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 111,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 0.092,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "e6d939c8-709d-4891-986e-6645c7bcbfe7",
+      "name": "구운 거위고기 살코기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1632",
+        "external_name": "거위고기, 살코기, 구운것",
+        "source_item_id": "9df5602d-4381-42f5-9bc5-41f6f0b41881",
+        "profile_id": "6e3c02d9-0d1f-436f-a5e2-d36535e117db",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 12.67,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 28.97,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 76,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 238,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 4.56,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "8129733c-2685-4031-9e32-8998d0a15f5f",
+      "name": "구운 송아지고기 수입산 갈비",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2005",
+        "external_name": "송아지고기, 수입산, 갈비, 구운것",
+        "source_item_id": "84eded6f-3f3f-45af-9e63-d792369279e3",
+        "profile_id": "3213c689-fc94-4bf8-9a4a-54868fd72634",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 13.96,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 23.96,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 92,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 228,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 5.41,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "갈비"
+      ]
+    },
+    {
+      "ingredient_id": "2c99885d-ec4a-4ad0-893b-32bb0e415963",
+      "name": "구운 송아지고기 수입산 등심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2008",
+        "external_name": "송아지고기, 수입산, 등심, 구운것",
+        "source_item_id": "267ee00e-8e08-46c5-9ad2-4a66b73e1f43",
+        "profile_id": "71e642b3-1bbd-4c76-a0c5-c0f7bcd3b9b4",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 12.32,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 24.8,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 93,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 217,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 5.26,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "등심"
+      ]
+    },
+    {
+      "ingredient_id": "bed17741-4f3c-4f09-99d7-f61c575b0119",
+      "name": "구운 송아지고기 수입산 어깨",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2013",
+        "external_name": "송아지고기, 수입산, 어깨, 구운것",
+        "source_item_id": "51da6124-cd44-4935-a614-5141e2729490",
+        "profile_id": "5c77da41-4eed-436a-bea9-eb8c2d4885a7",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 8.25,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 25.46,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 90,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 183,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.51,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "어깨"
+      ]
+    },
+    {
+      "ingredient_id": "097a16b3-1a0e-57cf-92ac-224e76a0a938",
+      "name": "기러기알",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2057",
+        "external_name": "기러기알, 생것",
+        "source_item_id": "df5df44d-d780-48d9-bf78-f164393478bd",
+        "profile_id": "3f391032-d147-4c1f-9a85-a3b5c092593f",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 13.9,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 12.3,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 143,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 193,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 2.4,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": null,
+            "status": "missing"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "d1561af2-6cc5-4f52-9140-e7acc011230d",
+      "name": "끓인 토끼고기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2052",
+        "external_name": "토끼고기, 집토끼, 끓인것",
+        "source_item_id": "1f4d9f91-0f59-47ec-b8c6-ade4dfc1785d",
+        "profile_id": "f8367e49-f8c9-4047-8919-2fb7b6e3b649",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 3.51,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 33.02,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 45,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 173,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 1.05,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "2588c0ae-f889-48f5-b8f4-c94ebec56cdc",
+      "name": "냉동 고래고기 붉은살",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1637",
+        "external_name": "고래고기, 붉은살, 냉동",
+        "source_item_id": "2497fef5-113d-4476-bfb7-95d81cc2106d",
+        "profile_id": "b0dddf9e-45db-4f2c-b34f-254c6b38668d",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 3.5,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 23.5,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 58,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 132,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": null,
+            "status": "missing"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "붉은살"
+      ]
+    },
+    {
+      "ingredient_id": "dfa26343-0d41-4750-9e8f-b6cea850e188",
+      "name": "돼지고기 살코기",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+      "target_name": "돼지고기",
+      "reason": "RDA1685 살코기 생것은 원본 자체가 대푯값이며 기존 활성 돼지고기 대표 profile의 8영양값과 모두 같다. 기본재료를 중복 복구하지 않고 명확한 돼지고기 살코기 표현을 기존 대표로 연결한다. 특정 부위/생·가열 구분은 합치지 않는다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1685",
+        "external_name": "돼지고기, 살코기, 생것",
+        "source_item_id": "391771d6-f180-4606-a8a9-25b0f6265771",
+        "profile_id": "cae01393-a579-4529-8744-c9478d288637",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 12.84,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 19.45,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 50,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 203,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 4.84,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [
+        "돼지고기 살코기",
+        "돼지 살코기",
+        "생 돼지고기 살코기",
+        "돼지고기, 살코기, 생것",
+        "돼지고기 · 살코기 (생것)"
+      ],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [],
+      "representative_comparison": {
+        "target_profile_id": "e4439e0c-ff63-4456-8051-07a25d9323f6",
+        "target_provider": "HOMECOOK_USER_STANDARD",
+        "target_source_key": "representative:돼지고기",
+        "same_eight_values": true,
+        "original_rda_source_kind": "대푯값",
+        "raw_xml_row": 1779
+      }
+    },
+    {
+      "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "name": "돼지고기 앞다리 수육용",
+      "decision": "restore_base",
+      "target_ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "target_name": "돼지고기 앞다리 수육용",
+      "reason": "일상 구매·조리에 쓰는 명확한 돼지고기 재료이며 생것 RDA 영양 8종이 이미 연결돼 있다. 영양값 신규 추정 없이 선택 차단을 해제한다. 일반 앞다리(1721)와 수육용(3318)은 별도 원자료이므로 합치지 않는다. 수육용/앞다리 단독 별칭은 종과 부위가 불명확해 자동 매칭에서 제외한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "명시적 예외 허용을 SQL과 TypeScript 정책에 함께 반영",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "3318",
+        "external_name": "돼지고기, 앞다리, 수육용, 생것",
+        "source_item_id": "0eed96ee-3835-46be-b319-4e5183273b7e",
+        "profile_id": "14c29c27-79e2-4dd6-a52f-96f79822381f",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 21.32,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 17.46,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 54,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 274,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 6.72,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [
+        "돼지 앞다리 수육용",
+        "돼지고기 앞다리 수육용"
+      ],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "수육용",
+        "앞다리"
+      ],
+      "distinct_source_evidence": {
+        "source_3318": {
+          "raw_xml_row": 1822,
+          "source_label": "농진청('22)",
+          "energy_kcal": 274,
+          "fat_g": 21.32
+        },
+        "general_front_leg_1721": {
+          "raw_xml_row": 1815,
+          "source_label": "농진청('16)",
+          "energy_kcal": 159,
+          "fat_g": 7.87
+        },
+        "conclusion": "측정연도와 영양이 다른 명시적 구매형태라 일반 앞다리로 무조건 동의어 병합하지 않는다. 기존 ID를 정책검토로 복구하며 새ID를 만들어 선택차단을 회피하지 않는다.",
+        "primary_web_url": "https://nongsaro.go.kr/portal/ps/psx/psxf/mtralListPop.ps"
+      }
+    },
+    {
+      "ingredient_id": "a6efa5ba-1828-41d3-a813-7f38ad8ad04f",
+      "name": "삶은 거위알",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2056",
+        "external_name": "거위알, 삶은것",
+        "source_item_id": "0315570e-df66-4804-a042-ce73b9c30b5a",
+        "profile_id": "464dd3ac-51ec-4c24-9302-91da34494fe3",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 13.6,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 12.7,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 45,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 187,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 1,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": null,
+            "status": "missing"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "e2a9d793-14a0-4bdd-b1a1-83fd659f517e",
+      "name": "삶은 기러기알",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2058",
+        "external_name": "기러기알, 삶은것",
+        "source_item_id": "5e1b9870-ec90-43f3-9c5c-662357e8af32",
+        "profile_id": "1105b67c-62df-494f-8ce1-d9d1c8a15e75",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 14.9,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 13.1,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 138,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 212,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 4,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": null,
+            "status": "missing"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "bfc4f826-5d6b-426d-9e26-9177eb89b086",
+      "name": "삶은 돼지고기 갈비",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1687",
+        "external_name": "돼지고기, 갈비, 삶은것",
+        "source_item_id": "7a00bf28-8fc9-4162-8b03-eef16506898e",
+        "profile_id": "cd98101f-1b10-434d-b5f4-f28d9f3fbca6",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 19.54,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 26.51,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 45,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 296,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 6.66,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [
+        "목심",
+        "돼지고기, 목심, 삶은것"
+      ],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "갈비",
+        "목심"
+      ]
+    },
+    {
+      "ingredient_id": "c3b23d90-0cf1-4820-8be4-531eede986f1",
+      "name": "삶은 돼지고기 뒷다리",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1690",
+        "external_name": "돼지고기, 뒷다리, 삶은것",
+        "source_item_id": "62f41aca-400b-4625-b180-cbf130a0c057",
+        "profile_id": "c637008d-9b87-4920-8167-3323cac1991a",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 8.7,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 30.63,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 42,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 211,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 2.86,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "뒷다리"
+      ]
+    },
+    {
+      "ingredient_id": "3bc3fefb-c280-46fe-83fa-937ddb14f06b",
+      "name": "삶은 돼지고기 등심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1699",
+        "external_name": "돼지고기, 등심, 삶은것",
+        "source_item_id": "59fe229d-2605-41d2-ac4e-25318904f311",
+        "profile_id": "8880bfdd-0a77-4a3e-9fc4-b6c905d49836",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 5.94,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 35.08,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 28,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 204,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 2.24,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "등심"
+      ]
+    },
+    {
+      "ingredient_id": "0a128a83-b012-4197-83a2-1895b77fd882",
+      "name": "삶은 돼지고기 사태",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1708",
+        "external_name": "돼지고기, 사태, 삶은것",
+        "source_item_id": "fa1fe206-04ab-4c0d-bb1e-b3e274302316",
+        "profile_id": "60ff1d18-11c9-4455-b644-e9a56d130a49",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 8.46,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 29.14,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 54,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 203,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.02,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "사태"
+      ]
+    },
+    {
+      "ingredient_id": "5363ddb9-ee58-4b8a-884d-a84b80fd064c",
+      "name": "삶은 돼지고기 안심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1719",
+        "external_name": "돼지고기, 안심, 삶은것",
+        "source_item_id": "4e8f89fc-1127-4a88-910e-40c83fd488d0",
+        "profile_id": "e4ec6454-b8a3-4010-84a2-be7cba9c4ea1",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 4.31,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 32.32,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 37,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 177,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 1.58,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "안심"
+      ]
+    },
+    {
+      "ingredient_id": "fd75d45d-0d54-48c8-9b1b-04b750666c99",
+      "name": "삶은 돼지고기 앞다리 수육용",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "3319",
+        "external_name": "돼지고기, 앞다리, 수육용, 삶은것",
+        "source_item_id": "26b26d09-ef21-44c5-9d3e-48bca731e8fe",
+        "profile_id": "dfbcf4f6-fe5f-49b0-8d79-6b7d0f9fac90",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 20.63,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 27.47,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 36,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 310,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 6.72,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "수육용",
+        "앞다리"
+      ]
+    },
+    {
+      "ingredient_id": "07bccf3d-7699-438c-95a3-fefb2bbe3822",
+      "name": "삶은 송아지고기 수입산 갈비",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2004",
+        "external_name": "송아지고기, 수입산, 갈비, 삶은것",
+        "source_item_id": "10b1b564-f124-49b4-8849-9e46fd9afdd1",
+        "profile_id": "fd86559d-7c32-4cd4-bd44-5c5f919d4d71",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 12.53,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 32.43,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 95,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 251,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 4.95,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "갈비"
+      ]
+    },
+    {
+      "ingredient_id": "ae551f2c-758e-4458-b232-1882f52f33d5",
+      "name": "삶은 송아지고기 수입산 등심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2007",
+        "external_name": "송아지고기, 수입산, 등심, 삶은것",
+        "source_item_id": "582b7024-0c3e-41fe-a7ce-e3d5baed5bb6",
+        "profile_id": "d4a6d665-13a2-4d1b-ae2d-df5358227d5e",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 17.21,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 30.19,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 80,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 284,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 6.73,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "등심"
+      ]
+    },
+    {
+      "ingredient_id": "b0225d9d-4adc-47e7-9329-7645c1b4bac7",
+      "name": "삶은 송아지고기 수입산 살코기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2010",
+        "external_name": "송아지고기, 수입산, 살코기, 삶은것",
+        "source_item_id": "739d02a1-d73a-40dc-a0f0-28d96211e6f7",
+        "profile_id": "8b37d1b0-6af9-442d-abe6-12cc8237331f",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 5.33,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 35.73,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 90,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 201,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 1.49,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "5bc83621-578b-49b4-b98b-90efbb12d0ab",
+      "name": "삶은 송아지고기 수입산 어깨",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2012",
+        "external_name": "송아지고기, 수입산, 어깨, 삶은것",
+        "source_item_id": "cf2dddf3-663a-43a2-969d-bf9ff484ef85",
+        "profile_id": "aeb72c60-fbe9-49f1-b58d-cee5948bb76b",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 10.24,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 33.63,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 87,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 236,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.96,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "어깨"
+      ]
+    },
+    {
+      "ingredient_id": "7a42e229-8f27-4a38-996b-98c7eb5680e0",
+      "name": "삶은 송아지고기 수입산 채끝",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2015",
+        "external_name": "송아지고기, 수입산, 채끝(채끝살), 삶은것",
+        "source_item_id": "bfabb865-420e-4064-a3af-91dbbfe60947",
+        "profile_id": "7b91b2da-245e-4d15-8d65-0ef070f467e5",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 13.14,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 31.26,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 79,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 252,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 5.18,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "채끝",
+        "채끝살"
+      ]
+    },
+    {
+      "ingredient_id": "d2cd6149-b536-4c3b-a1a2-f63ade7fca04",
+      "name": "삶은 토끼고기 살코기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2054",
+        "external_name": "토끼고기, 살코기, 삶은것",
+        "source_item_id": "4eb73772-412d-4638-a42f-f3da46d9685b",
+        "profile_id": "24989f97-09c1-4e77-aa91-8d7221654a0b",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 8.87,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0.38,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 28.23,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 37,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 203,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.51,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "6752fedc-101f-484f-97dd-da34f1954980",
+      "name": "생 돼지고기 갈비",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "093dc3b3-6559-5469-a297-b0835915ebce",
+      "target_name": "돼지고기 갈비",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1686",
+        "external_name": "돼지고기, 갈비, 생것",
+        "source_item_id": "943d2941-8eee-438a-86aa-8b6542308378",
+        "profile_id": "bb8385d9-a009-45c0-be29-7ad7ca2521f5",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 17.06,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 17.77,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 64,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 236,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 4.52,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [
+        "생 돼지고기 갈비",
+        "돼지고기 · 갈비 (생것)",
+        "돼지고기, 갈비, 생것"
+      ],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "갈비"
+      ]
+    },
+    {
+      "ingredient_id": "ecf31d7f-dcf9-4e02-87aa-3d41cc54f582",
+      "name": "생 돼지고기 목심",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "29be65f9-fdbe-5c69-a4b3-861ac1661099",
+      "target_name": "돼지고기 목심",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1704",
+        "external_name": "돼지고기, 목심, 생것",
+        "source_item_id": "15c43759-d862-4d39-a7ab-268a57538865",
+        "profile_id": "3d32b1a3-ef17-457d-a52d-d21369f69693",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 16.36,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 17.21,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 51,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 227,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 5.91,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [
+        "생 돼지고기 목심",
+        "돼지고기 · 목심 (생것)",
+        "돼지고기, 목심, 생것"
+      ],
+      "invalid_aliases": [
+        "등갈비",
+        "돼지고기, 삼겹살(등갈비), 생것"
+      ],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "목심"
+      ]
+    },
+    {
+      "ingredient_id": "07694d02-8cd7-4047-ac4d-4078739c3c73",
+      "name": "생 돼지고기 사태",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "8b00dd9b-74b0-5e8a-8c0b-f705308a9805",
+      "target_name": "돼지고기 사태",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1707",
+        "external_name": "돼지고기, 사태, 생것",
+        "source_item_id": "047402af-6fd0-4630-a1cb-1fabdeba4cd7",
+        "profile_id": "590fb157-f340-42b5-bc3b-e866cf615540",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 7.72,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 19.78,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 71,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 156,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 2.76,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [
+        "생 돼지고기 사태",
+        "돼지고기 · 사태 (생것)",
+        "돼지고기, 사태, 생것"
+      ],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "사태"
+      ]
+    },
+    {
+      "ingredient_id": "99a58a07-e130-4299-a058-3cb424edeb89",
+      "name": "생 돼지고기 안심",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "13e7d66f-ab7e-5012-bc79-ea4bd9c3c00c",
+      "target_name": "돼지고기 안심",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1718",
+        "external_name": "돼지고기, 안심, 생것",
+        "source_item_id": "ee6ae0f1-bec1-4c73-862a-48374d8d5ca6",
+        "profile_id": "987a6b3e-1208-4874-96db-c73725a23e90",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 3.15,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 22.21,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 46,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 123,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 1.17,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [
+        "생 돼지고기 안심",
+        "돼지고기 · 안심 (생것)",
+        "돼지고기, 안심, 생것"
+      ],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "안심"
+      ]
+    },
+    {
+      "ingredient_id": "7f7b8c86-e780-4e70-8738-c3aa33641910",
+      "name": "송아지고기 수입산 갈비",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2003",
+        "external_name": "송아지고기, 수입산, 갈비, 생것",
+        "source_item_id": "a397b130-e417-4605-9280-9fe52663a3c9",
+        "profile_id": "bbbbe2c1-2a60-460d-aeb2-9be429b79bb2",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 9.01,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 18.86,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 89,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 162,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.71,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "갈비"
+      ]
+    },
+    {
+      "ingredient_id": "3de16d99-0442-493f-9b9a-6dd99ce1ed84",
+      "name": "송아지고기 수입산 등심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2006",
+        "external_name": "송아지고기, 수입산, 등심, 생것",
+        "source_item_id": "0d98eac9-d23a-4de9-9bde-62971ccd698f",
+        "profile_id": "acd05276-82ba-4e7c-8bd9-f18f3e223cea",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 10.07,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 20.07,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 98,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 177,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0.07,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.607,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "등심"
+      ]
+    },
+    {
+      "ingredient_id": "d0795631-b238-477a-82e5-2136e1eeb893",
+      "name": "송아지고기 수입산 살코기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2009",
+        "external_name": "송아지고기, 수입산, 살코기, 생것",
+        "source_item_id": "69e168bb-792e-4374-a40d-080966f0a7f9",
+        "profile_id": "68d1fcb0-7c18-40dd-9360-7e2fdc2b1c17",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 2.16,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 20.04,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 86,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 105,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 0.65,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "e8e6f360-e782-44fa-a9c6-fa872690a747",
+      "name": "송아지고기 수입산 어깨",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2011",
+        "external_name": "송아지고기, 수입산, 어깨, 생것",
+        "source_item_id": "f4fc52cd-8062-4c1c-a175-ef347f9f7494",
+        "profile_id": "e8204338-02f1-4e44-8f1a-ba42046dca1c",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 5.44,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 19.34,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 83,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 132,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 2.26,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "어깨"
+      ]
+    },
+    {
+      "ingredient_id": "a26c2384-04a3-4faa-99f2-0abebf56c235",
+      "name": "송아지고기 수입산 채끝",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2014",
+        "external_name": "송아지고기, 수입산, 채끝(채끝살), 생것",
+        "source_item_id": "e7ecf221-d157-429e-915d-71aea71f6023",
+        "profile_id": "13084655-6639-4ffd-b418-6daab5a5da74",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 7.81,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 19.07,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 76,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 152,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.35,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "채끝",
+        "채끝살"
+      ]
+    },
+    {
+      "ingredient_id": "6680195c-265d-4c7e-b3ca-aab70bce19f6",
+      "name": "오븐에 구운 송아지고기 수입산 채끝",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2016",
+        "external_name": "송아지고기, 수입산, 채끝(채끝살), 구운것(오븐)",
+        "source_item_id": "41bac0fb-9d98-44f2-8184-28d008de8e78",
+        "profile_id": "a544a5fe-0a1c-4a65-815f-b08901fa354a",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 10.45,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 25.14,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 83,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 202,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 4.51,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "오븐",
+        "채끝",
+        "채끝살"
+      ]
+    },
+    {
+      "ingredient_id": "7263c440-877f-5ce7-9973-6112ad115d9f",
+      "name": "토끼고기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2051",
+        "external_name": "토끼고기, 집토끼, 생것",
+        "source_item_id": "9505bc9b-0dbb-4d75-a883-6760481a2eb0",
+        "profile_id": "d67cc0e2-75eb-453d-a176-6a62611e5060",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 4.4,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 21.7,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 56,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 135,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0.6,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": null,
+            "status": "missing"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "18b501c8-7a5d-4699-a46e-942ca835e4e8",
+      "name": "토끼고기 살코기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "사용자가 선택한 일상 요리·베이킹 우선 범위에서 특수 축종 또는 그 세부 부위·조리상태다. 원자료와 기존 연결은 보존하되 이번 복구에서는 제외 유지한다. 식재료 오류나 유해성 판단이 아니며 별도 수요가 확인되면 재검토한다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "2053",
+        "external_name": "토끼고기, 살코기, 생것",
+        "source_item_id": "76046db9-9a2a-460f-84d1-2bd03c1d5beb",
+        "profile_id": "352f7615-198d-45e5-b48b-81179a209b9d",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 7.68,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0.62,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 20.97,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 50,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 161,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.11,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    },
+    {
+      "ingredient_id": "b530cbdf-7d78-4dca-b43e-7b43a9114084",
+      "name": "팬에 구운 돼지고기 갈비",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1688",
+        "external_name": "돼지고기, 갈비, 구운것(팬)",
+        "source_item_id": "b56131bb-965b-48a2-bec5-c8165a134394",
+        "profile_id": "d29fad11-f4f4-43fc-ab34-39731b9d8a9f",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 17.59,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 24.83,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 79,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 270,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 6.02,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "갈비",
+        "팬"
+      ]
+    },
+    {
+      "ingredient_id": "ae9befb4-ba46-4761-922d-cef4dbad93e1",
+      "name": "팬에 구운 돼지고기 뒷다리",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1691",
+        "external_name": "돼지고기, 뒷다리, 구운것(팬)",
+        "source_item_id": "2039cee8-f2ff-4522-9967-c6ea607e352f",
+        "profile_id": "76f3f38c-0c93-428e-abca-ac2d41432b0f",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 8.93,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 30.21,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 63,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 212,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 2.88,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "뒷다리",
+        "팬"
+      ]
+    },
+    {
+      "ingredient_id": "fa597781-a191-45f7-a3e8-3a19931858b2",
+      "name": "팬에 구운 돼지고기 등심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1700",
+        "external_name": "돼지고기, 등심, 구운것(팬)",
+        "source_item_id": "68a931c6-376c-48bb-9ddd-cf31e9eb9605",
+        "profile_id": "d3c25ba0-8571-4cce-990e-b1e46c8c5d62",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 5.18,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 32.06,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 49,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 184,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 2,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "등심",
+        "팬"
+      ]
+    },
+    {
+      "ingredient_id": "167bda6c-abdf-4057-84c1-d013ce38312f",
+      "name": "팬에 구운 돼지고기 목심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1706",
+        "external_name": "돼지고기, 목심, 구운것(팬)",
+        "source_item_id": "ed5c3e3f-4790-4ef7-8433-5db5f200719c",
+        "profile_id": "9736175e-2108-478b-bd80-0a6d24dc684c",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 17.23,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 24.06,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 65,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 264,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 6.42,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "목심",
+        "팬"
+      ]
+    },
+    {
+      "ingredient_id": "ccddaf85-4700-47f6-97cd-7c1c1b4d6b30",
+      "name": "팬에 구운 돼지고기 사태",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1709",
+        "external_name": "돼지고기, 사태, 구운것(팬)",
+        "source_item_id": "c5e8837f-3e97-4d07-b336-b49083ea09b6",
+        "profile_id": "2c00d995-fa7c-46cf-9ca0-a62a9ec5a0e8",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 9.74,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 28.47,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 99,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 212,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 3.59,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "사태",
+        "팬"
+      ]
+    },
+    {
+      "ingredient_id": "49488a14-bcce-41c0-8a4f-24a4691b273d",
+      "name": "팬에 구운 돼지고기 안심",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": true,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1720",
+        "external_name": "돼지고기, 안심, 구운것(팬)",
+        "source_item_id": "be699176-447d-4a9a-a800-dcbd34ea87f0",
+        "profile_id": "04f92855-e471-49d8-b4b9-74e827a06ef5",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 4.76,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 30.23,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 57,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 172,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 1.74,
+            "status": "observed"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": [
+        "안심",
+        "팬"
+      ]
+    },
+    {
+      "ingredient_id": "6955ed27-369a-5a47-bd5e-07a2ea9171ce",
+      "name": "멧돼지고기",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "target_name": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다.",
+      "current_catalog_presentation": "excluded",
+      "legacy_selection_blocked": false,
+      "required_selection_change": "기존 ID 선택 차단 유지",
+      "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+      "nutrition_evidence": {
+        "source_key": "1776",
+        "external_name": "멧돼지고기, 앞다리, 생것",
+        "source_item_id": "f9d28799-a747-4fa4-8d7e-e8748b78e9af",
+        "profile_id": "06f676ac-327e-48c6-8bac-aeca761d4135",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "values": {
+          "fat_g": {
+            "amount": 10.7,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "sugars_g": {
+            "amount": null,
+            "status": "missing"
+          },
+          "protein_g": {
+            "amount": 21.5,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 55,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 191,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 0,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": null,
+            "status": "missing"
+          }
+        }
+      },
+      "candidate_aliases": [],
+      "invalid_aliases": [],
+      "ambiguous_aliases_not_for_automatic_match": []
+    }
+  ],
+  "missed_synonym_decisions": [
+    {
+      "synonym": "돼지고기, 뒷다리, 구운것(팬)",
+      "ingredient_id": "ae9befb4-ba46-4761-922d-cef4dbad93e1",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 갈비, 구운것(팬)",
+      "ingredient_id": "b530cbdf-7d78-4dca-b43e-7b43a9114084",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 갈비, 삶은것",
+      "ingredient_id": "bfc4f826-5d6b-426d-9e26-9177eb89b086",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 뒷다리, 삶은것",
+      "ingredient_id": "c3b23d90-0cf1-4820-8be4-531eede986f1",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 사태, 구운것(팬)",
+      "ingredient_id": "ccddaf85-4700-47f6-97cd-7c1c1b4d6b30",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 앞다리, 수육용, 생것",
+      "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "decision": "restore_base",
+      "target_ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "reason": "일상 구매·조리에 쓰는 명확한 돼지고기 재료이며 생것 RDA 영양 8종이 이미 연결돼 있다. 영양값 신규 추정 없이 선택 차단을 해제한다. 일반 앞다리(1721)와 수육용(3318)은 별도 원자료이므로 합치지 않는다. 수육용/앞다리 단독 별칭은 종과 부위가 불명확해 자동 매칭에서 제외한다."
+    },
+    {
+      "synonym": "돼지고기, 살코기, 생것",
+      "ingredient_id": "dfa26343-0d41-4750-9e8f-b6cea850e188",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+      "reason": "원본1685 대푯값과 같은8영양을 쓰는 기존 돼지고기 대표로 명확한 살코기 표현 연결."
+    },
+    {
+      "synonym": "돼지고기, 등심, 구운것(팬)",
+      "ingredient_id": "fa597781-a191-45f7-a3e8-3a19931858b2",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 앞다리, 수육용, 삶은것",
+      "ingredient_id": "fd75d45d-0d54-48c8-9b1b-04b750666c99",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "수육용",
+      "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "decision": "retain_unresolved",
+      "target_ingredient_id": null,
+      "reason": "실사용 표현이지만 종/부위/상태가 불명확하다. 검색 화면에 명시적 후보를 표시하는 기능으로 다뤄야 하며 특정 삶은 돼지/수육용 한 재료에 자동 고정하지 않는다."
+    },
+    {
+      "synonym": "뒷다리",
+      "ingredient_id": "ae9befb4-ba46-4761-922d-cef4dbad93e1",
+      "decision": "retain_unresolved",
+      "target_ingredient_id": null,
+      "reason": "실사용 표현이지만 종/부위/상태가 불명확하다. 검색 화면에 명시적 후보를 표시하는 기능으로 다뤄야 하며 특정 삶은 돼지/수육용 한 재료에 자동 고정하지 않는다."
+    },
+    {
+      "synonym": "앞다리",
+      "ingredient_id": "fd75d45d-0d54-48c8-9b1b-04b750666c99",
+      "decision": "retain_unresolved",
+      "target_ingredient_id": null,
+      "reason": "실사용 표현이지만 종/부위/상태가 불명확하다. 검색 화면에 명시적 후보를 표시하는 기능으로 다뤄야 하며 특정 삶은 돼지/수육용 한 재료에 자동 고정하지 않는다."
+    },
+    {
+      "synonym": "등갈비",
+      "ingredient_id": "ecf31d7f-dcf9-4e02-87aa-3d41cc54f582",
+      "decision": "needs_source",
+      "target_ingredient_id": null,
+      "reason": "현재 연결한 부위와 원문 부위가 다르다. 잘못된 연결 해제 후 정확한 별도 재료/공식 source가 준비되면 연결한다."
+    },
+    {
+      "synonym": "돼지고기, 목심, 삶은것",
+      "ingredient_id": "bfc4f826-5d6b-426d-9e26-9177eb89b086",
+      "decision": "needs_source",
+      "target_ingredient_id": null,
+      "reason": "현재 연결한 부위와 원문 부위가 다르다. 잘못된 연결 해제 후 정확한 별도 재료/공식 source가 준비되면 연결한다."
+    },
+    {
+      "synonym": "수육용",
+      "ingredient_id": "fd75d45d-0d54-48c8-9b1b-04b750666c99",
+      "decision": "retain_unresolved",
+      "target_ingredient_id": null,
+      "reason": "실사용 표현이지만 종/부위/상태가 불명확하다. 검색 화면에 명시적 후보를 표시하는 기능으로 다뤄야 하며 특정 삶은 돼지/수육용 한 재료에 자동 고정하지 않는다."
+    },
+    {
+      "synonym": "뒷다리",
+      "ingredient_id": "c3b23d90-0cf1-4820-8be4-531eede986f1",
+      "decision": "retain_unresolved",
+      "target_ingredient_id": null,
+      "reason": "실사용 표현이지만 종/부위/상태가 불명확하다. 검색 화면에 명시적 후보를 표시하는 기능으로 다뤄야 하며 특정 삶은 돼지/수육용 한 재료에 자동 고정하지 않는다."
+    },
+    {
+      "synonym": "앞다리",
+      "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "decision": "retain_unresolved",
+      "target_ingredient_id": null,
+      "reason": "실사용 표현이지만 종/부위/상태가 불명확하다. 검색 화면에 명시적 후보를 표시하는 기능으로 다뤄야 하며 특정 삶은 돼지/수육용 한 재료에 자동 고정하지 않는다."
+    },
+    {
+      "synonym": "돼지고기, 삼겹살(등갈비), 생것",
+      "ingredient_id": "ecf31d7f-dcf9-4e02-87aa-3d41cc54f582",
+      "decision": "needs_source",
+      "target_ingredient_id": null,
+      "reason": "현재 연결한 부위와 원문 부위가 다르다. 잘못된 연결 해제 후 정확한 별도 재료/공식 source가 준비되면 연결한다."
+    },
+    {
+      "synonym": "돼지고기 · 갈비 (생것)",
+      "ingredient_id": "6752fedc-101f-484f-97dd-da34f1954980",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "093dc3b3-6559-5469-a297-b0835915ebce",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다."
+    },
+    {
+      "synonym": "돼지고기 · 사태 (생것)",
+      "ingredient_id": "07694d02-8cd7-4047-ac4d-4078739c3c73",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "8b00dd9b-74b0-5e8a-8c0b-f705308a9805",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다."
+    },
+    {
+      "synonym": "돼지고기 · 사태 (삶은것)",
+      "ingredient_id": "0a128a83-b012-4197-83a2-1895b77fd882",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 목심 (구운것(팬))",
+      "ingredient_id": "167bda6c-abdf-4057-84c1-d013ce38312f",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 등심 (삶은것)",
+      "ingredient_id": "3bc3fefb-c280-46fe-83fa-937ddb14f06b",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 사태, 삶은것",
+      "ingredient_id": "0a128a83-b012-4197-83a2-1895b77fd882",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 목심, 구운것(팬)",
+      "ingredient_id": "167bda6c-abdf-4057-84c1-d013ce38312f",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 등심, 삶은것",
+      "ingredient_id": "3bc3fefb-c280-46fe-83fa-937ddb14f06b",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 안심, 구운것(팬)",
+      "ingredient_id": "49488a14-bcce-41c0-8a4f-24a4691b273d",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기, 안심, 삶은것",
+      "ingredient_id": "5363ddb9-ee58-4b8a-884d-a84b80fd064c",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 안심 (구운것(팬))",
+      "ingredient_id": "49488a14-bcce-41c0-8a4f-24a4691b273d",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 안심 (삶은것)",
+      "ingredient_id": "5363ddb9-ee58-4b8a-884d-a84b80fd064c",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 안심 (생것)",
+      "ingredient_id": "99a58a07-e130-4299-a058-3cb424edeb89",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "13e7d66f-ab7e-5012-bc79-ea4bd9c3c00c",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다."
+    },
+    {
+      "synonym": "돼지고기 · 뒷다리 (구운것(팬))",
+      "ingredient_id": "ae9befb4-ba46-4761-922d-cef4dbad93e1",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 갈비 (구운것(팬))",
+      "ingredient_id": "b530cbdf-7d78-4dca-b43e-7b43a9114084",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 갈비 (삶은것)",
+      "ingredient_id": "bfc4f826-5d6b-426d-9e26-9177eb89b086",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 뒷다리 (삶은것)",
+      "ingredient_id": "c3b23d90-0cf1-4820-8be4-531eede986f1",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 사태 (구운것(팬))",
+      "ingredient_id": "ccddaf85-4700-47f6-97cd-7c1c1b4d6b30",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 앞다리 · 수육용 (생것)",
+      "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "decision": "restore_base",
+      "target_ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "reason": "일상 구매·조리에 쓰는 명확한 돼지고기 재료이며 생것 RDA 영양 8종이 이미 연결돼 있다. 영양값 신규 추정 없이 선택 차단을 해제한다. 일반 앞다리(1721)와 수육용(3318)은 별도 원자료이므로 합치지 않는다. 수육용/앞다리 단독 별칭은 종과 부위가 불명확해 자동 매칭에서 제외한다."
+    },
+    {
+      "synonym": "돼지고기 · 살코기 (생것)",
+      "ingredient_id": "dfa26343-0d41-4750-9e8f-b6cea850e188",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+      "reason": "원본1685 대푯값과 같은8영양을 쓰는 기존 돼지고기 대표로 명확한 살코기 표현 연결."
+    },
+    {
+      "synonym": "돼지고기 · 목심 (생것)",
+      "ingredient_id": "ecf31d7f-dcf9-4e02-87aa-3d41cc54f582",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "29be65f9-fdbe-5c69-a4b3-861ac1661099",
+      "reason": "동일 축종·부위·생것이고 활성 대표 재료와 동일한 RDA 영양 profile을 공유한다. 기존 ID를 재사용/개명하지 않고 명확한 원문 이름만 대표 재료의 동의어로 옮긴다."
+    },
+    {
+      "synonym": "돼지고기 · 등심 (구운것(팬))",
+      "ingredient_id": "fa597781-a191-45f7-a3e8-3a19931858b2",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "돼지고기 · 앞다리 · 수육용 (삶은것)",
+      "ingredient_id": "fd75d45d-0d54-48c8-9b1b-04b750666c99",
+      "decision": "retain_excluded",
+      "target_ingredient_id": null,
+      "reason": "삶은/팬에 구운 조리 후 세부 상태다. 상세 재료 보류라는 기존 범위에 따라 이번 기본재료 복구에서 제외를 유지한다. 동일한 생부위와 중량당 영양이 달라 생것으로 동의어를 옮기지 않는다. 향후 조리상태 검색을 지원할 때 원자료 그대로 복구할 수 있다."
+    },
+    {
+      "synonym": "생 돼지고기 앞다리 수육용",
+      "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "decision": "restore_base",
+      "target_ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "reason": "일상 구매·조리에 쓰는 명확한 돼지고기 재료이며 생것 RDA 영양 8종이 이미 연결돼 있다. 영양값 신규 추정 없이 선택 차단을 해제한다. 일반 앞다리(1721)와 수육용(3318)은 별도 원자료이므로 합치지 않는다. 수육용/앞다리 단독 별칭은 종과 부위가 불명확해 자동 매칭에서 제외한다."
+    },
+    {
+      "synonym": "생 돼지고기 살코기",
+      "ingredient_id": "dfa26343-0d41-4750-9e8f-b6cea850e188",
+      "decision": "redirect_alias",
+      "target_ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+      "reason": "원본1685 대푯값과 같은8영양을 쓰는 기존 돼지고기 대표로 명확한 살코기 표현 연결."
+    }
+  ],
+  "new_ingredients": [
+    {
+      "name": "돼지고기 등갈비",
+      "decision": "needs_source",
+      "source_found": true,
+      "target_ingredient_id": null,
+      "action": "신규 재료 ID와 RDA 1714 source_item/profile 생성 후 등갈비 별칭을 옮긴다. 기존 목심 ID 및 해당 profile은 유지한다.",
+      "candidate_aliases": [
+        "등갈비",
+        "돼지 등갈비",
+        "돼지고기 등갈비",
+        "생 돼지 등갈비",
+        "돼지고기, 삼겹살(등갈비), 생것"
+      ],
+      "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/food/detail.do?dbGrpCm=R&pageblock=10&pagenum=1&pagesize=10&searchClass=&searchCrtMth=&searchDetailMode=all&searchFoodCd=R109-014003201-0000&searchGroup=&searchGroupText=&searchHcln=&searchLogType=&searchMaker=&searchMakerText=&searchMonthCd=AVG&searchNotText=&searchOper=AND&searchOrderby=CAL&searchPageCnt=10&searchProcCode=&searchQc=&searchReduct=&searchRegionCd=ZZ&searchSource=&searchSubOrderby=&searchText=%EB%93%B1%EA%B0%88%EB%B9%84&searchTextListStr=&searchTextPre=&sortFieldCnt=1&sortOrder=DESC&totalListCnt=1",
+      "cooking_usage_source_url": "https://www.rda.go.kr/middlePopOpenPopNongsaroDBView.do?no=1489",
+      "official_workbook": {
+        "sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+        "sheet": "국가표준식품성분 Database 10.4",
+        "xml_part": "xl/worksheets/sheet6.xml",
+        "row": 1808,
+        "source_key": "1714",
+        "external_name": "돼지고기, 삼겹살(등갈비), 생것",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "basis_detail": "가식부",
+        "discard_percent": 40,
+        "source_label": "농진청('16)",
+        "values": {
+          "energy_kcal": 237,
+          "carbohydrate_g": 0,
+          "sugars_g": 0,
+          "fat_g": 17.19,
+          "protein_g": 17.88,
+          "fiber_g": 0,
+          "sodium_mg": 52,
+          "saturated_fat_g": 6.38
+        }
+      },
+      "existing_db_source_item_id": null,
+      "existing_db_profile_id": null,
+      "primary_web_crosscheck": "K-FIND food code R109-014003201-0000, 8개 영양값과 폐기율이 원본 workbook과 일치함. 2026-10-10 확인.",
+      "limit": "뼈 포함 구입 중량과 가식부 중량은 다르다. 이 검토는 환산4건과 분리하며 폐기율을 기존 모든 레시피에 자동 적용하도록 제안하지 않는다.",
+      "rejected": [
+        "목심1704를 등갈비로 개명하거나 영양 profile을 교체",
+        "돼지고기 갈비1686 또는 일반 삼겹살1710 영양으로 대체",
+        "폭립/양념등갈비 공장제품 영양을 생등갈비에 적용"
+      ]
+    }
+  ],
+  "followup_without_false_merge": [
+    "돼지고기, 목심, 삶은것은 현재 삶은 갈비1687에 잘못 연결되어 있다. 정확한 RDA1705가 운영 DB에 없어 기존 별칭을 잘못 복구하지 않는다. 상세상태 후속 범위에서 별도 소스/재료 검토.",
+    "일반 앞다리/뒷다리 검색은 사용자에게 종을 고를 후보를 보여줄 수 있으나 종 불명 상태에서 자동 영양 연결은 하지 않는다.",
+    "원문 별칭 갈비/등심/안심/사태/목심을 송아지·돼지·삶은/생것에 혼용한 행은 선택 상태 변경 전 정리해야 한다."
+  ],
+  "evidence_inputs": [
+    "inventory.json(read-only production export)",
+    "lib/ingredient-catalog-policy.ts",
+    "docs/engineering/data/ingredient-nutrition-curation-20260919.json(reference only)",
+    "official RDA10.4 workbook verified by SHA256",
+    "MFDS K-FIND detail verified on web"
+  ],
+  "db_mutations": false,
+  "code_mutations": false
+}

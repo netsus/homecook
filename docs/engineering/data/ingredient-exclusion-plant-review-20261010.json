@@ -1,0 +1,2924 @@
+{
+  "schema": "homecook.ingredient-exclusion-plant-review.v1",
+  "reviewed_at": "2026-10-10",
+  "inventory_source": "/tmp/homecook-exclusion-review-20261010/inventory.json",
+  "scope": "excluded 124개 중 육류45개를 제외한 식물·버섯·가공품79개",
+  "policy": "일상 요리·베이킹에서 쓰는 재료와 흔한 별칭 우선. retain_excluded는 비식용 판정이 아니며 기본 목록 우선순위/정의 미확정에 따른 보류다. 부분 영양소를 0으로 만들지 않는다.",
+  "counts": {
+    "retain_excluded": 71,
+    "restore_base": 4,
+    "needs_source": 4
+  },
+  "references": {
+    "rda_catalog": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+    "bangpung": "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+    "angelica": "https://www.rda.go.kr/board/board.do?dataNo=100000746399&mode=view&prgId=day_farmprmninfoEntry",
+    "kalopanax": "https://www.forest.go.kr/kfsweb/cop/bbs/selectBoardArticle.do?bbsId=BBSMSTR_1068&nttId=2816935",
+    "kalopanax_production": "https://www.forest.go.kr/kfsweb/cop/bbs/selectBoardArticle.do?bbsId=BBSMSTR_1823&nttId=3181576",
+    "goji_recipes": "https://www.cheongyang.go.kr/farm/sub02_03_03.do",
+    "goji_use": "https://www.cheongyang.go.kr/farm/sub02_03_04.do",
+    "nameko": "https://www.town.fujisato.akita.jp/kanko/notices/2835",
+    "ulleung": "https://council.ulleung.go.kr/mnts/asvr/cnts/mnt/mntViewer.php?params=bmlzRlM3Tk5TSEJYc1I5cFMzbzRQdz09",
+    "rda_print": "https://www.rda.go.kr/download_file/act/bookcafe078.PDF"
+  },
+  "rows": [
+    {
+      "ingredient_id": "39efb905-aba4-4c3c-9b96-d64f7af68093",
+      "name": "가시오갈피 순",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "가시오갈피 순: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "70f92d31-9801-4568-a804-befdcd5e66fc",
+            "source_item_id": "1d458010-3c04-40fa-8e8e-69cf889d7086",
+            "source_key": "699",
+            "external_name": "가시오갈피, 순, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "089ec6fc-c44a-42f9-9a1c-ab608acf953b",
+      "name": "갯나물 퉁퉁마디 환",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "환은 원물 함초와 다른 가공품이므로 계속 제외한다. 현재 이 환에 달린 함초 별칭은 과도하게 넓다. 활성 생 퉁퉁마디 두 재배조건 항목과 대표 선택을 검토한 후 원물 검색에 연결해야 하며 환 영양을 원물에 사용하지 않는다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [
+        "함초",
+        "환"
+      ],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "2733dcd5-3361-442b-a1e2-6da105b41e78",
+            "source_item_id": "c056cbca-52e8-4166-85a8-352936f52ed8",
+            "source_key": "724",
+            "external_name": "갯나물, 퉁퉁마디(함초), 환",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g"
+            ]
+          }
+        ]
+      },
+      "candidate_target_ids": [
+        "41a5e41b-a738-4e63-8183-3786a5ac61c4",
+        "7a736fb6-2153-447c-afdc-b694debc6029"
+      ]
+    },
+    {
+      "ingredient_id": "743e321b-95e8-4175-8f41-dac5f366922e",
+      "name": "구기자 순 재래종",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "청양군 자료에서 구기자순 분말 이용은 확인되나 이 행은 생순이다. 새순을 잎/열매나 분말과 합치지 않고 이번 흔한 표현 복구에서는 우선 보류한다.",
+      "evidence_urls": [
+        "https://www.cheongyang.go.kr/farm/sub02_03_04.do",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "순분말 레시피는 생순의 중량·영양을 승인하는 근거가 아님.",
+      "alias_candidates": [],
+      "forbidden_aliases": [
+        "구기자",
+        "구기자 가루"
+      ],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "e0035683-9017-4ae6-a09c-2a8612896fdd",
+            "source_item_id": "43d6bbd3-70d5-491b-87d1-9a9d42cc7208",
+            "source_key": "783",
+            "external_name": "구기자, 순, 재래종, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+      "name": "구기자 열매 재래종",
+      "current_presentation": "excluded",
+      "decision": "restore_base",
+      "target_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+      "reason": "청양군 공식 안내에서 생열매 사용과 건조품 사용을 구별한다. 현재 원자료는 재래종 생열매이므로 생 구기자 열매로 복구하고 말린 구기자의 영양으로 사용하지 않는다.",
+      "evidence_urls": [
+        "https://www.cheongyang.go.kr/farm/sub02_03_04.do",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "생열매 실사용 확인; 일반 구기자/고지베리는 건조 상태를 확정하지 못하므로 이 행의 자동 별칭으로 추가하지 않음.",
+      "alias_candidates": [
+        "생구기자",
+        "생 구기자 열매"
+      ],
+      "forbidden_aliases": [
+        "건구기자",
+        "말린 구기자",
+        "구기자 가루"
+      ],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "7e9f44a1-d8e6-4e26-b803-7abbb077242a",
+            "source_item_id": "7cd7d9c9-ae39-413e-be80-0165ea66848c",
+            "source_key": "1388",
+            "external_name": "구기자, 열매, 재래종, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      },
+      "proposed_display_name": "생 구기자 열매"
+    },
+    {
+      "ingredient_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+      "name": "구기자 잎 재래종",
+      "current_presentation": "excluded",
+      "decision": "restore_base",
+      "target_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+      "reason": "청양군 공식 구기자잎 김치와 영양죽 조리법에 잎이 직접 사용된다. 재료 부위가 분명한 기존 생잎 RDA 자료를 유지하여 복구한다.",
+      "evidence_urls": [
+        "https://www.cheongyang.go.kr/farm/sub02_03_03.do",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "지자체 조리법에서 명확한 잎 사용 확인. 열매·뿌리 자료로 교체 금지.",
+      "alias_candidates": [
+        "구기자잎"
+      ],
+      "forbidden_aliases": [
+        "구기자",
+        "지골피"
+      ],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "4e0bcbe8-9392-41e4-b60c-74ca8d9feaa7",
+            "source_item_id": "03bb3e8c-623f-44d9-aa26-546918922753",
+            "source_key": "784",
+            "external_name": "구기자, 잎, 재래종, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      },
+      "proposed_display_name": "구기자 잎"
+    },
+    {
+      "ingredient_id": "dae930a9-7e30-458c-b238-2245e860a407",
+      "name": "꾸지뽕 열매",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "꾸지뽕 열매: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "6190c6d5-06a0-49c6-86be-03aa8330d4e3",
+            "source_item_id": "e65986c3-e1ed-40cf-82c3-d78e226260f5",
+            "source_key": "1411",
+            "external_name": "꾸지뽕, 열매, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "8db75524-02d0-41a8-84fe-36ffb9ff1caa",
+      "name": "꾸지뽕 잎",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "꾸지뽕 잎: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "d356e6a3-6a4f-4399-a8b6-0dc0cc5d5482",
+            "source_item_id": "91b52da8-274b-44c9-9cea-0908f8439150",
+            "source_key": "780",
+            "external_name": "꾸지뽕, 잎, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "73765314-cb0a-51a3-95b9-930ae56ca124",
+      "name": "꿀풀",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "꿀풀: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "0f77017e-b090-4c65-9bab-cc73d9d1e417",
+            "source_item_id": "4be53e88-050a-4341-a66a-4cb58cd8b3eb",
+            "source_key": "810",
+            "external_name": "꿀풀(하고초), 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "7217e4a9-87f9-460e-89a8-df95690544ff",
+      "name": "냉동 꾸지뽕 열매",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "냉동 꾸지뽕 열매: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "62fb61d0-cc8c-4857-9cf6-55ba17f95069",
+            "source_item_id": "b7443685-30f8-436d-808c-5c98e00cbe08",
+            "source_key": "3593",
+            "external_name": "꾸지뽕, 열매, 냉동",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "9361798b-6518-43e6-a19a-ef3328e1ab3f",
+      "name": "노지 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "90a2c28d-ab71-4f96-b47c-64352f120c1b",
+            "source_item_id": "a138d489-fb10-4af9-9716-3ad185748197",
+            "source_key": "710",
+            "external_name": "갯기름나물, 노지, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "319d0dce-12d7-45ef-b8db-2ff521d9f89b",
+      "name": "노지 어린잎 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "c2a389f2-53e7-4b8a-aff6-fc55e7fbfa5e",
+            "source_item_id": "d3ba184d-ebee-4ae6-b47c-182ec05ab74e",
+            "source_key": "711",
+            "external_name": "갯기름나물, 노지, 어린잎, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "d3653f75-73c0-52a5-9b79-f16d023c601f",
+      "name": "누리장나무잎",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "누리장나무잎: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "2ab74f72-e930-4690-8a02-35714a75f40f",
+            "source_item_id": "4074836d-4353-4d54-9ba8-0a19868544d6",
+            "source_key": "815",
+            "external_name": "누리장나무잎, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "d3c7b0db-5e69-4ebb-8454-d930584d6075",
+      "name": "데친 가시오갈피 순",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "데친 가시오갈피 순: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "b5f5e403-4d65-4e8d-a910-a3013958a032",
+            "source_item_id": "a5c899ad-b1ae-41d4-b6d0-794999d73144",
+            "source_key": "700",
+            "external_name": "가시오갈피, 순, 데친것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "31eac531-4b86-4c91-86ae-cc62e1f36984",
+      "name": "데친 노지 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "c2b8faa4-3aff-4278-8882-b2fe7585da37",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "cd82ec28-1c60-4600-8982-29c5b4ceadd4",
+            "source_item_id": "9263806f-d5a6-40b8-ad44-a97dd3334cae",
+            "source_key": "715",
+            "external_name": "갯기름나물, 노지, 데친것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "47528b57-dc5b-4391-878a-1ded89521a60",
+      "name": "데친 노지 어린잎 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "c2b8faa4-3aff-4278-8882-b2fe7585da37",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "19a6a1a9-e8cb-4b23-8c5c-13c1d4430bd3",
+            "source_item_id": "67b61fe5-b2d1-45d1-9c15-ef00c861b67a",
+            "source_key": "716",
+            "external_name": "갯기름나물, 노지, 어린잎, 데친것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "9f094241-b1da-4481-b140-8dedcf80563a",
+      "name": "데친 하우스 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "c2b8faa4-3aff-4278-8882-b2fe7585da37",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "94a0d435-31a3-4189-8f11-3e058f9d41c6",
+            "source_item_id": "01f80e44-751e-41bd-9859-d93a300d9a5c",
+            "source_key": "717",
+            "external_name": "갯기름나물, 하우스, 데친것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "5a3c50a9-3c3e-4aa6-a59e-1786f4877f13",
+      "name": "데친 하우스 어린잎 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "c2b8faa4-3aff-4278-8882-b2fe7585da37",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "ebf26f53-5bc7-447e-a4e4-09a83bc228f0",
+            "source_item_id": "c696b501-3dea-43d6-8d58-603d96b7218e",
+            "source_key": "718",
+            "external_name": "갯기름나물, 하우스, 어린잎, 데친것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "bcb69314-66fc-5b0d-9e13-d0f17910e2fb",
+      "name": "동충하초",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "동충하초: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "1a5832e8-c8cf-41fc-beae-9b91d81a47d6",
+            "source_item_id": "990d15d7-8759-45fc-b309-66fe7c25341e",
+            "source_key": "1306",
+            "external_name": "동충하초, 누에동충하초, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "7a89d851-b8a6-4f14-a81f-24199a201951",
+      "name": "둥굴레 잎",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "둥굴레 잎: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "64f68b87-36ec-40eb-ad7c-fba8b968d30e",
+            "source_item_id": "e487a4ab-786b-4adc-9a2e-cfe067e2f0c6",
+            "source_key": "850",
+            "external_name": "둥굴레, 잎, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "5780b50f-85ee-4a37-a05c-7727506db525",
+      "name": "말린 꾸지뽕 잎",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 꾸지뽕 잎: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "b28a16c6-1346-467f-9a4f-102316a9ec42",
+            "source_item_id": "5ff6d38a-b538-4d85-88d8-0d35c9d8befb",
+            "source_key": "782",
+            "external_name": "꾸지뽕, 잎, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "7e7ae995-9ca6-481d-a9d1-546b50cf5d0a",
+      "name": "말린 동충하초",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 동충하초: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "c0a5332d-fe05-4841-a89b-800dfb3e9c0e",
+            "source_item_id": "9f611cb4-570b-4aa0-a9a3-6c1ab672269e",
+            "source_key": "1307",
+            "external_name": "동충하초, 누에동충하초, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "559102ea-9576-4962-89f4-86955ed36bd1",
+      "name": "말린 둥굴레 잎",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 둥굴레 잎: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "b115a87e-67df-457f-9473-dd5ff3713800",
+            "source_item_id": "7f6343fe-a85f-41be-ba3a-6ec79324cff0",
+            "source_key": "851",
+            "external_name": "둥굴레, 잎, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "c9804d5f-bcd0-4c0b-add2-bc1681cc5b6b",
+      "name": "말린 상황버섯",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 상황버섯: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "8e66bffe-47c8-499d-93ea-a897c123bcb1",
+            "source_item_id": "041f1c4e-b1cd-4297-a742-a54e81ab595b",
+            "source_key": "1324",
+            "external_name": "상황버섯, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "f724fa45-a101-443b-9ec5-707cf04cdcd7",
+      "name": "말린 영지버섯",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 영지버섯: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "fc80f014-009f-42f7-af32-24ccf90903f8",
+            "source_item_id": "15eace8f-b8d9-4ccf-ac46-d8db346f25d3",
+            "source_key": "1341",
+            "external_name": "영지버섯, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "12c42af3-9cdd-578f-b036-1d4a6c97e588",
+      "name": "박쥐나무",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "박쥐나무: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "a7ea8d7d-2c58-46dd-86d2-ed28f9dae797",
+            "source_item_id": "9d9ffc7b-bdf2-449e-af9a-bd1eeb543739",
+            "source_key": "925",
+            "external_name": "박쥐나무, 잎, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "0de31949-a28a-537e-a366-23c86a6dcbd1",
+      "name": "백모근",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "백모근: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "91f2c7fe-b792-40bd-97c8-4ca950f68b72",
+            "source_item_id": "2ab7c08b-4051-4a9d-bb4c-724b0b102245",
+            "source_key": "965",
+            "external_name": "백모근, 뿌리, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "b5394357-3449-4ab6-a18a-c41f6e9fd140",
+      "name": "삶은 꾸지뽕 잎",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "삶은 꾸지뽕 잎: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "c22193ee-ada3-4b76-bfe1-46188dbc5150",
+            "source_item_id": "94eb415a-847b-4d77-af61-7d7c7c24b303",
+            "source_key": "781",
+            "external_name": "꾸지뽕, 잎, 삶은것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "4b3d759f-0d97-5375-bc4e-4e3325316464",
+      "name": "삼붕냐와",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "삼붕냐와: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "212c021b-eb94-4a59-b6ac-c6d9808ef5cc",
+            "source_item_id": "f56a674e-020f-467a-9084-89c0d220429f",
+            "source_key": "1010",
+            "external_name": "삼붕냐와, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "8bf0bd13-aa03-42d1-b227-4779282ebba1",
+      "name": "상황버섯 추출",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "상황버섯 추출: 추출물은 원물과 농도·수율이 달라 단순 별칭 복구 대상이 아니다. 일상 원재료용 검색에서 계속 제외하고 특정 제품 정의가 확보될 때 제품 범위에서 검토한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "4974590b-8dc3-4e8e-bbfd-c7628a8ea6fa",
+            "source_item_id": "0c2ae7d5-acd8-473c-b239-fc27d401f486",
+            "source_key": "1325",
+            "external_name": "상황버섯, 추출",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "75a0a4c9-2347-59fc-ac83-92ae7da3217b",
+      "name": "아이비카",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "아이비카: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "bfe9dac2-ed7f-4951-877c-091d9788cbc2",
+            "source_item_id": "6b054566-1aa1-4672-9887-9ff74a92a7db",
+            "source_key": "1090",
+            "external_name": "아이비카, 닥풀, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "67e1e449-193e-4a2b-ab40-8a2c3555d8a3",
+      "name": "영지버섯 추출",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "영지버섯 추출: 추출물은 원물과 농도·수율이 달라 단순 별칭 복구 대상이 아니다. 일상 원재료용 검색에서 계속 제외하고 특정 제품 정의가 확보될 때 제품 범위에서 검토한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "75e01278-80ff-428c-b903-3670a91abd68",
+            "source_item_id": "a601ab24-faf6-4019-acfe-fcef13aeb074",
+            "source_key": "1342",
+            "external_name": "영지버섯, 추출",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "d9062036-0c22-53bd-86ef-02abf6387f33",
+      "name": "자운영",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "자운영: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "0f363fe5-9975-4448-8cc0-e91e05b56a26",
+            "source_item_id": "5c4b6d49-f149-477d-b1e6-29c0e8e49727",
+            "source_key": "1161",
+            "external_name": "자운영, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "e9dc2e1c-5226-57e0-831e-e85ae21ef080",
+      "name": "참빗살나무",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "참빗살나무: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "b25d96a8-12a8-4b6a-97b9-4ae16c360161",
+            "source_item_id": "189d5fc9-1143-4e0b-8f38-3b3269aa1b1a",
+            "source_key": "1178",
+            "external_name": "참빗살나무, 잎, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "cfaabb5e-482d-481b-8016-45bac54d1a01",
+      "name": "하우스 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "909141b9-4b83-48cd-a8ef-bf0d70d8261f",
+            "source_item_id": "e4ff85a5-6fff-430d-b818-9383aa13bbd5",
+            "source_key": "712",
+            "external_name": "갯기름나물, 하우스, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "49587faf-2b79-441a-b6da-6112381ebc6b",
+      "name": "하우스 어린잎 갯기름나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+      "reason": "노지·하우스·어린잎의 세부 시험 시료를 기본 목록에서 뺀 결정은 유지한다. 실제 방풍나물 검색은 이미 활성인 갯기름나물에 별칭을 보완하면 해결된다. 생것과 데친것은 서로 연결하지 않으며 이 행의 원 영양자료를 대체하지 않는다.",
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "공식 기관에서 방풍나물의 식물 정체성과 잎·줄기 조리 사용 확인; 재배 조건별 시료 통합은 상품 목록 정책이다.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "a9745832-4174-4b85-a56f-21eb237d6d50",
+            "source_item_id": "7b807a38-7e75-4602-9a6b-de389851850e",
+            "source_key": "713",
+            "external_name": "갯기름나물, 하우스, 어린잎, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "84eace3d-2bfc-5694-9184-4f8dfc00d50b",
+      "name": "마가목 열매",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "마가목 열매: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "2612fff7-7214-48be-93d3-5913423a9a26",
+            "source_item_id": "8c74d6a9-28ea-40e8-8171-9d88cad2d706",
+            "source_key": "1434",
+            "external_name": "마가목 열매, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "6461d64f-59e2-4166-8eb8-e4835f854456",
+      "name": "말린 산수유 과육",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 산수유 과육: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "1d7e1c15-7a02-4c28-a22f-abaa334b373a",
+            "source_item_id": "e392c716-2852-4397-93b2-091ce9ab3b84",
+            "source_key": "1521",
+            "external_name": "산수유, 과육, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "08b91f87-52e0-59d4-81ce-3bac5e7dd90b",
+      "name": "머루씨",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "머루씨: 과육/일반 식용유와 다른 명확한 시료이며 다른 재료로 재연결할 수 없다. 이번 일상 요리·베이킹의 흔한 표현 복구 우선 대상 근거를 확정하지 못했으므로 보존 제외한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "730dbfb5-910c-46f4-9233-297eda9bef13",
+            "source_item_id": "0433b9f2-5cf8-4705-b815-c94719e731f0",
+            "source_key": "636",
+            "external_name": "머루씨, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "b055be12-8c62-5987-82fe-337c0af8621a",
+      "name": "목화씨",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "목화씨: 과육/일반 식용유와 다른 명확한 시료이며 다른 재료로 재연결할 수 없다. 이번 일상 요리·베이킹의 흔한 표현 복구 우선 대상 근거를 확정하지 못했으므로 보존 제외한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "d3321ab7-c7a3-4d4c-9ca5-9c8b7a11ba87",
+            "source_item_id": "7910702f-ad44-4e6f-9c19-3d6dc2f3e687",
+            "source_key": "637",
+            "external_name": "목화씨, 구운것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "sugars_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "f80ef573-1aca-5957-9874-99e34c291bad",
+      "name": "보리밥 열매",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "보리밥 열매: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "cb0fc8e4-0ed0-49ea-a13c-139b4cd3cb6f",
+            "source_item_id": "9865cf16-73ef-4186-8735-fb82d037dd0d",
+            "source_key": "1483",
+            "external_name": "보리밥 열매, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "3bcc6562-8aac-43ca-be7e-21306cf63423",
+      "name": "산수유 열매",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "산수유 열매: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "f20315f9-ab5a-44a7-8abe-a0528da7d4e8",
+            "source_item_id": "b278ee4b-50c9-464f-9024-58b43f40fba3",
+            "source_key": "1520",
+            "external_name": "산수유, 열매, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": []
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "c2499335-e907-579c-a0b1-b90c7fa95665",
+      "name": "산자나무 열매",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "산자나무 열매: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "a426389c-5051-4adf-86d7-01e8081fb969",
+            "source_item_id": "ff14cac1-746c-4ba4-bd9a-bf5016b8b344",
+            "source_key": "1532",
+            "external_name": "산자나무 열매(씨벅톤), 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "babb19b7-ec21-5b21-ace6-84ce6b3c5f72",
+      "name": "소귀나무 열매",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "소귀나무 열매: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "9ae9be4d-e5ff-4afa-960f-a8d623892fda",
+            "source_item_id": "b20290f1-5690-46fd-a387-ffba135dd3f6",
+            "source_key": "1528",
+            "external_name": "소귀나무 열매, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "799227e7-ef6d-4c8a-8fc4-5ce489d6260b",
+      "name": "찐 천마",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "찐 천마: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "68b45f0c-17b3-45c9-aa3c-bfd06b2f1700",
+            "source_item_id": "472a850c-d665-42ab-a73a-5b2012912def",
+            "source_key": "483",
+            "external_name": "천마, 찐것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "189fcaee-24f3-5b80-b21d-1a17a1d594e0",
+      "name": "천마",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "천마: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "63230e34-4b40-4ffb-ba17-f65d68ff3f5b",
+            "source_item_id": "01cdc20c-bc14-4fad-bc24-05460913c635",
+            "source_key": "482",
+            "external_name": "천마, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "ceee4572-19b4-5590-9f8f-d65ae07d6370",
+      "name": "탱자",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "탱자: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "bd95f6bf-5a10-437e-a980-57d53a56d706",
+            "source_item_id": "4b61f524-257a-47e2-aaa4-9aefb7baba6e",
+            "source_key": "1583",
+            "external_name": "탱자, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "ac0f0c71-3435-5fef-b4e6-363f0e9ce273",
+      "name": "검은비늘버섯",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "검은비늘버섯: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "524478a4-15ce-4a0f-8abd-58ae58821840",
+            "source_item_id": "b26ee04b-9f33-434e-ba39-9e3fbff98e5b",
+            "source_key": "1284",
+            "external_name": "검은비늘버섯, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+      "name": "나도팽나무버섯",
+      "current_presentation": "excluded",
+      "decision": "restore_base",
+      "target_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+      "reason": "후지사토 지자체 공식 한국어 자료에서 나도팽나무버섯=나메코와 미소 된장국 이용을 확인했다. 이름이 낯설다는 이유로 제외된 실사용 버섯이므로 생 원재료를 복구한다.",
+      "evidence_urls": [
+        "https://www.town.fujisato.akita.jp/kanko/notices/2835",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "동일 식물명과 조리 사용 확인. 물에 담근 통조림/가공품의 영양은 생것과 별도.",
+      "alias_candidates": [
+        "나메코",
+        "나메코 버섯",
+        "나메꼬"
+      ],
+      "forbidden_aliases": [
+        "팽이버섯",
+        "팽나무버섯"
+      ],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "00d16b9a-ca2d-45e9-98b8-23e6fcb31f52",
+            "source_item_id": "4f3032f7-a75d-4983-b1bc-45c0bfa8ff97",
+            "source_key": "1289",
+            "external_name": "나도팽나무버섯, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      },
+      "proposed_display_name": "나메코 버섯"
+    },
+    {
+      "ingredient_id": "b15484bc-2639-51b1-b54e-7999293d6dc0",
+      "name": "는쟁이냉이",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "는쟁이냉이: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "eaa94beb-5fdb-40dd-8f62-0196cc7005d9",
+            "source_item_id": "ff6a4e1e-c141-4a5e-9a4e-c647e780ac8a",
+            "source_key": "816",
+            "external_name": "는쟁이냉이, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "6675303a-95dc-5d06-b02b-16de12f07cdf",
+      "name": "마타리",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "마타리: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "c3137c2f-ca9f-45e8-8ae1-546ce34a085c",
+            "source_item_id": "7bfca8b6-d0ec-459c-99ce-692d77938784",
+            "source_key": "882",
+            "external_name": "마타리, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "5466d5c5-c860-5f2b-8acb-a240297e5e16",
+      "name": "모링가",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "모링가: 부위·상태가 없는 일반명이며 현재 영양 연결도 없다. 잎/씨/꽃/뿌리/분말을 임의 결정하여 복구하지 않는다. 구체적인 일상 조리 표현과 같은 부위 원자료를 확보하면 별도 항목으로 재검토한다.",
+      "evidence_urls": [],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "e0a7fe03-8f44-513f-91c6-505db4062771",
+      "name": "밤버섯",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "밤버섯: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "7c1ae6c2-fb0b-4afb-b1bb-094d0b2d4068",
+            "source_item_id": "adda4c42-ca8d-480b-bc9e-ef92f63f3ddc",
+            "source_key": "1316",
+            "external_name": "밤버섯, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "3552a798-b132-54c4-b3d4-3188ec08492f",
+      "name": "방가지똥",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "방가지똥: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "8d02fdc9-ec22-468c-8bf3-815c84525e75",
+            "source_item_id": "c79260ff-2617-4a68-966d-0e87f67c4668",
+            "source_key": "926",
+            "external_name": "방가지똥, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "57884989-ce5f-51ec-9bdc-26d242f42aa8",
+      "name": "배암차즈기",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "배암차즈기: 부위·상태가 없는 일반명이며 현재 영양 연결도 없다. 잎/씨/꽃/뿌리/분말을 임의 결정하여 복구하지 않는다. 구체적인 일상 조리 표현과 같은 부위 원자료를 확보하면 별도 항목으로 재검토한다.",
+      "evidence_urls": [],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "5806b045-9f49-5e0d-96e0-cebc3e205bc4",
+      "name": "뽕나무버섯",
+      "current_presentation": "excluded",
+      "decision": "needs_source",
+      "target_id": null,
+      "reason": "일본 지자체는 나라타케=뽕나무버섯의 국물 요리 사용을 설명한다. 그러나 현재 행의 영양 미연결과 DB의 말린 줄기 시료는 다르므로 생 버섯 전체의 정확한 원자료를 확보한 뒤 복구 여부를 정한다.",
+      "evidence_urls": [
+        "https://www.town.fujisato.akita.jp/kanko/notices/2835",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [
+        "나라타케"
+      ],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "find_exact_source_no_dried_stem_substitution",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "b67200dc-bf76-5f88-9162-290c699977bd",
+      "name": "선인장",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "선인장: 부위·상태가 없는 일반명이며 현재 영양 연결도 없다. 잎/씨/꽃/뿌리/분말을 임의 결정하여 복구하지 않는다. 구체적인 일상 조리 표현과 같은 부위 원자료를 확보하면 별도 항목으로 재검토한다.",
+      "evidence_urls": [],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "99d293cc-fe73-59bc-9c6d-b51921741b45",
+      "name": "섬초롱",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "섬초롱: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "a9891e45-12d6-4788-9a56-17b5f4be3995",
+            "source_item_id": "6e53602c-1273-48c3-bd8c-a65500d173c6",
+            "source_key": "1039",
+            "external_name": "섬초롱, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "78a5dc17-8379-541c-bb0e-10252963c6f7",
+      "name": "소리쟁이",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "소리쟁이: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "72bf0142-7150-46e0-b517-e967b26f0488",
+            "source_item_id": "d068591c-aab1-4f06-8904-c6faba7dfbb2",
+            "source_key": "1043",
+            "external_name": "소리쟁이, 잎, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "d8c12a48-a804-55e6-8e74-9599c8110276",
+      "name": "쇠귀나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "쇠귀나물: 부위·상태가 없는 일반명이며 현재 영양 연결도 없다. 잎/씨/꽃/뿌리/분말을 임의 결정하여 복구하지 않는다. 구체적인 일상 조리 표현과 같은 부위 원자료를 확보하면 별도 항목으로 재검토한다.",
+      "evidence_urls": [],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "448c2b65-ebf7-5362-8935-d103a57cd452",
+      "name": "아주까리",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "아주까리: 부위·상태가 없는 일반명이며 현재 영양 연결도 없다. 잎/씨/꽃/뿌리/분말을 임의 결정하여 복구하지 않는다. 구체적인 일상 조리 표현과 같은 부위 원자료를 확보하면 별도 항목으로 재검토한다.",
+      "evidence_urls": [],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "070f8908-f14b-534a-b0e1-41e8ec569aa1",
+      "name": "잇꽃",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "잇꽃: 부위·상태가 없는 일반명이며 현재 영양 연결도 없다. 잎/씨/꽃/뿌리/분말을 임의 결정하여 복구하지 않는다. 구체적인 일상 조리 표현과 같은 부위 원자료를 확보하면 별도 항목으로 재검토한다.",
+      "evidence_urls": [],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+      "name": "전호",
+      "current_presentation": "excluded",
+      "decision": "restore_base",
+      "target_id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+      "reason": "울릉군 공식 회의록에서 실제 특산 산채 전호의 유통·섭취 및 식품 부위 문제를 확인했다. RDA 생 전호 원자료를 보존하고 식용 나물로 복구하되 약재 뿌리와 동일시하지 않는다.",
+      "evidence_urls": [
+        "https://council.ulleung.go.kr/mnts/asvr/cnts/mnt/mntViewer.php?params=bmlzRlM3Tk5TSEJYc1I5cFMzbzRQdz09",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "지역 실사용 산채 확인. RDA 생 전호의 가식부 범위를 넘어 다른 부위로 확대하지 않는다.",
+      "alias_candidates": [
+        "전호나물"
+      ],
+      "forbidden_aliases": [
+        "전호 뿌리"
+      ],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "c5351532-7bd8-49d2-a2bf-0f53d6ee4c9e",
+            "source_item_id": "a82b1300-d53e-4b33-a124-08db4900a70c",
+            "source_key": "1165",
+            "external_name": "전호, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      },
+      "proposed_display_name": "전호나물"
+    },
+    {
+      "ingredient_id": "daca8d22-8d34-5099-bd1a-41d4dcf374df",
+      "name": "제비쑥",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "제비쑥: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "fe8f3e1c-9ebd-4f17-b8b5-f616d32e8a40",
+            "source_item_id": "4e7901b9-e43a-4211-abee-9ea90b3ceb9d",
+            "source_key": "1166",
+            "external_name": "제비쑥, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "86c6666e-7803-5f84-b6bf-401144c956e7",
+      "name": "조뱅이",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "조뱅이: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "da061696-519f-4e17-a22d-f8da776e38a0",
+            "source_item_id": "154e660a-e3d0-457b-ac4d-6dbc03c7e19e",
+            "source_key": "1167",
+            "external_name": "조뱅이, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "5c9a16e7-dcb0-5b8e-8b76-c5e2c396c606",
+      "name": "줄나물",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "줄나물: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "045a4930-287a-4a71-a386-dd6bb12ee906",
+            "source_item_id": "5c2cd1df-55e7-4294-befb-e046846d1678",
+            "source_key": "1168",
+            "external_name": "줄나물, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "d92d08d0-aa42-54dc-90dc-8b0b351295f8",
+      "name": "참반디",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "참반디: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "21db36ab-f1a2-427e-aeff-88807a95e4ed",
+            "source_item_id": "36d043b2-c748-482e-9718-f65d7b8f80a7",
+            "source_key": "1177",
+            "external_name": "참반디, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "86196b82-fc22-4c7e-8632-bb74f64e939f",
+      "name": "데친 쇠귀나물 뿌리",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "데친 쇠귀나물 뿌리: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "ccac62a9-7508-450c-a7ed-14217f43f81a",
+            "source_item_id": "5e09ef8a-6f85-46c3-b652-4bf8bbf8708b",
+            "source_key": "1045",
+            "external_name": "쇠귀나물, 뿌리, 데친것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "1fa2ec03-665e-4884-afca-6c952f5e82fe",
+      "name": "말린 검은비늘버섯",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 검은비늘버섯: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "e11c441a-5d0d-4076-96bf-736d1f528a8e",
+            "source_item_id": "05f18d6a-c167-4f06-96f3-cce3ce4568b3",
+            "source_key": "1285",
+            "external_name": "검은비늘버섯, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "sodium_mg",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "3536f795-16fb-4ba1-ae44-a711bff32ef9",
+      "name": "말린 뽕나무버섯 야생 줄기",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 뽕나무버섯 야생 줄기: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "40facdff-ebc5-4146-aa78-0a5d908052b7",
+            "source_item_id": "b717534a-8c24-4857-aefe-c1d5892f9243",
+            "source_key": "1321",
+            "external_name": "뽕나무버섯, 야생, 줄기, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "69d3b696-9aa9-4ff6-8aa8-568d757b5738",
+      "name": "말린 뽕나무버섯 재배 줄기",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "말린 뽕나무버섯 재배 줄기: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "38eb5ac1-cfc7-436b-8480-c08cd4970aeb",
+            "source_item_id": "8245d534-526e-4bc2-a049-787c9e6a5c74",
+            "source_key": "1323",
+            "external_name": "뽕나무버섯, 재배, 줄기, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "75335d4c-8ecd-428f-bd3d-f569a4483cea",
+      "name": "말린 나도팽나무버섯",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "생 나메코는 복구하되 건조 버섯의 소비 상태가 다른 상세 항목은 이번에 보류한다. 생 나메코 자료로 치환하지 않는다.",
+      "evidence_urls": [
+        "https://www.town.fujisato.akita.jp/kanko/notices/2835",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [
+        "나메코"
+      ],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "90e4c140-9777-4e59-aeae-a28bf60c13f2",
+            "source_item_id": "243e85cb-efb0-4cd4-8aef-bbb828c27ff9",
+            "source_key": "1290",
+            "external_name": "나도팽나무버섯, 말린것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "a5c129ca-c586-4dea-b76a-8d6c099fb4c2",
+      "name": "데친 섬초롱",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "데친 섬초롱: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "5418e814-af9f-4ca4-8257-8d56e5c0a02a",
+            "source_item_id": "c5e24c46-04e8-4732-8cae-9a6068730c54",
+            "source_key": "1040",
+            "external_name": "섬초롱, 데친것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "999c1022-6367-4d49-b7e1-e7fd1d926c8a",
+      "name": "쇠귀나물 뿌리",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "쇠귀나물 뿌리: 이번 일상 요리·베이킹 및 흔한 별칭 우선 범위에서 복구를 정당화할 구체적 실사용 근거를 확정하지 못함. 식용 불가라는 판단은 아니며 기존 기록·원자료는 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "2b2ba561-4d1b-4a18-ad59-a904fca424d4",
+            "source_item_id": "cd67da3d-f6d0-4b5b-a95c-7eb18676374c",
+            "source_key": "1044",
+            "external_name": "쇠귀나물, 뿌리, 생것",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "e6cfcb34-0ea4-52c5-996a-541716ea224d",
+      "name": "복숭아씨기름",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "복숭아씨기름: 과육/일반 식용유와 다른 명확한 시료이며 다른 재료로 재연결할 수 없다. 이번 일상 요리·베이킹의 흔한 표현 복구 우선 대상 근거를 확정하지 못했으므로 보존 제외한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "preserve_existing",
+        "profiles": [
+          {
+            "profile_id": "e776dde3-944a-44b4-bbd6-e36a410462be",
+            "source_item_id": "f1ca5ce1-4e95-4bf4-8766-43bc3a58c08d",
+            "source_key": "2882",
+            "external_name": "복숭아씨기름",
+            "provider": "RDA_10_4",
+            "basis_amount": 100,
+            "basis_unit": "g",
+            "missing_nutrients": [
+              "fiber_g",
+              "sugars_g",
+              "saturated_fat_g"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ingredient_id": "a4bdf8ce-f4df-51e7-80d7-882b65e3c6ee",
+      "name": "당귀",
+      "current_presentation": "excluded",
+      "decision": "needs_source",
+      "target_id": null,
+      "reason": "일당귀 쌈 잎은 일상 식재료지만 현재 당귀 행에는 일당귀·참당귀가 함께 붙고 부위가 없다. 포괄행을 잎으로 개명하지 말고 일당귀 잎 항목을 별도로 추가한 후 동일 종·잎·생것 원자료에 연결한다. 참당귀 잎/뿌리는 별개다.",
+      "evidence_urls": [
+        "https://www.rda.go.kr/board/board.do?dataNo=100000746399&mode=view&prgId=day_farmprmninfoEntry",
+        "https://www.rda.go.kr/download_file/act/bookcafe078.PDF"
+      ],
+      "evidence_scope": "RDA 보도자료로 종·가식부 구분. 원본10.4 XLSX sheet6 row868 source_key818에서 일당귀 생잎 8종 값을 직접 확인했고 source_workbook_evidence에 보존. 포괄 당귀의 기존ID 변경은 하지 않는다.",
+      "alias_candidates": [
+        "일당귀 잎",
+        "일당귀잎",
+        "쌈당귀"
+      ],
+      "forbidden_aliases": [
+        "참당귀",
+        "당귀 뿌리"
+      ],
+      "nutrition": {
+        "action": "exact_source_found_create_distinct_leaf_ingredient",
+        "required_source_name": "당귀, 일당귀, 잎, 생것",
+        "reject": [
+          "참당귀 뿌리",
+          "일당귀 뿌리",
+          "참당귀 잎"
+        ],
+        "profiles": [],
+        "source_key": "818",
+        "missing_nutrients": [
+          "sugars_g",
+          "fiber_g",
+          "saturated_fat_g"
+        ]
+      },
+      "proposed_new_ingredient": "일당귀 잎"
+    },
+    {
+      "ingredient_id": "f9e5649c-633c-5a5a-84c4-ad603f54ed33",
+      "name": "엉겅퀴",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "일반 엉겅퀴는 고려엉겅퀴(곤드레)와 동일명이 아니다. 말린 엉겅퀴와 삶아 말린 엉겅퀴는 이미 활성이고 이 포괄행에는 상태가 없어 복구·자동 연결하지 않는다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [
+        "곤드레",
+        "고려엉겅퀴"
+      ],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      }
+    },
+    {
+      "ingredient_id": "7ab71f94-aaf6-570c-bec9-46cbfcef47ec",
+      "name": "음나무",
+      "current_presentation": "excluded",
+      "decision": "needs_source",
+      "target_id": null,
+      "reason": "산림청은 개두릅을 음나무 새순으로 명확히 분류한다. 현재 행은 나무 일반명이라 삼계탕용 가지와 새순을 구별할 수 없다. 엄나무순(개두릅)을 별도로 추가하고 정확한 생순 원자료를 연결한다.",
+      "evidence_urls": [
+        "https://www.forest.go.kr/kfsweb/cop/bbs/selectBoardArticle.do?bbsId=BBSMSTR_1068&nttId=2816935",
+        "https://www.forest.go.kr/kfsweb/cop/bbs/selectBoardArticle.do?bbsId=BBSMSTR_1823&nttId=3181576"
+      ],
+      "evidence_scope": "산림청은 개두릅=새순을 확인. 원본10.4 XLSX의1120은 생잎으로 기재되어 순 전체와의 동일성은 아직 미확정.",
+      "alias_candidates": [
+        "개두릅",
+        "엄나무순",
+        "음나무순"
+      ],
+      "forbidden_aliases": [
+        "엄나무",
+        "음나무",
+        "엄나무 가지"
+      ],
+      "nutrition": {
+        "action": "leaf_source_found_but_sprout_whole_part_mismatch",
+        "required_source_name": "음나무, 어린것, 생것 또는 동일 종의 생 새순 원자료",
+        "profiles": [],
+        "source_key_candidate": "1120",
+        "reject": [
+          "음나무 잎 1120을 순 전체와 같다고 단정"
+        ]
+      },
+      "proposed_new_ingredient": "엄나무순"
+    },
+    {
+      "ingredient_id": "b9f947da-44eb-5b2a-9157-99181135acc5",
+      "name": "잔대",
+      "current_presentation": "excluded",
+      "decision": "retain_excluded",
+      "target_id": null,
+      "reason": "잔대 뿌리·순은 이미 서로 다른 활성 상세 항목과 원자료가 있다. 포괄명 잔대를 어느 한 부위로 자동 연결하지 않고 현재 제외를 유지한다.",
+      "evidence_urls": [
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ],
+      "evidence_scope": "RDA 원자료명은 현재 적재된 inventory로 확인; 일상 사용 빈도를 뜻하지 않음.",
+      "alias_candidates": [],
+      "forbidden_aliases": [
+        "잔대순을 잔대뿌리로 연결"
+      ],
+      "nutrition": {
+        "action": "not_linked_no_fabrication",
+        "profiles": []
+      },
+      "candidate_target_ids": [
+        "7dea3084-70dc-4347-b74a-473e970a04cf",
+        "973fc3a5-5b3a-4a1d-8187-5f149495cd04"
+      ]
+    },
+    {
+      "ingredient_id": "290ff750-add0-455f-a407-325b71e2d51f",
+      "name": "화이트크림",
+      "current_presentation": "excluded",
+      "decision": "needs_source",
+      "target_id": null,
+      "reason": "실사용 가능성은 있지만 이름만으로 생크림·식물성 휘핑크림·제과 충전크림·조리소스를 가를 수 없다. 기존 생크림/크림소스에 임의 동의어로 넣지 않고 제품명/성분표 또는 구체적 조리 문맥을 확보한다.",
+      "evidence_urls": [],
+      "evidence_scope": "현재 DB 정의·부위 미확정이라는 내부 근거; 외부 동일 식품 근거 미확정.",
+      "alias_candidates": [],
+      "forbidden_aliases": [],
+      "nutrition": {
+        "action": "require_exact_product_or_recipe_definition",
+        "profiles": []
+      },
+      "candidate_target_ids": [
+        "a36c69a7-51f4-4aa7-aa0a-a7f55f8898b9",
+        "3908377a-cb50-473a-bbdf-b1104ad2d2cd"
+      ]
+    }
+  ],
+  "active_alias_additions": [
+    {
+      "target_id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+      "target_name": "갯기름나물",
+      "aliases": [
+        "방풍나물",
+        "식방풍"
+      ],
+      "forbidden_aliases": [
+        "해방풍",
+        "갯방풍",
+        "원방풍",
+        "방풍 뿌리"
+      ],
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797"
+      ]
+    },
+    {
+      "target_id": "c2b8faa4-3aff-4278-8882-b2fe7585da37",
+      "target_name": "데친 갯기름나물",
+      "aliases": [
+        "데친 방풍나물"
+      ],
+      "evidence_urls": [
+        "https://www.kofpi.or.kr/info/imupStory/forestStory_02view.do?bb_seq=797"
+      ]
+    }
+  ],
+  "new_ingredient_candidates": [
+    {
+      "name": "말린 구기자",
+      "state": "dried",
+      "reason": "공식 요리에서 불려 사용되는 열매를 생열매로 계산하지 않도록 건조품 원자료 필요",
+      "evidence_urls": [
+        "https://www.cheongyang.go.kr/farm/sub02_03_03.do",
+        "https://www.cheongyang.go.kr/farm/sub02_03_04.do"
+      ],
+      "nutrition_source_status": "pending_exact_RDA_or_USDA_source",
+      "aliases_after_approval": [
+        "건구기자",
+        "말린 구기자"
+      ],
+      "do_not_automatically_map": [
+        "생 구기자",
+        "구기자 잎",
+        "구기자 순"
+      ]
+    },
+    {
+      "name": "일당귀 잎",
+      "state": "raw",
+      "part": "leaves",
+      "status": "exact_official_source_ready",
+      "source_key": "818",
+      "provider": "RDA_10_4",
+      "source_workbook_row": 868,
+      "basis_amount": 100,
+      "basis_unit": "g",
+      "aliases_after_approval": [
+        "일당귀잎",
+        "쌈당귀"
+      ],
+      "ambiguous_aliases_not_automatic": [
+        "당귀",
+        "당귀잎",
+        "일당귀"
+      ],
+      "reason": "일당귀 잎은 쌈용으로 확인되고 정확한 공식 원자료가 있음. generic 당귀 및 참당귀를 이 새ID로 이동시키지 않는다.",
+      "evidence_urls": [
+        "https://www.rda.go.kr/board/board.do?dataNo=100000746399&mode=view&prgId=day_farmprmninfoEntry",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562"
+      ]
+    },
+    {
+      "name": "엄나무 잎",
+      "state": "raw",
+      "part": "leaves",
+      "status": "exact_leaf_source_available_but_whole_sprout_pending",
+      "source_key": "1120",
+      "provider": "RDA_10_4",
+      "source_workbook_row": 1189,
+      "aliases_after_approval": [
+        "음나무 잎"
+      ],
+      "do_not_automatically_map": [
+        "엄나무순",
+        "개두릅",
+        "음나무",
+        "엄나무"
+      ],
+      "reason": "생잎 8종 영양은 확보됨. 사용자에게 필요한 개두릅의 식용 순 전체와 동일하다는 근거를 추가 확인하기 전에는 대체하지 않음."
+    }
+  ],
+  "limitations": [
+    "이번 문서는 검토 제안이며 DB 변경 없음.",
+    "현재 원자료 연결이 있어도 일부 핵심 영양소 결측이 남을 수 있으며 row별 missing_nutrients에 보존.",
+    "재배환경/품종/상태가 다른 시료를 합산·평균하지 않음.",
+    "환산 4개는 사용자 자료 대기이므로 검토 범위 밖."
+  ],
+  "source_workbook_evidence": {
+    "path": "/tmp/homecook-nutrition-fix-20261006/식품성분표(10개정판).xlsx",
+    "sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+    "worksheet": "xl/worksheets/sheet6.xml",
+    "basis": "100g edible portion",
+    "rows": [
+      {
+        "row": 832,
+        "source_key": "783",
+        "source_name": "구기자, 순, 재래종, 생것",
+        "original_source": "농진청('15)",
+        "values": {
+          "energy_kcal": {
+            "raw": "50",
+            "amount": 50.0
+          },
+          "protein_g": {
+            "raw": "6.27",
+            "amount": 6.27
+          },
+          "fat_g": {
+            "raw": "1.08",
+            "amount": 1.08
+          },
+          "carbohydrate_g": {
+            "raw": "7.05",
+            "amount": 7.05
+          },
+          "sugars_g": {
+            "raw": "0.78",
+            "amount": 0.78
+          },
+          "fiber_g": {
+            "raw": "5.0999999999999996",
+            "amount": 5.1
+          },
+          "sodium_mg": {
+            "raw": "2",
+            "amount": 2.0
+          },
+          "saturated_fat_g": {
+            "raw": "0.12",
+            "amount": 0.12
+          }
+        }
+      },
+      {
+        "row": 833,
+        "source_key": "784",
+        "source_name": "구기자, 잎, 재래종, 생것",
+        "original_source": "농진청('15)",
+        "values": {
+          "energy_kcal": {
+            "raw": "56",
+            "amount": 56.0
+          },
+          "protein_g": {
+            "raw": "6.33",
+            "amount": 6.33
+          },
+          "fat_g": {
+            "raw": "1.57",
+            "amount": 1.57
+          },
+          "carbohydrate_g": {
+            "raw": "7.77",
+            "amount": 7.77
+          },
+          "sugars_g": {
+            "raw": "0.24",
+            "amount": 0.24
+          },
+          "fiber_g": {
+            "raw": "5.4",
+            "amount": 5.4
+          },
+          "sodium_mg": {
+            "raw": "8",
+            "amount": 8.0
+          },
+          "saturated_fat_g": {
+            "raw": "0.18",
+            "amount": 0.18
+          }
+        }
+      },
+      {
+        "row": 868,
+        "source_key": "818",
+        "source_name": "당귀, 일당귀, 잎, 생것",
+        "original_source": "농진청('09)",
+        "values": {
+          "energy_kcal": {
+            "raw": "43",
+            "amount": 43.0
+          },
+          "protein_g": {
+            "raw": "3.2",
+            "amount": 3.2
+          },
+          "fat_g": {
+            "raw": "0.4",
+            "amount": 0.4
+          },
+          "carbohydrate_g": {
+            "raw": "8.8000000000000007",
+            "amount": 8.8
+          },
+          "sugars_g": {
+            "raw": "-",
+            "amount": null
+          },
+          "fiber_g": {
+            "raw": "-",
+            "amount": null
+          },
+          "sodium_mg": {
+            "raw": "3",
+            "amount": 3.0
+          },
+          "saturated_fat_g": {
+            "raw": "-",
+            "amount": null
+          }
+        }
+      },
+      {
+        "row": 869,
+        "source_key": "819",
+        "source_name": "당귀, 참당귀, 잎, 생것",
+        "original_source": "농진청('09)",
+        "values": {
+          "energy_kcal": {
+            "raw": "39",
+            "amount": 39.0
+          },
+          "protein_g": {
+            "raw": "2.6",
+            "amount": 2.6
+          },
+          "fat_g": {
+            "raw": "0.7",
+            "amount": 0.7
+          },
+          "carbohydrate_g": {
+            "raw": "7.4",
+            "amount": 7.4
+          },
+          "sugars_g": {
+            "raw": "-",
+            "amount": null
+          },
+          "fiber_g": {
+            "raw": "-",
+            "amount": null
+          },
+          "sodium_mg": {
+            "raw": "3",
+            "amount": 3.0
+          },
+          "saturated_fat_g": {
+            "raw": "-",
+            "amount": null
+          }
+        }
+      },
+      {
+        "row": 1189,
+        "source_key": "1120",
+        "source_name": "음나무(엄나무), 잎, 생것",
+        "original_source": "농진청('15)",
+        "values": {
+          "energy_kcal": {
+            "raw": "41",
+            "amount": 41.0
+          },
+          "protein_g": {
+            "raw": "6.94",
+            "amount": 6.94
+          },
+          "fat_g": {
+            "raw": "0.67",
+            "amount": 0.67
+          },
+          "carbohydrate_g": {
+            "raw": "5.2",
+            "amount": 5.2
+          },
+          "sugars_g": {
+            "raw": "0.36",
+            "amount": 0.36
+          },
+          "fiber_g": {
+            "raw": "4",
+            "amount": 4.0
+          },
+          "sodium_mg": {
+            "raw": "1",
+            "amount": 1.0
+          },
+          "saturated_fat_g": {
+            "raw": "0.19",
+            "amount": 0.19
+          }
+        }
+      },
+      {
+        "row": 1190,
+        "source_key": "1121",
+        "source_name": "음나무(엄나무), 잎, 데친것",
+        "original_source": "농진청('15)",
+        "values": {
+          "energy_kcal": {
+            "raw": "37",
+            "amount": 37.0
+          },
+          "protein_g": {
+            "raw": "7.05",
+            "amount": 7.05
+          },
+          "fat_g": {
+            "raw": "0.75",
+            "amount": 0.75
+          },
+          "carbohydrate_g": {
+            "raw": "3.86",
+            "amount": 3.86
+          },
+          "sugars_g": {
+            "raw": "0",
+            "amount": 0.0
+          },
+          "fiber_g": {
+            "raw": "3.5",
+            "amount": 3.5
+          },
+          "sodium_mg": {
+            "raw": "3",
+            "amount": 3.0
+          },
+          "saturated_fat_g": {
+            "raw": "0.18",
+            "amount": 0.18
+          }
+        }
+      },
+      {
+        "row": 1472,
+        "source_key": "1388",
+        "source_name": "구기자, 열매, 재래종, 생것",
+        "original_source": "농진청('15)",
+        "values": {
+          "energy_kcal": {
+            "raw": "69",
+            "amount": 69.0
+          },
+          "protein_g": {
+            "raw": "4.5",
+            "amount": 4.5
+          },
+          "fat_g": {
+            "raw": "2.04",
+            "amount": 2.04
+          },
+          "carbohydrate_g": {
+            "raw": "10.23",
+            "amount": 10.23
+          },
+          "sugars_g": {
+            "raw": "7.31",
+            "amount": 7.31
+          },
+          "fiber_g": {
+            "raw": "5.8",
+            "amount": 5.8
+          },
+          "sodium_mg": {
+            "raw": "1",
+            "amount": 1.0
+          },
+          "saturated_fat_g": {
+            "raw": "0.25",
+            "amount": 0.25
+          }
+        }
+      },
+      {
+        "row": 3021,
+        "source_key": "2905",
+        "source_name": "구기자차, 말린것",
+        "original_source": "국('78)",
+        "values": {
+          "energy_kcal": {
+            "raw": "384",
+            "amount": 384.0
+          },
+          "protein_g": {
+            "raw": "14.6",
+            "amount": 14.6
+          },
+          "fat_g": {
+            "raw": "10.7",
+            "amount": 10.7
+          },
+          "carbohydrate_g": {
+            "raw": "57.2",
+            "amount": 57.2
+          },
+          "sugars_g": {
+            "raw": "-",
+            "amount": null
+          },
+          "fiber_g": {
+            "raw": "-",
+            "amount": null
+          },
+          "sodium_mg": {
+            "raw": "162",
+            "amount": 162.0
+          },
+          "saturated_fat_g": {
+            "raw": "-",
+            "amount": null
+          }
+        }
+      },
+      {
+        "row": 3022,
+        "source_key": "3339",
+        "source_name": "구기자차",
+        "original_source": "농진청('19)",
+        "values": {
+          "energy_kcal": {
+            "raw": "1",
+            "amount": 1.0
+          },
+          "protein_g": {
+            "raw": "0",
+            "amount": 0.0
+          },
+          "fat_g": {
+            "raw": "0",
+            "amount": 0.0
+          },
+          "carbohydrate_g": {
+            "raw": "0.13",
+            "amount": 0.13
+          },
+          "sugars_g": {
+            "raw": "0.02",
+            "amount": 0.02
+          },
+          "fiber_g": {
+            "raw": "0",
+            "amount": 0.0
+          },
+          "sodium_mg": {
+            "raw": "0",
+            "amount": 0.0
+          },
+          "saturated_fat_g": {
+            "raw": "0",
+            "amount": 0.0
+          }
+        }
+      }
+    ],
+    "cautions": [
+      "구기자차 말린것은 건조 구기자열매로 정체성 확정 안 됨.",
+      "음나무 잎 원자료는 순 전체와 부위가 다름."
+    ]
+  }
+}

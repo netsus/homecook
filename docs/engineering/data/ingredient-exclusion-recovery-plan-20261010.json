@@ -1,0 +1,1269 @@
+{
+  "schema": "homecook.ingredient-exclusion-recovery.v1",
+  "reviewed_by": "__PRIVATE_REVIEWER__",
+  "reviewed_at": "2026-10-09T15:57:26+00:00",
+  "scope": "일상 요리·베이킹의 명확한 종·부위·생/가열 상태만 복구. 기존 영양·재료 ID·과거 기록 불변.",
+  "evidence_files": [
+    {
+      "path": "docs/engineering/data/ingredient-exclusion-animal-review-20261010.json",
+      "sha256": "c45f7a1e3cc97fc5daf23a3311e74b4622928b4a5af437d2d988ce156d016e7e"
+    },
+    {
+      "path": "docs/engineering/data/ingredient-exclusion-plant-review-20261010.json",
+      "sha256": "c24066585f9cdb5ba788eceed79f19869274d5cd3b5395d60b9b7d0ff0d9338c"
+    }
+  ],
+  "source_workbook": {
+    "path": "/tmp/homecook-nutrition-fix-20261006/식품성분표(10개정판).xlsx",
+    "sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+    "worksheet": "xl/worksheets/sheet6.xml"
+  },
+  "preconditions": [
+    {
+      "table": "nutrition_sources",
+      "row": {
+        "id": "8ed16622-19ef-41f0-8061-2f9e47d60cce",
+        "is_active": true,
+        "created_at": "2026-09-14T06:06:09.572914+00:00",
+        "fetched_at": "2026-09-14T05:59:44.229+00:00",
+        "source_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+        "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+        "reviewed_at": "2026-09-14T05:59:44.229+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "source_kind": "nutrition_dataset",
+        "dataset_name": "국가표준식품성분 DB 10.4 exact 1:1 import 2026-09-14",
+        "license_name": "공공누리 제1유형(출처표시)",
+        "priority_rank": 2,
+        "provider_code": "RDA_10_4",
+        "review_status": "approved",
+        "source_version": "10.4",
+        "data_basis_date": "2026-04-28",
+        "decision_reason": "운영 승인: RDA 10.4 canonical exact 1:1 후 검수된 동의어 exact 1:1 자동 적재",
+        "manifest_sha256": "999505db59474e9f321fb04ff2c970aa8842bce530ee26a794613ced6880d313",
+        "freshness_status": "current",
+        "superseded_by_id": null,
+        "freshness_checked_at": "2026-09-14T05:59:44.229+00:00"
+      }
+    },
+    {
+      "table": "ingredient_catalog_groups",
+      "row": {
+        "id": "5039b296-313c-5cfa-ab29-2d4a8250bf6c",
+        "name": "돼지고기",
+        "category": "육류",
+        "sort_order": 428
+      }
+    },
+    {
+      "table": "ingredient_catalog_groups",
+      "row": {
+        "id": "625ad5b9-5231-5e9f-981d-431097b0c80b",
+        "name": "당귀",
+        "category": "채소",
+        "sort_order": 491
+      }
+    }
+  ],
+  "inserts": [
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "337c2ad7-fc74-5951-ac1d-b06866128182",
+        "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+        "synonym": "돼지 앞다리 수육용"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "b2bf524b-aebc-58c0-a8b0-59df2562b50a",
+        "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+        "synonym": "돼지고기 앞다리 수육용"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "e7bf3869-1224-5b06-adc4-3ff7d2145c6c",
+        "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+        "synonym": "구기자 열매 재래종"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "059922a7-5ca6-58d5-afb1-7de6a7ed1fe1",
+        "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+        "synonym": "생구기자"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "844e96ce-bc12-5599-a501-9f032c43297f",
+        "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+        "synonym": "생 구기자 열매"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "4ece0216-84bf-5375-a639-ed342bc49fd2",
+        "ingredient_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+        "synonym": "구기자 잎 재래종"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "e047e1e6-b1bf-5088-a971-50d6736d1cd6",
+        "ingredient_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+        "synonym": "구기자잎"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "7a21ed8b-8411-5cca-a368-1ca96135d93c",
+        "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "synonym": "나도팽나무버섯"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "2fea0ef0-9982-5762-a780-7f635cbd2681",
+        "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "synonym": "나메코"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "7ddc4b3d-ec9a-5a47-ad77-b2776ef8cd53",
+        "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "synonym": "나메코 버섯"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "884cd001-ad2f-5500-a008-b71c5f2debe9",
+        "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "synonym": "나메꼬"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "e5df00dc-80fc-542c-ae67-799de35e11ca",
+        "ingredient_id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+        "synonym": "전호"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "d82273d2-1df7-528f-a07f-30c349bf64be",
+        "ingredient_id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+        "synonym": "전호나물"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "280293dd-26c3-5fc1-ac39-d07c82079b7f",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+        "synonym": "돼지고기 살코기"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "86bbe5a4-cfb2-5580-a637-0f322a3d3141",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+        "synonym": "돼지 살코기"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "61c218c1-c3b2-5da7-a12e-5da961fbe609",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+        "synonym": "생 돼지고기 살코기"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "2f8b7e12-cac1-52ef-a3b8-b51b53882f61",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+        "synonym": "돼지고기, 살코기, 생것"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "0abf727f-7189-5dca-a255-68fc5e8d9770",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440014",
+        "synonym": "돼지고기 · 살코기 (생것)"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "5da6fedb-935c-5576-a83d-563523c06085",
+        "ingredient_id": "093dc3b3-6559-5469-a297-b0835915ebce",
+        "synonym": "생 돼지고기 갈비"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "a50e0833-b6a4-5cc8-a9aa-7232587567f6",
+        "ingredient_id": "093dc3b3-6559-5469-a297-b0835915ebce",
+        "synonym": "돼지고기 · 갈비 (생것)"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "75a24dd6-a012-5eff-a039-c31c163e1700",
+        "ingredient_id": "29be65f9-fdbe-5c69-a4b3-861ac1661099",
+        "synonym": "생 돼지고기 목심"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "9983d7ad-81e3-5684-a6bc-11a283172872",
+        "ingredient_id": "29be65f9-fdbe-5c69-a4b3-861ac1661099",
+        "synonym": "돼지고기 · 목심 (생것)"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "67c05725-3185-5507-ab1b-a67a22485395",
+        "ingredient_id": "8b00dd9b-74b0-5e8a-8c0b-f705308a9805",
+        "synonym": "생 돼지고기 사태"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "4b883b14-3ddb-5143-a80d-0308c7a7194a",
+        "ingredient_id": "8b00dd9b-74b0-5e8a-8c0b-f705308a9805",
+        "synonym": "돼지고기 · 사태 (생것)"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "7ea4e86b-b569-5682-ab7d-bab54dfad4c8",
+        "ingredient_id": "13e7d66f-ab7e-5012-bc79-ea4bd9c3c00c",
+        "synonym": "생 돼지고기 안심"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "0d3c10c6-8ce6-52be-a9cb-8c539421a7c6",
+        "ingredient_id": "13e7d66f-ab7e-5012-bc79-ea4bd9c3c00c",
+        "synonym": "돼지고기 · 안심 (생것)"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "0616edd5-3900-5fc9-adf8-7484d9e63c75",
+        "ingredient_id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+        "synonym": "방풍나물"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "bcb90f7e-345d-53e2-aad7-0698c7e0e1f9",
+        "ingredient_id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+        "synonym": "식방풍"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "3462d9b2-7b48-5a51-a41d-e4010cf4f834",
+        "ingredient_id": "c2b8faa4-3aff-4278-8882-b2fe7585da37",
+        "synonym": "데친 방풍나물"
+      }
+    },
+    {
+      "table": "ingredients",
+      "row": {
+        "id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "standard_name": "돼지고기 등갈비",
+        "category": "육류",
+        "category_code": null,
+        "default_unit": null,
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "row": {
+        "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "group_id": "5039b296-313c-5cfa-ab29-2d4a8250bf6c",
+        "display_name": "돼지고기 등갈비",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "retain_dimensions": [
+          "상태: 생것",
+          "100g 가식부 기준"
+        ],
+        "representative_ingredient_id": null,
+        "review_version": "exclusion-recovery-20261010-v1",
+        "definition": "실사용 재료 복구 검토: RDA 10.4 원문 1714의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지."
+      }
+    },
+    {
+      "table": "nutrition_source_items",
+      "row": {
+        "id": "e47ba75b-4b39-54eb-ac75-ae7160c6d500",
+        "source_id": "8ed16622-19ef-41f0-8061-2f9e47d60cce",
+        "external_item_key": "1714",
+        "external_name": "돼지고기, 삼겹살(등갈비), 생것",
+        "preparation_state": "as_published",
+        "source_basis_text": "가식부 100g",
+        "source_basis_amount": 100,
+        "source_basis_unit": "g",
+        "source_serving_amount": null,
+        "source_serving_unit": null,
+        "source_serving_text": null,
+        "source_total_content_amount": null,
+        "source_total_content_unit": null,
+        "source_total_content_text": null,
+        "edible_portion_percent": null,
+        "edible_portion_text": "가식부 100g. 원자료 폐기율 40%; 뼈 포함 중량에 자동 적용하지 않음.",
+        "stable_fingerprint": "06bd064e656863ca17e1ecedc4ef33fdd73595581c34acc76b9efd2954690625",
+        "review_status": "approved",
+        "decision_reason": "실사용 재료 복구 검토: RDA 10.4 원문 1714의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T15:57:26+00:00",
+        "provenance_json": {
+          "origin_provider": "농촌진흥청",
+          "origin_dataset": "국가표준식품성분 DB 10.4",
+          "origin_source_version": "10.4",
+          "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+          "worksheet": "xl/worksheets/sheet6.xml",
+          "worksheet_row": 1808,
+          "source_observed_raw": {
+            "row": 1808,
+            "source_key": "1714",
+            "source_name": "돼지고기, 삼겹살(등갈비), 생것",
+            "original_source": "농진청('16)",
+            "discard_percent": 40,
+            "values": {
+              "energy_kcal": {
+                "raw": "237",
+                "amount": 237,
+                "cell": "F1808"
+              },
+              "protein_g": {
+                "raw": "17.88",
+                "amount": 17.88,
+                "cell": "H1808"
+              },
+              "fat_g": {
+                "raw": "17.190000000000001",
+                "amount": 17.19,
+                "cell": "I1808"
+              },
+              "carbohydrate_g": {
+                "raw": "0",
+                "amount": 0,
+                "cell": "K1808"
+              },
+              "sugars_g": {
+                "raw": "0",
+                "amount": 0,
+                "cell": "L1808"
+              },
+              "fiber_g": {
+                "raw": "0",
+                "amount": 0,
+                "cell": "S1808"
+              },
+              "sodium_mg": {
+                "raw": "52",
+                "amount": 52,
+                "cell": "AA1808"
+              },
+              "saturated_fat_g": {
+                "raw": "6.38",
+                "amount": 6.38,
+                "cell": "CM1808"
+              }
+            }
+          },
+          "review_operation": "ingredient-exclusion-recovery-20261010"
+        },
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "source_item_id": "e47ba75b-4b39-54eb-ac75-ae7160c6d500",
+        "profile_kind": "ingredient_source",
+        "normalization_method": "mass_100g",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "version": 1,
+        "review_status": "approved",
+        "decision_reason": "실사용 재료 복구 검토: RDA 10.4 원문 1714의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T15:57:26+00:00",
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_by": null,
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "energy_kcal",
+        "source_unit": "kcal",
+        "amount": 237,
+        "value_status": "observed",
+        "source_token": "237",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "protein_g",
+        "source_unit": "g",
+        "amount": 17.88,
+        "value_status": "observed",
+        "source_token": "17.88",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fat_g",
+        "source_unit": "g",
+        "amount": 17.19,
+        "value_status": "observed",
+        "source_token": "17.190000000000001",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "carbohydrate_g",
+        "source_unit": "g",
+        "amount": 0,
+        "value_status": "observed",
+        "source_token": "0",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars_g",
+        "source_unit": "g",
+        "amount": 0,
+        "value_status": "observed",
+        "source_token": "0",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g",
+        "source_unit": "g",
+        "amount": 0,
+        "value_status": "observed",
+        "source_token": "0",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "sodium_mg",
+        "source_unit": "mg",
+        "amount": 52,
+        "value_status": "observed",
+        "source_token": "52",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "saturated_fat_g",
+        "source_unit": "g",
+        "amount": 6.38,
+        "value_status": "observed",
+        "source_token": "6.38",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "6e25c3d9-099e-5e3e-ad38-8cfb5a6f4fc1",
+        "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "nutrition_profile_id": "d3779a13-fedb-5835-a60d-154acb24e7b8",
+        "preparation_state": "as_published",
+        "match_method": "manual",
+        "confidence_score": 1,
+        "candidate_rank": 1,
+        "is_primary": true,
+        "review_status": "approved",
+        "decision_reason": "실사용 재료 복구 검토: RDA 10.4 원문 1714의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T15:57:26+00:00",
+        "version": 1,
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "521dabd9-36d8-50d8-ad4f-231666bf74d8",
+        "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "synonym": "등갈비"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "59dc402e-ed6e-5b24-a93f-5b556c7ac026",
+        "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "synonym": "돼지 등갈비"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "4e639013-6fdf-54cc-ae28-c1297cf1021b",
+        "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "synonym": "돼지고기 등갈비"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "0363dc66-5390-549b-af54-e93f2b431c86",
+        "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "synonym": "생 돼지 등갈비"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "c66d7b7a-50f5-576b-a3b3-896ea0e8dcd5",
+        "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+        "synonym": "돼지고기, 삼겹살(등갈비), 생것"
+      }
+    },
+    {
+      "table": "ingredients",
+      "row": {
+        "id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+        "standard_name": "일당귀 잎",
+        "category": "채소",
+        "category_code": null,
+        "default_unit": null,
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "row": {
+        "ingredient_id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+        "group_id": "625ad5b9-5231-5e9f-981d-431097b0c80b",
+        "display_name": "일당귀 잎",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "retain_dimensions": [
+          "상태: 생것",
+          "100g 가식부 기준"
+        ],
+        "representative_ingredient_id": null,
+        "review_version": "exclusion-recovery-20261010-v1",
+        "definition": "실사용 재료 복구 검토: RDA 10.4 원문 818의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지."
+      }
+    },
+    {
+      "table": "nutrition_source_items",
+      "row": {
+        "id": "a93338b3-d2b7-561e-aa3f-6470b9458e74",
+        "source_id": "8ed16622-19ef-41f0-8061-2f9e47d60cce",
+        "external_item_key": "818",
+        "external_name": "당귀, 일당귀, 잎, 생것",
+        "preparation_state": "as_published",
+        "source_basis_text": "가식부 100g",
+        "source_basis_amount": 100,
+        "source_basis_unit": "g",
+        "source_serving_amount": null,
+        "source_serving_unit": null,
+        "source_serving_text": null,
+        "source_total_content_amount": null,
+        "source_total_content_unit": null,
+        "source_total_content_text": null,
+        "edible_portion_percent": null,
+        "edible_portion_text": "가식부 100g",
+        "stable_fingerprint": "2d5cb9d399889dfb31f01ad4ceff33e4dfd4fb2bd6e48e3387bb996ba16e3cf3",
+        "review_status": "approved",
+        "decision_reason": "실사용 재료 복구 검토: RDA 10.4 원문 818의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T15:57:26+00:00",
+        "provenance_json": {
+          "origin_provider": "농촌진흥청",
+          "origin_dataset": "국가표준식품성분 DB 10.4",
+          "origin_source_version": "10.4",
+          "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+          "worksheet": "xl/worksheets/sheet6.xml",
+          "worksheet_row": 868,
+          "source_observed_raw": {
+            "row": 868,
+            "source_key": "818",
+            "source_name": "당귀, 일당귀, 잎, 생것",
+            "original_source": "농진청('09)",
+            "discard_percent": 0,
+            "values": {
+              "energy_kcal": {
+                "raw": "43",
+                "amount": 43,
+                "cell": "F868"
+              },
+              "protein_g": {
+                "raw": "3.2",
+                "amount": 3.2,
+                "cell": "H868"
+              },
+              "fat_g": {
+                "raw": "0.4",
+                "amount": 0.4,
+                "cell": "I868"
+              },
+              "carbohydrate_g": {
+                "raw": "8.8000000000000007",
+                "amount": 8.8,
+                "cell": "K868"
+              },
+              "sugars_g": {
+                "raw": "-",
+                "amount": null,
+                "cell": "L868"
+              },
+              "fiber_g": {
+                "raw": "-",
+                "amount": null,
+                "cell": "S868"
+              },
+              "sodium_mg": {
+                "raw": "3",
+                "amount": 3,
+                "cell": "AA868"
+              },
+              "saturated_fat_g": {
+                "raw": "-",
+                "amount": null,
+                "cell": "CM868"
+              }
+            }
+          },
+          "review_operation": "ingredient-exclusion-recovery-20261010"
+        },
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "source_item_id": "a93338b3-d2b7-561e-aa3f-6470b9458e74",
+        "profile_kind": "ingredient_source",
+        "normalization_method": "mass_100g",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "version": 1,
+        "review_status": "approved",
+        "decision_reason": "실사용 재료 복구 검토: RDA 10.4 원문 818의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T15:57:26+00:00",
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_by": null,
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "energy_kcal",
+        "source_unit": "kcal",
+        "amount": 43,
+        "value_status": "observed",
+        "source_token": "43",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "protein_g",
+        "source_unit": "g",
+        "amount": 3.2,
+        "value_status": "observed",
+        "source_token": "3.2",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fat_g",
+        "source_unit": "g",
+        "amount": 0.4,
+        "value_status": "observed",
+        "source_token": "0.4",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "carbohydrate_g",
+        "source_unit": "g",
+        "amount": 8.8,
+        "value_status": "observed",
+        "source_token": "8.8000000000000007",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars_g",
+        "source_unit": "g",
+        "amount": null,
+        "value_status": "missing",
+        "source_token": "-",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g",
+        "source_unit": "g",
+        "amount": null,
+        "value_status": "missing",
+        "source_token": "-",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "sodium_mg",
+        "source_unit": "mg",
+        "amount": 3,
+        "value_status": "observed",
+        "source_token": "3",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "saturated_fat_g",
+        "source_unit": "g",
+        "amount": null,
+        "value_status": "missing",
+        "source_token": "-",
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "0bbee828-296d-5184-a5b0-4845e2a054b2",
+        "ingredient_id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+        "nutrition_profile_id": "2e7d5b79-4346-50aa-ae0f-6c5d3235ccef",
+        "preparation_state": "as_published",
+        "match_method": "manual",
+        "confidence_score": 1,
+        "candidate_rank": 1,
+        "is_primary": true,
+        "review_status": "approved",
+        "decision_reason": "실사용 재료 복구 검토: RDA 10.4 원문 818의 종·부위·생것과 정확히 일치. 미수록 영양소는 null 유지.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T15:57:26+00:00",
+        "version": 1,
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_at": "2026-10-09T15:57:26+00:00"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "aff273c2-5abf-5d44-a63c-32eb248349ee",
+        "ingredient_id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+        "synonym": "일당귀 잎"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "c8916d6b-c2f5-5b01-aa40-da580107c88c",
+        "ingredient_id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+        "synonym": "일당귀잎"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "95d709e9-85ce-5695-a0e6-581e9d7b349b",
+        "ingredient_id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+        "synonym": "쌈당귀"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "770ce616-bec3-528e-a6ef-b0c48f84f590",
+        "ingredient_id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+        "synonym": "당귀, 일당귀, 잎, 생것"
+      }
+    }
+  ],
+  "updates": [
+    {
+      "table": "ingredient_catalog_entries",
+      "before": {
+        "group_id": "5039b296-313c-5cfa-ab29-2d4a8250bf6c",
+        "definition": null,
+        "updated_at": "2026-10-07T06:00:02.394663+00:00",
+        "display_name": "돼지고기 앞다리 수육용",
+        "presentation": "excluded",
+        "review_state": "reviewed",
+        "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+        "review_version": "catalog-review-20261007-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "구매용도/절단: 수육용",
+          "부위/가식부: 앞다리"
+        ],
+        "representative_ingredient_id": null
+      },
+      "after": {
+        "group_id": "5039b296-313c-5cfa-ab29-2d4a8250bf6c",
+        "definition": "일상 구매·조리에 쓰는 명확한 돼지고기 재료이며 생것 RDA 영양 8종이 이미 연결돼 있다. 영양값 신규 추정 없이 선택 차단을 해제한다. 일반 앞다리(1721)와 수육용(3318)은 별도 원자료이므로 합치지 않는다. 수육용/앞다리 단독 별칭은 종과 부위가 불명확해 자동 매칭에서 제외한다.",
+        "display_name": "돼지고기 앞다리 수육용",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+        "review_version": "exclusion-recovery-20261010-v1",
+        "retain_dimensions": [
+          "축종/식품 종류",
+          "부위·가식부",
+          "생/가공 상태",
+          "구매용도/절단: 수육용",
+          "부위/가식부: 앞다리"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "before": {
+        "group_id": "b5d8d68a-b8b1-57d6-8960-8f987194149a",
+        "definition": null,
+        "updated_at": "2026-10-07T06:00:02.394663+00:00",
+        "display_name": "구기자 열매 재래종",
+        "presentation": "excluded",
+        "review_state": "reviewed",
+        "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+        "review_version": "catalog-review-20261007-v1",
+        "retain_dimensions": [
+          "부위: 열매",
+          "원자료 조건: 재래종",
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      },
+      "after": {
+        "group_id": "b5d8d68a-b8b1-57d6-8960-8f987194149a",
+        "definition": "청양군 공식 안내에서 생열매 사용과 건조품 사용을 구별한다. 현재 원자료는 재래종 생열매이므로 생 구기자 열매로 복구하고 말린 구기자의 영양으로 사용하지 않는다.",
+        "display_name": "생 구기자 열매",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+        "review_version": "exclusion-recovery-20261010-v1",
+        "retain_dimensions": [
+          "부위: 열매",
+          "원자료 조건: 재래종",
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "ingredients",
+      "before": {
+        "id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "구기자열매재래종",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "구기자 열매 재래종"
+      },
+      "after": {
+        "id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "생 구기자 열매"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "before": {
+        "group_id": "b5d8d68a-b8b1-57d6-8960-8f987194149a",
+        "definition": null,
+        "updated_at": "2026-10-07T06:00:02.394663+00:00",
+        "display_name": "구기자 잎 재래종",
+        "presentation": "excluded",
+        "review_state": "reviewed",
+        "ingredient_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+        "review_version": "catalog-review-20261007-v1",
+        "retain_dimensions": [
+          "부위: 잎",
+          "원자료 조건: 재래종",
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      },
+      "after": {
+        "group_id": "b5d8d68a-b8b1-57d6-8960-8f987194149a",
+        "definition": "청양군 공식 구기자잎 김치와 영양죽 조리법에 잎이 직접 사용된다. 재료 부위가 분명한 기존 생잎 RDA 자료를 유지하여 복구한다.",
+        "display_name": "구기자 잎",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+        "review_version": "exclusion-recovery-20261010-v1",
+        "retain_dimensions": [
+          "부위: 잎",
+          "원자료 조건: 재래종",
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "ingredients",
+      "before": {
+        "id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "search_name": "구기자잎재래종",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "구기자 잎 재래종"
+      },
+      "after": {
+        "id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+        "category": "채소",
+        "created_at": "2026-09-14T06:59:32.034631+00:00",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "구기자 잎"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "before": {
+        "group_id": "007f8d42-0b2a-59de-85c3-0d07944ff1f1",
+        "definition": "나도팽나무버섯 원료/가공상태의 기존 정의를 기록에 보존하되 기본 선택 범위에서 제외.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "나도팽나무버섯",
+        "presentation": "excluded",
+        "review_state": "reviewed",
+        "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      },
+      "after": {
+        "group_id": "007f8d42-0b2a-59de-85c3-0d07944ff1f1",
+        "definition": "후지사토 지자체 공식 한국어 자료에서 나도팽나무버섯=나메코와 미소 된장국 이용을 확인했다. 이름이 낯설다는 이유로 제외된 실사용 버섯이므로 생 원재료를 복구한다.",
+        "display_name": "나메코 버섯",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "review_version": "exclusion-recovery-20261010-v1",
+        "retain_dimensions": [
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "ingredients",
+      "before": {
+        "id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "나도팽나무버섯",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "나도팽나무버섯"
+      },
+      "after": {
+        "id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "나메코 버섯"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "before": {
+        "group_id": "50b445d1-d256-5996-b2a0-70ab4bec4115",
+        "definition": "전호 원료/가공상태의 기존 정의를 기록에 보존하되 기본 선택 범위에서 제외.",
+        "updated_at": "2026-10-07T06:35:32.340187+00:00",
+        "display_name": "전호",
+        "presentation": "excluded",
+        "review_state": "reviewed",
+        "ingredient_id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+        "review_version": "definition-resolution-20261007-v1",
+        "retain_dimensions": [
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      },
+      "after": {
+        "group_id": "50b445d1-d256-5996-b2a0-70ab4bec4115",
+        "definition": "울릉군 공식 회의록에서 실제 특산 산채 전호의 유통·섭취 및 식품 부위 문제를 확인했다. RDA 생 전호 원자료를 보존하고 식용 나물로 복구하되 약재 뿌리와 동일시하지 않는다.",
+        "display_name": "전호나물",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+        "review_version": "exclusion-recovery-20261010-v1",
+        "retain_dimensions": [
+          "상태: 생것"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "ingredients",
+      "before": {
+        "id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "search_name": "전호",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "전호"
+      },
+      "after": {
+        "id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+        "category": "채소",
+        "created_at": "2026-06-25T00:00:00+00:00",
+        "default_unit": null,
+        "category_code": null,
+        "standard_name": "전호나물"
+      }
+    }
+  ],
+  "deletes": [
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "a163fd9e-abf2-42ae-bdb0-7b1c55097050",
+        "synonym": "앞다리",
+        "search_name": "앞다리",
+        "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "0a108f63-f555-4fdd-a4c5-fe25db61cd86",
+        "synonym": "등갈비",
+        "search_name": "등갈비",
+        "ingredient_id": "ecf31d7f-dcf9-4e02-87aa-3d41cc54f582"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "708daea9-7f65-478e-9cb6-e1f4a9c1dc98",
+        "synonym": "돼지고기, 목심, 삶은것",
+        "search_name": "돼지고기,목심,삶은것",
+        "ingredient_id": "bfc4f826-5d6b-426d-9e26-9177eb89b086"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "21cf6177-b221-482c-986d-b6b45977e31a",
+        "synonym": "함초",
+        "search_name": "함초",
+        "ingredient_id": "089ec6fc-c44a-42f9-9a1c-ab608acf953b"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "a46b964f-6b2f-45bc-90e1-3b20efe5113c",
+        "synonym": "함초",
+        "search_name": "함초",
+        "ingredient_id": "b774bc5d-af24-4b7c-9ec2-6d428ab024f2"
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "3a923f75-2e50-4ae8-8b15-801a6c4cedf6",
+        "synonym": "돼지고기, 삼겹살(등갈비), 생것",
+        "search_name": "돼지고기,삼겹살(등갈비),생것",
+        "ingredient_id": "ecf31d7f-dcf9-4e02-87aa-3d41cc54f582"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "ingredient_id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+      "action": "restore_base",
+      "reason": "일상 구매·조리에 쓰는 명확한 돼지고기 재료이며 생것 RDA 영양 8종이 이미 연결돼 있다. 영양값 신규 추정 없이 선택 차단을 해제한다. 일반 앞다리(1721)와 수육용(3318)은 별도 원자료이므로 합치지 않는다. 수육용/앞다리 단독 별칭은 종과 부위가 불명확해 자동 매칭에서 제외한다."
+    },
+    {
+      "ingredient_id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+      "action": "restore_base",
+      "reason": "청양군 공식 안내에서 생열매 사용과 건조품 사용을 구별한다. 현재 원자료는 재래종 생열매이므로 생 구기자 열매로 복구하고 말린 구기자의 영양으로 사용하지 않는다."
+    },
+    {
+      "ingredient_id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+      "action": "restore_base",
+      "reason": "청양군 공식 구기자잎 김치와 영양죽 조리법에 잎이 직접 사용된다. 재료 부위가 분명한 기존 생잎 RDA 자료를 유지하여 복구한다."
+    },
+    {
+      "ingredient_id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+      "action": "restore_base",
+      "reason": "후지사토 지자체 공식 한국어 자료에서 나도팽나무버섯=나메코와 미소 된장국 이용을 확인했다. 이름이 낯설다는 이유로 제외된 실사용 버섯이므로 생 원재료를 복구한다."
+    },
+    {
+      "ingredient_id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+      "action": "restore_base",
+      "reason": "울릉군 공식 회의록에서 실제 특산 산채 전호의 유통·섭취 및 식품 부위 문제를 확인했다. RDA 생 전호 원자료를 보존하고 식용 나물로 복구하되 약재 뿌리와 동일시하지 않는다."
+    },
+    {
+      "ingredient_id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+      "name": "돼지고기 등갈비",
+      "action": "new_exact_source",
+      "source_key": "1714"
+    },
+    {
+      "ingredient_id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+      "name": "일당귀 잎",
+      "action": "new_exact_source",
+      "source_key": "818"
+    }
+  ],
+  "expected_table_checksums": {
+    "ingredients": "63afef3c1a9c0c7cee293e52d71e5f94",
+    "nutrition_values": "59d74e6aeb8d9c319001b1de9062b339",
+    "nutrition_sources": "8a2c454cc2045fbe1111c22aca7810b4",
+    "nutrition_profiles": "f10d6921510e96e91184147f5e5d72e9",
+    "ingredient_synonyms": "88e8bc240b6c6c0911b5f07e191352da",
+    "nutrition_source_items": "7e8a109576668bd39fd38c5703c9df6a",
+    "ingredient_catalog_entries": "53bd1ce50fafac9624a500e209e67590",
+    "ingredient_nutrition_profiles": "087d4f408eea2ceba20d429aec33935f"
+  },
+  "preserved_hamcho_aliases": [
+    {
+      "id": "70a78693-dca7-4b33-a8b2-09ab68b3d3a8",
+      "synonym": "함초",
+      "search_name": "함초",
+      "ingredient_id": "7a736fb6-2153-447c-afdc-b694debc6029"
+    },
+    {
+      "id": "5bead820-a295-4565-b1dd-345b39c73c87",
+      "synonym": "함초",
+      "search_name": "함초",
+      "ingredient_id": "41a5e41b-a738-4e63-8183-3786a5ac61c4"
+    }
+  ],
+  "ai_job_cleanup": {
+    "ingredient_ids": [
+      "89b15f30-81cd-587a-abd7-301bf93661b5",
+      "d75a9492-4964-5a2f-a576-287511f07e4a"
+    ],
+    "policy_version": "ingredient-ai-v1",
+    "from_status": "queued",
+    "to_status": "skipped",
+    "reason": "NON_AI_PRIMARY_EXISTS",
+    "expected_attempt_count": 0,
+    "preserve_existing_jobs": true
+  },
+  "operation_checksum": "f59883e7f90852840d9e8a7895d90e75838d6dd1907c2d7718415168bb887072"
+}

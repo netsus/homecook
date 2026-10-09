@@ -1,0 +1,45 @@
+{
+  "schema": "homecook.green-pepper-piece-weight.v1",
+  "reviewed_at": "2026-10-09T23:18:36.000Z",
+  "reviewer": "__PRIVATE_REVIEWER_UUID__",
+  "source": {
+    "provider_code": "HOMECOOK_USER_STANDARD",
+    "dataset_name": "공식 레시피 기반 서비스 대표 중량: 생 풋고추 1개 15g",
+    "source_kind": "measurement_reference",
+    "source_version": "2026-10-10-FSIS32809-green-pepper-v1",
+    "data_basis_date": "2022-09-13",
+    "source_url": "https://www.fsis.go.kr/front/api/totalView.do?cnts_id=32809&select_list_no=5&title=",
+    "license_name": "출처 명시의 짧은 계량 인용; 원문 페이지 권리 유지",
+    "publisher": "국립수산물품질관리원 수산물안전정보",
+    "original_attribution": "농식품종합정보시스템",
+    "page_title": "가자미 — 가자미두부찌개",
+    "published_date": "2022-09-13",
+    "quoted_excerpt": "풋고추 15g(1 개)",
+    "excerpt_sha256": "72e11351d01b0083ac6a6588090489fc5c90259a47cf0b71eaa7b8ff00329257",
+    "downloaded_html_sha256": "ae8d4b9152d3a11c1da0a5a5bb557d1396ea06c81a37c98bb8cd9c320083e426",
+    "decision_reason": "공식 레시피의 풋고추 15g(1개) 표현을 생고추 서비스 대표 중량으로 선택했다. 국가 평균이나 실측 중간 크기 중량이라고 주장하지 않는다. 종류 미상 고추가 생 풋고추 영양 대표에 연결된 경우에만 적용한다. 청양고추·홍고추·오이고추·건고추에 확대 적용하지 않으며 실제 측정 g 입력을 우선한다."
+  },
+  "ingredient": {
+    "id": "a12cd429-b500-42d2-ac17-e53123f7356a",
+    "name": "고추",
+    "presentation": "umbrella",
+    "preparation_state": "as_published",
+    "actual_state": "raw_green_pepper",
+    "size_code": "medium",
+    "size_policy": "입력 크기 미지정 시 기존 medium 선택자를 사용; 원문이 medium 실측을 제공했다는 뜻 아님",
+    "observed_unit": "개",
+    "observed_amount": 1,
+    "weight_g": 15,
+    "expected_nutrition_profile_id": "ef0137c5-a46e-4108-8cdd-cb98dea3295a",
+    "expected_nutrition_link_id": "8a6214c1-c5ad-5568-a995-45ed0365d241",
+    "expected_source_item_id": "9b576eb2-9ff6-4656-b1f7-a7713c1b6b5f",
+    "expected_external_name": "고추, 풋고추, 생것",
+    "expected_provider_code": "RDA_10_4"
+  },
+  "policy": {
+    "append_only": true,
+    "preserve_existing_nutrition": true,
+    "preserve_historical_records": true,
+    "no_ai_calls": true
+  }
+}

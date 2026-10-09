@@ -1,0 +1,191 @@
+{
+  "status": "passed",
+  "verified_at": "2026-10-09T16:03:14.456Z",
+  "environment": "isolated restored clone",
+  "actual_async_owner_queries": 16,
+  "results": [
+    {
+      "query": "등갈비",
+      "matches": [
+        {
+          "id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+          "standard_name": "돼지고기 등갈비"
+        }
+      ]
+    },
+    {
+      "query": "돼지 등갈비",
+      "matches": [
+        {
+          "id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+          "standard_name": "돼지고기 등갈비"
+        }
+      ]
+    },
+    {
+      "query": "돼지고기, 삼겹살(등갈비), 생것",
+      "matches": [
+        {
+          "id": "89b15f30-81cd-587a-abd7-301bf93661b5",
+          "standard_name": "돼지고기 등갈비"
+        }
+      ]
+    },
+    {
+      "query": "돼지고기 앞다리 수육용",
+      "matches": [
+        {
+          "id": "cdf20482-adc3-48dc-a48f-a7658fed61d2",
+          "standard_name": "돼지고기 앞다리 수육용"
+        }
+      ]
+    },
+    {
+      "query": "방풍나물",
+      "matches": [
+        {
+          "id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+          "standard_name": "갯기름나물"
+        }
+      ]
+    },
+    {
+      "query": "식방풍",
+      "matches": [
+        {
+          "id": "46b7df4c-e85d-53b3-bd12-fb4ffff049c3",
+          "standard_name": "갯기름나물"
+        }
+      ]
+    },
+    {
+      "query": "데친 방풍나물",
+      "matches": [
+        {
+          "id": "c2b8faa4-3aff-4278-8882-b2fe7585da37",
+          "standard_name": "데친 갯기름나물"
+        }
+      ]
+    },
+    {
+      "query": "나메코",
+      "matches": [
+        {
+          "id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+          "standard_name": "나메코 버섯"
+        }
+      ]
+    },
+    {
+      "query": "나도팽나무버섯",
+      "matches": [
+        {
+          "id": "ae4d24fb-3f9c-5f49-9d42-fd7a1c030211",
+          "standard_name": "나메코 버섯"
+        }
+      ]
+    },
+    {
+      "query": "전호나물",
+      "matches": [
+        {
+          "id": "b31fa6ba-16a2-55e4-b192-870e2cce10ed",
+          "standard_name": "전호나물"
+        }
+      ]
+    },
+    {
+      "query": "일당귀잎",
+      "matches": [
+        {
+          "id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+          "standard_name": "일당귀 잎"
+        }
+      ]
+    },
+    {
+      "query": "쌈당귀",
+      "matches": [
+        {
+          "id": "d75a9492-4964-5a2f-a576-287511f07e4a",
+          "standard_name": "일당귀 잎"
+        }
+      ]
+    },
+    {
+      "query": "생 구기자 열매",
+      "matches": [
+        {
+          "id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+          "standard_name": "생 구기자 열매"
+        }
+      ]
+    },
+    {
+      "query": "구기자 잎",
+      "matches": [
+        {
+          "id": "b94da005-a91d-4fb6-944b-8561f78306cb",
+          "standard_name": "구기자 잎"
+        }
+      ]
+    },
+    {
+      "query": "구기자 열매 재래종",
+      "matches": [
+        {
+          "id": "ccc2f0a0-6467-4d9b-8f64-bf38b8cd4ce1",
+          "standard_name": "생 구기자 열매"
+        }
+      ]
+    },
+    {
+      "query": "함초",
+      "matches": [
+        {
+          "id": "41a5e41b-a738-4e63-8183-3786a5ac61c4",
+          "standard_name": "갯나물 퉁퉁마디 노지"
+        },
+        {
+          "id": "7a736fb6-2153-447c-afdc-b694debc6029",
+          "standard_name": "갯나물 퉁퉁마디 하우스"
+        }
+      ]
+    }
+  ],
+  "nutrition": [
+    {
+      "name": "돼지고기 등갈비",
+      "source": "돼지고기, 삼겹살(등갈비), 생것",
+      "core_values": 5,
+      "optional_missing": 0
+    },
+    {
+      "name": "일당귀 잎",
+      "source": "당귀, 일당귀, 잎, 생것",
+      "core_values": 5,
+      "optional_missing": 3
+    }
+  ],
+  "hamcho_ambiguity_preserved": true,
+  "production_writes": 0,
+  "local_tests": {
+    "files": 5,
+    "passed": 61,
+    "typecheck": "passed",
+    "lint": "passed",
+    "independent_review": "passed"
+  },
+  "clone_apply": {
+    "ingredients_after": 1932,
+    "idempotent": true,
+    "existing_nutrition_history_and_conversion_preserved": true
+  },
+  "production_read_only": {
+    "ai_enabled": false,
+    "ingredients": 1930,
+    "cdf_selectable": false,
+    "migration_present": false
+  },
+  "owned_isolated_test_container_removed": true
+}

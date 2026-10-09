@@ -1,0 +1,308 @@
+{
+  "schema_version": "homecook.broad-ingredient-nutrition-policy.v1",
+  "reviewed_on": "2026-10-10",
+  "status": "classification_and_plan_only",
+  "database_writes": 0,
+  "scope": {
+    "active_recipe_rows": 12,
+    "distinct_ingredients": 10,
+    "broad_names": 8,
+    "broad_rows": 10,
+    "conditional_representative_candidates": 2,
+    "broad_names_requiring_identity": 6,
+    "additional_identity_cases": 2,
+    "base_unlinked_ingredients": 16,
+    "distinct_union_base_and_recipe_ingredients": 25,
+    "count_rule": "recipes.deleted_at IS NULL 기준으로 기존 12행 재확인. 삭제된 레시피 행은 제외."
+  },
+  "policy": {
+    "meaning": "대표 후보를 정할 수 있는 것과 현재 레시피에 안전하게 적용 가능한 것은 다르다. 원문 또는 사용자의 종류 선택으로 조건을 충족한 뒤 연결을 승인한다.",
+    "priority": [
+      "기존 동일 식품·부위·상태의 승인 공식자료 재사용",
+      "실제 제품명/코드·제조사 라벨·원료·기준량 확인",
+      "정의와 적용조건이 일치하는 공식 품목대표 선정",
+      "가정 조리의 실제 배합·완성 무게·수율로 계산",
+      "식품 정체성은 확인됐지만 공식/제품/배합 자료가 없을 때 가정과 한계를 명시한 수동 AI 추정"
+    ],
+    "cannot_solve_by_ai": "식품 정체성이나 생/건조·농도 확인이 안 된 문제는 AI 수치 추정으로 해결하지 않는다.",
+    "missing_values": "미측정값을0으로 채우지 않으며 열량을 채워도 다른 영양소 결측은 별도 유지한다.",
+    "unit_evidence": "영양 대표 승인과 개·장·ml→g 환산 근거는 별도다.",
+    "no_automation": "자동 Gemini 호출을 다시 켜지 않는다."
+  },
+  "broad_and_recipe_cases": [
+    {
+      "name": "신김치",
+      "active_recipe_rows": 2,
+      "classification": "conditional_representative",
+      "candidate_standard_name": "배추김치",
+      "candidate_official_source_name": "김치, 배추 김치",
+      "representative_condition": "배추김치의 숙성 상태임이 확인되고, 건더기와 국물 포함 범위를 정한 경우 기존 공식 배추김치 자료를 대표 참고로 재사용한다.",
+      "observed_limitation": "현재 이름과 조리 문맥만으로 배추 품종을 확정하지 않는다. 한 행에 씻고 꼭 짜는 과정이 있어 일반 배추김치의 나트륨을 정확값으로 주장할 수 없다.",
+      "next_action": "배추김치 여부와 계량이 씻기 전인지 후인지 확인한다. 씻은 후 중량이면 그 상태의 자료를 찾거나 수동 추정 근거를 남긴다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "고추",
+      "active_recipe_rows": 1,
+      "classification": "conditional_representative",
+      "candidate_standard_name": "풋고추",
+      "candidate_official_source_name": "고추, 풋고추, 생것",
+      "representative_condition": "신선한 풋고추 범위임이 확인된 경우 일반 풋고추 공식 자료를 대표 참고로 사용한다.",
+      "observed_limitation": "현재 원문은 생 열매를 써는 문맥이지만 풋고추·홍고추·청양고추를 확정하지 못한다. 건고추·절임·분말에는 이 대표값을 적용하지 않는다.",
+      "next_action": "생것·색/종류를 확인하고 개당 중량 근거도 따로 확인한다. 영양 대표 연결이 개수 환산을 자동 승인하지 않는다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "알룰로스",
+      "active_recipe_rows": 1,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "분말·액상·혼합 감미료를 구분한 뒤 실제 제품 자료를 선택한다.",
+      "observed_limitation": "현재 10g 표기와 뿌리는 동작만으로 분말 또는 시럽을 확정할 수 없다.",
+      "next_action": "포장 또는 원문 제품명에서 제형·알룰로스 함량·다른 감미료·100g/100ml 표시를 확인한다. 임의 0kcal 입력 금지.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "치즈",
+      "active_recipe_rows": 1,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "종류와 자연/가공 여부를 구분하고 제품값을 우선한다.",
+      "observed_limitation": "현재 원문 어린이치즈만으로 체다·모짜렐라·가공치즈의 배합을 확정할 수 없다.",
+      "next_action": "어린이치즈의 제조사·제품명·라벨을 찾는다. 없으면 가공 슬라이스 등 실제 유형을 확인한 뒤 해당 유형의 공식 대표값을 별도 검토한다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "호박",
+      "active_recipe_rows": 1,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "애호박·주키니·단호박·늙은호박 중 종류를 먼저 식별한다.",
+      "observed_limitation": "그릴로 굽고 써는 문맥만으로 애호박을 확정할 수 없다.",
+      "next_action": "원문 이미지/재료 설명으로 종류와 생/조리 계량을 확인한 뒤 이미 승인된 동일 종류 공식 프로필을 재사용한다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "옥수수",
+      "active_recipe_rows": 1,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "생/삶은/통조림과 단옥수수·찰옥수수를 구분한다.",
+      "observed_limitation": "현재 30g과 속재료 문맥만으로 통조림 또는 생것 여부를 확정할 수 없다.",
+      "next_action": "통조림이면 제품과 배액 여부, 원물이면 품종/조리상태/가식 알맹이 기준을 확인한다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "버섯",
+      "active_recipe_rows": 2,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "종과 생/건조 상태를 먼저 확인한다.",
+      "observed_limitation": "현재 채소볶음 문맥은 신선 버섯의 가능성을 높일 뿐 종류를 확정하지 않는다. 느타리·새송이·양송이 등을 무작위 평균하지 않는다.",
+      "next_action": "원문이나 사용자 입력에서 종류를 확인한다. 혼합이면 실제 종류와 배합으로 계산하고 불명 상태는 유지한다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "김치국물",
+      "active_recipe_rows": 1,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "김치 종류와 건더기를 제외한 액체/희석 상태를 확인한 후 그 액체의 영양자료를 확보한다.",
+      "observed_limitation": "배추김치 전체 또는 열무김치 국물의 AI 자료를 일반 김치국물에 그대로 적용할 수 없다.",
+      "next_action": "배추김치 국물 등으로 범위를 좁힌 뒤 공식 액체 자료·제품 라벨을 찾고 없으면 해당 정의와 가정에 한정해 수동 AI 추정한다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "화이트크림",
+      "active_recipe_rows": 1,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "제품 정체성을 먼저 식별한다.",
+      "observed_limitation": "현재 조리 단계에서 생크림과 별도 원료로 함께 사용하므로 화이트크림을 생크림 동의어로 연결하면 잘못된 대체가 된다.",
+      "next_action": "원자료 작성처/포장으로 화이트소스·식물성 크림·제과 충전크림 등을 확인한 뒤 제품값 또는 확인된 배합으로 계산한다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    },
+    {
+      "name": "해물육수코인",
+      "active_recipe_rows": 1,
+      "classification": "identity_required",
+      "candidate_standard_name": null,
+      "candidate_official_source_name": null,
+      "representative_condition": "기존 재료 연결의 코인 형태부터 확인한다.",
+      "observed_limitation": "레시피 원문은 해물육수 8g만 명시하며 코인 형태를 뒷받침하지 않는다.",
+      "next_action": "코인·분말·액상·우린 육수 중 형태를 확인하여 오연결이면 먼저 수정하고, 제품 농도 및 희석 전/후 기준에 맞는 값을 선택한다.",
+      "current_approved_primary_link": false,
+      "new_link_applied": false
+    }
+  ],
+  "base_product_cases": [
+    {
+      "name": "콩국물",
+      "required_identity": "콩:물 농도, 가당·가염 여부",
+      "current_evidence": "기존 RDA 두유, 콩국물, 소금 0.3%는 활성 승인 원자료지만 일반 무첨가 콩국물의 정확값은 아니다.",
+      "acquisition_plan": "실제품 라벨 → 확인된 무가당/가염 유형의 공식 대표 → 직접 만드는 경우 콩·물·첨가물 중량과 완성 수율로 계산. 불명 농도는 AI로 추측하지 않는다.",
+      "new_link_applied": false
+    },
+    {
+      "name": "베트남 고추",
+      "required_identity": "생것/건조/분말과 실제 고추 종류",
+      "current_evidence": "현재 유통명만으로 생건조를 선택할 수 없다.",
+      "acquisition_plan": "포장/원문으로 상태 확인 → 동일 종류·상태 공식 자료 재사용. 외형이 비슷하다는 이유로 생고추와 건고추를 교환하지 않는다.",
+      "new_link_applied": false
+    },
+    {
+      "name": "사각어묵",
+      "required_identity": "튀김/찜, 배합, 제품명",
+      "current_evidence": "현재 어묵의 기존 승인 원자료는 어묵, 찐어묵이라 튀긴 사각어묵의 대체값으로 사용할 수 없다.",
+      "acquisition_plan": "제품명·원료·영양표 또는 식약처 동일 제품코드 → 실제 제조유형을 확인한 공식 품목대표. 모양만 같은 다른 어묵은 제외.",
+      "new_link_applied": false
+    },
+    {
+      "name": "훈제오리",
+      "required_identity": "껍질 포함, 염지/당첨가, 구입상태 또는 팬에 구운 상태",
+      "current_evidence": "RDA 오리고기, 조미훈제 및 조미훈제, 구운것(팬) 원자료는 승인 활성이다.",
+      "acquisition_plan": "제품 라벨 우선 → 제품정보가 없으면 조미훈제 일반 참고범위와 구입/조리 상태를 정한 뒤 일치하는 RDA 대표를 검토. 생오리 값 대입 금지.",
+      "new_link_applied": false
+    },
+    {
+      "name": "수제비면",
+      "required_identity": "일반 밀가루 생면/감자배합, 생면 수분, 삶기 전/후",
+      "current_evidence": "이전 검토의 공식 감자 수제비·만두피·파스타는 일반 밀가루 생수제비 대체로 부적절했다.",
+      "acquisition_plan": "해당 생면 제품 라벨 → 가정 반죽은 밀가루·물·소금 중량과 최종 생반죽 무게를 이용해 계산. 삶은 수율은 별도.",
+      "new_link_applied": false
+    },
+    {
+      "name": "초코칩",
+      "required_identity": "다크/밀크/화이트, 카카오·당·유지 배합",
+      "current_evidence": "제품명을 모르면 일반 초콜릿 한 종류를 정확값으로 대입할 수 없다.",
+      "acquisition_plan": "제조사 제품명/영양표/원료 우선. 형태와 조성이 정의되면 동일 초콜릿 유형 공식 대표를 검토하고 대표값 표시.",
+      "new_link_applied": false
+    },
+    {
+      "name": "조미김",
+      "required_identity": "한국식 기름·소금 첨가 구운 김, 제품",
+      "current_evidence": "현재 RDA 김, 조미김, 구운것 프로필은 열량/지방 정합성 문제로 revoked·inactive이며 대표 정책으로 재승인하지 않는다.",
+      "acquisition_plan": "정합성 검증한 실제 제품 라벨/식약처 제품 항목 우선. 일본 무기름 조미김 또는 일반 마른김으로 대체하지 않는다.",
+      "new_link_applied": false
+    },
+    {
+      "name": "바닐라 페이스트",
+      "required_identity": "당/시럽/알코올/바닐라빈 배합, 제품",
+      "current_evidence": "페이스트·에센스·추출액·시럽은 동일하지 않다.",
+      "acquisition_plan": "제조사 라벨과 원료, 영양기준량 확보 → 실측 없는 항목은 결측 유지. 직접 제조라면 실제 배합과 수율로 계산.",
+      "new_link_applied": false
+    },
+    {
+      "name": "해물육수코인",
+      "required_identity": "코인제품인지, 제품명, 희석 전 고형물",
+      "current_evidence": "현재 레시피 해물육수 표기와 코인 연결은 검증되지 않았다.",
+      "acquisition_plan": "먼저 원문 형태 정정 → 해당 제품 라벨의 희석 전 코인 무게/성분 사용. 완성 육수 100ml 자료는 희석비 없이는 교체 금지.",
+      "new_link_applied": false
+    },
+    {
+      "name": "허브솔트",
+      "required_identity": "소금 비율·첨가당/향신료, 제품",
+      "current_evidence": "일반 소금이나 허브 단독은 혼합물 대표가 아니다.",
+      "acquisition_plan": "제품 라벨 우선. 자가배합이면 소금 및 허브 각각 중량으로 계산. 나트륨을 소금100%로 단정 금지.",
+      "new_link_applied": false
+    },
+    {
+      "name": "크림 소스",
+      "required_identity": "유크림/식물성 유지, 농도·첨가물, 조리/제과 용도",
+      "current_evidence": "생크림 자체와 완성 크림소스를 구분해야 한다.",
+      "acquisition_plan": "완성 소스 제품 라벨 → 실제 집밥 소스의 재료중량·완성중량으로 계산. 이름만 알면 특정 제품으로 임의 대체 금지.",
+      "new_link_applied": false
+    },
+    {
+      "name": "바닐라 에센스",
+      "required_identity": "용매·당·알코올 농도, 제품",
+      "current_evidence": "바닐라 익스트랙·시럽을 자동 동등시하지 않는다.",
+      "acquisition_plan": "제조사 에센스 라벨/규격표 확보. 소량 사용도 내부값 보존, 미수록 열량/성분을0으로 만들지 않는다.",
+      "new_link_applied": false
+    },
+    {
+      "name": "다크 커버춰",
+      "required_identity": "다크 종류, 카카오 비율·당·유지, 제품",
+      "current_evidence": "커버춰 제품의 조성을 확인해야 한다.",
+      "acquisition_plan": "제조사 제품코드·카카오함량·영양표 → 일치하는 다크 초콜릿 유형의 대표는 실제 제품값과 구별해 별도 승인.",
+      "new_link_applied": false
+    },
+    {
+      "name": "초코 크런치",
+      "required_identity": "곡물/쿠키/견과/초콜릿 토핑 배합",
+      "current_evidence": "크런치는 조성보다 식감을 표현하므로 초콜릿 단독으로 대표 불가.",
+      "acquisition_plan": "제품 라벨·원료 순서 확보. 직접 만들면 각 원료 무게와 완성 수율. 제품/배합이 모르면 보류.",
+      "new_link_applied": false
+    },
+    {
+      "name": "고추청",
+      "required_identity": "고추:설탕 배합, 건더기 섭취·여과, 최종농도",
+      "current_evidence": "투입 설탕 전량이 여과된 청에 남는다고 가정할 수 없다.",
+      "acquisition_plan": "제품 라벨 우선. 가정 제조는 투입량뿐 아니라 최종 수율·여과/건더기 사용을 확인한 조리 계산. 근거 부족하면 제한된 AI 추정 명시.",
+      "new_link_applied": false
+    },
+    {
+      "name": "생강술",
+      "required_identity": "술 종류·도수·당첨가, 생강 배합·여과",
+      "current_evidence": "생강청/맛술은 동일 식품이 아니며 알코올 열량이 존재할 수 있다.",
+      "acquisition_plan": "제품 라벨 또는 실제 술+생강+첨가물 배합과 최종 수율. 조리 중 알코올 잔존량을 일괄0 처리하지 않고 별도 추정 조건으로 남긴다.",
+      "new_link_applied": false
+    }
+  ],
+  "completion_definition": [
+    "식품 종류·상태 확인 또는 대표 적용조건 충족",
+    "선택한 영양자료 승인 및 필요한 성분 확보",
+    "수치 수량과 단위 환산 근거 확보",
+    "현재 레시피 재계산과 과거 식사 snapshot 보존"
+  ],
+  "evidence": {
+    "repository": [
+      "docs/engineering/ingredient-nutrition-representatives-20261008.md",
+      "docs/engineering/data/ingredient-nutrition-representatives-20261008.json",
+      "docs/engineering/data/ingredient-definition-resolution-20261007.json"
+    ],
+    "live_read_only": [
+      "ingredient_catalog_entries 정의와 표준명 확인",
+      "삭제되지 않은 recipe_ingredients 및 recipe_steps 문맥 확인. 제목·원문·recipe ID·소유자 정보는 저장하지 않음",
+      "ingredient_nutrition_profiles/nutrition_profiles/nutrition_source_items 승인·활성 상태 확인"
+    ],
+    "public_sources": [
+      {
+        "title": "식약처 K-FIND 식품영양성분 데이터베이스",
+        "url": "https://various.foodsafetykorea.go.kr/nutrient/",
+        "use": "공식 영양자료와 제품 자료의 우선 조회 경로"
+      },
+      {
+        "title": "K-FIND 영양정보 조회",
+        "url": "https://various.foodsafetykorea.go.kr/nutrient/general/nutr/firstList.do",
+        "use": "제조사와 품목대표/상용제품 구분을 유지"
+      },
+      {
+        "title": "USDA FoodData Central Data Documentation",
+        "url": "https://fdc.nal.usda.gov/data-documentation/",
+        "use": "공식 분석/대표 데이터와 제조사 라벨 기반 Branded Foods의 구별"
+      },
+      {
+        "title": "USDA FoodData Central FAQ",
+        "url": "https://fdc.nal.usda.gov/faq/",
+        "use": "자료유형마다 기준량/serving size가 달라 정확한 제품 단위 확인 필요"
+      }
+    ]
+  }
+}

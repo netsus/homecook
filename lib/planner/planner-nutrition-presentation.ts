@@ -1,3 +1,4 @@
+import { formatEnergyKcal } from "@/lib/nutrition/energy-display";
 import type {
   PlannerNutritionCoreCode,
   PlannerNutritionQuality,
@@ -44,6 +45,9 @@ export function formatPlannerNutritionValue(
   value: PlannerNutritionValue,
 ) {
   const unit = PLANNER_NUTRITION_UNITS[code];
+  if (code === "energy_kcal") {
+    return formatEnergyKcal(value.status === "complete" ? value.amount : value.status === "partial" ? value.known_amount : null, { partial: value.status === "partial" });
+  }
 
   if (value.status === "complete" && value.amount !== null) {
     return `${formatAmount(value.amount, unit !== "mg")} ${unit}`;

@@ -1,0 +1,95 @@
+{
+  "schema": "homecook.nutrition-completion-followup-verification.v1",
+  "verified_at": "2026-10-09T18:59:23.963Z",
+  "status": "passed",
+  "deployment": "not_deployed",
+  "production_writes": 0,
+  "external_ai_calls": 0,
+  "unit_tests": {
+    "files": 12,
+    "passed": 206
+  },
+  "typecheck": "passed",
+  "changed_files_lint": "passed",
+  "independent_review": "passed",
+  "estimated_weights": {
+    "applied_to_clone": true,
+    "idempotent": true,
+    "exact_preimage_mutation_rejected": true,
+    "official_nutrition_and_history_preserved": true,
+    "observations": [
+      {
+        "ingredient_id": "81dd8c7e-319a-5f81-bf3e-4bd21b06d1d5",
+        "amount": 1,
+        "unit": "장",
+        "grams": 0.5,
+        "energy_kcal": {
+          "amount": 1.565,
+          "known_amount": null,
+          "status": "complete",
+          "display_mode": "total"
+        },
+        "quality": "estimated"
+      },
+      {
+        "ingredient_id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+        "amount": 3,
+        "unit": "알",
+        "grams": 0.201,
+        "energy_kcal": {
+          "amount": 0.50451,
+          "known_amount": null,
+          "status": "complete",
+          "display_mode": "total"
+        },
+        "quality": "estimated"
+      },
+      {
+        "ingredient_id": "78deadf1-4645-5854-9abc-39cffe996567",
+        "amount": 10,
+        "unit": "장",
+        "grams": 10,
+        "energy_kcal": {
+          "amount": 3.8000000000000003,
+          "known_amount": null,
+          "status": "complete",
+          "display_mode": "total"
+        },
+        "quality": "estimated"
+      }
+    ]
+  },
+  "calculation": {
+    "recipe_rows": 516,
+    "remaining_known_profile_unit_gaps": 1,
+    "remaining": "다진마늘 10개 원문 확인 대기",
+    "affected_recipes": 2,
+    "snapshot_write": "validated in clone and rolled back"
+  },
+  "broad_policy": {
+    "conditional_representatives": [
+      "신김치 → 배추김치",
+      "고추 → 풋고추"
+    ],
+    "identity_required": [
+      "알룰로스",
+      "치즈",
+      "호박",
+      "옥수수",
+      "버섯",
+      "김치국물",
+      "화이트크림",
+      "해물육수코인"
+    ],
+    "new_links_applied": 0
+  },
+  "live_read_only": {
+    "pieces": 15,
+    "ai_enabled": false,
+    "new_source": 0,
+    "ingredients": 1930
+  },
+  "owned_isolated_test_container_removed": true,
+  "browser_visual_qa": "pending release-batch check; component renders tested",
+  "pending_exclusion_recovery_preserved": true
+}

@@ -193,10 +193,10 @@ describe("reviewed piece unit deployment", () => {
     expect(code).toContain("atomicWrite(statePath, JSON.stringify({ ...previousState, database: pieceUnitDatabase }));");
     const preparationGuard = code.slice(code.indexOf("pieceUnitDatabase = pieceUnitAppliedDatabaseState(databasePlan);"), code.indexOf("const buildOptions ="));
     expect(preparationGuard).not.toContain("atomicWrite(recoveryPath");
-    expect(code).toContain("...(pieceUnitDatabase ? { database: pieceUnitDatabase } : {})");
-    expect(code).toContain("if (options.reviewedPieceUnitReadiness) atomicWrite(databaseStatePath, JSON.stringify(state.database));");
-    expect(code).toContain("restoreProhibitedReason: options.reviewedPieceUnitReadiness ? PIECE_UNIT_RECOVERY_MESSAGE : undefined");
-    expect(code).toContain("if (state.database && state.database.backwardCompatible !== true) throw new DeploymentError");
+    expect(code).toContain("...(reviewedDatabase ? { database: reviewedDatabase } : {})");
+    expect(code).toContain("if (options.reviewedNutritionRecoveryReadiness || options.reviewedPieceUnitReadiness || options.reviewedYoutubeResolutionReadiness) atomicWrite(databaseStatePath, JSON.stringify(state.database));");
+    expect(code).toContain("restoreProhibitedReason: options.reviewedPieceUnitReadiness ? PIECE_UNIT_RECOVERY_MESSAGE");
+    expect(code).toContain("const database = assertDatabaseRollbackCompatible(state.database, recordedDatabase);");
     expect(code.indexOf("pieceUnitDatabase = pieceUnitAppliedDatabaseState(databasePlan);")).toBeLessThan(code.indexOf('await logged("pnpm", ["install"'));
 
     expect(code).toMatch(/options\.reviewedPieceUnitReadiness\) await stageRound2Readiness/);
