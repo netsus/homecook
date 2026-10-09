@@ -10,7 +10,7 @@ const json = (v) => `${literal(JSON.stringify(v))}::jsonb`;
 const tables = ['nutrition_sources', 'nutrition_source_items', 'nutrition_profiles', 'nutrition_values', 'ingredient_nutrition_profiles', 'ingredient_catalog_entries', 'ingredients'];
 const codes = ['energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg', 'sugars_g', 'fiber_g', 'saturated_fat_g'];
 const keys = (table, row) => table === 'nutrition_values' ? { profile_id: row.profile_id, nutrient_code: row.nutrient_code } : table === 'ingredient_catalog_entries' ? { ingredient_id: row.ingredient_id } : { id: row.id };
-const where = (key) => Object.entries(key).map(([k,v]) => `t.${k}::text=${literal(v)}`).join(' AND ');
+const where = (key) => Object.entries(key).map(([k,v]) => `t.${k}=${literal(v)}${k==='nutrient_code'?'':'::uuid'}`).join(' AND ');
 const assert = (condition, error) => `IF ${condition} THEN RAISE EXCEPTION '${error}'; END IF;`;
 const actual = (table, key) => `(SELECT to_jsonb(t) FROM public.${table} t WHERE ${where(key)})`;
 export function validateCompletionPlan(plan) {
@@ -30,12 +30,19 @@ export function validateCompletionPlan(plan) {
   if(plan.inserts.some(op=>!tables.slice(0,5).includes(op.table))) throw Error('COMPLETION_INSERT_SCOPE');
   const profiles=plan.inserts.filter(op=>op.table==='nutrition_profiles');
   if(profiles.length!==8 || profiles.some(op=>op.row.profile_kind!=='ingredient_source' || op.row.review_status!=='approved')) throw Error('COMPLETION_PROFILE_SCOPE');
+  for(const op of plan.inserts.filter(op=>op.table==='ingredient_nutrition_profiles')) {
+    const profile=profiles.find(p=>p.row.id===op.row.nutrition_profile_id)?.row;
+    if(profile) {
+      const item=plan.inserts.find(p=>p.table==='nutrition_source_items'&&p.row.id===profile.source_item_id)?.row;
+      if(!item||item.preparation_state!==op.row.preparation_state) throw Error('COMPLETION_PREPARATION_STATE');
+    }
+  }
   const values=plan.inserts.filter(op=>op.table==='nutrition_values').map(op=>op.row);
   if(values.length!==64 || values.filter(v=>v.amount===null).length!==6) throw Error('COMPLETION_VALUES_SCOPE');
   for(const {row:p} of profiles) if(JSON.stringify(values.filter(v=>v.profile_id===p.id).map(v=>v.nutrient_code).sort())!==JSON.stringify([...codes].sort())) throw Error('COMPLETION_NUTRIENT_SET');
   for(const v of values) if((v.amount===null)!==(v.value_status==='missing') || (v.amount!==null&&(!Number.isFinite(v.amount)||v.amount<0))) throw Error('COMPLETION_VALUE');
   for(const d of plan.decisions) {
-    if(!d.definition_scope || !d.source_evidence || !plan.expected_links.some(l=>l.ingredient_id===d.ingredient_id&&l.after[0]===d.link_id)) throw Error('COMPLETION_DEFINITION');
+    if(!d.definition_scope || !d.link_source_name || d.link_source_name.length>100 || !d.source_evidence || !plan.expected_links.some(l=>l.ingredient_id===d.ingredient_id&&l.after[0]===d.link_id)) throw Error('COMPLETION_DEFINITION');
     if(d.source_evidence.profile_kind==='product_label') {
       if(d.profile_id===d.source_evidence.source_profile_id) throw Error('COMPLETION_PRODUCT_DIRECT_LINK');
       for(const v of d.source_evidence.captured_values) {
@@ -71,14 +78,31 @@ export function renderCompletionSql(input,{reviewedBy}={}) {
   };
   const preservation=protectedTables.map(t=>`${literal(t)},${digest(t)}`).join(',');
   const insert=(op)=>{const cols=Object.keys(op.row).join(',');return `INSERT INTO public.${op.table}(${cols}) SELECT ${cols} FROM jsonb_populate_record(NULL::public.${op.table},${json(op.row)});`;};
-  const update=(op,omitSuper=false)=>{const after={...op.after};if(omitSuper)delete after.superseded_by_id;return `UPDATE public.${op.table} t SET ${Object.keys(after).map(k=>`${k}=(SELECT ${k} FROM jsonb_populate_record(NULL::public.${op.table},${json(after)}))`).join(',')} WHERE ${where(op.key)};`;};
+  // This is the exact approved-source alias pattern used by
+  // apply_reviewed_ingredient_nutrition. Remove only rows created here so source
+  // labels do not become broad, ambiguous public search synonyms.
+  const temporaryAliases=p.decisions.map(d=>`
+IF NOT EXISTS(SELECT 1 FROM public.nutrition_profiles profile JOIN public.nutrition_source_items item ON item.id=profile.source_item_id WHERE profile.id=${literal(d.profile_id)}::uuid AND item.external_name=${literal(d.link_source_name)}) THEN RAISE EXCEPTION 'COMPLETION_SOURCE_NAME_DRIFT'; END IF;
+v_created_alias_id:=NULL;
+INSERT INTO public.ingredient_synonyms(ingredient_id,synonym)
+SELECT ${literal(d.ingredient_id)}::uuid,${literal(d.link_source_name)}
+WHERE NOT EXISTS(SELECT 1 FROM public.ingredients WHERE id=${literal(d.ingredient_id)}::uuid AND lower(btrim(standard_name))=lower(btrim(${literal(d.link_source_name)})))
+ON CONFLICT(ingredient_id,synonym) DO NOTHING RETURNING id INTO v_created_alias_id;
+IF v_created_alias_id IS NOT NULL THEN v_created_alias_ids:=array_append(v_created_alias_ids,v_created_alias_id); END IF;`).join('\n');
+  const update=(op)=>{const after=op.after;return `UPDATE public.${op.table} t SET ${Object.keys(after).map(k=>`${k}=(SELECT ${k} FROM jsonb_populate_record(NULL::public.${op.table},${json(after)}))`).join(',')} WHERE ${where(op.key)};`;};
+  const replacingIds=new Set(p.updates.filter(op=>op.table==='ingredient_nutrition_profiles').map(op=>op.after.superseded_by_id));
+  const linksToInsert=p.inserts.filter(op=>op.table==='ingredient_nutrition_profiles');
+  // Preserve the existing reviewed function's transition order: insert a pending
+  // replacement, supersede the old link once, then approve the replacement.
+  const insertLinks=linksToInsert.map(op=>insert(replacingIds.has(op.row.id)?{...op,row:{...op.row,review_status:'pending',is_active:false,is_primary:false}}:op)).join('\n');
+  const approveLinks=linksToInsert.filter(op=>replacingIds.has(op.row.id)).map(op=>update({table:op.table,key:{id:op.row.id},after:{review_status:'approved',is_active:true,is_primary:true}})).join('\n');
   return `BEGIN ISOLATION LEVEL READ COMMITTED;
 SET LOCAL ROLE postgres;
 SET LOCAL standard_conforming_strings=on;
 SET LOCAL lock_timeout='10s';
 SET LOCAL statement_timeout='240s';
 DO ${delimiter}
-DECLARE v_cutover uuid; v_preserved jsonb;
+DECLARE v_cutover uuid; v_preserved jsonb; v_created_alias_id uuid; v_created_alias_ids uuid[]:='{}';
 BEGIN
 PERFORM pg_advisory_xact_lock(hashtextextended('homecook:nutrition-completion-20261010',0));
 -- Catalog validation requires READ COMMITTED after acquiring this shared graph lock.
@@ -97,9 +121,12 @@ SELECT jsonb_build_object(${preservation}) INTO v_preserved;
 SELECT current_cutover_attempt_id INTO v_cutover FROM public.account_generation_capability_state WHERE singleton AND state='generation_active' FOR KEY SHARE;
 IF v_cutover IS NULL THEN RAISE EXCEPTION 'COMPLETION_WRITER_UNAVAILABLE'; END IF;
 PERFORM public.set_account_generation_internal_writer_marker(v_cutover,true);
-${p.updates.filter(op=>op.table==='ingredient_nutrition_profiles').map(op=>update(op,true)).join('\n')}
-${[...p.inserts].sort((a,b)=>tables.indexOf(a.table)-tables.indexOf(b.table)).map(insert).join('\n')}
+${p.inserts.filter(op=>op.table!=='ingredient_nutrition_profiles').sort((a,b)=>tables.indexOf(a.table)-tables.indexOf(b.table)).map(insert).join('\n')}
+${temporaryAliases}
+${insertLinks}
 ${p.updates.map(op=>update(op)).join('\n')}
+${approveLinks}
+DELETE FROM public.ingredient_synonyms WHERE id=ANY(v_created_alias_ids);
 ${post}
 ${links('after')}
 IF v_preserved IS DISTINCT FROM jsonb_build_object(${preservation}) THEN RAISE EXCEPTION 'COMPLETION_PRESERVATION_FAILED'; END IF;

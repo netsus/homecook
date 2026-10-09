@@ -9,7 +9,8 @@
     "actual_product_identity_claimed": false,
     "unit_conversion_separate": true,
     "history_immutable": true,
-    "automatic_ai_enabled": false
+    "automatic_ai_enabled": false,
+    "source_name_aliases": "검토된 11개 exact ID/원문명 연결에만 기존 검수 함수와 동일한 동의어 삽입 패턴 사용. 이 트랜잭션이 삽입한 임시 행만 제거하며 기존 동의어 전체를 보존한다."
   },
   "decisions": [
     {
@@ -106,7 +107,8 @@
       },
       "known_limitations": [
         "개수 무게 근거 없음; 영양 연결과 별도"
-      ]
+      ],
+      "link_source_name": "고추, 풋고추, 생것"
     },
     {
       "ingredient_id": "74807485-7b47-4243-80c6-58bf5bd538ca",
@@ -200,7 +202,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "오리고기, 조미훈제"
     },
     {
       "ingredient_id": "b0e0a390-94ab-5f07-b900-57cc2bbc11a3",
@@ -294,7 +297,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "두유, 콩국물, 소금 0.3%"
     },
     {
       "ingredient_id": "b486109e-e04e-409a-924f-638dc78258e4",
@@ -379,7 +383,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "사각어묵 (제품 라벨 기반 서비스 대표 예시)"
     },
     {
       "ingredient_id": "e10a1b06-34ec-5078-9f92-bf6e548afb35",
@@ -464,7 +469,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "초코칩 (제품 라벨 기반 서비스 대표 예시)"
     },
     {
       "ingredient_id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f",
@@ -549,7 +555,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "조미김 (제품 라벨 기반 서비스 대표 예시)"
     },
     {
       "ingredient_id": "775026fb-a00e-44f0-995d-dfc5599463b1",
@@ -634,7 +641,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "바닐라 페이스트 (제품 라벨 기반 서비스 대표 예시)"
     },
     {
       "ingredient_id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
@@ -719,7 +727,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "다크 커버춰 (제품 라벨 기반 서비스 대표 예시)"
     },
     {
       "ingredient_id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
@@ -804,7 +813,8 @@
           }
         ]
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "크림 소스 (제품 라벨 기반 서비스 대표 예시)"
     },
     {
       "ingredient_id": "335eff99-f04c-4942-adee-5aea91c32dd9",
@@ -983,7 +993,8 @@
           "unit": "g"
         }
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "Bread, whole-wheat, commercially prepared"
     },
     {
       "ingredient_id": "9dc0ee0f-7aab-416b-8eb7-4447a8139b0e",
@@ -1162,7 +1173,8 @@
           "unit": "g"
         }
       },
-      "known_limitations": []
+      "known_limitations": [],
+      "link_source_name": "Yogurt, Greek, plain, whole milk"
     }
   ],
   "preconditions": [
@@ -1741,10 +1753,11 @@
           "original_source_version": "2026-08-28",
           "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
           "original_values_sha256": "cce573e30d08ea26ab9be369608894a2",
-          "missing_values_preserved": true
+          "missing_values_preserved": true,
+          "original_preparation_state": null
         },
         "external_item_key": "service-example:사각어묵",
-        "preparation_state": null,
+        "preparation_state": "as_published",
         "source_basis_text": "100g",
         "source_basis_unit": "g",
         "stable_fingerprint": "cbc0ca49cc9cb5ae1fc6ed81f2c37c05ab2077c845393f1ac6d43670a6a9f3f9",
@@ -1927,10 +1940,11 @@
           "original_source_version": "2026-08-28",
           "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
           "original_values_sha256": "7554461698cdfd794cdc029560135b79",
-          "missing_values_preserved": true
+          "missing_values_preserved": true,
+          "original_preparation_state": null
         },
         "external_item_key": "service-example:초코칩",
-        "preparation_state": null,
+        "preparation_state": "as_published",
         "source_basis_text": "100g",
         "source_basis_unit": "g",
         "stable_fingerprint": "a861ee3c93735ed2484a7630e3c702b57944a9c7829991603af9f5d435fabe90",
@@ -2113,10 +2127,11 @@
           "original_source_version": "2026-08-28",
           "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
           "original_values_sha256": "5e9bfaa2149ab872d039378af37dfb5b",
-          "missing_values_preserved": true
+          "missing_values_preserved": true,
+          "original_preparation_state": null
         },
         "external_item_key": "service-example:조미김",
-        "preparation_state": null,
+        "preparation_state": "as_published",
         "source_basis_text": "100g",
         "source_basis_unit": "g",
         "stable_fingerprint": "a57b0e67107616b9e086f9e82e2a6f6fe4718e5eb11a901da48a8cbf92715620",
@@ -2299,10 +2314,11 @@
           "original_source_version": "2026-08-28",
           "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
           "original_values_sha256": "4e0c567542a4be52672f34aa6c78ca6c",
-          "missing_values_preserved": true
+          "missing_values_preserved": true,
+          "original_preparation_state": null
         },
         "external_item_key": "service-example:바닐라 페이스트",
-        "preparation_state": null,
+        "preparation_state": "as_published",
         "source_basis_text": "100ml",
         "source_basis_unit": "ml",
         "stable_fingerprint": "ea8f7f4061efb53ce5f41bb576abb3796781069d746a091697c235c505dd4199",
@@ -2485,10 +2501,11 @@
           "original_source_version": "2026-08-28",
           "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
           "original_values_sha256": "da471737826157753fa36caed7de96d0",
-          "missing_values_preserved": true
+          "missing_values_preserved": true,
+          "original_preparation_state": null
         },
         "external_item_key": "service-example:다크 커버춰",
-        "preparation_state": null,
+        "preparation_state": "as_published",
         "source_basis_text": "100g",
         "source_basis_unit": "g",
         "stable_fingerprint": "a577912fd538ebe2b9c037c90993b45f829bb7415546f95863b549e1defb4371",
@@ -2671,10 +2688,11 @@
           "original_source_version": "2026-08-28",
           "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
           "original_values_sha256": "60553415c5c4a4638001c8a0bf63a279",
-          "missing_values_preserved": true
+          "missing_values_preserved": true,
+          "original_preparation_state": null
         },
         "external_item_key": "service-example:크림 소스",
-        "preparation_state": null,
+        "preparation_state": "as_published",
         "source_basis_text": "100g",
         "source_basis_unit": "g",
         "stable_fingerprint": "8206f74b091424b942ebe4dffd90a66371bc1230fb5f6cc1bf7d967dc0bf44f6",
@@ -3780,5 +3798,5 @@
     "reused_official_profiles": 3,
     "product_service_examples": 6
   },
-  "operation_checksum": "9c8d6e2d1425c605ba7858fe6656e86027b039a5fc33619126f9fbb346924a90"
+  "operation_checksum": "7c067279ba9e5a6c96592e5b86edcb0ffd1cf3a1e6456168bb4f21d8f34cabc9"
 }

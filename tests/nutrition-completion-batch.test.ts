@@ -54,6 +54,11 @@ describe('reviewed nutrition completion batch', () => {
       if(op.row.reviewed_at) expect(op.row.reviewed_at).toBe('2026-10-09T22:40:00+00:00');
     }
   });
+  it('makes the copied service source preparation state explicit and consistent with its link', () => {
+    const d=original.decisions.find((d)=>d.name==='사각어묵')!;
+    const profile=original.inserts.find(o=>o.table==='nutrition_profiles'&&o.row.id===d.profile_id)!.row;
+    expect(()=>validateCompletionPlan(mutated(p=>{p.inserts.find(o=>o.table==='nutrition_source_items'&&o.row.id===profile.source_item_id)!.row.preparation_state='unknown';}))).toThrow('COMPLETION_PREPARATION_STATE');
+  });
   it('supersedes only two ingredient links while leaving original source values intact', () => {
     const links=original.updates.filter((op)=>op.table==='ingredient_nutrition_profiles');
     expect(links).toHaveLength(2);
@@ -85,7 +90,22 @@ describe('reviewed nutrition completion batch', () => {
     expect(sql).toContain('public.recipe_content_snapshots');
     expect(sql).not.toContain('__PRIVATE_REVIEWER__');
     expect(sql).not.toMatch(/(?:UPDATE|DELETE FROM) public\.(?:nutrition_values|nutrition_profiles|nutrition_source_items|recipes|recipe_ingredients|recipe_nutrition_snapshots)/);
-    expect(sql.indexOf('is_active=(SELECT is_active')).toBeLessThan(sql.indexOf('INSERT INTO public.ingredient_nutrition_profiles'));
+    expect(sql.indexOf('INSERT INTO public.ingredient_nutrition_profiles')).toBeLessThan(sql.indexOf('is_active=(SELECT is_active'));
+    expect(sql).toContain('\"review_status\":\"pending\"');
+    expect(sql.match(/UPDATE public\.ingredient_nutrition_profiles t SET/g)).toHaveLength(4);
+  });
+  it('limits temporary source-name aliases to the reviewed exact identities and removes only inserted IDs', () => {
+    const sql=renderCompletionSql(original,{reviewedBy:reviewer});
+    for(const d of original.decisions) {
+      expect(d.link_source_name.length).toBeLessThanOrEqual(100);
+      expect(sql).toContain(`profile.id='${d.profile_id}'::uuid AND item.external_name=`);
+      expect(sql).toContain(`SELECT '${d.ingredient_id}'::uuid,`);
+    }
+    expect(sql).toContain('COMPLETION_SOURCE_NAME_DRIFT');
+    expect(sql).toContain('ON CONFLICT(ingredient_id,synonym) DO NOTHING RETURNING id INTO v_created_alias_id');
+    expect(sql).toContain('DELETE FROM public.ingredient_synonyms WHERE id=ANY(v_created_alias_ids)');
+    expect(sql.indexOf('DELETE FROM public.ingredient_synonyms WHERE id=ANY(v_created_alias_ids)')).toBeLessThan(sql.indexOf('IF v_preserved IS DISTINCT'));
+    expect(sql).not.toMatch(/DISABLE TRIGGER|session_replication_role/);
   });
   it('rejects identifier injection and writes beyond allowed columns', () => {
     expect(()=>validateCompletionPlan(mutated(p=>{Object.assign(p.updates[0].key,{"id) OR true;--":"x"});}))).toThrow('COMPLETION_KEY');
