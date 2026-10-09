@@ -383,12 +383,14 @@ async function finalize() {
   return finalPlan;
 }
 
-async function sessionJson(session, sql) {
-  return JSON.parse(lastLine(await session.query(sql)));
+export async function sessionJson(session, sql) {
+  // json_agg may contain literal newlines between array rows. Keep the entire
+  // one-result payload; taking its last line silently discards the array prefix.
+  return JSON.parse((await session.query(sql)).trim());
 }
 
 async function collectSessionDatabase(session, target, { post = false } = {}) {
-  const readiness = await sessionJson(session, `SELECT set_config('request.jwt.claims','{"role":"youtube_extraction_worker"}',true); SELECT public.read_youtube_extraction_enqueue_readiness();`);
+  const readiness = await sessionJson(session, `SET LOCAL request.jwt.claims='{"role":"youtube_extraction_worker"}'; SELECT public.read_youtube_extraction_enqueue_readiness(); SET LOCAL request.jwt.claims='';`);
   const policy = await sessionJson(session, "SELECT jsonb_build_object('enabled',enabled,'policyVersion',policy_version,'extractorMode',extractor_mode,'pipelineIdentity',pipeline_identity,'resultAffectingOptions',result_affecting_options) FROM private.youtube_extraction_current_policy WHERE policy_key='primary';");
   const credential = await sessionJson(session, "SELECT jsonb_build_object('generation',current_generation,'releaseSha',release_sha,'schemaIdentity',schema_identity,'allowedSnapshotDigest',allowed_snapshot_digest,'expiresAt',expires_at) FROM private.youtube_extraction_worker_credentials WHERE credential_name='primary';");
   const queue = await sessionJson(session, "SELECT jsonb_build_object('queued',count(*) filter(where status='queued'),'processing',count(*) filter(where status='processing')) FROM public.youtube_extraction_jobs;");

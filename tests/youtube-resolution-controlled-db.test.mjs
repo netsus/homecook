@@ -5,8 +5,16 @@ import test from "node:test";
 
 import {
   observeYoutubeResolutionWorkerStopped,
+  sessionJson,
   stripExactMigrationWrapper,
 } from "../scripts/youtube-resolution-controlled-db.mjs";
+
+test("reads multiline PostgreSQL json_agg as one complete result", async () => {
+  const rows = [{ filename: "first.sql", sha256: "a" }, { filename: "last.sql", sha256: "b" }];
+  const result = await sessionJson({ query: async () => `${JSON.stringify(rows[0]).replace(/^\{/u, "[{")},\n${JSON.stringify(rows[1])}]\n` }, "SELECT json_agg(...)");
+  assert.deepEqual(result, rows);
+  await assert.rejects(sessionJson({ query: async () => '{}\n{}' }, "bad multiple results"), SyntaxError);
+});
 
 test("strips only the exact reviewed top-level transaction wrapper", () => {
   const committed = (name) => execFileSync("git", ["show", `c51d53871f31c7840fe24792b46b191ca963b11b:supabase/migrations/${name}`]);
