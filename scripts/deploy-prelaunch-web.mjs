@@ -16,6 +16,7 @@ import { loadAiNutritionReview, reviewedAiNutritionReadiness, verifyAiNutritionA
 import { loadPieceUnitReview, reviewedPieceUnitReadiness, verifyPieceUnitAppliedDatabase, pieceUnitAppliedDatabaseState, PIECE_UNIT_RECOVERY_MESSAGE } from "./lib/prelaunch-piece-unit-readiness.mjs";
 import { loadIngredientSearchReview, reviewedIngredientSearchReadiness, verifyIngredientSearchAppliedDatabase } from "./lib/prelaunch-ingredient-search-readiness.mjs";
 import { assertYoutubeTrialSource, loadYoutubeTrialReview, reviewedYoutubeTrialReadiness, verifyYoutubeTrialAppliedDatabase, verifyYoutubeTrialSourceBackfill } from "./lib/prelaunch-youtube-trial-readiness.mjs";
+import { loadYoutubeResolutionReview, reviewedYoutubeResolutionReadiness, verifyYoutubeResolutionAppliedDatabase } from "./lib/prelaunch-youtube-resolution-readiness.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
@@ -60,7 +61,8 @@ function assertClean(cwd) {
     throw new DeploymentError("현재 웹 checkout에 수정한 추적 파일이 있어 배포를 중단합니다.");
   }
 }
-function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript, youtubeTrialReview = null) {
+function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript,
+  youtubeTrialReview = null, youtubeResolutionReview = null) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
   git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
@@ -74,7 +76,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   }
   const manifest = (sha) => JSON.parse(git(["show", `${sha}:package.json`]));
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
-    { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview) });
+    { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview) });
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts };
 }
@@ -110,7 +112,7 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
     return env?.MUMEOK_ROUND2_ENABLED === "true" || env?.MUMEOK_ROUND2_RELEASE_SHA || env?.MUMEOK_ROUND2_READINESS_PATH || env?.MUMEOK_ROUND2_REPOSITORY_ROOT;
   });
   if (!configured) {
-    if (options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness || options.reviewedIngredientSearchReadiness || options.reviewedPieceUnitReadiness || options.reviewedYoutubeTrialReadiness) throw new DeploymentError("검토한 한정 배포에는 원본 R2 실행 설정이 필요합니다.");
+    if (options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness || options.reviewedIngredientSearchReadiness || options.reviewedPieceUnitReadiness || options.reviewedYoutubeTrialReadiness || options.reviewedYoutubeResolutionReadiness) throw new DeploymentError("검토한 한정 배포에는 원본 R2 실행 설정이 필요합니다.");
     return plist;
   }
   const source = live.plist.EnvironmentVariables?.MUMEOK_ROUND2_READINESS_PATH;
@@ -132,6 +134,10 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
     const reviewed = await reviewedYoutubeTrialReadiness({ ...input, databasePlan, repositoryRoot: plist.WorkingDirectory, configPath: options.dbConfig });
     readiness = reviewed.readiness;
     atomicWrite(join(release, "round2-youtube-trial-source-review.json"), JSON.stringify(reviewed.review, null, 2));
+  } else if (options.reviewedYoutubeResolutionReadiness) {
+    const reviewed = await reviewedYoutubeResolutionReadiness({ ...input, databasePlan, repositoryRoot: plist.WorkingDirectory, configPath: options.dbConfig });
+    readiness = reviewed.readiness;
+    atomicWrite(join(release, "round2-youtube-resolution-source-review.json"), JSON.stringify(reviewed.review, null, 2));
   } else if (options.reviewedAiNutritionReadiness) {
     const reviewed = await reviewedAiNutritionReadiness({ ...input, databasePlan, repositoryRoot: plist.WorkingDirectory, configPath: options.dbConfig });
     readiness = reviewed.readiness;
@@ -227,6 +233,9 @@ async function verifyAppliedDatabase(options, checkout) {
   if (options.reviewedYoutubeTrialReadiness) {
     return verifyYoutubeTrialAppliedDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, releaseSha: options.ref });
   }
+  if (options.reviewedYoutubeResolutionReadiness) {
+    return verifyYoutubeResolutionAppliedDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, releaseSha: options.ref });
+  }
   if (options.reviewedAiNutritionReadiness) {
     return verifyAiNutritionAppliedDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, releaseSha: options.ref });
   }
@@ -246,11 +255,12 @@ async function deploy(options) {
   if (options.reviewedIngredientSearchReadiness) await loadIngredientSearchReview();
   const youtubeTrialReview = options.reviewedYoutubeTrialReadiness ? await loadYoutubeTrialReview() : null;
   if (youtubeTrialReview) await verifyYoutubeTrialSourceBackfill({ review: youtubeTrialReview, repositoryRoot: repository });
+  const youtubeResolutionReview = options.reviewedYoutubeResolutionReadiness ? await loadYoutubeResolutionReview() : null;
   if (options.reviewedAiNutritionReadiness) await loadAiNutritionReview();
   if (options.reviewedFeedbackReadiness) await loadFeedbackReview();
   if (existsSync(recoveryPath)) throw new DeploymentError("이전 배포 복구가 남아 있습니다. status와 rollback을 먼저 실행하세요.");
   const live = current();
-  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview);
+  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview);
   const patch = readEnvironmentPatch(options.envFile, repository);
   const needsDatabase = selection.scope.database.length > 0 || Boolean(options.dbConfig);
   if (needsDatabase && !options.dbConfig) throw new DeploymentError("DB 변경이 포함되어 있습니다. --db-config <비공개 full-local 설정 파일>을 지정하세요. 웹은 변경하지 않았습니다.");
@@ -330,7 +340,7 @@ process.exit(result.status ?? 1);`;
         const finalPlan = await verifyAppliedDatabase(options, checkout);
         if (JSON.stringify(finalPlan) !== JSON.stringify(databasePlan)) throw new DeploymentError("준비 중 DB 이력이 바뀌었습니다.");
       }
-      if (options.reviewedYoutubeTrialReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
+      if (options.reviewedYoutubeTrialReadiness || options.reviewedYoutubeResolutionReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
       else if (options.reviewedRepairReadiness || options.reviewedBetaReadiness || options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness || options.reviewedIngredientSearchReadiness || options.reviewedPieceUnitReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
       assertClean(live.cwd);
       if (!readFileSync(plistPath).equals(live.bytes)) throw new DeploymentError("준비 중 웹 설정이 바뀌었습니다.");
@@ -379,7 +389,7 @@ async function rollback() {
 async function main() {
   const { action, args } = parsePrelaunchArgs(process.argv.slice(2));
   if (action === "help" || action === "--help") {
-    say("추가 옵션: --skip-automated-tests (명시적 테스트 생략), --already-applied-db (checksum 이력만 대조), --reviewed-repair-readiness (20260918 복구본의 한정된 R2 재검증), --reviewed-beta-readiness (20260922 베타 후보의 한정된 R2 재검증), --reviewed-feedback-readiness (검토한 exact 피드백 후보·고정 DB 이력·R2 경계 재검증), --reviewed-ai-nutrition-readiness (검토한 AI 후보·204→207개 DB 이력·비활성 worker·R2 경계 재검증), --reviewed-ingredient-search-readiness (검토한 재료 검색 후보·211→212개 DB 이력·익명/worker 권한 보존), --reviewed-piece-unit-readiness (검토한 개수 단위 후보·212→213개 DB 이력·기존 권한·과거 영양 보존)\n출시 전 웹/API/환경/추가형 DB 빠른 배포\nplan | deploy [--ref <커밋, 기본 origin/master>] [--env-file <비공개 dotenv>] [--db-config <비공개 full-local 설정>] [--db-baseline <비공개 JSON>] [--db-compatible] [--test-script <package.json test 명령>] [--verify-script <추가 검증 명령>]\nstatus | rollback\nplan은 변경 파일과 환경 키 이름만 표시합니다. deploy는 설치·빌드·확인 후 웹을 교체합니다.\n환경 파일은 Git 저장소 밖 0600 권한이어야 합니다. 키 값은 명령 인수에 넣지 마세요.\nAPI 변경은 기본 test:product를 실행하며 --test-script로 관련 test 명령을 선택하고 --verify-script로 추가 검증을 지정할 수 있습니다.\nDB 변경은 격리 검증·백업·트랜잭션으로 반영하며, 웹 rollback으로 DB를 되돌리지 않습니다.\n검토한 긴급 수정은 --ref 대신 --reviewed-ref <현재 웹 후속 커밋 40자리 SHA>를 사용합니다.");
+    say("추가 옵션: --skip-automated-tests (명시적 테스트 생략), --already-applied-db (checksum 이력만 대조), --reviewed-repair-readiness (20260918 복구본의 한정된 R2 재검증), --reviewed-beta-readiness (20260922 베타 후보의 한정된 R2 재검증), --reviewed-feedback-readiness (검토한 exact 피드백 후보·고정 DB 이력·R2 경계 재검증), --reviewed-ai-nutrition-readiness (검토한 AI 후보·204→207개 DB 이력·비활성 worker·R2 경계 재검증), --reviewed-ingredient-search-readiness (검토한 재료 검색 후보·211→212개 DB 이력·익명/worker 권한 보존), --reviewed-piece-unit-readiness (검토한 개수 단위 후보·212→213개 DB 이력·기존 권한·과거 영양 보존), --reviewed-youtube-resolution-readiness (검토한 YouTube 재료 연결 후보·213→215 DB·동일 v63 runtime)\n출시 전 웹/API/환경/추가형 DB 빠른 배포\nplan | deploy [--ref <커밋, 기본 origin/master>] [--env-file <비공개 dotenv>] [--db-config <비공개 full-local 설정>] [--db-baseline <비공개 JSON>] [--db-compatible] [--test-script <package.json test 명령>] [--verify-script <추가 검증 명령>]\nstatus | rollback\nplan은 변경 파일과 환경 키 이름만 표시합니다. deploy는 설치·빌드·확인 후 웹을 교체합니다.\n환경 파일은 Git 저장소 밖 0600 권한이어야 합니다. 키 값은 명령 인수에 넣지 마세요.\nAPI 변경은 기본 test:product를 실행하며 --test-script로 관련 test 명령을 선택하고 --verify-script로 추가 검증을 지정할 수 있습니다.\nDB 변경은 격리 검증·백업·트랜잭션으로 반영하며, 웹 rollback으로 DB를 되돌리지 않습니다.\n검토한 긴급 수정은 --ref 대신 --reviewed-ref <현재 웹 후속 커밋 40자리 SHA>를 사용합니다.");
     return;
   }
   if (process.platform !== "darwin") throw new DeploymentError("macOS 웹 서버에서 실행해야 합니다.");
@@ -397,7 +407,8 @@ async function main() {
   if (action === "plan") {
     const youtubeTrialReview = options.reviewedYoutubeTrialReadiness ? await loadYoutubeTrialReview() : null;
     if (youtubeTrialReview) await verifyYoutubeTrialSourceBackfill({ review: youtubeTrialReview, repositoryRoot: repository });
-    const selection = plan(options.ref, current(), options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview);
+    const youtubeResolutionReview = options.reviewedYoutubeResolutionReadiness ? await loadYoutubeResolutionReview() : null;
+    const selection = plan(options.ref, current(), options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview);
     const environmentKeys = Object.keys(readEnvironmentPatch(options.envFile, repository)).sort();
     say(JSON.stringify({ ...selection, environmentKeys, database: { required: selection.scope.database.length > 0 || Boolean(options.dbConfig), configProvided: Boolean(options.dbConfig), readOnly: Boolean(options.alreadyAppliedDb), requiresCompatibilityConfirmation: (selection.scope.database.length > 0 || Boolean(options.dbConfig)) && !options.dbCompatible && !options.alreadyAppliedDb, note: "DB 이력·현재 스키마·추가형 변경 여부는 배포 시 대상 커밋에서 검사합니다." } }, null, 2));
     return;
