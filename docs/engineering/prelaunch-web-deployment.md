@@ -312,3 +312,11 @@ Live 웹 Git에는 DB에 이미 적용된 historical migration 22개가 없지�
 Worker env와 full-local DB config는 서로 다른 고정 private path다. Worker install plan에는 worker env만 전달하고, DB adapter와 공식 backup readiness verifier에는 full-local config만 전달한다. 두 경로가 같으면 중단한다. prepare와 mutation 직전에는 실제 DB policy v3·snapshot·pipeline/options, credential generation/JTI hash/expiry/release/schema/digest, queued/processing 0, permit 미점유, DB target/210 receipt를 읽기 전용으로 대조한다. 별도 maintenance 컬럼을 가정하지 않으며, 이전 실행 웹 `7b672ef…`의 고정 plist/cwd Git SHA/build ID와 policy v2 불일치가 새 enqueue를 거부하는 기존 fence도 확인한다.
 
 installer는 worker 전용 O_EXCL lock을 잡고 canonical production promotion lock이 있으면 거부한다. 고정 LaunchAgent label/path의 기존 plist hash와 loaded 상태를 다시 확인하고, create-only 비공개 백업 뒤 0600 원자 교체·bootout/bootstrap·running/current-input attestation을 수행한다. 실패하면 이전 plist와 이전 loaded 상태만 복원한다. DB policy rollback을 했다고 주장하지 않으며 journal에 `dbPolicyRollbackPerformed:false`를 남겨 coherent forward fix가 필요함을 보존한다. HTTP/Docker/access 범위를 추가하지 않고 모델을 호출하지 않는다.
+
+## 2026-10-09 — 대표 재료 검색 반영
+
+`--reviewed-ingredient-search-readiness`는 운영 웹 `370483030665cb25548c40865544c3b6f4f49cbc` → 웹 후보 `4fe84f825c547904c4af969c8c72756d4e59a54b`, 통합 소스 `4680b207b8e5000bc5a1343c9faccdd3e1f544d2`를 비공개 manifest와 파일별 해시로 고정한다. `--already-applied-db --db-config`와 함께 사용하며 SQL을 실행하지 않는다. 별도 백업·격리 복원·실제 역할 검사·rollback 사전 실행 후 적용한 `20261009090000_ingredient_canonical_search.sql` 하나만 기존211개 원장에 더해212개임을 확인한다.
+
+기존 영양정보와 사용 기록, 동의어는 보존하고 옛 이름17개만 추가한다. 내부 권한검사 체인은 그대로 두며 익명 조회는 ingredients scope의 GET alias view 하나만 추가한다. 비동기 추출 역할에는 alias 행의 재료ID·대표ID·표시분류 세 열 SELECT만 허용한다. 기존 R2 증거·시각·데이터와 실제 권한을 교체 직전까지 다시 대조한다. AI 영양 자동 실행은 사용자 선택에 따라 계속 비활성화한다.
+
+웹 후보는 현재 Luna 추출 앱 코드를 보존하며 통합 소스의 앱 트리와 동일하다. 웹 검사는 `test:ingredient-canonical-search:web`을 사용하고 SQL 정적 검사 및 실제 역할 검사는 통합 소스와 격리 DB에서 수행한다. worker 설치·환경·Docker 변경은 포함하지 않는다.
