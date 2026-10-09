@@ -30,6 +30,21 @@ const exactWorkerOutput: YoutubeI031WorkerOutput = {
         unit: "g",
         optional: false,
         groupLabel: "찌개",
+        quantityState: "explicit",
+        amountBasis: "spoken",
+        originalName: "김치",
+        alternativeNames: ["묵은지"],
+        evidenceRefs: [{
+          source_method: "caption",
+          source_provider: "youtube",
+          snippet: "김치 200g",
+          line_index: 1,
+          start_ms: 1000,
+          end_ms: 2000,
+          frame_ts_ms: null,
+          locator_hash: "abc123",
+          evidence_id: "S0001",
+        }],
       },
       {
         name: "소금",
@@ -134,6 +149,13 @@ describe("YouTube i031 exact runtime", () => {
     expect(parsed.meta).toEqual(exactWorkerOutput.meta);
     expect(parsed.meta).not.toHaveProperty("rawPrompt");
     expect(parsed.meta).not.toHaveProperty("frameCacheDir");
+    expect(parsed.recipe.ingredients[0]).toMatchObject({
+      quantityState: "explicit",
+      amountBasis: "spoken",
+      originalName: "김치",
+      alternativeNames: ["묵은지"],
+      evidenceRefs: [{ evidence_id: "S0001", source_method: "caption" }],
+    });
 
     expect(() => parseYoutubeI031WorkerOutput({
       ...exactWorkerOutput,
@@ -145,8 +167,8 @@ describe("YouTube i031 exact runtime", () => {
   });
 
   it("rejects historical model output under the upgraded pipeline", () => {
-    expect(I031_EXACT_IDENTITY.pipelineVersion).toBe("i031-sol-v1");
-    expect(I031_EXACT_IDENTITY.model).toBe("gpt-5.6-sol");
+    expect(I031_EXACT_IDENTITY.pipelineVersion).toBe("vision-evidence-v2-source-anchored");
+    expect(I031_EXACT_IDENTITY.model).toBe("gpt-5.6-luna");
     expect(I031_EXACT_IDENTITY.selectorModel).toBe("gpt-5.6-sol");
     for (const change of [
       { model: "gpt-5.4" },
@@ -158,6 +180,60 @@ describe("YouTube i031 exact runtime", () => {
         ...exactWorkerOutput,
         identity: { ...exactWorkerOutput.identity, ...change },
       })).toThrowError(/I031_IDENTITY_MISMATCH/u);
+    }
+  });
+
+  it("accepts legacy schema-1 ingredients without optional evidence metadata", () => {
+    const parsed = parseYoutubeI031WorkerOutput({
+      ...exactWorkerOutput,
+      recipe: {
+        ...exactWorkerOutput.recipe,
+        ingredients: [{ name: "소금", amount: null, unit: null, optional: false, groupLabel: null }],
+      },
+    });
+    expect(parsed.recipe.ingredients[0]).toEqual({
+      name: "소금", amount: null, unit: null, optional: false, groupLabel: null,
+    });
+  });
+
+  it("rejects malformed or semantically inconsistent optional quantity metadata", () => {
+    const ingredient = exactWorkerOutput.recipe.ingredients[0];
+    for (const invalid of [
+      { ...ingredient, quantityState: "unknown" },
+      { ...ingredient, quantityState: "explicit", evidenceRefs: [] },
+      { ...ingredient, alternativeNames: ["a", "b", "c", "d", "e"] },
+      { ...ingredient, evidenceRefs: [{ source_method: "caption", source_provider: "youtube", snippet: "x", evidence_id: "bad id" }] },
+      { name: "간장", amount: "1", unit: "큰술", optional: false, groupLabel: null, amountBasis: "spoken" },
+      { ...ingredient, amountBasis: "onscreen", evidenceRefs: [{ source_method: "visual", source_provider: "codex-vision", snippet: "1큰술" }] },
+      { ...ingredient, quantityState: "estimated", amountBasis: "source-approximate", evidenceRefs: [{ source_method: "visual", source_provider: "codex-vision", snippet: "약 1큰술" }] },
+    ]) {
+      expect(() => parseYoutubeI031WorkerOutput({
+        ...exactWorkerOutput,
+        recipe: { ...exactWorkerOutput.recipe, ingredients: [invalid] },
+      })).toThrowError(YoutubeI031RuntimeError);
+    }
+  });
+
+  it("accepts only the qualified state, basis, and text-OCR source combinations", () => {
+    const valid = [
+      { name: "간장", amount: "1", unit: "큰술", optional: false, groupLabel: null,
+        quantityState: "explicit", amountBasis: "stated",
+        evidenceRefs: [{ source_method: "description", source_provider: "youtube", snippet: "간장 1큰술" }] },
+      { name: "간장", amount: "1", unit: "큰술", optional: false, groupLabel: null,
+        quantityState: "explicit", amountBasis: "onscreen",
+        evidenceRefs: [{ source_method: "visual", source_provider: "macos-vision-ocr", snippet: "간장 1큰술" }] },
+      { name: "간장", amount: "1", unit: "큰술", optional: false, groupLabel: null,
+        quantityState: "estimated", amountBasis: "source-adjustable",
+        evidenceRefs: [{ source_method: "visual", source_provider: "macos-vision-ocr", snippet: "간장 약 1큰술" }] },
+      { name: "소금", amount: null, unit: null, optional: false, groupLabel: null,
+        quantityState: "to_taste", amountBasis: null,
+        evidenceRefs: [{ source_method: "visual", source_provider: "macos-vision-ocr", snippet: "소금 약간" }] },
+    ];
+    for (const ingredient of valid) {
+      expect(parseYoutubeI031WorkerOutput({
+        ...exactWorkerOutput,
+        recipe: { ...exactWorkerOutput.recipe, ingredients: [ingredient] },
+      }).recipe.ingredients[0]).toMatchObject(ingredient);
     }
   });
 
@@ -311,12 +387,12 @@ describe("YouTube i031 exact runtime", () => {
           ),
         ) as { videoIds: string[]; recipeTitles: string[] };
 
-        expect(worker).toContain("single-recipe-four-source-v2");
+        expect(worker).toContain('ACTIVE_ANALYSIS_MODE = "source-anchored"');
         expect(worker).toMatch(/singleRecipeOnly:\s*true/u);
         expect(worker).toMatch(/sourceMode:\s*"source-text"/u);
         expect(worker).toMatch(/recipeMode:\s*"single"/u);
         expect(worker).toMatch(/publicSourceBundle:\s*null/u);
-        expect(Object.keys(manifest.files)).toHaveLength(12);
+        expect(Object.keys(manifest.files)).toHaveLength(22);
         const copiedFiles = (await readdir(workspace, { recursive: true, withFileTypes: true }))
           .filter((entry) => entry.isFile())
           .map((entry) => path.relative(workspace, path.join(entry.parentPath, entry.name)))
@@ -367,7 +443,7 @@ describe("YouTube i031 exact runtime", () => {
     const fallbackEnd = runtimeSource.indexOf("const source = {", fallbackStart);
     const fallbackSource = runtimeSource.slice(fallbackStart, fallbackEnd);
     expect(fallbackSource.indexOf("reserveQuota(\"external_transcript_api\", 1)"))
-      .toBeLessThan(fallbackSource.indexOf("fetchApifyCaptions(env, videoId)"));
+      .toBeLessThan(fallbackSource.indexOf("fetchApifyCaptions(env, videoId, signal)"));
     expect(workerSource).toContain("workerRpcClient.resolveMethods(methodLabels(");
     expect(workerSource).toContain('event_type: "success"');
     expect(workerSource).not.toContain("cache_hit: llmCache.cacheHit");

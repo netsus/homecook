@@ -126,16 +126,25 @@ const FIRST_CANONICAL_ADOPTION_MISSING_ARTIFACT_FILES = new Set([
 ]);
 const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT =
   "lib/server/youtube-i031-runtime/bundle";
+const OPTIONAL_RUNTIME_OCR_PATH = /^scripts\/recipe-loop\/prebuilt\/darwin-(arm64|x64)\/(manifest\.json|macos-vision-ocr)$/u;
 export const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES = Object.freeze([
+  "lib/server/owner-result-cache.mjs",
+  "lib/server/parallel-media-preparation.mjs",
   "lib/server/recipe-extraction-lab/candidate-packets.mjs",
   "lib/server/recipe-extraction-lab/extract.mjs",
   "lib/server/recipe-extraction-lab/prompt.mjs",
   "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+  "lib/server/recipe-extraction-lab/quantity-evidence.mjs",
   "lib/server/recipe-extraction-lab/source-evidence.mjs",
   "scripts/recipe-loop/extract-video-frames.py",
   "scripts/recipe-loop/lib/codex-vision-client.mjs",
   "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs",
+  "scripts/recipe-loop/lib/ingredient-event-selector.mjs",
+  "scripts/recipe-loop/lib/literal-quantity-grammar.mjs",
   "scripts/recipe-loop/lib/screen-ocr-scout.mjs",
+  "scripts/recipe-loop/lib/single-pass-vision.mjs",
+  "scripts/recipe-loop/lib/source-anchored-vision.mjs",
+  "scripts/recipe-loop/lib/source-quantity-owner-hints.mjs",
   "scripts/recipe-loop/macos-vision-ocr.swift",
   "scripts/recipe-loop/snapshot-video.mjs",
   "worker.mjs",
@@ -401,7 +410,8 @@ function makeArtifactReadOnly(directory) {
       makeArtifactReadOnly(target);
       chmodSync(target, 0o555);
     } else {
-      chmodSync(target, target.endsWith(".mjs") ? 0o555 : 0o444);
+      const executableOcrHelper = /\/scripts\/recipe-loop\/prebuilt\/darwin-(?:arm64|x64)\/macos-vision-ocr$/u.test(target);
+      chmodSync(target, target.endsWith(".mjs") || executableOcrHelper ? 0o555 : 0o444);
     }
   }
   chmodSync(directory, 0o555);
@@ -1002,7 +1012,27 @@ function assertRuntimeBundleClosure(artifactRoot, inventoryEntries) {
 
   const declaredPaths = Object.keys(bundleManifest.files).sort();
   const requiredPaths = [...YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES].sort();
-  if (JSON.stringify(declaredPaths) !== JSON.stringify(requiredPaths)) {
+  const optionalPaths = declaredPaths.filter((entry) => OPTIONAL_RUNTIME_OCR_PATH.test(entry));
+  if (optionalPaths.length) {
+    const directories = new Set(optionalPaths.map((entry) => posix.dirname(entry)));
+    if (directories.size !== 1 || optionalPaths.length !== 2
+      || !optionalPaths.some((entry) => entry.endsWith("/manifest.json"))
+      || !optionalPaths.some((entry) => entry.endsWith("/macos-vision-ocr"))) {
+      throw new Error("worker runtime OCR artifact must include one complete helper pair");
+    }
+    const helperDirectory = [...directories][0];
+    const helperRoot = resolve(artifactRoot, YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT, helperDirectory);
+    const helperManifest = readJsonFile(resolve(helperRoot, "manifest.json"), "OCR helper manifest");
+    if (helperManifest.schemaVersion !== 1 || helperManifest.platform !== "darwin"
+      || helperManifest.arch !== posix.basename(helperDirectory).slice("darwin-".length)
+      || typeof helperManifest.osRelease !== "string" || !/^\d+(?:\.\d+)+$/u.test(helperManifest.osRelease)
+      || helperManifest.sourceSha256 !== sha256File(resolve(artifactRoot, YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT, "scripts/recipe-loop/macos-vision-ocr.swift"))
+      || helperManifest.binarySha256 !== sha256File(resolve(helperRoot, "macos-vision-ocr"))) {
+      throw new Error("worker runtime OCR artifact identity/hash mismatch");
+    }
+  }
+  const requiredAndOptionalPaths = [...requiredPaths, ...optionalPaths].sort();
+  if (JSON.stringify(declaredPaths) !== JSON.stringify(requiredAndOptionalPaths)) {
     throw new Error("worker runtime bundle closure does not match required files.");
   }
 
@@ -1012,14 +1042,14 @@ function assertRuntimeBundleClosure(artifactRoot, inventoryEntries) {
     .sort();
   const requiredOuterPaths = [
     bundleManifestRelativePath,
-    ...requiredPaths.map((path) =>
+    ...requiredAndOptionalPaths.map((path) =>
       `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/${path}`),
   ].sort();
   if (JSON.stringify(declaredOuterPaths) !== JSON.stringify(requiredOuterPaths)) {
     throw new Error("worker runtime bundle closure inventory is invalid.");
   }
 
-  for (const relativePath of requiredPaths) {
+  for (const relativePath of requiredAndOptionalPaths) {
     const declaredSha = bundleManifest.files[relativePath];
     const outerPath = `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/${relativePath}`;
     const materializedPath = resolve(artifactRoot, outerPath);

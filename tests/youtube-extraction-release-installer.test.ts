@@ -194,6 +194,12 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       pipeline_identity: pipelineIdentity,
       policy_version: 2,
     });
+    const helper = join(outputDir,
+      "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/prebuilt/darwin-arm64/macos-vision-ocr");
+    expect(lstatSync(helper).mode & 0o777).toBe(0o555);
+    const helperSmoke = spawnSync(helper, [], { encoding: "utf8", timeout: 5_000 });
+    expect(helperSmoke.error?.message ?? "").not.toMatch(/EACCES|permission denied/iu);
+    expect(helperSmoke.status).not.toBeNull();
   });
 
   it("issues an exact ES256 local-only worker credential with a bounded lifetime", () => {
@@ -1004,7 +1010,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       expectedSchemaPath: inputs.expectedSchemaPath,
       secretRoot: privateDir,
       homeDir,
-      nodeBin: "/opt/homebrew/bin/node",
+      nodeBin: "/Users/tester/.nvm/versions/node/v22.19.0/bin/node",
       rootDir: inputs.artifactDir,
     });
 
@@ -1012,7 +1018,8 @@ describe("YTASYNC-OPS launchd contract", () => {
     expect(plist).toContain("<string>/usr/bin/env</string>");
     expect(plist).toContain("<string>-i</string>");
     expect(plist).toContain(`<string>HOME=${homeDir}</string>`);
-    expect(plist).toContain("<string>/opt/homebrew/bin/node</string>");
+    expect(plist).toContain("<string>/Users/tester/.nvm/versions/node/v22.19.0/bin/node</string>");
+    expect(plist).toContain("<string>PATH=/Users/tester/.nvm/versions/node/v22.19.0/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin</string>");
     expect(plist).toContain("<string>run</string>");
     expect(plist).toContain("<string>--secret-root</string>");
     expect(plist).toContain(`<string>${realpathSync(privateDir)}</string>`);
