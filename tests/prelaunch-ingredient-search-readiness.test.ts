@@ -165,6 +165,6 @@ describe("reviewed canonical ingredient search deployment", () => {
     expect(code).toContain("return verifyIngredientSearchAppliedDatabase(");
     expect(code).toContain("await reviewedIngredientSearchReadiness({ ...input, databasePlan");
     expect(code).toContain("round2-ingredient-search-source-review.json");
-    expect(code).toMatch(/options\.reviewedIngredientSearchReadiness\) await stageRound2Readiness/);
+    expect(code).toMatch(/options\.reviewedIngredientSearchReadiness \|\| options\.reviewedPieceUnitReadiness\) await stageRound2Readiness/);
   });
 });
