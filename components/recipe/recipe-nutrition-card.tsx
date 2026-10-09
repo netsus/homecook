@@ -2,6 +2,7 @@ import React from "react";
 import type { ReactNode } from "react";
 
 import type { RecipeNutrition } from "@/types/recipe";
+import { MEAL_LOG_MACROS } from "@/lib/planner/meal-log-nutrition-presentation";
 
 import {
   buildRecipeNutritionDisplay,
@@ -33,7 +34,7 @@ export function RecipeNutritionCard({
         action={
           <button
             aria-label="영양 정보 다시 시도"
-            className="mt-4 min-h-11 rounded-[var(--radius-control)] border border-[var(--brand-primary-border)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-bold text-[var(--brand-primary-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            className="mt-4 min-h-11 rounded-[var(--radius-control)] border border-[var(--brand-primary-border)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-medium text-[var(--brand-primary-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
             onClick={onRetry}
             type="button"
           >
@@ -130,55 +131,44 @@ function NutritionGraph({
   const coreByCode = new Map(coreNutrients.map((item) => [item.code, item]));
   const energyDisplay = coreByCode.get("energy_kcal");
   const energy = selectedNutritionAmount(nutrition, "energy_kcal", selectedServings, baseServings);
-  const macros = [
-    { code: "carbohydrate_g", label: "탄수화물", short: "탄", factor: 4, color: "var(--nutrition-carbohydrate)" },
-    { code: "protein_g", label: "단백질", short: "단", factor: 4, color: "var(--nutrition-protein)" },
-    { code: "fat_g", label: "지방", short: "지", factor: 9, color: "var(--nutrition-fat)" },
-  ] as const;
-  const macroValues = macros.map((macro) => ({
+  const macroValues = MEAL_LOG_MACROS.map((macro) => ({
     ...macro,
-    amount: selectedNutritionAmount(nutrition, macro.code, selectedServings, baseServings),
+    amount: selectedNutritionAmount(nutrition, macro.key, selectedServings, baseServings),
   }));
   const macroEnergy = macroValues.every((macro) => macro.amount !== null)
     ? macroValues.reduce((sum, macro) => sum + macro.amount! * macro.factor, 0)
     : 0;
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3">
-      <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-2">
-          <span className="shrink-0 rounded-[var(--radius-full)] bg-[var(--brand-primary-soft)] px-2 py-1 text-[11px] font-extrabold leading-none text-[var(--brand-primary-text)]">
-            {selectedServings}인분
-          </span>
-          <strong className="min-w-0 break-words text-[22px] font-extrabold leading-tight tabular-nums text-[var(--brand-primary-text)]">
-            {energyDisplay?.selectedTotalText ?? (energy === null ? "정보 준비 중" : `${formatNutritionNumber(energy, "kcal")} kcal`)}
-          </strong>
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--text-2)]">
+        <span>{selectedServings}인분</span>
+        {energyDisplay ? <span>1인분 {energyDisplay.perServingText}</span> : null}
+      </div>
+      <p className="mt-3 break-words text-3xl font-semibold leading-tight tabular-nums text-[var(--foreground)]">
+        {energy === null ? "정보 준비 중" : <>{formatNutritionNumber(energy)}<span className="ml-1 text-base font-normal">kcal</span></>}
+      </p>
+      {macroEnergy > 0 && Number.isFinite(macroEnergy) ? (
+        <div aria-label="탄수화물 단백질 지방 비율" className="mt-4 flex h-3 overflow-hidden rounded-full" role="img">
+          {macroValues.map((macro) => (
+            <span
+              aria-hidden="true"
+              className="block h-full"
+              key={macro.key}
+              style={{ backgroundColor: macro.color, width: `${(macro.amount! * macro.factor / macroEnergy) * 100}%` }}
+            />
+          ))}
         </div>
-        {energyDisplay ? (
-          <span className="min-w-0 break-words text-[12px] font-bold text-[var(--text-2)] sm:text-right">
-            1인분 {energyDisplay.perServingText}
-          </span>
-        ) : null}
-      </div>
-      <div aria-label="탄수화물 단백질 지방 비율" className="mt-2.5 flex h-3 overflow-hidden rounded-full bg-[var(--surface-fill)]" role="img">
-        {macroEnergy > 0 ? macroValues.map((macro) => (
-          <span
-            aria-hidden="true"
-            className="block h-full"
-            key={macro.code}
-            style={{ backgroundColor: macro.color, width: `${(macro.amount! * macro.factor / macroEnergy) * 100}%` }}
-          />
-        )) : null}
-      </div>
-      <dl className="mt-2 flex flex-wrap items-center justify-start gap-x-3 gap-y-1 text-[12px]">
+      ) : null}
+      <dl className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
         {macroValues.map((macro) => (
-          <div className="inline-flex items-center gap-1.5" key={macro.code}>
-            <dt className="flex items-center gap-1 font-bold text-[var(--text-2)]">
-              <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />
-              {macro.short}
+          <div className="min-w-0" key={macro.key}>
+            <dt className="text-[var(--text-2)]">
+              <span aria-hidden="true" className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />
+              <span aria-label={macro.label}>{macro.short}</span>
             </dt>
-            <dd className="font-extrabold tabular-nums text-[var(--foreground)]">
-              {coreByCode.get(macro.code)?.selectedTotalText ?? (macro.amount === null ? "정보 준비 중" : `${formatNutritionNumber(macro.amount, "g")} g`)}
+            <dd className="mt-1 text-lg font-normal tabular-nums text-[var(--foreground)]">
+              {macro.amount === null ? <span className="text-sm">정보 준비 중</span> : <>{formatNutritionNumber(macro.amount)}<span className="ml-0.5 text-sm text-[var(--text-2)]">g</span></>}
             </dd>
           </div>
         ))}
@@ -198,11 +188,17 @@ function selectedNutritionAmount(
   const fixedValue = nutrition.fixed_values?.[code];
   if (
     !baseServings ||
+    !Number.isFinite(baseServings) ||
     baseServings <= 0 ||
+    !Number.isFinite(selectedServings) ||
     selectedServings <= 0 ||
     (value?.status !== "complete" && value?.status !== "partial") ||
     typeof scalableValue !== "number" ||
-    typeof fixedValue !== "number"
+    !Number.isFinite(scalableValue) ||
+    scalableValue < 0 ||
+    typeof fixedValue !== "number" ||
+    !Number.isFinite(fixedValue) ||
+    fixedValue < 0
   ) {
     return null;
   }
@@ -210,10 +206,8 @@ function selectedNutritionAmount(
   return Number.isFinite(amount) ? amount : null;
 }
 
-function formatNutritionNumber(amount: number, unit: "kcal" | "g" | "mg") {
-  return new Intl.NumberFormat("ko-KR", {
-    maximumFractionDigits: unit === "g" ? 1 : 0,
-  }).format(amount);
+function formatNutritionNumber(amount: number) {
+  return Math.round(amount).toLocaleString("ko-KR");
 }
 
 function NutritionTable({
@@ -256,7 +250,7 @@ function NutritionTable({
               <td className="break-keep px-1.5 py-2.5 text-right font-medium">
                 {nutrient.perServingText}
               </td>
-              <td className="break-keep px-2.5 py-2.5 text-right font-bold">
+              <td className="break-keep px-2.5 py-2.5 text-right font-medium">
                 {nutrient.selectedTotalText}
               </td>
             </tr>
@@ -301,10 +295,10 @@ function NutritionStateCard({
 }) {
   return (
     <section className={cardClassName(variant)} data-testid={testId}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--brand-primary-text)]">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--brand-primary-text)]">
         예상 영양
       </p>
-      <h2 className="mt-1 text-[17px] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+      <h2 className="mt-1 text-[17px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
         {title}
       </h2>
       <p className="mt-2 text-[13px] leading-5 text-[var(--text-2)]">
@@ -317,7 +311,7 @@ function NutritionStateCard({
 
 function cardClassName(variant: "app" | "web") {
   return [
-    "min-w-0 rounded-[16px] border border-[var(--line-strong)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]",
-    variant === "web" ? "web-recipe-nutrition-card" : "mb-5",
+    "min-w-0 rounded-[var(--radius-card)] bg-[var(--ui-sky-50)] p-4 sm:p-5",
+    variant === "app" ? "mb-5" : "",
   ].join(" ");
 }

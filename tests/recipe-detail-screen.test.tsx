@@ -338,7 +338,7 @@ describe("recipe detail screen", () => {
     await userEvent.click(screen.getByRole("button", { name: "인분 늘리기" }));
 
     expect(screen.getByRole("columnheader", { name: "선택 3인분 전체" })).toBeTruthy();
-    expect(screen.getByText("1,100 kcal")).toBeTruthy();
+    expect(screen.getByText("1,100")).toBeTruthy();
   }, 10_000);
 
   it("retries only nutrition while preserving the recipe body and fixed CTA", async () => {

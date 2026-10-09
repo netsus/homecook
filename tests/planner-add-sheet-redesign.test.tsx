@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
+import userEvent from "@testing-library/user-event";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
@@ -85,13 +86,13 @@ describe("planner addition inside one sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "추가하기" }));
     expect((await screen.findByRole("alert")).textContent).toContain("잠시 후");
     expect(api.create).toHaveBeenCalledWith(expect.objectContaining({ planned_servings: 3, plan_date: "2026-10-06", column_id: "column" }), expect.any(String));
-    fireEvent.keyDown(document, { key: "Escape" });
+    await userEvent.setup().keyboard("{Escape}");
     expect(screen.getByText("변경사항을 버릴까요?")).toBeTruthy();
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(close).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "계속 편집" }));
     expect(screen.getByLabelText("3인분")).toBeTruthy();
-    fireEvent.keyDown(document, { key: "Escape" });
+    await userEvent.setup().keyboard("{Escape}");
     fireEvent.click(screen.getByRole("button", { name: "변경사항 버리기" }));
     await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
   });
