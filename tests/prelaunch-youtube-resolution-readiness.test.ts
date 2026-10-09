@@ -65,9 +65,9 @@ describe("reviewed YouTube resolution deploy option", () => {
   });
 
   it("is fail-closed until the independently reviewed manifest is pinned", () => {
-    expect(YOUTUBE_RESOLUTION_REVIEW_PIN).toEqual({ path: null, sha256: null });
-    expect(() => assertYoutubeResolutionReviewPin(YOUTUBE_RESOLUTION_REVIEW_PIN))
+    expect(() => assertYoutubeResolutionReviewPin({ path: null, sha256: null }))
       .toThrow("not configured");
+    expect(() => assertYoutubeResolutionReviewPin(YOUTUBE_RESOLUTION_REVIEW_PIN)).not.toThrow();
   });
 
   it("accepts only an exact post-install health receipt before web activation", () => {

@@ -370,7 +370,16 @@ describe("YouTube resolution worker installer", () => {
       await expect(verifyYoutubeResolutionWorkerCaller({ environment, token: "signed-token", secretRoot: root,
         fetchImpl: async (_url, init) => new Response(null, {
           status: init?.headers && Object.hasOwn(init.headers, "authorization") ? 204 : 403,
-        }) })).resolves.toEqual({ authenticatedStatus: 200, emptyClaimStatus: 403 });
+        }) })).resolves.toEqual({ authenticatedStatus: 200, emptyClaimStatus: 403, emptyClaimDenied: true });
+      for (const message of ["ACCOUNT_SESSION_STALE", "UNRELATED_DATABASE_FAILURE"]) {
+        const probe = verifyYoutubeResolutionWorkerCaller({ environment, token: "signed-token", secretRoot: root,
+          fetchImpl: async (_url, init) => init?.headers && Object.hasOwn(init.headers, "authorization")
+            ? new Response(null, { status: 204 })
+            : Response.json({ code: "55000", message }, { status: 500 }) });
+        if (message === "ACCOUNT_SESSION_STALE") {
+          await expect(probe).resolves.toEqual({ authenticatedStatus: 200, emptyClaimStatus: 500, emptyClaimDenied: true });
+        } else await expect(probe).rejects.toThrow("empty-claim");
+      }
       let fetchCount = 0;
       await expect(verifyYoutubeResolutionWorkerCaller({ environment: {
         ...environment, HOMECOOK_YOUTUBE_WORKER_DATA_API_URL: "https://attacker.example/rest/v1?leak=1",

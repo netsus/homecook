@@ -10,6 +10,18 @@ export const LIVE_POLICY_SNAPSHOT_DIGEST = "e40c9f4ef0d8a9241e49635f0fc906fe92a2
 export const LIVE_CREDENTIAL_GENERATION = 45;
 export const TARGET_CREDENTIAL_GENERATION = 46;
 export const SCHEMA_IDENTITY = "youtube-extraction-worker-schema-v2";
+
+/** Keep the adapter's complete identity while adding the DB-plan aliases. */
+export function resolutionDatabaseTarget(target) {
+  const systemId = target?.database?.systemIdentifier;
+  const postgresMajor = target?.database?.major;
+  if (typeof systemId !== "string" || !Number.isInteger(postgresMajor)
+    || (target.systemId !== undefined && target.systemId !== systemId)
+    || (target.postgresMajor !== undefined && target.postgresMajor !== postgresMajor)) {
+    throw new Error("YouTube resolution database identity aliases disagree");
+  }
+  return { ...target, systemId, postgresMajor };
+}
 export const MIGRATIONS = Object.freeze([
   "20261009200000_youtube_ingredient_resolution.sql",
   "20261010010000_youtube_saved_ingredient_links.sql",

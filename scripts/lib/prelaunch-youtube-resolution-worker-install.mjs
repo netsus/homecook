@@ -1,5 +1,5 @@
 /** Rollback-safe installer for the exact 2026-10-10 YouTube resolution worker. */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, closeSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { assertCredentialTransition, assertWorkerInstallAuthority } from "./prelaunch-youtube-resolution-contract.mjs";
+import { assertCredentialTransition, assertWorkerInstallAuthority, resolutionDatabaseTarget } from "./prelaunch-youtube-resolution-contract.mjs";
 import { assertYoutubeResolutionRolloutReview } from "./prelaunch-youtube-resolution-readiness.mjs";
 import { getLocalMacProductionReleasePaths } from "./local-mac-production-release.mjs";
 import { createRecordingDockerAdapter } from "./marketing-round2-controlled-deploy.mjs";
@@ -24,7 +24,7 @@ import { buildYoutubeExtractionWorkerPolicySnapshotDigest } from "./youtube-extr
 export const YOUTUBE_RESOLUTION_WORKER_INSTALL_CONFIRMATION = "LOCAL_PRELAUNCH_YOUTUBE_RESOLUTION_WORKER_INSTALL";
 export const YOUTUBE_RESOLUTION_WORKER_INSTALL_PIN = Object.freeze({
   path: "/Users/cwj/.homecook/operations/youtube-resolution-20261010/worker-install.json",
-  sha256: null,
+  sha256: "bc8ef1cbd763cdaae5f958ae24d8e1de44ff558b6ce5ca85aa7b498bc3f30008",
 });
 export const YOUTUBE_RESOLUTION_WORKER_ARTIFACT_PATH = "/Users/cwj/.homecook/youtube-extraction-releases/c51d53871f31-youtube-resolution-20261010/artifact.json";
 export const YOUTUBE_RESOLUTION_WORKER_DESCRIPTOR_PATH = "/Users/cwj/.homecook/youtube-extraction/app-descriptor-c51d53871f31-youtube-resolution.json";
@@ -119,8 +119,14 @@ export async function verifyYoutubeResolutionWorkerCaller({ environment, token, 
   const empty = await fetchImpl(new URL(`${endpoint.pathname}/rpc/check_youtube_extraction_worker_pre_request`, endpoint), {
     method: "POST", headers: { apikey: gatewayApiKey, "content-type": "application/json" }, body: "{}",
   });
-  check([401, 403].includes(empty.status), "empty-claim worker pre-request was not denied");
-  return { authenticatedStatus: 200, emptyClaimStatus: empty.status };
+  const emptyBody = empty.status === 500 ? await empty.json().catch(() => null) : null;
+  // The existing full-local session guard returns SQLSTATE 55000 for a missing
+  // session. Accept only that exact denial, never a generic server error.
+  const emptyClaimDenied = [401, 403].includes(empty.status)
+    || (empty.status === 500 && emptyBody?.code === "55000"
+      && emptyBody?.message === "ACCOUNT_SESSION_STALE");
+  check(emptyClaimDenied, "empty-claim worker pre-request was not denied");
+  return { authenticatedStatus: 200, emptyClaimStatus: empty.status, emptyClaimDenied };
 }
 
 /**
@@ -137,7 +143,8 @@ export async function observeLiveInstallAuthority(manifest, inputs, previousStat
   const target = await adapter.inspect();
   check(target.database?.systemIdentifier === "7669475895419854882"
     && target.database?.major === 17
-    && isDeepStrictEqual(target, manifest.review.databaseBefore.target),
+    && isDeepStrictEqual(resolutionDatabaseTarget(target),
+      resolutionDatabaseTarget(manifest.review.databaseBefore.target)),
   "live database target differs from the reviewed predecessor");
   const [queue, permit, credential, catalogFingerprint, policy] = await Promise.all([
     adapter.query(QUEUE_SQL), adapter.query(PERMIT_SQL), adapter.query(CREDENTIAL_SQL), adapter.query(CATALOG_SQL),
@@ -199,12 +206,14 @@ function preserveLauncherEnvironment(previous, plistPreview) {
   let preview = plistPreview;
   const next = parsePlist(Buffer.from(preview));
   const nextEnv = next.ProgramArguments.slice(2).filter((value) => /^[A-Z_][A-Z0-9_]*=/u.test(value));
-  for (const value of previousEnv.filter((entry) => !nextEnv.includes(entry))) {
-    const node = next.ProgramArguments.find((entry, index) => index >= 2 && entry.startsWith("/") && !entry.includes("="));
-    check(node, "generated launcher Node argument missing");
-    const escape = (text) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-    preview = preview.replace(`<string>${escape(node)}</string>`, `<string>${escape(value)}</string>\n    <string>${escape(node)}</string>`);
-  }
+  const node = next.ProgramArguments.find((entry, index) => index >= 2 && entry.startsWith("/") && !entry.includes("="));
+  check(node, "generated launcher Node argument missing");
+  const escape = (text) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  // Replace generated bindings as a group. Appending a differing PATH would
+  // create duplicate bindings and reorder the reviewed TMPDIR/PATH values.
+  for (const value of nextEnv) preview = preview.replace(`<string>${escape(value)}</string>`, "");
+  preview = preview.replace(`<string>${escape(node)}</string>`,
+    [...previousEnv, node].map((value) => `<string>${escape(value)}</string>`).join("\n    "));
   return preview;
 }
 
@@ -235,8 +244,9 @@ export async function prepareYoutubeResolutionWorkerInstall(manifest, adapters =
   const token = readBytes(inputs.credentialState.token_file).toString("utf8").trim();
   const claims = decodeYoutubeResolutionWorkerJwt(token);
   assertYoutubeResolutionWorkerJwtClaims(claims, {
-    audience: environment.HOMECOOK_YOUTUBE_WORKER_AUDIENCE,
-    issuer: environment.HOMECOOK_YOUTUBE_WORKER_ISSUER,
+    // These are fixed by the existing ES256 issuer, not worker dotenv keys.
+    audience: "youtube-extraction",
+    issuer: "https://worker.mumeok.kr",
     releaseSha: manifest.review.contract.to,
     schemaIdentity: manifest.review.contract.credential.schemaIdentity,
     snapshotDigest: manifest.review.contract.policy.snapshotDigest,
@@ -263,10 +273,13 @@ export async function prepareYoutubeResolutionWorkerInstall(manifest, adapters =
   plan = { ...plan, plist_preview: preserveLauncherEnvironment(parse(previousBytes), plan.plist_preview) };
   assertYoutubeResolutionLauncherPreserved(parse(previousBytes), parse(Buffer.from(plan.plist_preview)));
   const previousStatus = await (adapters.readStatus ?? (() => {
-    try {
-      const stdout = execFileSync("/bin/launchctl", ["print", plan.service_target], { encoding: "utf8" });
-      return parseLaunchctlPrintStatus({ serviceTarget: plan.service_target, status: 0, stdout });
-    } catch { return { loaded: false, state: "unloaded" }; }
+    const result = spawnSync("/bin/launchctl", ["print", plan.service_target], { encoding: "utf8" });
+    const parsed = parseLaunchctlPrintStatus({ serviceTarget: plan.service_target,
+      status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" });
+    check(!result.error && (parsed.loaded || (parsed.state === "unloaded"
+      && (result.status === 113 || /could not find service/iu.test(result.stderr ?? "")))),
+    "previous launchd observation failed ambiguously");
+    return parsed;
   }))();
   check(previousStatus.loaded === manifest.previous.loaded && previousStatus.state === manifest.previous.state,
     "previous launchd state changed");
@@ -348,7 +361,8 @@ export async function executeYoutubeResolutionWorkerInstall(prepared, confirmati
       plistSha256: hash(readFileSync(prepared.plan.plist_path)),
       runningObservations: status.observations,
       authenticatedPreRequest: postflight.authenticatedStatus >= 200 && postflight.authenticatedStatus < 300,
-      emptyClaimSucceeded: [401, 403].includes(postflight.emptyClaimStatus),
+      emptyClaimSucceeded: postflight.emptyClaimDenied === true
+        || [401, 403].includes(postflight.emptyClaimStatus),
       queue: freshAuthority.queue,
       permitFree: freshAuthority.permitHeld === false,
       installedAt: new Date().toISOString(),

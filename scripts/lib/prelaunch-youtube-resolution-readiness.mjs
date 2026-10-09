@@ -13,6 +13,7 @@ import {
   assertResolutionReview,
   assertRuntimeUnchanged,
   assertSourceEvidence,
+  resolutionDatabaseTarget,
   LIVE_CATALOG_FINGERPRINT,
   LIVE_PIPELINE_IDENTITY,
   LIVE_POLICY_SNAPSHOT_DIGEST,
@@ -25,7 +26,10 @@ import {
 // Filled only after the exact R source, backup-clone evidence, DB receipt,
 // artifact and descriptor have all been independently reviewed. CLI/env cannot
 // override this pin. An empty pin intentionally prohibits deployment.
-export const YOUTUBE_RESOLUTION_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const YOUTUBE_RESOLUTION_REVIEW_PIN = Object.freeze({
+  path: "/Users/cwj/.homecook/operations/youtube-resolution-20261010/rollout-review.json",
+  sha256: "ca6bb37bb1fb65c1a7352ed5351baa8e38bae9c98b367e4cb2da9e086ce3dbc8",
+});
 // Filled only after the worker installer creates and verifies its immutable
 // success receipt. Keeping this separate avoids a pre-install circular proof.
 export const YOUTUBE_RESOLUTION_WEB_ACTIVATION_PIN = Object.freeze({ path: null, sha256: null });
@@ -291,7 +295,7 @@ function committedMigrationLedger(git, ref) {
 }
 
 export async function collectYoutubeResolutionDatabase(adapter) {
-  const target = await adapter.inspect();
+  const target = resolutionDatabaseTarget(await adapter.inspect());
   const [ledger, readiness, policy, credential, queue, permit, ai, functions] = await Promise.all([
     adapter.query(YOUTUBE_RESOLUTION_LEDGER_SQL).then(JSON.parse),
     adapter.query(`SELECT set_config('request.jwt.claims','{"role":"youtube_extraction_worker"}',true); SELECT public.read_youtube_extraction_enqueue_readiness();`).then((value) => JSON.parse(value.split("\n").filter(Boolean).at(-1))),
