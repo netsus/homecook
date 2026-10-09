@@ -174,6 +174,51 @@ describe.skipIf(!enabled)("YouTube catalog after all current migrations", () => 
     expect(fingerprint).toBe(expectedSchema.catalog_fingerprint);
   });
 
+  it("rejects resolver helper definition and authority drift and rolls it back", () => {
+    psql(`
+      begin;
+      set local request.jwt.claims = '{"role":"authenticated","sub":"70000000-0000-4000-8000-000000000001"}';
+      do $probe$
+      declare
+        v_signature regprocedure := 'public.ingredient_lookup_name_candidates(text,text,text)'::regprocedure;
+        v_original text := pg_catalog.pg_get_functiondef(v_signature);
+        v_changed text;
+        v_before text := public.read_youtube_extraction_enqueue_readiness()->>'catalog_fingerprint';
+      begin
+        v_changed := replace(
+          v_original,
+          '  select candidates.search_name',
+          '  select /* resolver helper drift probe */ candidates.search_name'
+        );
+        if v_changed = v_original then
+          raise exception 'Resolver helper drift probe did not change the function';
+        end if;
+        execute v_changed;
+        execute 'alter function public.ingredient_lookup_name_candidates(text,text,text) security definer';
+        execute 'grant execute on function public.ingredient_lookup_name_candidates(text,text,text) to authenticated';
+        if public.read_youtube_extraction_enqueue_readiness()->>'catalog_fingerprint'
+          is not distinct from v_before then
+          raise exception 'Catalog fingerprint ignored resolver helper drift';
+        end if;
+        begin
+          perform private.assert_youtube_extraction_catalog_ready();
+          raise exception 'Catalog assertion accepted resolver helper drift';
+        exception when sqlstate '55000' then
+          if sqlerrm <> 'YOUTUBE_EXTRACTION_SCHEMA_NOT_READY' then
+            raise;
+          end if;
+        end;
+      end $probe$;
+      rollback;
+    `);
+    expect(psql(`
+      begin read only;
+      set local request.jwt.claims = '{"role":"authenticated","sub":"70000000-0000-4000-8000-000000000001"}';
+      select public.read_youtube_extraction_enqueue_readiness()->>'catalog_fingerprint';
+      rollback;
+    `)).toBe(expectedSchema.catalog_fingerprint);
+  });
+
   it("preserves Luna quantity metadata through the real worker resolver fence", () => {
     const workerId = "trial-quantity-worker";
     const jobId = "13000000-0000-4000-8000-000000000001";

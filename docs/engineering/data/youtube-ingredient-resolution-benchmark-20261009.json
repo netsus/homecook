@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "scope": "five independently reviewed strict-name mismatches from cached v59 outputs",
+  "denominator": 5,
+  "inputs": {
+    "review_fixture": "tests/fixtures/youtube-ingredient-resolution/reviewed-v1.json",
+    "review_fixture_sha256": "f654ea456ca4449fb9e39e798e500f54cd3d58348efc801d9f5cd91438a2cdfb",
+    "catalog_snapshot": "docs/engineering/data/ingredient-catalog-organization-20261007.json",
+    "catalog_snapshot_sha256": "ff468e3a40e4a76966522bfacdffd7f0559b5dadf9f524f5c865003f7499ef00",
+    "paid_or_external_reextraction": false
+  },
+  "before": {
+    "frozen_strict_name_match": { "numerator": 0, "denominator": 5, "rate": 0.0 },
+    "reviewed_semantic_equivalence": { "numerator": 5, "denominator": 5, "rate": 1.0 },
+    "candidate_semantic_recall": { "numerator": 2, "denominator": 5, "rate": 0.4 },
+    "resolved": { "numerator": 2, "denominator": 5, "rate": 0.4 },
+    "correct_final_id": { "numerator": 2, "denominator": 5, "rate": 0.4 },
+    "false_link_overall": { "numerator": 0, "denominator": 5, "rate": 0.0 },
+    "false_link_among_linked": { "numerator": 0, "denominator": 2, "rate": 0.0 }
+  },
+  "after": {
+    "frozen_strict_name_match": { "numerator": 0, "denominator": 5, "rate": 0.0 },
+    "reviewed_semantic_equivalence": { "numerator": 5, "denominator": 5, "rate": 1.0 },
+    "candidate_semantic_recall": { "numerator": 5, "denominator": 5, "rate": 1.0 },
+    "resolved": { "numerator": 5, "denominator": 5, "rate": 1.0 },
+    "correct_final_id": { "numerator": 5, "denominator": 5, "rate": 1.0 },
+    "false_link_overall": { "numerator": 0, "denominator": 5, "rate": 0.0 },
+    "false_link_among_linked": { "numerator": 0, "denominator": 5, "rate": 0.0 }
+  },
+  "guardrails": {
+    "ambiguous_control_preserved": { "numerator": 1, "denominator": 1, "rate": 1.0 },
+    "unsupported_modifier_controls_unresolved": { "numerator": 6, "denominator": 6, "rate": 1.0 },
+    "same_name_occurrence_context_isolation_in_ts": { "numerator": 2, "denominator": 2, "rate": 1.0 }
+  },
+  "notes": [
+    "The frozen golden files and grading-v2 strict score are unchanged.",
+    "Reviewed semantic equivalence and database ID resolution are separate metrics.",
+    "Spaghetti resolves only for the cached occurrence with explicit Spaghetti plus mass evidence; the name alone remains unresolved.",
+    "The spaghetti result targets the state-unspecified pasta-noodle identity and does not infer dried or cooked state.",
+    "The catalog IDs are pinned against the reviewed catalog JSON; resolver outcomes use the matching fixed-catalog fixture plus an isolated SQL replay, not a query against the running full-local database.",
+    "This five-row slice is a targeted regression benchmark, not an estimate of whole-corpus accuracy."
+  ]
+}

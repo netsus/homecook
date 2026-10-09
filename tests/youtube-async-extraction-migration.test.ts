@@ -33,10 +33,14 @@ const fractionalQuantityCatalogFingerprint =
   "2b4f7b7e645f8609df30399224da979cb399b7c955cc2c215d28e7f5482bc402";
 const trialQuantityCatalogFingerprint =
   "fb53256a0f5cb3c2690ecbc070718d2bbfaeafab4c23710dab0584f4cbc5d7c8";
+const ingredientResolutionCatalogFingerprint =
+  "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9";
 const trialQuantityBridgePath =
   "supabase/migrations/20261009001000_youtube_trial_quantity_bridge.sql";
 const trialCatalogAttestationPath =
   "supabase/migrations/20261009002000_youtube_trial_catalog_attestation.sql";
+const ingredientResolutionPath =
+  "supabase/migrations/20261009200000_youtube_ingredient_resolution.sql";
 
 describe("YTASYNC-DB/SEC migration contract", () => {
   it("binds the current release manifest to the reviewed resolver changes", () => {
@@ -58,7 +62,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     );
     expect(fractionSql).toContain(ingredientSearchCatalogFingerprint);
     expect(fractionSql).toContain(fractionalQuantityCatalogFingerprint);
-    expect(expectedSchema.catalog_fingerprint).toBe(trialQuantityCatalogFingerprint);
+    expect(expectedSchema.catalog_fingerprint).toBe(ingredientResolutionCatalogFingerprint);
     // Actual full replay parity and drift rejection are checked by
     // youtube-extraction-current-catalog.integration.test.ts.
   });
@@ -72,6 +76,14 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(attestation).toContain(trialQuantityCatalogFingerprint);
     expect(attestation).toContain("public.read_youtube_extraction_enqueue_readiness()");
     expect(attestation).toContain("private.assert_youtube_extraction_catalog_ready()");
+  });
+
+  it("re-attests the catalog after contextual ingredient resolution", () => {
+    const sql = readFileSync(ingredientResolutionPath, "utf8");
+    expect(sql).toContain(trialQuantityCatalogFingerprint);
+    expect(sql).toContain(ingredientResolutionCatalogFingerprint);
+    expect(sql).toContain("match_ingredient_name_exact_with_context");
+    expect(sql).toContain("private.assert_youtube_extraction_catalog_ready()");
   });
 
   it("re-attests the catalog after the internal scope function changes", () => {

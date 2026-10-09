@@ -60,3 +60,17 @@ PostgreSQL의 [문자열 정규화](https://www.postgresql.org/docs/current/func
 운영 주소에서20쌍 모두 대표ID 하나만 반환하고 옛ID는 반환하지 않았다. 슈가파우더·다진마늘의 띄어쓰기/숨은 문자 변형도 같은 결과를 냈다. 실제 추출 역할에서20쌍과 숨은 문자 매칭을 읽기 전용으로 확인했다. 새 영상 추출·외부 모델 호출은 실행하지 않았다. 웹 후보225개와 배포 검증117개 검사가 통과했고 production build·별도 포트·운영 GET 확인을 마쳤다. 배포 폴더의 Next 내장 lint는 기존 eslint-plugin-react-hooks 경로 오류로 실행되지 않았으며, 별도 변경 파일 lint와 타입 검사는 통과했다.
 
 이 작업이 만든 격리 DB 컨테이너는 제거했고 운영 백업은 보관한다. 다른 작업의 미반영 UI 수정과 기존 Luna worker 설정은 변경하지 않았다. [PR #1599](https://github.com/netsus/homecook/pull/1599).
+
+## 후속 개발: YouTube 추출 이름 연결 보강 (미배포)
+
+`codex/youtube-ingredient-resolution-20261009` 브랜치에서 저장된 v59 결과의 5개 엄격 이름 불일치를 독립 검토했다. 기존 frozen golden과 `grading-v2` 점수는 바꾸지 않고, 추출 의미 동등성과 실제 카탈로그 후보·최종 ID를 별도 지표로 측정한다. 고정 입력·기대 ID·분모와 전후 결과는 [targeted benchmark](data/youtube-ingredient-resolution-benchmark-20261009.json)에 기록했다.
+
+초기 benchmark를 5건으로 제한한 이유는 사용자 사례 5건만 원문과 고정 카탈로그 ID를 별도로 검토해 기대 ID를 독립적으로 확정할 수 있었기 때문이다. resolver가 고른 ID를 다시 정답으로 쓰지 않았고, 기대 ID가 없는 나머지 행을 정확도 분모에 넣지 않았다. 이후 같은 v59 캐시 30개 영상의 344개 재료 occurrence를 모델 호출 없이 전수 스캔했다. 341개는 조회 정책 자체가 불변이고, 실제 후보 또는 검토 동의어가 달라지는 행은 3개였다. `큰 사이즈 두부`, `맛술(미림)`, 근거가 있는 `스파게티`가 각각 검토 ID로 새로 연결됐으며, 기존 연결 ID 변경 0건, 연결→모호/미해결 0건, 모호성 변화 0건이었다. 이는 전체 30개의 정확도 점수가 아니라 baseline→candidate 변화 목록이다. 입력 30개 파일의 해시를 확인했고 원본은 수정하지 않았다. 상세 분모·lineage·제한은 [v59 dev30 regression delta](data/youtube-ingredient-resolution-v59-dev30-regression-20261009.json)에 기록했다.
+
+조회 후보는 원문을 저장 전에 수정하지 않는다. `큰 사이즈 두부`처럼 닫힌 크기 wrapper만 조회 후보 `두부`를 추가하고, 브랜드·용도·부위·건조/조리 상태·영양 차이는 제거하지 않는다. `맛술(미림)`은 현재 카탈로그의 검토된 맛술 ID에 전체 표현 하나를 동의어로 붙인다. `바질 잎`은 일반 바질로 합치지 않고 잎 전용 ID를 유지하며, `올리브 오일`은 기존 대표/동의어 구조를 그대로 사용한다.
+
+`스파게티`라는 이름만으로는 요리명과 면 재료를 구분할 수 없어 계속 미해결이다. 다만 같은 저장 행의 보존 원문 전체가 `Spaghetti`이고, 바로 뒤에 현재 단위와 같은 명시 질량(`Spaghetti 250g` 등)이 있을 때만 상태 미확정 `파스타면` 후보를 추가한다. `Spaghetti sauce`, `Spaghetti squash`, 브랜드명, `Cooked Spaghetti`, 다른 질량 단위처럼 원문에 정체성·상태 차이가 있으면 연결하지 않는다. 동일 이름이 한 레시피에 여러 번 나오더라도 occurrence별 키를 사용해 근거가 있는 행만 연결하고 다른 행은 미해결로 둔다.
+
+후속 migration `20261009200000_youtube_ingredient_resolution.sql`은 TypeScript와 같은 후보 순위, 정확 후보 우선, 표준명 우선, 다중 ID 보존을 SQL resolver에 적용한다. 비동기 YouTube resolver도 이름·단위·보존 원문을 넘긴다. 새 helper는 공개 API 역할에 노출하지 않으며 기존 worker owner에만 필요한 EXECUTE를 부여한다. helper 3개의 정확한 함수 정의·security mode·설정·ACL도 기존 shared-dependency contract에 포함해 본문이나 권한이 달라지면 readiness가 거부되도록 했다. resolver 본문과 helper 계약으로 달라진 비동기 추출 카탈로그 지문은 격리 migration postimage에서 계산해 재고정했다. 실제 worker lease/permit 경로에서 `Spaghetti 250g`만 파스타면으로 연결되고 소스·호박·브랜드·조리상태가 붙은 원문은 수량·단위·원문을 유지한 채 미해결임을 확인했다.
+
+이 후속 변경은 아직 운영 DB·worker·웹에 적용하지 않았다. 운영 반영 전에는 현재 full-local 카탈로그 ID와 generation writer 상태를 확인하고, 백업 후 `pnpm deploy:dev` 범위의 승인된 절차로 migration과 앱 코드를 같은 묶음에 반영해야 한다.
