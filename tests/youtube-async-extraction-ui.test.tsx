@@ -9,6 +9,7 @@ import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import * as asyncApi from "@/lib/api/youtube-extraction-jobs";
 import * as syncApi from "@/lib/api/youtube-import";
+import * as savedRecipeApi from "@/lib/api/youtube-saved-recipes";
 import {
   YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT,
   YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
@@ -20,6 +21,7 @@ const routerReplace = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: routerReplace }),
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/recipes/new/youtube",
 }));
 
 vi.mock("@/lib/api/cooking-methods", () => ({ fetchCookingMethods: vi.fn() }));
@@ -36,6 +38,11 @@ vi.mock("@/lib/api/youtube-import", () => ({
   registerYoutubeRecipe: vi.fn(),
   registerYoutubeIngredient: vi.fn(),
   registerYoutubeIngredientsBulk: vi.fn(),
+}));
+vi.mock("@/lib/api/youtube-saved-recipes", () => ({
+  ensureYoutubeSavedRecipe: vi.fn(),
+  fetchYoutubeSavedRecipe: vi.fn(),
+  updateYoutubeSavedRecipe: vi.fn(),
 }));
 
 const youtubeUrl = "https://www.youtube.com/watch?v=abcdefghijk";
@@ -131,17 +138,22 @@ describe("YT_IMPORT async extraction", () => {
     });
     vi.mocked(asyncApi.fetchYoutubeExtractionSession).mockReset();
     vi.mocked(syncApi.extractYoutubeRecipe).mockReset();
+    vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockReset();
+    vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockImplementation(async (extractionId) => ({
+      success: true,
+      data: {
+        draft_id: "22222222-2222-4222-8222-222222222222",
+        revision: 1,
+        created_at: "2026-10-08T00:00:00.000Z",
+        updated_at: "2026-10-08T00:00:00.000Z",
+        content: { title: "복원된 감자 수프", base_servings: 2, tags: [], ingredients: [], steps: [] },
+        source: { extraction_id: extractionId, youtube_url: youtubeUrl, youtube_video_id: "abcdefghijk", thumbnail_url: null },
+      },
+      error: null,
+    }));
     routerReplace.mockReset();
   });
 
-  it("blocks new extraction in preparation mode without invoking extraction APIs", () => {
-    vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "true");
-    render(<YoutubeImportScreen columnId="" planDate="2026-09-07" slotName="" initialYoutubeUrl="https://www.youtube.com/watch?v=example" />);
-    expect(screen.getByText("준비 중인 기능이에요")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "돌아가기" }).getAttribute("href")).toBe("/planner?date=2026-09-07");
-    expect(asyncApi.enqueueYoutubeExtraction).not.toHaveBeenCalled();
-    expect(syncApi.validateYoutubeUrl).not.toHaveBeenCalled();
-  });
 
   afterEach(() => cleanup());
 
@@ -579,7 +591,7 @@ describe("YT_IMPORT async extraction", () => {
       data: {
         status: "draft",
         draft: {
-          extraction_id: "extraction-restored",
+          extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
           title: "복원된 감자 수프",
           base_servings: 2,
           thumbnail_url: null,
@@ -598,9 +610,9 @@ describe("YT_IMPORT async extraction", () => {
       error: null,
     });
 
-    renderImport({ initialExtractionId: "extraction-restored" });
+    renderImport({ initialExtractionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
 
-    const heading = await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" });
+    const heading = await screen.findByRole("heading", { name: "복원된 감자 수프" });
     await waitFor(() => expect(document.activeElement).toBe(heading));
     expect(heading.getAttribute("tabindex")).toBe("-1");
   });
@@ -612,7 +624,7 @@ describe("YT_IMPORT async extraction", () => {
       data: {
         status: "draft",
         draft: {
-          extraction_id: "extraction-restored-with-url",
+          extraction_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
           title: "복원된 감자 수프",
           base_servings: 2,
           thumbnail_url: null,
@@ -632,11 +644,11 @@ describe("YT_IMPORT async extraction", () => {
     });
 
     renderImport({
-      initialExtractionId: "extraction-restored-with-url",
+      initialExtractionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       initialYoutubeUrl: youtubeUrl,
     });
 
-    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" }))
+    expect(await screen.findByRole("heading", { name: "복원된 감자 수프" }))
       .toBeTruthy();
     expect(vi.mocked(syncApi.validateYoutubeUrl).mock.calls.length)
       .toBe(validationCallsBeforeRestore);

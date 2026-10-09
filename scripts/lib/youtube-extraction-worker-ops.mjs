@@ -77,12 +77,12 @@ function buildPathEnv(nodeBin) {
   const nodeDir = dirname(ensureAbsolutePath(nodeBin, "nodeBin"));
   return [...new Set([
     nodeDir,
-    "/opt/homebrew/bin",
-    "/usr/local/bin",
     "/usr/bin",
     "/bin",
     "/usr/sbin",
     "/sbin",
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
   ])].join(":");
 }
 

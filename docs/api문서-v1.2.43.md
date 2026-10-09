@@ -4,6 +4,16 @@
 
 재료 목록/이름 검색은 검토된 catalog alias를 대표 ingredient ID와 표준명으로 반환하고 동일대표를 중복 표시하지 않는다. 입력/동의어를 정규화해 검색한 뒤 대표 분류를 적용한다. 유튜브 매칭은 실제 표준명 우선·별칭다중후보확인을 유지한다. 레시피/팬트리 검색은 옛ID 참조까지 찾으며 기존저장/상세의 정확ID와재고행을 변경하지 않는다. 응답 wrapper·소유권·제품선택/버전·cursor 계약은 유지한다. [세부 계약](engineering/ingredient-canonical-search-20261009.md) 참조.
 
+## 2026-10-08 사용자 정정 — 자동 저장된 레시피로 이동
+
+최초 수동 저장 단계는 없앤다. 추출 결과를 열 때 소유 원문으로 자동 저장하거나 기존 최신 저장본을 찾아 상세 화면으로 이동한다. 저장 확인 전에는 처리/오류 상태를 보여주며 저장 완료로 표시하지 않는다. 읽기 상태에는 저장 버튼이 없고 사용자가 수정했을 때만 변경사항 저장을 표시한다. 반복 열기·새로고침은 기존 사용자 편집을 덮어쓰지 않는다. source-only POST `{extraction_id}`와 기존 PATCH의 소유권·계정 세대·동시성 보호를 따른다. 아래 최초 수동 저장 설명은 이 정정으로 대체하며 운영 미반영이다.
+
+
+## 2026-10-08 — 유튜브 결과 우선·개인 보관 계약 (로컬 구현 완료, 미배포)
+
+소유자 전용 `GET/POST /api/v1/recipes/youtube/saved-drafts`, `GET/PATCH /api/v1/recipes/youtube/saved-drafts/{draft_id}`를 추가한다. POST는 extraction_id와 content, PATCH는 expected_revision과 content를 받는다. 쓰기는 UUID Idempotency-Key를 요구한다. content는 title/base_servings/tags와 안정된 row_id를 가진 ingredients/steps이며 미연결 값과 null 수량을 허용한다. 원본 source/evidence는 요청에서 받지 않고 소유 세션으로부터 서버가 보존한다. 기존 success/data/error 래퍼·계정 세대 권한·소유권·revision 보호를 유지한다. 정규 register API 계약은 변경하지 않는다.
+
+
 ## 2026-10-08 — AI 추정 영양 근거 (운영 반영)
 
 기존 성공/오류 wrapper와 권한을 유지한다. 레시피·계획 영양에서 실제 AI 성분이 기여하면 `AI_NUTRITION_ESTIMATE_USED` 경고와 기존6키 출처(provider=`HOMECOOK_AI_ESTIMATE`)를 전달한다. 식사 기록·미리보기의 영양 evidence에 선택적 boolean `contains_ai_estimate`를 추가하며, 옛 응답의 누락은 false로 읽고 저장된 JSON을 재작성하지 않는다. 합계는 실제 포함 항목의 플래그를 OR로 전달한다. null은0으로 바꾸지 않으며 source/경고 일치와 exact-key 검증은 유지한다. 자동 작업9RPC는 service 전용 `ingredient-ai-nutrition` scope·정확POST경로로만 호출하며 사용자용 새 쓰기 API를 열지 않는다. [계약·운영 결과](engineering/ingredient-ai-nutrition-rollout-20261008.md) 참조.

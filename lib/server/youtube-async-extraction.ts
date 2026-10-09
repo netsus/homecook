@@ -31,7 +31,7 @@ export const YOUTUBE_ASYNC_POLICY_OPTIONS = Object.freeze({
 } as const);
 
 const POLICY_PIPELINE_IDENTITY =
-  "5e80ffc32ab63ec1e4b015222692597e18bbce8520271a7130689dd138ff808c";
+  "1c9c47074da3bf1c55ed83f1ba5131d9d48ad486503919c554a5530d7972d935";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -60,7 +60,7 @@ function buildPolicySnapshotDigest() {
   const preimage = canonicalJson({
     extractor_mode: "i031_codex_vision",
     pipeline_identity: POLICY_PIPELINE_IDENTITY,
-    policy_version: 2,
+    policy_version: 3,
     result_affecting_options: YOUTUBE_ASYNC_POLICY_OPTIONS,
     schema_identity: "youtube-extraction-policy-snapshot-v1",
   });
@@ -69,7 +69,7 @@ function buildPolicySnapshotDigest() {
 
 export const YOUTUBE_ASYNC_POLICY = Object.freeze({
   policyKey: "primary",
-  policyVersion: 2,
+  policyVersion: 3,
   extractorMode: "i031_codex_vision",
   pipelineIdentity: POLICY_PIPELINE_IDENTITY,
   resultAffectingOptions: YOUTUBE_ASYNC_POLICY_OPTIONS,

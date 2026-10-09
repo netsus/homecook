@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -13,6 +13,7 @@ import { reviewedRepairReadiness } from "./lib/prelaunch-repair-readiness.mjs";
 import { reviewedBetaReadiness } from "./lib/prelaunch-beta-readiness.mjs";
 import { loadFeedbackReview, reviewedFeedbackReadiness, verifyFeedbackAppliedDatabase } from "./lib/prelaunch-feedback-readiness.mjs";
 import { loadAiNutritionReview, reviewedAiNutritionReadiness, verifyAiNutritionAppliedDatabase } from "./lib/prelaunch-ai-nutrition-readiness.mjs";
+import { assertYoutubeTrialSource, loadYoutubeTrialReview, reviewedYoutubeTrialReadiness, verifyYoutubeTrialAppliedDatabase, verifyYoutubeTrialSourceBackfill } from "./lib/prelaunch-youtube-trial-readiness.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
@@ -57,13 +58,21 @@ function assertClean(cwd) {
     throw new DeploymentError("현재 웹 checkout에 수정한 추적 파일이 있어 배포를 중단합니다.");
   }
 }
-function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript) {
+function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript, youtubeTrialReview = null) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
   git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
   const files = prelaunchChangedFiles((args) => command("git", ["-C", repository, ...args], { trimOutput: false }), live.ref, target);
+  if (youtubeTrialReview) {
+    const digests = Object.fromEntries(Object.keys(youtubeTrialReview.files).map(file => [file, [live.ref, target].map(sha =>
+      git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`],
+        { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null)]));
+    assertYoutubeTrialSource({ review: youtubeTrialReview, liveSha: live.ref, releaseSha: target,
+      files, actualFiles: files, digests });
+  }
   const manifest = (sha) => JSON.parse(git(["show", `${sha}:package.json`]));
-  const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target));
+  const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
+    { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview) });
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts };
 }
@@ -99,7 +108,7 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
     return env?.MUMEOK_ROUND2_ENABLED === "true" || env?.MUMEOK_ROUND2_RELEASE_SHA || env?.MUMEOK_ROUND2_READINESS_PATH || env?.MUMEOK_ROUND2_REPOSITORY_ROOT;
   });
   if (!configured) {
-    if (options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness) throw new DeploymentError("검토한 한정 배포에는 원본 R2 실행 설정이 필요합니다.");
+    if (options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness || options.reviewedYoutubeTrialReadiness) throw new DeploymentError("검토한 한정 배포에는 원본 R2 실행 설정이 필요합니다.");
     return plist;
   }
   const source = live.plist.EnvironmentVariables?.MUMEOK_ROUND2_READINESS_PATH;
@@ -109,7 +118,11 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
   const original = JSON.parse(readFileSync(source, "utf8"));
   const input = { readiness: original, previous: live.plist, next: plist, liveSha: live.ref, releaseSha: selection.target, files: selection.files, databaseDeployment };
   let readiness;
-  if (options.reviewedAiNutritionReadiness) {
+  if (options.reviewedYoutubeTrialReadiness) {
+    const reviewed = await reviewedYoutubeTrialReadiness({ ...input, databasePlan, repositoryRoot: plist.WorkingDirectory, configPath: options.dbConfig });
+    readiness = reviewed.readiness;
+    atomicWrite(join(release, "round2-youtube-trial-source-review.json"), JSON.stringify(reviewed.review, null, 2));
+  } else if (options.reviewedAiNutritionReadiness) {
     const reviewed = await reviewedAiNutritionReadiness({ ...input, databasePlan, repositoryRoot: plist.WorkingDirectory, configPath: options.dbConfig });
     readiness = reviewed.readiness;
     atomicWrite(join(release, "round2-ai-nutrition-source-review.json"), JSON.stringify(reviewed.review, null, 2));
@@ -195,6 +208,9 @@ async function switchWeb(bytes) {
   });
 }
 async function verifyAppliedDatabase(options, checkout) {
+  if (options.reviewedYoutubeTrialReadiness) {
+    return verifyYoutubeTrialAppliedDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, releaseSha: options.ref });
+  }
   if (options.reviewedAiNutritionReadiness) {
     return verifyAiNutritionAppliedDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, releaseSha: options.ref });
   }
@@ -210,11 +226,13 @@ async function verifyAppliedDatabase(options, checkout) {
 }
 
 async function deploy(options) {
+  const youtubeTrialReview = options.reviewedYoutubeTrialReadiness ? await loadYoutubeTrialReview() : null;
+  if (youtubeTrialReview) await verifyYoutubeTrialSourceBackfill({ review: youtubeTrialReview, repositoryRoot: repository });
   if (options.reviewedAiNutritionReadiness) await loadAiNutritionReview();
   if (options.reviewedFeedbackReadiness) await loadFeedbackReview();
   if (existsSync(recoveryPath)) throw new DeploymentError("이전 배포 복구가 남아 있습니다. status와 rollback을 먼저 실행하세요.");
   const live = current();
-  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript);
+  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview);
   const patch = readEnvironmentPatch(options.envFile, repository);
   const needsDatabase = selection.scope.database.length > 0 || Boolean(options.dbConfig);
   if (needsDatabase && !options.dbConfig) throw new DeploymentError("DB 변경이 포함되어 있습니다. --db-config <비공개 full-local 설정 파일>을 지정하세요. 웹은 변경하지 않았습니다.");
@@ -280,7 +298,8 @@ process.exit(result.status ?? 1);`;
         const finalPlan = await verifyAppliedDatabase(options, checkout);
         if (JSON.stringify(finalPlan) !== JSON.stringify(databasePlan)) throw new DeploymentError("준비 중 DB 이력이 바뀌었습니다.");
       }
-      if (options.reviewedRepairReadiness || options.reviewedBetaReadiness || options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
+      if (options.reviewedYoutubeTrialReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
+      else if (options.reviewedRepairReadiness || options.reviewedBetaReadiness || options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
       assertClean(live.cwd);
       if (!readFileSync(plistPath).equals(live.bytes)) throw new DeploymentError("준비 중 웹 설정이 바뀌었습니다.");
       atomicWrite(recoveryPath, JSON.stringify(state));
@@ -342,7 +361,9 @@ async function main() {
     return;
   }
   if (action === "plan") {
-    const selection = plan(options.ref, current(), options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript);
+    const youtubeTrialReview = options.reviewedYoutubeTrialReadiness ? await loadYoutubeTrialReview() : null;
+    if (youtubeTrialReview) await verifyYoutubeTrialSourceBackfill({ review: youtubeTrialReview, repositoryRoot: repository });
+    const selection = plan(options.ref, current(), options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview);
     const environmentKeys = Object.keys(readEnvironmentPatch(options.envFile, repository)).sort();
     say(JSON.stringify({ ...selection, environmentKeys, database: { required: selection.scope.database.length > 0 || Boolean(options.dbConfig), configProvided: Boolean(options.dbConfig), readOnly: Boolean(options.alreadyAppliedDb), requiresCompatibilityConfirmation: (selection.scope.database.length > 0 || Boolean(options.dbConfig)) && !options.dbCompatible && !options.alreadyAppliedDb, note: "DB 이력·현재 스키마·추가형 변경 여부는 배포 시 대상 커밋에서 검사합니다." } }, null, 2));
     return;

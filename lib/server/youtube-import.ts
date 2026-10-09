@@ -9063,34 +9063,145 @@ async function insertExtractionSession(
   return result.error;
 }
 
-function buildI031ParsedRecipe(result: YoutubeI031ExtractionResult): ParsedRecipeDescription {
+type I031QuantityState = "explicit" | "estimated" | "to_taste" | "unknown" | "conflicting";
+type I031VerifiedIngredient = YoutubeI031ExtractionResult["recipe"]["ingredients"][number] & {
+  quantityState?: I031QuantityState;
+  amountBasis?: string | null;
+  evidenceRefs?: Array<{
+    source_method: "description" | "comment" | "caption" | "visual";
+    source_provider: string;
+    line_index?: number | null;
+    start_ms?: number | null;
+    end_ms?: number | null;
+    frame_ts_ms?: number | null;
+    snippet: string;
+    locator_hash?: string | null;
+  }>;
+};
+
+function normalizeI031QuantityEvidenceRefs(
+  refs: I031VerifiedIngredient["evidenceRefs"],
+): YoutubeQuantityEvidenceRef[] {
+  return (refs ?? []).slice(0, 6).map((ref) => ({
+    source_method: ref.source_method,
+    source_provider: ref.source_provider,
+    line_index: ref.line_index ?? null,
+    start_ms: ref.start_ms ?? null,
+    end_ms: ref.end_ms ?? null,
+    frame_ts_ms: ref.frame_ts_ms ?? null,
+    snippet: ref.snippet,
+    locator_hash: ref.locator_hash ?? null,
+  }));
+}
+
+function i031QuantitySource(evidenceRefs: YoutubeQuantityEvidenceRef[]) {
+  return evidenceRefs.length > 0 && evidenceRefs.every((ref) =>
+    ref.source_method === "visual" && ref.source_provider !== "macos-vision-ocr")
+    ? "visual_explicit" as const
+    : "text_explicit" as const;
+}
+
+function isConsistentI031QuantityMetadata(
+  ingredient: I031VerifiedIngredient,
+  evidenceRefs: YoutubeQuantityEvidenceRef[],
+) {
+  const state = ingredient.quantityState;
+  const basis = ingredient.amountBasis ?? null;
+  const isTextEvidence = (ref: YoutubeQuantityEvidenceRef) => ref.source_method !== "visual"
+    || ref.source_provider === "macos-vision-ocr";
+  if (!state) return false;
+  if (["unknown", "conflicting", "to_taste"].includes(state)) return basis === null;
+  if (state === "explicit") {
+    return basis === "stated"
+      ? evidenceRefs.some((ref) => ref.source_method === "description" || ref.source_method === "comment")
+      : basis === "spoken"
+        ? evidenceRefs.some((ref) => ref.source_method === "caption")
+        : basis === "onscreen"
+          ? evidenceRefs.some((ref) => ref.source_method === "visual"
+            && ref.source_provider === "macos-vision-ocr")
+          : false;
+  }
+  return basis === "visual-estimate"
+    ? evidenceRefs.some((ref) => ref.source_method === "visual")
+    : basis === "source-approximate" || basis === "source-adjustable"
+      ? evidenceRefs.some(isTextEvidence)
+      : false;
+}
+
+export function buildI031ParsedRecipe(result: YoutubeI031ExtractionResult): ParsedRecipeDescription {
   return {
     ingredients: result.recipe.ingredients.map((ingredient) => {
+      const verified = ingredient as I031VerifiedIngredient;
       const name = normalizeParsedIngredientName(ingredient.name);
       const amount = normalizeLlmAmount(ingredient.amount);
       const unit = amount === null ? null : normalizeNullableString(ingredient.unit);
       const sourceAmountText = normalizeNullableString(ingredient.amount);
-      const ingredientType = amount !== null ? "QUANT" as const : "TO_TASTE" as const;
+      const evidenceRefs = normalizeI031QuantityEvidenceRefs(verified.evidenceRefs);
+      const hasQuantityMetadata = verified.quantityState !== undefined
+        || verified.amountBasis !== undefined
+        || verified.originalName !== undefined
+        || verified.alternativeNames !== undefined
+        || verified.evidenceRefs !== undefined;
+      const state = hasQuantityMetadata
+        ? isConsistentI031QuantityMetadata(verified, evidenceRefs) ? verified.quantityState : "unknown"
+        : undefined;
+      const hasVerifiedQuantity = amount !== null && unit !== null && evidenceRefs.length > 0;
+      const hasTextEvidence = evidenceRefs.some((ref) => ref.source_method !== "visual"
+        || ref.source_provider === "macos-vision-ocr");
+      const isVerifiedToTaste = state === "to_taste" && hasTextEvidence;
+      const legacyIngredientType = amount !== null ? "QUANT" as const : "TO_TASTE" as const;
+      const ingredientType = state === undefined
+        ? legacyIngredientType
+        : isVerifiedToTaste
+          ? "TO_TASTE" as const
+          : "QUANT" as const;
+      const safeAmount = state === "unknown" || state === "conflicting" || state === "to_taste"
+        ? null
+        : hasVerifiedQuantity
+          ? amount
+          : state === undefined
+            ? amount
+            : null;
+      const safeUnit = safeAmount === null ? null : unit;
+      const isEstimated = state === "estimated" && safeAmount !== null;
       const amountText = ingredientType === "QUANT"
-        ? `${sourceAmountText ?? amount}${unit ?? ""}`
-        : sourceAmountText ?? (ingredient.optional ? "선택" : "");
+        ? safeAmount === null
+          ? ""
+          : `${isEstimated ? "약 " : ""}${sourceAmountText ?? safeAmount}${safeUnit ?? ""}`
+        : isVerifiedToTaste
+          ? "약간"
+          : sourceAmountText ?? (ingredient.optional ? "선택" : "");
       const displayText = `${name} ${amountText}`.trim();
+      const quantitySource = state === undefined
+        ? "unknown" as const
+        : state === "explicit" && hasVerifiedQuantity || isVerifiedToTaste
+          ? i031QuantitySource(evidenceRefs)
+          : state === "estimated" && hasVerifiedQuantity
+            ? "recipe_inferred" as const
+            : "unknown" as const;
+      const quantityReviewRequired = state === undefined
+        ? amount !== null && unit === null
+        : state === "estimated" || state === "unknown" || state === "conflicting"
+          || state === "explicit" && !hasVerifiedQuantity || state === "to_taste" && !isVerifiedToTaste;
+      const quantityRawText = evidenceRefs[0]?.snippet ?? displayText;
+      const originalName = normalizeNullableString(verified.originalName);
+      const rawText = `${originalName ?? name} ${amountText}`.trim();
 
       return {
         name,
-        amount: ingredientType === "QUANT" ? amount : null,
-        unit: ingredientType === "QUANT" ? unit : null,
+        amount: safeAmount,
+        unit: safeUnit,
         ingredientType,
         displayText,
-        rawText: displayText,
+        rawText,
         componentLabel: ingredient.groupLabel,
-        scalable: ingredientType === "QUANT" && unit !== null,
+        scalable: ingredientType === "QUANT" && safeUnit !== null && !isEstimated,
         confidence: 0.9,
-        quantitySource: "unknown" as const,
-        quantityConfidence: null,
-        quantityRawText: displayText,
-        quantityEvidenceRefs: [],
-        quantityReviewRequired: amount !== null && unit === null,
+        quantitySource,
+        quantityConfidence: quantitySource === "recipe_inferred" ? 0.65 : quantitySource === "unknown" ? null : 0.9,
+        quantityRawText,
+        quantityEvidenceRefs: evidenceRefs,
+        quantityReviewRequired,
       };
     }),
     steps: [...result.recipe.steps],
