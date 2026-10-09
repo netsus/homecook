@@ -15,7 +15,7 @@ import {
 import { PIECE_UNIT_FUNCTIONS_SQL, PIECE_UNIT_HELPERS, PIECE_UNIT_CONSUMERS, pieceUnitFunctionEvidence } from "./prelaunch-piece-unit-readiness.mjs";
 
 // Filled only after reviewing immutable private evidence. CLI/env cannot override.
-export const NUTRITION_RECOVERY_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const NUTRITION_RECOVERY_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/ingredient-nutrition-recovery-20261010-7LsiyI/nutrition-recovery-web-review.json","sha256":"875323d4e173f46ecc5d852eb6c1c3b1292764a0d6d2cd2761de2b67e2fe808a"});
 export const NUTRITION_RECOVERY_FROM = "c51d53871f31c7840fe24792b46b191ca963b11b";
 export const NUTRITION_RECOVERY_CATALOG = "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9";
 export const NUTRITION_RECOVERY_MIGRATIONS = Object.freeze(["20261010120000_ingredient_exclusion_recovery_selection.sql"]);
