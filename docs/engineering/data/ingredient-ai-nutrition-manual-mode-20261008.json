@@ -1,0 +1,12 @@
+{
+  "status": "disabled",
+  "disabled_at": "2026-10-08T14:48:28.278Z",
+  "reason": "User prefers assistant-led batches without automatic Gemini calls",
+  "existing_values_preserved": true,
+  "enabled": false,
+  "processing_jobs": 0,
+  "existing_ai_profiles": 2,
+  "batch_trigger": "explicit_user_request",
+  "recurring_schedule_created": false,
+  "manual_policy": "Use authoritative sources first; label assistant estimates explicitly; do not call the Gemini API or silently re-enable the automatic policy."
+}

@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "verified_at": "2026-10-08T16:33:11.307Z",
+  "environment": "network-isolated restored full-local database",
+  "production_writes": 0,
+  "migration_sha256": "608e491cbe54cb255ce52efbd518fd1aec379b08f7d9dff3f3cf6a6d2a5112b5",
+  "aliases": 20,
+  "previous_synonyms": 4129,
+  "after_synonyms": 4146,
+  "added_synonyms": 17,
+  "existing_synonyms_preserved": true,
+  "ingredients_nutrition_references_and_history_preserved": true,
+  "ai_policy_preserved": true,
+  "idempotent": true,
+  "sql_behavior_and_actual_async_owner": "passed",
+  "unit_tests": {
+    "files": 12,
+    "passed": 231
+  },
+  "typecheck": "passed",
+  "changed_files_lint": "passed",
+  "build": {
+    "status": "passed",
+    "existing_unrelated_warnings": 4
+  },
+  "baseline_limitations": {
+    "recipe_api_existing_failures": 13,
+    "pantry_existing_failures": 3,
+    "broader_suite_claimed_pass": false
+  },
+  "live_read_only_confirmation": {
+    "synonyms": 4129,
+    "ai_enabled": false,
+    "canonical_search_migration_applied": false
+  },
+  "isolated_test_container_removed": true
+}

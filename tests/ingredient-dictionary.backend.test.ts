@@ -38,6 +38,8 @@ function createFilteringTable<T extends object>(
     values: [] as string[],
   };
   const query = {
+    order: vi.fn(() => query),
+    range: vi.fn(() => query),
     in: vi.fn((column: string, values: string[]) => {
       state.column = column;
       state.values = values;
@@ -46,7 +48,7 @@ function createFilteringTable<T extends object>(
     then(onFulfilled?: (value: { data: T[] | null; error: QueryError | null }) => unknown, onRejected?: (reason: unknown) => unknown) {
       const data = error
         ? null
-        : rows.filter((row) => state.values.includes(String((row as Record<string, unknown>)[state.column])));
+        : rows.filter((row) => !state.column || state.values.includes(String((row as Record<string, unknown>)[state.column])));
 
       return Promise.resolve({ data, error }).then(onFulfilled, onRejected);
     },
@@ -62,10 +64,14 @@ function createIngredientDb({
   ingredients = [],
   synonyms = [],
   synonymError = null,
+  aliases = [],
+  aliasError = null,
 }: {
   ingredients?: IngredientRow[];
   synonyms?: SynonymRow[];
   synonymError?: QueryError | null;
+  aliases?: { ingredient_id: string; representative_ingredient_id: string; representative_standard_name: string; representative_category: string; representative_category_code: string | null }[];
+  aliasError?: QueryError | null;
 } = {}) {
   // PostgreSQL stores normalized search keys on both dictionary tables.
   const ingredientsTable = createFilteringTable(ingredients.map((row) => ({
@@ -78,6 +84,7 @@ function createIngredientDb({
   })), { error: synonymError });
   const dbClient = {
     from: vi.fn((table: string) => {
+      if (table === "ingredient_catalog_aliases") return createFilteringTable(aliases, { error: aliasError });
       if (table === "ingredients") return ingredientsTable;
       if (table === "ingredient_synonyms") return synonymsTable;
       throw new Error(`unexpected table: ${table}`);
@@ -110,6 +117,53 @@ function buildIngredient(
 }
 
 describe("21 ingredient dictionary backend", () => {
+  it("folds an old standard name and its synonyms to one representative", async () => {
+    const old = { id: "00000000-0000-4000-8000-000000000901", standard_name: "슈가파우더" };
+    const canonical = { id: "00000000-0000-4000-8000-000000000902", standard_name: "가루 설탕" };
+    const aliases = [{ ingredient_id: old.id, representative_ingredient_id: canonical.id,
+      representative_standard_name: canonical.standard_name, representative_category: "양념", representative_category_code: null }];
+    const { dbClient } = createIngredientDb({ ingredients: [old, canonical], aliases,
+      synonyms: [{ synonym: "슈가파우더", ingredients: canonical }, { synonym: "파우더슈거", ingredients: old }] });
+    const lookup = await findIngredientIds(dbClient, ["슈가파우더", "파우더슈거", "가루 설탕"]);
+    expect(lookup.error).toBeNull();
+    for (const name of ["슈가파우더", "파우더슈거", "가루 설탕"]) {
+      expect([...lookup.matchesByName.get(name)!.keys()]).toEqual([canonical.id]);
+      expect(buildIngredient(name, lookup.matchesByName)).toMatchObject({ ingredient_id: canonical.id, standard_name: canonical.standard_name, resolution_status: "resolved" });
+    }
+    expect(lookup.matchesByName.get("슈가파우더")!.get(canonical.id)?.source).toBe("synonym");
+    expect(lookup.matchesByName.get("가루 설탕")!.get(canonical.id)?.source).toBe("direct");
+  });
+
+  it.each([false, true])("keeps real direct standard-name precedence regardless of alias row order: %s", async (reverse) => {
+    const old = { id: "00000000-0000-4000-8000-000000000901", standard_name: "슈가 파우더" };
+    const realDirect = { id: "00000000-0000-4000-8000-000000000903", standard_name: "슈가파우더" };
+    const canonicalId = "00000000-0000-4000-8000-000000000902";
+    const { dbClient } = createIngredientDb({ ingredients: reverse ? [realDirect, old] : [old, realDirect],
+      aliases: [{ ingredient_id: old.id, representative_ingredient_id: canonicalId,
+        representative_standard_name: "가루 설탕", representative_category: "양념", representative_category_code: null }] });
+    const lookup = await findIngredientIds(dbClient, ["슈가파우더"]);
+    expect([...lookup.matchesByName.get("슈가파우더")!.keys()]).toEqual([realDirect.id]);
+  });
+
+  it("keeps distinct canonical synonym identities ambiguous after folding", async () => {
+    const old = { id: "00000000-0000-4000-8000-000000000901", standard_name: "슈가파우더" };
+    const canonicalId = "00000000-0000-4000-8000-000000000902";
+    const { dbClient } = createIngredientDb({ ingredients: [old],
+      synonyms: [{ synonym: old.standard_name, ingredients: { id: "00000000-0000-4000-8000-000000000903", standard_name: "다른 설탕" } }],
+      aliases: [{ ingredient_id: old.id, representative_ingredient_id: canonicalId,
+        representative_standard_name: "가루 설탕", representative_category: "양념", representative_category_code: null }] });
+    const lookup = await findIngredientIds(dbClient, [old.standard_name]);
+    expect(buildIngredient(old.standard_name, lookup.matchesByName).resolution_status).toBe("needs_review");
+    expect(lookup.matchesByName.get(old.standard_name)?.size).toBe(2);
+  });
+
+  it("fails closed when the canonical alias view cannot be read", async () => {
+    const { dbClient } = createIngredientDb({ aliasError: { message: "alias read failed" } });
+    const lookup = await findIngredientIds(dbClient, ["양파"]);
+    expect(lookup.error).toBeTruthy();
+    expect(lookup.matchesByName.size).toBe(0);
+  });
+
   it("resolves a Korean synonym to the canonical ingredient name", async () => {
     const soySauceId = "00000000-0000-4000-8000-000000000001";
     const { dbClient } = createIngredientDb({

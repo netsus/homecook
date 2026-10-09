@@ -1,3 +1,4 @@
+import { canonicalizeIngredient, expandIngredientIdentityIds, loadIngredientAliases } from "@/lib/server/ingredient-canonical-search";
 import { ingredientSearchPattern, normalizeIngredientSearchName } from "@/lib/ingredient-search";
 
 const PAGE_SIZE = 1000;
@@ -40,6 +41,8 @@ export function createRecipeIngredientSearch(
   catalog: RecipeIngredientSearchClient,
   recipes: RecipeIngredientSearchClient,
 ) {
+  let aliasPromise: ReturnType<typeof loadIngredientAliases> | undefined;
+  const readAliases = () => aliasPromise ??= loadIngredientAliases(catalog);
   const names = new Map<string, Promise<string[]>>();
   const matches = new Map<string, Promise<Match[]>>();
 
@@ -50,18 +53,21 @@ export function createRecipeIngredientSearch(
     const searchKey = pork ? "돼지고기" : key;
     if (!names.has(searchKey)) names.set(searchKey, (async () => {
       const pattern = ingredientSearchPattern(searchKey);
-      const [direct, synonyms, cuts] = await Promise.all([
+      const [direct, synonyms, cuts, aliases] = await Promise.all([
         readPages(() => catalog.from("ingredients").select(INGREDIENT_COLUMNS)
           .like("search_name", pattern).order("standard_name", { ascending: true }).order("id", { ascending: true })),
         readPages(() => catalog.from("ingredient_synonyms").select(SYNONYM_COLUMNS)
           .like("search_name", pattern).order("ingredient_id", { ascending: true }).order("id", { ascending: true })),
         pork ? readPages(() => catalog.from("ingredients").select(INGREDIENT_COLUMNS)
           .in("search_name", PORK_CUT_NAMES).order("standard_name", { ascending: true }).order("id", { ascending: true })) : [],
+        readAliases(),
       ]);
       const candidates = [...direct, ...cuts, ...synonyms.flatMap((row) =>
         Array.isArray(row.ingredients) ? row.ingredients : row.ingredients ? [row.ingredients] : [])];
-      return [...new Set(candidates.filter((row) => !pork
-        || row.category === "육류" || row.category_code === "pork_beef_lamb").map((row) => row.id))];
+      return expandIngredientIdentityIds(candidates.filter((row) => {
+        const canonical = canonicalizeIngredient(row, aliases);
+        return !pork || canonical.category === "육류" || canonical.category_code === "pork_beef_lamb";
+      }).map((row) => row.id), aliases);
     })());
     return names.get(searchKey)!;
   }
@@ -93,9 +99,10 @@ export function createRecipeIngredientSearch(
           .in("id", selectedIds.slice(i, i + ID_BATCH_SIZE))
           .order("standard_name", { ascending: true }).order("id", { ascending: true })));
       }
+      const aliases = await readAliases();
       const groups = await Promise.all(selectedIds.map(async (id) => {
         const ingredient = selected.find((row) => row.id === id);
-        return new Set([id, ...(ingredient ? await idsForName(ingredient.standard_name) : [])]);
+        return new Set(expandIngredientIdentityIds([id, ...(ingredient ? await idsForName(ingredient.standard_name) : [])], aliases));
       }));
       const rows = await rowsForIds(groups.flatMap((group) => [...group]));
       const byRecipe = new Map<string, Set<string>>();

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "slice": "ingredient-canonical-search",
+  "migrations": [
+    "supabase/migrations/20261009090000_ingredient_canonical_search.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "authorization_rationale": "The existing anonymous authority entrypoint admits only the added ingredients-scope GET of the public alias metadata view and delegates every existing path to its unchanged predecessor. The predecessor remains private and uncallable by API roles. View grants, security-invoker semantics, session checks and private representative evidence permissions stay unchanged. The existing asynchronous RPC owner receives SELECT on only three public alias-edge columns, with RLS restricted to alias rows; no whole-table, review-state, mutation, or private-evidence access is added.",
+  "functions": [
+    {
+      "signature": "private.verify_anonymous_pre_canonical_search_20261009()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "private",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.normalize_ingredient_search_name(text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "public",
+      "allowed_principals": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.match_ingredient_name_exact(text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ],
+  "context_migrations": [
+    "supabase/migrations/20260801151000_full_local_request_authority.sql"
+  ]
+}
