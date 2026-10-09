@@ -58,6 +58,26 @@ describe("useDialogBoundary", () => {
     expect(calls[0]).toEqual({ options: { preventScroll: true }, overflow: "hidden" });
     spy.mockRestore();
   });
+  it("moves focus before hiding a background ancestor", () => {
+    const original = HTMLElement.prototype.setAttribute;
+    const hiddenWithFocus: HTMLElement[] = [];
+    const spy = vi.spyOn(HTMLElement.prototype, "setAttribute").mockImplementation(function (this: HTMLElement, name: string, value: string) {
+      if (name === "aria-hidden" && value === "true" && this.contains(document.activeElement)) hiddenWithFocus.push(this);
+      original.call(this, name, value);
+    });
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    try {
+      render(<DialogHarness onClose={vi.fn()} />);
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "취소" }));
+      expect(hiddenWithFocus).toHaveLength(0);
+    } finally {
+      spy.mockRestore();
+      outside.remove();
+    }
+  });
+
   it("closes on Escape by default", async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();

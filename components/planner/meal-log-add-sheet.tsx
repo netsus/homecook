@@ -16,6 +16,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { createPortal } from "react-dom";
 
 import { useDialogViewport } from "@/components/shared/use-dialog-viewport";
+import { useBackdropDismiss } from "@/components/shared/use-backdrop-dismiss";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { fetchFoodCatalogSearch, fetchFoodCatalogSource, type FoodCatalogSearchItem } from "@/lib/api/food-catalog-search";
 import { fetchCookedBatches, type CookedBatchListData } from "@/lib/api/cooking";
@@ -271,6 +272,7 @@ export function MealLogAddSheet({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState<"batch" | "catalog" | "recent" | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [checkingRecentId, setCheckingRecentId] = useState<string | null>(null);
   const [unavailableRecentBatchIds, setUnavailableRecentBatchIds] = useState<Set<string>>(new Set());
@@ -302,6 +304,8 @@ export function MealLogAddSheet({
       setDiscardConfirm(true);
     } else onClose();
   };
+
+  const backdropDismiss = useBackdropDismiss(requestClose);
 
   const { setReturnFocusTarget } = useDialogBoundary({
     closeOnEscape: !saving,
@@ -634,6 +638,7 @@ export function MealLogAddSheet({
 
   async function submit() {
     if (!selection
+      || savingRef.current
       || saving
       || amount === null
       || !mutationEnabled
@@ -643,6 +648,7 @@ export function MealLogAddSheet({
       || !suggestionConfirmed
       || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount)
       || !selection.unit.trim()) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -657,6 +663,7 @@ export function MealLogAddSheet({
         return;
       }
       setError(reason instanceof Error ? reason.message : "식사 기록을 저장하지 못했어요.");
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -704,7 +711,7 @@ export function MealLogAddSheet({
 
   return createPortal(
     <div className="fixed inset-x-0 z-[70] flex items-end justify-center overflow-hidden bg-[var(--overlay-40)] lg:items-center lg:p-6"
-      onClick={(event) => { if (event.target === event.currentTarget) requestClose(); }}
+      {...backdropDismiss}
       style={{ ...viewportStyle, top: "var(--dialog-viewport-top, 0px)", height: "var(--dialog-viewport-height, 100dvh)" }}>
       <div
         aria-label="먹은 음식 추가"
@@ -894,7 +901,11 @@ export function MealLogAddSheet({
             <p className="truncate font-medium" title={selection.name}>{selection.name}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-sm font-medium">먹은 양
-                <DecimalInput key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setInputEdited(true); setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
+                <DecimalInput onKeyDown={(event) => {
+                  if (event.key !== "Enter" || event.repeat || event.nativeEvent.isComposing || event.keyCode === 229) return;
+                  event.preventDefault();
+                  void submit();
+                }} key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setInputEdited(true); setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
               </label>
               <label className="text-sm font-medium">단위
                 {(selection.unitOptions?.length ?? 0) > 1 ? (

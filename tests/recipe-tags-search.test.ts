@@ -174,7 +174,7 @@ describe("36c recipe tag search route", () => {
         };
       }),
       from: vi.fn((table: string) => {
-        if (table === "ingredients" || table === "ingredient_synonyms") return createChainQuery({ data: [], error: null });
+        if (table === "ingredients" || table === "ingredient_synonyms" || table === "ingredient_catalog_aliases") return createChainQuery({ data: [], error: null });
         if (table === "recipes") {
           const query = recipeQueries.shift();
           if (!query) throw new Error("unexpected extra recipes query");
@@ -223,6 +223,7 @@ describe("36c recipe tag search route", () => {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return catalogQuery;
         if (table === "ingredient_synonyms") return synonymQuery;
+        if (table === "ingredient_catalog_aliases") return createChainQuery({ data: [], error: null });
         throw new Error(`unexpected catalog table: ${table}`);
       }),
     };
