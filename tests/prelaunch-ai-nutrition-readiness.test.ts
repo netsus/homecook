@@ -193,6 +193,6 @@ describe("reviewed AI nutrition deployment boundaries", () => {
     expect(source).toContain("if (options.reviewedAiNutritionReadiness) await loadAiNutritionReview();");
     expect(source).toContain("return verifyAiNutritionAppliedDatabase(");
     expect(source).toContain("round2-ai-nutrition-source-review.json");
-    expect(source).toMatch(/options\.reviewedAiNutritionReadiness\) await stageRound2Readiness/);
+    expect(source).toMatch(/else if \([^\n]*options\.reviewedAiNutritionReadiness[^\n]*\) await stageRound2Readiness/);
   });
 });

@@ -7,6 +7,7 @@ import {
   isValidIngredientCategory,
 } from "@/lib/ingredient-categories";
 import { ingredientSearchPattern, normalizeIngredientSearchName } from "@/lib/ingredient-search";
+import { expandIngredientIdentityIds, loadIngredientAliases, type IngredientAliases } from "@/lib/server/ingredient-canonical-search";
 import {
   normalizeIngredientIds,
   toPantryItems,
@@ -49,6 +50,7 @@ interface PantryItemsSelectQuery {
   eq(column: string, value: string): PantryItemsSelectQuery;
   in(column: string, values: string[]): PantryItemsSelectQuery;
   order(column: string, options: QueryOrderOption): PantryItemsSelectQuery;
+  range(from: number, to: number): PantryItemsSelectQuery;
   then: ArrayResult<PantryItemJoinedRow>["then"];
 }
 
@@ -363,12 +365,10 @@ function getIngredientSelect(includeTaxonomyColumn: boolean) {
 
 function buildPantryItemsQuery({
   auth,
-  category,
   includeTaxonomyColumn,
   ingredientIds,
 }: {
   auth: PantryAuthSuccess;
-  category?: string;
   includeTaxonomyColumn: boolean;
   ingredientIds?: string[];
 }) {
@@ -382,16 +382,12 @@ function buildPantryItemsQuery({
     query = query.in("ingredient_id", ingredientIds);
   }
 
-  if (category) {
-    query = query.eq("ingredients.category", category);
-  }
-
   return query
     .order("created_at", { ascending: false })
     .order("id", { ascending: true });
 }
 
-async function findPantryIngredientIds(dbClient: PantryDbClient, q: string) {
+async function findPantryIngredientIds(dbClient: PantryDbClient, q: string, aliases: IngredientAliases) {
   const ids = new Set<string>();
   const pattern = ingredientSearchPattern(q);
   const normalizedQuery = normalizeIngredientSearchName(q);
@@ -427,7 +423,7 @@ async function findPantryIngredientIds(dbClient: PantryDbClient, q: string) {
     }
     ingredientsFinished = ingredients.data.length < pageSize;
     synonymsFinished = synonyms.data.length < pageSize;
-    if (ingredientsFinished && synonymsFinished) return [...ids];
+    if (ingredientsFinished && synonymsFinished) return expandIngredientIdentityIds([...ids], aliases);
   }
 }
 
@@ -470,28 +466,33 @@ export async function GET(request: NextRequest) {
       { field: "q", reason: "too_long" },
     ]);
   }
-  const ingredientIds = q ? await findPantryIngredientIds(auth.dbClient, q) : undefined;
+  let aliases: IngredientAliases;
+  let ingredientIds: string[] | null | undefined;
+  try {
+    aliases = await loadIngredientAliases(auth.dbClient);
+    ingredientIds = q ? await findPantryIngredientIds(auth.dbClient, q, aliases) : undefined;
+  } catch {
+    return fail("INTERNAL_ERROR", "팬트리 검색을 불러오지 못했어요. 다시 시도해 주세요.", 500);
+  }
   if (ingredientIds === null) {
     return fail("INTERNAL_ERROR", "팬트리 검색을 불러오지 못했어요. 다시 시도해 주세요.", 500);
   }
-  let result = await buildPantryItemsQuery({
-    auth,
-    category,
-    includeTaxonomyColumn: true,
-    ingredientIds,
-  });
-
-  if (isSchemaCacheMiss(result.error)) {
-    result = await buildPantryItemsQuery({
-      auth,
-      category,
-      includeTaxonomyColumn: false,
-      ingredientIds,
-    });
-  }
-
-  if (result.error || !result.data) {
-    return fail("INTERNAL_ERROR", "팬트리 목록을 불러오지 못했어요.", 500);
+  const pantryRows: PantryItemJoinedRow[] = [];
+  const pageSize = 1000;
+  let includeTaxonomyColumn = true;
+  for (let offset = 0; ; offset += pageSize) {
+    const readPage = () => buildPantryItemsQuery({ auth, includeTaxonomyColumn, ingredientIds })
+      .range(offset, offset + pageSize - 1);
+    let result = await readPage();
+    if (includeTaxonomyColumn && isSchemaCacheMiss(result.error)) {
+      includeTaxonomyColumn = false;
+      result = await readPage();
+    }
+    if (result.error || !result.data) {
+      return fail("INTERNAL_ERROR", "팬트리 목록을 불러오지 못했어요.", 500);
+    }
+    pantryRows.push(...result.data);
+    if (result.data.length < pageSize) break;
   }
 
   let productItems: PantryProductItem[] = [];
@@ -520,7 +521,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return ok({ items: toPantryItems(result.data), product_items: productItems });
+  // Normalize only display metadata; inventory identities remain separate.
+  const items = toPantryItems(pantryRows.map((row) => {
+    const representative = aliases.get(row.ingredient_id);
+    return representative ? { ...row, ingredients: representative } : row;
+  })).filter((item) => !category || item.category === category);
+  return ok({ items, product_items: productItems });
 }
 
 export async function POST(request: Request) {

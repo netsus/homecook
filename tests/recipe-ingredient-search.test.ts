@@ -13,10 +13,13 @@ const ingredients = [
   [5, "삼겹살", "육류"], [6, "소고기 목심", "육류"],
   [7, "돼지감자", "채소"], [8, "된장", "양념"],
   [9, "재래식 된장", "양념"], [10, "양파", "채소"],
+  [11, "슈가파우더", "양념"], [12, "가루 설탕", "양념"],
 ].map(([key, name, category]) => ({
   id: id(Number(key)), standard_name: String(name), category: String(category),
   search_name: normalizeIngredientSearchName(String(name)),
 }));
+const aliases = [{ ingredient_id: id(11), representative_ingredient_id: id(12),
+  representative_standard_name: "가루 설탕", representative_category: "양념", representative_category_code: null }];
 const synonyms = [{
   ingredient_id: id(4), synonym: "돼지고기 앞다리살", search_name: "돼지고기앞다리살",
   ingredients: ingredients.find((row) => row.id === id(4)),
@@ -39,7 +42,8 @@ function searchFixture(options: { failTable?: string; extraMappings?: typeof map
       const table = path.slice(1);
       if (table === options.failTable) return new Response(JSON.stringify({ message: "lookup unavailable" }), { status: 500 });
       let rows: Record<string, unknown>[] = table === "ingredients" ? [...ingredients]
-        : table === "ingredient_synonyms" ? [...synonyms] : [...mappings, ...options.extraMappings ?? []];
+        : table === "ingredient_synonyms" ? [...synonyms]
+        : table === "ingredient_catalog_aliases" ? [...aliases] : [...mappings, ...options.extraMappings ?? []];
       for (const [key, expression] of url.searchParams) {
         if (expression.startsWith("in.(")) {
           const values = expression.slice(4, -1).split(",").map((v) => v.replace(/^"|"$/g, ""));
@@ -100,7 +104,15 @@ describe("recipe ingredient discovery", () => {
     expect(requests.some((url) => url.pathname.endsWith("recipe_ingredients") && url.searchParams.get("offset") === "1000")).toBe(true);
   });
 
-  it.each(["ingredients", "ingredient_synonyms", "recipe_ingredients"])("reports %s errors instead of a false empty result", async (failTable) => {
+  it("finds legacy references through either canonical or alias name and preserves both stored rows", async () => {
+    const { search } = searchFixture();
+    expect((await search.search("가루 설탕")).sort()).toEqual([id(210), id(211)]);
+    expect((await search.search("슈가파우더")).sort()).toEqual([id(210), id(211)]);
+    expect((await search.filter([id(12)]))?.sort()).toEqual([id(210), id(211)]);
+    expect((await search.filter([id(11)]))?.sort()).toEqual([id(210), id(211)]);
+  });
+
+  it.each(["ingredients", "ingredient_synonyms", "ingredient_catalog_aliases", "recipe_ingredients"])("reports %s errors instead of a false empty result", async (failTable) => {
     await expect(searchFixture({ failTable }).search.search("된장")).rejects.toBeTruthy();
   });
 

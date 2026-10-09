@@ -85,13 +85,13 @@ export function assertFrontendScope(files, before, after) {
 }
 
 export function parsePrelaunchOptions(args) {
-  /** @type {{ref: string, refOption: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string, testScript?: string, alreadyAppliedDb?: boolean, skipAutomatedTests?: boolean, reviewedRepairReadiness?: boolean, reviewedBetaReadiness?: boolean, reviewedFeedbackReadiness?: boolean, reviewedAiNutritionReadiness?: boolean, reviewedYoutubeTrialReadiness?: boolean}} */
+  /** @type {{ref: string, refOption: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string, testScript?: string, alreadyAppliedDb?: boolean, skipAutomatedTests?: boolean, reviewedRepairReadiness?: boolean, reviewedBetaReadiness?: boolean, reviewedFeedbackReadiness?: boolean, reviewedAiNutritionReadiness?: boolean, reviewedIngredientSearchReadiness?: boolean, reviewedYoutubeTrialReadiness?: boolean}} */
   const options = { ref: "origin/master", refOption: "--ref" };
   const names = { "--env-file": "envFile", "--db-config": "dbConfig", "--db-baseline": "dbBaseline", "--verify-script": "verifyScript", "--test-script": "testScript" };
   const seen = new Set();
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    const flag = { "--db-compatible": "dbCompatible", "--already-applied-db": "alreadyAppliedDb", "--skip-automated-tests": "skipAutomatedTests", "--reviewed-repair-readiness": "reviewedRepairReadiness", "--reviewed-beta-readiness": "reviewedBetaReadiness", "--reviewed-feedback-readiness": "reviewedFeedbackReadiness", "--reviewed-ai-nutrition-readiness": "reviewedAiNutritionReadiness", "--reviewed-youtube-trial-readiness": "reviewedYoutubeTrialReadiness" }[key];
+    const flag = { "--db-compatible": "dbCompatible", "--already-applied-db": "alreadyAppliedDb", "--skip-automated-tests": "skipAutomatedTests", "--reviewed-repair-readiness": "reviewedRepairReadiness", "--reviewed-beta-readiness": "reviewedBetaReadiness", "--reviewed-feedback-readiness": "reviewedFeedbackReadiness", "--reviewed-ai-nutrition-readiness": "reviewedAiNutritionReadiness", "--reviewed-ingredient-search-readiness": "reviewedIngredientSearchReadiness", "--reviewed-youtube-trial-readiness": "reviewedYoutubeTrialReadiness" }[key];
     if (flag) {
       if (options[flag]) throw new DeploymentError("중복된 배포 옵션입니다.");
       options[flag] = true;
@@ -109,12 +109,14 @@ export function parsePrelaunchOptions(args) {
   if (options.alreadyAppliedDb && options.dbBaseline) throw new DeploymentError("이미 적용된 DB 확인에는 baseline을 새로 만들 수 없습니다.");
   if (options.reviewedRepairReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 복구 배포에는 --already-applied-db가 필요합니다.");
   if (options.reviewedBetaReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 베타 배포에는 --already-applied-db가 필요합니다.");
+  if (options.reviewedIngredientSearchReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 재료 검색 배포에는 --already-applied-db가 필요합니다.");
+  if (options.reviewedIngredientSearchReadiness && (options.refOption !== "--reviewed-ref" || !/^[a-f0-9]{40}$/u.test(options.ref))) throw new DeploymentError("검토한 재료 검색 배포에는 --reviewed-ref의 정확한 SHA가 필요합니다.");
   if (options.reviewedAiNutritionReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 AI 영양 배포에는 --already-applied-db가 필요합니다.");
   if (options.reviewedAiNutritionReadiness && (options.refOption !== "--reviewed-ref" || !/^[a-f0-9]{40}$/u.test(options.ref))) throw new DeploymentError("검토한 AI 영양 배포에는 --reviewed-ref의 정확한 SHA가 필요합니다.");
   if (options.reviewedFeedbackReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 피드백 배포에는 --already-applied-db가 필요합니다.");
   if (options.reviewedYoutubeTrialReadiness && !options.alreadyAppliedDb) throw new DeploymentError("검토한 YouTube 시험 배포에는 --already-applied-db가 필요합니다.");
   if (options.reviewedYoutubeTrialReadiness && (options.refOption !== "--reviewed-ref" || !/^[a-f0-9]{40}$/u.test(options.ref))) throw new DeploymentError("검토한 YouTube 시험 배포에는 --reviewed-ref의 정확한 SHA가 필요합니다.");
-  if ([options.reviewedBetaReadiness, options.reviewedRepairReadiness, options.reviewedFeedbackReadiness, options.reviewedAiNutritionReadiness, options.reviewedYoutubeTrialReadiness].filter(Boolean).length > 1) throw new DeploymentError("서로 다른 한정 배포 검증을 함께 지정할 수 없습니다.");
+  if ([options.reviewedBetaReadiness, options.reviewedRepairReadiness, options.reviewedFeedbackReadiness, options.reviewedAiNutritionReadiness, options.reviewedYoutubeTrialReadiness, options.reviewedIngredientSearchReadiness].filter(Boolean).length > 1) throw new DeploymentError("서로 다른 한정 배포 검증을 함께 지정할 수 없습니다.");
   if (options.reviewedFeedbackReadiness && (options.refOption !== "--reviewed-ref" || !/^[a-f0-9]{40}$/u.test(options.ref))) throw new DeploymentError("검토한 피드백 배포에는 --reviewed-ref의 정확한 SHA가 필요합니다.");
   if (options.skipAutomatedTests && (options.testScript || options.verifyScript)) throw new DeploymentError("테스트 생략과 검증 스크립트는 함께 지정할 수 없습니다.");
   if (options.testScript && !/^test(?::[a-z0-9:_-]+)?$/u.test(options.testScript)) throw new DeploymentError("--test-script에는 package.json의 test 명령 이름이 필요합니다.");

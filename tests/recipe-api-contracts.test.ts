@@ -310,7 +310,7 @@ describe("recipe API contracts", () => {
         data: [],
         error: null,
       })),
-      from: vi.fn((table: string) => table === "ingredients" || table === "ingredient_synonyms"
+      from: vi.fn((table: string) => table === "ingredients" || table === "ingredient_synonyms" || table === "ingredient_catalog_aliases"
         ? createQuery({ data: [], error: null })
         : listQuery),
     });
@@ -484,6 +484,7 @@ describe("recipe API contracts", () => {
     createRouteHandlerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_catalog_aliases") return createQuery({ data: [], error: null });
         if (table === "ingredient_synonyms") return synonymsQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
@@ -516,12 +517,12 @@ describe("recipe API contracts", () => {
       },
     });
     expect(ingredientsQuery.select).toHaveBeenCalledWith("id, standard_name, category, category_code");
-    expect(ingredientsQuery.eq).toHaveBeenCalledWith("category", "채소");
+    expect(ingredientsQuery.eq).not.toHaveBeenCalledWith("category", "채소");
     expect(ingredientsQuery.like).toHaveBeenCalledWith("search_name", "%양파%");
     expect(synonymsQuery.select).toHaveBeenCalledWith(
       "ingredient_id, synonym, ingredients!inner(id, standard_name, category, category_code)",
     );
-    expect(synonymsQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
+    expect(synonymsQuery.eq).not.toHaveBeenCalledWith("ingredients.category", "채소");
     expect(synonymsQuery.like).toHaveBeenCalledWith("search_name", "%양파%");
   });
 
@@ -551,6 +552,7 @@ describe("recipe API contracts", () => {
     createRouteHandlerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_catalog_aliases") return createQuery({ data: [], error: null });
         if (table === "ingredient_synonyms") return synonymsQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
@@ -605,6 +607,7 @@ describe("recipe API contracts", () => {
     createRouteHandlerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_catalog_aliases") return createQuery({ data: [], error: null });
         if (table === "ingredient_synonyms") return synonymsQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
@@ -740,6 +743,7 @@ describe("recipe API contracts", () => {
     createRouteHandlerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_catalog_aliases") return createQuery({ data: [], error: null });
         if (table === "ingredient_synonyms") return synonymsQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
@@ -806,6 +810,7 @@ describe("recipe API contracts", () => {
     createRouteHandlerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_catalog_aliases") return createQuery({ data: [], error: null });
         if (table === "ingredient_synonyms") return synonymsQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
@@ -854,6 +859,7 @@ describe("recipe API contracts", () => {
     createRouteHandlerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_catalog_aliases") return createQuery({ data: [], error: null });
         if (table === "ingredient_synonyms") return synonymsQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
@@ -927,7 +933,7 @@ describe("recipe API contracts", () => {
         })),
       },
       rpc: vi.fn(async () => ({ data: [], error: null })),
-      from: vi.fn((table: string) => table === "ingredients" || table === "ingredient_synonyms"
+      from: vi.fn((table: string) => table === "ingredients" || table === "ingredient_synonyms" || table === "ingredient_catalog_aliases"
         ? createQuery({ data: [], error: null })
         : listQuery),
     });
@@ -1088,7 +1094,7 @@ describe("recipe API contracts", () => {
       })),
       from: vi.fn((table: string) => {
         if (table === "recipe_ingredients") return ingredientRowsQuery;
-        if (table === "ingredients" || table === "ingredient_synonyms") return createQuery({ data: [], error: null });
+        if (table === "ingredients" || table === "ingredient_synonyms" || table === "ingredient_catalog_aliases") return createQuery({ data: [], error: null });
         if (table === "recipes") return listQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
