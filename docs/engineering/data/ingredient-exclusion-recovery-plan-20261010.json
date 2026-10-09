@@ -1234,7 +1234,7 @@
     "nutrition_values": "59d74e6aeb8d9c319001b1de9062b339",
     "nutrition_sources": "8a2c454cc2045fbe1111c22aca7810b4",
     "nutrition_profiles": "f10d6921510e96e91184147f5e5d72e9",
-    "ingredient_synonyms": "0d26372f997084ae7c4ba304242f2540",
+    "ingredient_synonyms": "88e8bc240b6c6c0911b5f07e191352da",
     "nutrition_source_items": "7e8a109576668bd39fd38c5703c9df6a",
     "ingredient_catalog_entries": "53bd1ce50fafac9624a500e209e67590",
     "ingredient_nutrition_profiles": "087d4f408eea2ceba20d429aec33935f"
@@ -1253,5 +1253,5 @@
       "ingredient_id": "41a5e41b-a738-4e63-8183-3786a5ac61c4"
     }
   ],
-  "operation_checksum": "a479f2e1e27788f981797a2140ab5f318da797d39362b17edceedc17170e6095"
+  "operation_checksum": "0a2bb9e3acf47eda98ce2544f8c596dca15ee294c40488789e0f846f6045fe27"
 }
