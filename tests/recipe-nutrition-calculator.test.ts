@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-calculator";
+import { calculateRecipeIngredientWeightGrams, calculateRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-calculator";
 
 type NutrientCode =
   | "energy_kcal"
@@ -75,6 +75,7 @@ type CalculatorIngredient = {
   piece_weight?: {
     id: string;
     ingredient_id: string;
+    evidence_id: string;
     size_code: string;
     preparation_state: string;
     edible_state?: string;
@@ -82,6 +83,8 @@ type CalculatorIngredient = {
     review_status: string;
     is_active: boolean;
     evidence?: {
+      id: string; evidence_kind: string; preparation_state: string; size_code: string;
+      source_observed_amount: number; source_observed_unit: string; observed_weight_g: number;
       review_status: string;
       is_active: boolean;
       source: NonNullable<CalculatorIngredient["nutrition"]>["source"];
@@ -452,6 +455,7 @@ describe("recipe nutrition calculator", () => {
       edible_state: "edible",
     });
     piece.piece_weight = {
+      evidence_id: "fixture-evidence",
       id: "piece-weight",
       ingredient_id: piece.ingredient_id,
       size_code: "medium",
@@ -461,6 +465,8 @@ describe("recipe nutrition calculator", () => {
       review_status: "approved",
       is_active: true,
       evidence: {
+        id: "fixture-evidence", evidence_kind: "piece_weight", preparation_state: "peeled", size_code: "medium",
+        source_observed_amount: 1, source_observed_unit: "개", observed_weight_g: 80,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource("RDA-piece"),
@@ -534,7 +540,7 @@ describe("recipe nutrition calculator", () => {
     expect(result.fixed_values.energy_kcal).toBe(0);
     expect(result.missing_reasons).toContain("TO_TASTE_EXCLUDED:water-to-taste");
     expect(result.warnings).toContain("TO_TASTE_EXCLUDED");
-    expect(result.calculation_version).toBe("recipe-nutrition-v2");
+    expect(result.calculation_version).toBe("recipe-nutrition-v3");
   });
 
   it("does not trust observed zero nutrients from an unapproved TO_TASTE profile", async () => {
@@ -589,6 +595,7 @@ describe("recipe nutrition calculator", () => {
       edible_state: null,
     });
     sheet.piece_weight = {
+      evidence_id: "fixture-evidence",
       id: "piece-weight-medium-sheet",
       ingredient_id: sheet.ingredient_id,
       size_code: "medium",
@@ -597,6 +604,8 @@ describe("recipe nutrition calculator", () => {
       review_status: "approved",
       is_active: true,
       evidence: {
+        id: "fixture-evidence", evidence_kind: "piece_weight", preparation_state: "raw-edible", size_code: "medium",
+        source_observed_amount: 1, source_observed_unit: "장", observed_weight_g: 40,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource("HOMECOOK-medium-sheet"),
@@ -640,6 +649,7 @@ describe("recipe nutrition calculator", () => {
       preparation_state: "as_published",
     });
     ingredient.piece_weight = {
+      evidence_id: "fixture-evidence",
       id: `piece-weight-${unit}`,
       ingredient_id: ingredient.ingredient_id,
       size_code: "medium",
@@ -648,6 +658,8 @@ describe("recipe nutrition calculator", () => {
       review_status: "approved",
       is_active: true,
       evidence: {
+        id: "fixture-evidence", evidence_kind: "piece_weight", preparation_state: "as_published", size_code: "medium",
+        source_observed_amount: 1, source_observed_unit: unit, observed_weight_g: weight,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource(`HOMECOOK-${unit}`),
@@ -675,6 +687,7 @@ describe("recipe nutrition calculator", () => {
       edible_state: "legacy-value-must-not-be-used",
     });
     piece.piece_weight = {
+      evidence_id: "fixture-evidence",
       id: "piece-weight-official",
       ingredient_id: piece.ingredient_id,
       size_code: "medium",
@@ -683,6 +696,8 @@ describe("recipe nutrition calculator", () => {
       review_status: "approved",
       is_active: true,
       evidence: {
+        id: "fixture-evidence", evidence_kind: "piece_weight", preparation_state: "peeled", size_code: "medium",
+        source_observed_amount: 1, source_observed_unit: "개", observed_weight_g: 80,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource("RDA-piece-official"),
@@ -1077,9 +1092,12 @@ describe("AI nutrition provenance", () => {
   it("calculates AI piece conversion without treating its measurement source as official nutrient input", () => {
     const ai = aiIngredient({ amount: 2, unit: "개" });
     ai.piece_weight = {
+      evidence_id: "fixture-evidence",
       id: "piece-ai", ingredient_id: ai.ingredient_id, preparation_state: ai.preparation_state, size_code: "medium",
       weight_g: 40, review_status: "approved", is_active: true,
-      evidence: { review_status: "approved", is_active: true, source: measurementEvidenceSource() },
+      evidence: {
+        id: "fixture-evidence", evidence_kind: "piece_weight", preparation_state: ai.preparation_state, size_code: "medium",
+        source_observed_amount: 1, source_observed_unit: "개", observed_weight_g: 40, review_status: "approved", is_active: true, source: measurementEvidenceSource() },
     };
     const result = calculateRecipeNutrition(recipeInput([ai]));
     expect(result.calculation_quality).toBe("estimated");
@@ -1121,5 +1139,59 @@ describe("AI nutrition provenance", () => {
     const mixed = calculateRecipeNutrition(recipeInput([ai, official]));
     expect(mixed.calculation_quality).toBe("mixed");
     expect(mixed.values.energy_kcal.amount).toBe(30);
+  });
+});
+
+
+describe("piece measurement unit families", () => {
+  function measured(unit = "줌", observedUnit = "1줌", size = "handful") {
+    const ingredient = directIngredient({ unit, amount: 2 });
+    ingredient.piece_weight = {
+      id: "piece-green-onion", evidence_id: "evidence-green-onion",
+      ingredient_id: ingredient.ingredient_id, preparation_state: ingredient.preparation_state,
+      size_code: size, weight_g: 30, review_status: "approved", is_active: true,
+      evidence: {
+        id: "evidence-green-onion", evidence_kind: "piece_weight",
+        preparation_state: ingredient.preparation_state, size_code: size,
+        source_observed_amount: 1, source_observed_unit: observedUnit, observed_weight_g: 30,
+        review_status: "approved", is_active: true,
+        source: measurementEvidenceSource("HOMECOOK-handful"),
+      },
+    } as NonNullable<CalculatorIngredient["piece_weight"]>;
+    return ingredient;
+  }
+
+  it.each([["줌", "1줌", "handful"], ["handfuls", "1 handful", "handful"],
+    ["꼬집", "1꼬집", "pinch"], ["알", "1개", "medium"], ["통", "1통", "medium"],
+    ["줄기", "1대", "medium"]])("uses matching approved %s evidence for nutrition and weight", (unit, observation, size) => {
+    const ingredient = measured(unit, observation, size);
+    expect(calculateRecipeNutrition(recipeInput([ingredient])).values.energy_kcal.amount).toBe(60);
+    expect(calculateRecipeIngredientWeightGrams([ingredient])).toBe(60);
+  });
+
+  it.each([["장", "1개"], ["대", "1개"], ["모", "1장"], ["줌", "1개"],
+    ["1줌", "1줌"], ["팩", "1개"], ["개", "2개"], ["개", "1.0개"]])(
+    "rejects incompatible input %s and observation %s", (unit, observation) => {
+      const ingredient = measured(unit, observation, unit === "줌" ? "handful" : "medium");
+      expect(calculateRecipeNutrition(recipeInput([ingredient])).values.energy_kcal.amount).toBeNull();
+      expect(calculateRecipeIngredientWeightGrams([ingredient])).toBeNull();
+    });
+
+  it.each([{ review_status: "revoked" }, { freshness_status: "stale" }, { is_active: false }])(
+    "rejects unavailable measurement sources %j", (patch) => {
+      const ingredient = measured();
+      Object.assign(ingredient.piece_weight!.evidence!.source, patch);
+      expect(calculateRecipeNutrition(recipeInput([ingredient])).values.energy_kcal.amount).toBeNull();
+      expect(calculateRecipeIngredientWeightGrams([ingredient])).toBeNull();
+    });
+
+  it.each([
+    { source_observed_amount: 2 }, { observed_weight_g: 31 }, { id: "other" },
+    { evidence_kind: "volume_weight" }, { size_code: "medium" }, { preparation_state: "cooked" },
+  ])("rejects inconsistent measurement metadata %j", (patch) => {
+    const ingredient = measured();
+    Object.assign(ingredient.piece_weight!.evidence!, patch);
+    expect(calculateRecipeNutrition(recipeInput([ingredient])).values.energy_kcal.amount).toBeNull();
+    expect(calculateRecipeIngredientWeightGrams([ingredient])).toBeNull();
   });
 });

@@ -24,7 +24,7 @@ describe("finished cooking weight estimate", () => {
     expect(estimateCookedWeight([ingredient({ amount: 0.2, unit: "kg" })], 2, 2)).toBe(150);
   });
   it("uses approved density and piece-weight evidence without assuming ml equals g", () => {
-    const piece = ingredient({ amount: 2, unit: "개", piece_weight: { id: "piece", ingredient_id: "ingredient", size_code: "medium", preparation_state: "raw", weight_g: 80, review_status: "approved", is_active: true, evidence: { review_status: "approved", is_active: true, source } } });
+    const piece = ingredient({ amount: 2, unit: "개", piece_weight: { id: "piece", evidence_id: "piece-evidence", ingredient_id: "ingredient", size_code: "medium", preparation_state: "raw", weight_g: 80, review_status: "approved", is_active: true, evidence: { id: "piece-evidence", evidence_kind: "piece_weight", preparation_state: "raw", size_code: "medium", source_observed_amount: 1, source_observed_unit: "개", observed_weight_g: 80, review_status: "approved", is_active: true, source } } });
     expect(estimateCookedWeight([volume, piece], 2, 2)).toBe(135);
     expect(estimateCookedWeight([ingredient({ unit: "ml" })], 2, 2)).toBeNull();
   });

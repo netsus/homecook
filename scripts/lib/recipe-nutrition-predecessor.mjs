@@ -1,3 +1,5 @@
+import { approvedPieceObservation, pieceSizeCode, pieceWeightMatchesIngredient } from "../../lib/nutrition/ingredient-piece-units.mjs";
+
 const NUTRITION_LINK_SELECT = `
   id, ingredient_id, nutrition_profile_id, preparation_state, review_status, is_active, is_primary,
   nutrition_profiles(
@@ -30,7 +32,7 @@ const CONVERSION_ASSIGNMENT_SELECT = `
 const PIECE_WEIGHT_SELECT = `
   id, ingredient_id, evidence_id, size_code, preparation_state, weight_g, review_status, is_active,
   measurement_source_evidence(
-    id, source_id, evidence_kind, preparation_state, size_code, review_status, is_active,
+    id, source_id, evidence_kind, preparation_state, size_code, source_observed_amount, source_observed_unit, observed_weight_g, review_status, is_active,
     nutrition_sources(
       id, provider_code, dataset_name, source_version, data_basis_date, license_name, source_url,
       review_status, freshness_status, is_active
@@ -274,13 +276,14 @@ function pieceWeightCandidate(row) {
     return null;
   }
 
-  return {
+  const candidate = {
     ingredientId: row.ingredient_id,
     preparationState: row.preparation_state,
     sizeCode: row.size_code,
     pieceWeight: {
       id: row.id,
       ingredient_id: row.ingredient_id,
+      evidence_id: row.evidence_id,
       size_code: row.size_code,
       preparation_state: row.preparation_state,
       weight_g: weight,
@@ -288,6 +291,12 @@ function pieceWeightCandidate(row) {
       is_active: row.is_active,
       evidence: {
         id: evidence.id,
+        evidence_kind: evidence.evidence_kind,
+        preparation_state: evidence.preparation_state,
+        size_code: evidence.size_code,
+        source_observed_amount: safeNumber(evidence.source_observed_amount),
+        source_observed_unit: evidence.source_observed_unit,
+        observed_weight_g: safeNumber(evidence.observed_weight_g),
         review_status: evidence.review_status,
         is_active: evidence.is_active,
         source: {
@@ -300,6 +309,7 @@ function pieceWeightCandidate(row) {
       },
     },
   };
+  return approvedPieceObservation(candidate.pieceWeight) ? candidate : null;
 }
 
 function groupByIngredient(rows, projector) {
@@ -339,11 +349,6 @@ function isMassUnit(unit) {
   return normalized === "g" || normalized === "kg";
 }
 
-function isPieceUnit(unit) {
-  const normalized = typeof unit === "string" ? unit.trim().toLowerCase() : "";
-  return ["개", "장", "대", "모", "piece", "pieces"].includes(normalized);
-}
-
 function selectRecipeNutritionPredecessor(ingredient, predecessor) {
   // AI is a fallback; it must not outrank an approved official/product source
   // merely because its basis unit happens to match the ingredient quantity.
@@ -378,11 +383,12 @@ function selectRecipeNutritionPredecessor(ingredient, predecessor) {
   ) && predecessor.conversion_candidates.length === 1
     ? predecessor.conversion_candidates[0]
     : null;
-  const sizeCode = isPieceUnit(ingredient.unit) ? ingredient.size_code ?? "medium" : null;
+  const sizeCode = pieceSizeCode(ingredient.unit, ingredient.size_code);
   const matchingPieces = nutrition && sizeCode
     ? (predecessor.piece_weight_candidates ?? []).filter((candidate) =>
-      candidate.preparationState === nutrition.preparationState &&
-      candidate.sizeCode === sizeCode
+      pieceWeightMatchesIngredient(candidate.pieceWeight, {
+        ...ingredient, preparation_state: nutrition.preparationState,
+      })
     )
     : [];
   const piece = matchingPieces.length === 1 ? matchingPieces[0] : null;
@@ -503,7 +509,7 @@ export function buildRecipeNutritionInputGuard(ingredients, predecessors) {
         const predecessor = predecessors.get(ingredient.ingredient_id) ?? {
           nutrition_candidates: [],
           conversion_candidates: [],
-          piece_weight: null,
+          piece_weight_candidates: [],
         };
         const selected = selectRecipeNutritionPredecessor(ingredient, predecessor);
         return {
@@ -552,6 +558,24 @@ export function buildRecipeNutritionInputGuard(ingredients, predecessors) {
               source: sourceProjection(candidate.assignment.evidence.source),
             }))
             .sort((left, right) => compareUnicodeOrdinal(left.assignment_id, right.assignment_id)),
+          piece_candidates: (predecessor.piece_weight_candidates ?? [])
+            .map(({ pieceWeight: piece }) => ({
+              piece_weight_id: piece.id,
+              evidence_id: piece.evidence.id,
+              source_id: piece.evidence.source.id,
+              preparation_state: piece.preparation_state,
+              size_code: piece.size_code,
+              weight_g: piece.weight_g,
+              evidence_kind: piece.evidence.evidence_kind,
+              evidence_preparation_state: piece.evidence.preparation_state,
+              evidence_size_code: piece.evidence.size_code,
+              source_observed_amount: piece.evidence.source_observed_amount,
+              source_observed_unit: piece.evidence.source_observed_unit,
+              observed_weight_g: piece.evidence.observed_weight_g,
+              source: sourceProjection(piece.evidence.source),
+            }))
+            .sort((left, right) => compareUnicodeOrdinal(left.piece_weight_id, right.piece_weight_id)),
+          selected_piece_weight_id: selected.piece?.pieceWeight.id ?? null,
           selected_nutrition_link_id: selected.nutrition?.nutrition.link.id ?? null,
           selected_conversion_assignment_id: selected.conversion?.assignment.id ?? null,
         };

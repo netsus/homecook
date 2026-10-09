@@ -69,6 +69,7 @@ describe("recipe ingredient weight", () => {
         size_code: "medium",
         piece_weight: {
           id: "piece-weight",
+          evidence_id: "piece-evidence",
           ingredient_id: "ingredient-id",
           size_code: "medium",
           preparation_state: "default",
@@ -76,6 +77,8 @@ describe("recipe ingredient weight", () => {
           review_status: "approved",
           is_active: true,
           evidence: {
+            id: "piece-evidence", evidence_kind: "piece_weight", preparation_state: "default", size_code: "medium",
+            source_observed_amount: 1, source_observed_unit: "개", observed_weight_g: 80,
             review_status: "approved",
             is_active: true,
             source: approvedSource,

@@ -1,5 +1,9 @@
 # API\_설계\_v1.2.43
 
+## 2026-10-09 — 단위별 환산 근거 연결 (구현·운영 미반영)
+
+승인된 관측 단위 계열·수량1·무게·재료상태·크기가 맞는 유일한 근거만 사용한다. 대파 줌은handful30g, 대는medium100g을 구분한다. 실제/초안guard에piece후보/선택ID를 포함하고 식사 미리보기/저장도 동기화한다. 신규 계산은v3, 과거 동일수량 기록은 저장 영양을 보존한다. 제품라벨·권한·오류wrapper·AI비활성 정책은 유지한다. [구현·SQL·검증](engineering/ingredient-piece-unit-runtime-20261009.md)을 따른다.
+
 ## 2026-10-09 — 검색용 대표 재료 식별 (운영 반영)
 
 재료 목록/이름 검색은 검토된 catalog alias를 대표 ingredient ID와 표준명으로 반환하고 동일대표를 중복 표시하지 않는다. 입력/동의어를 정규화해 검색한 뒤 대표 분류를 적용한다. 유튜브 매칭은 실제 표준명 우선·별칭다중후보확인을 유지한다. 레시피/팬트리 검색은 옛ID 참조까지 찾으며 기존저장/상세의 정확ID와재고행을 변경하지 않는다. 응답 wrapper·소유권·제품선택/버전·cursor 계약은 유지한다. [세부 계약](engineering/ingredient-canonical-search-20261009.md) 참조.
@@ -5795,6 +5799,6 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 
 선택일 중심 요리계획/식사기록, 간결한 상세·모달, 실제 영양 그래프를 적용한다. 레시피 `view=preview`는 조회수 없는 동일 권한 읽기, `/meal-log/nutrition-preview`는 현재 소유자·세대의 읽기 전용 영양 계산이다. 계획 POST는 선택적 `Idempotency-Key`로 동일 시도 결과를 재사용한다. [상세 계약·검증·제한](engineering/planner-meal-log-redesign-20261006.md)을 따르며 웹과 새 SQL2개는 추후 묶음 배포한다.
 
-### 2026-10-09 식사기록 양 초과 오류 구분 (미배포)
+### 2026-10-09 식사기록 양 초과 오류 구분 (운영 반영: PR #1600)
 
 식사기록 mutation RPC에서 SQLSTATE22003와 CONFLICT가 함께 반환되면 HTTP409/codeCONFLICT를 유지하고 `fields: [{field: "quantity.amount", reason: "exceeds_available_amount"}]`를 제공한다. 이 경우 UI는 양을 줄이라는 안내를 표시하며 ‘다른 변경의 최신 기록 반영’으로 바꾸지 않는다. 실제 revision 충돌과 계정 권한·세대 검사는 유지한다. SQL/DB 변경 없음.

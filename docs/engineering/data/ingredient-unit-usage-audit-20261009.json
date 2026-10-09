@@ -1,0 +1,337 @@
+{
+  "schema": "homecook.ingredient-unit-usage-audit.v1",
+  "observed_at": "2026-10-09T11:37:41.424Z",
+  "current_recipe_rows": 516,
+  "units": [
+    {
+      "rows": 382,
+      "unit": "g",
+      "ingredients": 139,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 49,
+      "unit": "큰술",
+      "ingredients": 16,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 26,
+      "unit": "스푼",
+      "ingredients": 11,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 22,
+      "unit": "개",
+      "ingredients": 9,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 9,
+      "unit": null,
+      "ingredients": 6,
+      "ingredient_type": "TO_TASTE"
+    },
+    {
+      "rows": 6,
+      "unit": "ml",
+      "ingredients": 2,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 4,
+      "unit": "장",
+      "ingredients": 4,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 4,
+      "unit": "T",
+      "ingredients": 4,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 3,
+      "unit": "대",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 3,
+      "unit": "모",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 2,
+      "unit": "t",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 1,
+      "unit": "kg",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 1,
+      "unit": "알",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 1,
+      "unit": "작은술",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 1,
+      "unit": "줌",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 1,
+      "unit": "컵",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    },
+    {
+      "rows": 1,
+      "unit": "L",
+      "ingredients": 1,
+      "ingredient_type": "QUANT"
+    }
+  ],
+  "diagnostic_warning_counts": {
+    "PIECE_WEIGHT_CONVERSION_USED": 27,
+    "REPRESENTATIVE_VOLUME_CONVERSION_USED": 91,
+    "NUTRITION_PROFILE_MISSING": 12,
+    "TO_TASTE_EXCLUDED": 9,
+    "PIECE_WEIGHT_REQUIRED": 4,
+    "UNIT_CONVERSION_MISSING": 2,
+    "AI_NUTRITION_ESTIMATE_USED": 1
+  },
+  "conversion_blockers_before": [
+    {
+      "name": "양송이버섯",
+      "ingredient_id": "17c42094-d0da-4d2e-a26a-fe553ed1070c",
+      "unit": "개",
+      "reasons": [
+        "PIECE_WEIGHT_REQUIRED"
+      ]
+    },
+    {
+      "name": "월계수잎",
+      "ingredient_id": "81dd8c7e-319a-5f81-bf3e-4bd21b06d1d5",
+      "unit": "장",
+      "reasons": [
+        "PIECE_WEIGHT_REQUIRED"
+      ]
+    },
+    {
+      "name": "통후추",
+      "ingredient_id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+      "unit": "알",
+      "reasons": [
+        "UNIT_CONVERSION_MISSING"
+      ]
+    },
+    {
+      "name": "다진마늘",
+      "ingredient_id": "81648c47-60e2-4235-a6d1-4dfd0e405ca9",
+      "unit": "개",
+      "reasons": [
+        "PIECE_WEIGHT_REQUIRED"
+      ]
+    },
+    {
+      "name": "깻잎",
+      "ingredient_id": "78deadf1-4645-5854-9abc-39cffe996567",
+      "unit": "장",
+      "reasons": [
+        "PIECE_WEIGHT_REQUIRED"
+      ]
+    },
+    {
+      "name": "대파",
+      "ingredient_id": "f15beb06-d859-455e-980c-f51715603d9a",
+      "unit": "줌",
+      "reasons": [
+        "UNIT_CONVERSION_MISSING"
+      ]
+    }
+  ],
+  "additional_imported_content": {
+    "draft_units": [
+      {
+        "rows": 188,
+        "unit": "큰술"
+      },
+      {
+        "rows": 137,
+        "unit": null
+      },
+      {
+        "rows": 53,
+        "unit": "g"
+      },
+      {
+        "rows": 50,
+        "unit": "개"
+      },
+      {
+        "rows": 16,
+        "unit": "ml"
+      },
+      {
+        "rows": 13,
+        "unit": "대"
+      },
+      {
+        "rows": 12,
+        "unit": "스푼"
+      },
+      {
+        "rows": 9,
+        "unit": "장"
+      },
+      {
+        "rows": 9,
+        "unit": "팩"
+      },
+      {
+        "rows": 7,
+        "unit": "컵"
+      },
+      {
+        "rows": 3,
+        "unit": "T"
+      },
+      {
+        "rows": 3,
+        "unit": "모"
+      },
+      {
+        "rows": 3,
+        "unit": "kg"
+      },
+      {
+        "rows": 2,
+        "unit": "가득 스푼"
+      },
+      {
+        "rows": 2,
+        "unit": "줌"
+      },
+      {
+        "rows": 2,
+        "unit": "인분"
+      },
+      {
+        "rows": 1,
+        "unit": "L"
+      },
+      {
+        "rows": 1,
+        "unit": "mL"
+      },
+      {
+        "rows": 1,
+        "unit": "바퀴"
+      },
+      {
+        "rows": 1,
+        "unit": "통"
+      },
+      {
+        "rows": 1,
+        "unit": "공기"
+      },
+      {
+        "rows": 1,
+        "unit": "마리"
+      },
+      {
+        "rows": 1,
+        "unit": "방울"
+      },
+      {
+        "rows": 1,
+        "unit": "g 2캔"
+      },
+      {
+        "rows": 1,
+        "unit": "작은술"
+      },
+      {
+        "rows": 1,
+        "unit": "캔"
+      }
+    ],
+    "saved_units": [
+      {
+        "rows": 5,
+        "unit": "스푼"
+      },
+      {
+        "rows": 3,
+        "unit": "개"
+      },
+      {
+        "rows": 2,
+        "unit": "가득 스푼"
+      },
+      {
+        "rows": 2,
+        "unit": "컵"
+      },
+      {
+        "rows": 1,
+        "unit": null
+      },
+      {
+        "rows": 1,
+        "unit": "줌"
+      },
+      {
+        "rows": 1,
+        "unit": "g"
+      }
+    ],
+    "saved_results": 1
+  },
+  "scope_notes": [
+    "삭제되지 않은 recipes의 recipe_ingredients 전체 행이다. 과거 기록 스냅샷은 제외한다.",
+    "Saved results/drafts are separate observations and may overlap; not added to recipe counts. Drafts include retained historical sessions.",
+    "Nutrition profile missing and TO_TASTE are separate from conversion blockers.",
+    "No recipe IDs, owners or source text included."
+  ],
+  "unsupported_review": {
+    "current_recipe": [
+      "알",
+      "줌"
+    ],
+    "saved_results": [
+      "가득 스푼",
+      "줌"
+    ],
+    "retained_drafts": [
+      "팩",
+      "가득 스푼",
+      "줌",
+      "인분",
+      "바퀴",
+      "통",
+      "공기",
+      "마리",
+      "방울",
+      "g 2캔",
+      "캔"
+    ],
+    "policy": "Packaging needs exact product weight; heaped/spoon/cup context needs source confirmation; missing quantity stays unknown."
+  }
+}

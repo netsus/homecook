@@ -129,7 +129,7 @@ suite("real AI completion to TypeScript refresh roundtrip (isolated rollback)", 
       expect(completed).toMatchObject({ status: "applied", ingredient_id: ingredientId, affected_recipe_ids: [recipeId] });
       const refreshed = await refreshIngredientAiRecipeNutrition({ rpc: call }, { jobId: claimed.job_id, recipeId });
       expect(refreshed).toMatchObject({ created: true, is_current: true });
-      expect(writtenSnapshot).toMatchObject({ calculation_version: "recipe-nutrition-v2", calculation_quality: "estimated",
+      expect(writtenSnapshot).toMatchObject({ calculation_version: "recipe-nutrition-v3", calculation_quality: "estimated",
         scalable_values: { energy_kcal: 100, carbohydrate_g: 10, protein_g: 5, fat_g: 4.5, sodium_mg: 50 },
         warnings: ["AI_NUTRITION_ESTIMATE_USED"] });
       const stored = JSON.parse(await session.query(`select jsonb_build_object(
