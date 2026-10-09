@@ -39,7 +39,7 @@
 
 - `scripts/render-ingredient-exclusion-recovery.mjs`는 고정 [계획 JSON](data/ingredient-exclusion-recovery-plan-20261010.json)과 비공개 reviewer 파일을 받아 SQL만 출력한다. 운영 접속이나 자동 실행 기능은 없다. 공개 계획에는 개인 reviewer UUID 대신 토큰을 보관한다.
 - 실제 데이터 SQL은 출처/자료 해시와 정확한 사전값·사후값을 검사한다. 신규 재료2개, source item2개, 영양 profile2개, 값16행, 연결2개를 추가하며 기존 영양 row는 재작성하지 않는다. 기존 재료 ID/FK·과거 기록·단위환산 데이터 불변을 검증한다.
-- `20261010010000_ingredient_exclusion_recovery_selection.sql`은 실제 함수 사전정의 hash·owner·ACL을 확인하고 cdf 앞다리 수육용1개만 선택 가능하게 한다. 기존 invoker/immutable/parallel/search_path·owner/ACL을 유지하며 새 권한을 주지 않는다. TS 선택 제한도 같은25개다.
+- `20261010120000_ingredient_exclusion_recovery_selection.sql`은 실제 함수 사전정의 hash·owner·ACL을 확인하고 cdf 앞다리 수육용1개만 선택 가능하게 한다. 기존 invoker/immutable/parallel/search_path·owner/ACL을 유지하며 새 권한을 주지 않는다. TS 선택 제한도 같은25개다.
 - 관련61개 검사, 전체 타입 검사, 변경 파일 lint, 독립 코드/원자료 검토가 통과했다. 공식 원본 XLSX에서 신규16개 영양 셀을 재대조했다.
 - 최신 운영 전체 백업을 네트워크 없는 clone에 복원해 선택 SQL과 데이터 SQL을 적용했다. 재실행 변화0, 기존 영양/기록/환산 불변을 확인했다. clone은1932개 재료가 된다.
 - 실제 비동기 매칭 역할로16개 표현을 검증했다. 등갈비는 새 정확 ID, 일당귀잎은 새 정확 ID, 함초는 원물2후보만 반환했다. [검증 기록](data/ingredient-exclusion-recovery-verification-20261010.json).

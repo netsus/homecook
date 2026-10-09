@@ -39,7 +39,7 @@ describe("ingredient catalog policy", () => {
     const originalIds = original?.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/g) ?? [];
     expect(originalIds).toHaveLength(26);
     expect([...originalIds].filter((id) => id !== "cdf20482-adc3-48dc-a48f-a7658fed61d2").sort()).toEqual([...INACTIVE_INGREDIENT_IDS].sort());
-    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261010010000_ingredient_exclusion_recovery_selection.sql"), "utf8");
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261010120000_ingredient_exclusion_recovery_selection.sql"), "utf8");
     const helper = sql.match(/create or replace function public\.is_selectable_catalog_ingredient\(p_id uuid\)[\s\S]*?\$function\$;/i)?.[0];
     expect(helper).toBeDefined();
     const ids = helper?.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/g) ?? [];

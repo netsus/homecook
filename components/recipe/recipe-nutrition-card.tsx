@@ -98,6 +98,7 @@ export function RecipeNutritionCard({
           </span>
         </summary>
         <p className="leading-5">{SMALL_ENERGY_DISPLAY_NOTICE}</p>
+        {display.representativeNutritionText ? <p className="leading-5">{display.representativeNutritionText}</p> : null}
         {nutrition.warnings.some(warning => warning === "PIECE_WEIGHT_CONVERSION_USED" || warning === "REPRESENTATIVE_VOLUME_CONVERSION_USED") ? (
           <p className="leading-5">개수·부피로 입력한 재료는 승인된 대표 중량으로 환산했어요. 실제 무게와 다를 수 있어요.</p>
         ) : null}
