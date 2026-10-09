@@ -1,8 +1,8 @@
 /** Exact one-release readiness for the 2026-10-10 YouTube resolution rollout. */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join } from "node:path";
+import { lstatSync, readFileSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
 import { DeploymentError, inheritRound2Readiness } from "./prelaunch-web-deploy.mjs";
@@ -27,12 +27,15 @@ import {
 // artifact and descriptor have all been independently reviewed. CLI/env cannot
 // override this pin. An empty pin intentionally prohibits deployment.
 export const YOUTUBE_RESOLUTION_REVIEW_PIN = Object.freeze({
-  path: "/Users/cwj/.homecook/operations/youtube-resolution-20261010/rollout-review.json",
-  sha256: "ca6bb37bb1fb65c1a7352ed5351baa8e38bae9c98b367e4cb2da9e086ce3dbc8",
+  path: "/Users/cwj/.homecook/operations/youtube-resolution-20261010/web-rollout-review.json",
+  sha256: "d98737dd9677c31d79cdb7a8d87e1c74e8cbcb8b40284bf00ece556fb9e5eae9",
 });
 // Filled only after the worker installer creates and verifies its immutable
 // success receipt. Keeping this separate avoids a pre-install circular proof.
-export const YOUTUBE_RESOLUTION_WEB_ACTIVATION_PIN = Object.freeze({ path: null, sha256: null });
+export const YOUTUBE_RESOLUTION_WEB_ACTIVATION_PIN = Object.freeze({
+  path: "/Users/cwj/.homecook/operations/youtube-resolution-20261010/web-activation-private-proofs.json",
+  sha256: "28daf06c55eba93973c82729aae66c4aa64ed09bda28568be9619e88b3f12fb3",
+});
 export const YOUTUBE_RESOLUTION_LIVE_SHA = LIVE_WEB_SHA;
 export const YOUTUBE_RESOLUTION_TARGET_CATALOG = TARGET_CATALOG_FINGERPRINT;
 export const YOUTUBE_RESOLUTION_LEDGER_SQL = "SELECT coalesce(json_agg(t ORDER BY filename),'[]'::json) FROM (SELECT filename,sha256 FROM homecook_deploy.migrations) t;";
@@ -197,9 +200,24 @@ function assertDbApplyReceipt(receipt, review) {
   "DB apply receipt preservation/function evidence mismatch");
 }
 
+export function assertReadonlyArtifactFile(path) {
+  requireValue(isAbsolute(path) && resolve(path) === path, "artifact path is not canonical");
+  const file = lstatSync(path);
+  requireValue(file.isFile() && !file.isSymbolicLink() && file.nlink === 1
+    && file.uid === process.getuid() && (file.mode & 0o777) === 0o444,
+  "immutable artifact ownership/mode changed");
+  for (let parent = dirname(path); ; parent = dirname(parent)) {
+    const stat = lstatSync(parent);
+    requireValue(stat.isDirectory() && !stat.isSymbolicLink(), "artifact parent is not a real directory");
+    if (parent === dirname(parent)) break;
+  }
+}
+
 async function verifyPinnedArtifacts(review) {
   const { manifest, descriptor, expectedSchema } = review.artifactPaths;
-  for (const path of [manifest, descriptor, expectedSchema]) await privatePath(path);
+  assertReadonlyArtifactFile(manifest);
+  assertReadonlyArtifactFile(expectedSchema);
+  await privatePath(descriptor);
   requireValue((statSync(manifest).mode & 0o777) === 0o444
     && (statSync(descriptor).mode & 0o777) === 0o600
     && (statSync(expectedSchema).mode & 0o777) === 0o444, "artifact file modes changed");
@@ -237,8 +255,9 @@ export async function loadYoutubeResolutionReview({ requireWorkerInstall = true 
   const bytes = readFileSync(YOUTUBE_RESOLUTION_REVIEW_PIN.path);
   requireValue(hash(bytes) === YOUTUBE_RESOLUTION_REVIEW_PIN.sha256, "review manifest bytes changed");
   const review = assertYoutubeResolutionRolloutReview(JSON.parse(bytes));
-  for (const proof of Object.values(review.contract.proofs)) {
-    await privatePath(proof.path);
+  for (const [name, proof] of Object.entries(review.contract.proofs)) {
+    if (name === "workerArtifact") assertReadonlyArtifactFile(proof.path);
+    else await privatePath(proof.path);
     requireValue(hash(readFileSync(proof.path)) === proof.sha256, "pinned proof bytes changed");
   }
   for (const [name, digest] of Object.entries(review.proofDigests)) {

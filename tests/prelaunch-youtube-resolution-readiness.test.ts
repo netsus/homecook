@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import { chmodSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +10,7 @@ import {
 } from "../scripts/lib/prelaunch-web-deploy.mjs";
 import {
   assertYoutubeResolutionWorkerInstallResult,
+  assertReadonlyArtifactFile,
   assertYoutubeResolutionReviewPin,
   YOUTUBE_RESOLUTION_REVIEW_PIN,
 } from "../scripts/lib/prelaunch-youtube-resolution-readiness.mjs";
@@ -20,6 +24,19 @@ const manifest = {
 };
 
 describe("reviewed YouTube resolution deploy option", () => {
+  it("accepts owned immutable artifacts without treating them as mutable private secrets", () => {
+    const directory = mkdtempSync(join(realpathSync(tmpdir()), "resolution-artifact-"));
+    const file = join(directory, "artifact.json");
+    try {
+      writeFileSync(file, "{}", { mode: 0o444 });
+      expect(() => assertReadonlyArtifactFile(file)).not.toThrow();
+      chmodSync(file, 0o644);
+      expect(() => assertReadonlyArtifactFile(file)).toThrow("ownership/mode");
+      chmodSync(file, 0o444);
+      const alias = join(directory, "alias.json"); symlinkSync(file, alias);
+      expect(() => assertReadonlyArtifactFile(alias)).toThrow("ownership/mode");
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
   it("requires exact reviewed ref and already-applied DB mode", () => {
     const args = [
       "--reviewed-youtube-resolution-readiness",
