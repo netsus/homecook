@@ -20,6 +20,7 @@ import {
   normalizeIngredientCatalogName,
 } from "@/lib/ingredient-catalog-policy";
 import { normalizeIngredientSearchName } from "@/lib/ingredient-search";
+import { canonicalizeIngredient, loadIngredientAliases } from "@/lib/server/ingredient-canonical-search";
 import {
   adaptCandidateToFlatDraft,
   parseYoutubeRecipeDescription,
@@ -8156,6 +8157,16 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
     };
   }
 
+  let aliases: Awaited<ReturnType<typeof loadIngredientAliases>>;
+  try {
+    aliases = await loadIngredientAliases(dbClient);
+  } catch (error) {
+    return {
+      error: { message: error instanceof Error ? error.message : "Ingredient alias catalog is unavailable" },
+      matchesByName: new Map<string, Map<string, IngredientMatch>>(),
+    };
+  }
+
   const [directResult, synonymResult] = await Promise.all([
     table<ArrayLookupTable<IngredientLookupRow>>(dbClient, "ingredients")
       .select("id, standard_name")
@@ -8196,6 +8207,9 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
       if (source === "synonym" && [...bucket.values()].some((match) => match.source === "direct")) {
         continue;
       }
+      if (source === "direct") {
+        for (const [id, match] of bucket) if (match.source === "synonym") bucket.delete(id);
+      }
       const existing = bucket.get(ingredientId);
       if (!existing || (existing.source === "synonym" && source === "direct")) {
         bucket.set(ingredientId, { standardName, source });
@@ -8204,7 +8218,8 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
   };
 
   for (const row of directResult.data) {
-    attach(row.standard_name, row.id, row.standard_name, "direct");
+    const canonical = canonicalizeIngredient(row, aliases);
+    attach(row.standard_name, canonical.id, canonical.standard_name, aliases.has(row.id) ? "synonym" : "direct");
   }
 
   for (const row of synonymResult.data) {
@@ -8213,7 +8228,8 @@ export async function findIngredientIds(dbClient: DbClient, ingredientNames: str
       continue;
     }
 
-    attach(row.synonym, ingredient.id, ingredient.standard_name, "synonym");
+    const canonical = canonicalizeIngredient(ingredient, aliases);
+    attach(row.synonym, canonical.id, canonical.standard_name, "synonym");
   }
 
   return {

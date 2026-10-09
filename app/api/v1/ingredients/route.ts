@@ -11,6 +11,7 @@ import {
 } from "@/lib/ingredient-categories";
 import { isSelectableIngredientId } from "@/lib/ingredient-catalog-policy";
 import { ingredientSearchPattern, normalizeIngredientSearchName } from "@/lib/ingredient-search";
+import { canonicalizeIngredient, loadIngredientAliases, type IngredientAliases } from "@/lib/server/ingredient-canonical-search";
 import {
   getMockIngredientList,
   isDiscoveryFilterManualMockEnabled,
@@ -56,10 +57,10 @@ function normalizeIngredientRow(row: IngredientRow | null | undefined): Ingredie
   } satisfies IngredientItem;
 }
 
-function normalizeSynonymIngredient(row: IngredientSynonymRow) {
+function normalizeSynonymIngredient(row: IngredientSynonymRow, aliases: IngredientAliases) {
   const ingredient = Array.isArray(row.ingredients) ? row.ingredients[0] : row.ingredients;
 
-  return normalizeIngredientRow(ingredient ?? null);
+  return normalizeIngredientRow(ingredient ? canonicalizeIngredient(ingredient, aliases) : null);
 }
 
 function mergeIngredientItems(
@@ -158,15 +159,13 @@ export async function GET(request: NextRequest) {
 
     if (isDiscoveryFilterManualMockEnabled()) {
       const mockData = getMockIngredientList(
-        undefined,
+        query.q,
         query.category_code || query.category_group_code ? undefined : query.category,
       );
       return ok({
         items: mockData.items
           .map((item) => normalizeIngredientRow(item))
           .filter((item): item is IngredientItem => item !== null)
-          .filter((item) => !query.q || normalizeIngredientSearchName(item.standard_name)
-            .includes(normalizeIngredientSearchName(query.q)))
           .filter((item) => ingredientMatchesV2Filter(item, {
             categoryCode: query.category_code,
             categoryGroupCode: query.category_group_code,
@@ -178,6 +177,7 @@ export async function GET(request: NextRequest) {
       anonymousPublicReadScope: "ingredients",
     });
 
+    const aliases = await loadIngredientAliases(supabase);
     const shouldApplyLegacyCategory = query.category &&
       !query.category_code &&
       !query.category_group_code;
@@ -202,10 +202,7 @@ export async function GET(request: NextRequest) {
         .order("ingredient_id", { ascending: true })
         .order("id", { ascending: true });
 
-      if (shouldApplyLegacyCategory) {
-        ingredientsQuery = ingredientsQuery.eq("category", query.category);
-        synonymsQuery = synonymsQuery.eq("ingredients.category", query.category);
-      }
+      // Filter after canonicalization: an old alias may have a stale category.
 
       if (query.q) {
         const pattern = ingredientSearchPattern(query.q);
@@ -254,20 +251,26 @@ export async function GET(request: NextRequest) {
     const items = mergeIngredientItems(
       ingredientRows
         .filter((row) => normalizeIngredientSearchName(row.standard_name).includes(searchName))
-        .map((row) => normalizeIngredientRow(row))
+        .map((row) => normalizeIngredientRow(canonicalizeIngredient(row, aliases)))
         .filter((row): row is IngredientItem => row !== null),
       synonymRows
         .filter((row) => normalizeIngredientSearchName(row.synonym).includes(searchName))
-        .map((row) => normalizeSynonymIngredient(row))
+        .map((row) => normalizeSynonymIngredient(row, aliases))
         .filter((row): row is IngredientItem => row !== null),
-    ).filter((item) => ingredientMatchesV2Filter(item, {
-      categoryCode: query.category_code,
-      categoryGroupCode: query.category_group_code,
-    }));
+    ).filter((item) => !shouldApplyLegacyCategory || item.category === query.category)
+      .filter((item) => ingredientMatchesV2Filter(item, {
+        categoryCode: query.category_code,
+        categoryGroupCode: query.category_group_code,
+      }));
 
     const exactSynonymIds = new Set(synonymRows
       .filter((row) => normalizeIngredientSearchName(row.synonym) === searchName)
-      .map((row) => row.ingredient_id));
+      .map((row) => aliases.get(row.ingredient_id)?.id ?? row.ingredient_id));
+    for (const row of ingredientRows) {
+      if (aliases.has(row.id) && normalizeIngredientSearchName(row.standard_name) === searchName) {
+        exactSynonymIds.add(aliases.get(row.id)!.id);
+      }
+    }
     const rank = (item: IngredientItem) => {
       if (!searchName) return 0;
       if (normalizeIngredientSearchName(item.standard_name) === searchName) return 0;

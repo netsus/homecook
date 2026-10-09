@@ -66,6 +66,7 @@ function createArrayQuery<T>(result: QueryResult<T[]>) {
     gte: vi.fn(() => query),
     in: vi.fn(() => query),
     limit: vi.fn(() => query),
+    range: vi.fn(() => query),
     order: vi.fn(() => query),
     then: createAwaitableQuery(result).then,
   };
@@ -1168,6 +1169,7 @@ function createTranscriptFallbackExtractDbClient({
   const dbClient = {
     from: vi.fn((table: string) => {
       if (table === "ingredients") return ingredientsTable;
+      if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
       if (table === "ingredient_synonyms") return ingredientSynonymsTable;
       if (table === "cooking_methods") return cookingMethodsTable;
       if (table === "youtube_extraction_sessions") return sessionsTable;
@@ -1858,7 +1860,8 @@ describe("20 youtube real import backend", () => {
     const userDbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         throw new Error(`user scope denied table: ${table}`);
       }),
     };
@@ -1946,7 +1949,7 @@ describe("20 youtube real import backend", () => {
     expect(userDbClient.from).not.toHaveBeenCalledWith("cooking_methods");
     expect(internalDbClient.from).toHaveBeenCalledWith("cooking_methods");
     expect(internalDbClient.from).toHaveBeenCalledWith("youtube_extraction_sessions");
-    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", ["김치", "소금"]);
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("search_name", ["김치", "소금"]);
     expect(cookingMethodsTable.__selectQuery.eq).toHaveBeenCalledWith("code", "auto_salt");
     expect(cookingMethodsTable.insert).toHaveBeenCalledWith({
       code: "auto_salt",
@@ -2335,7 +2338,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -2419,12 +2423,12 @@ describe("20 youtube real import backend", () => {
     expect(new Set(body.data.steps.map((step: { cooking_method: { code: string } }) =>
       step.cooking_method.code,
     )).size).toBeGreaterThan(1);
-    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("search_name", [
       "청오이",
-      "두유 그릭 요거트",
+      "두유그릭요거트",
       "호밀빵",
       "소금",
-      "올리브 오일",
+      "올리브오일",
       "후추",
       "알룰로스",
     ]);
@@ -2509,7 +2513,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -2565,9 +2570,9 @@ describe("20 youtube real import backend", () => {
       "진간장, 다진 마늘, 맛술, 물엿, 설탕, 후추, 연겨자, 물, 참기름을 넣고 잘 섞어서 양념을 만들어주세요.",
       "고기에 양념을 잘 버무린 뒤 최소 30분 이상 재우고 프라이팬에 중약불(또는 약불)로 자주 뒤집어가며 타지 않게 구워주세요.",
     ]);
-    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("search_name", [
       "목살",
-      "다진 마늘",
+      "다진마늘",
       "진간장",
       "맛술",
       "물엿",
@@ -2577,9 +2582,9 @@ describe("20 youtube real import backend", () => {
       "물",
       "참기름",
     ]);
-    expect(ingredientSynonymsTable.__query.in).toHaveBeenCalledWith("synonym", [
+    expect(ingredientSynonymsTable.__query.in).toHaveBeenCalledWith("search_name", [
       "목살",
-      "다진 마늘",
+      "다진마늘",
       "진간장",
       "맛술",
       "물엿",
@@ -2656,7 +2661,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -2736,7 +2742,7 @@ describe("20 youtube real import backend", () => {
       },
       error: null,
     });
-    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("search_name", [
       "달걀",
       "양파",
       "대파",
@@ -2744,7 +2750,7 @@ describe("20 youtube real import backend", () => {
       "후추",
       "밥",
     ]);
-    expect(ingredientSynonymsTable.__query.in).toHaveBeenCalledWith("synonym", [
+    expect(ingredientSynonymsTable.__query.in).toHaveBeenCalledWith("search_name", [
       "달걀",
       "양파",
       "대파",
@@ -2821,7 +2827,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -2941,7 +2948,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -3025,12 +3033,12 @@ describe("20 youtube real import backend", () => {
       "치즈 필링",
       "치즈 필링",
     ]);
-    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("search_name", [
       "박력분",
       "아몬드가루",
       "버터",
       "설탕",
-      "바닐라 페이스트",
+      "바닐라페이스트",
       "노른자",
       "크림치즈",
       "생크림",
@@ -3072,7 +3080,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -3131,7 +3140,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -8192,7 +8202,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -8361,7 +8372,8 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
-        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "ingredient_catalog_aliases") return createEmptyIngredientSynonymsTable();
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
