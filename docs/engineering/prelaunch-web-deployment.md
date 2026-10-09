@@ -320,3 +320,11 @@ installer는 worker 전용 O_EXCL lock을 잡고 canonical production promotion 
 기존 영양정보와 사용 기록, 동의어는 보존하고 옛 이름17개만 추가한다. 내부 권한검사 체인은 그대로 두며 익명 조회는 ingredients scope의 GET alias view 하나만 추가한다. 비동기 추출 역할에는 alias 행의 재료ID·대표ID·표시분류 세 열 SELECT만 허용한다. 기존 R2 증거·시각·데이터와 실제 권한을 교체 직전까지 다시 대조한다. AI 영양 자동 실행은 사용자 선택에 따라 계속 비활성화한다.
 
 웹 후보는 현재 Luna 추출 앱 코드를 보존하며 통합 소스의 앱 트리와 동일하다. 웹 검사는 `test:ingredient-canonical-search:web`을 사용하고 SQL 정적 검사 및 실제 역할 검사는 통합 소스와 격리 DB에서 수행한다. worker 설치·환경·Docker 변경은 포함하지 않는다.
+
+## 2026-10-09 — 개수 단위 근거와 v3 영양 계산 반영
+
+`--reviewed-piece-unit-readiness`는 운영 웹 `4d7238de7e8fa08f4ae51853d7b0139b8bbe6308` → 후보 `91355997309321e9f775eac93a3a88c8352104e5`, 통합 소스 `2c920141b1e95c0d8c512a550a03e8c6271e8505`를 비공개 검토 manifest에 고정한다. `--reviewed-ref --already-applied-db --db-config`가 필요하며 새 SQL1개는 백업/복원·격리 검증·운영 rollback 사전 실행 뒤 별도 transaction으로 적용한다. 원장212→213, SQL 해시, helper5개와 consumer6개의 정의·권한, 기존 내부/익명/worker 권한 체계와 R2 원본 증명·시각·자료를 준비와 교체 직전에 확인한다. AI 자동 영양은 계속 비활성이다.
+
+웹 후보 앱 트리는 통합 소스와 동일하며 최신 화면과 Luna worker 설정을 보존한다. 새 순수 환산 helper는 lib/nutrition에 포함된다. 운영 데이터 보완용 SQL 렌더러는 웹 후보에 넣지 않는다. `test:ingredient-piece-units:web`으로 관련 웹 회귀를 실행한다. 새 guard는 이전v2 앱의 쓰기와 호환되지 않으므로 SQL과웹을 연속 반영한다.
+
+이 옵션은 검증된 DB 계획에서 `backwardCompatible:false` 기록을 만들고, 준비 중 기존 성공 배포 기록에도 이 DB 경계만 덧붙여 이전 웹으로 수동 rollback하는 것을 막는다. 빌드/preview 준비 실패는 recovery 파일을 새로 남기지 않아 검토 경로로 전진 재시도할 수 있다. 실제 교체 후 실패하면 완성된 복구 기록을 남기고 v2 자동 복귀를 하지 않는다. DB가 되돌아갔다고 주장하지 않으며, SQL과 맞는 v3 앱을 복구해야 한다. 다른 배포 옵션의 기존 자동 복구 동작은 유지한다. status.rollbackAvailable은 기존처럼 기록 존재 여부이며 실제 rollback 허용 여부를 뜻하지 않는다.

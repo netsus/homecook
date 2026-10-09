@@ -1,0 +1,1394 @@
+{
+  "schema": "homecook.ingredient-volume-evidence-audit.v1",
+  "reviewed_at": "2026-10-09",
+  "read_only": true,
+  "production_changes": 0,
+  "scope": {
+    "assignments": 33,
+    "active_approved": 30,
+    "inactive": 3,
+    "audit_counts": {
+      "verified_official": 10,
+      "inactive_historical": 3,
+      "approved_service_standard": 13,
+      "needs_scope_correction": 3,
+      "verified_official_recipe_reference": 4
+    }
+  },
+  "classification_note": "verified는 인용 수치 확인 범위만 뜻하며 모든 제품·상태의 물리밀도를 보증하지 않는다. needs_scope_correction은 수치 오류 또는 즉시 삭제 판단이 아니라 적용 형태/설명 보완 대상이다.",
+  "method": [
+    "운영 read-only inventory의 assignment/evidence/source33행 전수대조",
+    "RDA 공식 웹본문 표 및 측정법 확인",
+    "식약처 PDF 공식서버 다운로드, pypdf 텍스트,4개 해당 페이지 렌더 확인",
+    "기존 사용자 승인 문서 및 DB승인사유 대조",
+    "계산기가 normalized_g_per_15ml를 우선하고 estimated 품질로 선형환산함을 코드확인"
+  ],
+  "sources": [
+    {
+      "url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "checked": "2026-10-09",
+      "method": "web.open",
+      "scope": "계량도구, 성상별 계량방법, 표1-1 및 각주"
+    },
+    {
+      "url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305214.pdf",
+      "checked": "2026-10-09",
+      "method": "official HTTP download after web size limit; text extraction and render",
+      "sha256": "a0c70b598bbc86fc097eee604552e52838c4dea831fd8536af45d0d2f8396614",
+      "pdf_pages": [
+        22,
+        37,
+        59
+      ]
+    },
+    {
+      "url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+      "checked": "2026-10-09",
+      "method": "official HTTP download after web size limit; text extraction and render",
+      "sha256": "f3ae4dce2cbde7e8024932ee7e87d20bd76230009848dbc7b3813dd4e4e42f6c",
+      "pdf_pages": [
+        78
+      ]
+    },
+    {
+      "path": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "checked": "2026-10-09",
+      "scope": "기존 대표값 승인/공식 recipe값 한계 문서"
+    }
+  ],
+  "cross_cutting_findings": [
+    {
+      "code": "HOUSEHOLD_UTENSIL_NOT_MEASURED_TABLESPOON",
+      "detail": "공식 페이지의 밥숟가락은10–13ml 범위이며15ml 계량큰술과 구별한다. 종이컵도 통상180ml로200ml 계량컵과 다르다.",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03"
+    },
+    {
+      "code": "FILL_METHOD_REQUIRED",
+      "detail": "분말·다진양념·장류는 표면을 수평으로 맞추는 방식. 수북·왕큰술이나 용기종류 미상에 같은 값을 확정 적용하지 않는다.",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03"
+    },
+    {
+      "code": "REPRESENTATIVE_MAPPING_PROVENANCE",
+      "detail": "공식 출처 provider만으로 직접 일치로 표시하지 않는다. 일반→세부 재료 연결과 사용자 승인 대표값을 분리해서 표기한다."
+    },
+    {
+      "code": "NO_CURRENT_VOLUME_COVERAGE_GAP_IN_AUDITED_UNITS",
+      "detail": "inventory의 ml/큰술/작은술/T/t/컵/스푼 사용행은 모두 활성 부피 assignment 보유. 이것은 상태/실측정확성 또는 모든 다른 단위 지원의 보증이 아니다."
+    }
+  ],
+  "rows": [
+    {
+      "ingredient_id": "0ab7b211-7e75-4972-9822-c54c9b67ca4b",
+      "ingredient_name": "소금",
+      "assignment_id": "9ddfb9e0-4966-4376-9df7-06296b0ab688",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "66018aab-c1bd-4d40-a892-dc825b7366c0",
+      "evidence_source_subject": "소금",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 11.3,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 11.3
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 11.3,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "0fe5a6fe-d048-4598-9bf7-285af300a0f0",
+      "ingredient_name": "참기름",
+      "assignment_id": "c3d76bc9-6eb1-44a9-a580-1cdeb61bd6ce",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "fb72a1ad-5716-4af4-9ad5-34b09fc7cd1b",
+      "evidence_source_subject": "참기름",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 14.1,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 14.1
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 14.1,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "0305831c-dc7a-4341-9492-9afed5e4450b",
+      "ingredient_name": "설탕",
+      "assignment_id": "7933dda8-1d54-4e3a-8315-30a492b05701",
+      "assignment_version": 1,
+      "active_approved": false,
+      "assignment_review_status": "needs_review",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "9b7762c4-9c56-4dba-9e07-09f03ed36ee1",
+      "evidence_source_subject": "설탕",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 12.5,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 12.5
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 12.5,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "inactive_historical",
+      "evidence_scope": "published_measurement",
+      "reason": "현재 계산 제외된 과거 연결. 원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문 설탕값은 흑설탕·황설탕의 눌러담기 상태까지 동일하다는 뜻이 아님."
+      ],
+      "recommendation": "retain_inactive"
+    },
+    {
+      "ingredient_id": "d3e81b83-964b-4c22-8fbb-81c35dcf2074",
+      "ingredient_name": "식초",
+      "assignment_id": "073f1aba-6122-460f-b976-17242e70774a",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "30551855-824a-43bd-b525-a0eb59799fdc",
+      "evidence_source_subject": "식초",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 15.3,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 15.3
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.3,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440025",
+      "ingredient_name": "국간장",
+      "assignment_id": "f399bc6e-e84e-41d7-bdd8-ad053ae651e2",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "8fb38ed8-7b2a-46a9-87c1-a3fec4907813",
+      "evidence_source_subject": "국간장",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 17.8,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 17.8
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 17.8,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "57133a3a-629e-4258-bf07-a72b41236d0b",
+      "ingredient_name": "간장",
+      "assignment_id": "cd785b3d-2b61-4da5-b829-4cf10562ac5a",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "a2cf7025-d910-4ae4-999e-8cd4f8cd4bed",
+      "evidence_source_subject": "간장",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 17.7,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 17.7
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 17.7,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "6ccf625d-577b-4151-aa6a-9da7d998e8f2",
+      "ingredient_name": "꿀",
+      "assignment_id": "582d05fe-6322-48da-a4ee-d322897cde91",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "332b107f-d173-46a1-bf29-a4ad3d651960",
+      "evidence_source_subject": "꿀",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 24,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 24
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 24.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "0305831c-dc7a-4341-9492-9afed5e4450b",
+      "ingredient_name": "설탕",
+      "assignment_id": "6a151ced-5531-47b9-a4fc-40ab11580ff1",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "9b7762c4-9c56-4dba-9e07-09f03ed36ee1",
+      "evidence_source_subject": "설탕",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 12.5,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 12.5
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 12.5,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문 설탕값은 흑설탕·황설탕의 눌러담기 상태까지 동일하다는 뜻이 아님."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "4dfdc5ff-42d8-4c22-b1f7-ff9a0f43d568",
+      "ingredient_name": "양조간장",
+      "assignment_id": "e409be2f-d5b6-4a43-b151-50f40d30240d",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "cd053bd1-2e0e-452b-9adb-c750747e0731",
+      "evidence_source_subject": "양조간장",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 17.7,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 17.7
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 17.7,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "official_measurement_mapped_representative",
+      "reason": "원문의 일반 간장값을 양조간장 대표로 쓰기로 한 기존 승인. 양조간장 자체 공식 실측으로 표기하면 안 됨.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "a75bf43b-c473-44cc-ab3f-44bfcf6a0530",
+      "ingredient_name": "양조식초",
+      "assignment_id": "6f891de1-88e7-4b10-9da4-2744840ddb3f",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "2ef44713-3a08-4f8e-bda9-143f0fe2a7c9",
+      "evidence_source_subject": "양조식초",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 15.3,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 15.3
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.3,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "official_measurement_mapped_representative",
+      "reason": "원문의 일반 식초값을 양조식초 대표로 쓰기로 한 기존 승인. 양조식초 자체 공식 실측으로 표기하면 안 됨.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "1af619c8-1939-41bc-b35d-121e39267afd",
+      "ingredient_name": "물엿",
+      "assignment_id": "43a32477-4d52-4267-92db-0fac538e1078",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "ebb1022f-d661-462b-b39f-bae1067e033b",
+      "evidence_source_subject": "물엿",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 20,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 20
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 20.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "072bbc30-aede-4034-9b51-a256eee26d1b",
+      "ingredient_name": "고춧가루",
+      "assignment_id": "7da1ee74-4fa2-4400-b955-75d695eb576e",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "a2858414-e026-4776-8052-17cb0e26d4aa",
+      "evidence_source_subject": "고춧가루",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "고운 고춧가루 1큰술 (15mL)",
+        "weight_g": 7.4,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 7.4
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 7.4,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "needs_scope_correction",
+      "evidence_scope": "form_specific_measurement_on_generic_ingredient",
+      "reason": "7.4g은 원문의 고운고춧가루 값. 일반 고춧가루 전체에 정밀 실측으로 적용 불가. 기존 승인 대표값은 보존하되 고운 형태 가정을 명시해야 함.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "physical_form_not_structured"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "clarify_form_before_unrestricted_conversion"
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440018",
+      "ingredient_name": "마늘",
+      "assignment_id": "4c151b2a-3f6a-4322-9a09-48cd8a88c911",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "6bba7e5b-2ff0-496f-8094-9cedb3b54c89",
+      "evidence_source_subject": "마늘",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 11.3,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 11.3
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 11.3,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "needs_scope_correction",
+      "evidence_scope": "form_specific_measurement_on_generic_ingredient",
+      "reason": "원문 표는 마늘11.3g이나 통마늘·편마늘·다진마늘에 동일하게 쓸 수 있다는 근거 없음. 큰술 측정 형태를 명시하거나 다진마늘 경로로 제한 필요.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "physical_form_not_structured"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "clarify_form_before_unrestricted_conversion"
+    },
+    {
+      "ingredient_id": "81648c47-60e2-4235-a6d1-4dfd0e405ca9",
+      "ingredient_name": "다진마늘",
+      "assignment_id": "437df253-3d52-4d6b-b42c-aba67b4b7c90",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "6ab401e3-7489-4a71-9f63-129e55f25dc7",
+      "evidence_source_subject": "마늘 · 다진것",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 11.3,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 11.3
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 11.3,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "official_measurement_mapped_representative",
+      "reason": "원문 표의 마늘값을 다진마늘에 연결한 기존 사용자 승인. 원문 표 머리에는 다짐 상태가 직접 명시돼 있지 않음.",
+      "flags": [
+        "linear_scaling_is_estimate"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "9c80ca75-3e3b-4ede-9025-3b954c044ec6",
+      "ingredient_name": "후추",
+      "assignment_id": "d121ffb2-0ad2-4ba6-8dc5-82c53085368b",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "14a86f3a-d154-4965-b8b9-5736ddb8aeba",
+      "evidence_source_subject": "후추",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 8.6,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 8.6
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 8.6,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "needs_scope_correction",
+      "evidence_scope": "form_specific_measurement_on_generic_ingredient",
+      "reason": "8.6g은 원문의 후춧가루 값. 통후추·굵게 부순 후추로 확장 불가. 후추를 분말 기본값으로 쓸 경우 그 정의를 명시해야 함.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "physical_form_not_structured"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨."
+      ],
+      "recommendation": "clarify_form_before_unrestricted_conversion"
+    },
+    {
+      "ingredient_id": "464be6fb-f154-4ef8-bb6d-6936d1378ef5",
+      "ingredient_name": "멸치액젓",
+      "assignment_id": "d2ad20fc-aef1-4de9-9fa6-1aea48a1826c",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "3d197019-5279-4c52-b784-172e559c5c4b",
+      "evidence_source_subject": "액젓",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 17.9,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 17.9
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 17.9,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "official_measurement_mapped_representative",
+      "reason": "원문 새우/멸치 액젓 공통값을 멸치액젓에 적용. 종·브랜드 전용 실측으로 확정하지 않음.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "a979f352-5a8e-46e5-9d21-53f5b6ffc8d1",
+      "ingredient_name": "된장",
+      "assignment_id": "788ec7f4-fea9-4d7d-8e3d-30bd69fcab3b",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "86ee887d-34b3-459d-8dbd-a9e48d672318",
+      "evidence_source_subject": "된장",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 18,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 18
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 18.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "e3b8e3a2-d754-4361-abbb-2305d48ba8ca",
+      "ingredient_name": "고추장",
+      "assignment_id": "6b6c7e07-66d8-4a00-b238-4856e473ee20",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "46cf56a3-8d2f-4981-a2c2-7c6f9374e551",
+      "evidence_source_subject": "고추장",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a5f5ed60-873b-4499-85c8-94bc9e8f10a2",
+      "provider": "RDA_NICS",
+      "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+      "source_locator": "표 1-1, 1큰술 행",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 19,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 19
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 19.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official",
+      "evidence_scope": "published_measurement",
+      "reason": "원문 계량표 수치와 등록 수치 일치. 재료별 대표 실측이며 제품 전체의 일정한 물리밀도 보증은 아님.",
+      "flags": [
+        "linear_scaling_is_estimate",
+        "published_product_specific"
+      ],
+      "limitations": [
+        "온도·제품·담는 방식에 따른 편차를 보증하지 않음.",
+        "표의 작은술·컵 실측은 큰술에 단순비례하지 않는 경우가 있음. 현재 계산은15ml기준 선형 추정으로 표시됨.",
+        "원문은 발효식품에 대해 교재 일러두기의 특정 제품을 계량했다고 명시. 정확한 브랜드는 이 페이지에서 확인되지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "be38bc63-ced9-4b9f-84a2-924dde0eb62c",
+      "ingredient_name": "레몬즙",
+      "assignment_id": "d4d37b5c-4604-4e38-98af-66098e016ad6",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "33d8c4a6-43cd-4ae0-bceb-021bf4b39dd7",
+      "evidence_source_subject": "레몬즙",
+      "evidence_preparation_state": "as_published",
+      "source_id": "e759bf3f-9b62-4df6-afae-49102fc3e843",
+      "provider": "MFDS_SAMSAM",
+      "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305214.pdf",
+      "source_locator": "삼색 더덕 초밥, 인쇄42–43쪽/PDF22쪽, 레몬즙10g=2작은술",
+      "stored_observation": {
+        "amount": 2,
+        "unit": "2작은술 (10mL)",
+        "weight_g": 10,
+        "volume_ml": 10,
+        "normalized_g_per_15ml": 15
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official_recipe_reference",
+      "evidence_scope": "published_recipe_equivalence",
+      "reason": "식약처 공식 PDF의 g·계량단위 병기값을 직접 다운로드하고 해당 페이지 텍스트 및 렌더로 확인. 정규화 산술 일치.",
+      "flags": [
+        "recipe_equivalence_not_density"
+      ],
+      "limitations": [
+        "레시피의 편의상 반올림된 분량. 독립 밀도 실측이나 제품별 정밀도를 뜻하지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "7d1408f1-43bd-4399-a240-117ab14a5a23",
+      "ingredient_name": "올리브 오일",
+      "assignment_id": "71343311-675a-4cdd-a917-f3fa2438ef4e",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "70c9bf0f-84dd-45b2-920a-f0d92293d31f",
+      "evidence_source_subject": "올리브 오일",
+      "evidence_preparation_state": "as_published",
+      "source_id": "e759bf3f-9b62-4df6-afae-49102fc3e843",
+      "provider": "MFDS_SAMSAM",
+      "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305214.pdf",
+      "source_locator": "검은깨 두부 안심 스테이크, 인쇄116–117쪽/PDF59쪽, 올리브유15g=1큰술",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 15,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 15
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official_recipe_reference",
+      "evidence_scope": "published_recipe_equivalence",
+      "reason": "식약처 공식 PDF의 g·계량단위 병기값을 직접 다운로드하고 해당 페이지 텍스트 및 렌더로 확인. 정규화 산술 일치.",
+      "flags": [
+        "recipe_equivalence_not_density"
+      ],
+      "limitations": [
+        "레시피의 편의상 반올림된 분량. 독립 밀도 실측이나 제품별 정밀도를 뜻하지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "d8e4b087-3629-4f58-8ccd-2185a07d3da5",
+      "ingredient_name": "맛술",
+      "assignment_id": "45d6ae27-1076-496b-8967-a1fbc3a9a5fb",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "11a62a50-7c71-4d19-8ee6-c83080c28f68",
+      "evidence_source_subject": "맛술",
+      "evidence_preparation_state": "as_published",
+      "source_id": "e759bf3f-9b62-4df6-afae-49102fc3e843",
+      "provider": "MFDS_SAMSAM",
+      "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305214.pdf",
+      "source_locator": "닭다리 단호박 사과 매실 조림, 인쇄72–73쪽/PDF37쪽, 맛술3g=2/3작은술",
+      "stored_observation": {
+        "amount": 0.6667,
+        "unit": "2/3작은술",
+        "weight_g": 3,
+        "volume_ml": 3.3333,
+        "normalized_g_per_15ml": 13.5
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 13.500135001,
+        "difference_g_per_15ml": 0.000135001,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official_recipe_reference",
+      "evidence_scope": "published_recipe_equivalence",
+      "reason": "식약처 공식 PDF의 g·계량단위 병기값을 직접 다운로드하고 해당 페이지 텍스트 및 렌더로 확인. 정규화 산술 일치.",
+      "flags": [
+        "recipe_equivalence_not_density"
+      ],
+      "limitations": [
+        "레시피의 편의상 반올림된 분량. 독립 밀도 실측이나 제품별 정밀도를 뜻하지 않음.",
+        "3.3333ml 저장 절삭으로 산술값13.500135…g과13.5g의 미소차 존재. 원문2/3작은술의 유리수로 계산하면13.5g이 정확."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "68c0c37d-89d0-44cd-94f9-6bf9dfb73aa8",
+      "ingredient_name": "올리고당",
+      "assignment_id": "8c567d34-c538-43b2-9428-18f5aa1ec42e",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "363b1d45-7241-446b-b4f9-b1a1f5b72d04",
+      "evidence_source_subject": "올리고당",
+      "evidence_preparation_state": "as_published",
+      "source_id": "a99b3b4f-c833-4b57-9ab9-5ba5efb5e04e",
+      "provider": "MFDS_SAMSAM",
+      "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+      "source_locator": "비지를 넣은 쇠고기말이 구이, 인쇄154–155쪽/PDF78쪽, 올리고당15g=1큰술",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 15,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 15
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "verified_official_recipe_reference",
+      "evidence_scope": "published_recipe_equivalence",
+      "reason": "식약처 공식 PDF의 g·계량단위 병기값을 직접 다운로드하고 해당 페이지 텍스트 및 렌더로 확인. 정규화 산술 일치.",
+      "flags": [
+        "recipe_equivalence_not_density"
+      ],
+      "limitations": [
+        "레시피의 편의상 반올림된 분량. 독립 밀도 실측이나 제품별 정밀도를 뜻하지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "487653de-ae9b-499b-af18-ac444d2ed040",
+      "ingredient_name": "물",
+      "assignment_id": "0f183bb2-7378-4103-82a1-a49805313899",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "46748b83-0aa7-4541-a5e6-27c76d5028bd",
+      "evidence_source_subject": "물",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 15,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 15
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "이 재료에만 승인된1g/ml 근사값. 다른 액체에 전파 금지."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "03d5e5b4-b44c-455d-9f9d-564f776c68df",
+      "ingredient_name": "굴소스",
+      "assignment_id": "a804fb66-4b78-4d61-9d0e-0eed9e91ac8b",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "18828577-a05c-42af-89c7-f64e89433b2c",
+      "evidence_source_subject": "굴소스",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 20,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 20
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 20.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "27eb6475-a35b-40dd-87cf-bb90c7c47f05",
+      "ingredient_name": "오렌지즙",
+      "assignment_id": "01633d03-2e14-47e7-944c-6bb27ef6c47f",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "1939e715-38e5-4dba-8762-f87c21534ce9",
+      "evidence_source_subject": "오렌지즙",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 15,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 15
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "이 재료에만 승인된1g/ml 근사값. 다른 액체에 전파 금지."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "cdc7f891-1b2d-4645-b6e3-191e9a700d1d",
+      "ingredient_name": "탄산수",
+      "assignment_id": "09bca427-4cbc-4322-a8de-0c1e61586b37",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "b14c3607-977f-408f-9741-3ae4f605aa4a",
+      "evidence_source_subject": "탄산수",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 15,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 15
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 15.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "이 재료에만 승인된1g/ml 근사값. 다른 액체에 전파 금지."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "9935fd54-6916-4743-9783-06fb457dacca",
+      "ingredient_name": "다시다",
+      "assignment_id": "46aa6092-a6b6-400e-b42b-2193abd3cff6",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "e9aa1f65-c285-4acd-a79d-cdbc65d9a625",
+      "evidence_source_subject": "다시다",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 0.5,
+        "unit": "0.5스푼 (7.5mL)",
+        "weight_g": 5,
+        "volume_ml": 7.5,
+        "normalized_g_per_15ml": 10
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 10.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "0.5스푼5g을 스푼15ml로 해석한 기존 승인값. 가정 밥숟가락 부피와 동일하다는 근거 없음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "17439e42-1a79-4084-b9e0-776ab5904a10",
+      "ingredient_name": "참치액",
+      "assignment_id": "214d6f8a-d515-4c2c-aa9a-4a80bc6be595",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "a709e5eb-c069-4f84-9d2a-052d275db727",
+      "evidence_source_subject": "참치액",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 17.9,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 17.9
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 17.9,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "액젓17.9g/15ml를 참치액에 유추 적용한 기존 승인값. 제품 식별 근거 없음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "3e5d2f69-d053-4d20-b7e7-2443bfc3cdbf",
+      "ingredient_name": "참깨",
+      "assignment_id": "1c62c8f2-f574-4353-9609-8f6460e802c2",
+      "assignment_version": 1,
+      "active_approved": false,
+      "assignment_review_status": "revoked",
+      "assignment_preparation_state": "raw",
+      "evidence_id": "91e851f1-c101-463f-9f6a-16ed38e16256",
+      "evidence_source_subject": "참깨",
+      "evidence_preparation_state": "raw",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 7,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 7
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 7.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "inactive_historical",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "현재 계산 제외된 과거 연결. 기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement",
+        "approval_transcript_not_retrieved"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "이 출처 문서에 해당 큰술값의 별도 승인 문장이 보이지 않음. DB 승인사유가 현재 확인 가능한 근거이며 원승인 대화는 재확인하지 않음."
+      ],
+      "recommendation": "retain_inactive"
+    },
+    {
+      "ingredient_id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+      "ingredient_name": "식용유",
+      "assignment_id": "ffa6190a-e540-47f9-9d2e-596efc394d39",
+      "assignment_version": 1,
+      "active_approved": false,
+      "assignment_review_status": "revoked",
+      "assignment_preparation_state": "raw",
+      "evidence_id": "f0dd754b-d71e-47df-8901-095cbbf8c1d7",
+      "evidence_source_subject": "식용유",
+      "evidence_preparation_state": "raw",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 14,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 14
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 14.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "inactive_historical",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "현재 계산 제외된 과거 연결. 기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement",
+        "approval_transcript_not_retrieved"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "이 출처 문서에 해당 큰술값의 별도 승인 문장이 보이지 않음. DB 승인사유가 현재 확인 가능한 근거이며 원승인 대화는 재확인하지 않음."
+      ],
+      "recommendation": "retain_inactive"
+    },
+    {
+      "ingredient_id": "3e5d2f69-d053-4d20-b7e7-2443bfc3cdbf",
+      "ingredient_name": "참깨",
+      "assignment_id": "c0d4e539-9cc6-4c55-8dfe-27c9fb899ad1",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "6e78b322-c3db-4eea-a1da-c83f9c0a7150",
+      "evidence_source_subject": "참깨",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 7,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 7
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 7.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement",
+        "approval_transcript_not_retrieved"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "이 출처 문서에 해당 큰술값의 별도 승인 문장이 보이지 않음. DB 승인사유가 현재 확인 가능한 근거이며 원승인 대화는 재확인하지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+      "ingredient_name": "식용유",
+      "assignment_id": "4b335515-5352-43fe-aa2d-0ef05ef5a15d",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "cb998541-1950-4f3f-8a02-0d7ee135a23f",
+      "evidence_source_subject": "식용유",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 14,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 14
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 14.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement",
+        "approval_transcript_not_retrieved"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님.",
+        "이 출처 문서에 해당 큰술값의 별도 승인 문장이 보이지 않음. DB 승인사유가 현재 확인 가능한 근거이며 원승인 대화는 재확인하지 않음."
+      ],
+      "recommendation": "keep_with_scope"
+    },
+    {
+      "ingredient_id": "eaeb56ad-c587-425b-b375-9abe65e1a101",
+      "ingredient_name": "들기름",
+      "assignment_id": "efffa88b-7193-479a-b09e-f369da69433d",
+      "assignment_version": 1,
+      "active_approved": true,
+      "assignment_review_status": "approved",
+      "assignment_preparation_state": "as_published",
+      "evidence_id": "01a4db97-7097-4be5-88f2-72c92efe12e1",
+      "evidence_source_subject": "들기름",
+      "evidence_preparation_state": "as_published",
+      "source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "provider": "HOMECOOK_USER_STANDARD",
+      "source_url": "https://github.com/netsus/homecook/blob/master/docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "source_locator": "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-09-15-representative-profile-reconnections.md",
+      "stored_observation": {
+        "amount": 1,
+        "unit": "1큰술 (15mL)",
+        "weight_g": 13,
+        "volume_ml": 15,
+        "normalized_g_per_15ml": 13
+      },
+      "arithmetic_check": {
+        "calculated_g_per_15ml": 13.0,
+        "difference_g_per_15ml": 0.0,
+        "within_rounding_tolerance": true
+      },
+      "audit_status": "approved_service_standard",
+      "evidence_scope": "user_approved_estimate",
+      "reason": "기존 DB 승인값과 서비스 기록을 대조. 외부 공식 실측으로 승격하지 않음.",
+      "flags": [
+        "service_standard_not_official_measurement"
+      ],
+      "limitations": [
+        "사용자 승인 대표값이며 개별 제품 실측값이 아님."
+      ],
+      "recommendation": "keep_with_scope"
+    }
+  ],
+  "new_value_recommendations": [],
+  "deferred_recommendations": [
+    "공식표의 추가 재료를 카탈로그 상태·종과 대조하기 전 자동 확장하지 않는다.",
+    "원문 작은술 관측을 장래 별도 저장하면 15ml 선형 추정과 직접 관측의 차이를 드러낼 수 있다.",
+    "새 실측은 제품명·가식부·전처리·평평/수북·계량용기와 반복측정 범위를 함께 기록한다."
+  ]
+}

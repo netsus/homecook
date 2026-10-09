@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { pieceUnitFamily, pieceWeightMatchesIngredient } from "./ingredient-piece-units.mjs";
 
-export const RECIPE_NUTRITION_CALCULATION_VERSION = "recipe-nutrition-v2";
+export const RECIPE_NUTRITION_CALCULATION_VERSION = "recipe-nutrition-v3";
 export const RECIPE_NUTRITION_ROUNDING_POLICY_VERSION = "display-v1";
 
 export const CORE_NUTRIENT_CODES = [
@@ -103,12 +104,20 @@ export interface RecipeNutritionIngredientInput {
   piece_weight?: {
     id: string;
     ingredient_id: string;
+    evidence_id: string;
     size_code: string;
     preparation_state: string;
     weight_g: number;
     review_status: string;
     is_active: boolean;
     evidence?: {
+      id: string;
+      evidence_kind: string;
+      preparation_state: string;
+      size_code: string;
+      source_observed_amount: number;
+      source_observed_unit: string;
+      observed_weight_g: number;
       review_status: string;
       is_active: boolean;
       source: {
@@ -287,9 +296,7 @@ function volumeInMilliliters(amount: number, unit: string | null) {
 }
 
 function isPieceUnit(unit: string | null) {
-  return ["개", "장", "대", "모", "piece", "pieces"].includes(
-    normalizedUnit(unit) ?? "",
-  );
+  return pieceUnitFamily(unit) !== null;
 }
 
 function isApprovedNutrition(ingredient: RecipeNutritionIngredientInput) {
@@ -378,23 +385,9 @@ function ingredientWeightInGrams(
     return milliliters * normalizedWeight / 15;
   }
 
-  if (isPieceUnit(ingredient.unit)) {
-    const piece = ingredient.piece_weight;
-    const effectiveSizeCode = ingredient.size_code ?? "medium";
-    if (
-      piece
-      && piece.ingredient_id === ingredient.ingredient_id
-      && piece.size_code === effectiveSizeCode
-      && piece.preparation_state === ingredient.preparation_state
-      && piece.review_status === "approved"
-      && piece.is_active
-      && piece.evidence
-      && approvedEvidence(piece.evidence)
-      && Number.isFinite(piece.weight_g)
-      && piece.weight_g > 0
-    ) {
-      return amount * piece.weight_g;
-    }
+  const piece = ingredient.piece_weight;
+  if (piece && pieceWeightMatchesIngredient(piece, ingredient)) {
+    return amount * piece.weight_g;
   }
 
   return null;
@@ -512,28 +505,14 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
     }
   }
 
-  if (profile.basis_unit === "g" && isPieceUnit(ingredient.unit)) {
-    const piece = ingredient.piece_weight;
-    const effectiveSizeCode = ingredient.size_code ?? "medium";
-    if (
-      piece &&
-      piece.ingredient_id === ingredient.ingredient_id &&
-      piece.size_code === effectiveSizeCode &&
-      piece.preparation_state === ingredient.preparation_state &&
-      piece.review_status === "approved" &&
-      piece.is_active &&
-      piece.evidence &&
-      approvedEvidence(piece.evidence) &&
-      Number.isFinite(piece.weight_g) &&
-      piece.weight_g > 0
-    ) {
-      return {
-        factor: amount * piece.weight_g / profile.basis_amount,
-        quality: "estimated",
-        warning: "PIECE_WEIGHT_CONVERSION_USED",
-        measurementSource: piece.evidence.source,
-      };
-    }
+  const piece = ingredient.piece_weight;
+  if (profile.basis_unit === "g" && piece?.evidence && pieceWeightMatchesIngredient(piece, ingredient)) {
+    return {
+      factor: amount * piece.weight_g / profile.basis_amount,
+      quality: "estimated",
+      warning: "PIECE_WEIGHT_CONVERSION_USED",
+      measurementSource: piece.evidence.source,
+    };
   }
 
   return null;

@@ -1,0 +1,52 @@
+{
+  "schema": "homecook.ingredient-piece-supplement.v1",
+  "reviewed_date": "2026-10-09",
+  "source": {
+    "provider_code": "USDA_FDC_SR_LEGACY",
+    "dataset_name": "USDA SR Legacy household portions: white mushroom medium",
+    "source_version": "2019-04-01-FDC169251-portion84529",
+    "data_basis_date": "2019-04-01",
+    "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+    "archive_sha256": "b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0",
+    "food": {
+      "fdc_id": "169251",
+      "data_type": "sr_legacy_food",
+      "description": "Mushrooms, white, raw",
+      "food_category_id": "11",
+      "publication_date": "2019-04-01"
+    },
+    "portion": {
+      "id": "84529",
+      "fdc_id": "169251",
+      "seq_num": "4",
+      "amount": "1",
+      "measure_unit_id": "9999",
+      "portion_description": "",
+      "modifier": "medium",
+      "gram_weight": "18",
+      "data_points": "",
+      "footnote": "",
+      "min_year_acquired": ""
+    },
+    "license": "USDA FoodData Central public domain"
+  },
+  "ingredient": {
+    "id": "17c42094-d0da-4d2e-a26a-fe553ed1070c",
+    "name": "양송이버섯",
+    "preparation_state": "as_published",
+    "actual_state": "raw",
+    "size_code": "medium",
+    "observed_unit": "개",
+    "observed_amount": 1,
+    "weight_g": 18
+  },
+  "reason": "공식 USDA SR Legacy FDC169251 생 흰 양송이버섯의 medium 한 개18g. 현재 RDA 양송이버섯 생것 영양 연결과 동일 식품/상태로 확인. 크기 미지정 입력의 기존 medium 정책 안에서 대표 중량으로 사용하며 실제 측정 g 입력이 우선. 다른 버섯/가열/건조/장 단위에 확대 적용하는 근거가 아님.",
+  "policy": {
+    "preserve_existing_values": true,
+    "append_only": true,
+    "existing_recipe_input_unchanged": true,
+    "no_new_unit_aliases": true,
+    "no_ai_calls": true
+  },
+  "reviewed_at": "2026-10-09T11:33:27.032Z"
+}

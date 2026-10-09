@@ -639,6 +639,8 @@ describe("recipe nutrition snapshot service", () => {
             source_url: "https://example.test/measurement",
           },
         }],
+        piece_candidates: [],
+        selected_piece_weight_id: null,
         selected_nutrition_link_id: "link-1",
         selected_conversion_assignment_id: null,
       }],

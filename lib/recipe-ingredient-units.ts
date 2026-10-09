@@ -3,12 +3,12 @@ import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 // These unit families are already understood by recipe-nutrition-calculator.
 // Selecting a different unit never converts or guesses the ingredient amount.
 export const RECIPE_INGREDIENT_UNIT_OPTIONS = [
-  ...COOKING_UNIT_OPTIONS, "kg", "l", "개", "장", "대", "모", "큰술", "작은술", "컵",
+  ...COOKING_UNIT_OPTIONS, "kg", "l", "개", "알", "통", "장", "대", "줄기", "모", "줌", "꼬집", "큰술", "작은술", "컵",
 ] as const;
 
 const supportedUnits = new Set<string>([
   ...RECIPE_INGREDIENT_UNIT_OPTIONS,
-  "tbsp", "tsp", "cup", "piece", "pieces", "T", "t",
+  "tbsp", "tsp", "cup", "piece", "pieces", "handful", "handfuls", "pinch", "pinches", "T", "t",
   "스푼", "밥숟갈", "숟갈", "숟가락", "왕큰술", "티스푼",
 ]);
 

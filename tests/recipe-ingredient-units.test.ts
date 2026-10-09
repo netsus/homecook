@@ -4,7 +4,7 @@ import { getRecipeIngredientUnitOptions, isRecipeIngredientUnitAllowed } from "@
 describe("recipe ingredient unit choices", () => {
   it("offers existing nutrition unit families and preserves original legacy text", () => {
     expect(getRecipeIngredientUnitOptions({ unit: "줌" })).toEqual([
-      "g", "ml", "kg", "l", "개", "장", "대", "모", "큰술", "작은술", "컵", "줌",
+      "g", "ml", "kg", "l", "개", "알", "통", "장", "대", "줄기", "모", "줌", "꼬집", "큰술", "작은술", "컵",
     ]);
     expect(getRecipeIngredientUnitOptions({ unit: "g" }).filter((unit) => unit === "g")).toHaveLength(1);
     expect(getRecipeIngredientUnitOptions({ unit: null })).not.toContain("");
@@ -21,7 +21,7 @@ describe("recipe ingredient unit choices", () => {
     }
     expect(isRecipeIngredientUnitAllowed("임의단위")).toBe(false);
     expect(isRecipeIngredientUnitAllowed("줌", ["줌"])).toBe(true);
-    expect(isRecipeIngredientUnitAllowed("줌", ["g"])).toBe(false);
+    expect(isRecipeIngredientUnitAllowed("줌", ["g"])).toBe(true);
     for (const unit of [null, undefined, 5, "", " "]) expect(isRecipeIngredientUnitAllowed(unit)).toBe(false);
   });
 });

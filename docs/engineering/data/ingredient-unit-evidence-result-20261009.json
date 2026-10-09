@@ -1,0 +1,75 @@
+{
+  "schema": "homecook.ingredient-unit-evidence-result.v1",
+  "verified_at": "2026-10-09T11:39:17.213Z",
+  "passed": true,
+  "existing_volume_assignments_reviewed": 33,
+  "existing_piece_weights_reviewed": 14,
+  "active_volume_assignments": 30,
+  "active_piece_weights_before": 14,
+  "active_piece_weights_after": 15,
+  "added_measurement": {
+    "ingredient": "양송이버섯",
+    "size": "medium",
+    "amount": 1,
+    "unit": "개",
+    "weight_g": 18,
+    "source": "USDA SR Legacy FDC169251 portion84529"
+  },
+  "added_rows": 3,
+  "current_recipe_rows": 516,
+  "conversion_blockers_before": 6,
+  "conversion_blockers_after": 5,
+  "nutrition_profile_missing_rows": 12,
+  "to_taste_rows": 9,
+  "recipe_snapshots_created": 1,
+  "replay_snapshots_created": 0,
+  "existing_snapshot_payloads_preserved": true,
+  "existing_other_rows_preserved": true,
+  "ledger_and_function_definitions_unchanged": true,
+  "ai_policy_unchanged": true,
+  "provider_calls": 0,
+  "web_deployed": false,
+  "runtime_code_changed": false,
+  "backup": {
+    "bytes": 117406031,
+    "sha256": "e5db25cc8a594d32c050f51aa99a28ba0cf2456a96f281c38e788ef42522a213",
+    "isolated_restore_verified": true
+  },
+  "owned_isolated_test_container_removed": true,
+  "sql_sha256": "397be1a6ba85d80a8bb926fd7a8675ef5cc46eaa9ba5d049159bc79fd599472d",
+  "remaining": [
+    {
+      "ingredient": "월계수잎",
+      "unit": "장",
+      "reason": "No verified whole-leaf weight in examined official source; crumbled tsp is not leaf evidence"
+    },
+    {
+      "ingredient": "깻잎",
+      "unit": "장",
+      "reason": "Official recipe references have varying weights; no universal medium leaf established"
+    },
+    {
+      "ingredient": "다진마늘",
+      "unit": "개",
+      "reason": "Input identity/unit needs original-source confirmation; raw garlic clove cannot substitute"
+    },
+    {
+      "ingredient": "통후추",
+      "unit": "알",
+      "reason": "Unsupported unit and missing exact peppercorn weight"
+    },
+    {
+      "ingredient": "대파",
+      "unit": "줌",
+      "reason": "Existing handful30g evidence; runtime does not consume this unit/size"
+    }
+  ],
+  "limitations": [
+    "Existing piece unit-family mixing remains; active mushroom recipes checked for incompatible units before addition.",
+    "Household spoon15ml and default cup200ml policies remain unchanged; audit records official distinctions.",
+    "Runtime JS/SQL guards and unit aliases require a separate coherent implementation."
+  ],
+  "existing_snapshot_payloads_verified": 293,
+  "ai_enabled": false,
+  "migration_count": 212
+}

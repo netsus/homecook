@@ -1,0 +1,66 @@
+{
+  "schema": "homecook.ingredient-piece-unit-production.v1",
+  "status": "passed",
+  "verified_at": "2026-10-09T13:45:49.240Z",
+  "web_ref": "91355997309321e9f775eac93a3a88c8352104e5",
+  "build_id": "prelaunch-913559973093-p0Gh62",
+  "migration_count": 213,
+  "migration": {
+    "filename": "20261009130000_ingredient_piece_unit_evidence.sql",
+    "sha256": "cf17e3c267baa14e557063d4b9d1a05ddd31029e0614528ca013fa53281f6904"
+  },
+  "backup": {
+    "bytes": 117408024,
+    "sha256": "d3979eb4983c5665eca71bd6900a7a97b949000dce0f9cf18309cf655a109146",
+    "isolated_full_restore_verified": true,
+    "authenticated_platform_backup_readiness": "passed"
+  },
+  "refresh": {
+    "status": "passed",
+    "verified_at": "2026-10-09T13:42:01.016Z",
+    "current_recipes_refreshed": 2,
+    "new_snapshots": 2,
+    "replay_created": 0,
+    "historical_snapshots_preserved": 294,
+    "original_quantities_preserved": true,
+    "nutrition_sources_values_preserved": true,
+    "meal_history_preserved": true,
+    "ai_enabled": false,
+    "live_quantity_resolution": {
+      "ai_enabled": false,
+      "onion_sheet": null,
+      "green_onion_stalk": "100.000",
+      "green_onion_handful": "30.000"
+    }
+  },
+  "public_api": {
+    "recipes": 2,
+    "original_ingredients_unchanged": true,
+    "nutrition_matches_expected": true,
+    "green_onion_display": "대파 1줌"
+  },
+  "browser": {
+    "desktop": "passed",
+    "mobile_390_844": "passed",
+    "observed_display": "대파 1줌",
+    "viewport_reset": true
+  },
+  "checks": {
+    "web_tests": 148,
+    "deployment_regressions": 171,
+    "isolated_sql_checks": 14,
+    "build": "passed",
+    "typecheck": "passed",
+    "changed_files_lint": "passed",
+    "build_embedded_lint": "Existing eslint-plugin-react-hooks resolution failure in deployment checkout; separate lint passed"
+  },
+  "ai_enabled": false,
+  "external_provider_calls": 0,
+  "owned_isolated_container_removed": true,
+  "rollback_to_v2_web_prohibited": true,
+  "remaining_limitations": [
+    "Some ingredients still lack nutrition or exact unit evidence; missing values remain partial instead of zero.",
+    "No new provider-backed YouTube extraction was run."
+  ],
+  "pull_request": "https://github.com/netsus/homecook/pull/1601"
+}

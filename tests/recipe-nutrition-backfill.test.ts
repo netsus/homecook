@@ -15,6 +15,7 @@ import {
   runFoodSafetyRecipeNutritionBackfill,
 } from "@/scripts/lib/recipe-nutrition-backfill.mjs";
 import {
+  buildRecipeNutritionInputGuard,
   hydrateRecipeNutritionIngredients,
   loadRecipeNutritionPredecessors,
 } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
@@ -162,6 +163,7 @@ describe("FoodSafety-30 recipe nutrition backfill", () => {
           id: "piece-evidence-a",
           source_id: "piece-source",
           evidence_kind: "piece_weight",
+          source_observed_amount: 1, source_observed_unit: "1장", observed_weight_g: 40,
           preparation_state: "raw-edible",
           size_code: "medium",
           review_status: "approved",
@@ -210,6 +212,39 @@ describe("FoodSafety-30 recipe nutrition backfill", () => {
       size_code: "medium",
       piece_weight: { id: "piece-weight-a", weight_g: 40 },
     });
+
+    const guard = buildRecipeNutritionInputGuard([{ ...ingredients[0], unit: "장" }], hydratedPredecessors);
+    expect(guard.recipe_ingredients[0]).toMatchObject({
+      selected_piece_weight_id: "piece-weight-a",
+      piece_candidates: [{ piece_weight_id: "piece-weight-a", evidence_id: "piece-evidence-a",
+        source_observed_amount: 1, source_observed_unit: "1장", observed_weight_g: 40 }],
+    });
+    const candidate = loaded.get("ingredient-a").piece_weight_candidates[0];
+    hydratedPredecessors.get("ingredient-a")!.piece_weight_candidates = [candidate, candidate];
+    expect(hydrateRecipeNutritionIngredients([{ ...ingredients[0], unit: "장" }], hydratedPredecessors)[0].piece_weight).toBeNull();
+    hydratedPredecessors.get("ingredient-a")!.piece_weight_candidates = [candidate];
+    expect(hydrateRecipeNutritionIngredients([{ ...ingredients[0], unit: "개" }], hydratedPredecessors)[0].piece_weight).toBeNull();
+
+    const original = rowsByTable.piece_unit_weights[0] as {
+      size_code: string; weight_g: number; measurement_source_evidence: Record<string, unknown>;
+    };
+    for (const patch of [{ source_observed_amount: 2 }, { observed_weight_g: 41 },
+      { source_observed_unit: "2장" }, { source_observed_unit: "팩" }]) {
+      rowsByTable.piece_unit_weights = [{ ...original,
+        measurement_source_evidence: { ...original.measurement_source_evidence, ...patch } }];
+      expect((await loadRecipeNutritionPredecessors(client, ["ingredient-a"])).get("ingredient-a").piece_weight_candidates).toEqual([]);
+    }
+    rowsByTable.piece_unit_weights = [{ ...original, size_code: "handful", weight_g: 30,
+      measurement_source_evidence: { ...original.measurement_source_evidence,
+        size_code: "handful", source_observed_unit: "1줌", observed_weight_g: 30 } }];
+    const handfuls = await loadRecipeNutritionPredecessors(client, ["ingredient-a"]);
+    hydratedPredecessors.get("ingredient-a")!.piece_weight_candidates = handfuls.get("ingredient-a").piece_weight_candidates;
+    const handful = hydrateRecipeNutritionIngredients([{ ...ingredients[0], unit: "줌", amount: 2, size_code: "medium" }], hydratedPredecessors);
+    expect(handful[0]).toMatchObject({ size_code: "handful", piece_weight: { weight_g: 30,
+      evidence: { source_observed_amount: 1, source_observed_unit: "1줌", observed_weight_g: 30 } } });
+    expect(calculateRecipeNutrition({ recipe_id: "recipe", recipe_version: 1, base_servings: 1,
+      ingredients: handful }).values.energy_kcal.amount).not.toBeNull();
+
   });
 
   it("keeps the standalone operator calculation exactly equal to the hydrated server calculator", () => {
