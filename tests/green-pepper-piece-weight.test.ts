@@ -6,12 +6,15 @@ describe('official-recipe-based green pepper service weight',()=>{
     const {data,rows}=greenPepperRows(reviewer);
     expect(data.source.quoted_excerpt).toBe('풋고추 15g(1 개)');
     expect(data.source.published_date).toBe('2022-09-13');
-    expect(rows[0][1].provider_code).toBe('HOMECOOK_USER_STANDARD');
-    expect(rows[0][1].dataset_name).toContain('공식 레시피 기반 서비스 대표 중량');
-    expect(rows[2][1].ingredient_id).toBe('a12cd429-b500-42d2-ac17-e53123f7356a');
-    expect(rows[2][1].weight_g*2).toBe(30);
-    expect(rows[1][1].source_observed_amount).toBe(1);
-    expect(rows[1][1].source_observed_unit).toBe('개');
+    expect(rows[0]).toEqual(['nutrition_sources', expect.objectContaining({
+      provider_code: 'HOMECOOK_USER_STANDARD', dataset_name: expect.stringContaining('공식 레시피 기반 서비스 대표 중량'),
+    })]);
+    expect(rows[2]).toEqual(['piece_unit_weights', expect.objectContaining({
+      ingredient_id: 'a12cd429-b500-42d2-ac17-e53123f7356a', weight_g: 15,
+    })]);
+    expect(rows[1]).toEqual(['measurement_source_evidence', expect.objectContaining({
+      source_observed_amount: 1, source_observed_unit: '개',
+    })]);
     expect(data.source.decision_reason).toContain('국가 평균이나 실측 중간 크기 중량이라고 주장하지 않는다');
   });
   it('rejects missing reviewer and guards exact existing nutrition and replay identity',()=>{
