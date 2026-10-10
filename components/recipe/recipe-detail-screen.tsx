@@ -18,6 +18,7 @@ import { ManualRecipePublishAction } from "@/components/recipe/manual-recipe-pub
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
 import { RecipeDetailPersonalEditor } from "@/components/recipe/recipe-detail-personal-editor";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
+import { RecipeDescription } from "@/components/recipe/recipe-description";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { ContentState } from "@/components/shared/content-state";
@@ -1923,6 +1924,7 @@ export function RecipeDetailScreen({
               </a>
             </div>
           ) : null}
+          <RecipeDescription description={recipe.description} />
           <div
             aria-label="레시피 요약"
             className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] font-semibold text-[var(--text-2)]"
@@ -2478,6 +2480,7 @@ function RecipeDetailWebView({
               </div>
             </section>
 
+            <RecipeDescription description={recipe.description} />
             <section aria-label="레시피 요약" className="web-recipe-meta-row">
               <div className="web-recipe-metric-group">
                 <RecipeMetric label="기본인분" value={`${recipe.base_servings}인분`} />
