@@ -1,0 +1,378 @@
+{
+  "schema": "homecook.official-recipe-identity-review.v1",
+  "reviewed_on": "2026-10-10",
+  "database_writes": 0,
+  "external_paid_api_calls": 0,
+  "public_recipe_cases": 5,
+  "inspection": {
+    "method": "Official image URLs navigated in Chrome and screenshots visually inspected via Computer Use. Existing COOKRCP raw text and steps compared read-only. No brand inferred from appearance.",
+    "web_reader_image_fetch": "web.open could not render these image URLs; actual Chrome navigation succeeded.",
+    "source_metadata": "All five youtube_url and youtube_video_id fields are null; source_recipe_id and foodsafety image URLs identify official recipe provenance."
+  },
+  "cases": [
+    {
+      "name": "치즈",
+      "recipe_id": "0a54f6c0-0ac3-59ea-97f9-4b4f58156ecf",
+      "row_id": "da20b2c8-aff9-40e1-a46a-d540055ca968",
+      "current_ingredient_id": "b6d1dd47-7bed-4354-a588-3cc63cee86ef",
+      "current_amount": 20,
+      "current_unit": "g",
+      "public_recipe_title": "삼색샌드위치",
+      "official_source": {
+        "provider": "foodsafety-cookrcp",
+        "source_recipe_id": "441",
+        "youtube_url": null,
+        "youtube_video_id": null,
+        "canonical_recipe_url_present": false,
+        "provenance": "기존 수입 식약처 COOKRCP API 원문과 공식 foodsafetykorea.go.kr 조리 사진. youtube 필드에는 공식레시피 URL이 숨겨져 있지 않음.",
+        "raw_ingredients": "식빵(100g), 토마토(20g), 어린이치즈(20g), 양상추(30g)\n감자(30g), 올리고당(20g), 달걀(60g), 당근(20g), 오이(20g)\n양파(20g), 소금(0.3g)",
+        "raw_ingredients_sha256": "0a8417b32626af81aa4d2ebd8c30403684d3c864f1836dec27c8557942be9556",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "식빵은 가장 자리를 잘라 밀대를 이용 하여 얇게 밀어 준비한다."
+          },
+          {
+            "step": 2,
+            "instruction": "감자는 삶은 뒤 곱게 으깨어 올리고당을 넣고 골고루 섞는다."
+          },
+          {
+            "step": 3,
+            "instruction": "달걀은 약 13분 정도 삶아 껍질을 벗기고, 반으로 갈라 썰어놓는다."
+          },
+          {
+            "step": 4,
+            "instruction": "당근과 양파 오이도 얇게 썰어놓는다."
+          },
+          {
+            "step": 5,
+            "instruction": "토마토는 포를 떠서 준비한다."
+          },
+          {
+            "step": 6,
+            "instruction": "으깬 감자(2)에 준비한 달걀(3)과 채소(4)를 넣고 소금을 약간 넣은 뒤 골고루 섞어, 밀어 놓은 식빵에 토마토, 치즈, 양상추와 함께 넣어 돌돌 말아 완성한다."
+          }
+        ]
+      },
+      "status": "type_narrowed_product_unidentified",
+      "identity": "어린이용 얇은 슬라이스 치즈",
+      "findings": [
+        "원문은 어린이치즈20g이다.",
+        "공식 완성 사진에서 토마토 둘레를 감싸는 얇고 균일한 흰색 치즈층이 보인다.",
+        "브랜드·자연/가공 구성·저염 단계까지 사진으로 확인할 수 없다."
+      ],
+      "images": [
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00441_1.png",
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00441_6.png"
+      ],
+      "exact_existing_ingredient": null,
+      "product_benchmark_candidates": [
+        {
+          "name": "어린이슬라이스치즈",
+          "basis": {
+            "unit": "g",
+            "amount": 100
+          },
+          "brand": "주식회사 에스알인터내셔널",
+          "active": true,
+          "product_id": "1bf9cbb5-bdc9-4c7b-8a29-3f8cf11bbc9f",
+          "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+          "source_key": "item-report:20090262001127",
+          "source_name": "어린이슬라이스치즈",
+          "review_status": "approved"
+        }
+      ],
+      "recommended_action": "치즈 전체의 기본값으로 연결하지 않는다. 해당 레시피 행을 어린이용 슬라이스 치즈로 좁히고, 특정 어린이슬라이스 제품을 서비스 대표 예시로 명시하여 별도 프로필을 만들 수 있다. 원제품을 식별했다고 기록하지 않는다."
+    },
+    {
+      "name": "옥수수",
+      "recipe_id": "7da19cdd-f8f9-59d6-9583-378b0225b5f5",
+      "row_id": "5d9c0b94-0cfb-4b0a-8dab-e43aa6b2072e",
+      "current_ingredient_id": "84b5c0e9-ebb1-510b-afe6-8080cdd69ad4",
+      "current_amount": 30,
+      "current_unit": "g",
+      "public_recipe_title": "오징어콩순대",
+      "official_source": {
+        "provider": "foodsafety-cookrcp",
+        "source_recipe_id": "390",
+        "youtube_url": null,
+        "youtube_video_id": null,
+        "canonical_recipe_url_present": false,
+        "provenance": "기존 수입 식약처 COOKRCP API 원문과 공식 foodsafetykorea.go.kr 조리 사진. youtube 필드에는 공식레시피 URL이 숨겨져 있지 않음.",
+        "raw_ingredients": "오징어 1마리(220g), 옥수수 30g, 귀리밥 50g, 강낭콩 20g\n당근 20g, 미니파프리카 20g, 피망 20g, 대파 10g, 양파 25g\n카레가루 25g, 흰후추 1g, 다진마늘 5g, 참기름 15g, 밀가루 15g, 레몬즙 15g",
+        "raw_ingredients_sha256": "b81740303475b381459ab9bf3558a6bc640af7d4e04d4c107ee6bad1de09f06d",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "오징어는 내장을 빼서 흐르는 물에 깨끗이 씻은 후, 다리는 송송 다져주고 레몬즙을 살짝 뿌려준다."
+          },
+          {
+            "step": 2,
+            "instruction": "강낭콩은 먼저 삶아준다."
+          },
+          {
+            "step": 3,
+            "instruction": "피망, 당근, 양파, 대파, 파프리카는 송송 다져준다."
+          },
+          {
+            "step": 4,
+            "instruction": "잘라준 오징어다리는 다진마늘과 살짝 볶아준다."
+          },
+          {
+            "step": 5,
+            "instruction": "볼에 귀리밥을 넣고 카레가루를 넣고 모든 재료를 섞어 소 재료를 만든다."
+          },
+          {
+            "step": 6,
+            "instruction": "오징어 안쪽에 밀가루를 묻혀주고 소를 채워 팬에 구워준다."
+          }
+        ]
+      },
+      "status": "processing_state_unresolved",
+      "identity": "노란 옥수수 알맹이",
+      "findings": [
+        "원문은 옥수수30g이며 통조림/단옥수수/찰옥수수를 명시하지 않는다.",
+        "공식20_00390_04 사진의 볼에 노란 알맹이가 보이나 생/삶은/통조림 상태는 구별되지 않는다.",
+        "통조림 용기·라벨이나 배액 지시는 확인되지 않았다."
+      ],
+      "images": [
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00390_01.png",
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00390_02.png",
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00390_03.png",
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00390_04.png",
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00390_05.png"
+      ],
+      "conditional_existing_candidates": [
+        {
+          "id": "1de8bbc3-e83f-4f46-9691-97c1ea499637",
+          "name": "통조림 옥수수 가당",
+          "definition": null,
+          "profile_id": "3f3df0ad-286a-4878-80bf-45dda2d77576",
+          "source_key": "364",
+          "link_active": true,
+          "link_status": "approved",
+          "source_name": "옥수수, 통조림, 가당",
+          "presentation": "base"
+        }
+      ],
+      "recommended_action": "통조림을 사용했다는 원문 확증으로 취급하지 않는다. 서비스 기준을 별도로 정할 경우 특정 레시피에 조리용 옥수수알 대표를 쓰는 추정 정책임을 표시해야 한다."
+    },
+    {
+      "name": "호박",
+      "recipe_id": "426ae2a2-04f0-552d-98e8-6c6d144bc1f7",
+      "row_id": "fe4042ab-210a-4c9c-9910-e2908a059e6e",
+      "current_ingredient_id": "c5c86612-e0b7-5951-8bb2-553225bbfe9c",
+      "current_amount": 50,
+      "current_unit": "g",
+      "public_recipe_title": "구운채소와 간장레몬 소스",
+      "official_source": {
+        "provider": "foodsafety-cookrcp",
+        "source_recipe_id": "93",
+        "youtube_url": null,
+        "youtube_video_id": null,
+        "canonical_recipe_url_present": false,
+        "provenance": "기존 수입 식약처 COOKRCP API 원문과 공식 foodsafetykorea.go.kr 조리 사진. youtube 필드에는 공식레시피 URL이 숨겨져 있지 않음.",
+        "raw_ingredients": "●구운채소 : 가지 20g(3cm), 호박 50g(1/3개), 새송이버섯 15g(3개), 양파 15g(1/8개), 발사믹크레마 15g(1큰술), 빨강 파프리카 3g(3×1cm), 노랑 파프리카 3g(3×1cm), 청피망 3g(3×1cm), 올리브유 약간\n●간장 레몬 소스 : 저염간장 5g(1작은술), 식초 15g(1큰술), 설탕 10g(1큰술), 레몬즙 5g(1작은술)",
+        "raw_ingredients_sha256": "b5cd3ea67742f1f83ca567e1880e18e001bf68d488cfac9255d2fbce0780213b",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "저염간장, 식초, 레몬즙, 설탕을 혼합하여 간장레몬 소스를 만든다."
+          },
+          {
+            "step": 2,
+            "instruction": "호박, 가지, 새송이버섯은 3cm 길이로 자른 후 얇은 편으로 채 썰고, 양파, 파프리카, 피망은 호박 길이로 썬다."
+          },
+          {
+            "step": 3,
+            "instruction": "가지, 호박, 새송이버섯, 양파, 파프리카, 피망에 올리브유를 바르고 달궈진 그릴 팬에 구운 후 접시에 담고 발사믹크레마를 뿌리고 간장레몬 소스를 곁들인다."
+          }
+        ]
+      },
+      "status": "summer_squash_type_narrowed_species_unresolved",
+      "identity": "녹색 껍질과 연한 속살의 어린 호박류",
+      "findings": [
+        "원문은 호박50g(1/3개)이며 3cm 길이로 잘라 얇은 편으로 썬다.",
+        "공식 완성 사진은 녹색 껍질과 연한 속살의 편이고, 단호박/늙은호박의 노란 과육 형태가 아니다.",
+        "사진만으로 애호박과 쥬키니 중 하나를 확정하기는 어렵다."
+      ],
+      "images": [
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00093_2.png",
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00093_1.png"
+      ],
+      "conditional_existing_candidates": [
+        {
+          "id": "a6259229-9eaf-471b-814d-97726e8665d4",
+          "name": "애호박",
+          "definition": null,
+          "profile_id": "dd29a21b-e8c3-4b94-b1ed-a224b10c8050",
+          "source_key": "1273",
+          "link_active": true,
+          "link_status": "approved",
+          "source_name": "호박, 애호박, 생것",
+          "presentation": "base"
+        },
+        {
+          "id": "9c795ce2-95d0-52cb-a724-22b255178aa7",
+          "name": "쥬키니",
+          "definition": null,
+          "profile_id": "128af9b6-2d89-4d2f-b2a4-3414dad91acf",
+          "source_key": "1277",
+          "link_active": true,
+          "link_status": "approved",
+          "source_name": "호박, 쥬키니, 생것",
+          "presentation": "base"
+        }
+      ],
+      "recommended_action": "특정 레시피에서 생 어린 호박이라는 범위까지 좁힐 수 있다. 애호박 또는 쥬키니 대표를 선택한다면 원문 식별이 아니라 명시적 서비스 대표 선택으로 기록한다. 호박 전체에 전역 적용하지 않는다."
+    },
+    {
+      "name": "화이트크림",
+      "recipe_id": "a5a7fc1e-ceef-5970-9a85-b60377ce72f8",
+      "row_id": "ec1509b3-f0ad-4c93-b711-64ba6c3cf735",
+      "current_ingredient_id": "290ff750-add0-455f-a407-325b71e2d51f",
+      "current_amount": 50,
+      "current_unit": "g",
+      "public_recipe_title": "연어오븐구이",
+      "official_source": {
+        "provider": "foodsafety-cookrcp",
+        "source_recipe_id": "571",
+        "youtube_url": null,
+        "youtube_video_id": null,
+        "canonical_recipe_url_present": false,
+        "provenance": "기존 수입 식약처 COOKRCP API 원문과 공식 foodsafetykorea.go.kr 조리 사진. youtube 필드에는 공식레시피 URL이 숨겨져 있지 않음.",
+        "raw_ingredients": "연어(150g), 양파(50g), 토마토(100g), 파프리카(50g),\n당근(30g), 마늘(20g), 청피망(30g), 레몬(1/4개), 소금(0.3g),\n후춧가루(0.01g), 생크림(20g), 화이트크림(50g), 버터(20g)",
+        "raw_ingredients_sha256": "e425a5ac9795ba4f26133831bfc882f305a7260748a1f1267f2bceb783f8ca47",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "연어는 소금, 후춧가루, 레몬으로 마리네이드 한다."
+          },
+          {
+            "step": 2,
+            "instruction": "양파, 마늘은 입자있게 다진다."
+          },
+          {
+            "step": 3,
+            "instruction": "토마토는 씨를 제거하고 입자있게 썰고, 파프리카, 피망은 채 썬 뒤 볶는다."
+          },
+          {
+            "step": 4,
+            "instruction": "화이트크림, 생크림을 골고루 섞어 크림소스를 만든다."
+          },
+          {
+            "step": 5,
+            "instruction": "팬에 버터를 넣고 양파, 마늘을 볶다가 만들어 놓은 크림소스를 넣고 졸인다."
+          },
+          {
+            "step": 6,
+            "instruction": "접시에 볶은 야채를 담고, 200°C 오븐에서 10분 정도 구운 연어를 담은 뒤 크림소스를 올린다."
+          }
+        ]
+      },
+      "status": "cooking_cream_base_composition_unresolved",
+      "identity": "생크림과 따로 섞는 흰색 조리용 크림 베이스",
+      "findings": [
+        "원문에 생크림20g과 화이트크림50g이 따로 있다.",
+        "4단계는 두 재료를 혼합해 크림소스를 만드는 과정이다.",
+        "공식 사진은 흰색/옅은 크림색 액상 재료를 별도 그릇에 담은 모습이다.",
+        "유크림/식물성 크림/화이트소스 배합이나 제품 라벨은 보이지 않는다."
+      ],
+      "images": [
+        "https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00571_4.png"
+      ],
+      "exact_existing_ingredient": null,
+      "product_benchmark_candidates": [],
+      "recommended_action": "생크림이나 면사랑 크림소스로 자동 교체하지 않는다. 조리용 크림 베이스라는 정의는 좁혔지만 배합/농도 근거가 없어 영양 수치는 보류한다."
+    },
+    {
+      "name": "해물육수코인",
+      "recipe_id": "ff795de4-16d5-563c-af83-9fd8c4a9fda4",
+      "row_id": "b341ed87-c169-402c-9a0b-955328a14644",
+      "current_ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+      "current_amount": 8,
+      "current_unit": "g",
+      "public_recipe_title": "고추김치",
+      "official_source": {
+        "provider": "foodsafety-cookrcp",
+        "source_recipe_id": "399",
+        "youtube_url": null,
+        "youtube_video_id": null,
+        "canonical_recipe_url_present": false,
+        "provenance": "기존 수입 식약처 COOKRCP API 원문과 공식 foodsafetykorea.go.kr 조리 사진. youtube 필드에는 공식레시피 URL이 숨겨져 있지 않음.",
+        "raw_ingredients": "•필수재료 : 오이고추(40g), 영양부추(5g), 연근(5g), 무(5g)\n•절임물 : 해물육수(8g), 어간장(3g)\n•양념 : 고춧가루(3g), 생강청(3g), 통깨(1g)",
+        "raw_ingredients_sha256": "5df2a8129fc743a36340e7621c0695da32c9fc0557d9324832110c2b7a121b38",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "오이고추는 배를 갈라 씨를 제거하고 세척 후 절임물에 절여준다."
+          },
+          {
+            "step": 2,
+            "instruction": "영양부추, 연근은 송송 다지고 무는 채 썬다."
+          },
+          {
+            "step": 3,
+            "instruction": "손질한 부추와 연근, 무에 절임물을 조금 넣고 절인다."
+          },
+          {
+            "step": 4,
+            "instruction": "고춧가루, 생강청, 통깨를 절임채소에 섞어 소를 만든다."
+          },
+          {
+            "step": 5,
+            "instruction": "오이고추 속에 소를 채워 넣는다."
+          },
+          {
+            "step": 6,
+            "instruction": "오이고추를 그릇에 담고 남은 물을 부어 마무리한다."
+          }
+        ]
+      },
+      "status": "coin_identity_unsupported_liquid_use_confirmed",
+      "identity": "절임물에 쓰는 해물육수; 코인 형태 근거 없음",
+      "findings": [
+        "원문 절임물은 해물육수8g과 어간장3g이다.",
+        "1단계는 오이고추를 절임물에 절이는 과정, 마지막은 남은 물을 붓는 과정이다.",
+        "공식 사진에서 맑은 액체에 담긴 오이고추를 확인했다.",
+        "코인·분말·물에 녹이는 과정·브랜드 표시가 없다. 고형물8g의 영양을 대입하면 원문과 다른 농도가 된다."
+      ],
+      "images": [
+        "https://www.foodsafetykorea.go.kr/uploadimg/20230306/20230306052119_1678090879888.jpg"
+      ],
+      "exact_existing_ingredient": null,
+      "product_benchmark_candidates": [
+        {
+          "name": "해물육수",
+          "basis": {
+            "unit": "g",
+            "amount": 100
+          },
+          "brand": "보부상푸드",
+          "active": true,
+          "product_id": "053d9411-cfa2-47d6-a13d-42283d841249",
+          "profile_id": "8a0b5b11-4f5d-4070-a946-962dfb086b19",
+          "source_key": "item-report:2025032928716",
+          "source_name": "해물육수",
+          "review_status": "approved",
+          "usable": false,
+          "rejection": "같은 이름뿐이며 농축/완성 육수 상태·배합이 미확인이다. 2025 제품을 원레시피 사용제품이라고 추정하지 않는다."
+        }
+      ],
+      "recommended_action": "해당 레시피의 코인 연결을 제거하고 해물육수(액체/절임용, 배합 미상)라는 중립 식재료로 정정하는 것이 타당하다. 8g·원문 표시를 보존한다. 기존 가다랑어 육수는 생선 종류가 특정되어 정확 대체가 아니다. 영양은 별도 정의와 배합 근거가 필요하다."
+    }
+  ],
+  "conclusion": {
+    "exact_existing_ingredient_relinks_supported": 0,
+    "wrong_coin_mapping_needs_correction": 1,
+    "representative_choice_possible_but_not_original_identity": [
+      "치즈",
+      "호박"
+    ],
+    "identity_or_processing_still_unresolved": [
+      "옥수수",
+      "화이트크림",
+      "해물육수"
+    ]
+  }
+}

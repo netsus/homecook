@@ -2737,7 +2737,9 @@ describe("recipe detail screen", () => {
       Array.from(tagContainer?.children ?? []).map((child) => child.textContent),
     ).toEqual(["유튜브", "딸기푸딩", "노오븐디저트"]);
     expect(youtubeTag.getAttribute("href")).toBe("https://www.youtube.com/watch?v=abc");
-    expect(screen.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
+    const description = screen.getByText(MOCK_RECIPE_DETAIL.description!);
+    expect(description.closest("details")?.open).toBe(false);
+    expect(screen.getByText("레시피 설명")).toBeTruthy();
     expect(
       screen.queryByText("팬트리에 있는 재료는 만들기 전에 다시 확인해 주세요"),
     ).toBeNull();
