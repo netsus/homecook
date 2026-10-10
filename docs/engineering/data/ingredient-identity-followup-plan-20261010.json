@@ -1,0 +1,1219 @@
+{
+  "schema": "homecook.ingredient-identity-followup.v1",
+  "reviewed_by": "__PRIVATE_REVIEWER__",
+  "policy": {
+    "authorization": "2026-10-10 사용자 원문 정체성·영양 보완 요청 및 액상 알룰로스 확인",
+    "whole_profile_only": true,
+    "actual_product_identity_claimed": false,
+    "recipe_rows_unchanged": true,
+    "original_rows_immutable": true,
+    "automatic_ai_enabled": false,
+    "source_name_policy": "서비스 대표 source item은 새 typed canonical 명칭으로 명명하고 원제품명·원프로필을 provenance에 고정한다. 원제품 자료 자체는 변경하지 않는다."
+  },
+  "dataset_name": "Homecook 제품 라벨 기반 서비스 대표 예시 20261010 · 정체성 보완",
+  "decisions": [
+    {
+      "ingredient_id": "e3a4db20-62d6-56f5-a9a5-64950ed10723",
+      "name": "어린이 슬라이스 치즈",
+      "origin_ingredient_id": "b6d1dd47-7bed-4354-a588-3cc63cee86ef",
+      "presentation": "base",
+      "definition": "어린이용 가공 슬라이스 치즈. 브랜드 미상 시 식약처 수집 주식회사 에스알인터내셔널 어린이슬라이스치즈의 100g 표시값 전체를 서비스 대표로 사용한다. 실제 레시피의 제품이 해당 브랜드라는 뜻은 아니다. 자연치즈·스트링치즈·분말치즈는 제외한다.",
+      "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+      "link_id": "6f53ba71-9eed-5395-a30b-343632f19564",
+      "evidence_file": "official-recipe-identity-review-20261010.json",
+      "source": {
+        "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+        "source_item_id": "b1e12305-3bb0-43b2-bba7-0e441b125a90",
+        "source_id": "6348044d-7c4d-4139-8aea-bcb19e69d4b8",
+        "original_name": "어린이슬라이스치즈",
+        "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+        "item_key": "item-report:20090262001127",
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": [
+          {
+            "amount": 1.67,
+            "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+            "source_unit": "g",
+            "source_token": "1.67",
+            "value_status": "observed",
+            "nutrient_code": "carbohydrate_g",
+            "source_nutrient_code": "chocdf"
+          },
+          {
+            "amount": 328,
+            "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+            "source_unit": "kcal",
+            "source_token": "328",
+            "value_status": "observed",
+            "nutrient_code": "energy_kcal",
+            "source_nutrient_code": "enerc"
+          },
+          {
+            "amount": 26.67,
+            "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+            "source_unit": "g",
+            "source_token": "26.67",
+            "value_status": "observed",
+            "nutrient_code": "fat_g",
+            "source_nutrient_code": "fatce"
+          },
+          {
+            "amount": 20.56,
+            "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+            "source_unit": "g",
+            "source_token": "20.56",
+            "value_status": "observed",
+            "nutrient_code": "protein_g",
+            "source_nutrient_code": "prot"
+          },
+          {
+            "amount": 17.22,
+            "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+            "source_unit": "g",
+            "source_token": "17.22",
+            "value_status": "observed",
+            "nutrient_code": "saturated_fat_g",
+            "source_nutrient_code": "fasat"
+          },
+          {
+            "amount": 666,
+            "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+            "source_unit": "mg",
+            "source_token": "666",
+            "value_status": "observed",
+            "nutrient_code": "sodium_mg",
+            "source_nutrient_code": "nat"
+          },
+          {
+            "amount": 0,
+            "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+            "source_unit": "g",
+            "source_token": "0.00",
+            "value_status": "observed",
+            "nutrient_code": "sugars_g",
+            "source_nutrient_code": "sugars"
+          }
+        ],
+        "official_xlsx_row": "132729",
+        "normalization_method": "as_labeled"
+      }
+    },
+    {
+      "ingredient_id": "e5ae7caa-1e88-5232-aed9-de25cb369ecf",
+      "name": "배추김치 국물",
+      "origin_ingredient_id": "179cb586-34b3-4d7c-aa2b-7b2e79503357",
+      "presentation": "base",
+      "definition": "붉은 숙성 배추김치에서 나온 희석 전 양념국물. 큰 배추 건더기를 제외하며 물김치·동치미·완성 찌개 국물은 제외한다. 브랜드 미상 서비스 대표는 농업회사법인 다올 숙성김치-국물의 100g 표시값 전체이며 실제 사용 제품을 식별한 값이 아니다.",
+      "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+      "link_id": "cd1a8653-b0ab-5a4b-a214-f014881e0537",
+      "evidence_file": "kimchi-identity-review-20261010.json",
+      "source": {
+        "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+        "source_item_id": "04e76903-6f7c-474f-8db1-bd4904cdac62",
+        "source_id": "6348044d-7c4d-4139-8aea-bcb19e69d4b8",
+        "original_name": "숙성김치-국물",
+        "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+        "item_key": "item-report:20220773806101",
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": [
+          {
+            "amount": 3,
+            "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+            "source_unit": "g",
+            "source_token": "3.00",
+            "value_status": "observed",
+            "nutrient_code": "carbohydrate_g",
+            "source_nutrient_code": "chocdf"
+          },
+          {
+            "amount": 20,
+            "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+            "source_unit": "kcal",
+            "source_token": "20",
+            "value_status": "observed",
+            "nutrient_code": "energy_kcal",
+            "source_nutrient_code": "enerc"
+          },
+          {
+            "amount": 0.25,
+            "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+            "source_unit": "g",
+            "source_token": "0.25",
+            "value_status": "observed",
+            "nutrient_code": "fat_g",
+            "source_nutrient_code": "fatce"
+          },
+          {
+            "amount": 1,
+            "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+            "source_unit": "g",
+            "source_token": "1.00",
+            "value_status": "observed",
+            "nutrient_code": "protein_g",
+            "source_nutrient_code": "prot"
+          },
+          {
+            "amount": 0,
+            "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+            "source_unit": "g",
+            "source_token": "0.00",
+            "value_status": "observed",
+            "nutrient_code": "saturated_fat_g",
+            "source_nutrient_code": "fasat"
+          },
+          {
+            "amount": 500,
+            "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+            "source_unit": "mg",
+            "source_token": "500",
+            "value_status": "observed",
+            "nutrient_code": "sodium_mg",
+            "source_nutrient_code": "nat"
+          },
+          {
+            "amount": 2,
+            "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+            "source_unit": "g",
+            "source_token": "2.00",
+            "value_status": "observed",
+            "nutrient_code": "sugars_g",
+            "source_nutrient_code": "sugars"
+          }
+        ],
+        "official_xlsx_row": "159499",
+        "normalization_method": "as_labeled"
+      }
+    },
+    {
+      "ingredient_id": "2cfcc8dd-d93d-5f8d-aa24-a5e4e36e2893",
+      "name": "액상 알룰로스",
+      "origin_ingredient_id": "861871e2-cce1-43ff-969b-802a5cce0412",
+      "presentation": "base",
+      "definition": "사용자가 액상으로 확인한 식품용 알룰로스 감미료. 브랜드 미상 서비스 대표는 자연농장 키토라푸드 액상 알룰로스의 100g 표시값 전체이다. 순수 분말이나 다른 배합의 감미료에 적용하지 않으며 실제 사용 브랜드·알룰로스 함량을 확정한 값이 아니다. 표시 탄수화물을 순탄수 또는 알룰로스 함량으로 재해석하지 않는다.",
+      "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+      "link_id": "4ea42449-d34a-5c4b-aa15-3b39a07a272c",
+      "evidence_file": "allulose-mushroom-identity-review-20261010.json",
+      "source": {
+        "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+        "source_item_id": "15d51e85-53a9-49e3-9218-5584c797af4e",
+        "source_id": "6348044d-7c4d-4139-8aea-bcb19e69d4b8",
+        "original_name": "키토라푸드 액상 알룰로스",
+        "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+        "item_key": "item-report:20170333328242",
+        "basis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "values": [
+          {
+            "amount": 0.5,
+            "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+            "source_unit": "g",
+            "source_token": "0.50",
+            "value_status": "observed",
+            "nutrient_code": "carbohydrate_g",
+            "source_nutrient_code": "chocdf"
+          },
+          {
+            "amount": 2,
+            "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+            "source_unit": "kcal",
+            "source_token": "2",
+            "value_status": "observed",
+            "nutrient_code": "energy_kcal",
+            "source_nutrient_code": "enerc"
+          },
+          {
+            "amount": 0,
+            "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+            "source_unit": "g",
+            "source_token": "0.00",
+            "value_status": "observed",
+            "nutrient_code": "fat_g",
+            "source_nutrient_code": "fatce"
+          },
+          {
+            "amount": 0,
+            "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+            "source_unit": "g",
+            "source_token": "0.00",
+            "value_status": "observed",
+            "nutrient_code": "protein_g",
+            "source_nutrient_code": "prot"
+          },
+          {
+            "amount": 0,
+            "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+            "source_unit": "g",
+            "source_token": "0.00",
+            "value_status": "observed",
+            "nutrient_code": "saturated_fat_g",
+            "source_nutrient_code": "fasat"
+          },
+          {
+            "amount": 10,
+            "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+            "source_unit": "mg",
+            "source_token": "10",
+            "value_status": "observed",
+            "nutrient_code": "sodium_mg",
+            "source_nutrient_code": "nat"
+          },
+          {
+            "amount": 0.2,
+            "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+            "source_unit": "g",
+            "source_token": "0.20",
+            "value_status": "observed",
+            "nutrient_code": "sugars_g",
+            "source_nutrient_code": "sugars"
+          }
+        ],
+        "official_xlsx_row": "50219",
+        "normalization_method": "as_labeled"
+      }
+    },
+    {
+      "ingredient_id": "ef4fa64d-94f6-5328-a5c2-fef92ef26ed8",
+      "name": "해물육수(액체)",
+      "origin_ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+      "presentation": "umbrella",
+      "definition": "해물 원료를 우려내거나 해물 육수 제품을 물에 풀어 만든 액체 육수. 원료·배합·농도와 희석 여부가 확인되지 않아 영양 대표값을 연결하지 않는다. 물에 풀기 전 분말·코인 제품 자체와 구분한다.",
+      "profile_id": null,
+      "link_id": null,
+      "evidence_file": "official-recipe-identity-review-20261010.json",
+      "source": null
+    }
+  ],
+  "preconditions": [
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "b6d1dd47-7bed-4354-a588-3cc63cee86ef"
+      },
+      "md5": "0fc3fbad0a6669192cf46bfca7e9e916"
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "key": {
+        "ingredient_id": "b6d1dd47-7bed-4354-a588-3cc63cee86ef"
+      },
+      "md5": "72c09dafe29bcb308fb8fb60b3b094cd"
+    },
+    {
+      "table": "ingredient_catalog_groups",
+      "key": {
+        "id": "d69251ae-d9c1-585a-924f-9944345d8a7d"
+      },
+      "md5": "09c9f8bb898c7cfe85d075b8963aad95"
+    },
+    {
+      "table": "nutrition_sources",
+      "key": {
+        "id": "6348044d-7c4d-4139-8aea-bcb19e69d4b8"
+      },
+      "md5": "7069deb13b86b1d69c3be3b2fadd64b1"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "b1e12305-3bb0-43b2-bba7-0e441b125a90"
+      },
+      "md5": "33fde13c726e7a418e38693c15b218f8"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717"
+      },
+      "md5": "90f959f226350dd8bb8dfc0e5dbb2dba"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717"
+      },
+      "md5": "c00b43c3f59d3e4c833e5e803817da04"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "179cb586-34b3-4d7c-aa2b-7b2e79503357"
+      },
+      "md5": "5857c77703500cd7f7783ac94a6be696"
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "key": {
+        "ingredient_id": "179cb586-34b3-4d7c-aa2b-7b2e79503357"
+      },
+      "md5": "4b8ebfa86aaa3b290fa0a1b6e44b637b"
+    },
+    {
+      "table": "ingredient_catalog_groups",
+      "key": {
+        "id": "f541f1e1-5a1f-53d9-8052-f88bc766843d"
+      },
+      "md5": "98fc4f0e1f4446b07be90f3d35462e0a"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "04e76903-6f7c-474f-8db1-bd4904cdac62"
+      },
+      "md5": "4cb451272ea08e26dde7d3226d6e438a"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "752dd19c-95ab-4923-b424-ef70f0f7648d"
+      },
+      "md5": "dadc8223f0f9889d3db132650cf90f68"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d"
+      },
+      "md5": "74a60cf518c5b282dd9d2f585ca763b2"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "861871e2-cce1-43ff-969b-802a5cce0412"
+      },
+      "md5": "a432cf6763c78d02c05e14f5def681a2"
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "key": {
+        "ingredient_id": "861871e2-cce1-43ff-969b-802a5cce0412"
+      },
+      "md5": "6c75c1959dd9fc5a0089036e9bb7148e"
+    },
+    {
+      "table": "ingredient_catalog_groups",
+      "key": {
+        "id": "5c6708b1-ed08-55e9-96c3-dc094ed3a412"
+      },
+      "md5": "69e06f9248d16f0e903e76d4aed6fde0"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "15d51e85-53a9-49e3-9218-5584c797af4e"
+      },
+      "md5": "b85d02c4fda86918a18a372c86611ac5"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "00a3f614-5aa2-41b3-9c70-40e398fafc52"
+      },
+      "md5": "724c32d58bc3d7e262287df0deb05f51"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52"
+      },
+      "md5": "f8a9ca761f268517f535f459bd4577b4"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "f13270c3-ce36-41ef-bb12-77775fc615a7"
+      },
+      "md5": "bc84ce7e6b3c3723042789a65a29b769"
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "key": {
+        "ingredient_id": "f13270c3-ce36-41ef-bb12-77775fc615a7"
+      },
+      "md5": "e0c796e59554605823afc006cd50694c"
+    },
+    {
+      "table": "ingredient_catalog_groups",
+      "key": {
+        "id": "7e4d0cd4-6e6d-54c4-81d1-27e62238134a"
+      },
+      "md5": "435667e0d6740c7b3be73a3582b7a596"
+    }
+  ],
+  "inserts": [
+    {
+      "table": "nutrition_sources",
+      "row": {
+        "id": "c859ebd1-6aee-580b-a343-6c7ec10c6082",
+        "is_active": true,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "fetched_at": "2026-10-09T23:49:08+00:00",
+        "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+        "license_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "source_kind": "nutrition_dataset",
+        "dataset_name": "Homecook 제품 라벨 기반 서비스 대표 예시 20261010 · 정체성 보완",
+        "license_name": "이용허락범위 제한 없음",
+        "priority_rank": 5,
+        "provider_code": "HOMECOOK_USER_STANDARD",
+        "review_status": "approved",
+        "source_version": "20261010-identities-v1",
+        "data_basis_date": "2026-08-28",
+        "decision_reason": "원문·사용자 확인에 따른 명확한 재료 형태와 단일 제품 표시 전체를 사용한 서비스 대표값",
+        "manifest_sha256": "aef862a098f0ee2d0a614ad950109208fa7badf78488464ed823150a4debf579",
+        "freshness_status": "current",
+        "superseded_by_id": null,
+        "freshness_checked_at": "2026-10-09T23:49:08+00:00"
+      }
+    },
+    {
+      "table": "ingredients",
+      "row": {
+        "id": "e3a4db20-62d6-56f5-a9a5-64950ed10723",
+        "category": "유제품",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "default_unit": "g",
+        "category_code": "cheese_butter_alt_milk",
+        "standard_name": "어린이 슬라이스 치즈"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "row": {
+        "group_id": "d69251ae-d9c1-585a-924f-9944345d8a7d",
+        "definition": "어린이용 가공 슬라이스 치즈. 브랜드 미상 시 식약처 수집 주식회사 에스알인터내셔널 어린이슬라이스치즈의 100g 표시값 전체를 서비스 대표로 사용한다. 실제 레시피의 제품이 해당 브랜드라는 뜻은 아니다. 자연치즈·스트링치즈·분말치즈는 제외한다.",
+        "updated_at": "2026-10-09T23:49:08+00:00",
+        "display_name": "어린이 슬라이스 치즈",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "e3a4db20-62d6-56f5-a9a5-64950ed10723",
+        "review_version": "ingredient-identity-followup-20261010-v1",
+        "retain_dimensions": [
+          "가공",
+          "슬라이스",
+          "어린이용"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "nutrition_source_items",
+      "row": {
+        "id": "343f557b-5543-5007-ac03-badccbe7e84f",
+        "source_id": "c859ebd1-6aee-580b-a343-6c7ec10c6082",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "external_name": "어린이 슬라이스 치즈",
+        "review_status": "approved",
+        "decision_reason": "어린이용 가공 슬라이스 치즈. 브랜드 미상 시 식약처 수집 주식회사 에스알인터내셔널 어린이슬라이스치즈의 100g 표시값 전체를 서비스 대표로 사용한다. 실제 레시피의 제품이 해당 브랜드라는 뜻은 아니다. 자연치즈·스트링치즈·분말치즈는 제외한다.",
+        "provenance_json": {
+          "review_operation": "ingredient-identity-followup-20261010",
+          "reference_type": "user_approved_representative",
+          "actual_product_identity_claimed": false,
+          "definition_scope": "어린이용 가공 슬라이스 치즈. 브랜드 미상 시 식약처 수집 주식회사 에스알인터내셔널 어린이슬라이스치즈의 100g 표시값 전체를 서비스 대표로 사용한다. 실제 레시피의 제품이 해당 브랜드라는 뜻은 아니다. 자연치즈·스트링치즈·분말치즈는 제외한다.",
+          "original_product_name": "어린이슬라이스치즈",
+          "original_source_item_id": "b1e12305-3bb0-43b2-bba7-0e441b125a90",
+          "original_profile_id": "c5837bab-9cb1-4a11-b8d2-2f7ffda35717",
+          "original_preparation_state": null,
+          "original_source": "data.go.kr",
+          "original_source_version": "2026-08-28",
+          "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
+          "original_values_md5": "c00b43c3f59d3e4c833e5e803817da04",
+          "official_xlsx_sha256": "b074d98e75d2d087dc1b193f0056affbf9afd14524c9ccb556cb2b20978504f7",
+          "official_xlsx_row": "132729",
+          "missing_values_preserved": true,
+          "original_normalization_method": "as_labeled"
+        },
+        "external_item_key": "service-identity:e3a4db20-62d6-56f5-a9a5-64950ed10723",
+        "preparation_state": "as_published",
+        "source_basis_text": "100g",
+        "source_basis_unit": "g",
+        "stable_fingerprint": "15bd84926576580db784467b28fbfd0394d6c7747b3b01e6ae62a03bac194b33",
+        "edible_portion_text": "어린이용 가공 슬라이스 치즈. 브랜드 미상 시 식약처 수집 주식회사 에스알인터내셔널 어린이슬라이스치즈의 100g 표시값 전체를 서비스 대표로 사용한다. 실제 레시피의 제품이 해당 브랜드라는 뜻은 아니다. 자연치즈·스트링치즈·분말치즈는 제외한다.",
+        "source_basis_amount": 100,
+        "source_serving_text": "20g",
+        "source_serving_unit": null,
+        "source_serving_amount": null,
+        "edible_portion_percent": null,
+        "source_total_content_text": "1800g",
+        "source_total_content_unit": null,
+        "source_total_content_amount": null
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "version": 1,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "343f557b-5543-5007-ac03-badccbe7e84f",
+        "decision_reason": "어린이용 가공 슬라이스 치즈. 브랜드 미상 시 식약처 수집 주식회사 에스알인터내셔널 어린이슬라이스치즈의 100g 표시값 전체를 서비스 대표로 사용한다. 실제 레시피의 제품이 해당 브랜드라는 뜻은 아니다. 자연치즈·스트링치즈·분말치즈는 제외한다.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 328,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "source_unit": "kcal",
+        "source_token": "328",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 1.67,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "source_unit": "g",
+        "source_token": "1.67",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 20.56,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "source_unit": "g",
+        "source_token": "20.56",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 26.67,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "source_unit": "g",
+        "source_token": "26.67",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 17.22,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "source_unit": "g",
+        "source_token": "17.22",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g",
+        "source_unit": "g",
+        "amount": null,
+        "value_status": "missing",
+        "source_token": "",
+        "created_at": "2026-10-09T23:49:08+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 666,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "source_unit": "mg",
+        "source_token": "666",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "6f53ba71-9eed-5395-a30b-343632f19564",
+        "ingredient_id": "e3a4db20-62d6-56f5-a9a5-64950ed10723",
+        "nutrition_profile_id": "e4fa0b52-0739-5fa5-abe0-6e5467955cc2",
+        "preparation_state": "as_published",
+        "match_method": "manual",
+        "confidence_score": null,
+        "candidate_rank": null,
+        "is_primary": true,
+        "review_status": "approved",
+        "decision_reason": "user_approved_representative: 어린이용 가공 슬라이스 치즈. 브랜드 미상 시 식약처 수집 주식회사 에스알인터내셔널 어린이슬라이스치즈의 100g 표시값 전체를 서비스 대표로 사용한다. 실제 레시피의 제품이 해당 브랜드라는 뜻은 아니다. 자연치즈·스트링치즈·분말치즈는 제외한다.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "version": 1,
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_at": "2026-10-09T23:49:08+00:00"
+      }
+    },
+    {
+      "table": "ingredients",
+      "row": {
+        "id": "e5ae7caa-1e88-5232-aed9-de25cb369ecf",
+        "category": "양념",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "default_unit": "g",
+        "category_code": null,
+        "standard_name": "배추김치 국물"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "row": {
+        "group_id": "f541f1e1-5a1f-53d9-8052-f88bc766843d",
+        "definition": "붉은 숙성 배추김치에서 나온 희석 전 양념국물. 큰 배추 건더기를 제외하며 물김치·동치미·완성 찌개 국물은 제외한다. 브랜드 미상 서비스 대표는 농업회사법인 다올 숙성김치-국물의 100g 표시값 전체이며 실제 사용 제품을 식별한 값이 아니다.",
+        "updated_at": "2026-10-09T23:49:08+00:00",
+        "display_name": "배추김치 국물",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "e5ae7caa-1e88-5232-aed9-de25cb369ecf",
+        "review_version": "ingredient-identity-followup-20261010-v1",
+        "retain_dimensions": [
+          "배추김치",
+          "국물",
+          "희석 전"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "nutrition_source_items",
+      "row": {
+        "id": "66df8fb2-1a02-5ed3-ad14-ce0355dfff72",
+        "source_id": "c859ebd1-6aee-580b-a343-6c7ec10c6082",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "external_name": "배추김치 국물",
+        "review_status": "approved",
+        "decision_reason": "붉은 숙성 배추김치에서 나온 희석 전 양념국물. 큰 배추 건더기를 제외하며 물김치·동치미·완성 찌개 국물은 제외한다. 브랜드 미상 서비스 대표는 농업회사법인 다올 숙성김치-국물의 100g 표시값 전체이며 실제 사용 제품을 식별한 값이 아니다.",
+        "provenance_json": {
+          "review_operation": "ingredient-identity-followup-20261010",
+          "reference_type": "user_approved_representative",
+          "actual_product_identity_claimed": false,
+          "definition_scope": "붉은 숙성 배추김치에서 나온 희석 전 양념국물. 큰 배추 건더기를 제외하며 물김치·동치미·완성 찌개 국물은 제외한다. 브랜드 미상 서비스 대표는 농업회사법인 다올 숙성김치-국물의 100g 표시값 전체이며 실제 사용 제품을 식별한 값이 아니다.",
+          "original_product_name": "숙성김치-국물",
+          "original_source_item_id": "04e76903-6f7c-474f-8db1-bd4904cdac62",
+          "original_profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+          "original_preparation_state": null,
+          "original_source": "data.go.kr",
+          "original_source_version": "2026-08-28",
+          "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
+          "original_values_md5": "74a60cf518c5b282dd9d2f585ca763b2",
+          "official_xlsx_sha256": "b074d98e75d2d087dc1b193f0056affbf9afd14524c9ccb556cb2b20978504f7",
+          "official_xlsx_row": "159499",
+          "missing_values_preserved": true,
+          "original_normalization_method": "as_labeled"
+        },
+        "external_item_key": "service-identity:e5ae7caa-1e88-5232-aed9-de25cb369ecf",
+        "preparation_state": "as_published",
+        "source_basis_text": "100g",
+        "source_basis_unit": "g",
+        "stable_fingerprint": "400772ad135efc8bfe2a2774c21b00f768f26d2645873281235b70f8e82eab95",
+        "edible_portion_text": "붉은 숙성 배추김치에서 나온 희석 전 양념국물. 큰 배추 건더기를 제외하며 물김치·동치미·완성 찌개 국물은 제외한다. 브랜드 미상 서비스 대표는 농업회사법인 다올 숙성김치-국물의 100g 표시값 전체이며 실제 사용 제품을 식별한 값이 아니다.",
+        "source_basis_amount": 100,
+        "source_serving_text": "40g",
+        "source_serving_unit": null,
+        "source_serving_amount": null,
+        "edible_portion_percent": null,
+        "source_total_content_text": "100g",
+        "source_total_content_unit": null,
+        "source_total_content_amount": null
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "version": 1,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "66df8fb2-1a02-5ed3-ad14-ce0355dfff72",
+        "decision_reason": "붉은 숙성 배추김치에서 나온 희석 전 양념국물. 큰 배추 건더기를 제외하며 물김치·동치미·완성 찌개 국물은 제외한다. 브랜드 미상 서비스 대표는 농업회사법인 다올 숙성김치-국물의 100g 표시값 전체이며 실제 사용 제품을 식별한 값이 아니다.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 20,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "source_unit": "kcal",
+        "source_token": "20",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 3,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "source_unit": "g",
+        "source_token": "3.00",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 1,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "source_unit": "g",
+        "source_token": "1.00",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0.25,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "source_unit": "g",
+        "source_token": "0.25",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 2,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "source_unit": "g",
+        "source_token": "2.00",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g",
+        "source_unit": "g",
+        "amount": null,
+        "value_status": "missing",
+        "source_token": "",
+        "created_at": "2026-10-09T23:49:08+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 500,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "source_unit": "mg",
+        "source_token": "500",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "cd1a8653-b0ab-5a4b-a214-f014881e0537",
+        "ingredient_id": "e5ae7caa-1e88-5232-aed9-de25cb369ecf",
+        "nutrition_profile_id": "c3735186-5aac-5d23-a10f-a975996a0241",
+        "preparation_state": "as_published",
+        "match_method": "manual",
+        "confidence_score": null,
+        "candidate_rank": null,
+        "is_primary": true,
+        "review_status": "approved",
+        "decision_reason": "user_approved_representative: 붉은 숙성 배추김치에서 나온 희석 전 양념국물. 큰 배추 건더기를 제외하며 물김치·동치미·완성 찌개 국물은 제외한다. 브랜드 미상 서비스 대표는 농업회사법인 다올 숙성김치-국물의 100g 표시값 전체이며 실제 사용 제품을 식별한 값이 아니다.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "version": 1,
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_at": "2026-10-09T23:49:08+00:00"
+      }
+    },
+    {
+      "table": "ingredients",
+      "row": {
+        "id": "2cfcc8dd-d93d-5f8d-aa24-a5e4e36e2893",
+        "category": "양념",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "default_unit": "g",
+        "category_code": null,
+        "standard_name": "액상 알룰로스"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "row": {
+        "group_id": "5c6708b1-ed08-55e9-96c3-dc094ed3a412",
+        "definition": "사용자가 액상으로 확인한 식품용 알룰로스 감미료. 브랜드 미상 서비스 대표는 자연농장 키토라푸드 액상 알룰로스의 100g 표시값 전체이다. 순수 분말이나 다른 배합의 감미료에 적용하지 않으며 실제 사용 브랜드·알룰로스 함량을 확정한 값이 아니다. 표시 탄수화물을 순탄수 또는 알룰로스 함량으로 재해석하지 않는다.",
+        "updated_at": "2026-10-09T23:49:08+00:00",
+        "display_name": "액상 알룰로스",
+        "presentation": "base",
+        "review_state": "reviewed",
+        "ingredient_id": "2cfcc8dd-d93d-5f8d-aa24-a5e4e36e2893",
+        "review_version": "ingredient-identity-followup-20261010-v1",
+        "retain_dimensions": [
+          "액상",
+          "제품별 농도"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "nutrition_source_items",
+      "row": {
+        "id": "dc4fa32d-bacb-5715-aa33-f0ceba057e3b",
+        "source_id": "c859ebd1-6aee-580b-a343-6c7ec10c6082",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "external_name": "액상 알룰로스",
+        "review_status": "approved",
+        "decision_reason": "사용자가 액상으로 확인한 식품용 알룰로스 감미료. 브랜드 미상 서비스 대표는 자연농장 키토라푸드 액상 알룰로스의 100g 표시값 전체이다. 순수 분말이나 다른 배합의 감미료에 적용하지 않으며 실제 사용 브랜드·알룰로스 함량을 확정한 값이 아니다. 표시 탄수화물을 순탄수 또는 알룰로스 함량으로 재해석하지 않는다.",
+        "provenance_json": {
+          "review_operation": "ingredient-identity-followup-20261010",
+          "reference_type": "user_approved_representative",
+          "actual_product_identity_claimed": false,
+          "definition_scope": "사용자가 액상으로 확인한 식품용 알룰로스 감미료. 브랜드 미상 서비스 대표는 자연농장 키토라푸드 액상 알룰로스의 100g 표시값 전체이다. 순수 분말이나 다른 배합의 감미료에 적용하지 않으며 실제 사용 브랜드·알룰로스 함량을 확정한 값이 아니다. 표시 탄수화물을 순탄수 또는 알룰로스 함량으로 재해석하지 않는다.",
+          "original_product_name": "키토라푸드 액상 알룰로스",
+          "original_source_item_id": "15d51e85-53a9-49e3-9218-5584c797af4e",
+          "original_profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+          "original_preparation_state": null,
+          "original_source": "data.go.kr",
+          "original_source_version": "2026-08-28",
+          "original_manifest_sha256": "69d74803efa2149b7a0a5b3d6c074c22e0c2f674264cfa5d219d6cd1a9682fed",
+          "original_values_md5": "f8a9ca761f268517f535f459bd4577b4",
+          "official_xlsx_sha256": "b074d98e75d2d087dc1b193f0056affbf9afd14524c9ccb556cb2b20978504f7",
+          "official_xlsx_row": "50219",
+          "missing_values_preserved": true,
+          "original_normalization_method": "as_labeled"
+        },
+        "external_item_key": "service-identity:2cfcc8dd-d93d-5f8d-aa24-a5e4e36e2893",
+        "preparation_state": "as_published",
+        "source_basis_text": "100g",
+        "source_basis_unit": "g",
+        "stable_fingerprint": "9a4cbec3c46c7daa180ea65a31206cda6a44c37170c70c7ad8dac3aa823948fd",
+        "edible_portion_text": "사용자가 액상으로 확인한 식품용 알룰로스 감미료. 브랜드 미상 서비스 대표는 자연농장 키토라푸드 액상 알룰로스의 100g 표시값 전체이다. 순수 분말이나 다른 배합의 감미료에 적용하지 않으며 실제 사용 브랜드·알룰로스 함량을 확정한 값이 아니다. 표시 탄수화물을 순탄수 또는 알룰로스 함량으로 재해석하지 않는다.",
+        "source_basis_amount": 100,
+        "source_serving_text": null,
+        "source_serving_unit": null,
+        "source_serving_amount": null,
+        "edible_portion_percent": null,
+        "source_total_content_text": "100g",
+        "source_total_content_unit": null,
+        "source_total_content_amount": null
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "version": 1,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "dc4fa32d-bacb-5715-aa33-f0ceba057e3b",
+        "decision_reason": "사용자가 액상으로 확인한 식품용 알룰로스 감미료. 브랜드 미상 서비스 대표는 자연농장 키토라푸드 액상 알룰로스의 100g 표시값 전체이다. 순수 분말이나 다른 배합의 감미료에 적용하지 않으며 실제 사용 브랜드·알룰로스 함량을 확정한 값이 아니다. 표시 탄수화물을 순탄수 또는 알룰로스 함량으로 재해석하지 않는다.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 2,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "source_unit": "kcal",
+        "source_token": "2",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0.5,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "source_unit": "g",
+        "source_token": "0.50",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0.2,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "source_unit": "g",
+        "source_token": "0.20",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g",
+        "source_unit": "g",
+        "amount": null,
+        "value_status": "missing",
+        "source_token": "",
+        "created_at": "2026-10-09T23:49:08+00:00"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 10,
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "source_unit": "mg",
+        "source_token": "10",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "4ea42449-d34a-5c4b-aa15-3b39a07a272c",
+        "ingredient_id": "2cfcc8dd-d93d-5f8d-aa24-a5e4e36e2893",
+        "nutrition_profile_id": "d4f4a921-7e95-55dc-a13b-880a17bc8e0c",
+        "preparation_state": "as_published",
+        "match_method": "manual",
+        "confidence_score": null,
+        "candidate_rank": null,
+        "is_primary": true,
+        "review_status": "approved",
+        "decision_reason": "user_approved_representative: 사용자가 액상으로 확인한 식품용 알룰로스 감미료. 브랜드 미상 서비스 대표는 자연농장 키토라푸드 액상 알룰로스의 100g 표시값 전체이다. 순수 분말이나 다른 배합의 감미료에 적용하지 않으며 실제 사용 브랜드·알룰로스 함량을 확정한 값이 아니다. 표시 탄수화물을 순탄수 또는 알룰로스 함량으로 재해석하지 않는다.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-09T23:49:08+00:00",
+        "version": 1,
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_at": "2026-10-09T23:49:08+00:00"
+      }
+    },
+    {
+      "table": "ingredients",
+      "row": {
+        "id": "ef4fa64d-94f6-5328-a5c2-fef92ef26ed8",
+        "category": "양념",
+        "created_at": "2026-10-09T23:49:08+00:00",
+        "default_unit": "ml",
+        "category_code": null,
+        "standard_name": "해물육수(액체)"
+      }
+    },
+    {
+      "table": "ingredient_catalog_entries",
+      "row": {
+        "group_id": "7e4d0cd4-6e6d-54c4-81d1-27e62238134a",
+        "definition": "해물 원료를 우려내거나 해물 육수 제품을 물에 풀어 만든 액체 육수. 원료·배합·농도와 희석 여부가 확인되지 않아 영양 대표값을 연결하지 않는다. 물에 풀기 전 분말·코인 제품 자체와 구분한다.",
+        "updated_at": "2026-10-09T23:49:08+00:00",
+        "display_name": "해물육수(액체)",
+        "presentation": "umbrella",
+        "review_state": "reviewed",
+        "ingredient_id": "ef4fa64d-94f6-5328-a5c2-fef92ef26ed8",
+        "review_version": "ingredient-identity-followup-20261010-v1",
+        "retain_dimensions": [
+          "액체",
+          "배합 확인 필요",
+          "농도 확인 필요"
+        ],
+        "representative_ingredient_id": null
+      }
+    },
+    {
+      "table": "ingredient_synonyms",
+      "row": {
+        "id": "7495976d-2265-535b-a2c4-f3c2f81f857d",
+        "ingredient_id": "e3a4db20-62d6-56f5-a9a5-64950ed10723",
+        "synonym": "어린이치즈"
+      }
+    }
+  ],
+  "ai_job_cleanup": {
+    "policy_version": "ingredient-ai-v1",
+    "expected_attempt_count": 0,
+    "preserve_existing_jobs": true,
+    "entries": [
+      {
+        "ingredient_id": "e3a4db20-62d6-56f5-a9a5-64950ed10723",
+        "skip_reason": "NON_AI_PRIMARY_EXISTS"
+      },
+      {
+        "ingredient_id": "e5ae7caa-1e88-5232-aed9-de25cb369ecf",
+        "skip_reason": "NON_AI_PRIMARY_EXISTS"
+      },
+      {
+        "ingredient_id": "2cfcc8dd-d93d-5f8d-aa24-a5e4e36e2893",
+        "skip_reason": "NON_AI_PRIMARY_EXISTS"
+      },
+      {
+        "ingredient_id": "ef4fa64d-94f6-5328-a5c2-fef92ef26ed8",
+        "skip_reason": "CATALOG_SCOPE_EXCLUDED"
+      }
+    ]
+  },
+  "source_manifest": {
+    "original_xlsx_sha256": "b074d98e75d2d087dc1b193f0056affbf9afd14524c9ccb556cb2b20978504f7",
+    "report_hashes": {
+      "official-recipe-identity-review-20261010.json": "16c175b9e505855b13d6240fed249ac1427ef740af1c6a7c475efbbd6d9ae9d0",
+      "kimchi-identity-review-20261010.json": "2ebe055c07661b7b2a012376eeee2bf37d6ffcb0f4676160d4ca55d5fd06592d",
+      "allulose-mushroom-identity-review-20261010.json": "43dcfe247a1977eef00f0b404d87552ecbca91a4a1bda189fa8ff9dbdf5d5f31"
+    }
+  },
+  "counts": {
+    "new_ingredients": 4,
+    "new_base": 3,
+    "new_umbrella": 1,
+    "new_sources": 1,
+    "new_profiles": 3,
+    "new_values": 24,
+    "missing_fiber_values": 3,
+    "new_links": 3,
+    "new_aliases": 1,
+    "ai_jobs_skipped": 4
+  },
+  "operation_checksum": "134b03cbc43dd51b7d2c837628c703ae92835a32928c25ce4bc98b98bef7b491"
+}

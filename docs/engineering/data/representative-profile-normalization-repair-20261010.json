@@ -1,0 +1,1926 @@
+{
+  "schema": "homecook.representative-profile-normalization-repair.v1",
+  "reviewed_by": "__PRIVATE_REVIEWER__",
+  "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+  "reason": "Append supported normalization metadata without rewriting the original label profiles, values or history.",
+  "decisions": [
+    {
+      "ingredient_id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+      "standard_name": "크림 소스",
+      "old_profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+      "old_link_id": "ba7f1129-4a90-5337-a3f1-c0c1ebe75af3",
+      "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+      "link_id": "07c949bf-a79a-5e69-ab17-6554c97d2e5f",
+      "source_item_id": "ab194633-416e-58a0-a766-d9e5e928602b",
+      "link_source_name": "크림 소스 (제품 라벨 기반 서비스 대표 예시)",
+      "preparation_state": "as_published",
+      "old_profile_version": 1,
+      "old_link_version": 1,
+      "basis_amount": 100,
+      "basis_unit": "g",
+      "normalization_method": "mass_100g",
+      "captured_values": [
+        {
+          "amount": 10,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "g",
+          "source_token": "10.00",
+          "value_status": "observed",
+          "nutrient_code": "carbohydrate_g",
+          "source_nutrient_code": "chocdf"
+        },
+        {
+          "amount": 85,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "kcal",
+          "source_token": "85",
+          "value_status": "observed",
+          "nutrient_code": "energy_kcal",
+          "source_nutrient_code": "enerc"
+        },
+        {
+          "amount": 5,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "g",
+          "source_token": "5.00",
+          "value_status": "observed",
+          "nutrient_code": "fat_g",
+          "source_nutrient_code": "fatce"
+        },
+        {
+          "amount": null,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "g",
+          "source_token": "",
+          "value_status": "missing",
+          "nutrient_code": "fiber_g",
+          "source_nutrient_code": "fiber_g"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "g",
+          "source_token": "0.00",
+          "value_status": "observed",
+          "nutrient_code": "protein_g",
+          "source_nutrient_code": "prot"
+        },
+        {
+          "amount": 4,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "g",
+          "source_token": "4.00",
+          "value_status": "observed",
+          "nutrient_code": "saturated_fat_g",
+          "source_nutrient_code": "fasat"
+        },
+        {
+          "amount": 520,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "mg",
+          "source_token": "520",
+          "value_status": "observed",
+          "nutrient_code": "sodium_mg",
+          "source_nutrient_code": "nat"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8",
+          "source_unit": "g",
+          "source_token": "0.00",
+          "value_status": "observed",
+          "nutrient_code": "sugars_g",
+          "source_nutrient_code": "sugars"
+        }
+      ],
+      "source_id": "b06cc48c-453b-56f0-a996-62d670d074e0"
+    },
+    {
+      "ingredient_id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f",
+      "standard_name": "조미김",
+      "old_profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+      "old_link_id": "eacaba9f-8c6f-50f1-ad4b-279ce2b4050c",
+      "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+      "link_id": "500e49f0-3adf-5cbf-a5cd-203595db37bd",
+      "source_item_id": "c27a1e15-00f1-58a3-a488-808fcb9384c8",
+      "link_source_name": "조미김 (제품 라벨 기반 서비스 대표 예시)",
+      "preparation_state": "as_published",
+      "old_profile_version": 1,
+      "old_link_version": 2,
+      "basis_amount": 100,
+      "basis_unit": "g",
+      "normalization_method": "mass_100g",
+      "captured_values": [
+        {
+          "amount": 38.89,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "g",
+          "source_token": "38.89",
+          "value_status": "observed",
+          "nutrient_code": "carbohydrate_g",
+          "source_nutrient_code": "chocdf"
+        },
+        {
+          "amount": 500,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "kcal",
+          "source_token": "500",
+          "value_status": "observed",
+          "nutrient_code": "energy_kcal",
+          "source_nutrient_code": "enerc"
+        },
+        {
+          "amount": 33.33,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "g",
+          "source_token": "33.33",
+          "value_status": "observed",
+          "nutrient_code": "fat_g",
+          "source_nutrient_code": "fatce"
+        },
+        {
+          "amount": null,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "g",
+          "source_token": "",
+          "value_status": "missing",
+          "nutrient_code": "fiber_g",
+          "source_nutrient_code": "fiber_g"
+        },
+        {
+          "amount": 16.67,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "g",
+          "source_token": "16.67",
+          "value_status": "observed",
+          "nutrient_code": "protein_g",
+          "source_nutrient_code": "prot"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "g",
+          "source_token": "0.00",
+          "value_status": "observed",
+          "nutrient_code": "saturated_fat_g",
+          "source_nutrient_code": "fasat"
+        },
+        {
+          "amount": 1778,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "mg",
+          "source_token": "1778",
+          "value_status": "observed",
+          "nutrient_code": "sodium_mg",
+          "source_nutrient_code": "nat"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948",
+          "source_unit": "g",
+          "source_token": "0.00",
+          "value_status": "observed",
+          "nutrient_code": "sugars_g",
+          "source_nutrient_code": "sugars"
+        }
+      ],
+      "source_id": "b06cc48c-453b-56f0-a996-62d670d074e0"
+    },
+    {
+      "ingredient_id": "775026fb-a00e-44f0-995d-dfc5599463b1",
+      "standard_name": "바닐라 페이스트",
+      "old_profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+      "old_link_id": "256032d5-2efd-5950-a536-437ac0b82a7b",
+      "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+      "link_id": "530b867b-f8cb-5a8d-ae3d-f7596c9b4c9a",
+      "source_item_id": "fd9a79c4-02bf-5766-a8aa-b0c6ecb7a4c0",
+      "link_source_name": "바닐라 페이스트 (제품 라벨 기반 서비스 대표 예시)",
+      "preparation_state": "as_published",
+      "old_profile_version": 1,
+      "old_link_version": 1,
+      "basis_amount": 100,
+      "basis_unit": "ml",
+      "normalization_method": "volume_100ml",
+      "captured_values": [
+        {
+          "amount": 59.32,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "g",
+          "source_token": "59.32",
+          "value_status": "observed",
+          "nutrient_code": "carbohydrate_g",
+          "source_nutrient_code": "chocdf"
+        },
+        {
+          "amount": 237,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "kcal",
+          "source_token": "237",
+          "value_status": "observed",
+          "nutrient_code": "energy_kcal",
+          "source_nutrient_code": "enerc"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "g",
+          "source_token": "0.00",
+          "value_status": "observed",
+          "nutrient_code": "fat_g",
+          "source_nutrient_code": "fatce"
+        },
+        {
+          "amount": null,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "g",
+          "source_token": "",
+          "value_status": "missing",
+          "nutrient_code": "fiber_g",
+          "source_nutrient_code": "fiber_g"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "g",
+          "source_token": "0.00",
+          "value_status": "observed",
+          "nutrient_code": "protein_g",
+          "source_nutrient_code": "prot"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "g",
+          "source_token": "0.00",
+          "value_status": "observed",
+          "nutrient_code": "saturated_fat_g",
+          "source_nutrient_code": "fasat"
+        },
+        {
+          "amount": 0,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "mg",
+          "source_token": "0",
+          "value_status": "observed",
+          "nutrient_code": "sodium_mg",
+          "source_nutrient_code": "nat"
+        },
+        {
+          "amount": 59.32,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7",
+          "source_unit": "g",
+          "source_token": "59.32",
+          "value_status": "observed",
+          "nutrient_code": "sugars_g",
+          "source_nutrient_code": "sugars"
+        }
+      ],
+      "source_id": "b06cc48c-453b-56f0-a996-62d670d074e0"
+    },
+    {
+      "ingredient_id": "b486109e-e04e-409a-924f-638dc78258e4",
+      "standard_name": "사각어묵",
+      "old_profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+      "old_link_id": "c5b9e4de-763b-5b15-a472-ba092fd68813",
+      "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+      "link_id": "3e814241-cdf9-5d33-a4a3-bf78367e8784",
+      "source_item_id": "d769ea35-de3e-52de-a6ff-120c23126bff",
+      "link_source_name": "사각어묵 (제품 라벨 기반 서비스 대표 예시)",
+      "preparation_state": "as_published",
+      "old_profile_version": 1,
+      "old_link_version": 1,
+      "basis_amount": 100,
+      "basis_unit": "g",
+      "normalization_method": "mass_100g",
+      "captured_values": [
+        {
+          "amount": 30,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "g",
+          "source_token": "30.00",
+          "value_status": "observed",
+          "nutrient_code": "carbohydrate_g",
+          "source_nutrient_code": "chocdf"
+        },
+        {
+          "amount": 205,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "kcal",
+          "source_token": "205",
+          "value_status": "observed",
+          "nutrient_code": "energy_kcal",
+          "source_nutrient_code": "enerc"
+        },
+        {
+          "amount": 6,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "g",
+          "source_token": "6.00",
+          "value_status": "observed",
+          "nutrient_code": "fat_g",
+          "source_nutrient_code": "fatce"
+        },
+        {
+          "amount": null,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "g",
+          "source_token": "",
+          "value_status": "missing",
+          "nutrient_code": "fiber_g",
+          "source_nutrient_code": "fiber_g"
+        },
+        {
+          "amount": 8,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "g",
+          "source_token": "8.00",
+          "value_status": "observed",
+          "nutrient_code": "protein_g",
+          "source_nutrient_code": "prot"
+        },
+        {
+          "amount": 0.9,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "g",
+          "source_token": "0.90",
+          "value_status": "observed",
+          "nutrient_code": "saturated_fat_g",
+          "source_nutrient_code": "fasat"
+        },
+        {
+          "amount": 790,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "mg",
+          "source_token": "790",
+          "value_status": "observed",
+          "nutrient_code": "sodium_mg",
+          "source_nutrient_code": "nat"
+        },
+        {
+          "amount": 6,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99",
+          "source_unit": "g",
+          "source_token": "6.00",
+          "value_status": "observed",
+          "nutrient_code": "sugars_g",
+          "source_nutrient_code": "sugars"
+        }
+      ],
+      "source_id": "b06cc48c-453b-56f0-a996-62d670d074e0"
+    },
+    {
+      "ingredient_id": "e10a1b06-34ec-5078-9f92-bf6e548afb35",
+      "standard_name": "초코칩",
+      "old_profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+      "old_link_id": "57480ef2-da52-5d78-ade7-ab00f984325a",
+      "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+      "link_id": "3affae98-88a2-595f-a2e1-52d43e4e0286",
+      "source_item_id": "440b06e2-3a61-5ac9-adef-e141ff3afe91",
+      "link_source_name": "초코칩 (제품 라벨 기반 서비스 대표 예시)",
+      "preparation_state": "as_published",
+      "old_profile_version": 1,
+      "old_link_version": 2,
+      "basis_amount": 100,
+      "basis_unit": "g",
+      "normalization_method": "mass_100g",
+      "captured_values": [
+        {
+          "amount": 56.6,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "g",
+          "source_token": "56.60",
+          "value_status": "observed",
+          "nutrient_code": "carbohydrate_g",
+          "source_nutrient_code": "chocdf"
+        },
+        {
+          "amount": 510,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "kcal",
+          "source_token": "510",
+          "value_status": "observed",
+          "nutrient_code": "energy_kcal",
+          "source_nutrient_code": "enerc"
+        },
+        {
+          "amount": 29.5,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "g",
+          "source_token": "29.50",
+          "value_status": "observed",
+          "nutrient_code": "fat_g",
+          "source_nutrient_code": "fatce"
+        },
+        {
+          "amount": null,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "g",
+          "source_token": "",
+          "value_status": "missing",
+          "nutrient_code": "fiber_g",
+          "source_nutrient_code": "fiber_g"
+        },
+        {
+          "amount": 4,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "g",
+          "source_token": "4.00",
+          "value_status": "observed",
+          "nutrient_code": "protein_g",
+          "source_nutrient_code": "prot"
+        },
+        {
+          "amount": 27.5,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "g",
+          "source_token": "27.50",
+          "value_status": "observed",
+          "nutrient_code": "saturated_fat_g",
+          "source_nutrient_code": "fasat"
+        },
+        {
+          "amount": 30,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "mg",
+          "source_token": "30",
+          "value_status": "observed",
+          "nutrient_code": "sodium_mg",
+          "source_nutrient_code": "nat"
+        },
+        {
+          "amount": 53.8,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa",
+          "source_unit": "g",
+          "source_token": "53.80",
+          "value_status": "observed",
+          "nutrient_code": "sugars_g",
+          "source_nutrient_code": "sugars"
+        }
+      ],
+      "source_id": "b06cc48c-453b-56f0-a996-62d670d074e0"
+    },
+    {
+      "ingredient_id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+      "standard_name": "다크 커버춰",
+      "old_profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+      "old_link_id": "fd6b7d97-c8f4-5076-a707-137d2a09265c",
+      "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+      "link_id": "1950be59-f640-5e86-a965-f78315935300",
+      "source_item_id": "ffb82419-1549-5b95-a67f-f53b1c5cf83f",
+      "link_source_name": "다크 커버춰 (제품 라벨 기반 서비스 대표 예시)",
+      "preparation_state": "as_published",
+      "old_profile_version": 1,
+      "old_link_version": 1,
+      "basis_amount": 100,
+      "basis_unit": "g",
+      "normalization_method": "mass_100g",
+      "captured_values": [
+        {
+          "amount": 46,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "g",
+          "source_token": "46.00",
+          "value_status": "observed",
+          "nutrient_code": "carbohydrate_g",
+          "source_nutrient_code": "chocdf"
+        },
+        {
+          "amount": 537,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "kcal",
+          "source_token": "537",
+          "value_status": "observed",
+          "nutrient_code": "energy_kcal",
+          "source_nutrient_code": "enerc"
+        },
+        {
+          "amount": 37,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "g",
+          "source_token": "37.00",
+          "value_status": "observed",
+          "nutrient_code": "fat_g",
+          "source_nutrient_code": "fatce"
+        },
+        {
+          "amount": null,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "g",
+          "source_token": "",
+          "value_status": "missing",
+          "nutrient_code": "fiber_g",
+          "source_nutrient_code": "fiber_g"
+        },
+        {
+          "amount": 5,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "g",
+          "source_token": "5.00",
+          "value_status": "observed",
+          "nutrient_code": "protein_g",
+          "source_nutrient_code": "prot"
+        },
+        {
+          "amount": 22,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "g",
+          "source_token": "22.00",
+          "value_status": "observed",
+          "nutrient_code": "saturated_fat_g",
+          "source_nutrient_code": "fasat"
+        },
+        {
+          "amount": 6,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "mg",
+          "source_token": "6",
+          "value_status": "observed",
+          "nutrient_code": "sodium_mg",
+          "source_nutrient_code": "nat"
+        },
+        {
+          "amount": 43,
+          "created_at": "2026-10-09T22:40:00+00:00",
+          "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2",
+          "source_unit": "g",
+          "source_token": "43.00",
+          "value_status": "observed",
+          "nutrient_code": "sugars_g",
+          "source_nutrient_code": "sugars"
+        }
+      ],
+      "source_id": "b06cc48c-453b-56f0-a996-62d670d074e0"
+    }
+  ],
+  "inserts": [
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "version": 2,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "ab194633-416e-58a0-a766-d9e5e928602b",
+        "decision_reason": "브랜드 미상 액상 조리용 크림소스 대표 예시: 면사랑 크림소스 기수입 85kcal/100g. 분말·농축 베이스·제과용 크림에는 적용하지 않는다. 정규화 메타데이터 보완: 원본 기준량과 전체 영양값은 그대로 보존.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "07c949bf-a79a-5e69-ab17-6554c97d2e5f",
+        "version": 2,
+        "is_active": true,
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "is_primary": true,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "match_method": "manual",
+        "ingredient_id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+        "review_status": "approved",
+        "candidate_rank": null,
+        "decision_reason": "user_approved_representative: 브랜드 미상 액상 조리용 크림소스 대표 예시: 면사랑 크림소스 기수입 85kcal/100g. 분말·농축 베이스·제과용 크림에는 적용하지 않는다. 정규화 메타데이터 보완: 같은 출처의 후속 프로필 연결.",
+        "confidence_score": null,
+        "superseded_by_id": null,
+        "preparation_state": "as_published",
+        "nutrition_profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 10,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "g",
+        "source_token": "10.00",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 85,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "kcal",
+        "source_token": "85",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 5,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "g",
+        "source_token": "5.00",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": null,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "g",
+        "source_token": "",
+        "value_status": "missing",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 4,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "g",
+        "source_token": "4.00",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 520,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "mg",
+        "source_token": "520",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "version": 2,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "c27a1e15-00f1-58a3-a488-808fcb9384c8",
+        "decision_reason": "브랜드 미상 기름·소금 조미 구운김 대표 예시: 사조씨푸드 시선조미김. 취소된 RDA 조미김 자료를 재사용하지 않는다. 정규화 메타데이터 보완: 원본 기준량과 전체 영양값은 그대로 보존.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "500e49f0-3adf-5cbf-a5cd-203595db37bd",
+        "version": 3,
+        "is_active": true,
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "is_primary": true,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "match_method": "manual",
+        "ingredient_id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f",
+        "review_status": "approved",
+        "candidate_rank": null,
+        "decision_reason": "user_approved_representative: 브랜드 미상 기름·소금 조미 구운김 대표 예시: 사조씨푸드 시선조미김. 취소된 RDA 조미김 자료를 재사용하지 않는다. 정규화 메타데이터 보완: 같은 출처의 후속 프로필 연결.",
+        "confidence_score": null,
+        "superseded_by_id": null,
+        "preparation_state": "as_published",
+        "nutrition_profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 38.89,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "g",
+        "source_token": "38.89",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 500,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "kcal",
+        "source_token": "500",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 33.33,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "g",
+        "source_token": "33.33",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": null,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "g",
+        "source_token": "",
+        "value_status": "missing",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 16.67,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "g",
+        "source_token": "16.67",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 1778,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "mg",
+        "source_token": "1778",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "version": 2,
+        "is_active": true,
+        "basis_unit": "ml",
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "fd9a79c4-02bf-5766-a8aa-b0c6ecb7a4c0",
+        "decision_reason": "브랜드 미상 당 첨가 바닐라빈 페이스트 대표 예시: 하나종합상사 수입 퓨어 바닐라 빈 페이스트. 공식 기수입 100ml 기준, g으로 임의 환산하지 않는다. 정규화 메타데이터 보완: 원본 기준량과 전체 영양값은 그대로 보존.",
+        "superseded_by_id": null,
+        "normalization_method": "volume_100ml"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "530b867b-f8cb-5a8d-ae3d-f7596c9b4c9a",
+        "version": 2,
+        "is_active": true,
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "is_primary": true,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "match_method": "manual",
+        "ingredient_id": "775026fb-a00e-44f0-995d-dfc5599463b1",
+        "review_status": "approved",
+        "candidate_rank": null,
+        "decision_reason": "user_approved_representative: 브랜드 미상 당 첨가 바닐라빈 페이스트 대표 예시: 하나종합상사 수입 퓨어 바닐라 빈 페이스트. 공식 기수입 100ml 기준, g으로 임의 환산하지 않는다. 정규화 메타데이터 보완: 같은 출처의 후속 프로필 연결.",
+        "confidence_score": null,
+        "superseded_by_id": null,
+        "preparation_state": "as_published",
+        "nutrition_profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 59.32,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "g",
+        "source_token": "59.32",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 237,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "kcal",
+        "source_token": "237",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": null,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "g",
+        "source_token": "",
+        "value_status": "missing",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "g",
+        "source_token": "0.00",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "mg",
+        "source_token": "0",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 59.32,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "source_unit": "g",
+        "source_token": "59.32",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "version": 2,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "d769ea35-de3e-52de-a6ff-120c23126bff",
+        "decision_reason": "브랜드 미상 사각어묵의 서비스 대표 예시: 동원 조이락 알뜰 사각어묵. 찐어묵·두부어묵 등 다른 유형은 제외. 실제 사용 제품을 식별했다는 뜻이 아니다. 정규화 메타데이터 보완: 원본 기준량과 전체 영양값은 그대로 보존.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "3e814241-cdf9-5d33-a4a3-bf78367e8784",
+        "version": 2,
+        "is_active": true,
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "is_primary": true,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "match_method": "manual",
+        "ingredient_id": "b486109e-e04e-409a-924f-638dc78258e4",
+        "review_status": "approved",
+        "candidate_rank": null,
+        "decision_reason": "user_approved_representative: 브랜드 미상 사각어묵의 서비스 대표 예시: 동원 조이락 알뜰 사각어묵. 찐어묵·두부어묵 등 다른 유형은 제외. 실제 사용 제품을 식별했다는 뜻이 아니다. 정규화 메타데이터 보완: 같은 출처의 후속 프로필 연결.",
+        "confidence_score": null,
+        "superseded_by_id": null,
+        "preparation_state": "as_published",
+        "nutrition_profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 30,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "g",
+        "source_token": "30.00",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 205,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "kcal",
+        "source_token": "205",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 6,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "g",
+        "source_token": "6.00",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": null,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "g",
+        "source_token": "",
+        "value_status": "missing",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 8,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "g",
+        "source_token": "8.00",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 0.9,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "g",
+        "source_token": "0.90",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 790,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "mg",
+        "source_token": "790",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 6,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "source_unit": "g",
+        "source_token": "6.00",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "version": 2,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "440b06e2-3a61-5ac9-adef-e141ff3afe91",
+        "decision_reason": "브랜드 미상 베이킹 다크 컴파운드 초코칩의 대표 예시: 르본 제품. 밀크·화이트·카카오버터 초콜릿 명시 시 적용하지 않는다. 정규화 메타데이터 보완: 원본 기준량과 전체 영양값은 그대로 보존.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "3affae98-88a2-595f-a2e1-52d43e4e0286",
+        "version": 3,
+        "is_active": true,
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "is_primary": true,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "match_method": "manual",
+        "ingredient_id": "e10a1b06-34ec-5078-9f92-bf6e548afb35",
+        "review_status": "approved",
+        "candidate_rank": null,
+        "decision_reason": "user_approved_representative: 브랜드 미상 베이킹 다크 컴파운드 초코칩의 대표 예시: 르본 제품. 밀크·화이트·카카오버터 초콜릿 명시 시 적용하지 않는다. 정규화 메타데이터 보완: 같은 출처의 후속 프로필 연결.",
+        "confidence_score": null,
+        "superseded_by_id": null,
+        "preparation_state": "as_published",
+        "nutrition_profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 56.6,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "g",
+        "source_token": "56.60",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 510,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "kcal",
+        "source_token": "510",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 29.5,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "g",
+        "source_token": "29.50",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": null,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "g",
+        "source_token": "",
+        "value_status": "missing",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 4,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "g",
+        "source_token": "4.00",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 27.5,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "g",
+        "source_token": "27.50",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 30,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "mg",
+        "source_token": "30",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 53.8,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "source_unit": "g",
+        "source_token": "53.80",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "row": {
+        "id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "version": 2,
+        "is_active": true,
+        "basis_unit": "g",
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "created_by": null,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "basis_amount": 100,
+        "profile_kind": "ingredient_source",
+        "review_status": "approved",
+        "source_item_id": "ffb82419-1549-5b95-a67f-f53b1c5cf83f",
+        "decision_reason": "브랜드 미상 다크 커버춰 대표 예시: Callebaut 811 54.5%, MFDS 기수입 537kcal/100g 버전 전체 사용. 현 EU 550kcal 자료와 혼합하지 않고 70%·무설탕은 제외. 정규화 메타데이터 보완: 원본 기준량과 전체 영양값은 그대로 보존.",
+        "superseded_by_id": null,
+        "normalization_method": "mass_100g"
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "row": {
+        "id": "1950be59-f640-5e86-a965-f78315935300",
+        "version": 2,
+        "is_active": true,
+        "created_at": "2026-10-10T00:02:27.69+00:00",
+        "is_primary": true,
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "match_method": "manual",
+        "ingredient_id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+        "review_status": "approved",
+        "candidate_rank": null,
+        "decision_reason": "user_approved_representative: 브랜드 미상 다크 커버춰 대표 예시: Callebaut 811 54.5%, MFDS 기수입 537kcal/100g 버전 전체 사용. 현 EU 550kcal 자료와 혼합하지 않고 70%·무설탕은 제외. 정규화 메타데이터 보완: 같은 출처의 후속 프로필 연결.",
+        "confidence_score": null,
+        "superseded_by_id": null,
+        "preparation_state": "as_published",
+        "nutrition_profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 46,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "g",
+        "source_token": "46.00",
+        "value_status": "observed",
+        "nutrient_code": "carbohydrate_g",
+        "source_nutrient_code": "chocdf"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 537,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "kcal",
+        "source_token": "537",
+        "value_status": "observed",
+        "nutrient_code": "energy_kcal",
+        "source_nutrient_code": "enerc"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 37,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "g",
+        "source_token": "37.00",
+        "value_status": "observed",
+        "nutrient_code": "fat_g",
+        "source_nutrient_code": "fatce"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": null,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "g",
+        "source_token": "",
+        "value_status": "missing",
+        "nutrient_code": "fiber_g",
+        "source_nutrient_code": "fiber_g"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 5,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "g",
+        "source_token": "5.00",
+        "value_status": "observed",
+        "nutrient_code": "protein_g",
+        "source_nutrient_code": "prot"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 22,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "g",
+        "source_token": "22.00",
+        "value_status": "observed",
+        "nutrient_code": "saturated_fat_g",
+        "source_nutrient_code": "fasat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 6,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "mg",
+        "source_token": "6",
+        "value_status": "observed",
+        "nutrient_code": "sodium_mg",
+        "source_nutrient_code": "nat"
+      }
+    },
+    {
+      "table": "nutrition_values",
+      "row": {
+        "amount": 43,
+        "created_at": "2026-10-09T22:40:00+00:00",
+        "profile_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "source_unit": "g",
+        "source_token": "43.00",
+        "value_status": "observed",
+        "nutrient_code": "sugars_g",
+        "source_nutrient_code": "sugars"
+      }
+    }
+  ],
+  "updates": [
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "ba7f1129-4a90-5337-a3f1-c0c1ebe75af3"
+      },
+      "after": {
+        "is_active": false,
+        "is_primary": false,
+        "review_status": "superseded",
+        "superseded_by_id": "07c949bf-a79a-5e69-ab17-6554c97d2e5f",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "user_approved_representative: 브랜드 미상 액상 조리용 크림소스 대표 예시: 면사랑 크림소스 기수입 85kcal/100g. 분말·농축 베이스·제과용 크림에는 적용하지 않는다. 동일 원자료·영양값을 보존한 정규화 후속 연결로 교체."
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "eacaba9f-8c6f-50f1-ad4b-279ce2b4050c"
+      },
+      "after": {
+        "is_active": false,
+        "is_primary": false,
+        "review_status": "superseded",
+        "superseded_by_id": "500e49f0-3adf-5cbf-a5cd-203595db37bd",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "user_approved_representative: 브랜드 미상 기름·소금 조미 구운김 대표 예시: 사조씨푸드 시선조미김. 취소된 RDA 조미김 자료를 재사용하지 않는다. 동일 원자료·영양값을 보존한 정규화 후속 연결로 교체."
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "256032d5-2efd-5950-a536-437ac0b82a7b"
+      },
+      "after": {
+        "is_active": false,
+        "is_primary": false,
+        "review_status": "superseded",
+        "superseded_by_id": "530b867b-f8cb-5a8d-ae3d-f7596c9b4c9a",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "user_approved_representative: 브랜드 미상 당 첨가 바닐라빈 페이스트 대표 예시: 하나종합상사 수입 퓨어 바닐라 빈 페이스트. 공식 기수입 100ml 기준, g으로 임의 환산하지 않는다. 동일 원자료·영양값을 보존한 정규화 후속 연결로 교체."
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "c5b9e4de-763b-5b15-a472-ba092fd68813"
+      },
+      "after": {
+        "is_active": false,
+        "is_primary": false,
+        "review_status": "superseded",
+        "superseded_by_id": "3e814241-cdf9-5d33-a4a3-bf78367e8784",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "user_approved_representative: 브랜드 미상 사각어묵의 서비스 대표 예시: 동원 조이락 알뜰 사각어묵. 찐어묵·두부어묵 등 다른 유형은 제외. 실제 사용 제품을 식별했다는 뜻이 아니다. 동일 원자료·영양값을 보존한 정규화 후속 연결로 교체."
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "57480ef2-da52-5d78-ade7-ab00f984325a"
+      },
+      "after": {
+        "is_active": false,
+        "is_primary": false,
+        "review_status": "superseded",
+        "superseded_by_id": "3affae98-88a2-595f-a2e1-52d43e4e0286",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "user_approved_representative: 브랜드 미상 베이킹 다크 컴파운드 초코칩의 대표 예시: 르본 제품. 밀크·화이트·카카오버터 초콜릿 명시 시 적용하지 않는다. 동일 원자료·영양값을 보존한 정규화 후속 연결로 교체."
+      }
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "fd6b7d97-c8f4-5076-a707-137d2a09265c"
+      },
+      "after": {
+        "is_active": false,
+        "is_primary": false,
+        "review_status": "superseded",
+        "superseded_by_id": "1950be59-f640-5e86-a965-f78315935300",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "user_approved_representative: 브랜드 미상 다크 커버춰 대표 예시: Callebaut 811 54.5%, MFDS 기수입 537kcal/100g 버전 전체 사용. 현 EU 550kcal 자료와 혼합하지 않고 70%·무설탕은 제외. 동일 원자료·영양값을 보존한 정규화 후속 연결로 교체."
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "9c58b205-84be-51f3-a1ba-cdd907791fc8"
+      },
+      "after": {
+        "is_active": false,
+        "review_status": "superseded",
+        "superseded_by_id": "506cb72d-5f44-5259-a7a5-d11d858049d1",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "브랜드 미상 액상 조리용 크림소스 대표 예시: 면사랑 크림소스 기수입 85kcal/100g. 분말·농축 베이스·제과용 크림에는 적용하지 않는다. 원값·기준량은 보존하고 지원되는 정규화 메타데이터의 후속 버전으로 교체."
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948"
+      },
+      "after": {
+        "is_active": false,
+        "review_status": "superseded",
+        "superseded_by_id": "ab319313-7e12-5b6b-a4d4-c3fb844224f0",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "브랜드 미상 기름·소금 조미 구운김 대표 예시: 사조씨푸드 시선조미김. 취소된 RDA 조미김 자료를 재사용하지 않는다. 원값·기준량은 보존하고 지원되는 정규화 메타데이터의 후속 버전으로 교체."
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7"
+      },
+      "after": {
+        "is_active": false,
+        "review_status": "superseded",
+        "superseded_by_id": "eac783d5-22d4-5e8c-aed0-2bb67aacdad1",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "브랜드 미상 당 첨가 바닐라빈 페이스트 대표 예시: 하나종합상사 수입 퓨어 바닐라 빈 페이스트. 공식 기수입 100ml 기준, g으로 임의 환산하지 않는다. 원값·기준량은 보존하고 지원되는 정규화 메타데이터의 후속 버전으로 교체."
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99"
+      },
+      "after": {
+        "is_active": false,
+        "review_status": "superseded",
+        "superseded_by_id": "adb0cccd-23de-5f59-a20d-5d18d0caa0e0",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "브랜드 미상 사각어묵의 서비스 대표 예시: 동원 조이락 알뜰 사각어묵. 찐어묵·두부어묵 등 다른 유형은 제외. 실제 사용 제품을 식별했다는 뜻이 아니다. 원값·기준량은 보존하고 지원되는 정규화 메타데이터의 후속 버전으로 교체."
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "1d1e754e-9c61-59c9-a4ea-491380235bfa"
+      },
+      "after": {
+        "is_active": false,
+        "review_status": "superseded",
+        "superseded_by_id": "cad7670f-5326-5464-ada5-a1631fb7d44c",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "브랜드 미상 베이킹 다크 컴파운드 초코칩의 대표 예시: 르본 제품. 밀크·화이트·카카오버터 초콜릿 명시 시 적용하지 않는다. 원값·기준량은 보존하고 지원되는 정규화 메타데이터의 후속 버전으로 교체."
+      }
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "16e72e69-5fed-507c-aaa6-054f8dc672f2"
+      },
+      "after": {
+        "is_active": false,
+        "review_status": "superseded",
+        "superseded_by_id": "b29c6ba2-8347-5ac6-a66d-686b8bfb04a7",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-10T00:02:27.69+00:00",
+        "decision_reason": "브랜드 미상 다크 커버춰 대표 예시: Callebaut 811 54.5%, MFDS 기수입 537kcal/100g 버전 전체 사용. 현 EU 550kcal 자료와 혼합하지 않고 70%·무설탕은 제외. 원값·기준량은 보존하고 지원되는 정규화 메타데이터의 후속 버전으로 교체."
+      }
+    }
+  ],
+  "preconditions": [
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd"
+      },
+      "md5": "3cf510fb9d588b18ecfb746b69f3d73a"
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "ba7f1129-4a90-5337-a3f1-c0c1ebe75af3"
+      },
+      "md5": "e9572508f1a89fe8a617246cb48e4b2f"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "9c58b205-84be-51f3-a1ba-cdd907791fc8"
+      },
+      "md5": "e0d0047905bab027779730b071804b89"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "ab194633-416e-58a0-a766-d9e5e928602b"
+      },
+      "md5": "829d45f00520b670f41361209fd7f316"
+    },
+    {
+      "table": "nutrition_sources",
+      "key": {
+        "id": "b06cc48c-453b-56f0-a996-62d670d074e0"
+      },
+      "md5": "5578df0b74261b1b082a875e1a7f9302"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "9c58b205-84be-51f3-a1ba-cdd907791fc8"
+      },
+      "md5": "0eeda57ec66b0dd3073812deadd68c07"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f"
+      },
+      "md5": "3c2175eb8d82d171726f38ec89c94c78"
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "eacaba9f-8c6f-50f1-ad4b-279ce2b4050c"
+      },
+      "md5": "27cfa05d5404d5cc7249b593841d173b"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948"
+      },
+      "md5": "5b93b5ce4883ea2a1e9fbe3810edd594"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "c27a1e15-00f1-58a3-a488-808fcb9384c8"
+      },
+      "md5": "be897014c08da5173c39d628cc427fc1"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "5f6d94c7-56aa-5c4a-a5db-d7d823ebd948"
+      },
+      "md5": "ce21aa0c97782f79f444761c561a8102"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "775026fb-a00e-44f0-995d-dfc5599463b1"
+      },
+      "md5": "646899c17a0b5b40f561ca55adb05073"
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "256032d5-2efd-5950-a536-437ac0b82a7b"
+      },
+      "md5": "c3e75da9bac1a246a24d5d4a3b4933c9"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7"
+      },
+      "md5": "2fe331a756295acceb125e9aee5c6311"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "fd9a79c4-02bf-5766-a8aa-b0c6ecb7a4c0"
+      },
+      "md5": "64d2ac65da38be26bc9f8c66a69ec5de"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "b9cbd119-0c63-50ac-a30a-b275c8dd7cb7"
+      },
+      "md5": "2abdd48de2ceebd71d9e8d9af0bb0073"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "b486109e-e04e-409a-924f-638dc78258e4"
+      },
+      "md5": "f5a5e0cff971211a2f35611989addaa8"
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "c5b9e4de-763b-5b15-a472-ba092fd68813"
+      },
+      "md5": "1dd22c1c2998af74c2a783e9fdffa6f4"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99"
+      },
+      "md5": "6fd2aec16c0f700afcf2228e56065222"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "d769ea35-de3e-52de-a6ff-120c23126bff"
+      },
+      "md5": "30ef991531dfea2ba9fdc50dfa9f4e62"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "b76e3387-aac8-5c0a-a3fb-eec3be505c99"
+      },
+      "md5": "ce22442cef71a3248efc752d93731032"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "e10a1b06-34ec-5078-9f92-bf6e548afb35"
+      },
+      "md5": "bead106de4c08a44e53fe5baa2c237e0"
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "57480ef2-da52-5d78-ade7-ab00f984325a"
+      },
+      "md5": "60374dfcae1c0ac283f2630397bed6d2"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "1d1e754e-9c61-59c9-a4ea-491380235bfa"
+      },
+      "md5": "2f3f0eaf452ed8ba4317df7464e0c92e"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "440b06e2-3a61-5ac9-adef-e141ff3afe91"
+      },
+      "md5": "6ca25cd4513570a93536c89408d22fc3"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "1d1e754e-9c61-59c9-a4ea-491380235bfa"
+      },
+      "md5": "e151d679de8c439ab448e613729c28de"
+    },
+    {
+      "table": "ingredients",
+      "key": {
+        "id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330"
+      },
+      "md5": "6544e90f8f005d175f5572ccd73480ff"
+    },
+    {
+      "table": "ingredient_nutrition_profiles",
+      "key": {
+        "id": "fd6b7d97-c8f4-5076-a707-137d2a09265c"
+      },
+      "md5": "1a1991bf03bda44b787139d7df7d59db"
+    },
+    {
+      "table": "nutrition_profiles",
+      "key": {
+        "id": "16e72e69-5fed-507c-aaa6-054f8dc672f2"
+      },
+      "md5": "4baa964d21f4edfe29a8f1b34dfa87b6"
+    },
+    {
+      "table": "nutrition_source_items",
+      "key": {
+        "id": "ffb82419-1549-5b95-a67f-f53b1c5cf83f"
+      },
+      "md5": "01e80680f50fd56dd58608d46c260369"
+    },
+    {
+      "table": "nutrition_values",
+      "key": {
+        "profile_id": "16e72e69-5fed-507c-aaa6-054f8dc672f2"
+      },
+      "md5": "646df55bcff71a7fa0c244d89c665b94"
+    }
+  ],
+  "expected_links": [
+    {
+      "ingredient_id": "3908377a-cb50-473a-bbdf-b1104ad2d2cd",
+      "before": [
+        "ba7f1129-4a90-5337-a3f1-c0c1ebe75af3"
+      ],
+      "after": [
+        "07c949bf-a79a-5e69-ab17-6554c97d2e5f"
+      ]
+    },
+    {
+      "ingredient_id": "5570fc99-26b5-54b1-b7db-3aba236f8f8f",
+      "before": [
+        "eacaba9f-8c6f-50f1-ad4b-279ce2b4050c"
+      ],
+      "after": [
+        "500e49f0-3adf-5cbf-a5cd-203595db37bd"
+      ]
+    },
+    {
+      "ingredient_id": "775026fb-a00e-44f0-995d-dfc5599463b1",
+      "before": [
+        "256032d5-2efd-5950-a536-437ac0b82a7b"
+      ],
+      "after": [
+        "530b867b-f8cb-5a8d-ae3d-f7596c9b4c9a"
+      ]
+    },
+    {
+      "ingredient_id": "b486109e-e04e-409a-924f-638dc78258e4",
+      "before": [
+        "c5b9e4de-763b-5b15-a472-ba092fd68813"
+      ],
+      "after": [
+        "3e814241-cdf9-5d33-a4a3-bf78367e8784"
+      ]
+    },
+    {
+      "ingredient_id": "e10a1b06-34ec-5078-9f92-bf6e548afb35",
+      "before": [
+        "57480ef2-da52-5d78-ade7-ab00f984325a"
+      ],
+      "after": [
+        "3affae98-88a2-595f-a2e1-52d43e4e0286"
+      ]
+    },
+    {
+      "ingredient_id": "e2b1373c-2ec5-43d7-b49f-e2a2282a0330",
+      "before": [
+        "fd6b7d97-c8f4-5076-a707-137d2a09265c"
+      ],
+      "after": [
+        "1950be59-f640-5e86-a965-f78315935300"
+      ]
+    }
+  ],
+  "operation_checksum": "59a3c32d77874b437cfb5fc451ea0a4d410960fa854a467969dd6792fda0cbd8"
+}

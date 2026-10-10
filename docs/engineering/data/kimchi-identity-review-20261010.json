@@ -1,0 +1,302 @@
+{
+  "schema": "homecook.kimchi-identity-review.v1",
+  "review_date": "2026-10-10",
+  "mode": "read_only",
+  "production_writes": 0,
+  "paid_model_calls": 0,
+  "scope": "현재레시피의신김치2행·김치국물1행정체성확인.수량변경과전역신김치영양연결은범위밖.",
+  "evidence_review": {
+    "stored_recipe_sources_and_steps": "read",
+    "cached_transcripts": "read",
+    "current_public_video_descriptions": "retrieved via yt-dlp without model calls",
+    "current_video_frames": "downloaded public videos and visually inspected selected frames",
+    "source_original_xlsx": "직접ZIP/XML스트리밍대조;제품2행7성분+섬유빈칸확인",
+    "video_or_description_is_not": "AI추출결과만보고영상을보았다고주장하지않음"
+  },
+  "recipe_reviews": [
+    {
+      "recipe_title": "돼지고기 김치찌개",
+      "video_url": "https://www.youtube.com/watch?v=hUIVgRqJ8OY",
+      "reviewed_seconds": [
+        16,
+        18,
+        20,
+        23,
+        23.5,
+        24,
+        24.5
+      ],
+      "identity": "숙성된붉은배추포기김치,세척하지않음",
+      "observations": [
+        "16~20초영상에서배추의흰줄기와겹잎이붙은포기김치를써는모습직접확인.",
+        "23~24초같은접시의배추김치와붉은김치국물을함께팬에넣음.물을추가하기전이며물김치/찌개완성국물아님."
+      ],
+      "kimchi_row": {
+        "current_label": "신김치",
+        "current_amount": 1,
+        "current_unit": "kg",
+        "recommended_action": "remap_only_this_recipe_row",
+        "target_ingredient_id": "20d0899b-fb9d-4f5a-b7bf-6ae8bc1954b8",
+        "target_name": "배추김치",
+        "target_profile_id": "b5fbf5d3-cfc5-43d3-85fb-35242145d4cd",
+        "target_official_item_key": "795",
+        "target_source_name": "김치, 배추 김치",
+        "values_per_100g": {
+          "fat_g": {
+            "amount": 0.43,
+            "status": "observed"
+          },
+          "fiber_g": {
+            "amount": 2.5,
+            "status": "observed"
+          },
+          "sugars_g": {
+            "amount": 2.4,
+            "status": "observed"
+          },
+          "protein_g": {
+            "amount": 1.98,
+            "status": "observed"
+          },
+          "sodium_mg": {
+            "amount": 551,
+            "status": "observed"
+          },
+          "energy_kcal": {
+            "amount": 38,
+            "status": "observed"
+          },
+          "carbohydrate_g": {
+            "amount": 6.49,
+            "status": "observed"
+          },
+          "saturated_fat_g": {
+            "amount": 0.07,
+            "status": "observed"
+          }
+        },
+        "limitation": "숙성단계별개별분석값이아닌기존일반배추김치대표자료.전역신김치그룹은연결하지않음."
+      },
+      "juice_row": {
+        "current_label": "김치국물",
+        "current_amount": 100,
+        "current_unit": "g",
+        "confirmed_definition": "숙성된붉은배추김치에서나온희석전양념국물.배추큰건더기는별도김치행에포함.",
+        "existing_exact_ingredient": false,
+        "recommended_action": "정의가좁혀진배추김치국물항목을만들고검증된숙성김치-국물제품자료를단일서비스대표로사용가능.원래product_label을직접ingredient_source로오표시하지않고별도대표자료/근거연결유지.",
+        "candidate_source_item_key": "item-report:20220773806101",
+        "ai_fallback": "제품대표와일반배추김치국물의차이를보정한다면별도수동AI추정프로필로저장.표시자료나분석값이라고주장하지않음.",
+        "quantity_note": "원영상자막과캐시음성은약간이며100g의원문정량근거는확인못함.이번에는현수량100g을그대로보존."
+      }
+    },
+    {
+      "recipe_title": "신김치 제육볶음",
+      "video_url": "https://www.youtube.com/watch?v=chnArCaEpqA",
+      "reviewed_seconds": [
+        83,
+        88,
+        93,
+        98,
+        103,
+        108,
+        113,
+        118,
+        123,
+        128
+      ],
+      "identity": "숙성배추김치를물에가볍게씻어양념을제거하고물기를짜낸것",
+      "observations": [
+        "83~93초배추포기김치와200g준비자막을직접확인.",
+        "103~113초물속에서양념을씻고물기를쥐어짜는동작직접확인.",
+        "118~128초씻은배추김치를써는동작과물기제거지시직접확인."
+      ],
+      "current_amount": 200,
+      "current_unit": "g",
+      "weight_basis_observation": "원영상200g은세척하기전제시된다.씻고짠후200g을실측했다고볼근거없음.",
+      "existing_exact_ingredient": false,
+      "existing_same_type_product_candidate": "item-report:20030392182443",
+      "recommended_action": "씻어짠배추김치정의는확정가능.일반배추김치100g영양을그대로자동복사하지않음.",
+      "completion_options": [
+        {
+          "path": "post_wash_representative",
+          "method": "검증된씻은배추김치제품의7성분을서비스대표로유지하고실제세척후중량으로계산.",
+          "remaining_condition": "세척후무게확인또는현재200g을세척후대표입력량으로간주하는명시적서비스가정이필요."
+        },
+        {
+          "path": "manual_ai_before_washing_basis",
+          "method": "현재세척전투입량200g을그대로유지하려면세척전100g당남는영양을별도AI추정으로산출.원래배추김치자료와세척제품자료는참고근거로기록하며공식관측값으로혼합저장하지않음.",
+          "required_assumptions": [
+            "가볍게한번헹궈표면양념을제거하고물기를짬;장시간담가탈염한상태와구분.",
+            "세척전중량기준임을필드/정의에명시하고세척후100g당영양과혼동하지않음.",
+            "세척수율과각영양소잔존률의가정및불확실성기록.나트륨만임의로일률50%낮추지않음.",
+            "공식8성분완비로표시하지않음;출처유형은수동AI추정."
+          ]
+        }
+      ],
+      "not_a_blocker": "종류확인부족단계는해결됨.남은것은중량기준과추정방식선택이며종류를다시묻거나막연히보류할필요없음."
+    }
+  ],
+  "verified_product_sources": [
+    {
+      "name": "씻은배추김치",
+      "manufacturer": "주식회사산들바람식품농업회사법인",
+      "food_code": "P114-101010200-2214",
+      "item_report_number": "20030392182443",
+      "category": "배추김치",
+      "source_type": "MFDS collected manufacturer-declared processed-food data",
+      "dataset": "20260828_가공식품DB_316734건.xlsx",
+      "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+      "original_file_sha256": "b074d98e75d2d087dc1b193f0056affbf9afd14524c9ccb556cb2b20978504f7",
+      "xlsx_row": 144925,
+      "basis": "100g",
+      "source_collection_date": "2026-04-23",
+      "source_method": "수집",
+      "values": {
+        "energy_kcal": 30.0,
+        "protein_g": 1.0,
+        "fat_g": 0.0,
+        "carbohydrate_g": 7.0,
+        "sugars_g": 4.0,
+        "fiber_g": null,
+        "sodium_mg": 400.0,
+        "saturated_fat_g": 0.0
+      },
+      "original_cells": {
+        "A": "P114-101010200-2214",
+        "B": "씻은배추김치",
+        "J": "배추김치",
+        "Q": "100g",
+        "R": "30",
+        "T": "1.00",
+        "U": "0.00",
+        "W": "7.00",
+        "X": "4.00",
+        "Y": "",
+        "AD": "400",
+        "AN": "0.00",
+        "EX": "40g",
+        "EY": "1000g",
+        "EZ": "20030392182443",
+        "FA": "주식회사산들바람식품농업회사법인",
+        "EW": "식품의약품안전처",
+        "FH": "수집",
+        "FI": "2026-04-23",
+        "FJ": "46262"
+      },
+      "source_item_id": "021d164c-0113-4f77-8410-b345f0d8b196",
+      "profile_id": "672edf36-f23d-40b7-bd2a-9364bddc1b4f",
+      "existing_profile_kind": "product_label",
+      "existing_normalization": "as_labeled",
+      "fixture_check": "공식원본XLSX행·CSVprojection·승인된import source profile·제조사명이일치.임의seed/QA예시값으로판정할근거없음.",
+      "limits": [
+        "제조사표시를식약처가수집한제품자료이며식약처실측분석자료라고표시하지않음.",
+        "영상에해당브랜드가등장했다는뜻이아님.서비스대표로사용할경우대표선택사유명시필요.",
+        "원문식이섬유는빈칸이므로0추정이나타자료값덧붙이기금지."
+      ]
+    },
+    {
+      "name": "숙성김치-국물",
+      "manufacturer": "농업회사법인 다올 주식회사",
+      "food_code": "P114-101010200-2406",
+      "item_report_number": "20220773806101",
+      "category": "배추김치",
+      "source_type": "MFDS collected manufacturer-declared processed-food data",
+      "dataset": "20260828_가공식품DB_316734건.xlsx",
+      "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+      "original_file_sha256": "b074d98e75d2d087dc1b193f0056affbf9afd14524c9ccb556cb2b20978504f7",
+      "xlsx_row": 159499,
+      "basis": "100g",
+      "source_collection_date": "2026-06-17",
+      "source_method": "수집",
+      "values": {
+        "energy_kcal": 20.0,
+        "protein_g": 1.0,
+        "fat_g": 0.25,
+        "carbohydrate_g": 3.0,
+        "sugars_g": 2.0,
+        "fiber_g": null,
+        "sodium_mg": 500.0,
+        "saturated_fat_g": 0.0
+      },
+      "original_cells": {
+        "A": "P114-101010200-2406",
+        "B": "숙성김치-국물",
+        "J": "배추김치",
+        "Q": "100g",
+        "R": "20",
+        "T": "1.00",
+        "U": "0.25",
+        "W": "3.00",
+        "X": "2.00",
+        "Y": "",
+        "AD": "500",
+        "AN": "0.00",
+        "EX": "40g",
+        "EY": "100g",
+        "EZ": "20220773806101",
+        "FA": "농업회사법인 다올 주식회사",
+        "EW": "식품의약품안전처",
+        "FH": "수집",
+        "FI": "2026-06-17",
+        "FJ": "46262"
+      },
+      "source_item_id": "04e76903-6f7c-474f-8db1-bd4904cdac62",
+      "profile_id": "752dd19c-95ab-4923-b424-ef70f0f7648d",
+      "existing_profile_kind": "product_label",
+      "existing_normalization": "as_labeled",
+      "fixture_check": "공식원본XLSX행·CSVprojection·승인된import source profile·제조사명이일치.임의seed/QA예시값으로판정할근거없음.",
+      "limits": [
+        "제조사표시를식약처가수집한제품자료이며식약처실측분석자료라고표시하지않음.",
+        "영상에해당브랜드가등장했다는뜻이아님.서비스대표로사용할경우대표선택사유명시필요.",
+        "원문식이섬유는빈칸이므로0추정이나타자료값덧붙이기금지."
+      ]
+    }
+  ],
+  "primary_research": [
+    {
+      "title": "Changes in the Sodium Content of Different Types of Kimchi During Storage",
+      "doi": "10.7318/KJFC/2025.40.2.92",
+      "url": "http://jfc.or.kr/journal/article.php?Array=&code=93777",
+      "publication_year": 2025,
+      "access": "논문HTML원문을직접읽음.HTTPS호스트인증서오류로공개HTTP동일논문을읽음.",
+      "raw_sha256": "071375c4ff2e551aaca7584b8458b27e27712d2b6bd9ac1fe2c78735998324b9",
+      "scope": "배추김치를포함한6종의건더기/양념국물나트륨을실험배합과저장기간별측정.",
+      "specific_measurement": {
+        "table": 2,
+        "food": "Cabbage kimchi (baechu Pogi)",
+        "component": "Liquid",
+        "total_mean_mg_per_g": 9.89,
+        "total_sd_mg_per_g": 0.77,
+        "converted_mean_mg_per_100g": 989
+      },
+      "use": "국물의나트륨이양념배합·저장조건에따라달라진다는불확실성근거.",
+      "not_use": "이논문값을영상김치실측값으로간주하거나제품자료의나트륨칸만덮어쓰지않음.세척완료김치의8성분표가아니므로세척후영양의직접근거로사용하지않음."
+    }
+  ],
+  "rda104_search": {
+    "official_file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+    "washed_kimchi_exact_row_found": false,
+    "separated_kimchi_juice_exact_row_found": false,
+    "do_not_substitute": [
+      "백김치",
+      "열무김치국물",
+      "완성김치찌개국물"
+    ]
+  },
+  "separate_observations_not_changed": [
+    {
+      "recipe_title": "돼지고기 김치찌개",
+      "observation": "원문돼지고기500g과현재100g의차이.신김치음성1kg미만과화면1kg표현차이.김치국물원문약간과현재100g차이.수량정정범위아니므로그대로둠."
+    },
+    {
+      "recipe_title": "신김치 제육볶음",
+      "observation": "원문목살600g과현재100g의차이,양파1/2개표시와amount1의차이등.사용자수정일수있어임의정정하지않음."
+    }
+  ],
+  "private_evidence_hashes": {
+    "kimchi-pork-contact.png": "586435dae5f19c0a4933c021bee71c8224b6b2d34351993d18425c00c8b14e31",
+    "kimchi-stew-contact.png": "43798fb3693dea9523c817b546a1bde82f493d7123fb18193a6e468872e707e2",
+    "kimchi-juice-contact.png": "7c1ff34d8e11be0360b63013f652d824bd43d81fad27b2fcb12c68c817e0ff16",
+    "kimchi-official-xlsx-verification.json": "d6fdea41901ff459ffbdca309ea3372f095513af6be817d656ebc86241e9ff9a"
+  }
+}

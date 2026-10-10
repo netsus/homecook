@@ -1,0 +1,374 @@
+{
+  "schema_version": "homecook.ingredient-identity-review.v1",
+  "reviewed_on": "2026-10-10",
+  "status": "user_clarified_candidates_verified_not_applied",
+  "database_writes": 0,
+  "scope": {
+    "ingredient_kinds": 2,
+    "active_recipe_rows": 3
+  },
+  "items": [
+    {
+      "name": "알룰로스",
+      "active_recipe_rows": 1,
+      "current_amount": 10,
+      "current_unit": "g",
+      "identity_status": "liquid_confirmed_brand_unknown",
+      "recommended_ingredient": "액상 알룰로스",
+      "recommended_profile": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+      "public_source_url": "https://www.youtube.com/watch?v=MMSS6Rs7CQs",
+      "public_evidence": [
+        "원본 영상의 현재 공개 설명과 저장된 원문은 알룰로스만 명시하며 제품명·분말/액상·혼합비율을 제시하지 않는다.",
+        "YouTube 제품 보기 패널에서 확인한 태그 7개는 오븐·키친타월·호밀빵 2종·도마·두유 그릭요거트·오이이며 알룰로스 제품은 없다.",
+        "영상 도입·마무리 및 재료 장면(0초, 1초, 3초, 20초, 25초, 30초, 32초, 34초, 35초)을 화면으로 확인했으나 알룰로스 용기나 영양표를 특정하지 못했다. 영상 전체에 표시가 없다는 단정은 하지 않는다.",
+        "30초 부근 영양표는 두유 그릭요거트 통의 라벨이며 알룰로스 영양값으로 사용할 수 없다."
+      ],
+      "database_evidence": [
+        "현재 알룰로스 표준 재료는 umbrella이며 활성·승인 primary 영양 연결0개다."
+      ],
+      "quantity_issue": "저장된 10g은 공개 설명에 없는 수량이다. 현재 저장값은 보존하되 원문에서 확인된 정확한 양이라고 표기하지 않는다.",
+      "next_action": "액상 전용 재료를 만들고 검증한 한 제품의 전체 영양표를 서비스 대표 예시로 연결할 수 있다. 실제 사용 브랜드를 확인했다는 뜻은 아니며 일반 알룰로스 umbrella/분말에 전역 연결하지 않는다. 기존10g 수량 근거는 별도 유지한다.",
+      "not_allowed": [
+        "분말/혼합제품 전부에 같은값 사용",
+        "실제 영상에 이 브랜드가 등장했다고 주장",
+        "열량2kcal를0으로 변경",
+        "탄수화물0.50g을 알룰로스 함량/순탄수로 재해석",
+        "식이섬유 또는 알룰로오스 빈칸을0으로 채우기"
+      ],
+      "current_liquid_ingredient_exists": false,
+      "representative_candidate": {
+        "name": "키토라푸드 액상 알룰로스",
+        "manufacturer": "자연농장",
+        "food_code": "P104-701070000-0339",
+        "item_report_number": "20170333328242",
+        "category": "당류가공품",
+        "source_kind": "MFDS collected manufacturer-declared product information",
+        "dataset": "20260828_가공식품DB_316734건.xlsx",
+        "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do",
+        "original_xlsx_sha256": "b074d98e75d2d087dc1b193f0056affbf9afd14524c9ccb556cb2b20978504f7",
+        "xlsx_row": 50219,
+        "source_collection_date": "2023-12-19",
+        "source_method": "수집",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "source_item_id": "15d51e85-53a9-49e3-9218-5584c797af4e",
+        "existing_profile_id": "00a3f614-5aa2-41b3-9c70-40e398fafc52",
+        "existing_profile_kind": "product_label",
+        "existing_profile_approved_active": true,
+        "values": {
+          "energy_kcal": 2,
+          "protein_g": 0,
+          "fat_g": 0,
+          "carbohydrate_g": 0.5,
+          "sugars_g": 0.2,
+          "fiber_g": null,
+          "sodium_mg": 10,
+          "saturated_fat_g": 0
+        },
+        "source_tokens": {
+          "energy_kcal": "2",
+          "protein_g": "0.00",
+          "fat_g": "0.00",
+          "carbohydrate_g": "0.50",
+          "sugars_g": "0.20",
+          "fiber_g": "",
+          "sodium_mg": "10",
+          "saturated_fat_g": "0.00"
+        },
+        "original_cells": {
+          "A": "P104-701070000-0339",
+          "B": "키토라푸드 액상 알룰로스",
+          "J": "당류가공품",
+          "Q": "100g",
+          "R": "2",
+          "T": "0.00",
+          "U": "0.00",
+          "W": "0.50",
+          "X": "0.20",
+          "Y": "",
+          "AD": "10",
+          "AN": "0.00",
+          "BP": "",
+          "EZ": "20170333328242",
+          "FA": "자연농장",
+          "EW": "식품의약품안전처",
+          "FH": "수집",
+          "FI": "2023-12-19"
+        },
+        "verification": "원본 XLSX 행과 기존 승인 활성 profile의7성분이 값/단위/token까지 일치. 식이섬유 원문 빈칸 유지.",
+        "scope": "브랜드 미상 액상 알룰로스의 서비스 대표 제품 예시. 실제 촬영 제품 또는 모든 액상 제품의 동일 조성을 주장하지 않는다.",
+        "carbohydrate_contract": "원자료 W열 탄수화물(g)0.50을 그대로 사용한다. 순수 알룰로스 함량 또는 순탄수화물로 재해석하지 않는다. BP열 알룰로오스(g)는 빈칸이므로 함량/순도 추정 금지.",
+        "energy_contract": "2kcal/100g을0kcal로 바꾸지 않는다. 10g 계산값0.2kcal를 보존하고 화면에서만5kcal미만으로 표시할 수 있다.",
+        "unit_contract": "100g 기준. 밀도 근거 없이100ml로 취급하거나ml=g로 환산하지 않는다.",
+        "projection_csv_sha256": "cc7c4c2e7191c23a1b86e600c1cf18c33329719e2020222b8d6d3fe6a4bf343a",
+        "xlsx_csv_database_exact_match": true
+      }
+    },
+    {
+      "name": "버섯",
+      "active_recipe_rows": 2,
+      "current_amounts_g": [
+        50,
+        80
+      ],
+      "identity_status": "user_selected_king_oyster_representative",
+      "recommended_ingredient": "새송이버섯",
+      "recommended_profile": "f79b836f-6817-4e32-8a21-a59fcd3e97e2",
+      "database_evidence": [
+        "두 레시피 모두 source_type=manual이고 thumbnail_url과 origin_recipe_id가 없다.",
+        "두 레시피 모두 recipe_sources 행이 없어 외부 원문 링크가 없다.",
+        "저장된 재료·조리 단계는 버섯 종류와 생/건조 상태를 명시하지 않는다.",
+        "조회된 과거 내용 snapshot 1건에서도 버섯이라는 넓은 이름만 유지하며 제품 연결은 없다."
+      ],
+      "repository_evidence": "현재 저장소의 테스트·fixture·스크립트·SQL과 일반 파일에서 해당 레시피 제목, ID 및 고유 조리 문장으로 검색했으나 생성 원본이나 특정 종류 근거를 찾지 못했다. 비공개 원문과 ID는 이 파일에 복사하지 않았다.",
+      "next_action": "사용자 선택에 따라 두 레시피행만 기존 새송이버섯ID로 연결한다. 일반 버섯 umbrella는 전역 변경하지 않는다. 저장 중량50g/80g을 유지한다.",
+      "not_allowed": [
+        "일반 버섯 모든레시피/동의어를 새송이버섯으로 전역변경",
+        "사용자 결정을 원본의 종류 명시로 바꾸어 기록",
+        "새송이버섯 식이섬유 결측을0으로 채우기"
+      ],
+      "existing_canonical": {
+        "ingredient_id": "c7b43488-d336-44b3-bdf6-59f66399a292",
+        "link_id": "c796285d-ca78-4b8b-a76e-7b2b2980ac98",
+        "profile_id": "f79b836f-6817-4e32-8a21-a59fcd3e97e2",
+        "profile_kind": "ingredient_source",
+        "source_name": "청년의 품격 새송이버섯",
+        "food_code": "P116-702070100-0427",
+        "source_url": "https://various.foodsafetykorea.go.kr/nutrient/general/food/detail.do?searchFoodCd=P116-702070100-0427",
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "link_primary_approved_active": true,
+        "profile_approved_active": true,
+        "decision_reason": "사용자가 식약처 P116-702070100-0427 표시값을 새송이버섯 대표 성분으로 지정",
+        "values": {
+          "energy_kcal": 23,
+          "carbohydrate_g": 4.8,
+          "protein_g": 1.78,
+          "fat_g": 0.15,
+          "sugars_g": 2.63,
+          "sodium_mg": 0,
+          "saturated_fat_g": 0,
+          "fiber_g": null
+        },
+        "missing_preserved": [
+          "fiber_g"
+        ]
+      }
+    }
+  ],
+  "verification": {
+    "public_video_page_opened": true,
+    "public_product_panel_checked": true,
+    "paid_api_calls": 0,
+    "automatic_extraction_jobs": 0,
+    "raw_private_recipe_content_committed": false,
+    "exact_ingredient_links_recommended": 2,
+    "representative_product_candidate_verified": 1,
+    "database_writes": 0,
+    "allulose_seven_values_exact_xlsx_database": true,
+    "allulose_seven_values_exact_xlsx_csv_database": true
+  },
+  "limitations": [
+    "제품 패널은 조회일 현재 목록이며 게시 당시 제품 목록과 같다고 보장하지 않는다.",
+    "선택한 영상 프레임에서 특정하지 못한 사실은 해당 제품이 영상 전체에 나오지 않는다는 증거가 아니다.",
+    "기존 영양이 없는 이유를 식품 정의 불명과 수량 근거 부족으로 구분했다.",
+    "이전 미확정 판정은 당시 조사기록이며 사용자 후속답변으로 종류는 해소됐다. 브랜드는 미상이라 액상 알룰로스 선택은 서비스 대표 예시 정책이다."
+  ],
+  "user_clarification": {
+    "date": "2026-10-10",
+    "mushrooms": "두 야채볶음의 버섯은 새송이버섯 대표 사용",
+    "allulose": "알룰로스는 액상",
+    "source": "사용자의 후속 명시적 답변. 원문 판독으로 바꾸어 기록하지 않음"
+  },
+  "additional_user_selections": {
+    "date": "2026-10-10",
+    "scope": "original two identified recipe rows only; retain50g/30g",
+    "items": [
+      {
+        "name": "애호박",
+        "values": [
+          {
+            "code": "carbohydrate_g",
+            "token": "5.14",
+            "value": 5.14,
+            "status": "observed"
+          },
+          {
+            "code": "energy_kcal",
+            "token": "22",
+            "value": 22.0,
+            "status": "observed"
+          },
+          {
+            "code": "fat_g",
+            "token": "0.09",
+            "value": 0.09,
+            "status": "observed"
+          },
+          {
+            "code": "fiber_g",
+            "token": "2.2000000000000002",
+            "value": 2.2,
+            "status": "observed"
+          },
+          {
+            "code": "protein_g",
+            "token": "1.07",
+            "value": 1.07,
+            "status": "observed"
+          },
+          {
+            "code": "saturated_fat_g",
+            "token": "0.03",
+            "value": 0.03,
+            "status": "observed"
+          },
+          {
+            "code": "sodium_mg",
+            "token": "0",
+            "value": 0.0,
+            "status": "observed"
+          },
+          {
+            "code": "sugars_g",
+            "token": "2.4300000000000002",
+            "value": 2.43,
+            "status": "observed"
+          }
+        ],
+        "link_id": "e349427b-1350-4913-af9c-c7dd0e0f3bca",
+        "source_id": "e4f3b0b5-1488-441e-a07a-eb671c25a8f7",
+        "basis_unit": "g",
+        "profile_id": "dd29a21b-e8c3-4b94-b1ed-a224b10c8050",
+        "source_key": "1273",
+        "link_active": true,
+        "source_name": "호박, 애호박, 생것",
+        "basis_amount": 100.0,
+        "link_primary": true,
+        "ingredient_id": "a6259229-9eaf-471b-814d-97726e8665d4",
+        "profile_active": true,
+        "link_review_status": "approved",
+        "profile_review_status": "approved",
+        "original_xlsx": {
+          "file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+          "sheet": "6",
+          "row": 1349,
+          "cells": {
+            "A": "1273",
+            "C": "채소류",
+            "D": "호박, 애호박, 생것",
+            "E": "농진청('15)",
+            "F": "22",
+            "H": "1.07",
+            "I": "0.09",
+            "K": "5.14",
+            "L": "2.4300000000000002",
+            "S": "2.2000000000000002",
+            "AA": "0",
+            "CM": "0.03"
+          },
+          "basis": "per 100g Edible Portion"
+        },
+        "applies_to_rows": 1,
+        "original_amount_g": 50,
+        "selection_kind": "user_selected_representative",
+        "database_writes": 0,
+        "new_profile_required": false,
+        "form_note": "RDA appendix: Pumpkin, Young, Raw; Cucurbita moschata. Uses raw ingredient weight before grilling."
+      },
+      {
+        "name": "통조림 옥수수 가당",
+        "values": [
+          {
+            "code": "carbohydrate_g",
+            "token": "22.45",
+            "value": 22.45,
+            "status": "observed"
+          },
+          {
+            "code": "energy_kcal",
+            "token": "105",
+            "value": 105.0,
+            "status": "observed"
+          },
+          {
+            "code": "fat_g",
+            "token": "0.73",
+            "value": 0.73,
+            "status": "observed"
+          },
+          {
+            "code": "fiber_g",
+            "token": "1.3",
+            "value": 1.3,
+            "status": "observed"
+          },
+          {
+            "code": "protein_g",
+            "token": "2.0699999999999998",
+            "value": 2.07,
+            "status": "observed"
+          },
+          {
+            "code": "saturated_fat_g",
+            "token": "0.11",
+            "value": 0.11,
+            "status": "observed"
+          },
+          {
+            "code": "sodium_mg",
+            "token": "206",
+            "value": 206.0,
+            "status": "observed"
+          },
+          {
+            "code": "sugars_g",
+            "token": "4.17",
+            "value": 4.17,
+            "status": "observed"
+          }
+        ],
+        "link_id": "aa5bcc9b-1933-480c-9253-5dff246544cc",
+        "source_id": "48088022-75ef-4574-a473-67d085dd7153",
+        "basis_unit": "g",
+        "profile_id": "3f3df0ad-286a-4878-80bf-45dda2d77576",
+        "source_key": "364",
+        "link_active": true,
+        "source_name": "옥수수, 통조림, 가당",
+        "basis_amount": 100.0,
+        "link_primary": true,
+        "ingredient_id": "1de8bbc3-e83f-4f46-9691-97c1ea499637",
+        "profile_active": true,
+        "link_review_status": "approved",
+        "profile_review_status": "approved",
+        "original_xlsx": {
+          "file_sha256": "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50",
+          "sheet": "6",
+          "row": 386,
+          "cells": {
+            "A": "364",
+            "C": "곡류 및 그 제품",
+            "D": "옥수수, 통조림, 가당",
+            "E": "농진청('17)",
+            "F": "105",
+            "H": "2.0699999999999998",
+            "I": "0.73",
+            "K": "22.45",
+            "L": "4.17",
+            "S": "1.3",
+            "AA": "206",
+            "CM": "0.11"
+          },
+          "basis": "per 100g Edible Portion"
+        },
+        "applies_to_rows": 1,
+        "original_amount_g": 30,
+        "selection_kind": "user_selected_representative",
+        "database_writes": 0,
+        "new_profile_required": false,
+        "form_note": "RDA appendix: Corn, Canned, Sweetened. Cream type is separate item365. Original does not state drained or undrained; do not claim drained analytical precision."
+      }
+    ],
+    "verification": "both eight nutrients and per100g basis checked against original RDA workbook; active primary approved links/profiles verified; no new profiles or database writes"
+  }
+}
