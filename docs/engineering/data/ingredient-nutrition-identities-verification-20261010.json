@@ -1,0 +1,109 @@
+{
+  "schema": "homecook.ingredient-identity-completion.v1",
+  "verified_at": "2026-10-10T00:28:14.585Z",
+  "recipes": 53,
+  "ingredient_rows": 516,
+  "statuses": {
+    "complete": 46,
+    "partial": 7
+  },
+  "causes": {
+    "NUTRIENT_VALUE_MISSING": {
+      "occurrences": 67,
+      "rows": 38,
+      "ingredients": 23
+    },
+    "NUTRITION_PROFILE_MISSING": {
+      "occurrences": 2,
+      "rows": 2,
+      "ingredients": 2
+    },
+    "TO_TASTE_EXCLUDED": {
+      "occurrences": 9,
+      "rows": 9,
+      "ingredients": 6
+    }
+  },
+  "inventory": {
+    "ledger": 216,
+    "aliases": 4180,
+    "ai_enabled": false,
+    "ingredients": 1936,
+    "unsupported": 0
+  },
+  "api": {
+    "public_matches": 8,
+    "private_404": 1
+  },
+  "description_notices": 5,
+  "calculator_source_ref": "fa91963e43c1297a17ff528134a3590e7f503619",
+  "data_source_ref": "90e69eeb90f7982824442dd220b4354170455a50",
+  "production": {
+    "status": "committed",
+    "sql_sha256": "de46dd4399135ba3fea51090c6b26ff2c425d7ec5330e368bc4afe4bb82621ae",
+    "part_sha256": [
+      "eae279add593fbb97f2b28a24aa34553b52b78302420445f689cde0c61f70622",
+      "53b16eb39c2db4b0cf86dfd7880cf826d69a26d5cf0e96d11ede0246e1b11699",
+      "b178231f7ef3ee59da1b07a4b267987731cec7a6fe42ecfa35f1e43ab2b380d1"
+    ],
+    "backup_sha256": "4d8761811dfc8357bd819711f67c1e911198b94dd81a5029f1ffa023cefca6c5",
+    "counts": {
+      "new_ingredients": 4,
+      "new_base": 3,
+      "new_umbrella": 1,
+      "new_sources": 1,
+      "new_profiles": 3,
+      "new_values": 24,
+      "missing_fiber_values": 3,
+      "new_links": 3,
+      "new_aliases": 1,
+      "ai_jobs_skipped": 4
+    },
+    "normalization_repaired": 6,
+    "finished_at": "2026-10-10T00:27:06.988Z"
+  },
+  "preservation": {
+    "quantity_and_unit_unchanged": true,
+    "past_records_preserved": true,
+    "raw_kimchi_basis": "pre-wash cabbage kimchi 200g",
+    "new_nutrition_snapshots": 9,
+    "new_content_snapshots": 9
+  },
+  "verification": {
+    "clone_rollback": true,
+    "clone_replay_no_duplicates": true,
+    "actual_product_contributions": 9,
+    "screen_tests": 96,
+    "data_tests": 22,
+    "typecheck": "passed",
+    "targeted_eslint": "passed",
+    "independent_review": "no findings",
+    "owned_clone_removed": true,
+    "known_unrelated_test_failure": "recipe-detail-personal-actions static test expects router.refresh(); current deletion intentionally router.replace(destination)"
+  },
+  "web": {
+    "ref": "ed3ba74d7484883bf8fb3ccb4acd863a68f6bcbf",
+    "build_id": "prelaunch-ed3ba74d7484-gyfuqe",
+    "deploy_status": "loaded",
+    "recovery_pending": false,
+    "tests_passed": 192,
+    "build": "passed",
+    "embedded_lint": "existing react-hooks module resolution warning; targeted lint passed"
+  },
+  "ui": {
+    "verified_at": "2026-10-10T00:39:33.763162+00:00",
+    "desktop": "passed",
+    "mobile_viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "mobile_document_width": 375,
+    "mobile_scroll_width": 375,
+    "description_initially_collapsed": true,
+    "expanded_prewash_kimchi_notice": true,
+    "cabbage_kimchi_200g": true,
+    "washing_steps_preserved": true,
+    "new_dataset_representative_notice": true,
+    "viewport_restored": true
+  }
+}
