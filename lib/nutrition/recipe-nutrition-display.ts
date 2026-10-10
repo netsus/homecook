@@ -62,6 +62,7 @@ const UNAVAILABLE_TEXT = "정보 준비 중";
 // identified nutrition datasets qualify; the provider also supplies weights.
 const REPRESENTATIVE_NUTRITION_DATASETS = new Set([
   "Homecook 제품 라벨 기반 서비스 대표 예시 20261010",
+  "Homecook 제품 라벨 기반 서비스 대표 예시 20261010 · 정체성 보완",
   "Homecook 대표재료 영양 프로필",
   "Homecook 사용자 승인 영양 프로필",
 ]);

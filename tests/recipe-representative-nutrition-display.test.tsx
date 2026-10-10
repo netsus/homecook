@@ -11,7 +11,7 @@ const nutrition: RecipeNutrition = { basis: { amount: 1, unit: "serving" }, base
 afterEach(cleanup);
 
 describe("recipe representative nutrition attribution", () => {
-  it.each([source.dataset, "Homecook 대표재료 영양 프로필", "Homecook 사용자 승인 영양 프로필"])("explains the identified nutrition dataset %s inside the existing details", dataset => {
+  it.each([source.dataset, "Homecook 제품 라벨 기반 서비스 대표 예시 20261010 · 정체성 보완", "Homecook 대표재료 영양 프로필", "Homecook 사용자 승인 영양 프로필"])("explains the identified nutrition dataset %s inside the existing details", dataset => {
     render(<RecipeNutritionCard nutrition={{ ...nutrition, sources: [{ ...source, dataset }] }} selectedServings={1} onRetry={vi.fn()} />);
     expect(screen.getByText(message).closest("details")).toBeTruthy();
     expect(screen.getByText("5 kcal 미만")).toBeTruthy();
