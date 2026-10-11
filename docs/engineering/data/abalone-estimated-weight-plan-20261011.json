@@ -1,0 +1,159 @@
+{
+  "schema": "homecook.abalone-estimated-weight.v1",
+  "reviewed_on": "2026-10-11",
+  "reason": "사용자가 승인한 전복 1개 먹는 부분 50g으로 변경. 원문 수량·단위와 공식 영양값·과거 기록은 보존한다.",
+  "decisions": [
+    {
+      "ingredient_id": "ddf68557-ec77-5047-93c6-d0cb6c292c6d",
+      "ingredient_name": "전복",
+      "table": "piece_unit_weights",
+      "old_link_id": "dece2077-458a-44ae-bbd4-878ae72f596f",
+      "new_link_id": "f0b76026-09f0-51ab-8f24-e690ab0cf82c",
+      "old_evidence_id": "a36d83d4-75a5-4461-b6b3-c1f8490b24eb",
+      "new_evidence_id": "6b228501-486f-53e5-8cc4-5e42f50a5a91",
+      "old_source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "new_source_id": "2a34b972-5704-5b99-8db4-442e0d498915",
+      "raw_source_observation": {
+        "amount": 1,
+        "unit": "개",
+        "weight_g": 50,
+        "method": "user_approved_ai_estimate",
+        "actually_measured": false,
+        "official_reference": false,
+        "excluded_parts": [
+          "껍데기",
+          "입"
+        ],
+        "organ_handling": "recipe_specific",
+        "size_meaning": "service_default_not_physical_standard"
+      },
+      "old_link_payload": {
+        "id": "dece2077-458a-44ae-bbd4-878ae72f596f",
+        "version": 1,
+        "weight_g": 100,
+        "size_code": "medium",
+        "created_at": "2026-09-14T23:52:37.494065+00:00",
+        "evidence_id": "a36d83d4-75a5-4461-b6b3-c1f8490b24eb",
+        "ingredient_id": "ddf68557-ec77-5047-93c6-d0cb6c292c6d",
+        "preparation_state": "as_published"
+      },
+      "previous_weight_g": 100,
+      "applied_weight_g": 50,
+      "unit": "개",
+      "preparation_state": "as_published",
+      "limitation": "사용자 승인 AI 추정 중량. 전복 1개에서 껍데기·입을 제외한 먹는 부분 약 50g을 서비스 기본값으로 사용한다. 내장 포함 여부는 레시피별 손질 방식에 따르며 일정한 내장 비율은 추정하지 않는다. 공식 계량자료나 실제 측정값이 아니며 medium은 서비스 기본 크기 코드이고 물리적 크기 규격이 아니다. 실제 측정 g 입력을 우선한다."
+    }
+  ],
+  "inserts": [
+    {
+      "table": "nutrition_sources",
+      "row": {
+        "review_status": "approved",
+        "is_active": true,
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T07:05:23.143Z",
+        "created_at": "2026-10-11T07:05:23.143Z",
+        "superseded_by_id": null,
+        "id": "2a34b972-5704-5b99-8db4-442e0d498915",
+        "source_kind": "measurement_reference",
+        "fetched_at": "2026-10-11T07:05:23.143Z",
+        "freshness_checked_at": "2026-10-11T07:05:23.143Z",
+        "freshness_status": "current",
+        "priority_rank": null,
+        "license_name": "Service-authored user-approved estimate; not an official measurement",
+        "license_url": null,
+        "decision_reason": "사용자 승인 AI 추정 중량. 전복 1개에서 껍데기·입을 제외한 먹는 부분 약 50g을 서비스 기본값으로 사용한다. 내장 포함 여부는 레시피별 손질 방식에 따르며 일정한 내장 비율은 추정하지 않는다. 공식 계량자료나 실제 측정값이 아니며 medium은 서비스 기본 크기 코드이고 물리적 크기 규격이 아니다. 실제 측정 g 입력을 우선한다.",
+        "provider_code": "HOMECOOK_USER_STANDARD",
+        "dataset_name": "사용자 승인 AI 추정 중량 20261011 · 전복",
+        "source_version": "user-approved-ai-estimate-20261011",
+        "source_url": "https://github.com/netsus/homecook/blob/master/docs/engineering/data/abalone-estimated-weight-plan-20261011.json",
+        "manifest_sha256": "b278b8f273a662ddcd0180e1aedefa8ba0eebc09708e74fc1da7d26886e8fc94",
+        "data_basis_date": "2026-10-11"
+      }
+    },
+    {
+      "table": "measurement_source_evidence",
+      "row": {
+        "review_status": "approved",
+        "is_active": true,
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T07:05:23.143Z",
+        "created_at": "2026-10-11T07:05:23.143Z",
+        "superseded_by_id": null,
+        "id": "6b228501-486f-53e5-8cc4-5e42f50a5a91",
+        "version": 1,
+        "source_id": "2a34b972-5704-5b99-8db4-442e0d498915",
+        "source_item_id": null,
+        "evidence_kind": "piece_weight",
+        "source_subject": "전복",
+        "preparation_state": "as_published",
+        "size_code": "medium",
+        "source_observed_unit": "개",
+        "source_observed_amount": 1,
+        "observed_volume_ml": null,
+        "normalized_g_per_15ml": null,
+        "observed_weight_g": 50,
+        "source_url": "https://github.com/netsus/homecook/blob/master/docs/engineering/data/abalone-estimated-weight-plan-20261011.json",
+        "source_accessed_at": "2026-10-11",
+        "evidence_fingerprint": "b278b8f273a662ddcd0180e1aedefa8ba0eebc09708e74fc1da7d26886e8fc94",
+        "decision_reason": "사용자 승인 AI 추정 중량. 전복 1개에서 껍데기·입을 제외한 먹는 부분 약 50g을 서비스 기본값으로 사용한다. 내장 포함 여부는 레시피별 손질 방식에 따르며 일정한 내장 비율은 추정하지 않는다. 공식 계량자료나 실제 측정값이 아니며 medium은 서비스 기본 크기 코드이고 물리적 크기 규격이 아니다. 실제 측정 g 입력을 우선한다."
+      }
+    },
+    {
+      "table": "piece_unit_weights",
+      "row": {
+        "review_status": "approved",
+        "is_active": true,
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T07:05:23.143Z",
+        "created_at": "2026-10-11T07:05:23.143Z",
+        "superseded_by_id": null,
+        "id": "f0b76026-09f0-51ab-8f24-e690ab0cf82c",
+        "version": 2,
+        "ingredient_id": "ddf68557-ec77-5047-93c6-d0cb6c292c6d",
+        "evidence_id": "6b228501-486f-53e5-8cc4-5e42f50a5a91",
+        "size_code": "medium",
+        "preparation_state": "as_published",
+        "weight_g": 50,
+        "decision_reason": "사용자 승인 AI 추정 중량. 전복 1개에서 껍데기·입을 제외한 먹는 부분 약 50g을 서비스 기본값으로 사용한다. 내장 포함 여부는 레시피별 손질 방식에 따르며 일정한 내장 비율은 추정하지 않는다. 공식 계량자료나 실제 측정값이 아니며 medium은 서비스 기본 크기 코드이고 물리적 크기 규격이 아니다. 실제 측정 g 입력을 우선한다."
+      }
+    }
+  ],
+  "updates": [
+    {
+      "table": "piece_unit_weights",
+      "id": "dece2077-458a-44ae-bbd4-878ae72f596f",
+      "after": {
+        "review_status": "superseded",
+        "is_active": false,
+        "superseded_by_id": "f0b76026-09f0-51ab-8f24-e690ab0cf82c",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T07:05:23.143Z",
+        "decision_reason": "사용자 승인 AI 추정 중량 50g 후속 연결로 대체. 원래 100g 데이터와 근거는 과거 기록용으로 보존."
+      }
+    }
+  ],
+  "preconditions": [
+    {
+      "table": "ingredients",
+      "id": "ddf68557-ec77-5047-93c6-d0cb6c292c6d",
+      "md5": "00b63a0eb754cdb8dbbb06ec540e9894"
+    },
+    {
+      "table": "piece_unit_weights",
+      "id": "dece2077-458a-44ae-bbd4-878ae72f596f",
+      "md5": "d775af9a2a21a96cf7267d5de61d2fc7"
+    },
+    {
+      "table": "measurement_source_evidence",
+      "id": "a36d83d4-75a5-4461-b6b3-c1f8490b24eb",
+      "md5": "88557a5309d93f9e8306221e1181c517"
+    },
+    {
+      "table": "nutrition_sources",
+      "id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "md5": "0f0f5eba125f2115d38d0522fc3dbc3f"
+    }
+  ],
+  "operation_checksum": "b07cd341bde5f97c95496a9a9d6b37dacce1247e8c7647e659c9d5a060acede0"
+}
