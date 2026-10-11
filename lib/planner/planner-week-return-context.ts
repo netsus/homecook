@@ -64,7 +64,14 @@ function parseContext(value: unknown): PlannerWeekReturnContext | null {
     return null;
   }
 
-  return value as unknown as PlannerWeekReturnContext;
+  return {
+    version: 1,
+    startDate: value.startDate,
+    endDate: value.endDate,
+    selectedDate: value.selectedDate,
+    columnId: value.columnId,
+    slotName: value.slotName,
+  };
 }
 
 export function clearPlannerWeekReturnContext() {

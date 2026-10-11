@@ -86,7 +86,9 @@ function isSource(value: unknown): value is FoodProductListSource {
   return value === "all" || value === "public_dataset" || value === "manual";
 }
 
-function isBase(value: Record<string, unknown>) {
+function isBase(
+  value: Record<string, unknown>,
+): value is Record<string, unknown> & BaseReturnContext {
   return (
     value.version === 1 &&
     isSafeText(value.planDate, 32) &&
@@ -195,7 +197,22 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
       (value.quantityAmount !== undefined && !isSafeText(value.quantityAmount, 40)) ||
       (value.quantityUnit !== undefined && !isUnit(value.quantityUnit))
     ) return null;
-    return value as unknown as ProductMealEntryReturnContext;
+    const context: ProductMealEntryReturnContext = {
+      version: 1,
+      kind: "meal-entry",
+      planDate: value.planDate,
+      columnId: value.columnId,
+      slotName: value.slotName,
+      entryId: value.entryId,
+      action: value.action,
+    };
+    if (value.quantityAmount !== undefined) {
+      context.quantityAmount = value.quantityAmount;
+    }
+    if (value.quantityUnit !== undefined) {
+      context.quantityUnit = value.quantityUnit;
+    }
+    return context;
   }
 
   return null;
