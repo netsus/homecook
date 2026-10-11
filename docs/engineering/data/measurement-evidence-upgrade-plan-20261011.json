@@ -1,0 +1,522 @@
+{
+  "schema": "homecook.measurement-evidence-upgrade.v1",
+  "reviewed_on": "2026-10-11",
+  "reason": "기존 수치를 변경하지 않고 확인된 공식 레시피·제조사 계량 근거로 연결 보완. 원문분수와 단위당 정규화 사실을 분리 기록한다.",
+  "decisions": [
+    {
+      "ingredient_id": "1e49f4be-6b94-4e7f-a492-a68134881e98",
+      "ingredient_name": "청양고추",
+      "table": "piece_unit_weights",
+      "old_link_id": "9c922c29-189d-42ba-ae7d-a07ae7edd71f",
+      "new_link_id": "72c6d424-f94c-57aa-a23b-bb5fc713d5a9",
+      "old_evidence_id": "20a26666-1748-4767-8671-8480cce4396b",
+      "new_evidence_id": "8000140b-ed53-579e-a3a6-45b111d2245e",
+      "old_source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "new_source_id": "68771b27-2272-52ea-a082-a8fcc8354a2d",
+      "raw_source_observation": {
+        "amount_literal": "1",
+        "unit": "개",
+        "weight_g": 10,
+        "approximate": false,
+        "pdf_page_1based": 61
+      },
+      "normalization": "10g ÷ 1개 = 10g/개",
+      "old_link_payload": {
+        "id": "9c922c29-189d-42ba-ae7d-a07ae7edd71f",
+        "version": 1,
+        "weight_g": 10,
+        "size_code": "medium",
+        "created_at": "2026-09-14T14:18:34.083481+00:00",
+        "evidence_id": "20a26666-1748-4767-8671-8480cce4396b",
+        "ingredient_id": "1e49f4be-6b94-4e7f-a492-a68134881e98",
+        "preparation_state": "as_published"
+      },
+      "applied_weight_g": 10,
+      "applied_volume_ml": null,
+      "unit": "개",
+      "preparation_state": "as_published",
+      "source_kind": "official_recipe_parallel_measurement",
+      "limitation": "청양고추 10g(1개); 10g ÷ 1개 = 10g/개. 런타임 단위당 정규화:1개=10g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 공식기관의 레시피 계량사례. 시장 전체 중간크기 규격이나 통계 대표값으로 승격하지 않는다. 재료 준비의 생청양고추를 어슷썰어 조림에 넣는 순서. 익힌 고추의 계량으로 읽지 않음. 꼭지제거 여부 명문은 없어 source 상태는 as_published 유지.같은 PDF39쪽 주재료에는 청양고추6g(1/3개)=18g도 있어10g이 유일한 공식 개당값이라는 주장 금지."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440010",
+      "ingredient_name": "양파",
+      "table": "piece_unit_weights",
+      "old_link_id": "9765295b-11e9-4212-902a-e132424458b8",
+      "new_link_id": "55f8c331-7442-53ca-a4e8-7a0d582e823b",
+      "old_evidence_id": "54b8893b-69be-401e-a89c-0d59920c6ecc",
+      "new_evidence_id": "c0d158a5-8e28-55b2-a31e-3c1d285de443",
+      "old_source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "new_source_id": "68771b27-2272-52ea-a082-a8fcc8354a2d",
+      "raw_source_observation": {
+        "amount_literal": "1/8",
+        "unit": "개",
+        "weight_g": 20,
+        "approximate": false,
+        "pdf_page_1based": 64
+      },
+      "normalization": "20g ÷ (1/8개) = 160g/개",
+      "old_link_payload": {
+        "id": "9765295b-11e9-4212-902a-e132424458b8",
+        "version": 1,
+        "weight_g": 160,
+        "size_code": "medium",
+        "created_at": "2026-09-14T14:18:34.083481+00:00",
+        "evidence_id": "54b8893b-69be-401e-a89c-0d59920c6ecc",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440010",
+        "preparation_state": "as_published"
+      },
+      "applied_weight_g": 160,
+      "applied_volume_ml": null,
+      "unit": "개",
+      "preparation_state": "as_published",
+      "source_kind": "official_recipe_parallel_measurement",
+      "limitation": "양파 20g(1/8개); 20g ÷ (1/8개) = 160g/개. 런타임 단위당 정규화:1개=160g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 1/8개20g의 비례환산. USDA chopped cup160g과 별개. 껍질/손질 상태는 레시피 맥락 이상으로 확정하지 않는다. 재료 준비 양파를 썬 뒤 익히는 순서로 생양파 투입기준과 모순 없음. 겉껍질제거 명문은 없어 source 상태as_published 유지."
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440017",
+      "ingredient_name": "두부",
+      "table": "piece_unit_weights",
+      "old_link_id": "b53e94ce-dca3-4ab3-b4b0-8d8561d4b295",
+      "new_link_id": "30bbab96-89ff-5fa3-aba4-b892e8a7b63c",
+      "old_evidence_id": "2b53fc54-74cd-4741-a1b2-32480eb1eab5",
+      "new_evidence_id": "2a3ccceb-1a43-50eb-a55e-b12165f4415a",
+      "old_source_id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "new_source_id": "68771b27-2272-52ea-a082-a8fcc8354a2d",
+      "raw_source_observation": {
+        "amount_literal": "1/3",
+        "unit": "모",
+        "weight_g": 100,
+        "approximate": false,
+        "pdf_page_1based": 88
+      },
+      "normalization": "100g ÷ (1/3모) = 300g/모; 분수1/3을 십진근사로 나눈299.999... 대신 원문분수 정규화.",
+      "old_link_payload": {
+        "id": "b53e94ce-dca3-4ab3-b4b0-8d8561d4b295",
+        "version": 1,
+        "weight_g": 300,
+        "size_code": "medium",
+        "created_at": "2026-09-14T17:30:28.659173+00:00",
+        "evidence_id": "2b53fc54-74cd-4741-a1b2-32480eb1eab5",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440017",
+        "preparation_state": "as_published"
+      },
+      "applied_weight_g": 300,
+      "applied_volume_ml": null,
+      "unit": "모",
+      "preparation_state": "as_published",
+      "source_kind": "official_recipe_parallel_measurement",
+      "limitation": "두부 100g(1/3모); 100g ÷ (1/3모) = 300g/모; 분수1/3을 십진근사로 나눈299.999... 대신 원문분수 정규화.. 런타임 단위당 정규화:1모=300g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 레시피의 모 크기만 확인. 모든 포장두부가300g이라는 근거가 아님. 재료 준비 두부를 자른 뒤 데치므로 데친후100g으로 해석하지 않음. 순두부/연두부가 아닌 일반두부. 포장수가 포함된 질량으로 확정하지 않음."
+    },
+    {
+      "ingredient_id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+      "ingredient_name": "식용유",
+      "table": "ingredient_conversion_assignments",
+      "old_link_id": "4b335515-5352-43fe-aa2d-0ef05ef5a15d",
+      "new_link_id": "37a7a587-6b56-585b-a46c-2a715e8763dd",
+      "old_evidence_id": "cb998541-1950-4f3f-8a02-0d7ee135a23f",
+      "new_evidence_id": "1359e27a-551a-5195-a5a1-a71b0310ef05",
+      "old_source_id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "new_source_id": "56c053b1-341e-5de4-ac7f-b5e9002170eb",
+      "raw_source_observation": {
+        "amount_literal": "1",
+        "unit": "큰술",
+        "volume_ml": 15,
+        "weight_g": 14,
+        "approximate": true,
+        "pdf_page_1based": 9
+      },
+      "normalization": "14g/15ml 유지",
+      "old_link_payload": {
+        "id": "4b335515-5352-43fe-aa2d-0ef05ef5a15d",
+        "version": 1,
+        "created_at": "2026-09-15T22:20:39.833452+00:00",
+        "evidence_id": "cb998541-1950-4f3f-8a02-0d7ee135a23f",
+        "ingredient_id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+        "candidate_rank": 1,
+        "confidence_score": 1,
+        "preparation_state": "as_published",
+        "distance_g_per_15ml": 1,
+        "conversion_profile_id": "71000000-0000-4000-8000-000000000015"
+      },
+      "applied_weight_g": 14,
+      "applied_volume_ml": 15,
+      "unit": "큰술",
+      "preparation_state": "as_published",
+      "source_kind": "manufacturer_approximate_measurement",
+      "limitation": "15ml 계량스푼 식용유 약14g 제조사 안내를 기존14g/15ml 대표값에 연결. 실제 제품·온도·계량도구에 따라 달라지는 근사값이며 모든 기름/가정용 숟가락 확정값이 아님."
+    }
+  ],
+  "inserts": [
+    {
+      "table": "nutrition_sources",
+      "row": {
+        "id": "68771b27-2272-52ea-a082-a8fcc8354a2d",
+        "source_kind": "measurement_reference",
+        "fetched_at": "2026-10-11T06:19:45.007Z",
+        "freshness_checked_at": "2026-10-11T06:19:45.007Z",
+        "freshness_status": "current",
+        "priority_rank": null,
+        "license_name": "Source terms apply; factual measurement citation only",
+        "license_url": null,
+        "review_status": "approved",
+        "decision_reason": "공식 레시피에 병기된 분량을 단위당으로 정규화한 보조근거. 전국 중간크기 규격·통계 대표값·직접 실측으로 단정하지 않는다.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "provider_code": "MFDS_RECIPE_CORROBORATION",
+        "dataset_name": "식약처 공식 레시피 병기량 · 기존 서비스 대표중량 근거 보완 20261011",
+        "source_version": "삼삼한밥상II · URL upload20170417 · reviewed20261011",
+        "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+        "manifest_sha256": "f3ae4dce2cbde7e8024932ee7e87d20bd76230009848dbc7b3813dd4e4e42f6c",
+        "data_basis_date": null
+      }
+    },
+    {
+      "table": "nutrition_sources",
+      "row": {
+        "id": "56c053b1-341e-5de4-ac7f-b5e9002170eb",
+        "source_kind": "measurement_reference",
+        "fetched_at": "2026-10-11T06:19:45.007Z",
+        "freshness_checked_at": "2026-10-11T06:19:45.007Z",
+        "freshness_status": "current",
+        "priority_rank": null,
+        "license_name": "Source terms apply; factual measurement citation only",
+        "license_url": null,
+        "review_status": "approved",
+        "decision_reason": "제조사 안내의 15ml 약14g. 실험실 정밀밀도·모든 종류 기름의 확정값이 아니며 기존 식용유 대표값만 보강한다.",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "is_active": true,
+        "superseded_by_id": null,
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "provider_code": "NISSHIN_MANUFACTURER_APPROX",
+        "dataset_name": "닛신오일리오 식용유 계량스푼 약중량 2026",
+        "source_version": "2026-reviewed-20261011",
+        "source_url": "https://www.nisshin-oillio.com/oil/pdf/book.pdf",
+        "manifest_sha256": "3192fc043fc3839ce788b8fe7a19600f50ae68e583f3748971d3881491b25527",
+        "data_basis_date": null
+      }
+    },
+    {
+      "table": "measurement_source_evidence",
+      "row": {
+        "id": "8000140b-ed53-579e-a3a6-45b111d2245e",
+        "version": 1,
+        "is_active": true,
+        "size_code": "medium",
+        "source_id": "68771b27-2272-52ea-a082-a8fcc8354a2d",
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf#page=61",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "evidence_kind": "piece_weight",
+        "review_status": "approved",
+        "source_item_id": null,
+        "source_subject": "청양고추",
+        "decision_reason": "청양고추 10g(1개); 10g ÷ 1개 = 10g/개. 런타임 단위당 정규화:1개=10g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 공식기관의 레시피 계량사례. 시장 전체 중간크기 규격이나 통계 대표값으로 승격하지 않는다. 재료 준비의 생청양고추를 어슷썰어 조림에 넣는 순서. 익힌 고추의 계량으로 읽지 않음. 꼭지제거 여부 명문은 없어 source 상태는 as_published 유지.같은 PDF39쪽 주재료에는 청양고추6g(1/3개)=18g도 있어10g이 유일한 공식 개당값이라는 주장 금지.",
+        "superseded_by_id": null,
+        "observed_weight_g": 10,
+        "preparation_state": "as_published",
+        "observed_volume_ml": null,
+        "source_accessed_at": "2026-10-11",
+        "evidence_fingerprint": "3e071b1e06784676d52674a0fd360f3d74e75fb3adf1c05cc43c5ec30ed0c5c8",
+        "source_observed_unit": "개",
+        "normalized_g_per_15ml": null,
+        "source_observed_amount": 1
+      }
+    },
+    {
+      "table": "piece_unit_weights",
+      "row": {
+        "id": "72c6d424-f94c-57aa-a23b-bb5fc713d5a9",
+        "version": 2,
+        "weight_g": 10,
+        "is_active": true,
+        "size_code": "medium",
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "evidence_id": "8000140b-ed53-579e-a3a6-45b111d2245e",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "ingredient_id": "1e49f4be-6b94-4e7f-a492-a68134881e98",
+        "review_status": "approved",
+        "decision_reason": "청양고추 10g(1개); 10g ÷ 1개 = 10g/개. 런타임 단위당 정규화:1개=10g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 공식기관의 레시피 계량사례. 시장 전체 중간크기 규격이나 통계 대표값으로 승격하지 않는다. 재료 준비의 생청양고추를 어슷썰어 조림에 넣는 순서. 익힌 고추의 계량으로 읽지 않음. 꼭지제거 여부 명문은 없어 source 상태는 as_published 유지.같은 PDF39쪽 주재료에는 청양고추6g(1/3개)=18g도 있어10g이 유일한 공식 개당값이라는 주장 금지.",
+        "superseded_by_id": null,
+        "preparation_state": "as_published"
+      }
+    },
+    {
+      "table": "measurement_source_evidence",
+      "row": {
+        "id": "c0d158a5-8e28-55b2-a31e-3c1d285de443",
+        "version": 1,
+        "is_active": true,
+        "size_code": "medium",
+        "source_id": "68771b27-2272-52ea-a082-a8fcc8354a2d",
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf#page=64",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "evidence_kind": "piece_weight",
+        "review_status": "approved",
+        "source_item_id": null,
+        "source_subject": "양파",
+        "decision_reason": "양파 20g(1/8개); 20g ÷ (1/8개) = 160g/개. 런타임 단위당 정규화:1개=160g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 1/8개20g의 비례환산. USDA chopped cup160g과 별개. 껍질/손질 상태는 레시피 맥락 이상으로 확정하지 않는다. 재료 준비 양파를 썬 뒤 익히는 순서로 생양파 투입기준과 모순 없음. 겉껍질제거 명문은 없어 source 상태as_published 유지.",
+        "superseded_by_id": null,
+        "observed_weight_g": 160,
+        "preparation_state": "as_published",
+        "observed_volume_ml": null,
+        "source_accessed_at": "2026-10-11",
+        "evidence_fingerprint": "b8c20ac6653fd2a916ffbfcbf1bf9efeeed57a333268f750ca1a6dd51cd52d0b",
+        "source_observed_unit": "개",
+        "normalized_g_per_15ml": null,
+        "source_observed_amount": 1
+      }
+    },
+    {
+      "table": "piece_unit_weights",
+      "row": {
+        "id": "55f8c331-7442-53ca-a4e8-7a0d582e823b",
+        "version": 2,
+        "weight_g": 160,
+        "is_active": true,
+        "size_code": "medium",
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "evidence_id": "c0d158a5-8e28-55b2-a31e-3c1d285de443",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440010",
+        "review_status": "approved",
+        "decision_reason": "양파 20g(1/8개); 20g ÷ (1/8개) = 160g/개. 런타임 단위당 정규화:1개=160g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 1/8개20g의 비례환산. USDA chopped cup160g과 별개. 껍질/손질 상태는 레시피 맥락 이상으로 확정하지 않는다. 재료 준비 양파를 썬 뒤 익히는 순서로 생양파 투입기준과 모순 없음. 겉껍질제거 명문은 없어 source 상태as_published 유지.",
+        "superseded_by_id": null,
+        "preparation_state": "as_published"
+      }
+    },
+    {
+      "table": "measurement_source_evidence",
+      "row": {
+        "id": "2a3ccceb-1a43-50eb-a55e-b12165f4415a",
+        "version": 1,
+        "is_active": true,
+        "size_code": "medium",
+        "source_id": "68771b27-2272-52ea-a082-a8fcc8354a2d",
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "source_url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf#page=88",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "evidence_kind": "piece_weight",
+        "review_status": "approved",
+        "source_item_id": null,
+        "source_subject": "두부",
+        "decision_reason": "두부 100g(1/3모); 100g ÷ (1/3모) = 300g/모; 분수1/3을 십진근사로 나눈299.999... 대신 원문분수 정규화.. 런타임 단위당 정규화:1모=300g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 레시피의 모 크기만 확인. 모든 포장두부가300g이라는 근거가 아님. 재료 준비 두부를 자른 뒤 데치므로 데친후100g으로 해석하지 않음. 순두부/연두부가 아닌 일반두부. 포장수가 포함된 질량으로 확정하지 않음.",
+        "superseded_by_id": null,
+        "observed_weight_g": 300,
+        "preparation_state": "as_published",
+        "observed_volume_ml": null,
+        "source_accessed_at": "2026-10-11",
+        "evidence_fingerprint": "fc31e8da638786d5ff7a26a75060476099637115749c26cc469160db147726aa",
+        "source_observed_unit": "모",
+        "normalized_g_per_15ml": null,
+        "source_observed_amount": 1
+      }
+    },
+    {
+      "table": "piece_unit_weights",
+      "row": {
+        "id": "30bbab96-89ff-5fa3-aba4-b892e8a7b63c",
+        "version": 2,
+        "weight_g": 300,
+        "is_active": true,
+        "size_code": "medium",
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "evidence_id": "2a3ccceb-1a43-50eb-a55e-b12165f4415a",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "ingredient_id": "550e8400-e29b-41d4-a716-446655440017",
+        "review_status": "approved",
+        "decision_reason": "두부 100g(1/3모); 100g ÷ (1/3모) = 300g/모; 분수1/3을 십진근사로 나눈299.999... 대신 원문분수 정규화.. 런타임 단위당 정규화:1모=300g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 레시피의 모 크기만 확인. 모든 포장두부가300g이라는 근거가 아님. 재료 준비 두부를 자른 뒤 데치므로 데친후100g으로 해석하지 않음. 순두부/연두부가 아닌 일반두부. 포장수가 포함된 질량으로 확정하지 않음.",
+        "superseded_by_id": null,
+        "preparation_state": "as_published"
+      }
+    },
+    {
+      "table": "measurement_source_evidence",
+      "row": {
+        "id": "1359e27a-551a-5195-a5a1-a71b0310ef05",
+        "version": 1,
+        "is_active": true,
+        "size_code": null,
+        "source_id": "56c053b1-341e-5de4-ac7f-b5e9002170eb",
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "source_url": "https://www.nisshin-oillio.com/oil/pdf/book.pdf#page=9",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "evidence_kind": "volume_weight",
+        "review_status": "approved",
+        "source_item_id": null,
+        "source_subject": "식용유",
+        "decision_reason": "15ml 계량스푼 식용유 약14g 제조사 안내를 기존14g/15ml 대표값에 연결. 실제 제품·온도·계량도구에 따라 달라지는 근사값이며 모든 기름/가정용 숟가락 확정값이 아님.",
+        "superseded_by_id": null,
+        "observed_weight_g": 14,
+        "preparation_state": "as_published",
+        "observed_volume_ml": 15,
+        "source_accessed_at": "2026-10-11",
+        "evidence_fingerprint": "ec24dd49b6e5421c68c9b066448af152e9bda42f1e10bd607641de4e6d0a3cf6",
+        "source_observed_unit": "큰술",
+        "normalized_g_per_15ml": 14,
+        "source_observed_amount": 1
+      }
+    },
+    {
+      "table": "ingredient_conversion_assignments",
+      "row": {
+        "id": "37a7a587-6b56-585b-a46c-2a715e8763dd",
+        "version": 2,
+        "is_active": true,
+        "created_at": "2026-10-11T06:19:45.007Z",
+        "evidence_id": "1359e27a-551a-5195-a5a1-a71b0310ef05",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "ingredient_id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+        "review_status": "approved",
+        "candidate_rank": 1,
+        "confidence_score": 1,
+        "superseded_by_id": null,
+        "assignment_reason": "15ml 계량스푼 식용유 약14g 제조사 안내를 기존14g/15ml 대표값에 연결. 실제 제품·온도·계량도구에 따라 달라지는 근사값이며 모든 기름/가정용 숟가락 확정값이 아님.",
+        "preparation_state": "as_published",
+        "distance_g_per_15ml": 1,
+        "conversion_profile_id": "71000000-0000-4000-8000-000000000015"
+      }
+    }
+  ],
+  "updates": [
+    {
+      "table": "piece_unit_weights",
+      "id": "9c922c29-189d-42ba-ae7d-a07ae7edd71f",
+      "after": {
+        "review_status": "superseded",
+        "is_active": false,
+        "superseded_by_id": "72c6d424-f94c-57aa-a23b-bb5fc713d5a9",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "decision_reason": "동일 수치의 확인된 계량 근거를 연결한 후속 버전으로 대체. 청양고추 10g(1개); 10g ÷ 1개 = 10g/개. 런타임 단위당 정규화:1개=10g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 공식기관의 레시피 계량사례. 시장 전체 중간크기 규격이나 통계 대표값으로 승격하지 않는다. 재료 준비의 생청양고추를 어슷썰어 조림에 넣는 순서. 익힌 고추의 계량으로 읽지 않음. 꼭지제거 여부 명문은 없어 source 상태는 as_published 유지.같은 PDF39쪽 주재료에는 청양고추6g(1/3개)=18g도 있어10g이 유일한 공식 개당값이라는 주장 금지."
+      }
+    },
+    {
+      "table": "piece_unit_weights",
+      "id": "9765295b-11e9-4212-902a-e132424458b8",
+      "after": {
+        "review_status": "superseded",
+        "is_active": false,
+        "superseded_by_id": "55f8c331-7442-53ca-a4e8-7a0d582e823b",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "decision_reason": "동일 수치의 확인된 계량 근거를 연결한 후속 버전으로 대체. 양파 20g(1/8개); 20g ÷ (1/8개) = 160g/개. 런타임 단위당 정규화:1개=160g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 1/8개20g의 비례환산. USDA chopped cup160g과 별개. 껍질/손질 상태는 레시피 맥락 이상으로 확정하지 않는다. 재료 준비 양파를 썬 뒤 익히는 순서로 생양파 투입기준과 모순 없음. 겉껍질제거 명문은 없어 source 상태as_published 유지."
+      }
+    },
+    {
+      "table": "piece_unit_weights",
+      "id": "b53e94ce-dca3-4ab3-b4b0-8d8561d4b295",
+      "after": {
+        "review_status": "superseded",
+        "is_active": false,
+        "superseded_by_id": "30bbab96-89ff-5fa3-aba4-b892e8a7b63c",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "decision_reason": "동일 수치의 확인된 계량 근거를 연결한 후속 버전으로 대체. 두부 100g(1/3모); 100g ÷ (1/3모) = 300g/모; 분수1/3을 십진근사로 나눈299.999... 대신 원문분수 정규화.. 런타임 단위당 정규화:1모=300g. 공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님. 레시피의 모 크기만 확인. 모든 포장두부가300g이라는 근거가 아님. 재료 준비 두부를 자른 뒤 데치므로 데친후100g으로 해석하지 않음. 순두부/연두부가 아닌 일반두부. 포장수가 포함된 질량으로 확정하지 않음."
+      }
+    },
+    {
+      "table": "ingredient_conversion_assignments",
+      "id": "4b335515-5352-43fe-aa2d-0ef05ef5a15d",
+      "after": {
+        "review_status": "superseded",
+        "is_active": false,
+        "superseded_by_id": "37a7a587-6b56-585b-a46c-2a715e8763dd",
+        "reviewed_by": "__PRIVATE_REVIEWER__",
+        "reviewed_at": "2026-10-11T06:19:45.007Z",
+        "assignment_reason": "동일 수치의 확인된 계량 근거를 연결한 후속 버전으로 대체. 15ml 계량스푼 식용유 약14g 제조사 안내를 기존14g/15ml 대표값에 연결. 실제 제품·온도·계량도구에 따라 달라지는 근사값이며 모든 기름/가정용 숟가락 확정값이 아님."
+      }
+    }
+  ],
+  "preconditions": [
+    {
+      "table": "piece_unit_weights",
+      "id": "9c922c29-189d-42ba-ae7d-a07ae7edd71f",
+      "md5": "530eea07f7a69bc4e96d485867d581cd"
+    },
+    {
+      "table": "ingredients",
+      "id": "1e49f4be-6b94-4e7f-a492-a68134881e98",
+      "md5": "c772bf0169c37ea0c0fb8456957c17b9"
+    },
+    {
+      "table": "nutrition_sources",
+      "id": "e0be219a-2645-4ee1-914f-a6e7f757537c",
+      "md5": "0f0f5eba125f2115d38d0522fc3dbc3f"
+    },
+    {
+      "table": "measurement_source_evidence",
+      "id": "20a26666-1748-4767-8671-8480cce4396b",
+      "md5": "d771895aa5972720acfcfe440f6334cc"
+    },
+    {
+      "table": "piece_unit_weights",
+      "id": "9765295b-11e9-4212-902a-e132424458b8",
+      "md5": "07feb46f49b0768810d41d35166c3850"
+    },
+    {
+      "table": "ingredients",
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "md5": "2101ae9b81c05ece8b3cac4e5e87b993"
+    },
+    {
+      "table": "measurement_source_evidence",
+      "id": "54b8893b-69be-401e-a89c-0d59920c6ecc",
+      "md5": "3e53ca3034cda6812b4d48b2ea0faa1e"
+    },
+    {
+      "table": "piece_unit_weights",
+      "id": "b53e94ce-dca3-4ab3-b4b0-8d8561d4b295",
+      "md5": "eff6ab50e9c0509d7240e8598be0f6bc"
+    },
+    {
+      "table": "ingredients",
+      "id": "550e8400-e29b-41d4-a716-446655440017",
+      "md5": "ff6e20257cd56f82d1c0434d2dbe71e0"
+    },
+    {
+      "table": "measurement_source_evidence",
+      "id": "2b53fc54-74cd-4741-a1b2-32480eb1eab5",
+      "md5": "dd271d1990b5d604647e7a4403abccb3"
+    },
+    {
+      "table": "ingredient_conversion_assignments",
+      "id": "4b335515-5352-43fe-aa2d-0ef05ef5a15d",
+      "md5": "1e5141f98a81bffc0132106d4c6932b0"
+    },
+    {
+      "table": "ingredients",
+      "id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+      "md5": "fd7e41a73d88b533fc9fba6cf021b26b"
+    },
+    {
+      "table": "nutrition_sources",
+      "id": "2ed8f8e6-fc3f-4868-b678-7a1f1174aff0",
+      "md5": "3eb4da04e04987341fe12954fe3a016b"
+    },
+    {
+      "table": "measurement_source_evidence",
+      "id": "cb998541-1950-4f3f-8a02-0d7ee135a23f",
+      "md5": "40ef2c937c1e263be06f5ae59c9b4306"
+    },
+    {
+      "table": "measurement_conversion_profiles",
+      "id": "71000000-0000-4000-8000-000000000015",
+      "md5": "610407f60e4d021c21bd8d3a08364766"
+    }
+  ],
+  "operation_checksum": "79920d043fd560d2ebb7fdb342cc41e18c11861f48e1dd751c7ec2559fb2dee3"
+}
