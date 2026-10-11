@@ -1171,7 +1171,7 @@ describe("MypageScreen", () => {
       screen
         .getByTestId("mobile-saved-recipe-image-recipe-saved-2")
         .getAttribute("src"),
-    ).toContain("images.unsplash.com");
+    ).toBe("/images/recipe-placeholder.svg");
     const stats = screen.getByLabelText("마이페이지 통계");
     expect(within(stats).getByText("요리기록")).toBeTruthy();
     expect(within(stats).getByText("장보기기록")).toBeTruthy();
