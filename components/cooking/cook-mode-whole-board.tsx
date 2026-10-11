@@ -206,13 +206,21 @@ function getInstructionHighlights(
   ingredientNames: string[],
   methodLabels: string[],
 ) {
-  const candidates = [
-    ...ingredientNames.map((label) => ({ label, type: "ingredient" as const })),
-    ...methodLabels
-      .map((label) => label.trim())
-      .filter((label) => label.length > 0)
-      .map((label) => ({ label, type: "method" as const })),
-  ].sort((a, b) => b.label.length - a.label.length);
+  const candidates: Array<{
+    label: string;
+    type: InstructionHighlight["type"];
+  }> = [];
+
+  for (const label of ingredientNames) {
+    candidates.push({ label, type: "ingredient" });
+  }
+  for (const methodLabel of methodLabels) {
+    const label = methodLabel.trim();
+    if (label.length > 0) {
+      candidates.push({ label, type: "method" });
+    }
+  }
+  candidates.sort((a, b) => b.label.length - a.label.length);
 
   const highlights: InstructionHighlight[] = [];
 
