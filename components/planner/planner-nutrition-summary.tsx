@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { hasCompleteEnergyAndMacros } from "@/lib/nutrition/recipe-nutrition-display";
 import { PlannerNutritionChart } from "@/components/planner/meal-pinned-nutrition";
 import { AppCenterDialog } from "@/components/shared/app-overlay";
 import {
@@ -62,7 +63,7 @@ export function PlannerWeekNutritionSummary({
           )}
         </div>
 
-        {nutrition && nutrition.incomplete_entry_count > 0 ? (
+        {nutrition && !hasCompleteEnergyAndMacros(nutrition.values) && nutrition.incomplete_entry_count > 0 ? (
           <span className="shrink-0 rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-extrabold text-[var(--brand-primary-text)] max-[359px]:px-2">
             {nutrition.incomplete_entry_count}개 확인 필요
           </span>
@@ -104,7 +105,7 @@ export function PlannerDayNutritionSummary({
     <span className="flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-bold text-[var(--text-3)]">
       <span>{formatPlannerNutritionEnergy(nutrition.values.energy_kcal)}</span>
       {nutrition.warnings.includes("AI_NUTRITION_ESTIMATE_USED") ? <span className="text-[var(--brand-primary-text)]">{plannerAiEstimateNotice(nutrition.values, true)}</span> : null}
-      {nutrition.incomplete_entry_count > 0 ? (
+      {!hasCompleteEnergyAndMacros(nutrition.values) && nutrition.incomplete_entry_count > 0 ? (
         <span className="rounded-full bg-[var(--brand-primary-soft)] px-2 py-0.5 text-[var(--brand-primary-text)]">
           {nutrition.incomplete_entry_count}개 확인 필요
         </span>
@@ -164,7 +165,7 @@ export function MealNutritionSummary({
 }: SharedSummaryProps & { entryCount?: number }) {
   const [warningOpen, setWarningOpen] = useState(false);
   const warningButtonRef = useRef<HTMLButtonElement>(null);
-  const messages = buildPlannerNutritionWarningMessages(nutrition?.warnings ?? []);
+  const messages = buildPlannerNutritionWarningMessages(nutrition?.warnings ?? [], nutrition?.values);
 
   const closeWarnings = useCallback(() => {
     setWarningOpen(false);

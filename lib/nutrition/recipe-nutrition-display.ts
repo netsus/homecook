@@ -67,6 +67,10 @@ const REPRESENTATIVE_NUTRITION_DATASETS = new Set([
   "Homecook 사용자 승인 영양 프로필",
 ]);
 
+export function hasCompleteEnergyAndMacros(values: RecipeNutrition["values"]) {
+  return RECIPE_NUTRIENT_DISPLAY_ORDER.every((code) => hasCompleteNutritionValue(values[code]));
+}
+
 export function buildRecipeNutritionDisplay(
   nutrition: RecipeNutrition,
   selectedServings: number,
@@ -86,7 +90,7 @@ export function buildRecipeNutritionDisplay(
       hasValidSelectedServings,
     )),
     optionalNutrients: OPTIONAL_RECIPE_NUTRIENT_DISPLAY_ORDER
-      .filter((code) => hasObservedNutritionValue(nutrition.values[code]))
+      .filter((code) => hasCompleteNutritionValue(nutrition.values[code]))
       .map((code) => buildDisplayItem(
         nutrition,
         code,
@@ -237,14 +241,6 @@ function isObservedAmount(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
-function hasObservedNutritionValue(value: RecipeNutritionValue | undefined) {
-  if (value?.status === "complete") {
-    return isObservedAmount(value.amount);
-  }
-
-  if (value?.status === "partial") {
-    return isObservedAmount(value.known_amount);
-  }
-
-  return false;
+function hasCompleteNutritionValue(value: RecipeNutritionValue | undefined) {
+  return value?.status === "complete" && isObservedAmount(value.amount);
 }

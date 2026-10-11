@@ -13,7 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
 import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigation";
 import { MealLogDayNutritionDetail } from "@/components/planner/meal-log-day-nutrition-detail";
-import { formatMealLogEnergy, MEAL_LOG_MACROS, scaleMealLogNutrition } from "@/lib/planner/meal-log-nutrition-presentation";
+import { formatMealLogEnergy, hasKnownEnergyAndMacros, MEAL_LOG_MACROS, scaleMealLogNutrition } from "@/lib/planner/meal-log-nutrition-presentation";
 import { MealLogMacroBar, MealLogNutritionChart, MealLogNutritionNote } from "@/components/planner/meal-log-nutrition-chart";
 import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { createGuestMealLogDay, createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
@@ -271,7 +271,7 @@ function ActiveSection({ date, disabled, guest = false, section, onAdd, onDetail
         <button aria-label={`${section.slot_name_snapshot}에 먹은 음식 추가`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--ui-slate-300)] bg-[var(--ui-white)] text-xl font-semibold text-[var(--brand-primary-text)] shadow-sm outline-none hover:border-[var(--brand)] hover:bg-[var(--ui-slate-50)] focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={sectionAddActionId(section.meal_plan_column_id, date)} onClick={onAdd} type="button">+</button>
       </div>
       {section.entries.length > 0 && section.subtotal.contains_ai_estimate ? <MealLogNutritionNote nutrition={section.subtotal} /> : null}
-      {section.incomplete_count > 0 ? <p className="sr-only">일부 정보 없음 {section.incomplete_count}건</p> : null}
+      {section.entries.some(entry => !hasKnownEnergyAndMacros(entry.nutrition)) ? <p className="sr-only">일부 정보 없음 {section.entries.filter(entry => !hasKnownEnergyAndMacros(entry.nutrition)).length}건</p> : null}
       <ul className="divide-y divide-[var(--ui-slate-100)]">
         {section.entries.map((entry) => <EntryRow disabled={disabled} entry={entry} guest={guest} key={entry.id} onDetail={() => onDetail(entry)} />)}
       </ul>
@@ -318,7 +318,7 @@ function DeletedSection({ date, disabled, section, onDetail }: {
       </div>
       <p className="mt-1 text-xs text-[var(--text-2)]">새 음식 추가 없음</p>
       {section.entries.length > 0 && section.subtotal.contains_ai_estimate ? <MealLogNutritionNote nutrition={section.subtotal} /> : null}
-      {section.incomplete_count > 0 ? <p className="sr-only">일부 정보 없음 {section.incomplete_count}건</p> : null}
+      {section.entries.some(entry => !hasKnownEnergyAndMacros(entry.nutrition)) ? <p className="sr-only">일부 정보 없음 {section.entries.filter(entry => !hasKnownEnergyAndMacros(entry.nutrition)).length}건</p> : null}
       <ul className="mt-2 divide-y divide-[var(--line-strong)]">
         {section.entries.map((entry) => <EntryRow disabled={disabled} entry={entry} key={entry.id} onDetail={() => onDetail(entry)} />)}
       </ul>
@@ -515,7 +515,7 @@ function EntryDialog({
         {entry.display_brand ? <p className="mt-2 text-sm text-[var(--text-2)]">{entry.display_brand}</p> : null}
         <div className="my-6 flex justify-between rounded-xl bg-[var(--surface-fill)] p-4"><span className="font-medium">먹은 양</span><span>{number(entry.quantity.amount, entry.quantity.unit)}</span></div>
         <section aria-label="기록한 음식 영양정보" className="rounded-2xl bg-[var(--ui-sky-50)] p-5"><h3 className="mb-3 text-sm font-medium">먹은 양 기준 영양</h3><MealLogNutritionChart nutrition={entry.nutrition} /></section>
-        <div className="my-6 flex justify-between"><span>나트륨</span><span>{number(entry.nutrition.sodium_mg, "mg")}</span></div>
+        {entry.nutrition.sodium_mg !== null && Number.isFinite(entry.nutrition.sodium_mg) ? <div className="my-6 flex justify-between"><span>나트륨</span><span>{number(entry.nutrition.sodium_mg, "mg")}</span></div> : null}
         <button aria-label="식사 기록 수정" className="mt-4 min-h-12 w-full rounded-xl bg-[var(--brand-primary-accessible)] px-4 font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => setAction("edit")} type="button">먹은 양 수정</button>
         <button className="mt-3 min-h-12 w-full rounded-xl border border-[var(--danger-border)] px-4 font-medium text-[var(--danger-strong)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => setAction("delete")} type="button">기록 삭제</button>
       </div>

@@ -13,14 +13,19 @@ export function formatMealLogEnergy(nutrition: MealLogNutritionEvidence): string
   return formatEnergyKcal(nutrition.calories_kcal, { partial: nutrition.calculation_status === "partial", unavailableText: "정보 없음" });
 }
 
+export function hasKnownEnergyAndMacros(nutrition: MealLogNutritionEvidence) {
+  return [nutrition.calories_kcal, ...MEAL_LOG_MACROS.map(macro => nutrition[macro.key])]
+    .every(amount => typeof amount === "number" && Number.isFinite(amount) && amount >= 0);
+}
+
 /** Provenance is independent of coverage and of quantity-conversion estimates. */
 export function mealLogNutritionNotice(nutrition: MealLogNutritionEvidence): string | null {
   if (nutrition.contains_ai_estimate === true) {
-    return nutrition.calculation_status === "complete"
+    return hasKnownEnergyAndMacros(nutrition)
       ? "AI 추정값 포함"
       : "AI 추정값 포함 · 일부 영양정보가 빠진 추정값";
   }
-  return nutrition.calculation_status !== "complete" ? "확인된 정보 기준" : null;
+  return !hasKnownEnergyAndMacros(nutrition) ? "확인된 정보 기준" : null;
 }
 
 /** Use all three known macro values; partial results must be labelled by the view. */
