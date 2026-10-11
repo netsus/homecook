@@ -19,6 +19,7 @@ const navigationMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/menu-add",
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
