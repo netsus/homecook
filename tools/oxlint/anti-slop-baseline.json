@@ -708,12 +708,6 @@
       "count": 1
     },
     {
-      "file": "components/home/home-screen.tsx",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "a509f0a083cc906786f358d3d2e6adc283d6f91f174978b7b0a14740dbb97b47",
-      "count": 1
-    },
-    {
       "file": "components/marketing/homeflow-landing.tsx",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "845749623820e1a057c90c4ec89efa8d39582d33b4c15f5f7417bac6f498205b",
@@ -753,12 +747,6 @@
       "file": "components/planner/meal-log-screen.tsx",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "7cad7f49ea7bcdb3cbb674e3829bd1f28d093d1aded316463df37614071defdf",
-      "count": 1
-    },
-    {
-      "file": "components/planner/meal-pinned-nutrition.tsx",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "16a1ceab67644c069d7e05dbc210fb4f5a1ad751f5c6dfe6d8c8f3f4c9bacfa6",
       "count": 1
     },
     {

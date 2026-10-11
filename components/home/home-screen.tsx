@@ -184,7 +184,13 @@ function getWebHomeTagUnits(label: string) {
 }
 
 function getWebHomeTagPreview(tags: string[]) {
-  const normalizedTags = tags.map((tag) => tag.trim()).filter(Boolean);
+  const normalizedTags: string[] = [];
+  for (const tag of tags) {
+    const normalizedTag = tag.trim();
+    if (normalizedTag) {
+      normalizedTags.push(normalizedTag);
+    }
+  }
   const visibleTags: string[] = [];
   let usedUnits = 0;
 

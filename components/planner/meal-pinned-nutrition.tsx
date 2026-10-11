@@ -22,9 +22,12 @@ export function PlannerNutritionChart({ values, containsAiEstimate = false }: { 
     (sum, { code, factor }) => sum + (displayedAmount(code) ?? 0) * factor,
     0,
   );
-  const availableLabels = macros
-    .filter(({ code }) => displayedAmount(code) !== null)
-    .map(({ label }) => label);
+  const availableLabels: string[] = [];
+  for (const { code, label } of macros) {
+    if (displayedAmount(code) !== null) {
+      availableLabels.push(label);
+    }
+  }
   return <div className="mt-3">
     {aiNotice ? <p className="mb-2 pr-8 text-xs font-semibold text-[var(--brand-primary-text)]">{aiNotice}</p> : null}
     <p className="text-xl font-extrabold tabular-nums text-[var(--brand-primary-text)]">{values.energy_kcal ? formatPlannerNutritionValue("energy_kcal", values.energy_kcal) : "열량 정보 준비 중"}</p>
