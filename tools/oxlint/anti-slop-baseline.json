@@ -840,36 +840,6 @@
       "count": 1
     },
     {
-      "file": "lib/cooking-method-taxonomy.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "39746c9a79eb82ea64299f93aab3828d9ab27dbe0a5b12fa444b6b3021012b64",
-      "count": 1
-    },
-    {
-      "file": "lib/ingredient-categories.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "082325095491431a5ef5e30dd464d2dcaafbfa799f00d6fd14374911f9889e2d",
-      "count": 1
-    },
-    {
-      "file": "lib/ingredient-categories.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "1fde1232b6bed546234396befcc2e878c7ae8220e0f097745812b08faa97d898",
-      "count": 1
-    },
-    {
-      "file": "lib/ingredient-categories.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "272d865385288c436ba2f9442d80717331a5267b4fb8b31bb92f4f9cfa2a6ae0",
-      "count": 1
-    },
-    {
-      "file": "lib/ingredient-categories.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "dcf95dfe7a839e82e4806de4f9e00ec615cd1899ce3287c6211580c2834c9cf1",
-      "count": 1
-    },
-    {
       "file": "lib/marketing/round2-client.ts",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "28b4ca500b9c65f988b7ec067b8019baad7c658e83ff9ebadbacf3f460265b11",

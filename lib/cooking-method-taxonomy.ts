@@ -364,9 +364,14 @@ export function getCookingMethodSynonyms(methodCode: string | null | undefined) 
     return [];
   }
 
-  return COOKING_METHOD_SYNONYMS
-    .filter((synonym) => synonym.method_code === methodCode.trim() && synonym.is_active)
-    .map((synonym) => synonym.synonym);
+  const normalizedMethodCode = methodCode.trim();
+  const synonyms: Array<(typeof COOKING_METHOD_SYNONYMS)[number]["synonym"]> = [];
+  for (const synonym of COOKING_METHOD_SYNONYMS) {
+    if (synonym.method_code === normalizedMethodCode && synonym.is_active) {
+      synonyms.push(synonym.synonym);
+    }
+  }
+  return synonyms;
 }
 
 export function getCookingMethodCategoryLabel({
