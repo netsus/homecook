@@ -24,4 +24,12 @@ describe("recipe ingredient unit choices", () => {
     expect(isRecipeIngredientUnitAllowed("줌", ["g"])).toBe(true);
     for (const unit of [null, undefined, 5, "", " "]) expect(isRecipeIngredientUnitAllowed(unit)).toBe(false);
   });
+
+  it("preserves reviewed household spoons only when the current source row supplies that unit", () => {
+    expect(getRecipeIngredientUnitOptions({ unit: "밥숟가락" })).toContain("밥숟가락");
+    expect(getRecipeIngredientUnitOptions({ unit: "g" })).not.toContain("밥숟가락");
+    expect(isRecipeIngredientUnitAllowed("밥숟가락")).toBe(false);
+    expect(isRecipeIngredientUnitAllowed("밥숟가락", ["g", "숟가락"])).toBe(false);
+    expect(isRecipeIngredientUnitAllowed("밥숟가락", ["밥숟가락"])).toBe(true);
+  });
 });
