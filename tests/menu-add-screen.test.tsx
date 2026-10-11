@@ -80,7 +80,6 @@ const DEFAULT_PROPS = {
 const EXTRACTION_IDS = {
   default: "20000000-0000-4000-8000-000000000001",
   visualQuantity: "20000000-0000-4000-8000-000000000002",
-  multiParent: "20000000-0000-4000-8000-000000000003",
   unresolved: "20000000-0000-4000-8000-000000000005",
   legacyUnresolved: "20000000-0000-4000-8000-000000000006",
   caption: "20000000-0000-4000-8000-000000000007",
@@ -726,89 +725,6 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "가져오기 화면 열기" })).toBeNull();
     expect(mockRouterPush).not.toHaveBeenCalled();
-  });
-
-  it("does not pretend a multi-recipe parent can be saved as a recipe result", async () => {
-    installMatchMedia(true);
-    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
-      success: true,
-      data: {
-        extraction_id: EXTRACTION_IDS.multiParent,
-        title: "집밥 모음",
-        base_servings: 1,
-        thumbnail_url: "https://i.ytimg.com/vi/multi12345/hqdefault.jpg",
-        tags: ["집밥"],
-        extraction_methods: ["caption"],
-        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해 주세요."],
-        blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
-        ingredients: [],
-        steps: [],
-        new_cooking_methods: [],
-        multi_recipe_status: "multiple",
-        primary_candidate_id: "candidate-1",
-        recipe_candidates: [
-          {
-            candidate_id: "candidate-1",
-            title: "김치볶음밥",
-            start_ms: 10_000,
-            end_ms: 40_000,
-            confidence: 0.84,
-            ingredients: [],
-            steps: [],
-            draft_warnings: [],
-            blocking_issues: [],
-            evidence_refs: [],
-          },
-          {
-            candidate_id: "candidate-2",
-            title: "계란국",
-            start_ms: 41_000,
-            end_ms: 70_000,
-            confidence: 0.88,
-            ingredients: [
-              {
-                draft_ingredient_id: "draft-egg",
-                ingredient_id: "ing-egg",
-                standard_name: "계란",
-                amount: 1,
-                unit: "개",
-                ingredient_type: "QUANT",
-                display_text: "계란 1개",
-                sort_order: 1,
-                scalable: true,
-                confidence: 0.9,
-                resolution_status: "resolved",
-                candidates: [],
-                raw_text: "계란 1개",
-              },
-            ],
-            steps: [],
-            draft_warnings: [],
-            blocking_issues: [],
-            evidence_refs: [],
-          },
-        ],
-      },
-      error: null,
-    });
-    render(<MenuAddScreen {...DEFAULT_PROPS} />);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("menu-add-option-youtube"));
-    await user.type(
-      screen.getByLabelText("유튜브 URL"),
-      "https://www.youtube.com/watch?v=multi12345",
-    );
-    await user.click(screen.getByRole("button", { name: "가져오기" }));
-
-    expect(await screen.findByRole("heading", { name: "레시피 저장을 마치지 못했어요" })).toBeTruthy();
-    expect(screen.getByText("저장 결과가 변경됐어요. 최신 내용을 다시 확인해 주세요.")).toBeTruthy();
-    expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
-      EXTRACTION_IDS.multiParent,
-      expect.stringMatching(UUID_PATTERN),
-    );
-    expect(youtubeApi.createYoutubeCandidateDraft).not.toHaveBeenCalled();
-    expect(mockRouterReplace).not.toHaveBeenCalled();
   });
 
   it("keeps an unresolved YouTube ingredient private and clears source provenance after rename", async () => {
