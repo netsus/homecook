@@ -78,6 +78,20 @@ export function buildRecipeNutritionDisplay(
   const baseServings = nutrition.base_servings;
   const hasValidBaseServings = isPositiveFinite(baseServings);
   const hasValidSelectedServings = isPositiveFinite(selectedServings);
+  const optionalNutrients: RecipeNutrientDisplayItem[] = [];
+
+  for (const code of OPTIONAL_RECIPE_NUTRIENT_DISPLAY_ORDER) {
+    if (hasCompleteNutritionValue(nutrition.values[code])) {
+      optionalNutrients.push(buildDisplayItem(
+        nutrition,
+        code,
+        selectedServings,
+        baseServings,
+        hasValidBaseServings,
+        hasValidSelectedServings,
+      ));
+    }
+  }
 
   return {
     hasValidBaseServings,
@@ -89,16 +103,7 @@ export function buildRecipeNutritionDisplay(
       hasValidBaseServings,
       hasValidSelectedServings,
     )),
-    optionalNutrients: OPTIONAL_RECIPE_NUTRIENT_DISPLAY_ORDER
-      .filter((code) => hasCompleteNutritionValue(nutrition.values[code]))
-      .map((code) => buildDisplayItem(
-        nutrition,
-        code,
-        selectedServings,
-        baseServings,
-        hasValidBaseServings,
-        hasValidSelectedServings,
-      )),
+    optionalNutrients,
     qualityText: qualityText(nutrition.calculation_quality),
     aiEstimateText: nutrition.warnings.includes("AI_NUTRITION_ESTIMATE_USED") ? "AI 추정값 포함" : null,
     representativeNutritionText: nutrition.sources.some(source =>
