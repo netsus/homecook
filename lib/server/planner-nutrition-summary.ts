@@ -284,11 +284,16 @@ export function aggregatePlannerNutritionEntries(
   const warnings = [...new Set(entries.flatMap((entry) =>
     entry.warnings.filter((warning) => typeof warning === "string" && warning.length > 0)
   ))].sort(compareUnicodeOrdinal);
-  const sources = [...new Map(entries.flatMap((entry) => entry.sources)
-    .map(sanitizeSource)
-    .filter((source): source is PlannerNutritionSource => source !== null)
-    .map((source) => [JSON.stringify(sourceTuple(source)), source] as const)).values()]
-    .sort(compareSources);
+  const sourcesByTuple = new Map<string, PlannerNutritionSource>();
+  for (const entry of entries) {
+    for (const candidate of entry.sources) {
+      const source = sanitizeSource(candidate);
+      if (source !== null) {
+        sourcesByTuple.set(JSON.stringify(sourceTuple(source)), source);
+      }
+    }
+  }
+  const sources = [...sourcesByTuple.values()].sort(compareSources);
   const incompleteEntryCount = entries.filter((entry) =>
     PLANNER_COMPLETENESS_CODES.some(
       (code) => normalizeValue(entry.values[code]).status !== "complete",
@@ -440,17 +445,19 @@ export async function readPlannerRecipeNutritionEntries(
   if (mealsResult.error || !mealsResult.data) throw new PlannerNutritionReadError();
 
   const dedupedMeals = [...new Map(mealsResult.data.map((meal) => [meal.id, meal])).values()];
-  const snapshotIds = [...new Set(dedupedMeals
-    .map((meal) => {
-      const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
-        ? meal.recipe_content_snapshots[0] ?? null
-        : meal.recipe_content_snapshots;
-      return meal.recipe_content_snapshot_id
-        ? contentSnapshot?.recipe_nutrition_snapshot_id ?? null
-        : meal.recipe_nutrition_snapshot_id;
-    })
-    .filter((id): id is string => typeof id === "string" && id.length > 0))]
-    .sort(compareUnicodeOrdinal);
+  const snapshotIdSet = new Set<string>();
+  for (const meal of dedupedMeals) {
+    const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+      ? meal.recipe_content_snapshots[0] ?? null
+      : meal.recipe_content_snapshots;
+    const snapshotId = meal.recipe_content_snapshot_id
+      ? contentSnapshot?.recipe_nutrition_snapshot_id ?? null
+      : meal.recipe_nutrition_snapshot_id;
+    if (typeof snapshotId === "string" && snapshotId.length > 0) {
+      snapshotIdSet.add(snapshotId);
+    }
+  }
+  const snapshotIds = [...snapshotIdSet].sort(compareUnicodeOrdinal);
   const snapshotMap = new Map<string, RecipeNutritionSnapshotRow>();
   if (snapshotIds.length > 0) {
     const snapshotsResult = await dbClient
