@@ -63,6 +63,7 @@ describe("product ingredient link pantry and shopping runtime contract", () => {
   });
 
   it("pins and exposes shopping provenance while retaining all-null fail-closed", () => {
+    const sql = read(migrationPath);
     const createRoute = read("app/api/v1/shopping/lists/route.ts");
     const detailRoute = read("app/api/v1/shopping/lists/[list_id]/route.ts");
     const completeRoute = read(
@@ -79,10 +80,14 @@ describe("product ingredient link pantry and shopping runtime contract", () => {
     expect(shoppingTypes).toMatch(
       /source_type\?: "ingredient" \| "food_product" \| null/,
     );
-    expect(completeRoute).toMatch(/ingredient_id[\s\S]*food_product_id/);
-    expect(completeRoute).toMatch(/food_product_nutrition_version_id/);
     expect(completeRoute).toMatch(
-      /hasPinnedIdentity[\s\S]*item\.ingredient_id[\s\S]*item\.food_product_id/,
+      /rpc\("complete_shopping_list"[\s\S]*p_add_to_pantry_item_ids/,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.complete_shopping_list[\s\S]*item\.ingredient_id[\s\S]*item\.food_product_id[\s\S]*item\.food_product_nutrition_version_id/i,
+    );
+    expect(sql).toMatch(
+      /item\.ingredient_id is not null[\s\S]*item\.food_product_id is not null[\s\S]*item\.food_product_nutrition_version_id is not null/i,
     );
   });
 });

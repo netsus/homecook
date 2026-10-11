@@ -396,6 +396,8 @@ export function MypageScreen({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const bookCoverLoadedIdsRef = useRef<Set<string>>(new Set());
   const bookCoverLoadingIdsRef = useRef<Set<string>>(new Set());
+  const shoppingLoadFailedRef = useRef(false);
+  const shoppingRequestSequenceRef = useRef(0);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileReturnToRef = useRef<string | null>(
     typeof window === "undefined"
@@ -635,11 +637,15 @@ export function MypageScreen({
   ]);
 
   const loadShoppingHistory = useCallback(async (cursor?: string) => {
+    const requestSequence = ++shoppingRequestSequenceRef.current;
     try {
       const result = await fetchShoppingHistory({
         cursor,
         limit: SHOPPING_PAGE_SIZE,
       });
+      if (requestSequence !== shoppingRequestSequenceRef.current) {
+        return false;
+      }
       if (cursor) {
         setShoppingItems((prev) => [...prev, ...result.items]);
       } else {
@@ -648,14 +654,23 @@ export function MypageScreen({
       setShoppingCursor(result.next_cursor);
       setShoppingHasNext(result.has_next);
       setShoppingLoaded(true);
+      if (!cursor) {
+        shoppingLoadFailedRef.current = false;
+      }
+      return true;
     } catch (error) {
+      if (requestSequence !== shoppingRequestSequenceRef.current) {
+        return false;
+      }
       if (isMypageApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
-        return;
+        return false;
       }
       if (!cursor) {
+        shoppingLoadFailedRef.current = true;
         setViewState("error");
       }
+      return false;
     }
   }, []);
 
@@ -1360,9 +1375,16 @@ export function MypageScreen({
 
   // Load shopping history when tab switches
   useEffect(() => {
-    if (authState !== "authenticated" || activeTab !== "shopping" || shoppingLoaded) return;
+    if (
+      authState !== "authenticated" ||
+      viewState !== "ready" ||
+      activeTab !== "shopping" ||
+      shoppingLoaded
+    ) {
+      return;
+    }
     void loadShoppingHistory();
-  }, [authState, activeTab, shoppingLoaded, loadShoppingHistory]);
+  }, [authState, activeTab, shoppingLoaded, loadShoppingHistory, viewState]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;
@@ -1742,9 +1764,13 @@ export function MypageScreen({
         <button
           className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-contrast)] px-6 py-3 text-sm font-semibold text-[var(--text-inverse)]"
           onClick={() => {
-            if (activeTab === "shopping") {
+            if (shoppingLoadFailedRef.current) {
               setShoppingLoaded(false);
-              void loadShoppingHistory();
+              void loadShoppingHistory().then((loaded) => {
+                if (loaded) {
+                  setViewState("ready");
+                }
+              });
             } else {
               void loadInitialData();
             }

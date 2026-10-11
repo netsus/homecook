@@ -339,10 +339,6 @@ export function MenuAddScreen({
     setSelectedPantryRecipe(null);
   }, [appReturn, initialSource, isMealAddModalOrigin]);
 
-  const handleLeftoverClick = useCallback(() => {
-    setPickerMode("leftover");
-  }, []);
-
   const handleLeftoverSelect = useCallback((leftover: LeftoverListItemData) => {
     setSelectedLeftover(leftover);
   }, []);

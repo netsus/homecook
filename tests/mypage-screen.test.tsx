@@ -1460,6 +1460,119 @@ describe("MypageScreen", () => {
     expect(await screen.findByText("집밥러")).toBeTruthy();
   });
 
+  it("recovers the shopping history after its initial request succeeds on retry", async () => {
+    mockFetchShoppingHistory
+      .mockRejectedValueOnce(new Error("shopping fail"))
+      .mockResolvedValue(MOCK_SHOPPING_HISTORY);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    const user = await openShoppingSurface();
+    expect(
+      await screen.findByText("데이터를 불러오지 못했어요"),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByText("2026년 4월")).toBeTruthy();
+    expect(screen.queryByText("데이터를 불러오지 못했어요")).toBeNull();
+  });
+
+  it("keeps the latest shopping retry result when an older request fails later", async () => {
+    let rejectOlderRetry!: (error: Error) => void;
+    let resolveLatestRetry!: (history: typeof MOCK_SHOPPING_HISTORY) => void;
+    mockFetchShoppingHistory
+      .mockRejectedValueOnce(new Error("initial shopping fail"))
+      .mockReturnValueOnce(new Promise((_, reject) => {
+        rejectOlderRetry = reject;
+      }))
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveLatestRetry = resolve;
+      }));
+
+    render(<MypageScreen initialAuthenticated />);
+
+    const user = await openShoppingSurface();
+    expect(
+      await screen.findByText("데이터를 불러오지 못했어요"),
+    ).toBeTruthy();
+
+    const retry = screen.getByRole("button", { name: "다시 시도" });
+    await user.click(retry);
+    await user.click(retry);
+
+    await act(async () => {
+      resolveLatestRetry(MOCK_SHOPPING_HISTORY);
+    });
+    expect(await screen.findByText("2026년 4월")).toBeTruthy();
+
+    await act(async () => {
+      rejectOlderRetry(new Error("late shopping failure"));
+    });
+    expect(screen.queryByText("데이터를 불러오지 못했어요")).toBeNull();
+  });
+
+  it("retries core profile data when a direct shopping entry did not cause the error", async () => {
+    mockFetchUserProfile
+      .mockRejectedValueOnce(new Error("profile fail"))
+      .mockResolvedValue(MOCK_PROFILE);
+
+    render(
+      <MypageScreen
+        initialActiveTab="shopping"
+        initialAuthenticated
+      />,
+    );
+
+    expect(
+      await screen.findByText("데이터를 불러오지 못했어요"),
+    ).toBeTruthy();
+    expect(mockFetchShoppingHistory).not.toHaveBeenCalled();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByText("집밥러")).toBeTruthy();
+    expect(mockFetchUserProfile).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(mockFetchShoppingHistory).toHaveBeenCalledTimes(1));
+  });
+
+  it("waits for core mypage data before loading a direct shopping entry", async () => {
+    let resolveProfile!: (profile: typeof MOCK_PROFILE) => void;
+    let resolveBooks!: (books: typeof MOCK_BOOKS) => void;
+    mockFetchUserProfile.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveProfile = resolve;
+      }),
+    );
+    mockFetchRecipeBooks.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveBooks = resolve;
+      }),
+    );
+    mockFetchShoppingHistory.mockRejectedValueOnce(new Error("shopping fail"));
+
+    render(
+      <MypageScreen
+        initialActiveTab="shopping"
+        initialAuthenticated
+      />,
+    );
+
+    await act(async () => Promise.resolve());
+    expect(mockFetchShoppingHistory).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveProfile(MOCK_PROFILE);
+      resolveBooks(MOCK_BOOKS);
+    });
+
+    expect(
+      await screen.findByText("데이터를 불러오지 못했어요"),
+    ).toBeTruthy();
+    expect(mockFetchShoppingHistory).toHaveBeenCalledTimes(1);
+  });
+
   it("shows loading skeleton initially", () => {
     mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
     mockFetchRecipeBooks.mockReturnValue(new Promise(() => {}));
