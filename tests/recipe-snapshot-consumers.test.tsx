@@ -146,7 +146,7 @@ describe("recipe snapshot consumer regression", () => {
       "fails closed when a content-pinned planner Meal cannot load its immutable content row",
     ]);
     expectScenarioNames("tests/shopping-preview.backend.test.ts", [
-      "uses a content-pinned Meal title instead of the mutable current recipe title",
+      "uses a content-pinned Meal title even when the current source is deleted (source visible: %s)",
       "fails closed when a shopping preview Meal has a broken content pin relation",
       "uses pinned content once per Meal without duplicating a recipe-level serving total",
     ]);
