@@ -80,6 +80,8 @@ const DEFAULT_PROPS = {
 const EXTRACTION_IDS = {
   default: "20000000-0000-4000-8000-000000000001",
   visualQuantity: "20000000-0000-4000-8000-000000000002",
+  multiParent: "20000000-0000-4000-8000-000000000003",
+  multiChild: "20000000-0000-4000-8000-000000000004",
   unresolved: "20000000-0000-4000-8000-000000000005",
   legacyUnresolved: "20000000-0000-4000-8000-000000000006",
   caption: "20000000-0000-4000-8000-000000000007",
@@ -294,6 +296,110 @@ function mockVisualQuantityExtract(ingredientOverrides = {}) {
     },
     error: null,
   });
+}
+
+function buildMultiParentExtract(): YoutubeRecipeExtractData {
+  return {
+    extraction_id: EXTRACTION_IDS.multiParent,
+    title: "집밥 모음",
+    base_servings: 1,
+    thumbnail_url: "https://i.ytimg.com/vi/multi12345/hqdefault.jpg",
+    tags: ["집밥"],
+    extraction_methods: ["caption"],
+    draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해 주세요."],
+    blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
+    ingredients: [],
+    steps: [],
+    new_cooking_methods: [],
+    multi_recipe_status: "multiple",
+    primary_candidate_id: "candidate-1",
+    recipe_candidates: [
+      {
+        candidate_id: "candidate-1",
+        title: "김치볶음밥",
+        start_ms: 10_000,
+        end_ms: 40_000,
+        confidence: 0.84,
+        ingredients: [],
+        steps: [],
+        draft_warnings: [],
+        blocking_issues: [],
+        evidence_refs: [],
+      },
+      {
+        candidate_id: "candidate-2",
+        title: "계란국",
+        start_ms: 41_000,
+        end_ms: 70_000,
+        confidence: 0.88,
+        ingredients: [{
+          draft_ingredient_id: "draft-egg",
+          ingredient_id: "ing-egg",
+          standard_name: "계란",
+          amount: 1,
+          unit: "개",
+          ingredient_type: "QUANT",
+          display_text: "계란 1개",
+          sort_order: 1,
+          scalable: true,
+          confidence: 0.9,
+          resolution_status: "resolved",
+          candidates: [],
+          raw_text: "계란 1개",
+        }],
+        steps: [],
+        draft_warnings: [],
+        blocking_issues: [],
+        evidence_refs: [],
+      },
+    ],
+  };
+}
+
+function buildMultiChildExtract(): YoutubeRecipeExtractData {
+  return {
+    extraction_id: EXTRACTION_IDS.multiChild,
+    title: "계란국",
+    base_servings: 1,
+    thumbnail_url: "https://i.ytimg.com/vi/multi12345/hqdefault.jpg",
+    tags: ["계란국"],
+    extraction_methods: ["caption"],
+    draft_warnings: [],
+    blocking_issues: [],
+    ingredients: [{
+      draft_ingredient_id: "draft-egg",
+      ingredient_id: "ing-egg",
+      standard_name: "계란",
+      amount: 1,
+      unit: "개",
+      ingredient_type: "QUANT",
+      display_text: "계란 1개",
+      sort_order: 1,
+      scalable: true,
+      confidence: 0.9,
+      resolution_status: "resolved",
+      candidates: [],
+      raw_text: "계란 1개",
+    }],
+    steps: [{
+      step_number: 1,
+      instruction: "계란을 풀어 끓여요.",
+      cooking_method: {
+        id: "method-1",
+        code: "boil",
+        label: "끓이기",
+        color_key: "red",
+        is_new: false,
+      },
+      duration_text: null,
+      is_incomplete: false,
+      missing_fields: [],
+      raw_text: "계란을 풀어 끓여요.",
+    }],
+    new_cooking_methods: [],
+    multi_recipe_status: "single",
+    primary_candidate_id: "candidate-2",
+  };
 }
 
 describe("MenuAddScreen", () => {
@@ -725,6 +831,55 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "가져오기 화면 열기" })).toBeNull();
     expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("keeps a multi-recipe parent out of automatic save and saves the selected child", async () => {
+    installMatchMedia(true);
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+      success: true,
+      data: buildMultiParentExtract(),
+      error: null,
+    });
+    vi.mocked(youtubeApi.createYoutubeCandidateDraft).mockResolvedValueOnce({
+      success: true,
+      data: {
+        parent_extraction_id: EXTRACTION_IDS.multiParent,
+        candidate_id: "candidate-2",
+        draft: buildMultiChildExtract(),
+      },
+      error: null,
+    });
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=multi12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    const candidates = await screen.findByTestId("youtube-recipe-candidates");
+    expect(within(candidates).getByText("요리 후보 2개")).toBeTruthy();
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalled();
+    expect(youtubeApi.createYoutubeCandidateDraft).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("youtube-recipe-candidate-candidate-2"));
+
+    expect(await screen.findByRole("heading", { name: "계란국" })).toBeTruthy();
+    expect(youtubeApi.createYoutubeCandidateDraft).toHaveBeenCalledWith({
+      extraction_id: EXTRACTION_IDS.multiParent,
+      candidate_id: "candidate-2",
+    });
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledTimes(1);
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
+      EXTRACTION_IDS.multiChild,
+      expect.stringMatching(UUID_PATTERN),
+    );
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalledWith(
+      EXTRACTION_IDS.multiParent,
+      expect.anything(),
+    );
   });
 
   it("keeps an unresolved YouTube ingredient private and clears source provenance after rename", async () => {

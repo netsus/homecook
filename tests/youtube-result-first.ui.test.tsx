@@ -10,6 +10,8 @@ import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import * as extractionApi from "@/lib/api/youtube-extraction-jobs";
 import * as youtubeApi from "@/lib/api/youtube-import";
 import * as savedRecipeApi from "@/lib/api/youtube-saved-recipes";
+import type { YoutubeRecipeExtractData } from "@/types/recipe";
+import type { YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
 
 const routerReplace = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -36,6 +38,101 @@ vi.mock("@/lib/api/youtube-saved-recipes", () => ({
   updateYoutubeSavedRecipe: vi.fn(),
 }));
 
+const MULTI_PARENT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
+const MULTI_CHILD_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2";
+const MULTI_SAVED_ID = "11111111-1111-4111-8111-111111111112";
+
+function buildMultiParentDraft(): YoutubeRecipeExtractData {
+  return {
+    extraction_id: MULTI_PARENT_ID,
+    title: "집밥 모음",
+    base_servings: 1,
+    thumbnail_url: null,
+    tags: ["집밥"],
+    extraction_methods: ["caption"],
+    draft_warnings: ["저장할 요리를 먼저 선택해 주세요."],
+    blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
+    ingredients: [],
+    steps: [],
+    new_cooking_methods: [],
+    multi_recipe_status: "multiple",
+    primary_candidate_id: "candidate-1",
+    recipe_candidates: [
+      {
+        candidate_id: "candidate-1",
+        title: "김치볶음밥",
+        start_ms: 10_000,
+        end_ms: 40_000,
+        confidence: 0.84,
+        ingredients: [],
+        steps: [],
+        draft_warnings: [],
+        blocking_issues: [],
+        evidence_refs: [],
+      },
+      {
+        candidate_id: "candidate-2",
+        title: "계란국",
+        start_ms: 41_000,
+        end_ms: 70_000,
+        confidence: 0.88,
+        ingredients: [],
+        steps: [],
+        draft_warnings: [],
+        blocking_issues: [],
+        evidence_refs: [],
+      },
+    ],
+  };
+}
+
+function buildMultiChildDraft(): YoutubeRecipeExtractData {
+  return {
+    extraction_id: MULTI_CHILD_ID,
+    title: "계란국",
+    base_servings: 1,
+    thumbnail_url: null,
+    tags: ["계란국"],
+    extraction_methods: ["caption"],
+    draft_warnings: [],
+    blocking_issues: [],
+    ingredients: [],
+    steps: [],
+    new_cooking_methods: [],
+    multi_recipe_status: "single",
+    primary_candidate_id: "candidate-2",
+  };
+}
+
+function buildMultiChildSavedResult(): YoutubeSavedRecipeResult {
+  return {
+    draft_id: MULTI_SAVED_ID,
+    revision: 1,
+    created_at: "2026-10-11T00:00:00.000Z",
+    updated_at: "2026-10-11T00:00:00.000Z",
+    content: { title: "계란국", base_servings: 1, tags: ["계란국"], ingredients: [], steps: [] },
+    source: {
+      extraction_id: MULTI_CHILD_ID,
+      youtube_url: "https://www.youtube.com/watch?v=multi12345",
+      youtube_video_id: "multi12345",
+      thumbnail_url: null,
+    },
+  };
+}
+
+function mockMultiParentSession() {
+  vi.mocked(extractionApi.fetchYoutubeExtractionSession).mockResolvedValueOnce({
+    success: true,
+    data: {
+      status: "draft",
+      recipe_id: null,
+      recipe_path: null,
+      draft: buildMultiParentDraft(),
+    },
+    error: null,
+  } as Awaited<ReturnType<typeof extractionApi.fetchYoutubeExtractionSession>>);
+}
+
 describe("YouTube result-first UI", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
@@ -44,6 +141,7 @@ describe("YouTube result-first UI", () => {
     vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockReset();
     vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockReset();
     vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mockReset();
+    vi.mocked(youtubeApi.createYoutubeCandidateDraft).mockReset();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn().mockReturnValue({
@@ -585,6 +683,116 @@ describe("YouTube result-first UI", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "엄마표 된장찌개" })).toBeTruthy();
+  });
+
+  it("deduplicates candidate input, retries promotion, and only saves the promoted child", async () => {
+    mockMultiParentSession();
+    let resolveFirstPromotion!: (
+      value: Awaited<ReturnType<typeof youtubeApi.createYoutubeCandidateDraft>>,
+    ) => void;
+    vi.mocked(youtubeApi.createYoutubeCandidateDraft)
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveFirstPromotion = resolve;
+      }))
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          parent_extraction_id: MULTI_PARENT_ID,
+          candidate_id: "candidate-2",
+          draft: buildMultiChildDraft(),
+        },
+        error: null,
+      });
+    vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockResolvedValueOnce({
+      success: true,
+      data: buildMultiChildSavedResult(),
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(
+      <YoutubeImportScreen
+        columnId=""
+        initialExtractionId={MULTI_PARENT_ID}
+        planDate=""
+        slotName=""
+      />,
+    );
+
+    const candidate = await screen.findByTestId("youtube-recipe-candidate-candidate-2");
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalled();
+
+    act(() => {
+      candidate.click();
+      candidate.click();
+    });
+    expect(youtubeApi.createYoutubeCandidateDraft).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirstPromotion({
+        success: false,
+        data: null,
+        error: { code: "NETWORK_ERROR", message: "후보를 불러오지 못했어요.", fields: [] },
+      });
+    });
+    expect(await screen.findByText("후보를 불러오지 못했어요.")).toBeTruthy();
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("youtube-recipe-candidate-candidate-2"));
+
+    expect(await screen.findByRole("heading", { name: "계란국" })).toBeTruthy();
+    expect(youtubeApi.createYoutubeCandidateDraft).toHaveBeenCalledTimes(2);
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledTimes(1);
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
+      MULTI_CHILD_ID,
+      expect.any(String),
+    );
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalledWith(
+      MULTI_PARENT_ID,
+      expect.anything(),
+    );
+    expect(screen.queryByTestId("youtube-recipe-candidates")).toBeNull();
+  });
+
+  it("cancels an in-flight candidate promotion when the user leaves", async () => {
+    mockMultiParentSession();
+    let resolvePromotion!: (
+      value: Awaited<ReturnType<typeof youtubeApi.createYoutubeCandidateDraft>>,
+    ) => void;
+    vi.mocked(youtubeApi.createYoutubeCandidateDraft).mockReturnValueOnce(new Promise((resolve) => {
+      resolvePromotion = resolve;
+    }));
+    const onRequestClose = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <YoutubeImportScreen
+        columnId=""
+        initialExtractionId={MULTI_PARENT_ID}
+        onRequestClose={onRequestClose}
+        planDate=""
+        slotName=""
+      />,
+    );
+
+    await user.click(await screen.findByTestId("youtube-recipe-candidate-candidate-2"));
+    expect(youtubeApi.createYoutubeCandidateDraft).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
+    expect(onRequestClose).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolvePromotion({
+        success: true,
+        data: {
+          parent_extraction_id: MULTI_PARENT_ID,
+          candidate_id: "candidate-2",
+          draft: buildMultiChildDraft(),
+        },
+        error: null,
+      });
+    });
+
+    expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "계란국" })).toBeNull();
   });
 
   it("offers login with the current extraction URL when automatic persistence is unauthorized", async () => {
