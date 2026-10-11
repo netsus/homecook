@@ -8,7 +8,7 @@ Copyright (c) 2025 Jesse Vincent
 
 ## Anti Slop
 
-`.agents/skills/homecook-typescript-evidence-review/SKILL.md` uses selected review ideas from [`dmmulroy/anti-slop`](https://github.com/dmmulroy/anti-slop/tree/c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b). No upstream plugin code is vendored.
+`.agents/skills/homecook-typescript-evidence-review/SKILL.md` uses selected review ideas from [`dmmulroy/anti-slop`](https://github.com/dmmulroy/anti-slop/tree/c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b). Five reviewed source files are vendored under `tools/oxlint/anti-slop`; their exact paths and SHA-256 values are recorded in the adjacent `UPSTREAM.md`.
 
 Copyright (c) 2026 Dillon Mulroy
 

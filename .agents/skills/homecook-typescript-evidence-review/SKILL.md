@@ -1,6 +1,6 @@
 ---
 name: homecook-typescript-evidence-review
-description: Homecook TypeScript/JavaScript 변경에서 근거 없는 타입·런타임 가정, 불필요한 할당, 과도한 추상화를 점검한다. 새 코드 작성, 의미 있는 리팩터링, 코드 리뷰 때 사용하며 외부 lint 플러그인을 설치하거나 모든 패턴을 기계적으로 금지하지 않는다.
+description: Homecook TypeScript/JavaScript 변경에서 자동 Anti Slop 검사와 근거 중심 리뷰를 함께 적용한다. 새 코드 작성, 의미 있는 리팩터링, 코드 리뷰 때 사용하며 자동 강제 범위와 사람의 판단이 필요한 범위를 구분한다.
 ---
 
 # Homecook TypeScript evidence review
@@ -26,13 +26,15 @@ description: Homecook TypeScript/JavaScript 변경에서 근거 없는 타입·�
 
 ## 3. 증거로 닫는다
 
-1. 변경 동작을 직접 재현하는 가장 작은 테스트를 실행한다.
-2. 타입을 바꿨다면 관련 `typecheck`, lint 규칙을 바꿨다면 관련 lint를 실행한다.
-3. diff를 다시 읽고 모든 변경 줄이 요청 또는 그 검증으로 설명되는지 확인한다.
-4. 자동으로 강제된 항목과 리뷰로만 확인한 항목을 구분해 보고한다.
+1. 제품 TypeScript/JavaScript를 바꿨다면 `pnpm verify:anti-slop`을 실행한다. baseline 파일을 자동 갱신해 신규 위반을 숨기지 않는다.
+2. 변경 동작을 직접 재현하는 가장 작은 테스트를 실행한다.
+3. 타입을 바꿨다면 관련 `typecheck`, lint 규칙을 바꿨다면 관련 lint를 실행한다.
+4. diff를 다시 읽고 모든 변경 줄이 요청 또는 그 검증으로 설명되는지 확인한다.
+5. 자동으로 강제된 항목과 리뷰로만 확인한 항목을 구분해 보고한다.
 
 ## 적용 범위와 출처
 
-- 이 저장소는 `dmmulroy/anti-slop`의 Oxlint 플러그인 소스를 vendoring하지 않았고 `oxlint` 또는 `@oxlint/plugins`를 추가하지 않았다. 따라서 upstream 규칙 전체가 자동 강제된다고 주장하지 않는다.
-- 규칙 선택 기준은 MIT 라이선스의 [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop/tree/c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b)에서 착안해 Homecook의 기존 ESLint·Vitest·런타임에 맞게 독립적으로 작성했다.
+- 이 저장소는 MIT 라이선스의 [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop/tree/c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b)에서 검토한 규칙 네 개만 `tools/oxlint/anti-slop`에 vendoring하고, `oxlint`와 `@oxlint/plugins`를 `1.78.0`으로 함께 고정한다.
+- 자동 검사는 `app`, `components`, `lib`, `stores`, `types`, `ui`에서 배열 `filter`/`map` 이중 순회, reducer 누산 복사·spread, 연쇄 타입 단언, 조건부 빈 객체 spread의 baseline 초과 신규 위반을 막는다.
+- 모듈 mocking, `typeof`, `unknown`, `Reflect`, Effect 규칙은 Homecook의 테스트·입력 경계·동적 어댑터 사용을 무차별 차단하지 않도록 자동 강제하지 않는다. 이 절의 나머지 리뷰 항목은 계속 사람의 판단이 필요하다.
 - 구현 전 판단, 단순성, 최소 범위, 성공 조건은 [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills/tree/2c606141936f1eeef17fa3043a72095b4765b9c2)의 네 주제를 참고했다. 검토 시점에 스킬 frontmatter는 MIT라고 표시했지만 저장소 루트 `LICENSE`는 없었으므로 원문을 복제하지 않았다.

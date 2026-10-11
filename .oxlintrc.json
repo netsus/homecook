@@ -1,0 +1,28 @@
+{
+  "ignorePatterns": [
+    ".agents/**",
+    ".artifacts/**",
+    ".codex/**",
+    ".next/**",
+    ".omx/**",
+    ".worktrees/**",
+    "build/**",
+    "coverage/**",
+    "lib/server/youtube-i031-runtime/bundle/**",
+    "node_modules/**",
+    "out/**",
+    "playwright-report/**",
+    "test-results/**",
+    "tools/oxlint/anti-slop/**"
+  ],
+  "jsPlugins": [
+    { "name": "anti-slop", "specifier": "./tools/oxlint/anti-slop/index.ts" }
+  ],
+  "rules": {
+    "oxc/no-accumulating-spread": "error",
+    "anti-slop/no-array-filter-map": "error",
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    "anti-slop/no-reduce-accumulator-copy": "error"
+  }
+}

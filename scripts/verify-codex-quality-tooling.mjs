@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -12,6 +13,10 @@ const files = {
   notices: "THIRD_PARTY_NOTICES.md",
   packageJson: "package.json",
   lockfile: "pnpm-lock.yaml",
+  antiSlopConfig: ".oxlintrc.json",
+  antiSlopBaseline: "tools/oxlint/anti-slop-baseline.json",
+  antiSlopUpstream: "tools/oxlint/anti-slop/UPSTREAM.md",
+  antiSlopWorkflow: ".github/workflows/anti-slop.yml",
 };
 
 function fail(message) {
@@ -57,6 +62,11 @@ const notices = await read(files.notices);
 const packageJsonText = await read(files.packageJson);
 const lockfile = await read(files.lockfile);
 const packageJson = JSON.parse(packageJsonText);
+const antiSlopConfig = await read(files.antiSlopConfig);
+const antiSlopBaselineText = await read(files.antiSlopBaseline);
+const antiSlopBaseline = JSON.parse(antiSlopBaselineText);
+const antiSlopUpstream = await read(files.antiSlopUpstream);
+const antiSlopWorkflow = await read(files.antiSlopWorkflow);
 
 const expectedSkills = [
   {
@@ -93,23 +103,66 @@ if (packageJson.scripts?.["verify:codex-quality-tooling"] !== "node scripts/veri
   fail("package.json must expose verify:codex-quality-tooling");
 }
 
-const dependencyNames = new Set([
-  ...Object.keys(packageJson.dependencies ?? {}),
-  ...Object.keys(packageJson.devDependencies ?? {}),
-  ...Object.keys(packageJson.optionalDependencies ?? {}),
-  ...Object.keys(packageJson.peerDependencies ?? {}),
-]);
-const forbiddenExternalPackages = ["oxlint", "@oxlint/plugins", "oxlint-plugin-anti-slop"];
-const declaredExternalLintDependencies = forbiddenExternalPackages.filter((packageName) => dependencyNames.has(packageName));
-if (declaredExternalLintDependencies.length > 0) {
-  fail(`unapproved external lint dependencies are declared: ${declaredExternalLintDependencies.join(", ")}`);
+for (const packageName of ["oxlint", "@oxlint/plugins"]) {
+  if (packageJson.devDependencies?.[packageName] !== "1.78.0") {
+    fail(`${packageName} must be an exact 1.78.0 devDependency`);
+  }
+  for (const field of ["dependencies", "optionalDependencies", "peerDependencies"]) {
+    if (packageJson[field]?.[packageName] !== undefined) {
+      fail(`${packageName} must not be declared in ${field}`);
+    }
+  }
+}
+if (packageJson.devDependencies?.["oxlint-plugin-anti-slop"] !== undefined) {
+  fail("unofficial oxlint-plugin-anti-slop package must not be installed");
+}
+assertContains(lockfile, "'@oxlint/plugins@1.78.0':", files.lockfile);
+assertContains(lockfile, "oxlint@1.78.0:", files.lockfile);
+assertContains(lockfile, "sha512-Ypt8KeRYw+4jUtlPirfcHWMrn5ms12VrrFPD+Mds477/7tJxG1Kcz2Yrg2nVcTQEUx/GdlhS+BUg1kmxNm04Ug==", files.lockfile);
+assertContains(lockfile, "sha512-QgQePuxIqKOzo1KSjG2EnITEeWvWnKAm77eq8nrMtf6AGoA+zyGc4PFYtDNJSD25g/ibOwfQ851hZ4/SPkMVoA==", files.lockfile);
+
+const vendoredHashes = {
+  "tools/oxlint/anti-slop/rules/no-array-filter-map.ts": "528bba857b84712c038e35e59079cc1e6c78a0421c65bb3c6117c9d412a2f28a",
+  "tools/oxlint/anti-slop/rules/no-reduce-accumulator-copy.ts": "dce4b08ee7ac4bbedfe743f6fa4a3d423cde50b37691130b899cc4573c05d2ae",
+  "tools/oxlint/anti-slop/rules/no-chained-type-assertions.ts": "72f8e981520f94adac0ffbdab8f8e84e5f2a4595f14e4a6471be917a85a20a15",
+  "tools/oxlint/anti-slop/rules/no-conditional-empty-object-spread.ts": "33f044030d208fcc10be73bb19c8172c275c5229df4b0ca8ec10f069bbe60062",
+  "tools/oxlint/anti-slop/shared/array-method.ts": "e360557253c56ab7c256623f3338415743e5027e9d999f801fb79d98240d217b",
+  "tools/oxlint/anti-slop/LICENSE": "10ed33bf340d6d63dc0633dfc917a346b369b6aa41fe20734aefc6a3fb75ba17",
+};
+for (const [relativePath, expectedHash] of Object.entries(vendoredHashes)) {
+  const content = await read(relativePath);
+  const actualHash = createHash("sha256").update(content).digest("hex");
+  if (actualHash !== expectedHash) fail(`${relativePath} hash is ${actualHash}, expected ${expectedHash}`);
+  assertContains(antiSlopUpstream, expectedHash, files.antiSlopUpstream);
 }
 
-const externalLintLockEntries = forbiddenExternalPackages.filter((packageName) =>
-  lockfile.includes(`${packageName}@`),
-);
-if (externalLintLockEntries.length > 0) {
-  fail(`unapproved external lint packages are locked: ${externalLintLockEntries.join(", ")}`);
+for (const rule of [
+  "anti-slop/no-array-filter-map",
+  "anti-slop/no-chained-type-assertions",
+  "anti-slop/no-conditional-empty-object-spread",
+  "anti-slop/no-reduce-accumulator-copy",
+  "oxc/no-accumulating-spread",
+]) {
+  assertContains(antiSlopConfig, `\"${rule}\": \"error\"`, files.antiSlopConfig);
+}
+if (antiSlopBaseline.sourceCommit !== "c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b") {
+  fail("Anti Slop baseline must name the reviewed upstream commit");
+}
+if (!Array.isArray(antiSlopBaseline.findings) || antiSlopBaseline.findings.length === 0) {
+  fail("Anti Slop baseline must record the reviewed existing findings");
+}
+if (packageJson.scripts?.["verify:anti-slop"] !== "node scripts/test-anti-slop-fixtures.mjs && tsc --noEmit -p tools/oxlint/tsconfig.json && node scripts/run-anti-slop.mjs") {
+  fail("package.json must expose verify:anti-slop");
+}
+assertContains(antiSlopWorkflow, "pnpm verify:anti-slop", files.antiSlopWorkflow);
+assertContains(antiSlopWorkflow, "pnpm verify:codex-quality-tooling", files.antiSlopWorkflow);
+for (const action of [
+  "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+  "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+  "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+]) {
+  assertContains(antiSlopWorkflow, action, files.antiSlopWorkflow);
+  assertContains(record, action, files.record);
 }
 
 for (const sourceRevision of [
@@ -133,9 +186,10 @@ process.stdout.write(
       agentsBytes,
       defaultInstructionBudgetBytes,
       skills: expectedSkills.map(({ expectedName, relativePath }) => ({ name: expectedName, path: relativePath })),
-      antiSlopMechanicalEnforcement: false,
-      externalLintDirectDependenciesDeclared: declaredExternalLintDependencies,
-      externalLintLockEntries,
+      antiSlopMechanicalEnforcement: true,
+      antiSlopVersion: "1.78.0",
+      vendoredFilesVerified: Object.keys(vendoredHashes).length,
+      baselineFindings: antiSlopBaseline.findings.reduce((total, finding) => total + finding.count, 0),
     },
     null,
     2,
