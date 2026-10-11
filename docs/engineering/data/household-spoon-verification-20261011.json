@@ -1,0 +1,52 @@
+{
+  "schema": "homecook.household-spoon-verification.v1",
+  "verified_at": "2026-10-11T10:18:47.860Z",
+  "status": "PASS",
+  "reviewed_ingredient_kinds": 11,
+  "reviewed_recipe_rows": 27,
+  "applied_ingredient_kinds": 7,
+  "applied_recipe_rows": 16,
+  "affected_recipes": 4,
+  "held_recipe_rows": 11,
+  "current_recipes": 51,
+  "current_recipe_rows": 495,
+  "unaffected_recipes": 47,
+  "nutrition_snapshots_created": 4,
+  "content_snapshots_created": 4,
+  "historical_records_preserved": true,
+  "sql_js_guard_parity": true,
+  "failed_transaction_rollback": true,
+  "clone_replay_additions": 0,
+  "production_replay_performed": false,
+  "ai_automatic_nutrition_enabled": false,
+  "worker_catalog_fingerprint": "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9",
+  "ledger_count": 218,
+  "web_ref": "f970bc1d1f1e981d8947e852a9b51ada4a74570a",
+  "web_build": "prelaunch-f970bc1d1f1e-WgYzjm",
+  "sql_sha256": "b67583b31d5aecad961a1421a5e7f862ed21f7ee11be82a90b365b2c615bd323",
+  "tests": {
+    "runtime": 82,
+    "weight_plan": 14,
+    "sql": 18,
+    "deployment": 149,
+    "independent_review": 34,
+    "typecheck": "PASS",
+    "build": "PASS",
+    "selected_eslint": "PASS",
+    "embedded_next_eslint": "existing react-hooks module resolution warning"
+  },
+  "ui": {
+    "origin": "http://127.0.0.1:3100",
+    "desktop": "PASS",
+    "mobile_390_844": "PASS",
+    "tofu_display_kcal": 446,
+    "pork_display_kcal": 2218,
+    "unit": "밥숟가락",
+    "public_domain_browser": "not verified; preceding client blocker"
+  },
+  "limitations": [
+    "User-approved weight estimates, not physical measurements",
+    "Heaped or conflicting source rows retain previous conversion",
+    "Source-trusted unit preservation only; global manual unit list unchanged"
+  ]
+}

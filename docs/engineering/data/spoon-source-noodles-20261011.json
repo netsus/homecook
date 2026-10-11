@@ -1,0 +1,64 @@
+{
+  "schema": "homecook.household-spoon-source-review.v1",
+  "reviewed_at": "2026-10-11",
+  "mode": "read_only_source_audit",
+  "database_mutations": 0,
+  "paid_model_calls": 0,
+  "recipe_id": "b9166455-9283-4922-90b9-72967030bc94",
+  "recipe_title": "엄마표 간장국수",
+  "source_url": "https://www.youtube.com/watch?v=OlHcm42NmYE",
+  "source_access": {
+    "current_web_fetch": "YouTube fetch throttled",
+    "visual_review": "Reviewed original video cached in previous source audit; extracted fresh frames locally, matched original video SHA256. No new video download required.",
+    "source_video_sha256": "ebb6a1dffaa2c5f9b326c1dc3d171154b61aad72d492f06eb072f23027c9ac53",
+    "prior_contact_sheet_sha256": "f7fea023a9f8b1408c1dd13c972517ebc9f539632717bb41613a166444d29c87"
+  },
+  "rows": [
+    {
+      "recipe_ingredient_id": "b9b65bde-e737-4f4c-9255-90486e72c4a9",
+      "ingredient_name": "다진마늘",
+      "current_amount": 1,
+      "current_unit": "숟가락",
+      "classification": "household_heaped",
+      "tool_observation": "일반 금속 밥숟가락 형태다. 15ml 계량스푼 표식은 보이지 않는다.",
+      "fill_observation": "7.5~7.8초에 둥근 모서리를 가진 다진마늘 덩어리 하나가 숟가락에 담겨 있고, 윗면이 숟가락 가장자리와 평평하지 않다. 계량 후 윗면을 깎아낸 평평한 1숟가락으로 확인할 수 없다.",
+      "onscreen_text": "다진마늘 1",
+      "source_times_seconds": [
+        7.5,
+        7.8
+      ],
+      "household_spoon_confirmed": true,
+      "level_fill_confirmed": false,
+      "measured_capacity_ml": null,
+      "actual_weight_g": null,
+      "approved_level_spoon_estimate_g": 9,
+      "eligible_for_9g_replacement": false,
+      "recommended_action": "기존 수량·표현은 유지하고 이번 평평한 밥숟가락 9g 적용 대상에서 제외. 실제 중량 또는 별도 수북한/덩어리 기준 근거가 생기면 재검토.",
+      "limitations": [
+        "영상은 도구의 실제 용량과 마늘 덩어리의 실제 중량을 입증하지 않는다.",
+        "덩어리가 냉동인지 여부는 확인되지 않으므로 냉동마늘이라고 단정하지 않는다.",
+        "household_heaped 분류는 평평한 계량이 아니라는 시각적 분류이며 수북한 1숟가락의 수치 기준을 새로 정하는 의미가 아니다."
+      ]
+    }
+  ],
+  "reviewed_frames": [
+    {
+      "time_seconds": 7.2,
+      "filename": "garlic-7.2s.png",
+      "sha256": "dee647744e2af9838baeba851ed33a1c4e076385716d312da58bc2e0aca6a310"
+    },
+    {
+      "time_seconds": 7.5,
+      "filename": "garlic-7.5s.png",
+      "sha256": "660effbccbed641440546533fc0afe0ee430299af8fa1d1cae00550c6cf3095e"
+    },
+    {
+      "time_seconds": 7.8,
+      "filename": "garlic-7.8s.png",
+      "sha256": "14170a3f85e1f9fbd57679787516ed6f70ab9eeb4f0f2a99054a237729d2f833"
+    }
+  ],
+  "prior_review_reference": "docs/engineering/data/garlic-and-partial-nutrition-review-20261010.json#garlic",
+  "user_authority": "밥숟가락 확인 시 승인된 추정값 사용. 이전 표의 평평한 밥숟가락 조건을 충족하지 않아 9g 변경 보류.",
+  "source_text_note": "설명·화면의 숫자 1만으로 평평한 숟가락 또는15ml를 추정하지 않았다."
+}

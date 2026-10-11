@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-11",
+  "source": {
+    "url": "https://www.youtube.com/watch?v=2aszTDFuueA",
+    "video_id": "2aszTDFuueA",
+    "title": "돼지고기가 이렇게 맛있는 줄 몰랐죠. 이제 그냥 구워 먹지 마세요!",
+    "duration_seconds": 139,
+    "primary_source_description_read": true,
+    "primary_source_video_frames_viewed": true,
+    "subtitles_available": false,
+    "audio_transcribed": false
+  },
+  "method": "Read public uploader description through yt-dlp metadata; download public 480p video; inspect contact sheets and precise ffmpeg frames with image viewer. No paid AI, third-party transcript or authenticated access used.",
+  "scope": "Source tool/fill audit only; recipe/fork/DB changes not performed.",
+  "tool_finding": "긴 손잡이와 타원형 볼을 가진 나무 밥숟가락이 공통으로 보인다. ml 표기나 계량스푼 형태는 보이지 않는다. 실제 용량을 영상으로 측정하지 않았으므로 11.5ml 상당 중량은 사용자 승인 서비스 추정이다.",
+  "classification_note": "confirmed_household_level for liquids means no heaped mound and visibly contained in spoon bowl; it is not a measured 11.5ml observation.",
+  "rows": [
+    {
+      "ingredient": "소금",
+      "source_amount": 0.5,
+      "classification": "unknown",
+      "tool_type": "household_spoon",
+      "fill": "small mound / fractional fill; level half not established",
+      "timestamp_seconds": [
+        20.8,
+        21.3
+      ],
+      "apply_household_estimate": false,
+      "evidence": "타원형 나무 밥숟가락 중앙에 소량을 모아 담은 상태를 확인했다. 설명과 화면 모두 반 스푼이지만, 수북함과 평평한 반 스푼 환산의 대응은 확인되지 않았다.",
+      "hold_reason": "Fractional dry quantity is visible, but cannot verify level-fill assumption."
+    },
+    {
+      "ingredient": "맛술",
+      "source_name": "미림",
+      "source_amount": 2,
+      "classification": "confirmed_household_level",
+      "tool_type": "household_spoon",
+      "fill": "liquid within bowl, no heaping",
+      "timestamp_seconds": [
+        22.9,
+        25.2
+      ],
+      "apply_household_estimate": true,
+      "estimated_grams_per_spoon": 10,
+      "estimated_total_grams": 20,
+      "evidence": "같은 나무 밥숟가락으로 투명한 액체를 두 번 붓고, 화면과 설명의 수량도 일치한다."
+    },
+    {
+      "ingredient": "양조간장",
+      "source_name": "간장",
+      "source_amount": 2,
+      "classification": "confirmed_household_level",
+      "tool_type": "household_spoon",
+      "fill": "liquid within bowl, no heaping",
+      "timestamp_seconds": [
+        59.8,
+        62.2
+      ],
+      "apply_household_estimate": true,
+      "estimated_grams_per_spoon": 14,
+      "estimated_total_grams": 28,
+      "evidence": "나무 밥숟가락의 액체를 소스 볼에 두 번 붓는 장면이다. 화면과 설명의 수량이 일치한다.",
+      "identity_limit": "영상은 간장으로 표현한다. 양조간장 제품 형태를 새로 확인한 것은 아니다."
+    },
+    {
+      "ingredient": "양조식초",
+      "source_name": "식초",
+      "source_amount": 1,
+      "classification": "confirmed_household_level",
+      "tool_type": "household_spoon",
+      "fill": "liquid within bowl, no heaping",
+      "timestamp_seconds": [
+        62.5,
+        64.3
+      ],
+      "apply_household_estimate": true,
+      "estimated_grams_per_spoon": 12,
+      "estimated_total_grams": 12,
+      "evidence": "나무 밥숟가락에 담은 투명한 액체를 한 번 붓는다. 화면과 설명의 수량이 일치한다.",
+      "identity_limit": "영상은 식초로 표현한다. 양조식초 제품 형태를 새로 확인한 것은 아니다."
+    },
+    {
+      "ingredient": "굴소스",
+      "source_amount": 1,
+      "classification": "confirmed_household_level",
+      "tool_type": "household_spoon",
+      "fill": "viscous liquid within bowl; no mound above rim",
+      "timestamp_seconds": [
+        65.0,
+        66.6
+      ],
+      "apply_household_estimate": true,
+      "estimated_grams_per_spoon": 15,
+      "estimated_total_grams": 15,
+      "evidence": "65.3초 프레임에서 밥숟가락 안에 담긴 소스의 평평한 액면과 테두리가 보인다. 화면과 설명의 수량도 일치한다."
+    },
+    {
+      "ingredient": "설탕",
+      "source_amount": 2,
+      "classification": "household_heaped",
+      "tool_type": "household_spoon",
+      "fill": "heaped dry sugar",
+      "timestamp_seconds": [
+        70.5,
+        73.1
+      ],
+      "apply_household_estimate": false,
+      "description_amount": 2,
+      "on_screen_caption_amount": 4,
+      "evidence": "70.5초 프레임에 숟가락 테두리 위로 올라온 설탕이 보인다. 영상 화면 수량은 4, 공개 설명은 2로 다르다.",
+      "hold_reason": "Heaped fill and conflicting source quantities; do not silently change quantity or apply level-spoon estimate."
+    },
+    {
+      "ingredient": "다진마늘",
+      "source_name": "마늘",
+      "source_amount": 1,
+      "classification": "household_heaped",
+      "tool_type": "household_spoon",
+      "fill": "chopped garlic visibly heaped above rim",
+      "timestamp_seconds": [
+        77.8,
+        78.1
+      ],
+      "apply_household_estimate": false,
+      "evidence": "77.8초 프레임에서 잘게 다진 마늘이 숟가락 테두리보다 높게 수북하다. 평평한 밥숟가락 9g 기준에 부합하지 않는다.",
+      "hold_reason": "User-approved 9g applies to level household spoon, not a visibly heaped spoon."
+    }
+  ],
+  "summary": {
+    "reviewed": 7,
+    "apply_candidates": 4,
+    "held": 3,
+    "measuring_15ml_confirmed": 0
+  },
+  "private_evidence": [
+    {
+      "relative_file": "pork/2aszTDFuueA.info.json",
+      "sha256": "9e531258c02c5f235956b91beea678308ebdbe5d912108c3a79324dbc072f8cb"
+    },
+    {
+      "relative_file": "pork/source.webm",
+      "sha256": "93883fa6c764a5249e9bfc17290b26ba311832e3e5f21e8d0353ef9e62d2b22e"
+    },
+    {
+      "relative_file": "pork/contact.png",
+      "sha256": "a548317b56a4d001a50ceb4af05ef73de2c35f789ae47c741ca6b1b38dad76d2"
+    },
+    {
+      "relative_file": "pork/preseason.png",
+      "sha256": "43ecf95f801b13458c64e0c1028a52bfd63a06f0daacde0f8fbda7cebe7ad38c"
+    },
+    {
+      "relative_file": "pork/sauce.png",
+      "sha256": "c9ebe695170739660d427e230dabf8a71d8e412933fe21ce3c01cc60e114d966"
+    },
+    {
+      "relative_file": "pork/salt-detail.png",
+      "sha256": "9d2ac45e4928c94884e4a354d5de19384e65a21f898c0c390be2778e3bed749a"
+    },
+    {
+      "relative_file": "pork/frame-23.7.png",
+      "sha256": "5e00aaf565fa5c6a1538826d67b792f65679601bd6c0536710fe1d3f25d87c2e"
+    },
+    {
+      "relative_file": "pork/frame-65.3.png",
+      "sha256": "02bec36bbe70f63b718c8c3327e71765c4c65b10921a6514c6254538df57bd72"
+    },
+    {
+      "relative_file": "pork/frame-70.5.png",
+      "sha256": "b42be40c6128aa3fee0008d047bb587067ee47781dfafc31d02781ae8066a3b8"
+    },
+    {
+      "relative_file": "pork/frame-77.8.png",
+      "sha256": "20a0475db2989f17c0ccd3a08a8ba7c37061304ca5c07e4afc42e79ba340ad90"
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "reviewed_on": "2026-10-11",
+  "source": {
+    "url": "https://www.youtube.com/watch?v=2KoUycJinko",
+    "video_id": "2KoUycJinko",
+    "title": "여러가지 시도해보고 정착한 두부찌개 레시피",
+    "author": "뚜비두밥 맛있는밥",
+    "duration_seconds": 20,
+    "author_comment_url": "https://www.youtube.com/watch?v=2KoUycJinko&lc=UgwmsTv1haD1-gmX3NZ4AaABAg",
+    "author_comment_verified": true,
+    "author_comment_pinned": true,
+    "description_empty": true
+  },
+  "method": {
+    "public_author_comment": "yt-dlp public top comments; uploader flag and pinned flag checked. Comment quantities match the six reviewed ingredients. Non-author comments were not used.",
+    "visual": "Actual downloaded public video frames at the stated timestamps were opened and visually inspected, including ingredient-pour sequence contact sheet.",
+    "transcript": "Korean automatic captions verify ingredient order, not spoon capacity or numeric quantities.",
+    "boundary": "No measuring-spoon capacity can be measured from images. Ordinary eating-spoon shape supports household-spoon classification only. Proposed grams are user-approved estimates, never measured values."
+  },
+  "tool_observation": "All six additions use a shallow oval metal eating spoon with a long slim handle. No measuring cup-shaped spoon or 15ml marking is visible. The author calls these amounts 스푼, not 큰술 or T.",
+  "rows": [
+    {
+      "ingredient": "고춧가루",
+      "source_amount": 2,
+      "source_unit": "스푼",
+      "classification": "unknown",
+      "spoon_type": "household",
+      "fill": "uncertain_or_mounded",
+      "timestamps_seconds": [
+        9.25,
+        9.65
+      ],
+      "evidence": "Powder is already tipping/falling in the available shots; a rounded pile is visible but the pre-pour level surface is not shown clearly. Level filling cannot be confirmed.",
+      "apply_estimate": false,
+      "proposed_grams": null,
+      "reason": "Do not apply the 6g level-spoon estimate to an uncertain powder heap."
+    },
+    {
+      "ingredient": "다진마늘",
+      "source_amount": 1,
+      "source_unit": "스푼",
+      "classification": "household_heaped",
+      "spoon_type": "household",
+      "fill": "heaped",
+      "timestamps_seconds": [
+        10.5
+      ],
+      "evidence": "A large mound of minced garlic projects above and beyond the spoon bowl before tipping.",
+      "apply_estimate": false,
+      "proposed_grams": null,
+      "reason": "The approved 9g estimate is for a level spoon; no arbitrary heap multiplier."
+    },
+    {
+      "ingredient": "진간장",
+      "catalog_ingredient": "양조간장",
+      "source_amount": 1,
+      "source_unit": "스푼",
+      "classification": "confirmed_household_level",
+      "spoon_type": "household",
+      "fill": "liquid",
+      "timestamps_seconds": [
+        11.25
+      ],
+      "evidence": "Dark liquid is held and poured from the ordinary metal eating spoon. Author quantity is one spoon.",
+      "apply_estimate": true,
+      "estimate_grams_per_spoon": 14,
+      "proposed_grams": 14
+    },
+    {
+      "ingredient": "멸치액젓",
+      "source_amount": 1,
+      "source_unit": "스푼",
+      "classification": "confirmed_household_level",
+      "spoon_type": "household",
+      "fill": "liquid",
+      "timestamps_seconds": [
+        12.15
+      ],
+      "evidence": "Liquid is poured from the same eating spoon; the author lists one spoon.",
+      "apply_estimate": true,
+      "estimate_grams_per_spoon": 14,
+      "proposed_grams": 14
+    },
+    {
+      "ingredient": "올리고당",
+      "source_amount": 1,
+      "source_unit": "스푼",
+      "classification": "confirmed_household_level",
+      "spoon_type": "household",
+      "fill": "viscous_liquid",
+      "timestamps_seconds": [
+        12.7,
+        12.8
+      ],
+      "evidence": "Clear viscous syrup drains from the same eating spoon without a solid mound; author quantity is one spoon.",
+      "apply_estimate": true,
+      "estimate_grams_per_spoon": 12,
+      "proposed_grams": 12
+    },
+    {
+      "ingredient": "다시다",
+      "source_amount": 0.5,
+      "source_unit": "스푼",
+      "classification": "confirmed_household_level",
+      "spoon_type": "household",
+      "fill": "partial_non_heaped",
+      "timestamps_seconds": [
+        13.5,
+        13.6
+      ],
+      "evidence": "Fine seasoning occupies part of the bowl with no protruding mound; the author explicitly lists half a spoon. This is a visual non-heaped classification, not a measured half-volume.",
+      "apply_estimate": true,
+      "estimate_grams_per_spoon": 8,
+      "proposed_grams": 4
+    }
+  ],
+  "summary": {
+    "reviewed_rows": 6,
+    "eligible_for_approved_estimate": 4,
+    "heaped_hold": 1,
+    "unknown_fill_hold": 1,
+    "confirmed_measuring_15ml": 0
+  },
+  "artifacts": [
+    {
+      "private_relative_file": "tofu/source.info.json",
+      "sha256": "a1d0e28b6499e5f6f95d26c2aa50733d32b2c48e9a12de12d3eb168d67781a97"
+    },
+    {
+      "private_relative_file": "tofu/source.ko-orig.vtt",
+      "sha256": "f9d3aca2d82258f6c7b8091b00363be48b6264e8fd4f74c5dc7d0985c9d7c671"
+    },
+    {
+      "private_relative_file": "tofu/comments.info.json",
+      "sha256": "62a88a49d4bef425d94aca462c95e556f087baf9750cf7e65234632d81ed9259"
+    },
+    {
+      "private_relative_file": "tofu/video.mp4",
+      "sha256": "cbcd4ccde6aa84631892223030498a98376aefd31bf57ec8d00f4a8f4b425ae3"
+    },
+    {
+      "private_relative_file": "tofu/frame-10.50.jpg",
+      "sha256": "ad19702059a2de0a62ea94f43a1ac82c8799836a0069abbac828244de334732b"
+    },
+    {
+      "private_relative_file": "tofu/frame-11.25.jpg",
+      "sha256": "089c41f05ff31521f19a0b0d4bdd7e0a9521b4a16f99bfb7d00b40464fdb23e4"
+    },
+    {
+      "private_relative_file": "tofu/frame-12.15.jpg",
+      "sha256": "3929c90272a862ff0bc93232043dda23d2dd93407f51db66f918b0854a1a7916"
+    },
+    {
+      "private_relative_file": "tofu/frame-12.70.jpg",
+      "sha256": "e294c15e70c6e0d7f30953e45b1023ace1bb0bb6131d4de5db17ded8ce4f584d"
+    },
+    {
+      "private_relative_file": "tofu/frame-13.50.jpg",
+      "sha256": "4fcd413aebc3565e97b18c0651036adba64af2da9753dc18b8e063906ba8f5b8"
+    },
+    {
+      "private_relative_file": "tofu/frame-9.65.jpg",
+      "sha256": "e1d1d756386ba551543506981faf0c76bacc5b53f9c5c579dc50f56562f81961"
+    }
+  ]
+}
