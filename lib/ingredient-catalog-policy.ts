@@ -24,6 +24,8 @@ export const INACTIVE_INGREDIENT_IDS = [
   "49587faf-2b79-441a-b6da-6112381ebc6b",
   "9f094241-b1da-4481-b140-8dedcf80563a",
   "cfaabb5e-482d-481b-8016-45bac54d1a01",
+  "290ff750-add0-455f-a407-325b71e2d51f",
+  "ef4fa64d-94f6-5328-a5c2-fef92ef26ed8",
 ] as const;
 
 const INACTIVE_INGREDIENT_ID_SET = new Set<string>(INACTIVE_INGREDIENT_IDS);
@@ -54,6 +56,8 @@ export const INACTIVE_INGREDIENT_NAMES = [
   "팬에 구운 돼지고기 목심",
   "팬에 구운 돼지고기 사태",
   "팬에 구운 돼지고기 안심",
+  "화이트크림",
+  "해물육수(액체)",
 ] as const;
 
 const INACTIVE_INGREDIENT_NAME_SET = new Set<string>(INACTIVE_INGREDIENT_NAMES);

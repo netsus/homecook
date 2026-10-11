@@ -11,16 +11,25 @@ import {
   normalizeIngredientCatalogName,
 } from "@/lib/ingredient-catalog-policy";
 
+const RETIRED_UNUSED_IDS = [
+  "290ff750-add0-455f-a407-325b71e2d51f",
+  "ef4fa64d-94f6-5328-a5c2-fef92ef26ed8",
+];
+
+const PRIOR_INACTIVE_IDS: readonly string[] = INACTIVE_INGREDIENT_IDS.filter(
+  (id) => !RETIRED_UNUSED_IDS.includes(id),
+);
+
 describe("ingredient catalog policy", () => {
-  it("hides the remaining 25 user-removed RDA variants while keeping base ingredients selectable", () => {
-    expect(INACTIVE_INGREDIENT_IDS).toHaveLength(25);
-    expect(new Set(INACTIVE_INGREDIENT_IDS).size).toBe(25);
+  it("hides 25 removed RDA variants and two retired ingredients while keeping base ingredients selectable", () => {
+    expect(INACTIVE_INGREDIENT_IDS).toHaveLength(27);
+    expect(new Set(INACTIVE_INGREDIENT_IDS).size).toBe(27);
     expect(isSelectableIngredientId("b530cbdf-7d78-4dca-b43e-7b43a9114084")).toBe(false);
     expect(isSelectableIngredientId("47528b57-dc5b-4391-878a-1ded89521a60")).toBe(false);
     expect(isSelectableIngredientId("550e8400-e29b-41d4-a716-446655440014")).toBe(true);
     expect(isSelectableIngredientId("46b7df4c-e85d-53b3-bd12-fb4ffff049c3")).toBe(true);
-    expect(INACTIVE_INGREDIENT_NAMES).toHaveLength(25);
-    expect(new Set(INACTIVE_INGREDIENT_NAMES).size).toBe(25);
+    expect(INACTIVE_INGREDIENT_NAMES).toHaveLength(27);
+    expect(new Set(INACTIVE_INGREDIENT_NAMES).size).toBe(27);
     expect(isSelectableIngredientName("생 돼지고기 갈비")).toBe(false);
     expect(isSelectableIngredientName("돼지고기 갈비")).toBe(true);
   });
@@ -38,13 +47,34 @@ describe("ingredient catalog policy", () => {
     const original = legacySql.match(/create or replace function public\.is_selectable_catalog_ingredient\(p_id uuid\)[\s\S]*?\$function\$;/i)?.[0];
     const originalIds = original?.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/g) ?? [];
     expect(originalIds).toHaveLength(26);
-    expect([...originalIds].filter((id) => id !== "cdf20482-adc3-48dc-a48f-a7658fed61d2").sort()).toEqual([...INACTIVE_INGREDIENT_IDS].sort());
+    expect([...originalIds].filter((id) => id !== "cdf20482-adc3-48dc-a48f-a7658fed61d2").sort()).toEqual([...PRIOR_INACTIVE_IDS].sort());
     const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261010120000_ingredient_exclusion_recovery_selection.sql"), "utf8");
     const helper = sql.match(/create or replace function public\.is_selectable_catalog_ingredient\(p_id uuid\)[\s\S]*?\$function\$;/i)?.[0];
     expect(helper).toBeDefined();
     const ids = helper?.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/g) ?? [];
     expect(ids).toHaveLength(25);
+    expect([...ids].sort()).toEqual([...PRIOR_INACTIVE_IDS].sort());
+  });
+
+  it("retires only the two unused identities without hiding seafood stock coins", () => {
+    for (const id of RETIRED_UNUSED_IDS) expect(isSelectableIngredientId(id)).toBe(false);
+    expect(isSelectableIngredientName("화이트크림")).toBe(false);
+    expect(isSelectableIngredientName("해물육수(액체)")).toBe(false);
+    expect(isSelectableIngredientName("해물육수코인")).toBe(true);
+    expect(isSelectableIngredientName("생크림")).toBe(true);
+  });
+
+  it("adds exactly the two retired IDs in SQL and retains function authority guards", () => {
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261011140000_retire_unused_ingredients.sql"), "utf8");
+    const helper = sql.match(/create or replace function public\.is_selectable_catalog_ingredient\(p_id uuid\)[\s\S]*?\$function\$;/i)?.[0];
+    expect(helper).toBeDefined();
+    const ids = helper?.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/g) ?? [];
+    expect(ids).toHaveLength(27);
     expect([...ids].sort()).toEqual([...INACTIVE_INGREDIENT_IDS].sort());
+    expect(ids.filter((id) => !PRIOR_INACTIVE_IDS.includes(id)).sort()).toEqual([...RETIRED_UNUSED_IDS].sort());
+    expect(sql).toContain("if md5(v_definition) is distinct from");
+    expect(sql).toContain("if v_after is distinct from v_before");
+    expect(sql).not.toMatch(/(?:delete\s+from|drop\s+function|grant\s|revoke\s)/i);
   });
 
   it.each([
