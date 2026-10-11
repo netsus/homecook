@@ -1,0 +1,116 @@
+{
+  "schema": "homecook.ingredient-retirement-verification.v1",
+  "date": "2026-10-11",
+  "mode": "logical retirement preserving historical foreign keys",
+  "ids": [
+    "290ff750-add0-455f-a407-325b71e2d51f",
+    "ef4fa64d-94f6-5328-a5c2-fef92ef26ed8"
+  ],
+  "production": {
+    "status": "committed",
+    "ledger": 217,
+    "retired": 2,
+    "ai_enabled": false,
+    "selection_md5": "9f7d48a93dd5a8a2be33d78cc05da9e1",
+    "history_preserved": true,
+    "worker_selection_verified": true,
+    "physical_ingredients_retained": 2,
+    "backup_sha256": "bdd6e45264a74d2c9c20e3fca21fda4775469bba4f5f59241430b9edb42a4a03",
+    "sql_sha256": "556037d7b608fa452a3b92fb3b7680a551bdbc010ddc827a65e069a7f52dd5e5",
+    "worker_readiness_preserved": true,
+    "worker_catalog_fingerprint": "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9",
+    "finished_at": "2026-10-11T04:36:21.373Z"
+  },
+  "clone": {
+    "passed": true,
+    "injected_failure_rollback": true,
+    "replay_rejected_without_change": true,
+    "sql_sha256": "556037d7b608fa452a3b92fb3b7680a551bdbc010ddc827a65e069a7f52dd5e5",
+    "ledger": 217,
+    "retired": 2,
+    "ai_enabled": false,
+    "selection_md5": "9f7d48a93dd5a8a2be33d78cc05da9e1",
+    "history_preserved": true,
+    "worker_selection_verified": true,
+    "physical_ingredients_retained": 2,
+    "verified_at": "2026-10-11T04:35:59.049Z"
+  },
+  "typecheck": "passed",
+  "policy_tests_passed": 20,
+  "targeted_eslint": "passed",
+  "owned_clone_removed": true,
+  "web": {
+    "ref": "3f4efa5988c327bc54c57511cb905ee3a272028e",
+    "buildId": "prelaunch-3f4efa5988c3-VhO8ZH",
+    "loaded": true,
+    "recoveryPending": false,
+    "tests_passed": 225,
+    "build": "passed",
+    "embedded_lint_note": "Existing eslint-plugin-react-hooks resolution warning; separate targeted lint passed"
+  },
+  "public_search": {
+    "passed": true,
+    "verified_at": "2026-10-11T04:39:36.270Z",
+    "search": [
+      {
+        "q": "화이트크림",
+        "status": 200,
+        "items": []
+      },
+      {
+        "q": "화이트 크림",
+        "status": 200,
+        "items": []
+      },
+      {
+        "q": "해물육수(액체)",
+        "status": 200,
+        "items": []
+      },
+      {
+        "q": "해물 육수 (액체)",
+        "status": 200,
+        "items": []
+      },
+      {
+        "q": "해물육수",
+        "status": 200,
+        "items": [
+          {
+            "id": "f13270c3-ce36-41ef-bb12-77775fc615a7",
+            "standard_name": "해물육수코인",
+            "category": "양념",
+            "category_group_code": "seasoning_condiment",
+            "category_code": null,
+            "category_label": "양념"
+          }
+        ]
+      },
+      {
+        "q": "생크림",
+        "status": 200,
+        "items": [
+          {
+            "id": "a36c69a7-51f4-4aa7-aa0a-a7f55f8898b9",
+            "standard_name": "생크림",
+            "category": "유제품",
+            "category_group_code": "dairy_alternative",
+            "category_code": null,
+            "category_label": "유제품"
+          }
+        ]
+      }
+    ],
+    "recipe404": [
+      {
+        "id": "a5a7fc1e-ceef-5970-9a85-b60377ce72f8",
+        "status": 404
+      },
+      {
+        "id": "ff795de4-16d5-563c-af83-9fd8c4a9fda4",
+        "status": 404
+      }
+    ]
+  },
+  "original_db_floor_and_216_extension_preserved": true
+}
