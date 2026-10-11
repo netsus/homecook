@@ -30,6 +30,7 @@ const eslintConfig = [
       "**/playwright-report/**",
       "test-results/**",
       "**/test-results/**",
+      "tools/oxlint/anti-slop/**",
       "next-env.d.ts",
       "**/next-env.d.ts",
     ],

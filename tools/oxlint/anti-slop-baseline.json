@@ -1,0 +1,1551 @@
+{
+  "schema": 1,
+  "sourceCommit": "c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b",
+  "scope": [
+    "app",
+    "components",
+    "lib",
+    "stores",
+    "types",
+    "ui"
+  ],
+  "rules": [
+    "anti-slop(no-array-filter-map)",
+    "anti-slop(no-chained-type-assertions)",
+    "anti-slop(no-conditional-empty-object-spread)",
+    "anti-slop(no-reduce-accumulator-copy)",
+    "oxc(no-accumulating-spread)"
+  ],
+  "findings": [
+    {
+      "file": "app/api/v1/admin/audit-logs/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "3867d632377768844f35f109e2ad683095bafebc78f95d38b2a2ee8ebe1b3e5d",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/admin/operational-events/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "3867d632377768844f35f109e2ad683095bafebc78f95d38b2a2ee8ebe1b3e5d",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/admin/page-view/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "3867d632377768844f35f109e2ad683095bafebc78f95d38b2a2ee8ebe1b3e5d",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/admin/users/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "3867d632377768844f35f109e2ad683095bafebc78f95d38b2a2ee8ebe1b3e5d",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking-methods/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "37ddd1abf8178065c916898f038e349fcb2cec3fe8fc01a1a27aeba465767554",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/session-attempts/[id]/complete/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "2336727f156042dc36378a56b1b77687de3f57314ec6b615e435f9e9a481663e",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/session-attempts/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/sessions/[session_id]/cancel/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "9c8870879609aec680a58d5ac81910ae6684e8652b748acbf235440a27ae49e4",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "dfdc16fbe4f15c336cd94233663b7dba171ea3dff258c662baafca9c5fc1f8bc",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/sessions/[session_id]/cook-mode/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "eb9ee866151c5534de5ce603ca099bccd76329c17172627c26d5890f63dd1d09",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/sessions/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "3c8df6d2ee81b6becd8d6a760d3c8080cd2f9eeff914358728571a33783d78ab",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/cooking/sessions/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "b2f1a65ff4b468e5bdf2aa6f0749f537b0e0b9b633748203310ec9d0c7bade38",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/food-catalog/search/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "213b687ba9e38bebf081c44de289b09c0f608cdae7c4cdb1429db72ca373c3e5",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/food-products/[product_id]/report/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "885c9eaa4534054df4e3413dbdb1f261294629aba7bc38294a4470de63cf4ef0",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/food-products/[product_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "6c4c04e44fcf8e72ed9817e27f1f30424f8075814d07b873b72aa84c5d5e8cfc",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/food-products/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "b9cacb9ece9a87b1dbd0d80d24a7501f57cdb84f1cd0a1254f6cdab0c5b8a381",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/food-products/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "bc4bf6ad7a3d86fa6af7a91bc0795fa32154ca01944ee4136cff8cf5dc90c39b",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/ingredients/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "06b0555c399fdb597f2075310628e41ec84f201e0bac5c371bcb08465931e911",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/ingredients/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "52e340872ca74505ffdaa09738f4385f53e5d4fed583ab31a6de679cf6dac545",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/ingredients/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "53d39094ff54ff401e15b27a2010722992cc5cf619148cabd12f369d4dd35d06",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/ingredients/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "66f0351600e38e276ec9ddf15d4c3cde9a5a27262676343493bc005140bcc377",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/ingredients/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "68ddabbb4780e8059e3b027a8c03d5c21813c43fbeaf7dae70cdb3970eafe65f",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/ingredients/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "b09fc771e45c7cf78a6159b29ee94eeb8b3a488b93c42d4819b7a40f398e9706",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/ingredients/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "f37ab7ec039048b9f33a042387a69cb0a6e46ec7c5d5c2aebf31ed98a8d15b5e",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/leftovers/[leftover_id]/eat/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "d97c9904d63c0f8d8dc8c6f7fdc82ecbdf011582d94a53d7f5ac6aba62cebc67",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/leftovers/[leftover_id]/keep/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "d39044ab4baae24b18be56e6a15c909ea43f380b1f0726b49599b9f6ed2bafd4",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/leftovers/[leftover_id]/uneat/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "d39044ab4baae24b18be56e6a15c909ea43f380b1f0726b49599b9f6ed2bafd4",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/leftovers/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "e000d2d91be100ae95ec113a9f932d1838c947734316b8eb437228f1bdd0e472",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "e37acc447d4e8ad8c719ae510162a9d9770b7ea42147717d46fef54d7f7524b9",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/meals/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "16e843117c2fadc3c91622137f1ce7bd4675d535edd60aecee60516b63f48332",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/meals/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/meals/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "d9f5207c6497f3b58132a472f7662c1ebadcb343b00a471159ce0c1e993fe9a0",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/meals/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/pantry/bundles/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "96b8ff9e2372384f43a42c8da7206004be0bc87c015fdadc060811be956760d8",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/pantry/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "dcbbb9a552ef8853b448ea49658f36e450e2c074bf953c86e795cfc7f04b3858",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/planner/columns/shared.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "91ed2302347fd6bac4d9d018e4d817e65709029fb2fd3c9547c5bd9c3ad3c5ec",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/planner/nutrition/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "92e084546d67fd71e7919c79a5c7a7071c42750e4aeb39b29f6ac932fc35979f",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/planner/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "dbc701ee1443a382ea4c8238f09525dd993c05dbd7eb886a8705b3e245a52d01",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/product-planner-entries/[entry_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/product-planner-entries/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "86a850df59c1324f7c3cc1fabd80bcad0dff8f2ebfab214518e17382a3dbbf8f",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "05aac81611f471be8f894654821ef5c6fbf25358bdfa0b5191de84574df8be77",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "13be47fc629b2b9da8569a9bcd9d608ced4f29d954ab656a3cd4b72080748696",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "58dfb17a095eb0ff3b4d31d2ee7b8938e090c134eca4ec9f59982b5c0a5d7888",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/[book_id]/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "57b04ea1fa26b7b0c8c1d59f62d84e80951ea3538f44684baab0d0d82734fe10",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/[book_id]/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "b93293a196fffa21d468425c4278a6a7f680b21376f398a859b0d0afa342a839",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/[book_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "0c02a21adac6a0fccf9c1acd2b75c8c87bcf716024973fa8a05dff5b2b31f10c",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "27ebc9d56f69b69f83690da7d2ea200c42b7a8976af789e26342bb1192e7c315",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "8c8f2edb3fd70f767d10253a58f09f56913fd5fd9769b968a69f1b8ada2222fc",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipe-books/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "96694f5d2832741fcbcabfea25cb774e3873027ab92e5c8302c50585a2219a8c",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/cook-mode/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ce0f88be7a1fdeee0a51d9af9db8f0e19433dbe3fa2cfddb1150efdf006a0d3f",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/like/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "3ad1ddccb50e5086af927f31cadc2fd2e474318f0036351292fb4c0aea4546bf",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/publish/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "59c307534b5136d238e3d3f1f3b86ec2cc1c4f5766ba2d2c1232194a98061068",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/publish/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "aa336e5ccd3ca10ecf13203e85ddb7c47042d995049950ccb04cd7c142e9f3b0",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "75dca4dc05eacbb3b3182090d0a749053ce982f349fd6869ff9238d463d5b741",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "91e5705e78b700f1287003227440f6dab707875d501101f851a207a28286d093",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "f4146d01e0fa2ccf1e8e6098b0d5df305167088c4f52e3f2a230662c27786c5e",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/save/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "12e8a3b0f8e52bd001619aa7653cf9bd49b3dfeba8b1082e50e6ff8420a0f606",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/save/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "1d4ed556adf3eac796f34013d7c35a6a76c4b33cb52b3bf5cae4cbae49b88b50",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/[id]/save/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ad2bfadee955fec6270d46984716065dc2bd503db54ad6dc214ae0e06fb0a760",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "6ce3f8a4acb2e0eff70cb03163cfe9d8dfc82df55c31a241e7d634e81dbbd999",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/images/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "14266fcd1379ee725f82accef37fed33a3731de1d352212d05e088b8f07dc68b",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/images/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "b314370a1eb44b83c8942484e4a2dd840296a20093e5c9a54b6d969779baeff4",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/pantry-match/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "ea2da29bcfe772d1062c49f0b4f2bf4cd0108f7e0301cd012f45eaa11e7c3dd5",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/pantry-match/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "c34ac8ccf9e0d5f107876551928af7121103a84281535895f0467805c2331f44",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "25ac0d525c3da59d26b59b15f223d632ce205eecd5a2c8f0af58a2765a6423db",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "c2acee8946d823a14f92b11b6296f4ebfb91966112db0b788e083dd255c8737f",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "f100c2dc1ae544ca8ee0af0ad91bf9be9a23e7ce5182449f2b66c4dfd083110c",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "50dc6803b50c304c522be326ed993ca34ee28525522d08817a260870987215b0",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "598a39d3f5bf77409ff13897fb9870725912ac3348c52e72eb2afa3339aadb32",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "618b2074248421401bfdc85e35f73bdf1ff1b63afb3393caf1bd1612c5090a72",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "75dca4dc05eacbb3b3182090d0a749053ce982f349fd6869ff9238d463d5b741",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "9763ee8b73027d7a1bc31e5d48061557cffac3c56473ba77be5893eb979beef2",
+      "count": 3
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "aa336e5ccd3ca10ecf13203e85ddb7c47042d995049950ccb04cd7c142e9f3b0",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "b862a39f029c3d4647b2b4c6f210ded3831c4960685812e00256fbdc0ea416bb",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "c4d70fde2704d45db48bb362e214d0d76570933efdba41a227b78fa8bd766064",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "afb7b5791d3240030d1311ff3c097ce1594d74cc78213f1cfa8171b6a3fb16b6",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "e795e548fa21a1828d5f7bd6d2a62a57386040b76ded57d87ee3dab5fa5be5ad",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "f662a8a2b81fbd32d5d5a51847b61960e4229c510ba386727756885db3ac6eab",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/themes/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "4131b5247545ea556e12379a093c680000352ec89bf6487373d5f795cf776103",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/themes/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "4b510350e3548c8e4eee5fe62789b61c2e4990e3e4bc10e799617eda1c8863c5",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/themes/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "eeeeb203b0ef8e079f3873ce11b842cc88c20bf677d5f820e1ead2d39573a27f",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/themes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "08f668719e7e34d25ad489387d1a416a6eb359b7d779372897a9489cb277131c",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/themes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "16dfc41fb59a53354b165190058a82a2a311e0ebfdc629b3646f198ce49599d1",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/recipes/themes/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "f9c3897e564b00092e600c6cf40b71d84c7adfe4c4945dff776fbb5c8f4b7211",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/[list_id]/complete/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "1803c4c067810b5d49315abecc809802880f569d6ab3497298477e34da0ed4f2",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/[list_id]/complete/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "a309e12ebc96615a9a578ed2c5fde4ad761a0e7750b896e81b2cd8518ed07f01",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/[list_id]/items/[item_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "37a09f27ef371f760c8b53e235b4a031b54fd19f242536d1a333d84cf58852ab",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/[list_id]/items/bulk/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "4e95ab99711c9ddfd0e66f6c1e99622beaa5fcd8186cc02b16f4ffd9c5e1fdc1",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/[list_id]/items/reorder/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "d4981b272978b1aed6dbe70f59957eab90d0912347113b3f4594388b502488da",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/[list_id]/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "bad943693927d658c957a56021331a3b94c6893dc8a95bd5ccea6f70e7a23297",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/[list_id]/share-text/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "6850c6e76c6bd99465367a6cce2202fb7673ec5d727f9028f6f394290a86e28f",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "8c19097e5466200ef828404d0f2d87c19df70d6dd0ed35a95e5da6add10387cc",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "9377f0d687ea163881aeb71c049740d2aedaaeadc3e3f8d36a05b34010bae458",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "c220a8c298fbf288e1f7bd60063f1b77ec3ade80b664eff8addd7759f30ddc8d",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/shopping/preview/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "7aa68f75dff384408a6f4fdbae344061cd6d0536133eabe6e1eef7a27d482271",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/tags/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "97613083c140bb26e71c1c72b62f12ede9ec61b26fa2e66f8902eed47aeab1d3",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/_account-generation-active.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "6ffeb26c3ea5844adc99e5d696e54ab8c817d988b959ca6628737fc04a45c64c",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/users/me/_account-generation-active.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "cbda6f702526273c0fdf1e83ba4fcb4c6318f3b1191581efea82320f55c032cb",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/gamification/_helpers.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "63592dedca1c006cc7b61b3f204225c2848c2c9fd3e18bbee5a52ebbba5558c0",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/progress/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "6b70f37f7ca1b8c175aafd2e09f28a3363c2b790149ad4e980ab7e35ffd0d080",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "2cd700b4d3558c3e1f11e949e748e7ee8bcb4b7afa56642ec8b656fb525bb838",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "36a5841e1ce290633f53713c29c9bcdefd8a66a06708a819b5047550f433bdc7",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "621f428feacff4329e310deb68114442142d34792d6058dd29ebeddd349398a1",
+      "count": 2
+    },
+    {
+      "file": "app/api/v1/users/me/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/settings/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "9a86eb7b114f8f0ca9f1ed90cebed5116e6694fbf97ecbd98d51401535c57c98",
+      "count": 1
+    },
+    {
+      "file": "app/api/v1/users/me/settings/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "9496f78cf7fadb636a53e48da7b95af993983526c3d984331c2c796bd5a66259",
+      "count": 1
+    },
+    {
+      "file": "components/auth/account-quarantine-screen.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "379a9b7ebcb91eca8f97be88719640db973f1da89fe6004994faa868a8ee6e29",
+      "count": 1
+    },
+    {
+      "file": "components/cooking/cook-mode-whole-board.tsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "8cdfb07beafa4040814f2a42036c9f3d3ab7cba871a9c18fe8ebda417fd0a210",
+      "count": 1
+    },
+    {
+      "file": "components/cooking/cook-mode-whole-board.tsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "925b9bced19c536521054831b63a9e2e0fd75b3e907087a44a600616d9281f5e",
+      "count": 1
+    },
+    {
+      "file": "components/home/home-screen.tsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "a509f0a083cc906786f358d3d2e6adc283d6f91f174978b7b0a14740dbb97b47",
+      "count": 1
+    },
+    {
+      "file": "components/marketing/homeflow-landing.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "845749623820e1a057c90c4ec89efa8d39582d33b4c15f5f7417bac6f498205b",
+      "count": 1
+    },
+    {
+      "file": "components/marketing/round2/round2-turnstile.tsx",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "9e2a0750b99b350e4bb98d094219cdfbbf3c9b2f5a2453cb1b46fc8c98d1fff2",
+      "count": 1
+    },
+    {
+      "file": "components/mypage/mypage-growth-detail-dialog.tsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "94f95b42a1848f653ed1a8da2e0bfbb3e70ae9f51f073d7ce2e108aa8bf6ef36",
+      "count": 1
+    },
+    {
+      "file": "components/planner/food-product-picker.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "44bc57cfc7aaf47feaa462cb8d24fcefdd3ee7408624dc23692804844624e7f6",
+      "count": 1
+    },
+    {
+      "file": "components/planner/meal-add-picker-flow.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "4e7df61d6cc11240fa16ccd6307faae492d9436afb293af522747dca831c9199",
+      "count": 1
+    },
+    {
+      "file": "components/planner/meal-log-screen.tsx",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021",
+      "count": 4
+    },
+    {
+      "file": "components/planner/meal-log-screen.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "7cad7f49ea7bcdb3cbb674e3829bd1f28d093d1aded316463df37614071defdf",
+      "count": 1
+    },
+    {
+      "file": "components/planner/meal-pinned-nutrition.tsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "16a1ceab67644c069d7e05dbc210fb4f5a1ad751f5c6dfe6d8c8f3f4c9bacfa6",
+      "count": 1
+    },
+    {
+      "file": "components/planner/recipe-search-picker.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "224f2dc08b20d2925b3039766282725fbc43b3bde6e3ccbdc7956085a1b408d9",
+      "count": 1
+    },
+    {
+      "file": "components/planner/recipe-search-picker.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "3a7f38694f3f46f992fd88740808b62afc4100640245e94426f5d3203e5ecb59",
+      "count": 1
+    },
+    {
+      "file": "components/recipe/manual-recipe-create-screen.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "824b9f549475d6a88f56a4c4986299329e8ba1449c900c249419ea94f70290f0",
+      "count": 1
+    },
+    {
+      "file": "components/recipe/manual-recipe-create-screen.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "cfca0b38dd6a5ba231689dfd3f9d269ded491809614eab8ac86562f45632b9d0",
+      "count": 1
+    },
+    {
+      "file": "components/recipe/manual-recipe-create-screen.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "d983b83fa0a3a381de4b943ff006a5ed49b838988f4a8142f70139b736854481",
+      "count": 2
+    },
+    {
+      "file": "components/recipe/recipe-food-catalog-picker.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "748429e8e7be9a41c5906d0fb31c04d358225bcbab12350339ce63a9bc0d97df",
+      "count": 1
+    },
+    {
+      "file": "lib/api/manual-recipe.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "f7f1f3b694424f54e336b2655fe7396c2701fac21dd83bd363a451fdf91a924c",
+      "count": 1
+    },
+    {
+      "file": "lib/api/meal-log.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "b67f6fbf2778bb24bf0bab9cf449c201e96df565573423c819b863b9f7543b63",
+      "count": 1
+    },
+    {
+      "file": "lib/api/pantry.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "8cb8f597e9b5b2e22f112fd80cc528727ea2b16036263d17a9dfba89528c2e02",
+      "count": 1
+    },
+    {
+      "file": "lib/api/pantry.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "ddfde003c235a9bfda893626784154aeaa697a8ad4d284c86390d86d27e22949",
+      "count": 1
+    },
+    {
+      "file": "lib/cooking-method-taxonomy.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "39746c9a79eb82ea64299f93aab3828d9ab27dbe0a5b12fa444b6b3021012b64",
+      "count": 1
+    },
+    {
+      "file": "lib/ingredient-categories.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "082325095491431a5ef5e30dd464d2dcaafbfa799f00d6fd14374911f9889e2d",
+      "count": 1
+    },
+    {
+      "file": "lib/ingredient-categories.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "1fde1232b6bed546234396befcc2e878c7ae8220e0f097745812b08faa97d898",
+      "count": 1
+    },
+    {
+      "file": "lib/ingredient-categories.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "272d865385288c436ba2f9442d80717331a5267b4fb8b31bb92f4f9cfa2a6ae0",
+      "count": 1
+    },
+    {
+      "file": "lib/ingredient-categories.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "dcf95dfe7a839e82e4806de4f9e00ec615cd1899ce3287c6211580c2834c9cf1",
+      "count": 1
+    },
+    {
+      "file": "lib/marketing/round2-client.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "28b4ca500b9c65f988b7ec067b8019baad7c658e83ff9ebadbacf3f460265b11",
+      "count": 1
+    },
+    {
+      "file": "lib/marketing/round2-client.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "613d0f9826830d21f18bd46aeb22d1f665489e6dcd1e1d452eae01c8912dc96d",
+      "count": 1
+    },
+    {
+      "file": "lib/marketing/round2-client.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "75229bde778886180574fdf5f214ae5007b34d0b07d92912294c1067a9b8a555",
+      "count": 1
+    },
+    {
+      "file": "lib/marketing/round2-client.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "aac29495ca65acc5b662fbeff975bd2f86cb8924df7ade498a6fcb564602fe16",
+      "count": 1
+    },
+    {
+      "file": "lib/marketing/round2-client.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "b3a9a584cb5bb0edf8804a6e1f7d63b895a9c0dbf5a8781afbce170607d99f4f",
+      "count": 1
+    },
+    {
+      "file": "lib/nutrition/recipe-nutrition-display.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "64911f01cea02e6f0dd0e767da89d3cc361b863553b768a65c0180b51b3ea221",
+      "count": 1
+    },
+    {
+      "file": "lib/planner/planner-week-return-context.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ba97ab0c29e555dfffa8c87996233a05a69fe06a9a1633a62076fc40f4e9cb85",
+      "count": 1
+    },
+    {
+      "file": "lib/planner/product-planner-return-context.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "817338590c4e56849bc2d9700c39c708ec8a85fbcf406928d70b252278146b08",
+      "count": 1
+    },
+    {
+      "file": "lib/recipe-detail.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "9bdebdf92d3240b73501027bd51d739d8a7733313300a480387b098a6235b623",
+      "count": 1
+    },
+    {
+      "file": "lib/recipe-editor-ingredients.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "55baaaade70d2d7c6d7d3608a5e7fde0744b4659735947850d92b86a8c742f3f",
+      "count": 1
+    },
+    {
+      "file": "lib/recipe-themes.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "366c6908d89fccc32d7641222234963c11ca13f261d85dd1ddf7b7b2c31d354a",
+      "count": 1
+    },
+    {
+      "file": "lib/server/account-generation/session-authority.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "85a9086b2ebf866ef15a1c5987f5df4140b9a6401ca3c689124701537c1b749e",
+      "count": 1
+    },
+    {
+      "file": "lib/server/admin-auth.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3",
+      "count": 2
+    },
+    {
+      "file": "lib/server/cooked-batches.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "25b53b93581d7d35b873f02fbfa9b075a7caf438690a3484b09a1f8c65a86804",
+      "count": 1
+    },
+    {
+      "file": "lib/server/cooked-batches.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "7b9cfab39ad464d6e379e75cf68df927ccb5af204bda13a37f68d87a29df5bf4",
+      "count": 1
+    },
+    {
+      "file": "lib/server/external-ingredient-source-adapters.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "49ea02b09f24a1b33bce23fe1cc399cd00843791d8c480cca8a5d65d73584256",
+      "count": 1
+    },
+    {
+      "file": "lib/server/hybrid-auth/bootstrap.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596",
+      "count": 1
+    },
+    {
+      "file": "lib/server/hybrid-auth/session-observability.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "a117605a78dc4dac9265e35ca1e9564c7d6d55c76d1299c6ba9b88cf49780528",
+      "count": 1
+    },
+    {
+      "file": "lib/server/ingredient-ai-nutrition-refresh.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ec7d41753dac343ab951b9a532e4f50507f257809b23f8cfca572965af34f32e",
+      "count": 1
+    },
+    {
+      "file": "lib/server/ingredient-ai-nutrition-worker.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "22575ab81754f534fef3a43f96a0dad8e9dcfc5dcff7250c95cfb49bc0bf9d17",
+      "count": 1
+    },
+    {
+      "file": "lib/server/ingredient-ai-nutrition-worker.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "f9d38664bad47b5292a51e299c887d33cae51d5b8b6a476aa9372aeecef38bdc",
+      "count": 1
+    },
+    {
+      "file": "lib/server/marketing-round2-preflight.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "6f1729cfe5e56c4ea7cb606e3d29e6e8192ccfeda950e2b6ca5b4360bffd13dd",
+      "count": 1
+    },
+    {
+      "file": "lib/server/marketing-round2.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "1074c5efc6313c249855ad1fb10f9499113dfb09031ce9d74d89b53190b88e00",
+      "count": 1
+    },
+    {
+      "file": "lib/server/marketing-validation.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596",
+      "count": 1
+    },
+    {
+      "file": "lib/server/marketing-validation.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "6665833748dd7674fddd04d08bc8894659e24db30c265e8e466a2424077ec64f",
+      "count": 1
+    },
+    {
+      "file": "lib/server/meal-log-route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "d39044ab4baae24b18be56e6a15c909ea43f380b1f0726b49599b9f6ed2bafd4",
+      "count": 1
+    },
+    {
+      "file": "lib/server/meal-log.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "425239b2afe44b7687fead7e17db7c369a50897a5be27f7d4e185b378cd5aa2c",
+      "count": 1
+    },
+    {
+      "file": "lib/server/meal-log.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "edb1777d5d55beb4d994b0678103ee85186513c7f26eeda8143a31d3b00ff040",
+      "count": 1
+    },
+    {
+      "file": "lib/server/planner-meal-nutrition-view.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "814ea4efc86ddeaa9b288934a117f65042e63e2d54f3dfb8e839ccc92d6a7fcd",
+      "count": 1
+    },
+    {
+      "file": "lib/server/planner-meal-nutrition-view.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "cbc813f91e8c0772f169316901a0d28d319ea44fd89a591b86dcbaddb2c30d66",
+      "count": 1
+    },
+    {
+      "file": "lib/server/planner-nutrition-summary.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "298aca4c11d6a024993ae451e9b93b986de2028f3327dd881c5a6d3010282583",
+      "count": 1
+    },
+    {
+      "file": "lib/server/planner-nutrition-summary.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "77c8c4de9ae03e3025e80d1d3fa8eacbb70ae58b7969eb46dd57773a3d2be4a9",
+      "count": 1
+    },
+    {
+      "file": "lib/server/planner-nutrition-summary.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "9de0d29fb531b90c41e8b3351add3d82578da258ea568070da9752813948e65d",
+      "count": 1
+    },
+    {
+      "file": "lib/server/planner-nutrition-summary.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "438f9ce8580d3e264c91c3dc4cd2462e89d6f967ced7244746a5789633f0ba10",
+      "count": 1
+    },
+    {
+      "file": "lib/server/planner-nutrition-summary.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "c6f1939aaeda76cf3846e6231e63c2f41c9145974cb1322e2e9ea36c80f7d213",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-book-image-read.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ddf1ca6c7a27e60abd6c069c39fe5530cbdf1dfb7ad7f13c0eb5b3c6e56b5282",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-content-snapshot-future-propagation.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "1962d5a14ce1681e92e4b1043048b418962c31e881371319bc60c694cb2999b6",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-content-snapshot-future-propagation.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "e248f91a2ad6ff0a06f95cda013a18fedd4e8c220630a751912d2d782ade6f7b",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-content-snapshot-future-propagation.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "a741156783c7ed3aa3ae80dacb54a95a853de9fea81f22eb00b104da674c632d",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/candidate-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "552bad8a0b0ff1ee44b1930b798a8db3d6da299764cdf219da76be17e7fe7267",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "3716996129a78c2f61b68a4f6757f27336ebd274606e50ca8ef21c7c92318e9d",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "a4ada9dfe223ee89ccb5dbbd41885289bebaa9ce7b5c0dc1553920124fcaca4c",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "eb99d134dac64ce35355c9e79b152ba6923d08703fecbf854e0b1d3f4c7bfc47",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "0b2b268568de654429b31896206dc18385602bebe3bb6e694967b106659bc41a",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "cf7ee0be9adfe7c69a40eb53e321529d1ec25058a42bc5b41bcd2ecaa3144aa3",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/prompt.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "d14c717e8fbb23ae9ecb7e2241d9a67e60f9fdbde752042fd91abc4be8a53bce",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "1ddba8e9c246d8581a7a448ecd442afe3cc0bea022eb48769feab60838d1cf5a",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "423cf43922f0227b945b501c7c0f9d04d68a0bdcc074690806c1c98c11a940ea",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "7712a2824c586fbd95d0fe0018d8c53f87647e59a634f4ca82329181a0d6f9c0",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "9c92fb3e00ecb4db3f5383f45ab1271e875dc8383e93b6ae364076e69fe7799e",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "adbfb9831e781c61cc83ad6d53f6b6f863d10c6d55f5803fee5c30b512436182",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "cd92f1a95e2259833e69117865a8684bf1350d75408b028f36d3b34fdfd2ef39",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-image-read.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "6e5727602d392218ec787c872bb5c483bed28b2796aa3bbe250233e1772f8d44",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-ingredient-search.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "09de2a8e8968c1c34d20ba5aa135b361dc2de456b179e6f5fb297e87d4c2aac8",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-ingredient-search.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "de177d7285997f3ae2af0996e415abf1fe2f9116a6e86a6cca2d7daa6d2395e8",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-snapshot-entrypoint.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ee99d0adf654714439b09c21da494c80c1b12426b1af02509dd00093777ef9c9",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-snapshot-entrypoint.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "f69d7457e7f785ef15743982092c8b3890703c620fe578c469d84ee885150131",
+      "count": 1
+    },
+    {
+      "file": "lib/server/recipe-tags-backfill.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "9fb1f822294c6e38a486b8503291bdae79d0d7bb90b282819517e5e3cdc8ca2b",
+      "count": 1
+    },
+    {
+      "file": "lib/server/shopping.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "7daa40ada366b9b3081a8cd469ee6e57be9c2d5769443222c8c91aa79343af44",
+      "count": 1
+    },
+    {
+      "file": "lib/server/user-gamification.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "66e113c8ce5745977e30964983de8e65c5d2285b784218d47bc6b2ed8c0e39bf",
+      "count": 1
+    },
+    {
+      "file": "lib/server/user-gamification.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "8f57fed0030e12a7aeb10aad16b1b050dcbff14a99c6ce22c72656c07860d503",
+      "count": 1
+    },
+    {
+      "file": "lib/server/user-gamification.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "4f0c6a7e112afd07d9258d419d7eaf3817b7036b9e7e1a445c4ded4726cfba1f",
+      "count": 1
+    },
+    {
+      "file": "lib/server/user-gamification.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "ac5acd99e97cc3eada201b2eb9caedf60f1c55754152581e4529cebb646065d7",
+      "count": 1
+    },
+    {
+      "file": "lib/server/user-growth-activity.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "4d0a30d6891165e87b8ad349dc6c268b125b55a22ae06cd50835576b733680ab",
+      "count": 1
+    },
+    {
+      "file": "lib/server/user-progress.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "a2c5fd4bd48d3ce5683f88b76fd735a69e7b35408f4dfb83886844dddfa6b4bf",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-caption-normalizer.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "9bbea3fe827400ed5317238a3bbf4929621406478705ae0dd4a42cd4859d5405",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-corpus-scoring.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "11186be8691d2d130d7c85b3ab664fc84e7cf7bcd881bf2f0c8dc1899cdc06ba",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-corpus-scoring.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "aba92d5c9d64659fad6231a02147b765ee5cb55f112d291ac3e4906b18d8f55a",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-dictionary-resolution-scoring.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "e238adcbe3546aace55104ce34de370a5a86be87d3951b01e911a21296c9b28d",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "1bbd1d03a572a4dfabd22ca9fafe3f95181a28e87c44f05d001bd1f821c46fc6",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "34e806cb2794a179da81f3209081a642c240cd89d3f39add25ad31bc6262f7f4",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "38885a3ae3a8772920c89766ceb9dc300b731525b2bad64c38a092fadf0306ee",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "7b6764024fe75ca0469396eed32a2d6f995076a9e627421e4eedf340eb47a007",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "929c73950f7e7e3b6e7c78551d36517b3d1fbf465aa92fdeb0f6ba41a9157258",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "25ac0d525c3da59d26b59b15f223d632ce205eecd5a2c8f0af58a2765a6423db",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "2704e2b4eac333f3f2eecb2d12dec6e6b492d820bdca2c33f4d54dc66bee8b9f",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "7d1046f7803cf6ada9004d52e4dd8f1e2f68a1207d95e7a14f9d4d77c2caca5e",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "b83c829a846df3e11720bbd6a52ad1d71f9069a923fc88e92933721050686f16",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "c90a745fcd5816ccdf7697882c0ad7a37ab1b18db5ed4ad2e385dd6241659644",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "cf956bcd75d239ceff25ab4054133c4ca84949988b56b595aef7057202dc6177",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "d5f630122221169358e05bcacb6d241f341c2354b826f15259684684ed0c07e3",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "ebd87cbfab328fb4aa47906c821f71e43f1c949c93940bdc28d9e202a2ad492d",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "f100c2dc1ae544ca8ee0af0ad91bf9be9a23e7ce5182449f2b66c4dfd083110c",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "30b6f3c5e18c13720d24cfa5c04c8a9e5f2aada95d61d06ac25a22748ddb792d",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "420b7c93e579798d38a80482548997ac918e8ca4c752a1a0ae25ccaa463ec3f1",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "72794cb52a80a24933131f9e382bf574d3b55cf5c15371e800367bb6fc5cb4b4",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "7504d79179b148302738b40b37ac0fb91764a14cc58d0df3d7dcf5e2e1a00c04",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "7b4229720f23313ef9315ed7760408c2fdc40bbb9021f9fe961fb06e49c8b5c8",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "92da625072f8e7b97a9f5e9b9df5f3628375c2855fd87776c2d4d727c2f74b0c",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "b5d30639b6c87c3d09cd95ec3c502b152e05dc9984bd6c06e37cffcac7705644",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f",
+      "count": 3
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "cc6c925ac6aa2f56d5248ee67918751cdf452bd3d0da012119770ab573722b16",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a",
+      "count": 3
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "e1db37d04ff6244ebac409ede6b65b088461e0e775e21f102e62e066ccce7889",
+      "count": 2
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "832897b23a8e4d8031cad5350820f96d2aabb7fd175f3ab9a4438c1ac5ab69e8",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-multi-recipe-extractor.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "a31ab85a7f7dc7ba576baa2bd6193af0f375e6923a864f79bdbb3ad3c7b2fca3",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-multi-recipe-extractor.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "b0fcfeeb0e737e9d27fe7f122574e52d74a119bdd23dbc84dfae2bb12a5286f6",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-multi-recipe-extractor.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "bfa5125924e5ab1bb3c165ab0cca17f286bd473f1d0f3b3aaa2db9316c920ca3",
+      "count": 1
+    },
+    {
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "5a36c46def2ed4f85e2e1af41ef3959b67ad71c17d2f10abf55fbf47550fbe03",
+      "count": 1
+    },
+    {
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596",
+      "count": 1
+    },
+    {
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "64752f1969cb456f9fd8d564dc2359492240ce45f46c4962895b480ad08ccac5",
+      "count": 1
+    },
+    {
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "snippetSha256": "ad71ce36f80c8301ba0b1fe7799c42e9306a140f9bcaad4490801d39661cff14",
+      "count": 1
+    },
+    {
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "8582f1aa19f63c520f7f83dc1c927ced28bea42dd9ea18b693b76a2861a61325",
+      "count": 1
+    },
+    {
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "eb7dee8d361a75fb15140abc686d4fc6a8b6e7cc120ad5155fff2043233af23f",
+      "count": 1
+    },
+    {
+      "file": "stores/ui-store.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "66df7941665a62fdf1624eb9faedf21f80048344e59f4bc7cc58200d731699b9",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "0686d5adf87baff37fb31b849989d853bd6c447803fc09d32afa9f8edd776802",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "42b213e63f521a5b1d7d24990338bb1918dfbc337317ea9d8e084975e83ed253",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "snippetSha256": "8084d999b093f6aaa05e37f9efef2744b3b710fe3106152ee2b4147b8364a1e0",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "bca8d01a1ce4b0397a467d308799c2e6692413529772ad9dbc3fe31050ec823f",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "c565029adc76b4bce3f607d0977d4c4136539b8aba1cf166591d24c9befed9c6",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/detail.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "65c9340771b057d71dcf2de445ec7ab72c7418a1325bf5e65a7b760e8843cc1c",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/wave1.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "f6486c9d16ab0cf9103c46050e71061a74b604037d0afbfa791b6e962722ff31",
+      "count": 1
+    },
+    {
+      "file": "ui/designs/prototypes/claude-design-260512-desktop/project/modals.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "snippetSha256": "be59a9625462d08be0bd5c266c0cb4ead88957d74463faa92dbdbe03aa996457",
+      "count": 1
+    }
+  ]
+}
