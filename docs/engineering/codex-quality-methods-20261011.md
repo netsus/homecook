@@ -23,7 +23,7 @@ YouTube 영상 [쓰레기 코드 ☠️ 없애는 법](https://www.youtube.com/w
 - Codex 공식 문서의 [저장소 스킬 경로](https://learn.chatgpt.com/docs/build-skills)에 따라 루트 `.agents/skills/<name>/SKILL.md`는 저장소 아래에서 시작한 Codex에 팀 공통 스킬로 노출된다.
 - 루트 지침이 TypeScript/JavaScript 변경과 완료 게이트에서 두 스킬의 적용 시점을 명시한다. 개인 홈 설정은 필요하지 않다.
 - `pnpm verify:codex-quality-tooling`은 필수 파일, skill frontmatter, 루트 연결, 32 KiB 기본 instruction 예산, vendored source hash, 정확한 의존성 버전과 자동 검사 연결을 확인한다.
-- `pnpm verify:anti-slop`은 허용/차단 fixture와 baseline 초과 신규 위반 차단을 함께 검증한다. 대상 경로의 GitHub Actions 워크플로도 같은 명령에 연결되어 있으며, 저장소 Actions 설정이 활성화된 경우에만 원격에서 실행된다.
+- `pnpm verify:anti-slop`은 허용/차단 fixture와 baseline 초과 신규 위반 차단을 함께 검증한다. 대상 경로의 GitHub Actions workflow도 같은 명령에 연결되어 있지만, 저장소 Actions 설정이 활성화된 경우에만 원격에서 실행된다. 현재는 Actions가 비활성이라 로컬 명령이 공식 검증 경로이며 workflow는 required check나 자동 PR 차단 조건이 아니다.
 
 ## 기계적으로 강제되는 것과 아닌 것
 
@@ -47,9 +47,9 @@ YouTube 영상 [쓰레기 코드 ☠️ 없애는 법](https://www.youtube.com/w
 
 Anti Slop upstream은 공식 npm 패키지 없이 소스 vendoring을 전제로 한다. Homecook은 다섯 소스 파일과 로컬 entry point만 포함하며, Effect 규칙은 직접 의존성이 없어 제외했다. 모듈 mocking·runtime `typeof`·`unknown`·`Reflect` 규칙도 기존 테스트와 외부 입력 경계의 정당한 패턴을 무차별 차단하므로 제외했다. 기존 275건을 자동 고치거나 규칙을 약화하지 않고 source snippet hash 기반 baseline으로 고정했다. 줄 이동은 허용하지만 같은 파일·규칙·정규화된 snippet의 허용 개수를 넘기면 실패한다. baseline 변경은 `pnpm lint:anti-slop:baseline`로 만들 수 있지만 반드시 diff에서 새 허용 항목의 이유를 검토해야 한다.
 
-기존 ESLint는 Next.js·TypeScript·프로젝트 기본 규칙을 계속 담당한다. Anti Slop은 그 대체물이 아니라 선택한 저근거 패턴의 신규 유입만 막는 별도 gate다. 현재 빠른 개발 모드에서 제품 전체 CI는 여전히 사용하지 않고, 이 대상 경로 워크플로만 예외로 둔다.
+기존 ESLint는 Next.js·TypeScript·프로젝트 기본 규칙을 계속 담당한다. Anti Slop은 그 대체물이 아니라 선택한 저근거 패턴의 신규 유입만 막는 별도 gate다. 현재 빠른 개발 모드에서는 `pnpm verify:anti-slop`을 로컬에서 실행하며 GitHub Actions CI는 사용하지 않는다.
 
-워크플로의 실행 코드 공급망은 가변 major tag 대신 확인한 정확한 커밋으로 고정한다: `actions/checkout@11d5960a326750d5838078e36cf38b85af677262`, `pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1`, `actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020`. 저장소 Actions가 비활성화된 상태에서는 워크플로 파일만으로 검사가 실행됐다고 주장하지 않는다.
+향후 활성화에 대비한 workflow의 실행 코드 공급망은 가변 major tag 대신 확인한 정확한 커밋으로 고정한다: `actions/checkout@11d5960a326750d5838078e36cf38b85af677262`, `pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1`, `actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020`. 저장소 Actions가 비활성화된 상태에서는 workflow 파일만으로 검사가 실행됐다고 주장하지 않는다. Actions 활성화와 required check 도입은 별도 승인·검토가 필요한 저장소 설정 변경이다.
 
 ## 팀 확인
 
