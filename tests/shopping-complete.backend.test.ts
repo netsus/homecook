@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { completeShoppingList, isShoppingApiError } from "@/lib/api/shopping";
 
 const createRouteHandlerClient = vi.fn();
-const createServiceRoleClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -18,15 +17,7 @@ const recordUserGrowthActivityEvent = vi.fn();
 const buildShoppingBundlePreparedSourceKey = vi.fn(() => "shopping_bundle_prepared:test-key");
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient: async (...args: unknown[]) => {
-    const routeClient = await createRouteHandlerClient(...args);
-    const createDataClient = createServiceRoleClient.getMockImplementation();
-    const dataClient = createDataClient?.();
-    return dataClient
-      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
-      : routeClient;
-  },
-  createServiceRoleClient,
+  createRouteHandlerClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -43,99 +34,6 @@ vi.mock("@/lib/server/user-growth-activity", () => ({
   buildShoppingBundlePreparedSourceKey,
   recordUserGrowthActivityEvent,
 }));
-
-interface QueryError {
-  message: string;
-}
-
-interface QueryResult<T> {
-  data: T | null;
-  error: QueryError | null;
-}
-
-function createMaybeSingleQuery<T>(results: Array<QueryResult<T | null>>) {
-  const query = {
-    eq: vi.fn(() => query),
-    maybeSingle: vi.fn(async () =>
-      results.shift() ?? {
-        data: null,
-        error: { message: "missing maybeSingle result" },
-      }),
-  };
-
-  return query;
-}
-
-function createUpdateMaybeSingleQuery<T>(results: Array<QueryResult<T | null>>) {
-  const query = {
-    eq: vi.fn(() => query),
-    select: vi.fn(() => query),
-    maybeSingle: vi.fn(async () =>
-      results.shift() ?? {
-        data: null,
-        error: { message: "missing update result" },
-      }),
-  };
-
-  return query;
-}
-
-function createArrayUpdateQuery<T>(results: Array<QueryResult<T[]>>) {
-  const query = {
-    eq: vi.fn(() => query),
-    in: vi.fn(() => query),
-    select: vi.fn(() => query),
-    then(
-      onFulfilled?: (value: QueryResult<T[]>) => unknown,
-      onRejected?: (reason: unknown) => unknown,
-    ) {
-      return Promise.resolve(
-        results.shift() ?? {
-          data: null,
-          error: { message: "missing update result" },
-        },
-      ).then(onFulfilled, onRejected);
-    },
-  };
-
-  return query;
-}
-
-function createArraySelectQuery<T>(results: Array<QueryResult<T[]>>) {
-  const query = {
-    eq: vi.fn(() => query),
-    in: vi.fn(() => query),
-    then(
-      onFulfilled?: (value: QueryResult<T[]>) => unknown,
-      onRejected?: (reason: unknown) => unknown,
-    ) {
-      return Promise.resolve(
-        results.shift() ?? {
-          data: null,
-          error: { message: "missing select result" },
-        },
-      ).then(onFulfilled, onRejected);
-    },
-  };
-
-  return query;
-}
-
-function createInsertQuery(results: Array<QueryResult<null>>) {
-  return {
-    then(
-      onFulfilled?: (value: QueryResult<null>) => unknown,
-      onRejected?: (reason: unknown) => unknown,
-    ) {
-      return Promise.resolve(
-        results.shift() ?? {
-          data: null,
-          error: null,
-        },
-      ).then(onFulfilled, onRejected);
-    },
-  };
-}
 
 async function importCompleteRoute() {
   return import("@/app/api/v1/shopping/lists/[list_id]/complete/route");
@@ -163,18 +61,26 @@ function createContext(id = listId) {
   };
 }
 
+function authenticatedClient(rpc?: ReturnType<typeof vi.fn>) {
+  return {
+    auth: {
+      getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+    },
+    from: vi.fn(),
+    ...(rpc ? { rpc } : {}),
+  };
+}
+
 describe("12a shopping complete backend", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
-    createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     awardUserProgressEvent.mockReset();
     buildShoppingBundlePreparedSourceKey.mockClear();
     recordUserGrowthActivityEvent.mockReset();
-    createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     awardUserProgressEvent.mockResolvedValue({
@@ -196,10 +102,9 @@ describe("12a shopping complete backend", () => {
 
     const { POST } = await importCompleteRoute();
     const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
 
     expect(response.status).toBe(401);
-    expect(body).toMatchObject({
+    await expect(response.json()).resolves.toMatchObject({
       success: false,
       data: null,
       error: { code: "UNAUTHORIZED" },
@@ -209,103 +114,54 @@ describe("12a shopping complete backend", () => {
   it("returns 404 for invalid list ids before querying the database", async () => {
     const { POST } = await importCompleteRoute();
     const response = await POST(createCompleteRequest("not-a-uuid"), createContext("not-a-uuid"));
-    const body = await response.json();
 
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
     expect(response.status).toBe(404);
-    expect(body).toMatchObject({
+    await expect(response.json()).resolves.toMatchObject({
       success: false,
       data: null,
       error: { code: "RESOURCE_NOT_FOUND" },
     });
   });
 
-  it("marks the shopping list complete and transitions only registered linked meals", async () => {
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
+  it("uses only the atomic complete_shopping_list RPC and records new-completion rewards", async () => {
+    const reflectedItemId = "550e8400-e29b-41d4-a716-446655440301";
+    const rpc = vi.fn(async () => ({
+      data: {
+        completed: true,
+        meals_updated: 2,
+        pantry_added: 1,
+        pantry_added_item_ids: [reflectedItemId],
+        completed_at: "2026-04-27T11:20:00.000Z",
+        meal_ids: ["meal-1", "meal-2"],
+        newly_completed: true,
       },
-    ]);
-    const listUpdateQuery = createUpdateMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          is_completed: true,
-          completed_at: "2026-04-27T11:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([
-      {
-        data: [{ id: "meal-1" }, { id: "meal-2" }],
-        error: null,
-      },
-    ]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [],
-        error: null,
-      },
-    ]);
-    const updateList = vi.fn((values: { is_completed: true; completed_at: string }) => {
-      void values;
-      return listUpdateQuery;
-    });
-    const updateMeals = vi.fn(() => mealsUpdateQuery);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: updateList,
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: updateMeals,
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
+      error: null,
+    }));
+    const client = authenticatedClient(rpc);
+    createRouteHandlerClient.mockResolvedValue(client);
 
     const { POST } = await importCompleteRoute();
-    const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
-
-    expect(updateList).toHaveBeenCalledWith(
-      expect.objectContaining({
-        is_completed: true,
-      }),
+    const response = await POST(
+      createCompleteRequest(listId, { add_to_pantry_item_ids: [reflectedItemId] }),
+      createContext(),
     );
-    expect(updateList.mock.calls[0][0].completed_at).toEqual(expect.any(String));
-    expect(listUpdateQuery.eq).toHaveBeenCalledWith("id", listId);
-    expect(listUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(updateMeals).toHaveBeenCalledWith({ status: "shopping_done" });
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("shopping_list_id", listId);
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("status", "registered");
+
+    expect(rpc).toHaveBeenCalledWith("complete_shopping_list", {
+      p_list_id: listId,
+      p_user_id: "user-1",
+      p_add_to_pantry_item_ids: [reflectedItemId],
+    });
+    expect(client.from).not.toHaveBeenCalled();
     expect(response.status).toBe(200);
-    expect(body).toEqual({
+    await expect(response.json()).resolves.toEqual({
       success: true,
-      data: { completed: true, meals_updated: 2, pantry_added: 0, pantry_added_item_ids: [] },
+      data: {
+        completed: true,
+        meals_updated: 2,
+        pantry_added: 1,
+        pantry_added_item_ids: [reflectedItemId],
+      },
       error: null,
     });
     expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
@@ -335,1040 +191,149 @@ describe("12a shopping complete backend", () => {
     });
   });
 
-  it("uses the atomic complete_shopping_list RPC when the database client exposes it", async () => {
-    const reflectedItemId = "550e8400-e29b-41d4-a716-446655440301";
+  it("fails closed without direct table writes when the atomic RPC is unavailable", async () => {
+    const client = authenticatedClient();
+    createRouteHandlerClient.mockResolvedValue(client);
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(createCompleteRequest(), createContext());
+
+    expect(client.from).not.toHaveBeenCalled();
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+  });
+
+  it("keeps the atomic completion successful when secondary reward writers fail", async () => {
+    awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
+    recordUserGrowthActivityEvent.mockRejectedValue(new Error("activity unavailable"));
     const rpc = vi.fn(async () => ({
       data: {
         completed: true,
-        meals_updated: 2,
-        pantry_added: 1,
-        pantry_added_item_ids: [reflectedItemId],
+        meals_updated: 0,
+        pantry_added: 0,
+        pantry_added_item_ids: [],
         completed_at: "2026-04-27T11:20:00.000Z",
-        meal_ids: ["meal-1", "meal-2"],
+        meal_ids: ["meal-1"],
         newly_completed: true,
       },
       error: null,
     }));
-    const from = vi.fn();
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from,
-    });
-    createServiceRoleClient.mockReturnValue({ rpc, from });
+    createRouteHandlerClient.mockResolvedValue(authenticatedClient(rpc));
 
     const { POST } = await importCompleteRoute();
-    const response = await POST(
-      createCompleteRequest(listId, { add_to_pantry_item_ids: [reflectedItemId] }),
-      createContext(),
-    );
-    const body = await response.json();
+    const response = await POST(createCompleteRequest(listId, { add_to_pantry_item_ids: [] }), createContext());
 
-    expect(rpc).toHaveBeenCalledWith("complete_shopping_list", {
-      p_list_id: listId,
-      p_user_id: "user-1",
-      p_add_to_pantry_item_ids: [reflectedItemId],
-    });
-    expect(from).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("complete_shopping_list", expect.objectContaining({
+      p_add_to_pantry_item_ids: [],
+    }));
     expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        completed: true,
-        meals_updated: 2,
-        pantry_added: 1,
-        pantry_added_item_ids: [reflectedItemId],
-      },
-      error: null,
-    });
-    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
-      userId: "user-1",
-      eventType: "shopping_completed",
-      sourceTable: "shopping_lists",
-      sourceId: listId,
-      occurredAt: "2026-04-27T11:20:00.000Z",
-    });
-    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
-      userId: "user-1",
-      activityType: "shopping_bundle_prepared",
-      category: "shopping",
-      sourceKey: "shopping_bundle_prepared:test-key",
-      sourceTable: "shopping_lists",
-      sourceId: listId,
-      sourceMeta: {
-        action_kind: "shopping_list",
-        meal_ids: ["meal-1", "meal-2"],
-        shopping_list_id: listId,
-      },
-      occurredAt: "2026-04-27T11:20:00.000Z",
-    });
-  });
-
-  it("keeps shopping completion successful when progress writer fails", async () => {
-    awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
-
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
-      },
-    ]);
-    const listUpdateQuery = createUpdateMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          is_completed: true,
-          completed_at: "2026-04-27T11:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([
-      {
-        data: [],
-        error: null,
-      },
-    ]);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: vi.fn(() => listUpdateQuery),
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: vi.fn(() => mealsUpdateQuery),
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            update: vi.fn(),
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(
-      createCompleteRequest(listId, { add_to_pantry_item_ids: [] }),
-      createContext(),
-    );
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
+    await expect(response.json()).resolves.toMatchObject({
       success: true,
       data: { completed: true, meals_updated: 0, pantry_added: 0, pantry_added_item_ids: [] },
-      error: null,
     });
   });
 
-  it("returns 200 with no meal changes when the completed list has no registered meals", async () => {
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: true,
-          completed_at: "2026-04-27T10:20:00.000Z",
-        },
-        error: null,
+  it("does not duplicate rewards when the RPC reports an already completed list", async () => {
+    const rpc = vi.fn(async () => ({
+      data: {
+        completed: true,
+        meals_updated: 1,
+        pantry_added: 1,
+        pantry_added_item_ids: ["item-1"],
+        completed_at: "2026-04-27T11:20:00.000Z",
+        meal_ids: ["meal-recovered"],
+        newly_completed: false,
       },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([
-      {
-        data: [],
-        error: null,
-      },
-    ]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [],
-        error: null,
-      },
-    ]);
-    const updateList = vi.fn();
-    const updateMeals = vi.fn(() => mealsUpdateQuery);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: updateList,
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: updateMeals,
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
+      error: null,
+    }));
+    createRouteHandlerClient.mockResolvedValue(authenticatedClient(rpc));
 
     const { POST } = await importCompleteRoute();
     const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
 
-    expect(updateList).not.toHaveBeenCalled();
-    expect(updateMeals).toHaveBeenCalledWith({ status: "shopping_done" });
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("shopping_list_id", listId);
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("status", "registered");
+    expect(rpc).toHaveBeenCalledWith("complete_shopping_list", expect.objectContaining({
+      p_add_to_pantry_item_ids: null,
+    }));
     expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: { completed: true, meals_updated: 0, pantry_added: 0, pantry_added_item_ids: [] },
-      error: null,
-    });
     expect(awardUserProgressEvent).not.toHaveBeenCalled();
+    expect(recordUserGrowthActivityEvent).not.toHaveBeenCalled();
   });
 
-  it("recovers registered meal transitions when the list was already marked complete", async () => {
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: true,
-          completed_at: "2026-04-27T10:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([
-      {
-        data: [{ id: "meal-recovered" }],
-        error: null,
-      },
-    ]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [],
-        error: null,
-      },
-    ]);
-    const updateList = vi.fn();
-    const updateMeals = vi.fn(() => mealsUpdateQuery);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: updateList,
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: updateMeals,
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
+  it.each([
+    ["VALIDATION_ERROR", 422],
+    ["RESOURCE_NOT_FOUND", 404],
+    ["FORBIDDEN", 403],
+    ["CONFLICT", 409],
+    ["UNKNOWN", 500],
+  ])("maps RPC error %s to HTTP %i", async (errorCode, expectedStatus) => {
+    const rpc = vi.fn(async () => ({
+      data: { error_code: errorCode, message: "rpc rejected" },
+      error: null,
+    }));
+    createRouteHandlerClient.mockResolvedValue(authenticatedClient(rpc));
 
     const { POST } = await importCompleteRoute();
     const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
 
-    expect(updateList).not.toHaveBeenCalled();
-    expect(updateMeals).toHaveBeenCalledWith({ status: "shopping_done" });
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("shopping_list_id", listId);
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("status", "registered");
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: { completed: true, meals_updated: 1, pantry_added: 0, pantry_added_item_ids: [] },
-      error: null,
-    });
-  });
-
-  it("reflects selected candidate items to pantry and ignores invalid item ids", async () => {
-    const existingPantryIngredientId = "550e8400-e29b-41d4-a716-446655440101";
-    const newPantryIngredientId = "550e8400-e29b-41d4-a716-446655440102";
-    const alreadyHaveIngredientId = "550e8400-e29b-41d4-a716-446655440104";
-    const validExistingItemId = "550e8400-e29b-41d4-a716-446655440201";
-    const validNewItemId = "550e8400-e29b-41d4-a716-446655440202";
-    const uncheckedItemId = "550e8400-e29b-41d4-a716-446655440203";
-    const alreadyHaveItemId = "550e8400-e29b-41d4-a716-446655440204";
-    const invalidItemId = "550e8400-e29b-41d4-a716-446655440999";
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
-      },
-    ]);
-    const listUpdateQuery = createUpdateMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          is_completed: true,
-          completed_at: "2026-04-27T11:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [
-          {
-            id: validExistingItemId,
-            ingredient_id: existingPantryIngredientId,
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-          {
-            id: validNewItemId,
-            ingredient_id: newPantryIngredientId,
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-          {
-            id: uncheckedItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440103",
-            is_checked: false,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-          {
-            id: alreadyHaveItemId,
-            ingredient_id: alreadyHaveIngredientId,
-            is_checked: true,
-            is_pantry_excluded: true,
-            added_to_pantry: false,
-          },
-        ],
-        error: null,
-      },
-    ]);
-    const pantryQuery = createArraySelectQuery([
-      {
-        data: [{ ingredient_id: existingPantryIngredientId }],
-        error: null,
-      },
-    ]);
-    const itemReflectQuery = createArrayUpdateQuery([
-      {
-        data: [{ id: validExistingItemId }, { id: validNewItemId }, { id: alreadyHaveItemId }],
-        error: null,
-      },
-    ]);
-    const pantryInsertQuery = createInsertQuery([{ data: null, error: null }]);
-    const updateItems = vi.fn(() => itemReflectQuery);
-    const insertPantryItems = vi.fn(() => pantryInsertQuery);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: vi.fn(() => listUpdateQuery),
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: vi.fn(() => mealsUpdateQuery),
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-            update: updateItems,
-          };
-        }
-        if (table === "pantry_items") {
-          return {
-            select: vi.fn(() => pantryQuery),
-            insert: insertPantryItems,
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(
-      createCompleteRequest(listId, {
-        add_to_pantry_item_ids: [
-          validExistingItemId,
-          validNewItemId,
-          uncheckedItemId,
-          alreadyHaveItemId,
-          invalidItemId,
-        ],
-      }),
-      createContext(),
-    );
-    const body = await response.json();
-
-    expect(updateItems).toHaveBeenCalledWith({ added_to_pantry: true });
-    expect(itemReflectQuery.in).toHaveBeenCalledWith("id", [
-      validExistingItemId,
-      validNewItemId,
-      alreadyHaveItemId,
-    ]);
-    expect(insertPantryItems).toHaveBeenCalledWith([
-      {
-        user_id: "user-1",
-        ingredient_id: newPantryIngredientId,
-      },
-      {
-        user_id: "user-1",
-        ingredient_id: alreadyHaveIngredientId,
-      },
-    ]);
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        completed: true,
-        meals_updated: 0,
-        pantry_added: 3,
-        pantry_added_item_ids: [validExistingItemId, validNewItemId, alreadyHaveItemId],
-      },
-      error: null,
-    });
-  });
-
-  it("reflects the pinned product version and excludes an all-null legacy snapshot in fallback completion", async () => {
-    const productItemId = "550e8400-e29b-41d4-a716-446655440231";
-    const allNullItemId = "550e8400-e29b-41d4-a716-446655440232";
-    const productId = "550e8400-e29b-41d4-a716-446655440331";
-    const versionId = "550e8400-e29b-41d4-a716-446655440332";
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
-      },
-    ]);
-    const listUpdateQuery = createUpdateMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          is_completed: true,
-          completed_at: "2026-04-27T11:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [
-          {
-            id: productItemId,
-            ingredient_id: null,
-            food_product_id: productId,
-            food_product_nutrition_version_id: versionId,
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-          {
-            id: allNullItemId,
-            ingredient_id: null,
-            food_product_id: null,
-            food_product_nutrition_version_id: null,
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-        ],
-        error: null,
-      },
-    ]);
-    const pantryQuery = createArraySelectQuery([{ data: [], error: null }]);
-    const pantryInsertQuery = createInsertQuery([{ data: null, error: null }]);
-    const itemReflectQuery = createArrayUpdateQuery([
-      { data: [{ id: productItemId }], error: null },
-    ]);
-    const insertPantryItems = vi.fn(() => pantryInsertQuery);
-    const updateItems = vi.fn(() => itemReflectQuery);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: vi.fn(() => listUpdateQuery),
-          };
-        }
-        if (table === "meals") {
-          return { update: vi.fn(() => mealsUpdateQuery) };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-            update: updateItems,
-          };
-        }
-        if (table === "pantry_items") {
-          return {
-            select: vi.fn(() => pantryQuery),
-            insert: insertPantryItems,
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(
-      createCompleteRequest(listId, {
-        add_to_pantry_item_ids: [productItemId, allNullItemId],
-      }),
-      createContext(),
-    );
-    const body = await response.json();
-
-    expect(insertPantryItems).toHaveBeenCalledWith([
-      {
-        user_id: "user-1",
-        food_product_id: productId,
-        food_product_nutrition_version_id: versionId,
-      },
-    ]);
-    expect(itemReflectQuery.in).toHaveBeenCalledWith("id", [productItemId]);
-    expect(body.data).toEqual({
-      completed: true,
-      meals_updated: 0,
-      pantry_added: 1,
-      pantry_added_item_ids: [productItemId],
-    });
-  });
-
-  it("defaults to reflecting all checked purchase candidates when add_to_pantry_item_ids is omitted", async () => {
-    const firstItemId = "550e8400-e29b-41d4-a716-446655440211";
-    const secondItemId = "550e8400-e29b-41d4-a716-446655440212";
-    const uncheckedItemId = "550e8400-e29b-41d4-a716-446655440213";
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
-      },
-    ]);
-    const listUpdateQuery = createUpdateMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          is_completed: true,
-          completed_at: "2026-04-27T11:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [
-          {
-            id: firstItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440111",
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-          {
-            id: secondItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440112",
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-          {
-            id: uncheckedItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440113",
-            is_checked: false,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-        ],
-        error: null,
-      },
-    ]);
-    const pantryQuery = createArraySelectQuery([{ data: [], error: null }]);
-    const itemReflectQuery = createArrayUpdateQuery([{ data: [{ id: firstItemId }, { id: secondItemId }], error: null }]);
-    const pantryInsertQuery = createInsertQuery([{ data: null, error: null }]);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: vi.fn(() => listUpdateQuery),
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: vi.fn(() => mealsUpdateQuery),
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-            update: vi.fn(() => itemReflectQuery),
-          };
-        }
-        if (table === "pantry_items") {
-          return {
-            select: vi.fn(() => pantryQuery),
-            insert: vi.fn(() => pantryInsertQuery),
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        completed: true,
-        meals_updated: 0,
-        pantry_added: 2,
-        pantry_added_item_ids: [firstItemId, secondItemId],
-      },
-      error: null,
-    });
-  });
-
-  it("defaults to reflecting checked purchase items and already-have excluded items", async () => {
-    const checkedItemId = "550e8400-e29b-41d4-a716-446655440231";
-    const alreadyHaveItemId = "550e8400-e29b-41d4-a716-446655440232";
-    const uncheckedPurchaseItemId = "550e8400-e29b-41d4-a716-446655440233";
-    const checkedIngredientId = "550e8400-e29b-41d4-a716-446655440131";
-    const alreadyHaveIngredientId = "550e8400-e29b-41d4-a716-446655440132";
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
-      },
-    ]);
-    const listUpdateQuery = createUpdateMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          is_completed: true,
-          completed_at: "2026-04-27T11:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [
-          {
-            id: checkedItemId,
-            ingredient_id: checkedIngredientId,
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-          {
-            id: alreadyHaveItemId,
-            ingredient_id: alreadyHaveIngredientId,
-            is_checked: false,
-            is_pantry_excluded: true,
-            added_to_pantry: false,
-          },
-          {
-            id: uncheckedPurchaseItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440133",
-            is_checked: false,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-        ],
-        error: null,
-      },
-    ]);
-    const pantryQuery = createArraySelectQuery([{ data: [], error: null }]);
-    const itemReflectQuery = createArrayUpdateQuery([
-      { data: [{ id: checkedItemId }, { id: alreadyHaveItemId }], error: null },
-    ]);
-    const pantryInsertQuery = createInsertQuery([{ data: null, error: null }]);
-    const updateItems = vi.fn(() => itemReflectQuery);
-    const insertPantryItems = vi.fn(() => pantryInsertQuery);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: vi.fn(() => listUpdateQuery),
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: vi.fn(() => mealsUpdateQuery),
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-            update: updateItems,
-          };
-        }
-        if (table === "pantry_items") {
-          return {
-            select: vi.fn(() => pantryQuery),
-            insert: insertPantryItems,
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
-
-    expect(updateItems).toHaveBeenCalledWith({ added_to_pantry: true });
-    expect(itemReflectQuery.in).toHaveBeenCalledWith("id", [checkedItemId, alreadyHaveItemId]);
-    expect(insertPantryItems).toHaveBeenCalledWith([
-      {
-        user_id: "user-1",
-        ingredient_id: checkedIngredientId,
-      },
-      {
-        user_id: "user-1",
-        ingredient_id: alreadyHaveIngredientId,
-      },
-    ]);
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        completed: true,
-        meals_updated: 0,
-        pantry_added: 2,
-        pantry_added_item_ids: [checkedItemId, alreadyHaveItemId],
-      },
-      error: null,
-    });
-  });
-
-  it("treats add_to_pantry_item_ids [] as explicit no pantry reflection", async () => {
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
-      },
-    ]);
-    const listUpdateQuery = createUpdateMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          is_completed: true,
-          completed_at: "2026-04-27T11:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
-    const updateItems = vi.fn();
-    const insertPantryItems = vi.fn();
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: vi.fn(() => listUpdateQuery),
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: vi.fn(() => mealsUpdateQuery),
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            update: updateItems,
-          };
-        }
-        if (table === "pantry_items") {
-          return {
-            insert: insertPantryItems,
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(
-      createCompleteRequest(listId, { add_to_pantry_item_ids: [] }),
-      createContext(),
-    );
-    const body = await response.json();
-
-    expect(updateItems).not.toHaveBeenCalled();
-    expect(insertPantryItems).not.toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: { completed: true, meals_updated: 0, pantry_added: 0, pantry_added_item_ids: [] },
-      error: null,
-    });
-  });
-
-  it("does not add new pantry reflections when an already completed list is called again", async () => {
-    const alreadyReflectedItemId = "550e8400-e29b-41d4-a716-446655440221";
-    const unreflectedItemId = "550e8400-e29b-41d4-a716-446655440222";
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "user-1",
-          is_completed: true,
-          completed_at: "2026-04-27T10:20:00.000Z",
-        },
-        error: null,
-      },
-    ]);
-    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
-    const itemsQuery = createArraySelectQuery([
-      {
-        data: [
-          {
-            id: alreadyReflectedItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440121",
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: true,
-          },
-          {
-            id: unreflectedItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440122",
-            is_checked: true,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-          },
-        ],
-        error: null,
-      },
-    ]);
-    const updateItems = vi.fn();
-    const insertPantryItems = vi.fn();
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: vi.fn(),
-          };
-        }
-        if (table === "meals") {
-          return {
-            update: vi.fn(() => mealsUpdateQuery),
-          };
-        }
-        if (table === "shopping_list_items") {
-          return {
-            select: vi.fn(() => itemsQuery),
-            update: updateItems,
-          };
-        }
-        if (table === "pantry_items") {
-          return {
-            insert: insertPantryItems,
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(
-      createCompleteRequest(listId, { add_to_pantry_item_ids: [unreflectedItemId] }),
-      createContext(),
-    );
-    const body = await response.json();
-
-    expect(updateItems).not.toHaveBeenCalled();
-    expect(insertPantryItems).not.toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        completed: true,
-        meals_updated: 0,
-        pantry_added: 1,
-        pantry_added_item_ids: [alreadyReflectedItemId],
-      },
-      error: null,
-    });
-  });
-
-  it("returns 403 when another user's shopping list is completed", async () => {
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: {
-          id: listId,
-          user_id: "other-user",
-          is_completed: false,
-          completed_at: null,
-        },
-        error: null,
-      },
-    ]);
-    const updateList = vi.fn();
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return {
-            select: vi.fn(() => listQuery),
-            update: updateList,
-          };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { POST } = await importCompleteRoute();
-    const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
-
-    expect(updateList).not.toHaveBeenCalled();
-    expect(response.status).toBe(403);
-    expect(body).toMatchObject({
+    expect(response.status).toBe(expectedStatus);
+    await expect(response.json()).resolves.toMatchObject({
       success: false,
-      data: null,
-      error: { code: "FORBIDDEN" },
+      error: { code: errorCode, message: "rpc rejected" },
     });
   });
 
-  it("returns 404 when the shopping list does not exist", async () => {
-    const listQuery = createMaybeSingleQuery([
-      {
-        data: null,
-        error: null,
-      },
-    ]);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return { select: vi.fn(() => listQuery) };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
+  it.each([
+    [{ data: null, error: { message: "transport failed" } }],
+    [{ data: null, error: null }],
+  ])("returns 500 when the RPC result is unavailable", async (rpcResult) => {
+    const rpc = vi.fn(async () => rpcResult);
+    createRouteHandlerClient.mockResolvedValue(authenticatedClient(rpc));
 
     const { POST } = await importCompleteRoute();
     const response = await POST(createCompleteRequest(), createContext());
-    const body = await response.json();
 
-    expect(response.status).toBe(404);
-    expect(body).toMatchObject({
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
       success: false,
-      data: null,
-      error: { code: "RESOURCE_NOT_FOUND" },
+      error: { code: "INTERNAL_ERROR" },
     });
+  });
+
+  it("rejects an invalid pantry reflection body before calling the RPC", async () => {
+    const rpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue(authenticatedClient(rpc));
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(
+      new Request(`http://localhost:3000/api/v1/shopping/lists/${listId}/complete`, {
+        method: "POST",
+        body: JSON.stringify({ add_to_pantry_item_ids: "not-an-array" }),
+      }),
+      createContext(),
+    );
+
+    expect(response.status).toBe(422);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns the formatted bootstrap error before calling the RPC", async () => {
+    ensureUserBootstrapState.mockRejectedValue(new Error("bootstrap failed"));
+    const rpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue(authenticatedClient(rpc));
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(createCompleteRequest(), createContext());
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { message: "formatted: bootstrap failed" },
+    });
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("completeShoppingList helper returns completion summary when envelope is valid", async () => {
