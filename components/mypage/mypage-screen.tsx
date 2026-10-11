@@ -397,6 +397,7 @@ export function MypageScreen({
   const bookCoverLoadedIdsRef = useRef<Set<string>>(new Set());
   const bookCoverLoadingIdsRef = useRef<Set<string>>(new Set());
   const shoppingLoadFailedRef = useRef(false);
+  const shoppingRequestSequenceRef = useRef(0);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileReturnToRef = useRef<string | null>(
     typeof window === "undefined"
@@ -636,11 +637,15 @@ export function MypageScreen({
   ]);
 
   const loadShoppingHistory = useCallback(async (cursor?: string) => {
+    const requestSequence = ++shoppingRequestSequenceRef.current;
     try {
       const result = await fetchShoppingHistory({
         cursor,
         limit: SHOPPING_PAGE_SIZE,
       });
+      if (requestSequence !== shoppingRequestSequenceRef.current) {
+        return false;
+      }
       if (cursor) {
         setShoppingItems((prev) => [...prev, ...result.items]);
       } else {
@@ -654,6 +659,9 @@ export function MypageScreen({
       }
       return true;
     } catch (error) {
+      if (requestSequence !== shoppingRequestSequenceRef.current) {
+        return false;
+      }
       if (isMypageApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
         return false;

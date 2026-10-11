@@ -1478,6 +1478,40 @@ describe("MypageScreen", () => {
     expect(screen.queryByText("데이터를 불러오지 못했어요")).toBeNull();
   });
 
+  it("keeps the latest shopping retry result when an older request fails later", async () => {
+    let rejectOlderRetry!: (error: Error) => void;
+    let resolveLatestRetry!: (history: typeof MOCK_SHOPPING_HISTORY) => void;
+    mockFetchShoppingHistory
+      .mockRejectedValueOnce(new Error("initial shopping fail"))
+      .mockReturnValueOnce(new Promise((_, reject) => {
+        rejectOlderRetry = reject;
+      }))
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveLatestRetry = resolve;
+      }));
+
+    render(<MypageScreen initialAuthenticated />);
+
+    const user = await openShoppingSurface();
+    expect(
+      await screen.findByText("데이터를 불러오지 못했어요"),
+    ).toBeTruthy();
+
+    const retry = screen.getByRole("button", { name: "다시 시도" });
+    await user.click(retry);
+    await user.click(retry);
+
+    await act(async () => {
+      resolveLatestRetry(MOCK_SHOPPING_HISTORY);
+    });
+    expect(await screen.findByText("2026년 4월")).toBeTruthy();
+
+    await act(async () => {
+      rejectOlderRetry(new Error("late shopping failure"));
+    });
+    expect(screen.queryByText("데이터를 불러오지 못했어요")).toBeNull();
+  });
+
   it("retries core profile data when a direct shopping entry did not cause the error", async () => {
     mockFetchUserProfile
       .mockRejectedValueOnce(new Error("profile fail"))
