@@ -21,15 +21,6 @@ export interface CookedBatchOperation {
   key: string;
 }
 
-export const DEPLETED_REASON_LABELS = {
-  consumed: "다 먹음",
-  discarded: "모두 버림",
-  mixed: "먹음·버림으로 소진",
-  consumed_unweighed: "무게 없이 다 먹음",
-  discarded_unweighed: "무게 없이 모두 버림",
-  mixed_unweighed: "무게 없이 먹고 버림",
-} as const;
-
 export function mergeCookedBatchPages(
   current: CookedBatchProjection[],
   next: CookedBatchProjection[],
