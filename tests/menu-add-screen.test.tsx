@@ -6,9 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MenuAddScreen } from "@/components/planner/menu-add-screen";
-import * as leftoversApi from "@/lib/api/leftovers";
 import { fetchIngredients } from "@/lib/api/ingredients";
-import * as mealApi from "@/lib/api/meal";
 import * as recipeApi from "@/lib/api/recipe";
 import * as youtubeApi from "@/lib/api/youtube-import";
 import * as savedRecipeApi from "@/lib/api/youtube-saved-recipes";
@@ -30,16 +28,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => navigationMocks.searchParams(),
 }));
 
-vi.mock("@/lib/api/leftovers", () => ({
-  fetchLeftovers: vi.fn(),
-}));
-
 vi.mock("@/lib/api/ingredients", () => ({
   fetchIngredients: vi.fn(),
-}));
-
-vi.mock("@/lib/api/meal", () => ({
-  createMealSafe: vi.fn(),
 }));
 
 vi.mock("@/lib/api/recipe", () => ({
@@ -315,9 +305,7 @@ describe("MenuAddScreen", () => {
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
-    vi.mocked(leftoversApi.fetchLeftovers).mockReset();
     vi.mocked(fetchIngredients).mockReset();
-    vi.mocked(mealApi.createMealSafe).mockReset();
     vi.mocked(recipeApi.fetchRecipes).mockReset();
     vi.mocked(recipeApi.fetchRecipes).mockResolvedValue({
       success: true,
@@ -546,13 +534,15 @@ describe("MenuAddScreen", () => {
     expect(grid).toBeTruthy();
     expect(grid.className).toContain("flex");
 
-    // All six Wave1 options should be present.
+    // Planner options deliberately exclude leftovers; cooked food is recorded
+    // from the meal-log add sheet instead.
     expect(screen.getByTestId("menu-add-option-search")).toBeTruthy();
     expect(screen.getByTestId("menu-add-option-recipebook")).toBeTruthy();
     expect(screen.getByTestId("menu-add-option-pantry")).toBeTruthy();
-    expect(screen.getByTestId("menu-add-option-leftover")).toBeTruthy();
+    expect(screen.getByTestId("menu-add-option-product")).toBeTruthy();
     expect(screen.getByTestId("menu-add-option-youtube")).toBeTruthy();
     expect(screen.getByTestId("menu-add-option-manual")).toBeTruthy();
+    expect(screen.queryByTestId("menu-add-option-leftover")).toBeNull();
   });
 
   it("opens and focuses the mobile recipe search picker from the search option tile (Wave1)", async () => {
@@ -586,33 +576,6 @@ describe("MenuAddScreen", () => {
     expect(screen.getAllByText("4/18 아침").length).toBeGreaterThan(0);
     expect(screen.queryByText("대상")).toBeNull();
     expect(screen.queryByText("다른 방법으로 추가")).toBeNull();
-  });
-
-  it("opens the requested picker when source is provided by the planner sheet", async () => {
-    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({ items: [] });
-
-    render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="leftover" />);
-
-    const screenView = await screen.findByTestId("leftover-picker-screen");
-
-    expect(screenView).toBeTruthy();
-    expect(screen.queryByRole("dialog", { name: "남은 요리에서 추가" })).toBeNull();
-    expect(leftoversApi.fetchLeftovers).toHaveBeenCalledWith("leftover");
-  });
-
-  it("returns from the leftover picker back button to the option list", async () => {
-    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({ items: [] });
-
-    render(<MenuAddScreen {...DEFAULT_PROPS} />);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("menu-add-option-leftover"));
-
-    const pickerScreen = await screen.findByTestId("leftover-picker-screen");
-    await user.click(within(pickerScreen).getByTestId("leftover-picker-back"));
-
-    expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
-    expect(screen.queryByTestId("leftover-picker-screen")).toBeNull();
   });
 
   it("uses matching typography for YouTube and manual option tiles while giving recipebook a cover cue", () => {
@@ -1146,19 +1109,14 @@ describe("MenuAddScreen", () => {
     expect(youtubeApi.registerYoutubeRecipe).not.toHaveBeenCalled();
   });
 
-  it("keeps the desktop option rail visible while opening leftovers in the right panel", async () => {
+  it("keeps the desktop option rail limited to the current planner sources", () => {
     installMatchMedia(true);
-    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({ items: [] });
 
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("menu-add-option-leftover"));
-
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
-    expect(await screen.findByTestId("leftover-picker-web")).toBeTruthy();
-    expect(screen.queryByRole("dialog", { name: "남은 요리에서 추가" })).toBeNull();
-    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(screen.getByTestId("menu-add-option-product")).toBeTruthy();
+    expect(screen.queryByTestId("menu-add-option-leftover")).toBeNull();
   });
 
   it("returns from a source picker to the planner meal-add modal context", async () => {
@@ -1190,14 +1148,9 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("menu-add-option-search").textContent).toContain("레시피 검색");
     expect(screen.getByTestId("menu-add-option-recipebook").textContent).toContain("레시피북");
     expect(screen.getByTestId("menu-add-option-pantry").textContent).toContain("팬트리에서 찾기");
+    expect(screen.getByTestId("menu-add-option-product").textContent).toContain("완제품");
     expect(screen.getByTestId("menu-add-option-youtube").textContent).toContain("유튜브");
-
-    const leftoverBtn = screen.getByTestId("menu-add-option-leftover");
-    expect(leftoverBtn.textContent).toContain("🍱");
-    expect(leftoverBtn.textContent).toContain("남은 요리");
-    expect(leftoverBtn.textContent).not.toContain("4/18 아침");
-    expect(leftoverBtn.textContent).not.toContain("대상 ·");
-    expect(leftoverBtn.textContent).not.toContain("남은 요리에서 추가");
+    expect(screen.queryByTestId("menu-add-option-leftover")).toBeNull();
 
     const manualBtn = screen.getByTestId("menu-add-option-manual");
     expect(manualBtn.textContent).toContain("✏️");
@@ -1205,100 +1158,6 @@ describe("MenuAddScreen", () => {
     expect(manualBtn.textContent).not.toContain("4/18 아침");
     expect(manualBtn.textContent).not.toContain("대상 ·");
     expect(manualBtn.textContent).not.toContain("레시피 직접 작성");
-  });
-
-  it("adds a leftover dish to the current planner slot", async () => {
-    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({
-      items: [
-        {
-          id: "leftover-1",
-          recipe_id: "recipe-1",
-          recipe_title: "김치찌개",
-          recipe_thumbnail_url: null,
-          status: "leftover",
-          cooked_at: "2026-04-17T00:00:00.000Z",
-          eaten_at: null,
-          stale_reviewed_at: null,
-          cooking_servings: 2,
-          source_meal_label: "저녁",
-          source_planned_servings: 2,
-        },
-      ],
-    });
-    vi.mocked(mealApi.createMealSafe).mockResolvedValue({
-      success: true,
-      data: {
-        id: "meal-1",
-        recipe_id: "recipe-1",
-        plan_date: DEFAULT_PROPS.planDate,
-        column_id: DEFAULT_PROPS.columnId,
-        planned_servings: 1,
-        status: "registered",
-        is_leftover: true,
-        leftover_dish_id: "leftover-1",
-        recipe_nutrition_snapshot_id: null,
-      },
-      error: null,
-    });
-
-    render(<MenuAddScreen {...DEFAULT_PROPS} />);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /남은 요리/ }));
-
-    await waitFor(() => {
-      expect(screen.getByText("김치찌개")).toBeTruthy();
-    });
-    expect(screen.getByText("4/17 저녁 2인분")).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "추가" }));
-    await waitFor(() => {
-      expect(screen.getByText("계획 인분 입력")).toBeTruthy();
-    });
-    await user.click(
-      within(screen.getByRole("dialog", { name: "계획 인분 입력" })).getByRole(
-        "button",
-        { name: "추가하기" },
-      ),
-    );
-
-    await waitFor(() => {
-      expect(mealApi.createMealSafe).toHaveBeenCalledWith({
-        recipe_id: "recipe-1",
-        plan_date: DEFAULT_PROPS.planDate,
-        column_id: DEFAULT_PROPS.columnId,
-        planned_servings: 1,
-        leftover_dish_id: "leftover-1",
-      });
-    });
-    expect(mockRouterReplace).toHaveBeenCalledWith(
-      `/planner/${DEFAULT_PROPS.planDate}/${DEFAULT_PROPS.columnId}?slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`,
-    );
-  });
-
-  it("shows fallback metadata for leftover dishes without source meal data", async () => {
-    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({
-      items: [
-        {
-          id: "leftover-1",
-          recipe_id: "recipe-1",
-          recipe_title: "된장찌개",
-          recipe_thumbnail_url: null,
-          status: "leftover",
-          cooked_at: "2026-04-17T00:00:00.000Z",
-          eaten_at: null,
-          stale_reviewed_at: null,
-          cooking_servings: 0,
-          source_meal_label: null,
-          source_planned_servings: null,
-        },
-      ],
-    });
-
-    render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="leftover" />);
-
-    expect(await screen.findByText("된장찌개")).toBeTruthy();
-    expect(screen.getByText("4/17 끼니 미상 인분 미상")).toBeTruthy();
   });
 
   // ─── Slice 27b: YouTube Source Fallback Frontend Tests ─────────────────────

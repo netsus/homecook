@@ -38,8 +38,15 @@ describe("MEAL_LOG add sheet", () => {
     expect(JSON.parse(String(request[1]?.body))).toMatchObject({
       consumed_local_date: "2026-08-10",
       meal_plan_column_id: "20000000-0000-4000-8000-000000000001",
+      source: {
+        id: "40000000-0000-4000-8000-000000000001",
+        type: "cooked_batch",
+      },
       quantity: { amount: 50, unit: "g" },
     });
+    expect(fetchMock.mock.calls.some(([url, init]) =>
+      String(url).includes("/api/v1/meals") && init?.method === "POST"))
+      .toBe(false);
   });
 
   it("submits the amount with Enter but ignores composition, repeat, and an invalid amount", async () => {
