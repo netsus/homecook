@@ -57,7 +57,12 @@ describe("YouTube truthful worker progress bundle contract", () => {
     expect(keyframes).toContain("options.onProgress?.(");
     expect(keyframes).toContain('"model_analysis"');
     expect(worker).toContain('reportProgress("source_fetch"');
-    expect(worker).toContain("onProgress(stage, videoDurationSeconds)");
+    expect(worker).toContain(
+      "createExtractionClientOptions((stage, videoDurationSeconds) => {",
+    );
+    expect(worker).toContain(
+      "workerRpcClient.reportProgress(stage, videoDurationSeconds);",
+    );
   });
 
   it("parses ordered frame extractor progress without exposing command output", async () => {

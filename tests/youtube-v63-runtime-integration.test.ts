@@ -26,7 +26,9 @@ describe("v63 source-anchored runtime integration", () => {
       keyframesPerRecipe: 8,
       screenOcrMode: "auto",
       ocrStrategy: "auto",
+      timeoutMs: 180_000,
     });
+    expect(worker.createExtractionClientOptions(() => undefined).timeoutMs).toBe(1_200_000);
     expect(worker.createExtractionIdentity(options)).toEqual({ ...I031_EXACT_IDENTITY, codexCliVersion: "0.154.0-alpha.6.2" });
     expect(YOUTUBE_ASYNC_POLICY.pipelineIdentity).toBe("1c9c47074da3bf1c55ed83f1ba5131d9d48ad486503919c554a5530d7972d935");
     expect(YOUTUBE_ASYNC_POLICY.policyVersion).toBe(3);
