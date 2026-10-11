@@ -78,8 +78,9 @@ describe("prelaunch meal log presentation", () => {
     const food = await screen.findByRole("button", { name: /식사 기록 상세/ });
     expect(within(food).getByText("나의 비공개 닭고기 덮밥")).toBeTruthy();
     expect(within(food).getByLabelText("먹은 양 125g")).toBeTruthy();
-    expect(within(food.closest("li")!).getByText("350").className).toContain("text-[var(--nutrition-number)]");
-    expect(within(food.closest("li")!).getByText("kcal").className).not.toContain("text-[var(--nutrition-number)]");
+    const calories = within(food.closest("li")!).getByText("350 kcal");
+    expect(calories.className).toContain("text-right");
+    expect(calories.className).not.toContain("font-semibold");
     expect(within(food.closest("li")!).getByText("25").className).toContain("text-[var(--nutrition-number)]");
     expect(screen.getAllByLabelText("먹은 양 125g")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /식사 기록 상세/, description: /125g/ })).toBeTruthy();
