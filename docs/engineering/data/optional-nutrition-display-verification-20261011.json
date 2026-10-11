@@ -1,0 +1,29 @@
+{
+  "verified_at": "2026-10-11T05:54:57.626Z",
+  "ref": "4f3f5d45862b63d4edf0d432dc6256f23ef328c1",
+  "buildId": "prelaunch-4f3f5d45862b-PQXgwE",
+  "loaded": true,
+  "recovery_pending": false,
+  "nutrition_api_unchanged": true,
+  "database_state_unchanged": true,
+  "ui_tests": 82,
+  "deployment_tests": 148,
+  "typecheck": "passed",
+  "targeted_lint": "passed",
+  "build": "passed",
+  "visual": {
+    "desktop": "passed on running production web at 127.0.0.1:3100",
+    "mobile": "passed at390x844;document/scrollwidth375/375",
+    "core_numbers_unchanged": [
+      "517kcal",
+      "77g",
+      "23g",
+      "13g"
+    ],
+    "missing_optional_notice_absent": true,
+    "partial_fiber_row_hidden": true,
+    "sodium_sugar_saturated_fat_preserved": true,
+    "viewport_restored": true,
+    "public_browser_limitation": "Public browser detail failed; direct API navigation reported net::ERR_BLOCKED_BY_CLIENT. Public HTTP API separately returned200 and identical nutrition. Browser protections were not changed."
+  }
+}

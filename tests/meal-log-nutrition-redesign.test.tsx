@@ -81,7 +81,7 @@ describe("meal-log redesigned detail flow", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "하루 영양 상세 보기" }));
     expect(screen.getByRole("dialog", { name: "하루 영양 상세" })).toBeTruthy();
   });
-  it("keeps incomplete nutrition semantics without repeated visible warning labels", async () => {
+  it("hides optional sodium gaps while preserving stored partial evidence", async () => {
     const partial = { ...nutrition, calculation_status: "partial" as const, sodium_mg: null };
     api.fetch.mockImplementation(async (date: string) => {
       const data = day({ ...entry, nutrition: partial });
@@ -89,13 +89,13 @@ describe("meal-log redesigned detail flow", () => {
     });
     render(<MealLogScreen {...props} />);
     await screen.findByText("김치찌개");
-    expect(screen.getByText("일부 정보 없음 1건").className).toBe("sr-only");
-    expect(screen.getByText("확인된 정보 기준").className).toBe("sr-only");
+    expect(screen.queryByText("일부 정보 없음 1건")).toBeNull();
+    expect(screen.queryByText("확인된 정보 기준")).toBeNull();
     expect(screen.getByText("확인된 탄단지 기준").className).toBe("sr-only");
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "하루 영양 상세 보기" }));
     const detail = screen.getByRole("dialog", { name: "하루 영양 상세" });
-    for (const qualifier of within(detail).getAllByText("확인된 정보 기준")) expect(qualifier.className).toBe("sr-only");
+    expect(within(detail).queryByText("확인된 정보 기준")).toBeNull();
     expect(within(detail).getByRole("img").getAttribute("aria-describedby")).toBeTruthy();
     expect(partial.sodium_mg).toBeNull();
   });

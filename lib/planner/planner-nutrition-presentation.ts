@@ -1,3 +1,4 @@
+import { hasCompleteEnergyAndMacros } from "@/lib/nutrition/recipe-nutrition-display";
 import { formatEnergyKcal } from "@/lib/nutrition/energy-display";
 import type {
   PlannerNutritionCoreCode,
@@ -79,7 +80,8 @@ export function formatPlannerNutritionQuality(
   return "계산 방법 정보 준비 중";
 }
 
-export function buildPlannerNutritionWarningMessages(warnings: string[]) {
+export function buildPlannerNutritionWarningMessages(warnings: string[], values?: Record<string, PlannerNutritionValue>) {
+  if (values && hasCompleteEnergyAndMacros(values)) return [];
   return [
     ...new Set(
       warnings.map(
@@ -96,7 +98,7 @@ export function plannerAiEstimateNotice(
   containsAiEstimate: boolean = false,
 ): string | null {
   if (!containsAiEstimate) return null;
-  return Object.values(values).some(value => value.status !== "complete")
+  return !hasCompleteEnergyAndMacros(values)
     ? "AI 추정값 포함 · 일부 영양정보가 빠진 추정값"
     : "AI 추정값 포함";
 }

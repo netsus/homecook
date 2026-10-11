@@ -48,7 +48,7 @@ describe("small energy display without changing nutrition", () => {
 });
 
 describe("recipe quantity-conversion explanation", () => {
-  const nutrition: RecipeNutrition = { basis: { amount: 1, unit: "serving" }, base_servings: 1, values: { energy_kcal: value(10) }, scalable_values: { energy_kcal: 10 }, fixed_values: { energy_kcal: 0 }, calculation_status: "complete", calculation_quality: "estimated", availability_reason: null, warnings: [], sources: [] };
+  const nutrition: RecipeNutrition = { basis: { amount: 1, unit: "serving" }, base_servings: 1, values: { energy_kcal: value(10), carbohydrate_g: value(2.5), protein_g: value(0), fat_g: value(0) }, scalable_values: { energy_kcal: 10, carbohydrate_g: 2.5, protein_g: 0, fat_g: 0 }, fixed_values: { energy_kcal: 0, carbohydrate_g: 0, protein_g: 0, fat_g: 0 }, calculation_status: "complete", calculation_quality: "estimated", availability_reason: null, warnings: [], sources: [] };
   it.each(["PIECE_WEIGHT_CONVERSION_USED", "REPRESENTATIVE_VOLUME_CONVERSION_USED"])("explains representative weight only when %s was used", warning => {
     render(<RecipeNutritionCard nutrition={{ ...nutrition, warnings: [warning] }} selectedServings={1} onRetry={vi.fn()} />);
     const explanation = screen.getByText("개수·부피로 입력한 재료는 승인된 대표 중량으로 환산했어요. 실제 무게와 다를 수 있어요.");

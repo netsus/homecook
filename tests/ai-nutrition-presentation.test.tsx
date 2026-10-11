@@ -41,7 +41,7 @@ describe("AI nutrition provenance is separate from completeness and quantity con
     expect(screen.getByText((_, element) => element?.tagName === "P" && /^100\s*kcal$/.test(element.textContent ?? ""))).toBeTruthy();
   });
   it("does not describe partial AI recipe values as only verified values", () => {
-    render(<RecipeNutritionCard nutrition={{ ...recipe, calculation_status: "partial" }} selectedServings={1} onRetry={vi.fn()} />);
+    render(<RecipeNutritionCard nutrition={{ ...recipe, calculation_status: "partial", values: { ...values, protein_g: { ...value, amount: null, known_amount: 20, status: "partial" } } }} selectedServings={1} onRetry={vi.fn()} />);
     expect(screen.getByText(/^AI 추정값 포함/)).toBeTruthy();
     expect(screen.getByText(/일부 영양정보가 빠진 추정값/)).toBeTruthy();
     expect(screen.queryByText(/확인된 값만/)).toBeNull();
@@ -61,7 +61,7 @@ describe("AI nutrition provenance is separate from completeness and quantity con
     expect(screen.queryByRole("img", { name: /확인된/ })).toBeNull();
   });
   it.each([true, false])("labels a saved meal/chart and preview bar (complete=%s)", complete => {
-    const nutrition = { ...meal, calculation_status: complete ? "complete" as const : "partial" as const };
+    const nutrition = { ...meal, calculation_status: complete ? "complete" as const : "partial" as const, protein_g: complete ? meal.protein_g : null };
     const view = render(<MealLogNutritionChart nutrition={nutrition} compact />);
     expect(screen.getByText(/AI 추정값 포함/)).toBeTruthy();
     expect(screen.queryByText("확인된 정보 기준")).toBeNull();
@@ -102,14 +102,14 @@ it("shows pinned AI evidence in the actual plan card and hides it for stale serv
 
 
 it("labels AI values in the add-to-plan recipe preview", async () => {
-  previewApi.fetch.mockResolvedValue({ ...MOCK_RECIPE_DETAIL, nutrition: { ...recipe, calculation_status: "partial" } });
+  previewApi.fetch.mockResolvedValue({ ...MOCK_RECIPE_DETAIL, nutrition: { ...recipe, calculation_status: "partial", values: { ...values, protein_g: { ...value, amount: null, known_amount: 20, status: "partial" } } } });
   render(<MealAddRecipePreview recipeId="recipe" servings={1} />);
   expect(await screen.findByText(/AI 추정값 포함/)).toBeTruthy();
   expect(screen.getByText(/일부 영양정보가 빠진 추정값/)).toBeTruthy();
 });
 
 it("keeps ordinary incomplete notices screen-reader-only but AI provenance visible", () => {
-  const officialPartial = { ...historicalMeal, calculation_status: "partial" as const };
+  const officialPartial = { ...historicalMeal, calculation_status: "partial" as const, protein_g: null };
   const view = render(<MealLogNutritionChart nutrition={officialPartial} compact />);
   expect(screen.getByText("확인된 정보 기준").className).toBe("sr-only");
   view.rerender(<MealLogNutritionChart nutrition={{ ...officialPartial, contains_ai_estimate: true }} compact />);
@@ -128,4 +128,34 @@ it("preserves the new detailed plan card while carrying AI provenance into its m
   expect(screen.queryByRole("img", { name: /확인된/ })).toBeNull();
   expect(screen.getAllByText(/AI 추정값 포함/)).toHaveLength(1);
   expect(screen.getByText(/AI 추정값 포함/).className).not.toContain("sr-only");
+});
+
+
+it.each(["meal", "day", "week"])("does not request attention for optional-only gaps in the %s planner", kind => {
+  const optionalMissing = { ...planner, calculation_status: "partial" as const, incomplete_entry_count: 1,
+    values: { ...values, sodium_mg: { amount: null, known_amount: null, status: "unavailable" as const, display_mode: null } },
+    warnings: [warning, "NUTRIENT_VALUE_MISSING"],
+  };
+  const props = { nutrition: optionalMissing, error: null, isRefreshing: false, onRetry: vi.fn(), status: "ready" as const };
+  render(kind === "meal" ? <MealNutritionSummary {...props} /> : kind === "day" ? <PlannerDayNutritionSummary nutrition={optionalMissing} /> : <PlannerWeekNutritionSummary {...props} days={[]} />);
+  expect(screen.getByText("AI 추정값 포함")).toBeTruthy();
+  expect(screen.queryByText(/빠진|확인 필요|확인해 주세요/)).toBeNull();
+});
+
+it("keeps optional-only meal-log gaps quiet without changing stored evidence", () => {
+  const nutrition = { ...historicalMeal, calculation_status: "partial" as const, sodium_mg: null };
+  const view = render(<MealLogNutritionChart nutrition={nutrition} compact />);
+  expect(screen.queryByText(/확인된 정보 기준|일부 영양/)).toBeNull();
+  view.rerender(<MealLogNutritionChart nutrition={{ ...nutrition, contains_ai_estimate: true }} compact />);
+  expect(screen.getByText("AI 추정값 포함")).toBeTruthy();
+  expect(screen.queryByText(/빠진 추정값/)).toBeNull();
+  expect(nutrition.calculation_status).toBe("partial");
+  expect(nutrition.sodium_mg).toBeNull();
+});
+
+it("keeps optional-only recipe preview gaps quiet", async () => {
+  previewApi.fetch.mockResolvedValue({ ...MOCK_RECIPE_DETAIL, nutrition: { ...recipe, calculation_status: "partial", values: { ...values, sodium_mg: { amount: null, known_amount: null, status: "unavailable", display_mode: null } } } });
+  render(<MealAddRecipePreview recipeId="recipe" servings={1} />);
+  expect(await screen.findByText("AI 추정값 포함")).toBeTruthy();
+  expect(screen.queryByText(/빠진|일부 영양 정보 없음/)).toBeNull();
 });
