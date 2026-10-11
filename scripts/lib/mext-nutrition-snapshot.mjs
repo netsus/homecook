@@ -6,7 +6,7 @@ const UNITS = Object.freeze({
 });
 
 export function parseMextNutrientToken(token) {
-  const source_token = token == null ? '' : String(token);
+  const source_token = token === null || typeof token === 'undefined' ? '' : String(token);
   const text = source_token.trim();
   if (text === '' || text === '-' || text === '－') {
     return { amount: null, missing_reason: text === '' ? 'not_provided' : 'unmeasured', source_token };
