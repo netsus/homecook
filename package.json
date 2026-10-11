@@ -36,6 +36,7 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm test:product",
     "test:local-mac-production-release": "node scripts/run-local-mac-production-release-tests.mjs",
+    "test:youtube-resolution-release-contracts": "node --test tests/prelaunch-youtube-resolution-contract.test.mjs tests/prelaunch-youtube-resolution-db-plan.test.mjs tests/youtube-resolution-controlled-db.test.mjs",
     "capture:local-mac-production-release-evidence": "node scripts/capture-local-mac-production-release-evidence.mjs",
     "verify:local-mac-production-release-evidence": "node scripts/validate-local-mac-production-release-evidence.mjs",
     "account-maintenance:scheduler:install": "node scripts/account-maintenance-scheduler-install.mjs",
