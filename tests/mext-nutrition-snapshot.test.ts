@@ -4,7 +4,7 @@ import { normalizeMextReviewedFood, parseMextNutrientToken } from '../scripts/li
 describe('reviewed MEXT nutrition cells', () => {
   it('distinguishes a published zero from absent or unmeasured data', () => {
     expect(parseMextNutrientToken('0').amount).toBe(0);
-    for (const token of ['', '-', '－', null]) expect(parseMextNutrientToken(token).amount).toBeNull();
+    for (const token of ['', '-', '－', null, undefined]) expect(parseMextNutrientToken(token).amount).toBeNull();
   });
   it('retains trace and estimated trace without inventing a number', () => {
     expect(parseMextNutrientToken('Tr')).toMatchObject({ amount: null, missing_reason: 'trace', source_token: 'Tr' });

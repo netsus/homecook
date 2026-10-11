@@ -52,7 +52,7 @@ function webReview() {
     sourceBackfillMigrations };
 }
 function manifest() {
-  const review = webReview(); const value: any = { schema: "homecook.prelaunch-youtube-worker-install.v1", approved: true,
+  const review = webReview(); const value = { schema: "homecook.prelaunch-youtube-worker-install.v1", approved: true,
     webReleaseSha: review.to, artifactSha256: review.installedWorkerArtifactSha256,
     manifestFileSha256: sha("artifact-manifest-file"),
     descriptorSha256: review.workerDescriptorSha256, policySha256: review.queuePolicySha256,
@@ -62,8 +62,9 @@ function manifest() {
     oldWeb: { releaseSha: YOUTUBE_TRIAL_LIVE_SHA, plistPath: "/private/old.plist", workingDirectory: "/private/live-web",
       buildId: "live-build", plistSha256: sha("live-plist") },
     i031Preflight: { ready: true, codexCliVersion: "0.154.0-alpha.6.2", chatGptLogin: true, toolsReady: true } };
-  value.installAuthoritySha256 = sha(JSON.stringify(prelaunchYoutubeWorkerInstallAuthority(value),
-    Object.keys(prelaunchYoutubeWorkerInstallAuthority(value)).sort())); return value;
+  const installAuthoritySha256 = sha(JSON.stringify(prelaunchYoutubeWorkerInstallAuthority(value),
+    Object.keys(prelaunchYoutubeWorkerInstallAuthority(value)).sort()));
+  return { ...value, installAuthoritySha256 };
 }
 
 describe("reviewed prelaunch YouTube worker installer", () => {
@@ -87,7 +88,7 @@ describe("reviewed prelaunch YouTube worker installer", () => {
     expect(source).not.toContain("assertLocalMacProductionMutationAuthority");
   });
   it("rejects live DB queue, permit, credential, policy and predecessor web drift", () => {
-    const value = manifest(); const now = Date.now(); const observed: any = { policy: { enabled: true,
+    const value = manifest(); const now = Date.now(); const observed = { policy: { enabled: true,
       policy_version: value.review.queuePolicyVersion, pipeline_identity: value.review.pipelineIdentity,
       policy_snapshot_digest: value.review.queuePolicySnapshotDigest }, queue: { queued: 0, processing: 0 },
     permit: { owner_id: null }, credential: { current_generation: value.credentialGeneration,
