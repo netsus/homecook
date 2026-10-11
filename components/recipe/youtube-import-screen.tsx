@@ -358,6 +358,13 @@ function getApiErrorMessage(defaultMessage: string, message?: string | null) {
   return message?.trim() || defaultMessage;
 }
 
+function requiresYoutubeCandidateSelection(data: YoutubeRecipeExtractData) {
+  return (
+    (data.recipe_candidates?.length ?? 0) > 0 ||
+    (data.multi_recipe_status !== undefined && data.multi_recipe_status !== "single")
+  );
+}
+
 const YOUTUBE_STEP_LABELS = [
   { id: "url-input", label: "링크 입력" },
   { id: "preview", label: "미리보기" },
@@ -2469,6 +2476,8 @@ function ActiveYoutubeImportScreen({
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [isPromotingCandidate, setIsPromotingCandidate] = useState(false);
   const [candidatePromotionError, setCandidatePromotionError] = useState<string | null>(null);
+  const candidatePromotionTokenRef = useRef(0);
+  const candidatePromotionInFlightRef = useRef(false);
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [draftThumbnailUrl, setDraftThumbnailUrl] = useState<string | null>(null);
@@ -2790,12 +2799,13 @@ function ActiveYoutubeImportScreen({
 
         const data = result.data;
         const candidates = data.recipe_candidates ?? [];
+        const needsCandidateSelection = requiresYoutubeCandidateSelection(data);
         setRecipeCandidates(candidates);
-        setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
+        setParentExtractionId(needsCandidateSelection ? data.extraction_id : null);
         setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
         setCandidatePromotionError(null);
         applyExtractDataToReview(data);
-        pushStep("saving-result");
+        pushStep(needsCandidateSelection ? "review" : "saving-result");
         return true;
       };
 
@@ -2942,11 +2952,12 @@ function ActiveYoutubeImportScreen({
       }
       const data = result.data.draft;
       const candidates = data.recipe_candidates ?? [];
+      const needsCandidateSelection = requiresYoutubeCandidateSelection(data);
       setRecipeCandidates(candidates);
-      setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
+      setParentExtractionId(needsCandidateSelection ? data.extraction_id : null);
       setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
       applyExtractDataToReview(data);
-      setCurrentStep("saving-result");
+      setCurrentStep(needsCandidateSelection ? "review" : "saving-result");
     });
     return () => {
       current = false;
@@ -2974,6 +2985,7 @@ function ActiveYoutubeImportScreen({
 
   const retryEnsureSavedResult = useCallback(() => {
     if (!extractionId || initialSavedDraftId) return;
+    if (parentExtractionId === extractionId) return;
     if (ensureInFlightRef.current === extractionId) return;
     setEnsureError(null);
     setCurrentStep("saving-result");
@@ -2998,12 +3010,13 @@ function ActiveYoutubeImportScreen({
       applySavedResult(result.data);
       router.replace(`/recipes/youtube/saved/${result.data.draft_id}`);
     });
-  }, [applySavedResult, extractionId, initialSavedDraftId, router]);
+  }, [applySavedResult, extractionId, initialSavedDraftId, parentExtractionId, router]);
 
   useEffect(() => {
     if (currentStep !== "saving-result" || !extractionId || initialSavedDraftId || savedDraftId || ensureError) return;
+    if (parentExtractionId === extractionId) return;
     retryEnsureSavedResult();
-  }, [currentStep, ensureError, extractionId, initialSavedDraftId, retryEnsureSavedResult, savedDraftId]);
+  }, [currentStep, ensureError, extractionId, initialSavedDraftId, parentExtractionId, retryEnsureSavedResult, savedDraftId]);
 
   useEffect(() => {
     if ((!initialExtractionId && !initialSavedDraftId) || currentStep !== "review") return;
@@ -3022,8 +3035,10 @@ function ActiveYoutubeImportScreen({
 
   const handleSelectCandidate = useCallback(async (candidateId: string) => {
     const parentId = parentExtractionId ?? extractionId;
-    if (!parentId || isPromotingCandidate) return;
+    if (!parentId || candidatePromotionInFlightRef.current) return;
 
+    candidatePromotionInFlightRef.current = true;
+    const requestToken = ++candidatePromotionTokenRef.current;
     setIsPromotingCandidate(true);
     setCandidatePromotionError(null);
     setSelectedCandidateId(candidateId);
@@ -3033,6 +3048,8 @@ function ActiveYoutubeImportScreen({
       candidate_id: candidateId,
     });
 
+    if (requestToken !== candidatePromotionTokenRef.current) return;
+    candidatePromotionInFlightRef.current = false;
     setIsPromotingCandidate(false);
 
     if (!result.success || !result.data) {
@@ -3044,6 +3061,7 @@ function ActiveYoutubeImportScreen({
 
     setParentExtractionId(result.data.parent_extraction_id);
     setSelectedCandidateId(result.data.candidate_id);
+    setRecipeCandidates([]);
     setSavedDraftId("");
     setSavedDraftRevision(null);
     applyExtractDataToReview(result.data.draft);
@@ -3051,9 +3069,13 @@ function ActiveYoutubeImportScreen({
   }, [
     applyExtractDataToReview,
     extractionId,
-    isPromotingCandidate,
     parentExtractionId,
   ]);
+
+  useEffect(() => () => {
+    candidatePromotionTokenRef.current += 1;
+    candidatePromotionInFlightRef.current = false;
+  }, []);
 
   // ─── Step 3 handlers ───────────────────────────────────────────────
 
@@ -3406,6 +3428,11 @@ function ActiveYoutubeImportScreen({
   // ─── Back handling ─────────────────────────────────────────────────
 
   const handleBack = useCallback(() => {
+    if (isPromotingCandidate) {
+      candidatePromotionTokenRef.current += 1;
+      candidatePromotionInFlightRef.current = false;
+      setIsPromotingCandidate(false);
+    }
     if (currentStep === "review" && hasUnsavedChanges) {
       setModalMode("confirm-back");
     } else if (currentStep === "preview" || currentStep === "non-recipe-warning") {
@@ -3415,7 +3442,7 @@ function ActiveYoutubeImportScreen({
     } else {
       exitImportFlow();
     }
-  }, [currentStep, exitImportFlow, extractionError, hasUnsavedChanges]);
+  }, [currentStep, exitImportFlow, extractionError, hasUnsavedChanges, isPromotingCandidate]);
 
   const handleConfirmBack = useCallback(() => {
     setModalMode("none");
@@ -3425,6 +3452,8 @@ function ActiveYoutubeImportScreen({
   // ─── Reenter / retry ──────────────────────────────────────────────
 
   const handleReenter = useCallback(() => {
+    candidatePromotionTokenRef.current += 1;
+    candidatePromotionInFlightRef.current = false;
     const currentUrl = new URL(window.location.href);
     if (currentUrl.searchParams.has("jobId")) {
       currentUrl.searchParams.delete("jobId");
