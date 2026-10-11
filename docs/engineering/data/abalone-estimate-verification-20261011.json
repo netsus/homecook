@@ -1,0 +1,51 @@
+{
+  "schema": "homecook.abalone-estimate-completion.v1",
+  "status": "production_applied",
+  "applied_weight_g": 50,
+  "previous_weight_g": 100,
+  "weight_kind": "user_approved_ai_estimate",
+  "actually_measured": false,
+  "production": {
+    "status": "committed",
+    "sourceRef": "83dc3d229e93265f3a297652d94109d80f845c42",
+    "sql_sha256": "142fbd52c63e6be7588294bc034c5419ffcf3311965cd77aaeec0635ae9a6b54",
+    "backup_sha256": "92d168921a7ce4d943a0f8c5e921283ee2b1569a6fb8fb6f0f9e48a816365f14",
+    "evidence_counts": {
+      "sources": 1,
+      "evidence": 1,
+      "piece_links": 1,
+      "volume_links": 0,
+      "superseded_links": 1
+    },
+    "recipe_count": 1,
+    "snapshots_created": 1,
+    "snapshots_reused": 0,
+    "history_preserved": true,
+    "finished_at": "2026-10-11T07:15:08.556Z"
+  },
+  "verification": {
+    "passed": true,
+    "verified_at": "2026-10-11T07:15:23.904Z",
+    "sourceRef": "4f3f5d45862b63d4edf0d432dc6256f23ef328c1",
+    "recipes": 51,
+    "rows": 495,
+    "snapshots": 51,
+    "affected_snapshot_hashes_verified": 1,
+    "history_preserved": true
+  },
+  "focused_tests": 8,
+  "typecheck": "passed",
+  "targeted_eslint": "passed",
+  "injected_failure_rollback": true,
+  "replay_created": 0,
+  "other_recipes_unchanged": 50,
+  "historical_records_preserved": true,
+  "display_amount": 1,
+  "display_unit": "개",
+  "spoon_table_applied": false,
+  "web_changes": false,
+  "ledger": 217,
+  "ai_automatic_enabled": false,
+  "owned_clone_removed": true,
+  "backup_retained": true
+}
