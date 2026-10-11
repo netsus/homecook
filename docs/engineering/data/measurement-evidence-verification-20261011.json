@@ -1,0 +1,54 @@
+{
+  "schema": "homecook.measurement-evidence-completion.v1",
+  "status": "production_applied",
+  "reviewed_scope": {
+    "piece_assignments": 19,
+    "volume_assignments": 30,
+    "current_recipes": 51,
+    "ingredient_rows": 495
+  },
+  "production": {
+    "status": "committed",
+    "sourceRef": "874346b8ba444f60ffb330de353a0811a1f107aa",
+    "sql_sha256": "513c924290d2d15883801f530c72368d205fbc8b2575f066a2846a0dc216c95b",
+    "backup_sha256": "7a35a2895061d116efe9ebebe7e754bd054af204f4735c0382f913ff30d6a0bb",
+    "evidence_counts": {
+      "sources": 2,
+      "evidence": 4,
+      "piece_links": 3,
+      "volume_links": 1,
+      "superseded_links": 4
+    },
+    "recipe_count": 34,
+    "snapshots_created": 26,
+    "snapshots_reused": 8,
+    "history_preserved": true,
+    "finished_at": "2026-10-11T06:28:23.326Z"
+  },
+  "verification": {
+    "renderer_unit_tests": 8,
+    "typecheck": "passed",
+    "targeted_lint": "passed",
+    "clone_failed_transaction_rollback": true,
+    "clone_replay_additions": 0,
+    "current_recipe_numbers_unchanged": true,
+    "current_recipe_status_and_scaling_unchanged": true,
+    "historical_records_preserved": true,
+    "production_readonly_passed": true
+  },
+  "estimates": {
+    "review_only": true,
+    "new_estimates_applied_to_database": false,
+    "paid_ai_calls": 0
+  },
+  "web_changes": false,
+  "database_migration_changes": false,
+  "final_inventory": {
+    "ledger": 217,
+    "ai_enabled": false,
+    "piece_active": 19,
+    "volume_active": 30,
+    "owned_clone_removed": true,
+    "backup_retained": true
+  }
+}
