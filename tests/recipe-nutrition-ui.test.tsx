@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
-import { buildRecipeNutritionDisplay } from "@/lib/nutrition/recipe-nutrition-display";
+import { buildRecipeNutritionDisplay, hasCompleteEnergyAndMacros } from "@/lib/nutrition/recipe-nutrition-display";
 import type { RecipeNutrition, RecipeNutritionValue } from "@/types/recipe";
 
 const COMPLETE_VALUES = {
@@ -70,10 +70,12 @@ function renderCard(
     isRefreshing = false,
     onRetry = vi.fn(),
     selectedServings = 4,
+    variant = "app",
   }: {
     isRefreshing?: boolean;
     onRetry?: () => void;
     selectedServings?: number;
+    variant?: "app" | "web";
   } = {},
 ) {
   render(
@@ -82,11 +84,65 @@ function renderCard(
       nutrition={nutrition}
       onRetry={onRetry}
       selectedServings={selectedServings}
+      variant={variant}
     />,
   );
 }
 
 describe("recipe nutrition display", () => {
+  it.each(["app", "web"] as const)("omits missing or partial optional nutrients without an incomplete notice in %s", async (variant) => {
+    for (const status of ["partial", "unavailable"] as const) {
+      renderCard(buildNutrition({
+        calculation_status: "partial",
+        warnings: ["AI_NUTRITION_ESTIMATE_USED"],
+        values: {
+          ...COMPLETE_VALUES,
+          sodium_mg: { amount: null, known_amount: status === "partial" ? 730 : null, status, display_mode: status === "partial" ? "minimum" : null },
+          sugars_g: value(0),
+          fiber_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+          saturated_fat_g: value(Number.NaN),
+        },
+        scalable_values: { ...buildNutrition().scalable_values, sugars_g: 0 },
+        fixed_values: { ...buildNutrition().fixed_values, sugars_g: 0 },
+      }), { variant });
+
+      expect(screen.getByTestId(`recipe-nutrition-card-${variant}`)).toBeTruthy();
+      expect(screen.getByText("AI 추정값 포함")).toBeTruthy();
+      await userEvent.click(screen.getByText("영양성분 더 보기"));
+      expect(screen.queryByText(/일부 영양\s?정보/)).toBeNull();
+      expect(screen.queryByRole("row", { name: /나트륨|식이섬유|포화지방/ })).toBeNull();
+      expect(within(screen.getByRole("row", { name: /당류/ })).getAllByText("0 g")).toHaveLength(2);
+      cleanup();
+    }
+  });
+
+  it.each(["app", "web"] as const)("keeps the incomplete notice for missing energy or macros in %s", async (variant) => {
+    for (const code of ["energy_kcal", "carbohydrate_g", "protein_g", "fat_g"]) {
+      renderCard(buildNutrition({
+        values: {
+          ...COMPLETE_VALUES,
+          [code]: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+        },
+      }), { variant });
+
+      await userEvent.click(screen.getByText("영양성분 더 보기"));
+      expect(screen.getByText("일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요.")).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it("requires complete, finite, nonnegative energy and macro amounts but accepts zero", () => {
+    expect(hasCompleteEnergyAndMacros({ ...COMPLETE_VALUES, energy_kcal: value(0) })).toBe(true);
+    for (const amount of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(hasCompleteEnergyAndMacros({ ...COMPLETE_VALUES, protein_g: value(amount) })).toBe(false);
+    }
+    expect(hasCompleteEnergyAndMacros({})).toBe(false);
+    expect(hasCompleteEnergyAndMacros({
+      ...COMPLETE_VALUES,
+      fat_g: { amount: null, known_amount: 20, status: "partial", display_mode: "minimum" },
+    })).toBe(false);
+  });
+
   it("renders calories and macros as a graph while keeping per-serving calories visible", () => {
     renderCard(buildNutrition());
 
@@ -236,10 +292,8 @@ describe("recipe nutrition display", () => {
     expect(screen.queryByText(/최소/)).toBeNull();
 
     await userEvent.click(screen.getByText("영양성분 더 보기"));
-    const sodium = screen.getByRole("row", { name: /나트륨/ });
     expect(screen.getByText("일부 영양 정보가 빠져 있어요. 확인된 값만 표시했어요.").closest("details")?.open).toBe(true);
-    expect(within(sodium).getByText("365 mg")).toBeTruthy();
-    expect(within(sodium).getByText("1,410 mg")).toBeTruthy();
+    expect(screen.queryByRole("row", { name: /나트륨/ })).toBeNull();
   });
 
   it("keeps incomplete-nutrition details available without optional nutrients and leaves unknown values unfilled", async () => {

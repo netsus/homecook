@@ -7,6 +7,7 @@ import { MEAL_LOG_MACROS } from "@/lib/planner/meal-log-nutrition-presentation";
 
 import {
   buildRecipeNutritionDisplay,
+  hasCompleteEnergyAndMacros,
   type RecipeNutrientDisplayItem,
 } from "@/lib/nutrition/recipe-nutrition-display";
 
@@ -62,8 +63,7 @@ export function RecipeNutritionCard({
   }
 
   const display = buildRecipeNutritionDisplay(nutrition, selectedServings);
-  const hasIncompleteNutrition = nutrition.calculation_status !== "complete"
-    || Object.values(nutrition.values).some((value) => value.status !== "complete");
+  const hasIncompleteNutrition = !hasCompleteEnergyAndMacros(nutrition.values);
   return (
     <section
       aria-label="레시피 영양성분"

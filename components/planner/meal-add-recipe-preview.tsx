@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchRecipePreview } from "@/lib/api/recipe";
-import { buildRecipeNutritionDisplay } from "@/lib/nutrition/recipe-nutrition-display";
+import { buildRecipeNutritionDisplay, hasCompleteEnergyAndMacros } from "@/lib/nutrition/recipe-nutrition-display";
 import { formatScaledIngredient } from "@/lib/recipe";
 import type { RecipeDetail } from "@/types/recipe";
 
@@ -25,6 +25,7 @@ export function MealAddRecipePreview({ recipeId, servings }: { recipeId: string;
   if (loading) return <div aria-label="레시피 미리보기 불러오는 중" role="status" className="my-5 space-y-3"><Skeleton className="h-5" /><Skeleton className="h-8" /></div>;
   if (failed || !recipe) return <div className="my-4 flex items-center justify-between gap-3 text-sm"><p>재료·영양을 불러오지 못했어요.</p><button type="button" className="min-h-11 shrink-0 text-[var(--brand)]" onClick={() => setAttempt(value => value + 1)}>다시 확인</button></div>;
   const nutrition = buildRecipeNutritionDisplay(recipe.nutrition, servings);
+  const incompleteCore = !hasCompleteEnergyAndMacros(recipe.nutrition.values);
   const calories = nutrition.nutrients.find(item => item.code === "energy_kcal")?.selectedTotalText ?? "정보 없음";
   const integerCalories = calories.replace(/\d[\d,]*(?:\.\d+)?/u, value => Math.round(Number(value.replaceAll(",", ""))).toLocaleString("ko-KR"));
   return <div className="mt-5 space-y-5">
@@ -33,7 +34,7 @@ export function MealAddRecipePreview({ recipeId, servings }: { recipeId: string;
       <ul className="space-y-3 pb-3 text-sm">{recipe.ingredients.map(ingredient => <li key={ingredient.id}>{formatScaledIngredient(ingredient, recipe.base_servings, servings)}</li>)}</ul>
     </details>
     <div className="flex items-center justify-between gap-3"><span className="text-sm">예상 영양 · {servings}인분</span><span className="text-xl tabular-nums">{integerCalories}</span></div>
-    {nutrition.aiEstimateText ? <p className="text-xs text-[var(--brand-primary-text)]">{nutrition.aiEstimateText}{recipe.nutrition.calculation_status !== "complete" || Object.values(recipe.nutrition.values).some(value => value.status !== "complete") ? " · 일부 영양정보가 빠진 추정값" : ""}</p> : null}
-    {!nutrition.aiEstimateText && recipe.nutrition.calculation_status !== "complete" ? <p className="text-xs text-[var(--text-2)]">일부 영양 정보 없음</p> : null}
+    {nutrition.aiEstimateText ? <p className="text-xs text-[var(--brand-primary-text)]">{nutrition.aiEstimateText}{incompleteCore ? " · 일부 영양정보가 빠진 추정값" : ""}</p> : null}
+    {!nutrition.aiEstimateText && incompleteCore ? <p className="text-xs text-[var(--text-2)]">일부 영양 정보 없음</p> : null}
   </div>;
 }
