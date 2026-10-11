@@ -708,18 +708,6 @@
       "count": 1
     },
     {
-      "file": "components/cooking/cook-mode-whole-board.tsx",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "8cdfb07beafa4040814f2a42036c9f3d3ab7cba871a9c18fe8ebda417fd0a210",
-      "count": 1
-    },
-    {
-      "file": "components/cooking/cook-mode-whole-board.tsx",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "925b9bced19c536521054831b63a9e2e0fd75b3e907087a44a600616d9281f5e",
-      "count": 1
-    },
-    {
       "file": "components/home/home-screen.tsx",
       "rule": "anti-slop(no-array-filter-map)",
       "snippetSha256": "a509f0a083cc906786f358d3d2e6adc283d6f91f174978b7b0a14740dbb97b47",
