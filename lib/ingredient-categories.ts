@@ -363,11 +363,30 @@ export function getIngredientGroupCodesForLegacyCategory(
     return [];
   }
 
-  return Array.from(new Set(
-    INGREDIENT_SUBCATEGORIES
-      .filter((category) => category.legacy_category === legacyCategory)
-      .map((category) => category.group_code as IngredientCategoryGroupCode),
-  ));
+  const groupCodes = new Set<IngredientCategoryGroupCode>();
+  for (const category of INGREDIENT_SUBCATEGORIES) {
+    if (category.legacy_category === legacyCategory) {
+      groupCodes.add(category.group_code);
+    }
+  }
+  return Array.from(groupCodes);
+}
+
+type ActiveIngredientCategoryGroupFilterOption = {
+  value: IngredientCategoryGroupCode;
+  label: (typeof INGREDIENT_CATEGORY_GROUPS)[number]["label"];
+  category_group_code: IngredientCategoryGroupCode;
+};
+
+const ACTIVE_INGREDIENT_CATEGORY_GROUP_OPTIONS: ActiveIngredientCategoryGroupFilterOption[] = [];
+for (const group of INGREDIENT_CATEGORY_GROUPS) {
+  if (group.is_active) {
+    ACTIVE_INGREDIENT_CATEGORY_GROUP_OPTIONS.push({
+      value: group.code,
+      label: group.label,
+      category_group_code: group.code,
+    });
+  }
 }
 
 export const INGREDIENT_CATEGORY_GROUP_OPTIONS = [
@@ -376,24 +395,21 @@ export const INGREDIENT_CATEGORY_GROUP_OPTIONS = [
     label: ALL_INGREDIENT_CATEGORY,
     category_group_code: null,
   },
-  ...INGREDIENT_CATEGORY_GROUPS
-    .filter((group) => group.is_active)
-    .map((group) => ({
-      value: group.code,
-      label: group.label,
-      category_group_code: group.code,
-    })),
+  ...ACTIVE_INGREDIENT_CATEGORY_GROUP_OPTIONS,
 ] as const satisfies readonly IngredientCategoryGroupFilterOption[];
 
-const INGREDIENT_SUBCATEGORY_OPTIONS = INGREDIENT_SUBCATEGORIES
-  .filter((category) => category.is_active)
-  .map((category) => ({
-    value: category.code,
-    label: category.label,
-    group_code: category.group_code,
-    group_label: getIngredientCategoryGroupByCode(category.group_code)!.label,
-    legacy_category: category.legacy_category as IngredientCategory,
-  })) as IngredientSubcategoryOption[];
+const INGREDIENT_SUBCATEGORY_OPTIONS: IngredientSubcategoryOption[] = [];
+for (const category of INGREDIENT_SUBCATEGORIES) {
+  if (category.is_active) {
+    INGREDIENT_SUBCATEGORY_OPTIONS.push({
+      value: category.code,
+      label: category.label,
+      group_code: category.group_code,
+      group_label: getIngredientCategoryGroupByCode(category.group_code)!.label,
+      legacy_category: category.legacy_category as IngredientCategory,
+    });
+  }
+}
 
 export function getIngredientCategoryGroupLabel(
   groupCode: string | null | undefined,
@@ -414,14 +430,24 @@ export function getIngredientSubcategoryOption(
 }
 
 export function getIngredientSubcategoryOptionsByGroup() {
-  return INGREDIENT_CATEGORY_GROUPS
-    .filter((group) => group.is_active)
-    .map((group) => ({
-      group,
-      options: INGREDIENT_SUBCATEGORY_OPTIONS.filter(
-        (option) => option.group_code === group.code,
-      ),
-    }));
+  const groupedOptions: Array<{
+    group: (typeof INGREDIENT_CATEGORY_GROUPS)[number];
+    options: IngredientSubcategoryOption[];
+  }> = [];
+
+  for (const group of INGREDIENT_CATEGORY_GROUPS) {
+    if (!group.is_active) continue;
+
+    const options: IngredientSubcategoryOption[] = [];
+    for (const option of INGREDIENT_SUBCATEGORY_OPTIONS) {
+      if (option.group_code === group.code) {
+        options.push(option);
+      }
+    }
+    groupedOptions.push({ group, options });
+  }
+
+  return groupedOptions;
 }
 
 export function getDefaultIngredientSubcategoryOption(
