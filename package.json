@@ -27,6 +27,7 @@
     "release:rehearsal:verify": "node scripts/local-mac-production-rehearsal.mjs verify",
     "release:production:attestation:verify": "node scripts/verify-production-release-attestation.mjs",
     "lint": "eslint . --ignore-pattern '.agents/**' --ignore-pattern '.omx/**'",
+    "verify:codex-quality-tooling": "node scripts/verify-codex-quality-tooling.mjs",
     "typecheck": "tsc --noEmit",
     "test": "pnpm test:product",
     "test:local-mac-production-release": "node scripts/run-local-mac-production-release-tests.mjs",
