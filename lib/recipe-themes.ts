@@ -101,9 +101,13 @@ export function selectNoFlameApplianceRecipeIds(rows: RecipeMethodCodeRow[]) {
     recipeMethods.set(row.recipe_id, state);
   });
 
-  return [...recipeMethods.entries()]
-    .filter(([, state]) => state.hasApplianceMethod && !state.hasDisallowedMethod)
-    .map(([recipeId]) => recipeId);
+  const recipeIds: string[] = [];
+  for (const [recipeId, state] of recipeMethods) {
+    if (state.hasApplianceMethod && !state.hasDisallowedMethod) {
+      recipeIds.push(recipeId);
+    }
+  }
+  return recipeIds;
 }
 
 export function selectHeartyMainThemeRecipes(items: RecipeCardItem[]) {

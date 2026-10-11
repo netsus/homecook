@@ -864,12 +864,6 @@
       "count": 1
     },
     {
-      "file": "lib/nutrition/recipe-nutrition-display.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "64911f01cea02e6f0dd0e767da89d3cc361b863553b768a65c0180b51b3ea221",
-      "count": 1
-    },
-    {
       "file": "lib/planner/planner-week-return-context.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "ba97ab0c29e555dfffa8c87996233a05a69fe06a9a1633a62076fc40f4e9cb85",
@@ -891,12 +885,6 @@
       "file": "lib/recipe-editor-ingredients.ts",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "55baaaade70d2d7c6d7d3608a5e7fde0744b4659735947850d92b86a8c742f3f",
-      "count": 1
-    },
-    {
-      "file": "lib/recipe-themes.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "366c6908d89fccc32d7641222234963c11ca13f261d85dd1ddf7b7b2c31d354a",
       "count": 1
     },
     {
