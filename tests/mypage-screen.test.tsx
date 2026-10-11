@@ -713,7 +713,7 @@ describe("MypageScreen", () => {
     });
   });
 
-  it("keeps the mobile profile summary button visible while mypage data loads", async () => {
+  it("keeps the mobile mypage navigation available while data loads", async () => {
     installMatchMedia(true);
     let resolveProfile!: (value: typeof MOCK_PROFILE) => void;
     mockFetchUserProfile.mockReturnValue(
@@ -725,7 +725,12 @@ describe("MypageScreen", () => {
     render(<MypageScreen initialAuthenticated />);
 
     expect(await screen.findByTestId("mypage-mobile-loading")).toBeTruthy();
-    expect(screen.getByTestId("mobile-profile-summary-button")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.queryByTestId("mobile-profile-summary-button")).toBeNull();
+    const bottomTab = screen.getByRole("navigation", { name: "마이페이지 하단 탭" });
+    const mypageLink = within(bottomTab).getByRole("link", { name: "마이" });
+    expect(mypageLink.getAttribute("href")).toBe("/mypage");
+    expect(mypageLink.getAttribute("aria-current")).toBe("page");
     await waitFor(() => expect(mockFetchUserProfile).toHaveBeenCalledTimes(1));
 
     await act(async () => {
