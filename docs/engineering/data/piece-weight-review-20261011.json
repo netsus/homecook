@@ -1,0 +1,713 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-10-11",
+  "scope": "현재 활성19개 개체/장/모/줌/꼬집 환산. 현재 레시피495재료행 인벤토리 기준. DB 변경 없음.",
+  "policy": [
+    "공식 자료 수치와 서비스 반올림/대표값을 구분한다.",
+    "AI 추정은 실측·공식 기준이라고 표기하지 않는다.",
+    "제품중량/장수로 해결 가능한 두부·빵은 실측 필수 항목으로 분류하지 않는다.",
+    "숫자가 같아도 종·손질상태·크기 의미가 다르면 근거를 자동 승격하지 않는다.",
+    "원문에 없는 양을 적당량에 채우지 않는다."
+  ],
+  "summary": {
+    "active_piece_assignments": 19,
+    "currently_used_assignments": 15,
+    "current_piece_recipe_rows": 32,
+    "same_value_official_recipe_corroborations": [
+      "청양고추10g/개",
+      "양파160g/개",
+      "두부300g/모"
+    ],
+    "provenance_only_candidates": [
+      "양배추908g 원자료→900g 서비스반올림",
+      "레몬58g 원자료→60g 서비스반올림",
+      "달걀USDA large50g→서비스기본50g"
+    ],
+    "safe_unconditional_new_numeric_replacements": 0
+  },
+  "source_artifacts": [
+    {
+      "path": "/Users/cwj/.homecook/operations/measurement-review-20261011-2cnFyZ/piece-source-extract.json",
+      "sha256": "ddf9c031f4cb8c2bd081e595ca5490ca7b8b1e684ffdf4700ac6a376b0d4d869"
+    },
+    {
+      "path": "/Users/cwj/.homecook/operations/measurement-review-20261011-2cnFyZ/piece-mfds-pages.json",
+      "sha256": "ccc9da0c008d19a69d0608ee7548824cc806c5f9a2301409734734fda10db4b3"
+    }
+  ],
+  "source_findings": [
+    {
+      "id": "mfds-cheongyang",
+      "ingredient_name": "청양고추",
+      "url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+      "pdf_pages_1based": [
+        39,
+        47,
+        61,
+        62,
+        78
+      ],
+      "source_amount": 1,
+      "source_unit": "개",
+      "source_weight_g": 10,
+      "derived_g_per_unit": 10,
+      "decision": "safe_same_value_corroboration",
+      "limitation": "공식기관의 레시피 계량사례. 시장 전체 중간크기 규격이나 통계 대표값으로 승격하지 않는다.",
+      "pdf_sha256": "f3ae4dce2cbde7e8024932ee7e87d20bd76230009848dbc7b3813dd4e4e42f6c",
+      "source_provider": "MFDS",
+      "source_kind": "official_recipe_parallel_measurement",
+      "source_size_code": null,
+      "service_size_code": "medium",
+      "interpretation": "공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님.",
+      "selected_pdf_page_1based": 61,
+      "selected_printed_page": 120,
+      "recipe_title": "단호박 들깨 꽁치조림",
+      "source_excerpt": "청양고추 10g(1개)",
+      "normalization": "10g ÷ 1개 = 10g/개",
+      "preparation_compatibility": "재료 준비의 생청양고추를 어슷썰어 조림에 넣는 순서. 익힌 고추의 계량으로 읽지 않음. 꼭지제거 여부 명문은 없어 source 상태는 as_published 유지.",
+      "conflicting_observations": "같은 PDF39쪽 주재료에는 청양고추6g(1/3개)=18g도 있어10g이 유일한 공식 개당값이라는 주장 금지."
+    },
+    {
+      "id": "mfds-onion",
+      "ingredient_name": "양파",
+      "url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+      "pdf_pages_1based": [
+        39,
+        47,
+        64
+      ],
+      "source_amount": 0.125,
+      "source_unit": "개",
+      "source_weight_g": 20,
+      "derived_g_per_unit": 160,
+      "decision": "safe_same_value_corroboration",
+      "limitation": "1/8개20g의 비례환산. USDA chopped cup160g과 별개. 껍질/손질 상태는 레시피 맥락 이상으로 확정하지 않는다.",
+      "pdf_sha256": "f3ae4dce2cbde7e8024932ee7e87d20bd76230009848dbc7b3813dd4e4e42f6c",
+      "source_provider": "MFDS",
+      "source_kind": "official_recipe_parallel_measurement",
+      "source_size_code": null,
+      "service_size_code": "medium",
+      "interpretation": "공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님.",
+      "selected_pdf_page_1based": 64,
+      "selected_printed_page": 126,
+      "recipe_title": "꽈리고추 명태찜",
+      "source_excerpt": "양파 20g(1/8개)",
+      "normalization": "20g ÷ (1/8개) = 160g/개",
+      "preparation_compatibility": "재료 준비 양파를 썬 뒤 익히는 순서로 생양파 투입기준과 모순 없음. 겉껍질제거 명문은 없어 source 상태as_published 유지."
+    },
+    {
+      "id": "mfds-tofu",
+      "ingredient_name": "두부",
+      "url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+      "pdf_pages_1based": [
+        88
+      ],
+      "source_amount": 0.3333333333333333,
+      "source_amount_literal": "1/3",
+      "source_unit": "모",
+      "source_weight_g": 100,
+      "derived_g_per_unit": 300,
+      "decision": "safe_same_value_corroboration_product_info_preferred",
+      "limitation": "레시피의 모 크기만 확인. 모든 포장두부가300g이라는 근거가 아님.",
+      "pdf_sha256": "f3ae4dce2cbde7e8024932ee7e87d20bd76230009848dbc7b3813dd4e4e42f6c",
+      "source_provider": "MFDS",
+      "source_kind": "official_recipe_parallel_measurement",
+      "source_size_code": null,
+      "service_size_code": "medium",
+      "interpretation": "공식 레시피 병기 기반 서비스 대표값. 전국표준 중간크기 또는 실제측정값이 아님.",
+      "selected_pdf_page_1based": 88,
+      "selected_printed_page": 174,
+      "recipe_title": "두부 카나페",
+      "source_excerpt": "두부 100g(1/3모)",
+      "normalization": "100g ÷ (1/3모) = 300g/모; 분수1/3을 십진근사로 나눈299.999... 대신 원문분수 정규화.",
+      "preparation_compatibility": "재료 준비 두부를 자른 뒤 데치므로 데친후100g으로 해석하지 않음. 순두부/연두부가 아닌 일반두부. 포장수가 포함된 질량으로 확정하지 않음."
+    },
+    {
+      "id": "usda-cabbage",
+      "ingredient_name": "양배추",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "fdc_id": "169975",
+      "portion_id": "85795",
+      "description": "Cabbage, raw",
+      "modifier": "head, medium (about 5-3/4 inch dia)",
+      "source_amount": 1,
+      "source_weight_g": 908,
+      "current_service_weight_g": 900,
+      "decision": "safe_source_observation_documentation",
+      "limitation": "900은 사용자승인 반올림값. source observed908과 applied900을 분리해 저장할 수 있을 때에만 근거보완. 900을 USDA 원문으로 저장 금지."
+    },
+    {
+      "id": "usda-egg",
+      "ingredient_name": "달걀",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "fdc_id": "171287",
+      "portion_id": "88374",
+      "description": "Egg, whole, raw, fresh",
+      "modifier": "large",
+      "source_amount": 1,
+      "source_weight_g": 50,
+      "current_service_weight_g": 50,
+      "decision": "same_value_corroboration_not_size_relabel",
+      "limitation": "가식부50g은 large. 기존서비스medium은 USDAmedium44g과 다름. source size large와 service default를 분리 기록할 때만."
+    },
+    {
+      "id": "usda-lemon",
+      "ingredient_name": "레몬",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "fdc_id": "167746",
+      "portion_id": "81883",
+      "description": "Lemons, raw, without peel",
+      "modifier": "fruit (2-1/8 inch dia)",
+      "source_amount": 1,
+      "source_weight_g": 58,
+      "current_service_weight_g": 60,
+      "decision": "safe_source_observation_documentation",
+      "limitation": "껍질제거 지름규격58g→60g은 서비스 반올림. 레몬즙/통째에 적용금지."
+    },
+    {
+      "id": "usda-mushroom",
+      "ingredient_name": "양송이버섯",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "fdc_id": "169251",
+      "portion_id": "84529",
+      "description": "Mushrooms, white, raw",
+      "modifier": "medium",
+      "source_amount": 1,
+      "source_weight_g": 18,
+      "decision": "already_applied_no_new_write"
+    },
+    {
+      "id": "mfds-abalone",
+      "ingredient_name": "전복",
+      "url": "https://www.foodsafetykorea.go.kr/upload/20170417/20170417053825_1492418305244.pdf",
+      "pdf_pages_1based": [
+        60
+      ],
+      "source_amount": 2,
+      "source_unit": "마리",
+      "source_weight_g": 100,
+      "derived_g_per_unit": 50,
+      "decision": "do_not_auto_replace",
+      "limitation": "참전복, 회를 뜨는 레시피이나100g에 껍질 포함 여부 명문이 불충분. 현재 전복1개100g을50으로 바로 교체하는 근거는 안 됨."
+    },
+    {
+      "id": "usda-abalone",
+      "ingredient_name": "전복",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "fdc_id": "174212",
+      "portion_id": "93945",
+      "description": "Mollusks, abalone, mixed species, raw",
+      "modifier": "oz",
+      "source_amount": 3,
+      "source_weight_g": 85,
+      "decision": "reject_piece_conversion",
+      "limitation": "온스 단위이며 1개 질량이 아님."
+    },
+    {
+      "id": "usda-cucumber",
+      "ingredient_name": "청오이",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "fdc_id": "168409",
+      "portion_id": "83050",
+      "description": "Cucumber, with peel, raw",
+      "modifier": "cucumber (8-1/4 inch)",
+      "source_amount": 1,
+      "source_weight_g": 301,
+      "decision": "reject_automatic_species_size_substitution",
+      "limitation": "청오이 품종/크기 일치 미확인.301g을 현200g 대신 자동 적용하지 않음."
+    },
+    {
+      "id": "usda-bay",
+      "ingredient_name": "월계수잎",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "fdc_id": "170917",
+      "portion_ids": [
+        "87532",
+        "87533"
+      ],
+      "source_portions": [
+        {
+          "unit": "tsp, crumbled",
+          "weight_g": 0.6
+        },
+        {
+          "unit": "tbsp, crumbled",
+          "weight_g": 1.8
+        }
+      ],
+      "decision": "reject_whole_leaf_conversion",
+      "limitation": "부순잎 부피값을 잎1장 무게로 사용하지 않음."
+    }
+  ],
+  "assignments": [
+    {
+      "ingredient_id": "025bc5c9-fcf0-500a-a32e-8fc8bb64ded5",
+      "ingredient_name": "레몬",
+      "assignment_id": "cb4a2c23-4935-4267-b3f8-e70ddf76c79f",
+      "current_evidence_id": "cfe1def1-6a6f-490f-bb53-ea429c24befd",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 60,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 0,
+      "current_recipe_count": 0,
+      "review_category": "source_size_confirmation",
+      "ai_working_estimate": {
+        "central_weight_g": 60,
+        "plausible_working_range_g": [
+          40,
+          90
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "껍질을 벗긴 지름 약5.4cm 레몬. USDA58g을 현서비스60g으로 반올림한 값; 통째 레몬·즙에 적용 금지."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "0ab7b211-7e75-4972-9822-c54c9b67ca4b",
+      "ingredient_name": "소금",
+      "assignment_id": "e6f5e7ce-74a6-4acd-9c2f-a7322895788c",
+      "current_evidence_id": "7d6b0a31-0541-4ed3-92bd-0c956175101d",
+      "current_size_code": "pinch",
+      "unit": "꼬집",
+      "current_weight_g": 0.3,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 0,
+      "current_recipe_count": 0,
+      "review_category": "measure_hand_action",
+      "ai_working_estimate": {
+        "central_weight_g": 0.3,
+        "plausible_working_range_g": [
+          0.1,
+          0.6
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "고운 소금, 엄지와 검지로 한 번. 입자와 손가락 수가 달라지면 별도 측정."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "0e0de2a4-913c-4127-bfce-740daa6181c8",
+      "ingredient_name": "청오이",
+      "assignment_id": "2d8331fb-bd04-4fcc-9af1-55d9d58c14eb",
+      "current_evidence_id": "122f1aeb-885e-4289-99dd-e5b181ff97ee",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 200,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 2,
+      "current_recipe_count": 2,
+      "review_category": "measure_unidentified_size",
+      "ai_working_estimate": {
+        "central_weight_g": 200,
+        "plausible_working_range_g": [
+          150,
+          300
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "양 끝을 제거한 생 청오이, 껍질 포함. 품종·길이 미확인. USDA301g 일반오이를 한국 청오이에 자동 적용하지 않음."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "17c42094-d0da-4d2e-a26a-fe553ed1070c",
+      "ingredient_name": "양송이버섯",
+      "assignment_id": "fec17319-2f25-48bd-8064-12691cee42f9",
+      "current_evidence_id": "4a19b580-0993-48f6-81a1-e245b2af3b4f",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 18,
+      "current_provider": "USDA_FDC_SR_LEGACY",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "already_official_exact_portion",
+      "ai_working_estimate": {
+        "central_weight_g": 18,
+        "plausible_working_range_g": [
+          10,
+          23
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "생 흰 양송이 중간크기 가식부. 이미 USDA84529 반영됨; 소형10g/대형23g은 다른 portion."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "1e49f4be-6b94-4e7f-a492-a68134881e98",
+      "ingredient_name": "청양고추",
+      "assignment_id": "9c922c29-189d-42ba-ae7d-a07ae7edd71f",
+      "current_evidence_id": "20a26666-1748-4767-8671-8480cce4396b",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 10,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 7,
+      "current_recipe_count": 7,
+      "review_category": "official_recipe_corroboration",
+      "ai_working_estimate": {
+        "central_weight_g": 10,
+        "plausible_working_range_g": [
+          5,
+          15
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "꼭지를 제거한 생 청양고추. 식약처 레시피 사례10g/개는 일반medium 규격을 정의한 것은 아님."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "335eff99-f04c-4942-adee-5aea91c32dd9",
+      "ingredient_name": "통밀 식빵",
+      "assignment_id": "32e2ad6a-df18-4d3b-a753-bc741e6ed30f",
+      "current_evidence_id": "3e160368-5bf8-490d-a8f4-6cbb5d21165f",
+      "current_size_code": "medium",
+      "unit": "장",
+      "current_weight_g": 40,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "product_information_first",
+      "ai_working_estimate": {
+        "central_weight_g": 40,
+        "plausible_working_range_g": [
+          25,
+          55
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "제품 총중량과 실제 장수, 가능하면 포장 1장 중량 확인. 잘린 두께·끝조각에 따라 다름."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440010",
+      "ingredient_name": "양파",
+      "assignment_id": "9765295b-11e9-4212-902a-e132424458b8",
+      "current_evidence_id": "54b8893b-69be-401e-a89c-0d59920c6ecc",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 160,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 6,
+      "current_recipe_count": 6,
+      "review_category": "official_recipe_corroboration",
+      "ai_working_estimate": {
+        "central_weight_g": 160,
+        "plausible_working_range_g": [
+          100,
+          250
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "겉껍질·뿌리 제거한 생양파. 국내 공식레시피20g/1/8개 사례만 보조근거로 사용; USDAmedium110g과는 다른 규격."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440017",
+      "ingredient_name": "두부",
+      "assignment_id": "b53e94ce-dca3-4ab3-b4b0-8d8561d4b295",
+      "current_evidence_id": "2b53fc54-74cd-4741-a1b2-32480eb1eab5",
+      "current_size_code": "medium",
+      "unit": "모",
+      "current_weight_g": 300,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 3,
+      "current_recipe_count": 3,
+      "review_category": "product_information_first",
+      "ai_working_estimate": {
+        "central_weight_g": 300,
+        "plausible_working_range_g": [
+          200,
+          500
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "포장물 제외 두부 본체. 포장 총중량과 개수로 우선 확인; 두부300g은 제품마다 다른 1모의 대표값."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "57d5d75f-3fa5-4540-aac7-9ec97e8ddcb6",
+      "ingredient_name": "양배추",
+      "assignment_id": "e5f07671-e66c-435f-a436-fd03bc49d2a4",
+      "current_evidence_id": "23058564-1c87-4ed6-b3b5-f9afb12a50ac",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 900,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 2,
+      "current_recipe_count": 2,
+      "review_category": "official_portion_rounding_documentation",
+      "ai_working_estimate": {
+        "central_weight_g": 900,
+        "plausible_working_range_g": [
+          700,
+          1300
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "일반 생양배추 가식부 한 통. USDA medium 지름약14.6cm908g을 900g으로 반올림한 서비스값; leaf와 구분."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "7588611d-b21a-46b7-8023-e9408bf84a6b",
+      "ingredient_name": "통후추",
+      "assignment_id": "7ccfacfc-f935-4350-858c-6cef2a2cd78f",
+      "current_evidence_id": "9666807f-31a3-42b4-8eb3-1dd689a1dd9c",
+      "current_size_code": "medium",
+      "unit": "알",
+      "current_weight_g": 0.067,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "measure_small_batch",
+      "ai_working_estimate": {
+        "central_weight_g": 0.067,
+        "plausible_working_range_g": [
+          0.04,
+          0.1
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "마른 검은 통후추. 기존 사용자제공3알0.2g에서 유도. 100알 한꺼번에 재고 나누는 방법 권고."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "78deadf1-4645-5854-9abc-39cffe996567",
+      "ingredient_name": "깻잎",
+      "assignment_id": "4d4e1d25-9e9e-4c78-8e51-fd8c7b81f256",
+      "current_evidence_id": "8f61044c-240c-41eb-8cff-2bab475f2357",
+      "current_size_code": "medium",
+      "unit": "장",
+      "current_weight_g": 1,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "measure_small_batch",
+      "ai_working_estimate": {
+        "central_weight_g": 1,
+        "plausible_working_range_g": [
+          0.7,
+          3
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "생깻잎, 씻은 뒤 표면 물기 제거. 크기 차이 큼. 식약처 사례 약.83~6g/장, 중앙1g은 공식 통계중앙값 아님."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "81dd8c7e-319a-5f81-bf3e-4bd21b06d1d5",
+      "ingredient_name": "월계수잎",
+      "assignment_id": "e33af84a-93c3-4e1b-8d80-127b1a676638",
+      "current_evidence_id": "7a6ebcd6-4f7c-4174-8e37-f4c0c7fa5f33",
+      "current_size_code": "medium",
+      "unit": "장",
+      "current_weight_g": 0.5,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "measure_small_batch",
+      "ai_working_estimate": {
+        "central_weight_g": 0.5,
+        "plausible_working_range_g": [
+          0.1,
+          0.6
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "마른 온전한 잎. 기존 사용자제공값 유지; USDA 부순잎 tsp.6g을 1장으로 가져오지 않음. 잎20장 이상 한꺼번에 측정."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "a12cd429-b500-42d2-ac17-e53123f7356a",
+      "ingredient_name": "고추",
+      "assignment_id": "19f4d2b9-2151-456c-8fcb-6de4f8feed9e",
+      "current_evidence_id": "81ed401b-64e8-4666-8fa9-0c02acba689a",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 15,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "measure_unidentified_size",
+      "ai_working_estimate": {
+        "central_weight_g": 15,
+        "plausible_working_range_g": [
+          8,
+          25
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "일반 풋고추 대표, 꼭지 제외. 청양고추와 별개. 기존 MFDS15g/개 사례는 별도 승인 서비스대표."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "a1ee7317-14cc-4803-92f0-70e090827d84",
+      "ingredient_name": "식빵",
+      "assignment_id": "b432c6c8-7eb7-4c0c-a7f3-679bd3c6d592",
+      "current_evidence_id": "7c6b261e-5c1e-4958-9974-e1718fb631eb",
+      "current_size_code": "medium",
+      "unit": "장",
+      "current_weight_g": 40,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 0,
+      "current_recipe_count": 0,
+      "review_category": "product_information_first",
+      "ai_working_estimate": {
+        "central_weight_g": 40,
+        "plausible_working_range_g": [
+          25,
+          55
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "제품 총중량과 장수 우선. 현재 장 단위 사용 없음."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "a2fa3c29-96ec-4d90-936c-7a4d2e9d35bb",
+      "ingredient_name": "달걀",
+      "assignment_id": "016a991d-7603-4269-b665-f8619d4c864f",
+      "current_evidence_id": "86c86465-7bd6-45b7-86b0-519bef796604",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 50,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 0,
+      "current_recipe_count": 0,
+      "review_category": "official_same_value_different_size",
+      "ai_working_estimate": {
+        "central_weight_g": 50,
+        "plausible_working_range_g": [
+          38,
+          63
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "껍데기 제외 생달걀 내용물. USDA large50g, medium44g. 현서비스medium50g을 USDAmedium으로 재명명 금지."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "ddf68557-ec77-5047-93c6-d0cb6c292c6d",
+      "ingredient_name": "전복",
+      "assignment_id": "dece2077-458a-44ae-bbd4-878ae72f596f",
+      "current_evidence_id": "a36d83d4-75a5-4461-b6b3-c1f8490b24eb",
+      "current_size_code": "medium",
+      "unit": "개",
+      "current_weight_g": 100,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "identity_and_edible_state_then_measure",
+      "ai_working_estimate": {
+        "central_weight_g": 50,
+        "plausible_working_range_g": [
+          30,
+          100
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "AI 임시 제안은 껍데기·입 제거, 내장 사용 여부를 별도 기록한 생가식부1개50g. 현100g과 다르므로 현재 레시피를 자동 덮어쓰지 않음; 실제 크기·손질 상태 확인 우선."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "f15beb06-d859-455e-980c-f51715603d9a",
+      "ingredient_name": "대파",
+      "assignment_id": "f3dd5df4-3587-4d67-9c8b-544541dad65b",
+      "current_evidence_id": "8f5aaacd-06f4-45cd-8a2c-2d759d0f4018",
+      "current_size_code": "handful",
+      "unit": "줌",
+      "current_weight_g": 30,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "measure_hand_action",
+      "ai_working_estimate": {
+        "central_weight_g": 30,
+        "plausible_working_range_g": [
+          15,
+          50
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "뿌리와 시든 잎 제거한 생대파를 썰어 느슨하게 한 손으로 잡은 양. 웅큼이나 꽉쥔 줌으로 자동 확장하지 않음."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "f15beb06-d859-455e-980c-f51715603d9a",
+      "ingredient_name": "대파",
+      "assignment_id": "eee8e9a7-833a-450c-84da-c0ba0b809036",
+      "current_evidence_id": "cb0e36c6-94d6-4648-a0b1-595213d8ddb2",
+      "current_size_code": "medium",
+      "unit": "대",
+      "current_weight_g": 100,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 3,
+      "current_recipe_count": 3,
+      "review_category": "measure_unidentified_size",
+      "ai_working_estimate": {
+        "central_weight_g": 100,
+        "plausible_working_range_g": [
+          50,
+          150
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "뿌리와 시든 잎 제거한 흰부분+푸른부분 한 대. 쪽파/scallion/leek로 대체 금지. 공식레시피 조각 개수 표현과 한 대는 다름."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    },
+    {
+      "ingredient_id": "fc8c99dd-cae6-46d2-9380-8fead38b9509",
+      "ingredient_name": "호밀빵",
+      "assignment_id": "063dfc8a-5481-4220-bfa8-7ea9952d75b4",
+      "current_evidence_id": "a2da7682-df30-477c-8086-6bdda496f4ab",
+      "current_size_code": "medium",
+      "unit": "장",
+      "current_weight_g": 40,
+      "current_provider": "HOMECOOK_USER_STANDARD",
+      "current_recipe_rows": 1,
+      "current_recipe_count": 1,
+      "review_category": "product_information_first",
+      "ai_working_estimate": {
+        "central_weight_g": 40,
+        "plausible_working_range_g": [
+          25,
+          60
+        ],
+        "range_kind": "AI가 제안한 실무 가늠 범위. 측정치·표준오차·통계적 신뢰구간·식품의 최소최대가 아님.",
+        "changes_database": false,
+        "basis": "제품 총중량과 장수 우선. 작은 식빵형과 큰 독일식 통호밀빵 조각 구분."
+      },
+      "recommended_action": "자료 보조근거 기록 또는 측정/제품 확인 목록 작성; 기존 값을 공식값으로 재분류하지 않음"
+    }
+  ],
+  "measurement_protocol": [
+    "손질 전 총중량이 아니라 실제 먹는 부분을 재고 껍질·껍데기·물기·내장 처리 상태를 기록한다.",
+    "줌은 같은 썰기/잡기 방법으로5회 이상, 개체는 크기를 기록하여5개 이상 측정한다. 이 횟수는 실무 시작 제안이며 통계 표본수 보장은 아니다.",
+    "깻잎은10장, 월계수잎20장, 통후추100알처럼 묶어 재고 나눈다. 저울 해상도보다 작은1개를 직접 읽지 않는다.",
+    "최종 대표값은 표본 평균과 범위, 원측정값·날짜·제품/크기를 함께 보존하며 실제 사용자g 입력이 우선한다."
+  ],
+  "limits": [
+    "이번 조사에서 확보하지 못한 공식근거가 없다고 단정하지 않는다.",
+    "레시피 현재 사용량은 DB 인벤토리의 정확한 단위 조합으로 셌으며 실제 계산기 실행의 대체 증거는 아니다.",
+    "범위는 AI의 작업 가이드이며 제조사·국가기관이 검증한 값이 아니다.",
+    "새로운 유료AI 호출, DB 쓰기, 커밋, 배포 없음.",
+    "nutrition profile 원본은 본 인벤토리에 없으므로 실DB의 개별profile raw상태/identity 대조는 부모가 수행해야 한다. 원자료 조리순서상 생재료 투입량과 모순은 발견하지 않았다."
+  ]
+}
