@@ -740,6 +740,7 @@ interface ParsedDescriptionIngredient {
   quantityRawText?: string | null;
   quantityEvidenceRefs?: YoutubeQuantityEvidenceRef[];
   quantityReviewRequired?: boolean;
+  quantityRequiresResolvedIngredient?: boolean;
 }
 
 interface ParsedRecipeDescription {
@@ -8645,6 +8646,7 @@ export function buildExtractedIngredient({
   quantityRawTextOverride,
   quantityEvidenceRefsOverride,
   quantityReviewRequiredOverride,
+  quantityRequiresResolvedIngredient = false,
 }: {
   matchesByName: IngredientMatchesByName;
   name: string;
@@ -8663,6 +8665,7 @@ export function buildExtractedIngredient({
   quantityRawTextOverride?: string | null;
   quantityEvidenceRefsOverride?: YoutubeQuantityEvidenceRef[];
   quantityReviewRequiredOverride?: boolean;
+  quantityRequiresResolvedIngredient?: boolean;
 }): YoutubeExtractedIngredient {
   const sortedMatches = sortIngredientMatches(
     Array.from(matchesByName.get(lookupKey)?.entries() ?? [])
@@ -8681,6 +8684,7 @@ export function buildExtractedIngredient({
       : hasMatch
         ? "needs_review"
         : "unresolved";
+  const unresolvedSourceBoundQuantity = quantityRequiresResolvedIngredient && resolutionStatus !== "resolved";
   const quantitySource = quantitySourceOverride ?? inferInitialQuantitySource({ amount, unit, rawText, displayText });
   const quantityEvidenceRefs = quantityEvidenceRefsOverride ?? (quantitySource === "text_explicit"
     ? buildInitialQuantityEvidenceRef({ rawText, displayText })
@@ -8696,12 +8700,12 @@ export function buildExtractedIngredient({
     draft_ingredient_id: crypto.randomUUID(),
     ingredient_id: resolutionStatus === "resolved" ? resolvedMatch?.ingredientId ?? "" : "",
     standard_name: resolutionStatus === "resolved" ? resolvedMatch?.standardName ?? name : name,
-    amount,
-    unit,
+    amount: unresolvedSourceBoundQuantity ? null : amount,
+    unit: unresolvedSourceBoundQuantity ? null : unit,
     ingredient_type: ingredientType,
-    display_text: displayText,
+    display_text: unresolvedSourceBoundQuantity ? name : displayText,
     sort_order: sortOrder,
-    scalable,
+    scalable: unresolvedSourceBoundQuantity ? false : scalable,
     confidence: hasMatch ? confidence : null,
     resolution_status: resolutionStatus,
     component_label: componentLabel,
@@ -8715,11 +8719,11 @@ export function buildExtractedIngredient({
         ? undefined
         : [],
     raw_text: rawText,
-    quantity_source: quantitySource,
-    quantity_confidence: quantityConfidence,
+    quantity_source: unresolvedSourceBoundQuantity ? "unknown" : quantitySource,
+    quantity_confidence: unresolvedSourceBoundQuantity ? null : quantityConfidence,
     quantity_raw_text: quantityRawText,
     quantity_evidence_refs: quantityEvidenceRefs,
-    quantity_review_required: quantityReviewRequired,
+    quantity_review_required: unresolvedSourceBoundQuantity || quantityReviewRequired,
     quantity_user_confirmed: false,
   };
 }
@@ -8751,6 +8755,7 @@ function buildExtractedIngredients(
       quantityRawTextOverride: ingredient.quantityRawText,
       quantityEvidenceRefsOverride: ingredient.quantityEvidenceRefs,
       quantityReviewRequiredOverride: ingredient.quantityReviewRequired,
+      quantityRequiresResolvedIngredient: ingredient.quantityRequiresResolvedIngredient,
     }),
   );
 }
@@ -9140,7 +9145,7 @@ function isConsistentI031QuantityMetadata(
   if (!state) return false;
   if (["unknown", "conflicting", "to_taste"].includes(state)) return basis === null;
   if (state === "explicit") {
-    return basis === "stated"
+    return basis === "stated" || basis === "source-bound-stated"
       ? evidenceRefs.some((ref) => ref.source_method === "description" || ref.source_method === "comment")
       : basis === "spoken"
         ? evidenceRefs.some((ref) => ref.source_method === "caption")
@@ -9212,6 +9217,8 @@ export function buildI031ParsedRecipe(result: YoutubeI031ExtractionResult): Pars
         : state === "estimated" || state === "unknown" || state === "conflicting"
           || state === "explicit" && !hasVerifiedQuantity || state === "to_taste" && !isVerifiedToTaste;
       const quantityRawText = evidenceRefs[0]?.snippet ?? displayText;
+      const quantityRequiresResolvedIngredient = state === "explicit"
+        && verified.amountBasis === "source-bound-stated";
       const originalName = normalizeNullableString(verified.originalName);
       const rawText = `${originalName ?? name} ${amountText}`.trim();
 
@@ -9230,6 +9237,7 @@ export function buildI031ParsedRecipe(result: YoutubeI031ExtractionResult): Pars
         quantityRawText,
         quantityEvidenceRefs: evidenceRefs,
         quantityReviewRequired,
+        quantityRequiresResolvedIngredient,
       };
     }),
     steps: [...result.recipe.steps],

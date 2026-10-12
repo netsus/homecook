@@ -3,178 +3,141 @@
 ## 상태
 
 - 날짜: 2026-10-12
-- 기준: `7e466b170ba39795220ef64e67eac3fab4429420`에서 분기한 독립 작업 브랜치
+- 기준: 기존 source-bound 후보 `7e5f8ddd4d4fa22cbd3c8ad620686ea46efd8a77`에서 분기한 독립 작업 브랜치
 - 구현: 로컬 완료, 운영·DB·웹 미반영
-- 런타임 후보: `v64-source-bound` (source-anchored client v64, verifier v38)
-- 모델·OCR·영상 다운로드·네트워크 평가: 0회
+- 현재 런타임 후보: client v65, verifier v39, source binding v2
+- 이번 후속 작업의 모델·OCR·영상 다운로드·네트워크 호출: 0회
 
-여기서 `v64-source-bound`는 과거 P5 v64를 재사용한 이름이 아니다. 이 문서의 기준
-commit에서 새로 만든 source-bound 후보이며, 정확한 client/verifier/pipeline identity와
-bundle hash를 아래에 함께 고정한다.
+앞선 정확 3건 평가는 이전 승인 범위의 3/3 모델 호출을 이미 모두 소비했다. 이번 후속은
+그때 저장한 immutable source snapshot과 raw proposal을 읽어 현재 verifier만 다시 실행했다.
+과거 승인·receipt·`--execute`를 새 실행 권한으로 재사용하지 않았다.
 
-## 확인한 문제
+## 원인과 최소 변경
 
 읽기 전용 진단
 `.diagnostics/youtube-description-quantity-20261012/diagnosis.json`의 SHA-256은
 `9c0fabe8e6422391576f14a98ec898644096090a0fa7d010696c5150784247e1`과 일치한다.
-운영 v63에서 공식 설명란 또는 작성자 댓글에 명시된 `통삼겹살 500g`,
+운영 v63에서 공식 설명란 또는 작성자 댓글의 `통삼겹살 500g`,
 `돼지고기 앞다리살 400g`, `양파 2개(500g)`가 post-verifier 결과에서
-`unknown/null`로 남은 사례가 있다. 저장된 pre-verifier raw 모델 JSON은 없으므로
-모델 누락과 검증 강등의 개별 비율은 이 진단으로 나누지 않는다.
+`unknown/null`로 남은 사례가 있었다. 저장된 pre-verifier JSON이 없던 최초 진단만으로는
+모델 누락과 verifier 강등의 비율을 나누지 않는다.
 
-모델이 제출한 이름이나 evidence ID만 보고 `unknown`을 승격하는 방식은 안전하지 않다.
-이번 변경은 서버가 source ledger를 만들 때 닫힌 재료 행의 재료명과 literal 수량을
-먼저 결속하고, 기존 verifier가 같은 원천 재료 행을 독립적으로 확인한 경우에만
-기존 explicit 검증을 다시 실행한다.
+기존 v64 후보는 이름-first 행과 일반 bullet을 request-local로 결속했지만 실제 저장 입력에서
+다음 경계가 빠졌다.
 
-## request-local 결속 계약
+- 작성자 댓글의 emoji bullet을 목록 표식으로 인식하지 못했다.
+- 설명란의 `1/2 lb | 250g Spaghetti` 같은 amount-first 행을 닫힌 재료 행으로 인식하지 못했다.
+- `RECIPE` 제목을 재료 영역으로 열지 않았고 `Handful of ...` 행이나 `약간` 행이 다음 행의
+  scope를 잘못 바꿀 수 있었다.
+- literal 단위 문법에 `lb`가 없었다.
 
-`buildSinglePassEvidenceLedger`는 source marker마다 `source_block_index`를 부여한다.
-작성자 댓글 묶음의 `---`도 별도 source block으로 취급하되 기존 `line_index`는
-댓글 묶음 전체에서 단조 증가하도록 유지한다. 따라서 서로 다른 작성자 댓글 행은
-목록 연속성이나 수량을 공유하지 않는다.
+따라서 새 저장 필드나 DB/API 계약을 만들지 않고 기존 source ledger와 verifier 사이의
+request-local 결속만 확장했다. 서버가 원문에서 직접 만든 재료명·primary 수량·reference
+수량·정규화 좌표를 verifier에 전달하며, 모델이 만든 이름·ID 자체는 승격 근거로 쓰지 않는다.
 
-source-anchored 모드의 YouTube description/comment 중 다음만 request-local
-`sourceQuantityBindings`를 가진다.
+## request-local 결속·복구 계약
 
-1. 명시적인 재료 제목 아래의 닫힌 한 재료 행
-2. 같은 source block 안에서 연속한 안전한 닫힌 재료 행 2개 이상
+설명란과 작성자 댓글은 source marker와 `---`마다 별도 `source_block_index`를 가진다.
+서로 다른 block의 목록, 이름 또는 수량을 조립하지 않는다. 다음 중 하나인 행만 결속한다.
 
-각 결속은 NFKC·공백 정리된 ledger 행을 기준으로 다음을 보존한다.
+1. 명시적인 재료 제목 아래의 안전한 닫힌 재료 행
+2. 같은 source block에서 연속한 안전한 닫힌 재료 행 2개 이상
+3. 같은 source block의 연속한 emoji-marked 목록에서 안전한 numeric tuple 2개 이상
 
-- 정확한 `sourceName`
-- primary `amount`, `unit`, literal
-- 재료명과 primary 수량의 `[start, end)` 정규화 좌표
-- 괄호 안 reference 수량과 좌표
-- source provider/method/block/line 및 owner evidence ID
-- 같은 block의 반복 numeric owner 존재 여부
+결속은 name-first와 amount-first를 모두 지원한다. `2개(500g)`와
+`1/2 lb | 250g`은 첫 수량을 primary, 뒤 수량을 reference로 좌표와 함께 보존한다.
+amount-first의 여러 수량은 `|` 또는 괄호 관계 표지가 있을 때만 reference로 인정한다.
+합산·환산하거나 reference를 primary로 교체하지 않는다.
 
-이 값은 모델 prompt의 정답이나 저장 필드가 아니다. request-local ledger에서 verifier로만
-전달된다. 기존 owner-hint 버전과 prompt v17은 그대로이며, 작성자 댓글에 새 결속이
-생겨도 prompt owner-hint packet은 바뀌지 않는 회귀를 고정했다.
+복구는 raw 행이 정확히 `quantityState=unknown`, `amount=null`, `unit=null`이고 기존 verifier가
+같은 원천 owner의 이름과 literal evidence를 다시 증명할 때만 시도한다. 이미 `explicit`,
+`estimated`, `to_taste`, `conflicting`인 값은 덮지 않는다. 대체재·조건·부정·조리 행동·범위·
+근사·정성량·추가 투입·다중 소유자, 한 owner의 중복 소비, 반복 numeric owner는 보수적으로
+남긴다. description과 author comment가 primary/reference까지 같으면 description을 우선하되,
+다르면 값을 섞지 않고 conflict를 유지한다.
 
-## 복구와 보수적 보존
+verifier가 복구한 값은 transient `amountBasis=source-bound-stated`로 표시한다. 이후 기존 재료
+사전 조회가 verifier가 원문에서 고정한 이름을 단일 재료로 `resolved`한 경우에만 최종
+`text_explicit` 수량으로 공개한다. sync 경로는 기존 사용자 DB 조회 결과를 사용한다. async
+worker는 transient 표식을 SQL 입력 전에 기존 `amountBasis=stated`로 바꾸되 해당 ingredient
+index를 request-local로 보관하고, 기존 SQL resolver가 돌려준 authoritative
+`resolution_status`가 정확히 `resolved`인지 최종 저장 직전에 확인한다. 미해결·다중 후보는
+amount/unit을 null, state를 `unknown`으로 되돌려 `review-required`로 남긴다. 따라서 숫자형
+그릇·접시 목록처럼 문법만으로 재료성을 증명할 수 없는 입력은 모델 이름/ID만으로 승격되지
+않는다. transient 표지는 persistence RPC의 입력/저장 계약을 넘지 않으며 새 DB 열·evidence
+field·SQL allowlist 값은 추가하지 않는다.
 
-- raw 행이 정확히 `quantityState=unknown`, `amount=null`, `unit=null`일 때만 후보가 된다.
-- 모델의 표시용 이름이나 검증 전 evidence ID 자체는 승격 근거가 아니다. 모델
-  `sourceName`은 서버 결속 후보를 찾는 키로만 사용하고, 기존 verifier가 원문 이름과
-  literal evidence owner 하나를 문제 없이 결속한 baseline 행이어야 한다.
-- 선택한 서버 owner의 이름·수량·전체 원문 evidence로 raw 행을 다시 구성한 뒤 기존
-  explicit verifier를 다시 통과한다. 대상 밖 행과 issue가 달라지면 복구하지 않는다.
-- 하나의 서버 owner를 둘 이상의 모델 행이 요구하거나, 한 block에 같은 이름의 반복·다중
-  numeric owner가 있으면 승격하지 않고 검수 대상으로 남긴다.
-- description과 author comment가 primary 및 reference까지 같으면 description owner를
-  우선한다. 서로 다르면 값을 조립하거나 덮지 않고 `conflicting`으로 보존한다.
-- 결속 밖의 대체재·조건·부정·조리 행동·범위·근사·정성량·추가 투입·다중 소유자 언급은
-  복구를 막는다.
-- 기존 `explicit`, `estimated`, `to_taste`, `conflicting`은 덮지 않는다.
-- `양파 2개(500g)`는 `2개`만 primary로 복구한다. `500g`은 reference 좌표와 원문
-  evidence에 남기며 합산·환산·대체하지 않는다.
+emoji 제거도 임의 기호 삭제가 아니다. Extended Pictographic cluster 뒤에 실제 공백이 있는
+행 머리만 목록 표식으로 제거한다. 목록을 이어 주는 비 numeric emoji 행은 정성량 또는 범위
+재료형으로 제한하며 승인 개수에는 포함하지 않는다. isolated emoji나 임의 감상 문구는 닫힌
+목록의 근거로 쓰지 않는다.
 
 ## 버전·무결성
 
-- client: `codex-vision-source-anchored-v64-source-bound-quantity-recovery`
-- verifier: `source-anchor-fidelity-v38-source-bound-quantity-recovery`
+- client: `codex-vision-source-anchored-v65-source-bound-quantity-replay-fixes`
+- verifier: `source-anchor-fidelity-v39-source-bound-quantity-replay-fixes`
 - prompt: `source-anchored-single-recipe-v17-source-first-quantity` (변경 없음)
 - selector: `deterministic-evidence-v3-ingredient-event-preserving-largest-gap` (변경 없음)
 - OCR policy: `source-anchored-full-frame-ocr-v1` (변경 없음)
-- source binding: `source-quantity-bindings-v1`
-- execution config signature: `72912a139bef413676f9c3ae`
-- candidate pipeline identity: `f0d7a43869f533050c7357afaa0994b4e01e980adbc2d9ece290859bf33cb6d0`
-- runtime bundle SHA-256: `4b67adadf5490261b91736399050dc71ed70f7f870fb369ebca070b766092b6e`
-- bundle manifest SHA-256: `18073207e185266b6328d8ed39462d79e80666cfd7a73c9de2b864629a7bb025`
-- `single-pass-vision.mjs`: `666f45888412b6a6ad1853e3e7f4a1706d66f3b35ea6318042edb3806dc0825c`
-- `source-anchored-vision.mjs`: `bdf5ccf5683819d56addf4235bbb621915ff3600fd6154bbd1a218c086f77b0c`
-- `source-quantity-owner-hints.mjs`: `2e2dcf582b529e705c7f7a0c3e6039e78a2e3e483bd9e0c8abd338caa46ffbae`
+- source binding: `source-quantity-bindings-v2`
+- execution config signature: `ec2a61efa3f408614fe41a5e`
+- candidate pipeline identity: `19b173b7f6dcfc5f88cd62878028efab4a979baacd8b6f7c68072cb5ee44ad4d`
+- runtime bundle SHA-256: `ef587335a6c1e0199c114d501ecc0ef1dc18d56cf8b7f7dc3a759934c415337b`
+- bundle manifest SHA-256: `7c80eb4b28a928c06747a35a005d2224a728669ed5b06bbad5bd9af6c13cf489`
+- `literal-quantity-grammar.mjs`: `e3a2f2537f98219d56f36a320f8cffa8a969cb2473aad87166f66997fac2bc20`
+- `single-pass-vision.mjs`: `a8614a16b2588e311262c8c3fede756bc6fe7f8b11ee2cbb2ba27f9e3759b4f3`
+- `source-anchored-vision.mjs`: `95b1deb4f099e2814952a4ef2cf5114800a6bd9815d128f94857c676640c94ac`
+- `source-quantity-owner-hints.mjs`: `3ef0658bf5f5b003cb9054097fe07c23a06d8337f42d71c6f7a2a6324bec8aec`
+- async resolver/finalization gate: `11c72f3d61dd402c14a7846b1972a44f246b17289761837cd4718358a87ae12a`
 
-pipeline identity는 exact runtime identity와 Codex CLI version의 canonical JSON SHA-256이다.
-bundle manifest에는 변경된 세 모듈의 실제 SHA-256을 반영했다. 운영의 v63/policy3
-pipeline identity와 배포 계약은 바꾸지 않았으며, 이 후보를 운영에 적용하려면 별도
-배포 승인과 정책 회전 검토가 필요하다.
+기존 `source-bound-evaluation-runner`와 preflight는 이미 소비된 v64 평가 후보에 고정했다.
+현재 bundle과 달라지면 fail-closed임을 테스트한다. 새 후보로 그 승인이나 3회 budget을
+재사용할 수 없다.
 
-## 최소 3건 평가 입력과 캐시 상태
+## 저장 결과 오프라인 재검증
 
-평가 대상은 다음 순서로 고정했다. allowlist 순서도 이 표와 같아야 한다.
+재검증 스크립트는 ignored 작업 증거
+`.omx/source-bound-evaluation-20261012/replay-saved-results.mjs`이고 SHA-256은
+`0e9b6c5a76ddf5635ad15536f8e15b9405256fa4818dc851bbf55b40b4004ef8`이다. 정확한 source와
+durable result SHA를 먼저 확인하고, 저장된 invocation의 id/text/provider/method/block/line/timestamp와
+현재 재구성 ledger가 같은지 검사한 뒤 저장된 raw proposal을 v39 verifier에 넣는다.
+모델·네트워크 호출 수는 모두 0이다.
 
-| 순서 | 영상 | 확인할 원천 | 현재 로컬 상태 |
-|---:|---|---|---|
-| 1 | `D9jzKcu9Snc` · <https://www.youtube.com/shorts/D9jzKcu9Snc> | 작성자 댓글 | 진단에 `통삼겹살 500g` 등 post-verifier evidence만 있음. 완전한 immutable `source.json`이 없어 실평가 불가 |
-| 2 | `AtGAVBl1vrQ` · <https://www.youtube.com/shorts/AtGAVBl1vrQ> | 작성자 댓글 | 진단에 `돼지고기 앞다리살 400g`, `양파 2개(500g)` 등 post-verifier evidence만 있음. 완전한 immutable `source.json`이 없어 실평가 불가 |
-| 3 | `eJyoszbyNNQ` · <https://www.youtube.com/watch?v=eJyoszbyNNQ> | 설명란 | `notebooks/recipe_loop_data/train/eJyoszbyNNQ/source.json`, SHA-256 `46dce89f7a2ae3d5986d7cd8306259e1f350d61761b38bdc9b0962f8a502f345`; `RECIPE` 아래 `1/2 lb | 250g Spaghetti`, `½ Onion`, `2 Cloves Garlic`, `2 Cups | 500ml Water` 등이 있어 source cache 준비 완료 |
+결과 `.omx/source-bound-evaluation-20261012/replay-result-v2.json`의 SHA-256은
+`d94221b0f6e4caae0b976e8097c9656731b1e3c40becc1f6a13da1670492f269`이다.
 
-앞의 두 영상에 공통으로 재사용 가능한 것은 진단 JSON SHA-256
-`9c0fabe8e6422391576f14a98ec898644096090a0fa7d010696c5150784247e1`뿐이다.
-이 진단은 전체 author-comment source snapshot이나 pre-verifier 모델 입력을 대체하지 않는다.
-따라서 두 건을 실제 추출 평가하려면 새 공개 원천 수집과 snapshot 고정이 필요하며, 이는
-현재 승인되지 않은 네트워크 작업이다. 세 번째 건의 기존 `golden.json`은 실추출 입력으로
-읽지 않는다.
+| 영상 | immutable source SHA-256 | 저장 result SHA-256 | v38 → v39 실제 차이 |
+|---|---|---|---|
+| `D9jzKcu9Snc` | `ccb47ccf7b40c6ebacdc6ea1a6b5b07736546b9decaebbb2cc4d57a4e513cb11` | `fd20faf126ed85724295ecfd0b8c056576e91d2f38d02c70abf1c469a1c49c13` | `통삼겹살` unknown→`500 g explicit`, 두 번째 `소금` unknown→`1 티스푼 explicit`; verified explicit 0→2, rejected 3→1 |
+| `AtGAVBl1vrQ` | `074b583eb201f3bcc1da1eae43466d0d9bce33bef91552ce85a95bec2a4ffefc` | `89d71e1a5761faf183774336f75079509f2df5af7ab64f998738b9e71d3084ae` | `돼지고기 앞다리살` unknown→`400 g explicit`; verified explicit 10→11, rejected 1→0. `양파`는 `2개` 한 행이며 `500g`은 reference로만 보존 |
+| `eJyoszbyNNQ` | `46dce89f7a2ae3d5986d7cd8306259e1f350d61761b38bdc9b0962f8a502f345` | `bb1fa2234ae70976e7f12b10e141222cfb1604835eb4aca3a379d1f03af06526` | 최종 출력 변화 없음. amount-first 7행 결속과 primary/reference 좌표는 생성되지만 기존 `estimated` 두 행은 덮지 않음 |
 
-세 번째 영상은 기존 prepared media도
-`/Users/cwj/01_vibe_coding/homecook/.omx/p5-v70-dev30-20261011/media-cache/eJyoszbyNNQ/source.136.mp4`
-에 있고, 42,787,256 bytes 및 SHA-256
-`c5b95544cf37fd126c7d0a24f39e7db7542a765901bbf2c5b26e5c7e86ffe697`를 확인했다.
-preparation manifest SHA-256은
-`20e4474517f792e7857bad1f9c4792b20d0be06e7e2de2a9f6abc9e7100173f6`, media index SHA-256은
-`eb72573cf91948ba432d2f39274c5b8a013111cf07969f4307fb4c04d30382ec`이다. 같은 index에는
-앞의 두 Shorts가 없다. 따라서 `eJyoszbyNNQ`만 새 다운로드 없이 source/media 입력을 만들
-수 있고, 두 Shorts는 새 source snapshot과 media 확보가 모두 필요하다. 캐시 존재는 OCR
-또는 모델 실행 승인으로 간주하지 않는다.
+이 replay는 verifier까지의 결과다. 최초 진단에서 목표 재료의 DB 연결 성공은 확인됐지만 이번
+오프라인 replay는 DB를 다시 조회하지 않았다. bridge 회귀에서는 같은 source-bound 후보가
+단일 재료 사전 match일 때만 수량을 유지하고, match 0개 또는 다중 후보면 amount/unit을 null,
+quantity source를 unknown, review-required를 true로 바꾸는 것을 mock 사전으로 확인했다.
+별도의 async worker 회귀는 transient basis가 SQL 입력에서 기존 `stated`로 정규화되고, SQL
+resolver 결과가 `resolved`이면 그대로 유지되며 그릇·접시 같은 `unresolved`/`needs_review`면
+`unknown/null`로 강등된 payload만 최종 persistence RPC에 전달됨을 확인한다. resolver 응답이
+없거나 index가 어긋나면 저장하지 않고 fail-closed한다.
 
-캐시 상태와 후보 hash만 확인하는 네트워크 없는 명령은 다음 하나다.
+`eJyoszbyNNQ`의 `½ Onion`은 단위가 없어 계속 unknown이다. Olive Oil/Balsamic Vinegar는
+저장 raw가 `estimated`여서 보수적 비덮기 정책상 그대로이고 Garlic의 기존 conflict도
+유지한다. D9의 시각 원천 `한두 꼬집`과 honey conflict 역시 이번 literal source 복구 범위가
+아니다. 이는 누락을 숨긴 결과가 아니라 남은 검수 범위다.
 
-```sh
-node scripts/recipe-loop/source-bound-evaluation-preflight.mjs --preflight-only
-```
+## 회귀 검증 범위와 한계
 
-이 CLI는 `--execute`를 제공하지 않는다. 현재 출력은
-`status=source-cache-incomplete`, `liveExecutionAvailableFromCli=false`, 준비 1/3이다.
+fixture/mock 검사는 제목 있는/없는 연속 목록, description/comment, comment block 분리,
+한글/영문, 줄바꿈·일반 bullet·emoji bullet·NFKC, description/comment 일치·불일치,
+name-first/amount-first, primary/reference 좌표, 반복 투입, 대체·조건·부정·행동·범위·정성·
+다중 소유자, 기존 상태 비덮기와 owner 중복 소비 차단을 포함한다.
+숫자형 비재료 emoji 목록, 관계 표지 없는 인접 수량, 닫히지 않은 reference 괄호와 재료 사전
+미해결 source-bound 후보의 fail-closed 처리와 저장 RPC 전에 transient basis가 제거되는지도
+포함한다.
 
-## 평가 승인·provider 경계
-
-`evaluation-dispatch-authorization.mjs`는 오프라인으로 다음 fail-closed 계약을 검증한다.
-
-- host가 검증한 `role:user` 메시지의 정확한 grant만 허용
-- host 설정 allowlist와 요청·승인 allowlist가 순서까지 정확히 일치
-- 총 dispatch 예산은 allowlist 길이와 같고 영상별 1회
-- 호출 전에 request authorization과 영상별 소비 marker를 영속화
-- 같은 request ID의 다른 승인, allowlist 밖 영상, 재시도 및 불확실한 실패 후 재실행 거부
-
-따라서 사용자 승인 1회가 정확한 영상 3개·총 3회·영상별 재시도 없음으로 명시되면 그
-범위를 표현할 수 있다. `source-bound-evaluation-runner.mjs`는 이 controller를 최소
-3건 runner에 연결해 다음 순서로 동작한다.
-
-1. 세 source snapshot의 경로·SHA-256·영상 URL·필수 description/comment를 모두 확인한다.
-2. host가 검증한 최신 `role:user` grant를 exact allowlist·후보·호출 계약에 결속한다.
-3. 영상별 소비 marker를 먼저 exclusive/durable 생성한다.
-4. primitive provider 콜백 직전 마지막 await에서 candidate git/bundle/pipeline identity를
-   다시 읽어 승인 후보와 비교한다.
-5. provider 콜백을 정확히 한 번 호출하고 telemetry가 model 1, selector 0, repair 0,
-   retry 0인지 확인한다. 불확실한 실패도 이미 소비된 것으로 남긴다.
-
-runner가 받는 `invokeProviderOnce`는 단일 provider request를 수행하는 신뢰 host adapter여야
-한다. 저장소에는 authoritative message store를 읽는 API나 그러한 support-tool adapter가
-없으므로 이를 셸 환경 변수, 모델이 만든 승인 파일, timestamp만으로 대체하지 않는다.
-`verifyRoleUserMessage` mock은 단위 테스트에서만 사용한다. 실제 실행에는 (a) 별도 사용자
-메시지, (b) 그 메시지를 직접 검증하는 support tool, (c) 모델 호출 명령에 대한 별도 tool
-approval, (d) 모델 sandbox 밖의 host-owned budget/log directory가 모두 필요하다.
-현재 runner는 adapter가 반환한 telemetry를 사후 확인하므로 거짓 adapter 자체를 방어하지
-않으며, prepared media 경로·hash도 아직 request grant에 결속하지 않는다. live adapter를
-추가할 때는 primitive dispatch 구현과 media binding을 함께 독립 검토해야 한다.
-
-budget marker의 계약 경로는 host가 제공한 절대 `budgetDirectory` 아래
-`<sha256(requestId)>/authorization.json`과
-`<sha256(requestId)>/<sha256(videoId)>.json`이다. 실제 host directory와 provider log/receipt
-경로는 아직 support-tool adapter가 없고 실행도 승인되지 않았으므로 존재하지 않는다.
-mock은 OS 임시 디렉터리만 사용하고 테스트 종료 시 삭제한다. old dev30/P5 runner와 그
-`approval.json`·receipt는 이 경계에 입력할 수 없다.
-
-## 검증 범위와 한계
-
-네트워크 없는 fixture/mock으로 제목 목록, 제목 없는 연속 목록, description/comment,
-댓글별 `---` block 분리, 한글/영문, 줄바꿈·bullet·NFKC, 설명/댓글 일치·불일치,
-primary/reference 보존, 반복 투입, 대체·조건·부정·행동·범위·정성·다중 소유자,
-기존 상태 비덮기와 owner 중복 소비 차단을 확인한다.
-
-이 검증은 결정적 코드 경로만 증명한다. 실제 모델 성능 개선, 공개 Shorts 재추출 성공,
-P5 통과, 운영 반영을 증명하지 않는다. DB/API/UI 저장 계약은 변경하지 않았으며 별도
-canonical 저장·플래너 작업 파일도 수정하지 않았다.
+이 결과는 결정적 verifier 코드와 저장된 세 raw proposal에 대한 재검증만 증명한다. 새 모델
+호출에서 모델 출력이 개선됐다는 뜻이 아니며 P5 통과, 운영 반영, 새 영상 다운로드 성공을
+뜻하지 않는다. DB/API/UI/저장 계약과 canonical 레시피·플래너 파일은 변경하지 않았다.
+async worker에 request-local index와 기존 SQL resolver의 authoritative 결과를 최종 persistence
+직전에 확인하는 gate만 추가했으며 운영 DB에는 migration을 적용하지 않았다.

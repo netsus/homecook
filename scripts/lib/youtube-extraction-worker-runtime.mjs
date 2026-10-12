@@ -101,6 +101,69 @@ function record(value) {
     : null;
 }
 
+/**
+ * The verifier-only source-bound basis must never cross the persistence RPC.
+ * Convert it to the existing SQL input contract while retaining request-local
+ * indexes. The authoritative resolver result is checked before finalization.
+ */
+export function prepareSourceBoundQuantitiesForResolution(runtimeResult) {
+  const result = record(runtimeResult);
+  const recipe = record(result?.recipe);
+  if (!result || !recipe || !Array.isArray(recipe.ingredients)) {
+    return { runtimeResult, ingredientIndexes: [] };
+  }
+  const ingredientIndexes = [];
+  const ingredients = recipe.ingredients.map((value, index) => {
+    const ingredient = record(value);
+    if (!ingredient || ingredient.amountBasis !== "source-bound-stated") return value;
+    ingredientIndexes.push(index);
+    return { ...ingredient, amountBasis: "stated" };
+  });
+  return {
+    runtimeResult: ingredientIndexes.length > 0
+      ? { ...result, recipe: { ...recipe, ingredients } }
+      : runtimeResult,
+    ingredientIndexes,
+  };
+}
+
+/**
+ * The SQL resolver is the authority for selectable canonical/synonym identity.
+ * A source-bound numeric claim survives only when that exact source-owned name
+ * resolved to one ingredient. Raw text and evidence stay available for review.
+ */
+export function finalizeResolvedSourceBoundQuantities(resolvedDraft, ingredientIndexes) {
+  if (!Array.isArray(ingredientIndexes) || ingredientIndexes.length === 0) return resolvedDraft;
+  const resolved = record(resolvedDraft);
+  const draft = record(resolved?.draft);
+  if (!resolved || !draft || !Array.isArray(draft.ingredients)
+    || ingredientIndexes.some((index) => !Number.isSafeInteger(index)
+      || index < 0 || index >= draft.ingredients.length)) {
+    throw new Error("source-bound ingredient resolution is unavailable");
+  }
+  const targets = new Set(ingredientIndexes);
+  const ingredients = draft.ingredients.map((value, index) => {
+    if (!targets.has(index)) return value;
+    const ingredient = record(value);
+    if (!ingredient) throw new Error("source-bound ingredient resolution is invalid");
+    if (ingredient.resolution_status === "resolved") return ingredient;
+    const name = typeof ingredient.standard_name === "string" ? ingredient.standard_name.trim() : "";
+    return {
+      ...ingredient,
+      amount: null,
+      unit: null,
+      display_text: `${name} 수량 미확인`.trim(),
+      scalable: false,
+      amount_basis: null,
+      quantity_state: "unknown",
+      quantity_source: "unknown",
+      quantity_confidence: null,
+      quantity_review_required: true,
+    };
+  });
+  return { ...resolved, draft: { ...draft, ingredients } };
+}
+
 function requiredString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} is unavailable`);
@@ -661,7 +724,7 @@ export function createYoutubeExtractionWorkerRuntime({
         });
         const catalog = await workerRpcClient.readCatalog();
 
-        const runtimeResult = await Promise.race([
+        const rawRuntimeResult = await Promise.race([
           extractor.extract({
             videoId: claim.youtube_video_id,
             signal: controller.signal,
@@ -676,6 +739,8 @@ export function createYoutubeExtractionWorkerRuntime({
           }),
           heartbeatFailed,
         ]);
+        const sourceBound = prepareSourceBoundQuantitiesForResolution(rawRuntimeResult);
+        const runtimeResult = sourceBound.runtimeResult;
         if (controller.signal.aborted) return "stale-fence";
 
         const runtimeRow = record(runtimeResult);
@@ -724,14 +789,14 @@ export function createYoutubeExtractionWorkerRuntime({
 
         workerRpcClient.reportProgress("finalizing");
         await workerRpcClient.flushProgress(progressFlushTimeoutMs).catch(() => false);
-        const resolved = resultRow(await rpc("resolve_youtube_extraction_job_draft", {
+        const resolved = finalizeResolvedSourceBoundQuantities(resultRow(await rpc("resolve_youtube_extraction_job_draft", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
           permit_generation: permitGeneration,
           youtube_video_id: claim.youtube_video_id,
           runtime_result: withoutPersistence(runtimeResult),
-        }), "resolve draft");
+        }), "resolve draft"), sourceBound.ingredientIndexes);
         if (!resolved) throw new Error("resolve draft returned no result");
         await heartbeat();
         const finalized = successBoolean(await rpc("finalize_youtube_extraction_job", {

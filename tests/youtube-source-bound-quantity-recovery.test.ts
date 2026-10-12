@@ -68,9 +68,11 @@ describe("server-bound description and author-comment quantity recovery", () => 
       originalName: testCase.ingredient,
       amount: testCase.expected.amount,
       unit: testCase.expected.unit,
-      amountRawText: `${testCase.expected.amount}${testCase.expected.unit}`,
+      amountRawText: "amount_raw_text" in testCase.expected
+        ? testCase.expected.amount_raw_text
+        : `${testCase.expected.amount}${testCase.expected.unit}`,
       quantityState: "explicit",
-      amountBasis: "stated",
+      amountBasis: "source-bound-stated",
       evidenceRefs: [expect.objectContaining({ snippet: testCase.expected.owner_text })],
     });
     expect(checked.corrections).toEqual(expect.arrayContaining([
@@ -128,6 +130,101 @@ describe("server-bound description and author-comment quantity recovery", () => 
       originalName: "양파",
       amount: "2",
       unit: "개",
+      quantityState: "explicit",
+    });
+  });
+
+  it("treats a leading emoji as a list marker, not part of the bound ingredient name", () => {
+    const testCase = fixture.positive_cases.find(({ case_id }) => case_id === "emoji-prefixed-headerless-comment-list");
+    if (!testCase) throw new Error("missing emoji-prefixed source fixture");
+    const { ledger } = verify(testCase);
+    const binding = ledger.flatMap((entry: { sourceQuantityBindings?: Array<Record<string, unknown>> }) =>
+      entry.sourceQuantityBindings ?? []).find((candidate: Record<string, unknown>) => candidate.sourceName === "통삼겹살");
+
+    expect(binding).toMatchObject({
+      sourceName: "통삼겹살",
+      amount: "500",
+      unit: "g",
+      normalizedCoordinates: {
+        name: { start: 3, end: 7 },
+        quantity: { start: 8, end: 12 },
+      },
+    });
+  });
+
+  it("verifies an explicit quantity cited without its leading emoji marker", () => {
+    const testCase = fixture.positive_cases.find(({ case_id }) => case_id === "emoji-prefixed-headerless-comment-list");
+    if (!testCase) throw new Error("missing emoji-prefixed source fixture");
+    const { checked } = verify(testCase, { quantityState: "explicit", amount: "500", unit: "g" });
+
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      originalName: "통삼겹살",
+      amount: "500",
+      unit: "g",
+      quantityState: "explicit",
+    });
+    expect(checked.issues).toEqual([]);
+    expect(checked.corrections).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-bound-quantity-recovered" }),
+    ]));
+  });
+
+  it("keeps a qualitative ingredient row from becoming the next row's scope context", () => {
+    const sourceText = "[SOURCE: author_comment]\nㅡ맛있는카레 레시피ㅡ\n식용유 약간\n돼지고기 앞다리살 400g\n소금 2꼬집\n양파 2개(500g)";
+    const ledger = buildSinglePassEvidenceLedger({ sourceText, sourceAnchored: true });
+    const pork = ledger.find((entry: { text?: string }) => entry.text === "돼지고기 앞다리살 400g");
+    if (!pork) throw new Error("missing pork source row");
+
+    expect(pork.scopeContext).not.toBe("식용유 약간");
+    const checked = validateSourceAnchoredResult({
+      recipes: [{
+        title: "맛있는 카레",
+        ingredients: [{
+          name: "돼지고기 앞다리살",
+          sourceName: "돼지고기 앞다리살",
+          amount: "400",
+          unit: "g",
+          quantityState: "explicit",
+          optional: false,
+          evidence: [{ id: pork.id, quote: pork.text }],
+        }],
+        steps: ["카레를 만든다."],
+      }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      amount: "400",
+      unit: "g",
+      quantityState: "explicit",
+    });
+    expect(checked.issues).toEqual([]);
+  });
+
+  it("keeps amount-first primary and reference spans without producing a duplicate ingredient", () => {
+    const testCase = fixture.positive_cases.find(({ case_id }) => case_id === "amount-first-english-primary-reference");
+    if (!testCase) throw new Error("missing amount-first source fixture");
+    const { checked, ledger } = verify(testCase);
+    const bindings = ledger.flatMap((entry: { sourceQuantityBindings?: Array<Record<string, unknown>> }) =>
+      entry.sourceQuantityBindings ?? []).filter((binding: Record<string, unknown>) => binding.sourceName === "Olive Oil");
+
+    expect(bindings).toEqual([expect.objectContaining({
+      amount: "2",
+      unit: "Tablespoons",
+      normalizedCoordinates: {
+        name: { start: 21, end: 30 },
+        quantity: { start: 0, end: 13 },
+      },
+      references: [expect.objectContaining({
+        amount: "30",
+        unit: "ml",
+        normalizedCoordinates: { start: 16, end: 20 },
+      })],
+    })]);
+    expect(checked.json.recipes[0].ingredients).toHaveLength(1);
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      originalName: "Olive Oil",
+      amount: "2",
+      unit: "Tablespoons",
       quantityState: "explicit",
     });
   });
@@ -302,6 +399,48 @@ describe("server-bound description and author-comment quantity recovery", () => 
     });
   });
 
+  it("keeps an unmarked adjacent comment quantity reviewable instead of treating it as a reference conflict", () => {
+    const ledger = buildSinglePassEvidenceLedger({
+      sourceText: "[SOURCE: description]\nRECIPE\n2 Tablespoons | 30ml Olive Oil\n1 Cup Water\nInstructions\n[SOURCE: author_comment]\n2 Tablespoons 45ml Olive Oil\n1 Cup Water",
+      sourceAnchored: true,
+    });
+    const oliveEntries = ledger.filter((entry: { text?: string }) => entry.text?.includes("Olive Oil"));
+    const oliveBindings = oliveEntries.flatMap((entry: { sourceQuantityBindings?: Array<Record<string, unknown>> }) =>
+      entry.sourceQuantityBindings ?? []);
+
+    expect(oliveBindings).toEqual([expect.objectContaining({
+      amount: "2",
+      unit: "Tablespoons",
+      references: [expect.objectContaining({ amount: "30", unit: "ml" })],
+      sourceMethod: "description",
+    })]);
+
+    const checked = validateSourceAnchoredResult({
+      recipes: [{
+        title: "Olive Oil reference",
+        ingredients: [{
+          name: "Olive Oil",
+          sourceName: "Olive Oil",
+          amount: null,
+          unit: null,
+          quantityState: "unknown",
+          optional: false,
+          evidence: oliveEntries.map((entry: { id: string; text: string }) => ({ id: entry.id, quote: entry.text })),
+        }],
+        steps: ["Mix."],
+      }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      amount: null,
+      unit: null,
+      quantityState: "unknown",
+    });
+    expect(checked.corrections).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-bound-quantity-review-required", reason: "source-related-unbound-mention" }),
+    ]));
+  });
+
   it("does not join isolated headerless rows across separate author comments", () => {
     const ledger = buildSinglePassEvidenceLedger({
       sourceText: "[SOURCE: author_comment]\n통삼겹살 500g\n---\n양파 2개",
@@ -383,9 +522,9 @@ describe("server-bound description and author-comment quantity recovery", () => 
     expect(prompt).not.toContain("source_block_index");
   });
 
-  it.each(["explicit", "to_taste", "conflicting"])("does not overwrite an existing %s state", (quantityState) => {
+  it.each(["explicit", "estimated", "to_taste", "conflicting"])("does not overwrite an existing %s state", (quantityState) => {
     const testCase = fixture.positive_cases[1];
-    const submitted = quantityState === "explicit"
+    const submitted = ["explicit", "estimated"].includes(quantityState)
       ? { quantityState, amount: "450", unit: "g" }
       : { quantityState, amount: null, unit: null };
     const { checked } = verify(testCase, submitted);

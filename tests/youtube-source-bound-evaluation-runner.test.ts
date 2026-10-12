@@ -128,7 +128,7 @@ afterEach(async () => {
 });
 
 describe("source-bound three-video evaluation runner", () => {
-  it("documents that only the description case is currently runnable from the repository cache", async () => {
+  it("keeps the spent v64 evaluator fail-closed after the runtime candidate changes", async () => {
     const [readiness, bundle] = await Promise.all([
       inspectSourceBoundEvaluationReadiness({
         projectRoot: process.cwd(),
@@ -145,7 +145,7 @@ describe("source-bound three-video evaluation runner", () => {
     expect(readiness[2]).toMatchObject({
       sourceSha256: "46dce89f7a2ae3d5986d7cd8306259e1f350d61761b38bdc9b0962f8a502f345",
     });
-    expect(bundle.sha256).toBe(CANDIDATE.bundleSha256);
+    expect(bundle.sha256).not.toBe(CANDIDATE.bundleSha256);
   });
 
   it("checks the exact contract and candidate immediately before each primitive provider call", async () => {

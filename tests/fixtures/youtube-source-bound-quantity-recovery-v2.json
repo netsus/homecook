@@ -63,6 +63,31 @@
       "source_text": "[SOURCE: description]\n[재료]\n볶은깨 1큰술\n소금 1큰술",
       "ingredient": "볶은깨",
       "expected": { "amount": "1", "unit": "큰술", "owner_text": "볶은깨 1큰술" }
+    },
+    {
+      "case_id": "emoji-prefixed-headerless-comment-list",
+      "source_text": "[SOURCE: author_comment]\n🥩 통삼겹살 500g\n🧄 통마늘 넉넉히\n🍯 꿀 2~3스푼\n🧂 소금 0.7티스푼\n✨ 깨 넉넉히",
+      "ingredient": "통삼겹살",
+      "submitted_evidence_text": "🥩 통삼겹살 500g",
+      "expected": { "amount": "500", "unit": "g", "owner_text": "🥩 통삼겹살 500g" }
+    },
+    {
+      "case_id": "amount-first-english-primary-reference",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 Tablespoons | 30ml Olive Oil\n1 Tablespoon | 15ml Balsamic Vinegar\nInstructions",
+      "ingredient": "Olive Oil",
+      "expected": { "amount": "2", "unit": "Tablespoons", "amount_raw_text": "2 Tablespoons", "owner_text": "2 Tablespoons | 30ml Olive Oil", "reference_amount": "30", "reference_unit": "ml" }
+    },
+    {
+      "case_id": "amount-first-english-pound-primary",
+      "source_text": "[SOURCE: description]\nRECIPE\n1/2 lb | 250g Spaghetti\n2 Cloves Garlic\nInstructions",
+      "ingredient": "Spaghetti",
+      "expected": { "amount": "1/2", "unit": "lb", "amount_raw_text": "1/2 lb", "owner_text": "1/2 lb | 250g Spaghetti", "reference_amount": "250", "reference_unit": "g" }
+    },
+    {
+      "case_id": "amount-first-parenthetical-reference",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 Tablespoons (30ml) Olive Oil\n1 Cup Water\nInstructions",
+      "ingredient": "Olive Oil",
+      "expected": { "amount": "2", "unit": "Tablespoons", "amount_raw_text": "2 Tablespoons", "owner_text": "2 Tablespoons (30ml) Olive Oil", "reference_amount": "30", "reference_unit": "ml" }
     }
   ],
   "guard_cases": [
@@ -324,6 +349,84 @@
       "case_id": "mit-no-space-multi-owner-stays-unknown",
       "source_text": "[SOURCE: description]\n[재료]\n양파 및대파 2개\n소금 1큰술",
       "ingredient": "양파 및대파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "isolated-emoji-row-is-not-a-list",
+      "source_text": "[SOURCE: author_comment]\n🥩 통삼겹살 500g",
+      "ingredient": "통삼겹살",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "amount-first-action-stays-unknown",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 tablespoons add sugar\n1 cup Water\nInstructions",
+      "ingredient": "add sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "amount-first-condition-stays-unknown",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 tablespoons Sugar when needed\n1 cup Water\nInstructions",
+      "ingredient": "Sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "amount-first-alternative-stays-unknown",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 tablespoons Sugar or Honey\n1 cup Water\nInstructions",
+      "ingredient": "Sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "amount-first-multi-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 tablespoons Sugar + Salt\n1 cup Water\nInstructions",
+      "ingredient": "Sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "amount-first-range-stays-unknown",
+      "source_text": "[SOURCE: description]\nRECIPE\n2~3 tablespoons Sugar\n1 cup Water\nInstructions",
+      "ingredient": "Sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "instructions-end-amount-first-scope",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 tablespoons Sugar\n1 cup Water\nInstructions\n2 tablespoons Salt",
+      "ingredient": "Salt",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "recipe-prose-label-is-not-an-ingredient-heading",
+      "source_text": "[SOURCE: description]\n[Best Recipe]\n2 tablespoons Sugar\nInstructions",
+      "ingredient": "Sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "arbitrary-emoji-prose-does-not-complete-a-list",
+      "source_text": "[SOURCE: author_comment]\n📦 그릇 2개\n😊 맛있어요",
+      "ingredient": "그릇",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "qualitative-emoji-prose-does-not-complete-a-list",
+      "source_text": "[SOURCE: author_comment]\n📦 그릇 2개\n😊 오늘은 약간",
+      "ingredient": "그릇",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "temperature-range-emoji-prose-does-not-complete-a-list",
+      "source_text": "[SOURCE: author_comment]\n📦 그릇 2개\n🌡️ 온도 2~3도",
+      "ingredient": "그릇",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "amount-first-adjacent-quantities-need-reference-marker",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 Tablespoons 45ml Olive Oil\n1 cup Water\nInstructions",
+      "ingredient": "Olive Oil",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "amount-first-unclosed-reference-parenthesis",
+      "source_text": "[SOURCE: description]\nRECIPE\n2 Tablespoons (30ml Olive Oil\n1 cup Water\nInstructions",
+      "ingredient": "Olive Oil",
       "expected_state": "unknown"
     }
   ]

@@ -2,7 +2,7 @@
 
 ## 2026-10-12 — YouTube 설명란·작성자 댓글 원천 결속 수량 복구 (로컬, 미배포)
 
-설명란과 각 작성자 댓글의 닫힌 재료 행에서 서버가 재료명·literal 수량·정규화 좌표를 request-local로 결속하고, 기존 verifier가 같은 원천 행을 다시 증명한 `unknown/null`만 보수적으로 복구한다. 댓글 구분자별 source block을 분리하며 설명/댓글 충돌·반복·대체·조건·부정·조리 행동·범위·정성량·다중 소유자는 덮지 않는다. prompt/DB/API/UI는 변경하지 않았고 모델·OCR·다운로드·네트워크 평가는0회다. 승인 controller는 exact 3건 runner의 provider 직전 후보 재검증·영상별 durable 소비 경계에 mock으로 연결했다. 다만 Shorts 2건의 완전한 source snapshot과 authoritative message-store support adapter가 없어 실제 평가는 fail-closed이며, 현재 캐시 실행 가능 입력은 설명란 사례 `eJyoszbyNNQ` 1건뿐이다. [구현 계약·후보 hash·평가 입력·검증 한계](../engineering/youtube-source-bound-quantity-recovery-20261012.md)를 따른다.
+설명란과 각 작성자 댓글의 닫힌 재료 행에서 서버가 재료명·literal 수량·정규화 좌표를 request-local로 결속하고, 기존 verifier가 같은 원천 행을 다시 증명한 `unknown/null`만 보수적으로 복구한다. 후속 v65/v39는 emoji bullet, amount-first 영문 목록, `lb`, plain `RECIPE` 제목과 정성량 scope 경계를 보완했다. 복구값은 기존 재료 사전이 원문 이름을 단일 재료로 해결해야만 최종 explicit으로 공개되며 미해결·다중 후보는 unknown/review-required로 남는다. sync 경로는 기존 DB 조회를 사용하고, async worker는 transient 복구 표식을 기존 `stated`로 SQL resolver에 넣은 뒤 authoritative `resolution_status`가 `resolved`일 때만 최종 저장 payload에 유지한다. 저장된 3건의 immutable source/raw proposal을 모델·네트워크 호출0회로 재검증해 `통삼겹살 500g`, 두 번째 `소금 1티스푼`, `돼지고기 앞다리살 400g`이 verifier에서 복구되고 `양파 2개(500g)`의 primary/reference가 분리 보존됨을 확인했다. 기존 estimated/conflict와 literal 밖 시각량은 덮지 않는다. 앞선 정확3건 평가 budget은 이미3/3 소비됐고 새 후보에 재사용하지 않는다. prompt/DB schema·SQL allowlist/API/UI·운영은 변경하지 않았다. [구현 계약·저장 결과 replay·hash·검증 한계](../engineering/youtube-source-bound-quantity-recovery-20261012.md)를 따른다.
 
 ## 2026-10-11 — 원문 확인 밥숟가락 중량 운영 반영
 
