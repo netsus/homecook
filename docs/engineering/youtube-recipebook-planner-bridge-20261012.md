@@ -39,6 +39,14 @@
 - 운영 배포, 인증·보안 설정
 - P5 추출 모델의 분량 판정과 영양 계산 정책
 
+## 운영 웹 기반 release 후보와 DB 검증 경계
+
+- release 후보는 현재 운영 웹 `f970bc1d1f1e981d8947e852a9b51ada4a74570a`의 후속 커밋으로 구성한다. 일반 master 리팩터링과 P5 추출기·평가 이력은 포함하지 않는다.
+- 운영 DB 원장 218개에 이미 반영된 `20261011140000_retire_unused_ingredients.sql`, `20261011200000_household_spoon_measurement.sql`은 운영 영수증과 같은 checksum의 migration source closure로만 포함한다. 이 두 파일은 다시 실행하지 않는다.
+- migration source는 이번 bridge까지 219개지만, 성공한 DB 통합 검사는 운영과 동등한 post-218 schema 복제본에 `20261012120000_youtube_saved_recipe_canonical_bridge.sql`만 적용한 **target migration 검증**이다. 이를 219개 전체 replay 성공으로 표현하지 않는다.
+- 빈 DB에서 219개를 순서대로 적용하는 현재 전체 replay는 이번 변경 전부터 있던 `20260919001000_ingredient_search_normalization.sql`의 `INGREDIENT_SEARCH_YOUTUBE_LOOKUP_SHAPE_CHANGED`에서 중단된다. 기존 migration의 checksum은 운영 기준·master·release 후보에서 동일하며, 이 실패를 이번 target migration 성공으로 덮지 않는다.
+- bridge SQL은 함수·트리거·기존 저장 결과 UPDATE를 포함해 `deploy:dev`의 빠른 추가형 DB 경로에서 거부된다. 새 백업과 대상 확인을 승인받은 별도 통제 transaction으로 DB/backfill을 먼저 적용하고, 원장 219개와 API schema reload를 확인한 뒤 웹을 `--already-applied-db`로 전환한다.
+
 ## 검증 계약
 
 - 신규 저장 → `내가 추가한 레시피` 노출 → reader → 유튜브 편집 재진입 → 수정/저장 → 플래너 추가
