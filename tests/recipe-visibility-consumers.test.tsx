@@ -28,6 +28,22 @@ vi.mock("@/lib/api/ingredients", () => ({
   fetchIngredients: vi.fn(),
 }));
 
+vi.mock("@/lib/api/food-catalog-search", () => ({
+  fetchFoodCatalogSearch: vi.fn(async () => ({
+    items: [
+      {
+        type: "ingredient",
+        id: "ing-onion",
+        standard_name: "양파",
+        category: "채소",
+        default_unit: "g",
+      },
+    ],
+    has_next: false,
+    next_cursor: null,
+  })),
+}));
+
 vi.mock("@/lib/api/manual-recipe", () => ({
   cancelRecipeImage: vi.fn(),
   createManualRecipe: vi.fn(),
@@ -36,6 +52,12 @@ vi.mock("@/lib/api/manual-recipe", () => ({
 
 vi.mock("@/lib/api/recipe", () => ({
   suggestRecipeTags: vi.fn(),
+}));
+
+vi.mock("@/lib/api/mypage", () => ({
+  fetchUserProfile: vi.fn(async () => ({
+    id: "550e8400-e29b-41d4-a716-446655440001",
+  })),
 }));
 
 const storageMocks = vi.hoisted(() => {
@@ -126,9 +148,25 @@ async function fillRequiredManualRecipeFields(user: ReturnType<typeof userEvent.
   await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 }
 
+async function getReadyManualImageInput() {
+  const input = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+  await waitFor(() => {
+    expect(input.matches(":disabled")).toBe(false);
+  });
+  return input;
+}
+
 describe("recipe visibility consumers", () => {
   beforeEach(() => {
     installMatchMedia();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:recipe-visibility-preview"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
     storageMocks.mockStorageRemove.mockReset();
     storageMocks.getSupabaseBrowserClient.mockClear();
     vi.mocked(cancelRecipeImage).mockReset();
@@ -201,7 +239,7 @@ describe("recipe visibility consumers", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["managed"], "managed.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -231,7 +269,7 @@ describe("recipe visibility consumers", () => {
     );
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["managed"], "managed.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -252,7 +290,7 @@ describe("recipe visibility consumers", () => {
     vi.mocked(uploadRecipeImage).mockResolvedValueOnce(legacyUploadSuccess());
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["legacy"], "legacy.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -286,7 +324,7 @@ describe("recipe visibility consumers", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["managed"], "managed.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -294,11 +332,11 @@ describe("recipe visibility consumers", () => {
     });
     await user.click(screen.getByTestId("manual-image-retry-button"));
 
-    expect(vi.mocked(uploadRecipeImage).mock.calls[0]?.[1]).toEqual({
-      idempotencyKey: "550e8400-e29b-41d4-a716-446655440101",
-    });
-    expect(vi.mocked(uploadRecipeImage).mock.calls[1]?.[1]).toEqual({
-      idempotencyKey: "550e8400-e29b-41d4-a716-446655440101",
-    });
+    const firstAttemptKey = vi.mocked(uploadRecipeImage).mock.calls[0]?.[1]
+      ?.idempotencyKey;
+    const retryKey = vi.mocked(uploadRecipeImage).mock.calls[1]?.[1]
+      ?.idempotencyKey;
+    expect(firstAttemptKey).toEqual(expect.any(String));
+    expect(retryKey).toBe(firstAttemptKey);
   });
 });
