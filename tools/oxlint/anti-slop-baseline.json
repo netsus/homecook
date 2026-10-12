@@ -132,48 +132,6 @@
       "count": 1
     },
     {
-      "file": "app/api/v1/ingredients/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "06b0555c399fdb597f2075310628e41ec84f201e0bac5c371bcb08465931e911",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/ingredients/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "52e340872ca74505ffdaa09738f4385f53e5d4fed583ab31a6de679cf6dac545",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/ingredients/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "53d39094ff54ff401e15b27a2010722992cc5cf619148cabd12f369d4dd35d06",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/ingredients/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "66f0351600e38e276ec9ddf15d4c3cde9a5a27262676343493bc005140bcc377",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/ingredients/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "68ddabbb4780e8059e3b027a8c03d5c21813c43fbeaf7dae70cdb3970eafe65f",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/ingredients/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "b09fc771e45c7cf78a6159b29ee94eeb8b3a488b93c42d4819b7a40f398e9706",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/ingredients/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "f37ab7ec039048b9f33a042387a69cb0a6e46ec7c5d5c2aebf31ed98a8d15b5e",
-      "count": 1
-    },
-    {
       "file": "app/api/v1/leftovers/[leftover_id]/eat/route.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "d97c9904d63c0f8d8dc8c6f7fdc82ecbdf011582d94a53d7f5ac6aba62cebc67",
