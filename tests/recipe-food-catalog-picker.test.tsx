@@ -3,7 +3,10 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RecipeFoodCatalogPicker } from "@/components/recipe/recipe-food-catalog-picker";
+import {
+  RecipeFoodCatalogPicker,
+  recipeIngredientFromCatalog,
+} from "@/components/recipe/recipe-food-catalog-picker";
 import { fetchFoodCatalogSearch, type FoodCatalogProductData } from "@/lib/api/food-catalog-search";
 vi.mock("@/lib/api/food-catalog-search", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/api/food-catalog-search")>(),
@@ -24,6 +27,35 @@ async function advanceSearch(milliseconds = 250) {
   await act(async () => { await vi.advanceTimersByTimeAsync(milliseconds); });
 }
 describe("recipe food catalog picker", () => {
+  it("rejects an unlinked product at the projection boundary", () => {
+    expect(recipeIngredientFromCatalog(product(false), 1)).toBeNull();
+  });
+
+  it("projects exact generic and product ingredient fields", () => {
+    expect(recipeIngredientFromCatalog(ingredientResult("tofu", "두부").items[0]!, 3)).toEqual({
+      ingredient_id: "tofu",
+      standard_name: "두부",
+      amount: 100,
+      unit: "g",
+      ingredient_type: "QUANT",
+      scalable: true,
+      display_text: "두부 100g",
+      sort_order: 3,
+    });
+    expect(recipeIngredientFromCatalog(product(true), 4)).toEqual({
+      ingredient_id: "soy",
+      standard_name: "브랜드 · 양조간장",
+      amount: 15,
+      unit: "ml",
+      ingredient_type: "QUANT",
+      scalable: true,
+      display_text: "브랜드 · 양조간장 15ml",
+      sort_order: 4,
+      food_product_id: "p1",
+      food_product_nutrition_version_id: "v1",
+    });
+  });
+
   it("hides the add footer while the keyboard is open and restores the selection after closing", async () => {
     vi.mocked(fetchFoodCatalogSearch).mockResolvedValue(ingredientResult("tofu", "두부"));
     const onAdd = vi.fn(); const onClose = vi.fn();
