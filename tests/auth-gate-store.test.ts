@@ -16,13 +16,30 @@ describe("auth gate store", () => {
       type: "planner",
     });
 
-    expect(useAuthGateStore.getState()).toMatchObject({
-      isOpen: true,
-      action: {
-        recipeId: "recipe-1",
-        type: "planner",
-        redirectTo: "/recipe/recipe-1",
-      },
+    const action = useAuthGateStore.getState().action;
+    expect(action).toEqual({
+      recipeId: "recipe-1",
+      type: "planner",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: expect.any(Number),
+    });
+    expect(Object.hasOwn(action!, "sourceOwnerUuid")).toBe(false);
+  });
+
+  it("preserves an explicit null source owner for a recipe fork", () => {
+    useAuthGateStore.getState().open({
+      recipeId: "recipe-1",
+      sourceOwnerUuid: null,
+      type: "recipe-fork",
+    });
+
+    expect(useAuthGateStore.getState().action).toEqual({
+      recipeId: "recipe-1",
+      type: "recipe-fork",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: expect.any(Number),
+      sourceOwnerUuid: null,
+      editContext: undefined,
     });
   });
 
