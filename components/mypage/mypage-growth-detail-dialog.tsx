@@ -649,21 +649,25 @@ interface AchievementTrackData {
 
 function buildAchievementGroups(data: UserGamificationData | null): AchievementGroupData[] {
   const categories = sortedCategories(data);
+  const groups: AchievementGroupData[] = [];
 
-  return ACHIEVEMENT_GROUPS.map((group) => {
+  for (const group of ACHIEVEMENT_GROUPS) {
     const groupCategories = categories.filter((category) =>
       group.categoryKeys.includes(category.category_key),
     );
     const milestones = groupCategories.flatMap((category) => category.milestones);
+    if (milestones.length === 0) continue;
 
-    return {
+    groups.push({
       earnedCount: milestones.filter((milestone) => milestone.status === "earned").length,
       key: group.key,
       label: group.label,
       milestones,
       totalCount: milestones.length,
-    };
-  }).filter((group) => group.totalCount > 0);
+    });
+  }
+
+  return groups;
 }
 
 function buildAchievementTracks(

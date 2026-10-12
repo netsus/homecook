@@ -51,9 +51,11 @@ export function changeRecipeIngredient(
       return {
         ...step,
         ingredients_used: replacement
-          ? step.ingredients_used.map((item) => item.ingredient_id === previous.ingredient_id
-            ? { ...item, ingredient_id: replacement.ingredient_id,
-                ...(!keepQuantity ? { amount: null, unit: null } : {}) } : item)
+          ? step.ingredients_used.map((item) => {
+              if (item.ingredient_id !== previous.ingredient_id) return item;
+              if (keepQuantity) return { ...item, ingredient_id: replacement.ingredient_id };
+              return { ...item, ingredient_id: replacement.ingredient_id, amount: null, unit: null };
+            })
           : step.ingredients_used.filter((item) => item.ingredient_id !== previous.ingredient_id),
       };
     }),

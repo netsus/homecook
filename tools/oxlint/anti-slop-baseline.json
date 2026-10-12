@@ -720,12 +720,6 @@
       "count": 1
     },
     {
-      "file": "components/mypage/mypage-growth-detail-dialog.tsx",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "94f95b42a1848f653ed1a8da2e0bfbb3e70ae9f51f073d7ce2e108aa8bf6ef36",
-      "count": 1
-    },
-    {
       "file": "components/planner/food-product-picker.tsx",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "44bc57cfc7aaf47feaa462cb8d24fcefdd3ee7408624dc23692804844624e7f6",
@@ -843,12 +837,6 @@
       "file": "lib/recipe-detail.ts",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "9bdebdf92d3240b73501027bd51d739d8a7733313300a480387b098a6235b623",
-      "count": 1
-    },
-    {
-      "file": "lib/recipe-editor-ingredients.ts",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "55baaaade70d2d7c6d7d3608a5e7fde0744b4659735947850d92b86a8c742f3f",
       "count": 1
     },
     {
