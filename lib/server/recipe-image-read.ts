@@ -85,26 +85,30 @@ export function isRecipeImageProjectionAuthorityMissing(error: unknown) {
     && (error.code === "PGRST202" || error.code === "42883");
 }
 
+function isRecipeImageReadProjection(
+  value: unknown,
+): value is RecipeImageReadProjection {
+  return isRecord(value)
+    && hasExactProjectionKeys(value)
+    && typeof value.recipe_id === "string"
+    && UUID_PATTERN.test(value.recipe_id)
+    && nullableString(value.legacy_thumbnail_url)
+    && nullableString(value.image_object_id)
+    && nullableString(value.bucket_id)
+    && nullableString(value.object_path)
+    && nullableString(value.owner_uuid)
+    && nullablePositiveSafeInteger(value.account_generation)
+    && nullableString(value.visibility)
+    && nullableString(value.state)
+    && nullableString(value.reference_type);
+}
+
 function parseProjection(value: unknown): RecipeImageReadProjection {
-  if (
-    !isRecord(value)
-    || !hasExactProjectionKeys(value)
-    || typeof value.recipe_id !== "string"
-    || !UUID_PATTERN.test(value.recipe_id)
-    || !nullableString(value.legacy_thumbnail_url)
-    || !nullableString(value.image_object_id)
-    || !nullableString(value.bucket_id)
-    || !nullableString(value.object_path)
-    || !nullableString(value.owner_uuid)
-    || !nullablePositiveSafeInteger(value.account_generation)
-    || !nullableString(value.visibility)
-    || !nullableString(value.state)
-    || !nullableString(value.reference_type)
-  ) {
+  if (!isRecipeImageReadProjection(value)) {
     throw new Error("managed recipe image read evidence is invalid");
   }
 
-  return value as unknown as RecipeImageReadProjection;
+  return value;
 }
 
 export function normalizeExpectedRecipeImageStorageOrigin(value: string) {

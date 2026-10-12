@@ -109,6 +109,20 @@ describe("recipe book image registry-aware read adapter", () => {
     })).rejects.toThrow("managed recipe book image read evidence is invalid");
   });
 
+  it.each([
+    { name: "an unexpected key", value: { ...projection(), unexpected: true } },
+    { name: "an invalid field type", value: { ...projection(), account_generation: "7" } },
+  ])("rejects projection evidence with $name", async ({ value }) => {
+    const client = {
+      rpc: vi.fn(async () => ({ data: [value], error: null })),
+    };
+
+    await expect(readRecipeBookImageProjections({
+      client,
+      bookIds: [BOOK_ID],
+    })).rejects.toThrow("managed recipe book image read evidence is invalid");
+  });
+
   it("keeps an unmanaged legacy cover URL", async () => {
     const { client } = storageClient();
 
