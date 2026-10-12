@@ -384,18 +384,6 @@
       "count": 1
     },
     {
-      "file": "app/api/v1/recipes/pantry-match/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "ea2da29bcfe772d1062c49f0b4f2bf4cd0108f7e0301cd012f45eaa11e7c3dd5",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/recipes/pantry-match/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "c34ac8ccf9e0d5f107876551928af7121103a84281535895f0467805c2331f44",
-      "count": 1
-    },
-    {
       "file": "app/api/v1/recipes/route.ts",
       "rule": "anti-slop(no-array-filter-map)",
       "snippetSha256": "25ac0d525c3da59d26b59b15f223d632ce205eecd5a2c8f0af58a2765a6423db",

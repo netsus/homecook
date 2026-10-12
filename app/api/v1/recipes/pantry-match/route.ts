@@ -79,6 +79,10 @@ interface PantryMatchDbClient {
   ): ArrayResult<PantryItemRow>;
 }
 
+function asPantryMatchDbClient(value: unknown) {
+  return value as PantryMatchDbClient & UserBootstrapDbClient;
+}
+
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
@@ -179,8 +183,7 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    PantryMatchDbClient & UserBootstrapDbClient;
+  const dbClient = asPantryMatchDbClient(routeClient);
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -275,12 +278,15 @@ export async function GET(request: NextRequest) {
     .map((recipe) => {
       const matchedIngredientIds = matchedByRecipe.get(recipe.id) ?? new Set<string>();
       const totalIngredientIds = totalByRecipe.get(recipe.id) ?? new Set<string>();
-      const missingIngredients = [...totalIngredientIds]
-        .filter((ingredientId) => !pantryIngredientSet.has(ingredientId))
-        .map((ingredientId) => ({
-          id: ingredientId,
-          standard_name: ingredientNameById.get(ingredientId) ?? "",
-        }));
+      const missingIngredients: PantryMatchRecipeItem["missing_ingredients"] = [];
+      for (const ingredientId of totalIngredientIds) {
+        if (!pantryIngredientSet.has(ingredientId)) {
+          missingIngredients.push({
+            id: ingredientId,
+            standard_name: ingredientNameById.get(ingredientId) ?? "",
+          });
+        }
+      }
       const totalIngredients = totalIngredientIds.size;
       const matchedIngredients = Math.min(matchedIngredientIds.size, totalIngredients);
 
