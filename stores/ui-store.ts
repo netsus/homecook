@@ -36,12 +36,19 @@ export const useAuthGateStore = create<AuthGateState>((set) => ({
   isOpen: false,
   action: null,
   open: (payload) => {
-    const common = {
+    const common: Pick<
+      PendingRecipeAction,
+      "recipeId" | "redirectTo" | "createdAt" | "sourceOwnerUuid"
+    > = {
       recipeId: payload.recipeId,
       redirectTo: `/recipe/${payload.recipeId}`,
       createdAt: Date.now(),
-      ...("sourceOwnerUuid" in payload ? { sourceOwnerUuid: payload.sourceOwnerUuid } : {}),
     };
+
+    if ("sourceOwnerUuid" in payload) {
+      common.sourceOwnerUuid = payload.sourceOwnerUuid;
+    }
+
     const action: PendingRecipeAction = (
       payload.type === "recipe-edit-save" || payload.type === "recipe-save-as-new"
     )
