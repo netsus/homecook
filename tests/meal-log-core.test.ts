@@ -142,6 +142,24 @@ describe("meal-log core", () => {
       quantity: { amount: 1, unit: "g" },
       expected_revision: 2,
     });
+    const createPayload = canonicalize?.({
+      consumedLocalDate: "2026-08-10",
+      timezoneNameSnapshot: "Asia/Seoul",
+      consumedAt: null,
+      mealPlanColumnId: "11111111-1111-4111-8111-111111111111",
+      source: { type: "ingredient", id: "22222222-2222-4222-8222-222222222222" },
+      quantity: { amount: 1, unit: "g" },
+      expectedRevision: null,
+    }) as Record<string, unknown>;
+    expect(Object.keys(createPayload)).toEqual([
+      "consumed_local_date",
+      "timezone_name_snapshot",
+      "consumed_at",
+      "meal_plan_column_id",
+      "source",
+      "quantity",
+    ]);
+    expect("expected_revision" in createPayload).toBe(false);
 
     const request = {
       consumed_local_date: "2026-08-10",
@@ -333,7 +351,36 @@ describe("meal-log core", () => {
 });
 
 
-test("preserves frozen optional AI evidence on entries, subtotals and day totals", () => {
+test("preserves optional AI evidence values, omission, and key order", () => {
+  const withoutEvidence = mealLog.projectMealLogData({ entry: entryProjection });
+  expect(withoutEvidence).toEqual({ entry: entryProjection });
+  if (!withoutEvidence || !("entry" in withoutEvidence)) throw new Error("entry projection required");
+  expect(Object.keys(withoutEvidence.entry.nutrition)).toEqual([
+    "calculation_status",
+    "calories_kcal",
+    "carbohydrate_g",
+    "protein_g",
+    "fat_g",
+    "sodium_mg",
+  ]);
+  expect("contains_ai_estimate" in withoutEvidence.entry.nutrition).toBe(false);
+
+  const falseNutrition = { ...compactNutrition, contains_ai_estimate: false };
+  const falseEvidence = mealLog.projectMealLogData({
+    entry: { ...entryProjection, nutrition: falseNutrition },
+  });
+  expect(falseEvidence).toEqual({ entry: { ...entryProjection, nutrition: falseNutrition } });
+  if (!falseEvidence || !("entry" in falseEvidence)) throw new Error("entry projection required");
+  expect(Object.keys(falseEvidence.entry.nutrition)).toEqual([
+    "contains_ai_estimate",
+    "calculation_status",
+    "calories_kcal",
+    "carbohydrate_g",
+    "protein_g",
+    "fat_g",
+    "sodium_mg",
+  ]);
+
   const nutrition = { ...compactNutrition, contains_ai_estimate: true };
   const entry = { ...entryProjection, nutrition };
   expect(mealLog.projectMealLogData({ entry })).toEqual({ entry });
