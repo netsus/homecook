@@ -57,8 +57,10 @@ function stringOrNull(value: unknown) {
 
 function fieldText(row: DataGoKrNutritionStandardRow, keys: Array<keyof DataGoKrNutritionStandardRow>) {
   return keys
-    .map((key) => stringOrNull(row[key]))
-    .filter(Boolean)
+    .flatMap((key) => {
+      const text = stringOrNull(row[key]);
+      return text ? [text] : [];
+    })
     .join(" ");
 }
 
