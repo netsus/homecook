@@ -78,6 +78,14 @@ type ModalMode =
 
 const RECIPE_EDITOR_HISTORY_GUARD_KEY = "__homecookRecipeEditorGuard";
 
+function withRecipeEditorHistoryGuard(state: unknown): Record<string, unknown> {
+  const nextState: Record<string, unknown> = state !== null && typeof state === "object"
+    ? { ...state }
+    : {};
+  nextState[RECIPE_EDITOR_HISTORY_GUARD_KEY] = true;
+  return nextState;
+}
+
 function formatTargetLabel(planDate: string, slotName: string) {
   return formatMealAddTargetLabel(planDate, slotName);
 }
@@ -744,14 +752,7 @@ export function ManualRecipeCreateScreen({
     }
 
     window.history.pushState(
-      {
-        ...(
-          window.history.state && typeof window.history.state === "object"
-            ? window.history.state
-            : {}
-        ),
-        [RECIPE_EDITOR_HISTORY_GUARD_KEY]: true,
-      },
+      withRecipeEditorHistoryGuard(window.history.state),
       "",
       window.location.href,
     );
@@ -782,14 +783,7 @@ export function ManualRecipeCreateScreen({
       }
 
       window.history.pushState(
-        {
-          ...(
-            window.history.state && typeof window.history.state === "object"
-              ? window.history.state
-              : {}
-          ),
-          [RECIPE_EDITOR_HISTORY_GUARD_KEY]: true,
-        },
+        withRecipeEditorHistoryGuard(window.history.state),
         "",
         window.location.href,
       );
@@ -1471,25 +1465,40 @@ export function ManualRecipeCreateScreen({
             ? { image_object_id: activeImage.image_object_id }
             : { thumbnail_url: activeImage.thumbnail_url })
           : {};
+        const body: ManualRecipeCreateBody = {
+          title: title.trim(),
+          base_servings: baseServings,
+          ...imagePayload,
+          ingredients: ingredients.map((ing, idx) => {
+            const ingredient: ManualRecipeIngredientInput = {
+              ingredient_id: ing.ingredient_id,
+              standard_name: ing.standard_name,
+              amount: ing.amount,
+              unit: ing.unit,
+              ingredient_type: ing.ingredient_type,
+              display_text: ing.display_text,
+              scalable: ing.scalable,
+              sort_order: idx + 1,
+            };
+            if (!ing.food_product_id) return ingredient;
+            return {
+              ...ingredient,
+              food_product_id: ing.food_product_id,
+              food_product_nutrition_version_id: ing.food_product_nutrition_version_id,
+            };
+          }),
+          steps: steps.map((step) => ({
+            step_number: step.step_number, instruction: step.instruction,
+            cooking_method_id: step.cooking_method?.id ?? "",
+            ingredients_used: step.ingredients_used, heat_level: step.heat_level,
+            duration_seconds: step.duration_seconds, duration_text: step.duration_text,
+          })),
+        };
+        if (reviewedTagPayload !== undefined) body.tags = reviewedTagPayload;
         pending = {
           ownerId: verifiedOwnerId,
           key: crypto.randomUUID(),
-          body: {
-            title: title.trim(), base_servings: baseServings, ...imagePayload,
-            ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
-            ingredients: ingredients.map((ing, idx) => ({
-              ingredient_id: ing.ingredient_id, standard_name: ing.standard_name,
-              amount: ing.amount, unit: ing.unit, ingredient_type: ing.ingredient_type,
-              display_text: ing.display_text, scalable: ing.scalable, sort_order: idx + 1,
-              ...(ing.food_product_id ? { food_product_id: ing.food_product_id, food_product_nutrition_version_id: ing.food_product_nutrition_version_id } : {}),
-            })),
-            steps: steps.map((step) => ({
-              step_number: step.step_number, instruction: step.instruction,
-              cooking_method_id: step.cooking_method?.id ?? "",
-              ingredients_used: step.ingredients_used, heat_level: step.heat_level,
-              duration_seconds: step.duration_seconds, duration_text: step.duration_text,
-            })),
-          },
+          body,
         };
         pendingCreateRef.current = pending;
         persistDraft(pending);
