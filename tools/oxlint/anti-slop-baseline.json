@@ -720,12 +720,6 @@
       "count": 1
     },
     {
-      "file": "components/mypage/mypage-growth-detail-dialog.tsx",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "94f95b42a1848f653ed1a8da2e0bfbb3e70ae9f51f073d7ce2e108aa8bf6ef36",
-      "count": 1
-    },
-    {
       "file": "components/planner/food-product-picker.tsx",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "44bc57cfc7aaf47feaa462cb8d24fcefdd3ee7408624dc23692804844624e7f6",
