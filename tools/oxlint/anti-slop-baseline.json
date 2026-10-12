@@ -756,24 +756,6 @@
       "count": 1
     },
     {
-      "file": "components/recipe/manual-recipe-create-screen.tsx",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "824b9f549475d6a88f56a4c4986299329e8ba1449c900c249419ea94f70290f0",
-      "count": 1
-    },
-    {
-      "file": "components/recipe/manual-recipe-create-screen.tsx",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "cfca0b38dd6a5ba231689dfd3f9d269ded491809614eab8ac86562f45632b9d0",
-      "count": 1
-    },
-    {
-      "file": "components/recipe/manual-recipe-create-screen.tsx",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "d983b83fa0a3a381de4b943ff006a5ed49b838988f4a8142f70139b736854481",
-      "count": 2
-    },
-    {
       "file": "components/recipe/recipe-food-catalog-picker.tsx",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "748429e8e7be9a41c5906d0fb31c04d358225bcbab12350339ce63a9bc0d97df",
