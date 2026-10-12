@@ -101,6 +101,35 @@ describe("cooked batch reader compatibility", () => {
     });
     expect(projected).not.toBeNull();
     expect(projected?.finished_weight_g).toBeNull();
+    expect(projected).not.toHaveProperty("weight_source");
     expect(Object.keys(projected!)).toHaveLength(15);
+  });
+
+  it.each([
+    [null, null],
+    ["estimated", "estimated"],
+  ] as const)("keeps an explicitly present weight source %s", (weightSource, expected) => {
+    const projected = projectCookedBatch({
+      id,
+      recipe_id: "550e8400-e29b-41d4-a716-446655440822",
+      recipe_title: "계량한 찌개",
+      recipe_thumbnail_url: null,
+      status: "leftover",
+      cooked_at: "2026-01-01T00:00:00.000Z",
+      cooking_servings: 2,
+      finished_weight_g: 800,
+      remaining_weight_g: 600,
+      weight_status: "known",
+      weight_source: weightSource,
+      batch_status: "available",
+      depleted_reason: null,
+      revision: 1,
+      nutrition_calculation_status: "complete",
+      current_unweighed_closure_event_id: null,
+    });
+
+    expect(projected).toHaveProperty("weight_source", expected);
+    expect(Object.keys(projected!).indexOf("weight_source"))
+      .toBe(Object.keys(projected!).indexOf("weight_status") + 1);
   });
 });

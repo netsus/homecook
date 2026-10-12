@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   parseBatchAdjustmentRequest,
@@ -6,11 +6,55 @@ import {
   parseBatchDiscardRequest,
   parseBatchWeightRequest,
   parseCookedBatchListQuery,
+  projectCookedBatchGamification,
   projectCookedBatchMutationData,
 } from "@/lib/server/cooked-batches";
 
+const projectUserGamificationAfterProgressEvent = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/server/user-gamification", () => ({
+  projectUserGamificationAfterProgressEvent,
+}));
+
 const batchId = "550e8400-e29b-41d4-a716-446655440801";
 const eventId = "550e8400-e29b-41d4-a716-446655440802";
+const occurredAt = "2026-08-08T10:00:00.000Z";
+
+const requiredEventCounts = {
+  cooking_completed: 1,
+  shopping_completed: 0,
+  recipe_saved_distinct_ever: 0,
+  custom_book_created: 0,
+  planner_registered_first: 0,
+  planner_registered_repeat: 0,
+};
+
+function createGamificationProjectionDb(eventCounts: Record<string, number>) {
+  const rows: Record<string, Record<string, unknown>> = {
+    user_progress_events: {
+      id: eventId,
+      xp_delta: 15,
+      occurred_at: occurredAt,
+      source_meta_json: { previous_level: 1 },
+    },
+    user_progress_summary: {
+      total_xp: 15,
+      event_counts: eventCounts,
+      last_updated_at: occurredAt,
+    },
+  };
+
+  return {
+    from(table: string) {
+      const query = {
+        select: () => query,
+        eq: () => query,
+        maybeSingle: async () => ({ data: rows[table] ?? null, error: null }),
+      };
+      return query;
+    },
+  };
+}
 
 const batch = {
   id: batchId,
@@ -116,5 +160,28 @@ describe("cooked batch mutation contract", () => {
       operation_id: "private",
       replay_checksum: "private",
     })).toEqual({ action: "discard", batch, event_id: eventId });
+  });
+
+  it.each([
+    ["omits", requiredEventCounts, false],
+    ["keeps", { ...requiredEventCounts, leftover_eaten: 2 }, true],
+  ] as const)("%s the optional leftover event count without changing its value", async (
+    _label,
+    eventCounts,
+    includesLeftoverCount,
+  ) => {
+    projectUserGamificationAfterProgressEvent.mockClear();
+
+    await projectCookedBatchGamification(
+      createGamificationProjectionDb(eventCounts),
+      "550e8400-e29b-41d4-a716-446655440804",
+      "cooking_completed",
+      batchId,
+    );
+
+    const progress = projectUserGamificationAfterProgressEvent.mock.calls[0]?.[1]?.progress;
+    expect(progress?.event_counts).toEqual(eventCounts);
+    expect(Object.hasOwn(progress?.event_counts ?? {}, "leftover_eaten"))
+      .toBe(includesLeftoverCount);
   });
 });
