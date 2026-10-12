@@ -13,6 +13,7 @@ import { resolveAuthorizedRecipeImageUrls } from "@/lib/server/recipe-image-read
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   dedupeProductPlannerEntries,
+  parseProductPlannerEntries,
   toMealProductPlannerEntry,
 } from "@/lib/server/prepared-food-planner-entry";
 import {
@@ -47,7 +48,6 @@ import {
 } from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
-import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 interface QueryError {
   code?: string;
@@ -497,7 +497,10 @@ async function getMeals(request: NextRequest) {
     p_end_date: parsed.planDate,
     p_column_id: parsed.columnId,
   });
-  if (productEntriesResult.error || !Array.isArray(productEntriesResult.data)) {
+  const parsedProductEntries = productEntriesResult.error
+    ? null
+    : parseProductPlannerEntries(productEntriesResult.data);
+  if (!parsedProductEntries) {
     const authorityError = createHybridAuthorityRouteError(productEntriesResult.error);
     if (authorityError) {
       return authorityError;
@@ -505,7 +508,7 @@ async function getMeals(request: NextRequest) {
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
   const productEntries = dedupeProductPlannerEntries(
-    productEntriesResult.data as ProductPlannerEntryData[],
+    parsedProductEntries,
   ).map(toMealProductPlannerEntry);
 
   const recipeIds = [...new Set(mealsResult.data.map((meal) => meal.recipe_id))];

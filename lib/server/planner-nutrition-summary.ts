@@ -6,6 +6,7 @@ import {
   mapRecipeNutritionSnapshot,
   type RecipeNutritionSnapshotRow,
 } from "@/lib/server/recipe-nutrition-snapshot";
+import { parseProductPlannerEntries } from "@/lib/server/prepared-food-planner-entry";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 import {
   PLANNER_NUTRITION_CORE_CODES,
@@ -502,14 +503,16 @@ export async function readPlannerNutritionSummary(
     p_end_date: range.endDate,
     p_column_id: null,
   });
-  if (productResult.error || !Array.isArray(productResult.data)) {
+  const parsedProductEntries = productResult.error
+    ? null
+    : parseProductPlannerEntries(productResult.data);
+  if (!parsedProductEntries) {
     throw new PlannerNutritionReadError();
   }
 
   const productEntries = dedupeByStorageKey(
-    (productResult.data as ProductPlannerEntryData[])
-      .filter((entry) => isRecord(entry) && typeof entry.id === "string" &&
-        typeof entry.plan_date === "string" && typeof entry.column_id === "string" &&
+    parsedProductEntries
+      .filter((entry) =>
         entry.plan_date >= range.startDate && entry.plan_date <= range.endDate)
       .map(projectProductEntry),
   );

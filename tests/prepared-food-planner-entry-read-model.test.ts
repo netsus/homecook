@@ -45,6 +45,22 @@ const entry = {
   },
 };
 
+const malformedEntry = {
+  ...entry,
+  id: "550e8400-e29b-41d4-a716-446655440005",
+  nutrition: {
+    ...entry.nutrition,
+    values: {
+      energy_kcal: {
+        amount: "100",
+        known_amount: null,
+        status: "complete",
+        display_mode: "total",
+      },
+    },
+  },
+};
+
 interface QueryResult<T> {
   data: T;
   error: { message: string } | null;
@@ -186,7 +202,22 @@ describe("prepared food planner entry existing read projections", () => {
       error: null,
     });
     const meals = thenableQuery({ data: [], error: null });
-    const rpc = vi.fn(async () => ({ data: [entry, entry], error: null }));
+    const laterDuplicate = {
+      ...entry,
+      product_name: "후행 중복 제품",
+      nutrition: {
+        ...entry.nutrition,
+        values: {
+          ...entry.nutrition.values,
+          energy_kcal: {
+            ...entry.nutrition.values.energy_kcal,
+            amount: 999,
+            known_amount: 999,
+          },
+        },
+      },
+    };
+    const rpc = vi.fn(async () => ({ data: [entry, laterDuplicate], error: null }));
     const from = vi.fn((table: string) => {
       if (table === "meal_plan_columns") return { select: vi.fn(() => columns) };
       if (table === "meals") return { select: vi.fn(() => meals) };
@@ -213,6 +244,34 @@ describe("prepared food planner entry existing read projections", () => {
       p_start_date: "2026-07-14",
       p_end_date: "2026-07-20",
       p_column_id: null,
+    });
+  });
+
+  it("fails the planner read closed when a product RPC row is malformed", async () => {
+    const columns = thenableQuery({ data: [], error: null });
+    const meals = thenableQuery({ data: [], error: null });
+    const rpc = vi.fn(async () => ({ data: [entry, malformedEntry], error: null }));
+    const from = vi.fn((table: string) => {
+      if (table === "meal_plan_columns") return { select: vi.fn(() => columns) };
+      if (table === "meals") return { select: vi.fn(() => meals) };
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: USER_ID } } })) },
+      from,
+      rpc,
+    });
+
+    const { GET } = await import("@/app/api/v1/planner/route");
+    const response = await GET(new NextRequest(
+      "http://localhost/api/v1/planner?start_date=2026-07-14&end_date=2026-07-20",
+    ));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR", fields: [] },
     });
   });
 
@@ -259,6 +318,37 @@ describe("prepared food planner entry existing read projections", () => {
       p_start_date: "2026-07-16",
       p_end_date: "2026-07-16",
       p_column_id: COLUMN_ID,
+    });
+  });
+
+  it("fails the meal slot read closed when a product RPC row is malformed", async () => {
+    const column = stateQuery({
+      data: { id: COLUMN_ID, user_id: USER_ID, name: "아침" },
+      error: null,
+    });
+    const meals = thenableQuery({ data: [], error: null });
+    const rpc = vi.fn(async () => ({ data: [entry, malformedEntry], error: null }));
+    const from = vi.fn((table: string) => {
+      if (table === "meal_plan_columns") return { select: vi.fn(() => column) };
+      if (table === "meals") return { select: vi.fn(() => meals) };
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: USER_ID } } })) },
+      from,
+      rpc,
+    });
+
+    const { GET } = await import("@/app/api/v1/meals/route");
+    const response = await GET(new NextRequest(
+      `http://localhost/api/v1/meals?plan_date=2026-07-16&column_id=${COLUMN_ID}`,
+    ));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR", fields: [] },
     });
   });
 });
