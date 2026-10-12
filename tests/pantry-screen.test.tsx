@@ -17,9 +17,11 @@ const mockDeletePantryItems = vi.fn();
 const mockAddPantryItems = vi.fn();
 const mockFetchPantryBundles = vi.fn();
 const mockFetchIngredients = vi.fn();
+const mockFetchFoodProducts = vi.fn();
 const mockFetchPantryMatchRecipes = vi.fn();
 const mockFetchPlannerColumns = vi.fn();
 const mockCreateMealSafe = vi.fn();
+const mockShowActionConfirmation = vi.fn();
 let mockSupabaseEnvAvailable = false;
 let mockAuthStateChangeCallback:
   | ((event: string, session: unknown) => void)
@@ -41,6 +43,14 @@ vi.mock("@/lib/api/pantry", () => ({
   fetchPantryBundles: (...args: unknown[]) => mockFetchPantryBundles(...args),
   fetchIngredients: (...args: unknown[]) => mockFetchIngredients(...args),
   isPantryApiError: (error: unknown) => error instanceof Error && "status" in error,
+}));
+
+vi.mock("@/lib/api/food-product", () => ({
+  fetchFoodProducts: (...args: unknown[]) => mockFetchFoodProducts(...args),
+}));
+
+vi.mock("@/stores/ui-store", () => ({
+  showActionConfirmation: (...args: unknown[]) => mockShowActionConfirmation(...args),
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -158,12 +168,19 @@ describe("PantryScreen", () => {
     mockAddPantryItems.mockReset();
     mockFetchPantryBundles.mockReset();
     mockFetchIngredients.mockReset();
+    mockFetchFoodProducts.mockReset();
     mockFetchPantryMatchRecipes.mockReset();
     mockFetchPlannerColumns.mockReset();
     mockCreateMealSafe.mockReset();
+    mockShowActionConfirmation.mockReset();
 
     mockFetchPantryList.mockResolvedValue({ items: MOCK_ITEMS });
     mockFetchIngredients.mockResolvedValue({ items: [] });
+    mockFetchFoodProducts.mockResolvedValue({
+      items: [],
+      has_next: false,
+      next_cursor: null,
+    });
     mockFetchPantryBundles.mockResolvedValue({ bundles: [] });
     mockFetchPantryMatchRecipes.mockResolvedValue({
       success: true,
@@ -438,7 +455,7 @@ describe("PantryScreen", () => {
     await user.click(screen.getByRole("button", { name: "제거하기" }));
 
     expect(
-      screen.getByText("재료를 삭제할까요?"),
+      screen.getByText("선택한 항목을 삭제할까요?"),
     ).toBeTruthy();
   });
 
@@ -459,12 +476,12 @@ describe("PantryScreen", () => {
     await user.click(confirmDeleteButton);
 
     await waitFor(() => {
-      expect(screen.getByText("1개 재료가 삭제됐어요")).toBeTruthy();
+      expect(screen.getByText("1개 항목이 삭제됐어요")).toBeTruthy();
     });
     expect(screen.getByTestId("app-feedback-toast").className).toContain(
       "growth-toast-card-xp",
     );
-    expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
+    expect(mockDeletePantryItems).toHaveBeenCalledWith([], ["p1"]);
   });
 
   it("keeps mobile search and edit controls in one stable toolbar", async () => {
@@ -974,7 +991,7 @@ describe("PantryScreen", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "양파 삭제" }));
 
-    expect(screen.getByText("재료를 삭제할까요?")).toBeTruthy();
+    expect(screen.getByText("선택한 항목을 삭제할까요?")).toBeTruthy();
     expect(screen.getByRole("button", { name: "삭제 (1)" })).toBeTruthy();
   });
 
@@ -1194,7 +1211,9 @@ describe("PantryScreen", () => {
         planned_servings: 2,
       });
     });
-    expect(await screen.findByText(/저녁에 추가됐어요/)).toBeTruthy();
+    expect(mockShowActionConfirmation).toHaveBeenCalledWith(
+      expect.stringMatching(/저녁에 추가됐어요$/),
+    );
   });
 
   it("shows add sheet load error state and retries", async () => {
@@ -1212,7 +1231,7 @@ describe("PantryScreen", () => {
     await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
 
     expect(
-      await screen.findByText("재료 목록을 불러오지 못했어요"),
+      await screen.findByText("재료·제품 목록을 불러오지 못했어요"),
     ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "다시 시도" }));

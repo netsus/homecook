@@ -93,6 +93,9 @@ const DEFAULT_PROPS = {
   initialAuthenticated: true,
 } as const;
 
+const UNKNOWN_CREATE_MESSAGE =
+  "저장 결과가 아직 확인되지 않았어요. 작성 내용은 보관했어요. ‘저장 결과 확인’을 누르면 같은 요청으로 안전하게 확인하고 재시도해요.";
+
 type UploadResult = Awaited<ReturnType<typeof uploadRecipeImage>>;
 
 function managedUploadSuccess(
@@ -129,6 +132,25 @@ async function fillMinimumManualRecipe(
   await user.click(screen.getByRole("button", { name: "준비" }));
   await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
   await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+}
+
+async function getReadyManualImageInput() {
+  const input = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+  await waitFor(() => {
+    expect(input.matches(":disabled")).toBe(false);
+  });
+  return input;
+}
+
+function readStoredManualRecipeDraft() {
+  const key = window.sessionStorage.key(0);
+  if (!key) return null;
+  const value = window.sessionStorage.getItem(key);
+  if (!value) return null;
+  return JSON.parse(value) as {
+    pending?: unknown;
+    uploadedImage?: { image_object_id?: string } | null;
+  };
 }
 
 describe("ManualRecipeCreateScreen", () => {
@@ -411,7 +433,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["img"], "pending.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -640,7 +662,7 @@ describe("ManualRecipeCreateScreen", () => {
     const addButton = screen.getByRole("button", {
       name: "선택한 재료 1개 추가",
     });
-    expect(addButton.className).toContain("bg-[var(--wave1-mint-contrast)]");
+    expect(addButton.className).toContain("bg-[var(--brand)]");
 
     await user.click(onionCheckbox);
 
@@ -664,7 +686,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     const file = new File(["dummy"], "photo.jpg", { type: "image/jpeg" });
 
     await user.upload(fileInput, file);
@@ -703,7 +725,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     const originalFile = new File([new Uint8Array(2 * 1024 * 1024)], "photo.jpg", {
       type: "image/jpeg",
     });
@@ -750,7 +772,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     const firstFile = new File(["first"], "first.jpg", { type: "image/jpeg" });
     const secondFile = new File(["second"], "second.jpg", { type: "image/jpeg" });
 
@@ -802,7 +824,7 @@ describe("ManualRecipeCreateScreen", () => {
     expect(vi.mocked(createManualRecipe).mock.calls[0][0].thumbnail_url).toBeUndefined();
   });
 
-  it("cancels a managed upload when the unsaved form unmounts", async () => {
+  it("keeps a completed managed upload with the recoverable draft when the form unmounts", async () => {
     vi.mocked(uploadRecipeImage).mockResolvedValue(
       managedUploadSuccess({
         image_object_id: "550e8400-e29b-41d4-a716-446655440060",
@@ -813,19 +835,21 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["img"], "discard.png", { type: "image/png" }));
 
     await waitFor(() => {
       expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
     });
+    await waitFor(() => {
+      expect(readStoredManualRecipeDraft()?.uploadedImage?.image_object_id).toBe(
+        "550e8400-e29b-41d4-a716-446655440060",
+      );
+    });
 
     view.unmount();
 
-    expect(cancelRecipeImage).toHaveBeenCalledWith(
-      "550e8400-e29b-41d4-a716-446655440060",
-      { idempotencyKey: expect.any(String) },
-    );
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
   });
 
   it("cancels a managed upload that finishes after the unsaved form unmounts", async () => {
@@ -839,7 +863,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["img"], "slow.png", { type: "image/png" }));
 
     await waitFor(() => {
@@ -863,7 +887,7 @@ describe("ManualRecipeCreateScreen", () => {
     });
   });
 
-  it("cancels a managed upload even when the form unmounts right after upload success resolves", async () => {
+  it("keeps a just-completed managed upload in the recoverable draft on unmount", async () => {
     let resolveUpload!: (value: UploadResult) => void;
     vi.mocked(uploadRecipeImage).mockReturnValue(
       new Promise((resolve) => {
@@ -874,7 +898,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["img"], "instant.png", { type: "image/png" }));
 
     await act(async () => {
@@ -887,12 +911,15 @@ describe("ManualRecipeCreateScreen", () => {
       await Promise.resolve();
     });
 
+    await waitFor(() => {
+      expect(readStoredManualRecipeDraft()?.uploadedImage?.image_object_id).toBe(
+        "550e8400-e29b-41d4-a716-446655440062",
+      );
+    });
+
     view.unmount();
 
-    expect(cancelRecipeImage).toHaveBeenCalledWith(
-      "550e8400-e29b-41d4-a716-446655440062",
-      { idempotencyKey: expect.any(String) },
-    );
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
   });
 
   it("does not double cancel after removing a managed upload and then unmounting", async () => {
@@ -906,7 +933,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["img"], "remove-once.png", { type: "image/png" }));
 
     await waitFor(() => {
@@ -942,7 +969,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["img"], "remove-latched.png", { type: "image/png" }),
     );
     const removeButton = await screen.findByTestId("manual-image-remove-button");
@@ -995,7 +1022,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(
       fileInput,
       new File(["img"], "recoverable-cleanup.png", { type: "image/png" }),
@@ -1052,7 +1079,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["img"], "original.png", { type: "image/png" }));
 
     await waitFor(() => {
@@ -1096,7 +1123,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["img"], "retry-remove.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -1160,7 +1187,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     // Upload an image
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["img"], "pic.png", { type: "image/png" }));
     await waitFor(() => {
       expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
@@ -1216,7 +1243,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, originalFile);
     await waitFor(() => {
       expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
@@ -1296,7 +1323,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["original"], "expired-retry.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -1360,7 +1387,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     // Upload will fail.
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["bad"], "fail.jpg", { type: "image/jpeg" }));
 
     await waitFor(() => {
@@ -1399,7 +1426,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["limited"], "limited.png", { type: "image/png" }),
     );
     await waitFor(() => {
@@ -1438,7 +1465,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
-    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const fileInput = await getReadyManualImageInput();
     await user.upload(fileInput, new File(["img"], "not-found.png", { type: "image/png" }));
     await waitFor(() => {
       expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
@@ -1463,7 +1490,7 @@ describe("ManualRecipeCreateScreen", () => {
     });
   });
 
-  it("surfaces retryable save failures in the shared feedback region and focuses the summary", async () => {
+  it("surfaces an unknown save outcome in the shared feedback region and focuses the summary", async () => {
     vi.mocked(createManualRecipe).mockResolvedValue({
       success: false,
       data: null,
@@ -1488,7 +1515,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "저장" }));
 
     const saveAlert = await screen.findByRole("alert");
-    expect(saveAlert.textContent).toContain("저장에 실패했어요. 다시 시도해 주세요.");
+    expect(saveAlert.textContent).toContain(UNKNOWN_CREATE_MESSAGE);
     expect(
       screen.getByTestId("manual-editor-feedback-region").contains(saveAlert),
     ).toBe(true);
@@ -1513,7 +1540,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["img"], "save-pending.png", { type: "image/png" }),
     );
     await screen.findByTestId("manual-image-replace-button");
@@ -1549,7 +1576,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["image"], "create-owned.png", { type: "image/png" }),
     );
     await screen.findByTestId("manual-image-replace-button");
@@ -1580,7 +1607,7 @@ describe("ManualRecipeCreateScreen", () => {
     expect(cancelRecipeImage).not.toHaveBeenCalled();
   });
 
-  it("cancels a create-owned image after unmount when create definitively rejects the image", async () => {
+  it("keeps a create-owned image in the recoverable draft after an unmounted rejection", async () => {
     let resolveCreate!: (
       value: Awaited<ReturnType<typeof createManualRecipe>>,
     ) => void;
@@ -1595,7 +1622,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["image"], "create-failed.png", { type: "image/png" }),
     );
     await screen.findByTestId("manual-image-replace-button");
@@ -1621,11 +1648,11 @@ describe("ManualRecipeCreateScreen", () => {
       await Promise.resolve();
     });
 
-    expect(cancelRecipeImage).toHaveBeenCalledTimes(1);
-    expect(cancelRecipeImage).toHaveBeenCalledWith(
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+    expect(readStoredManualRecipeDraft()?.uploadedImage?.image_object_id).toBe(
       imageObjectId,
-      expect.objectContaining({ idempotencyKey: expect.any(String) }),
     );
+    expect(readStoredManualRecipeDraft()?.pending).toBeNull();
   });
 
   it("does not cancel a create-owned image after unmount when the create outcome is unknown", async () => {
@@ -1644,7 +1671,7 @@ describe("ManualRecipeCreateScreen", () => {
     const user = userEvent.setup();
     const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
     await user.upload(
-      screen.getByTestId("manual-image-file-input"),
+      await getReadyManualImageInput(),
       new File(["image"], "create-unknown.png", { type: "image/png" }),
     );
     await screen.findByTestId("manual-image-replace-button");
@@ -1691,21 +1718,34 @@ describe("ManualRecipeCreateScreen", () => {
           fields: [],
         },
       });
+      vi.mocked(readManualRecipeCreateResult).mockResolvedValue({
+        success: false,
+        data: null,
+        error: {
+          code: errorCode,
+          message: "등록 결과를 확인하지 못했어요.",
+          fields: [],
+        },
+      });
 
       const user = userEvent.setup();
       render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
       await user.upload(
-        screen.getByTestId("manual-image-file-input"),
+        await getReadyManualImageInput(),
         new File(["image"], "create-unknown-mounted.png", { type: "image/png" }),
       );
       await screen.findByTestId("manual-image-replace-button");
       await fillMinimumManualRecipe(user, "생성 결과 잠금");
       await user.click(screen.getByRole("button", { name: "저장" }));
 
-      await screen.findByText("등록 결과를 확인하지 못했어요.");
-      expect(screen.getByRole("button", { name: "저장" })).toHaveProperty(
+      await screen.findByText(UNKNOWN_CREATE_MESSAGE);
+      expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
+      const recoveryButton = screen.getByRole("button", {
+        name: "저장 결과 확인",
+      });
+      expect(recoveryButton).toHaveProperty(
         "disabled",
-        true,
+        false,
       );
       expect(screen.getByTestId("manual-image-replace-button")).toHaveProperty(
         "disabled",
@@ -1716,7 +1756,10 @@ describe("ManualRecipeCreateScreen", () => {
         true,
       );
 
-      await user.click(screen.getByRole("button", { name: "저장" }));
+      await user.click(recoveryButton);
+      await waitFor(() => {
+        expect(readManualRecipeCreateResult).toHaveBeenCalledOnce();
+      });
       expect(createManualRecipe).toHaveBeenCalledOnce();
       expect(cancelRecipeImage).not.toHaveBeenCalled();
     },
