@@ -54,17 +54,15 @@ describe("recipe visibility security inventory", () => {
       "const dbClient = serviceClient ?? routeClient",
     );
     expect(themes).toContain(
-      "const themeDbClient = supabase as unknown as ThemeDbClient",
-    );
-    expect(themes).toContain(
-      "const privateThemeDbClient = serviceClient as unknown as ThemeDbClient",
+      "const dbClient = asRecipeThemesDbClient(routeClient)",
     );
     expect(themes).toMatch(
-      /privateThemeDbClient[\s\S]*\.from\("meals"\)/,
+      /userId[\s\S]*\? dbClient[\s\S]*\.from\("meals"\)/,
     );
-    expect(themes).toContain(
-      "dbClient: serviceClient as unknown as RecipeCardUserStatusDbClient",
+    expect(themes).toMatch(
+      /readRecipeCardUserStatuses\(\{[\s\S]*dbClient,[\s\S]*userId/,
     );
+    expect(themes).not.toContain("createServiceRoleClient");
     expect(tags).not.toContain("createServiceRoleClient");
   });
 });
