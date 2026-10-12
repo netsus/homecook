@@ -177,6 +177,34 @@ describe("marketing validation v2 route", () => {
     }
   });
 
+  it("returns quiz answers only after validating every keyed value", () => {
+    expect(parseMarketingValidationBody({
+      action: "quiz_completed",
+      honeypot: "",
+      answers: completedAnswers,
+    })).toEqual({
+      ok: true,
+      value: {
+        action: "quiz_completed",
+        honeypot: "",
+        answers: completedAnswers,
+      },
+    });
+    expect(parseMarketingValidationBody({
+      action: "quiz_completed",
+      honeypot: "",
+      answers: { ...completedAnswers, q2: 3, q4: "unknown", q5: "legacy" },
+    })).toEqual({
+      ok: false,
+      code: "VALIDATION_ERROR",
+      fields: [
+        { field: "q2", reason: "invalid_enum" },
+        { field: "q4", reason: "invalid_enum" },
+        { field: "answers", reason: "unexpected" },
+      ],
+    });
+  });
+
   it("never reflects arbitrary unknown key names into validation errors", async () => {
     const handler = createMarketingValidationHandler(dependencies());
     const sensitiveUnknownKeys = [

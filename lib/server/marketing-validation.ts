@@ -196,6 +196,19 @@ function buildQuizValidationError(fields: ApiErrorField[]): ParseQuizAnswersResu
   };
 }
 
+function parseQuizAnswer<K extends keyof MarketingValidationQuizAnswers>(
+  record: Record<string, unknown>,
+  key: K,
+  fields: ApiErrorField[],
+): MarketingValidationQuizAnswers[K] | null {
+  const answer = record[key];
+  if (typeof answer !== "string" || !isAllowedQuizAnswer(key, answer)) {
+    fields.push({ field: key, reason: "invalid_enum" });
+    return null;
+  }
+  return answer;
+}
+
 function validateExactKeys(
   body: Record<string, unknown>,
   allowedKeys: readonly string[],
@@ -213,24 +226,18 @@ function parseQuizAnswers(value: unknown): ParseQuizAnswersResult {
 
   const record = value as Record<string, unknown>;
   const fields: ApiErrorField[] = [];
-  const answers: Record<string, string> = {};
-  for (const key of ["q1", "q2", "q3", "q4"] as const) {
-    if (typeof record[key] !== "string" || !isAllowedQuizAnswer(key, record[key])) {
-      fields.push({ field: key, reason: "invalid_enum" });
-      continue;
-    }
-    answers[key] = record[key];
-  }
+  const q1 = parseQuizAnswer(record, "q1", fields);
+  const q2 = parseQuizAnswer(record, "q2", fields);
+  const q3 = parseQuizAnswer(record, "q3", fields);
+  const q4 = parseQuizAnswer(record, "q4", fields);
   if (Object.keys(record).some((key) => !["q1", "q2", "q3", "q4"].includes(key))) {
     fields.push({ field: "answers", reason: "unexpected" });
   }
 
-  return fields.length > 0
-    ? buildQuizValidationError(fields)
-    : {
-        ok: true as const,
-        answers: answers as unknown as MarketingValidationQuizAnswers,
-      };
+  if (fields.length > 0 || q1 === null || q2 === null || q3 === null || q4 === null) {
+    return buildQuizValidationError(fields);
+  }
+  return { ok: true, answers: { q1, q2, q3, q4 } };
 }
 
 export function parseMarketingValidationBody(
@@ -557,10 +564,12 @@ function toErrorMessage(error: unknown) {
     return "";
   }
   const candidate = error as Record<string, unknown>;
-  return ["code", "message", "details", "hint"]
-    .map((key) => candidate[key])
-    .filter((value): value is string => typeof value === "string")
-    .join(" ");
+  const messages: string[] = [];
+  for (const key of ["code", "message", "details", "hint"]) {
+    const value = candidate[key];
+    if (typeof value === "string") messages.push(value);
+  }
+  return messages.join(" ");
 }
 
 function buildSetCookie(sessionId: string, requestUrl: string, now: Date) {
