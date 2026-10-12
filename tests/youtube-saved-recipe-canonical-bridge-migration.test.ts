@@ -60,4 +60,15 @@ describe("YouTube saved recipe canonical bridge migration", () => {
       /old\.canonical_recipe_id is not null\s+and new\.canonical_recipe_id is distinct from old\.canonical_recipe_id/iu,
     );
   });
+
+  it("retires the public bridge on account deletion without deleting planner history", () => {
+    expect(sql).toContain("retire_youtube_saved_canonical_on_account_delete");
+    expect(sql).toMatch(
+      /current_setting\('homecook\.account_delete_user_id', true\)[\s\S]*old\.owner_user_id::text/iu,
+    );
+    expect(sql).toMatch(/delete from public\.recipe_book_items\s+where recipe_id = old\.canonical_recipe_id/iu);
+    expect(sql).toMatch(/delete from public\.recipe_likes\s+where recipe_id = old\.canonical_recipe_id/iu);
+    expect(sql).toMatch(/update public\.recipes[\s\S]*deleted_at = coalesce\(deleted_at, clock_timestamp\(\)\)/iu);
+    expect(sql).not.toMatch(/delete from public\.meals\s+where recipe_id = old\.canonical_recipe_id/iu);
+  });
 });

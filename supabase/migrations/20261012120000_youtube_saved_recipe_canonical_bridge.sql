@@ -281,6 +281,47 @@ $backfill_writer_marker$;
 alter table public.youtube_saved_recipe_results
   alter column canonical_recipe_id set not null;
 
+-- Account deletion removes the private saved document. Public manual recipes
+-- are otherwise anonymized and preserved, but a bridge recipe cannot render
+-- without that document. Retire only the bridge's public discovery/book
+-- surface while keeping the recipe tombstone and immutable meal snapshots for
+-- other users' existing planner history.
+create or replace function private.retire_youtube_saved_canonical_on_account_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+begin
+  if current_setting('homecook.account_delete_user_id', true)
+    is distinct from old.owner_user_id::text then
+    return old;
+  end if;
+
+  delete from public.recipe_book_items
+  where recipe_id = old.canonical_recipe_id;
+
+  delete from public.recipe_likes
+  where recipe_id = old.canonical_recipe_id;
+
+  update public.recipes
+  set deleted_at = coalesce(deleted_at, clock_timestamp()),
+      save_count = 0,
+      like_count = 0,
+      updated_at = clock_timestamp()
+  where id = old.canonical_recipe_id
+    and source_type = 'youtube';
+
+  return old;
+end;
+$function$;
+
+drop trigger if exists retire_youtube_saved_canonical_on_account_delete
+  on public.youtube_saved_recipe_results;
+create trigger retire_youtube_saved_canonical_on_account_delete
+before delete on public.youtube_saved_recipe_results
+for each row execute function private.retire_youtube_saved_canonical_on_account_delete();
+
 create or replace function private.project_youtube_saved_recipe_result(
   p_result public.youtube_saved_recipe_results
 )
@@ -671,6 +712,8 @@ alter function private.guard_youtube_saved_recipe_source_snapshot() owner to pos
 alter function private.project_youtube_saved_recipe_result(
   public.youtube_saved_recipe_results
 ) owner to postgres;
+alter function private.retire_youtube_saved_canonical_on_account_delete()
+  owner to postgres;
 alter function public.read_youtube_saved_recipe_results(
   uuid, timestamptz, text, integer, timestamptz, uuid
 ) owner to postgres;
@@ -692,6 +735,8 @@ revoke all on function private.guard_youtube_saved_recipe_source_snapshot()
 revoke all on function private.project_youtube_saved_recipe_result(
   public.youtube_saved_recipe_results
 ) from public, anon, authenticated, service_role;
+revoke all on function private.retire_youtube_saved_canonical_on_account_delete()
+  from public, anon, authenticated, service_role;
 revoke all on function public.read_youtube_saved_recipe_results(
   uuid, timestamptz, text, integer, timestamptz, uuid
 ) from public, anon, authenticated;

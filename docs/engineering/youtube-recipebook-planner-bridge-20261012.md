@@ -25,6 +25,7 @@
 - 공개 recipe snapshot은 `owner_user_id=null`로 고정해 다른 사용자가 자기 플래너에 추가해도 원 작성자의 private ownership으로 잘못 묶이지 않는다.
 - 레시피북 상세는 owner 검증과 `my_added` membership 검증 뒤 기존 owner-scoped 저장 RPC를 통해 내용을 읽는다.
 - canonical recipe가 삭제되면 연결 저장 결과도 함께 삭제된다. 공개 recipe 노출은 기존 계정 공개 상태/RLS를 따르며 비활성 소유자를 우회하지 않는다.
+- 계정 삭제로 private 저장 문서가 사라질 때 bridge recipe는 공개 검색·레시피북에서 soft-retire하고 다른 사용자의 saved/custom·like 참조를 정리한다. recipe tombstone과 이미 고정된 owner-neutral meal snapshot은 남겨 다른 사용자의 기존 플래너 기록을 보존한다.
 
 ## 기존 데이터 backfill
 
@@ -66,9 +67,9 @@
 
 ## 로컬 검증 결과
 
-- 직접 관련 Vitest는 10개 파일, 107개가 통과했다. 보안 경계 자체 리뷰에서 발견한 타 사용자 recipebook reader 분기를 수정한 뒤 해당 경로 5개 파일, 108개도 다시 통과했다. 함께 실행한 `recipe-add-to-planner`의 3개 실패는 이 변경의 기준 master `7e466b170`에서도 같은 파일·컴포넌트로 동일하게 재현돼 통합 회귀에서 제외했다.
+- 직접 관련 Vitest는 10개 파일, 107개가 통과했다. 보안 경계 자체 리뷰에서 발견한 타 사용자 recipebook reader 분기와 독립 리뷰에서 발견한 계정 삭제 orphan 경계를 수정한 뒤 해당 경로 5개 파일, 109개도 통과했다. 함께 실행한 `recipe-add-to-planner`의 3개 실패는 이 변경의 기준 master `7e466b170`에서도 같은 파일·컴포넌트로 동일하게 재현돼 통합 회귀에서 제외했다.
 - 수동 레시피, 레시피 상세·영양, 플래너, 쇼핑, 식사 기록, 인증과 YouTube 공개·저장 흐름의 넓은 회귀 묶음은 27개 파일, 461개가 통과했다.
-- 운영 원장 218개와 동등한 schema 복제본에 target bridge migration만 적용한 PostgreSQL 검사는 최종 SQL로 2개 모두 통과했다. 공개 태그 검색, owner 공개 projection, 다른 사용자의 플래너 추가와 owner-neutral snapshot, owner-scoped update, canonical ID 불변성, 기존 4행의 정확한 backfill, 공개 source row에 private draft ID·extraction metadata가 남지 않음을 확인했다. 격리 컨테이너는 검사 후 제거했고 운영 데이터는 읽기 전용 집계 외에 변경하지 않았다.
+- 운영 원장 218개와 동등한 schema 복제본에 target bridge migration만 적용한 PostgreSQL 검사는 최종 SQL로 2개 모두 통과했다. 공개 태그 검색, owner 공개 projection, 다른 사용자의 플래너 추가와 owner-neutral snapshot, owner-scoped update, canonical ID 불변성, 기존 4행의 정확한 backfill, 공개 source row에 private draft ID·extraction metadata가 남지 않음, 계정 삭제 뒤 공개 bridge·레시피북 참조 정리와 타 사용자 planner snapshot 보존을 확인했다. 격리 컨테이너는 검사 후 제거했고 운영 데이터는 읽기 전용 집계 외에 변경하지 않았다.
 - `pnpm typecheck`와 `pnpm build`가 통과했다. build는 93개 정적 페이지를 만들었다. `pnpm lint`는 오류 0개, 기준 master에도 있는 경고 9개로 통과했다.
 - Playwright Chromium에서 `desktop-chrome`, Pixel 7 기반 `mobile-chrome`, iPhone SE 크기의 `mobile-ios-small` 3개 프로젝트가 최종 코드로 모두 통과했다. 독립 포트 3118에서 저장 결과 재진입, 편집·저장, 새로고침, `내가 추가한 레시피` 이동, 반복 클릭 중복 방지와 좁은 화면 overflow를 확인했다. 포트 3100은 다른 세션의 프로세스가 사용 중이어서 종료하지 않았다. 이는 사용자의 기존 대화형 Google Chrome이 아니라 저장소가 관리하는 Chromium 검사다.
 - 배포 도구 자체 회귀는 4개 파일, 155개가 통과했다. 다만 실제 통합 후보의 `deploy:dev:plan`은 master와 운영 웹을 다시 합치며 생긴 보호 대상 server/tooling/config 파일을 현재 빠른 웹 배포 허용 범위 밖으로 판정해 중단했다. 배포 guard를 완화하지 않았으며, 이 통합 delta를 허용하는 별도 readiness 결정 또는 더 작은 배포 source가 필요하다.

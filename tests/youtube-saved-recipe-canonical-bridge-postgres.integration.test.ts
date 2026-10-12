@@ -280,6 +280,30 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
             1,
             'registered'
           );
+        insert into public.recipe_books (
+          id, user_id, name, book_type, sort_order
+        ) values (
+          '7c000000-0000-4000-8000-00000000000d',
+          '${viewerId}',
+          '다른 사용자의 저장 레시피',
+          'saved',
+          1
+        );
+        insert into public.recipe_book_items (
+          id, book_id, recipe_id, added_at
+        ) values (
+          '7c000000-0000-4000-8000-00000000000e',
+          '7c000000-0000-4000-8000-00000000000d',
+          v_recipe.id,
+          '2026-10-12T00:30:00Z'
+        );
+        insert into public.recipe_likes (id, user_id, recipe_id, created_at)
+        values (
+          '7c000000-0000-4000-8000-00000000000f',
+          '${viewerId}',
+          v_recipe.id,
+          '2026-10-12T00:30:00Z'
+        );
         perform public.set_account_generation_internal_writer_marker(
           v_cutover_attempt_id,
           false
@@ -333,6 +357,53 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
         exception when check_violation then
           null;
         end;
+
+        perform public.set_account_generation_internal_writer_marker(
+          v_cutover_attempt_id,
+          true
+        );
+        perform public.delete_user_private_data('${ownerId}'::uuid);
+        perform public.set_account_generation_internal_writer_marker(
+          v_cutover_attempt_id,
+          false
+        );
+
+        select * into strict v_recipe from public.recipes where id = v_recipe.id;
+        if v_recipe.deleted_at is null
+          or v_recipe.created_by is not null
+          or exists (
+            select 1 from public.youtube_saved_recipe_results
+            where id = '${savedId}'
+          )
+          or exists (
+            select 1 from public.recipe_book_items
+            where recipe_id = v_recipe.id
+          )
+          or exists (
+            select 1 from public.recipe_likes
+            where recipe_id = v_recipe.id
+          )
+          or public.read_public_youtube_saved_recipe_detail(v_recipe.id) is not null
+          or exists (
+            select 1
+            from public.find_recipe_ids_by_public_tags('간단요리', null) as found
+            where found.recipe_id = v_recipe.id
+          ) then
+          raise exception 'ACCOUNT_DELETE_BRIDGE_NOT_RETIRED recipe=%', row_to_json(v_recipe);
+        end if;
+        if not exists (
+          select 1
+          from public.meals as meal
+          join public.recipe_content_snapshots as snapshot
+            on snapshot.id = meal.recipe_content_snapshot_id
+          where meal.id = '7c000000-0000-4000-8000-00000000000c'
+            and meal.user_id = '${viewerId}'::uuid
+            and meal.recipe_id = v_recipe.id
+            and snapshot.owner_user_id is null
+            and jsonb_array_length(snapshot.ingredients_json) = 2
+        ) then
+          raise exception 'OTHER_USER_PLANNER_HISTORY_NOT_PRESERVED';
+        end if;
       end;
       $bridge$;
 
