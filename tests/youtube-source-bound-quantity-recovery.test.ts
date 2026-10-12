@@ -229,6 +229,280 @@ describe("server-bound description and author-comment quantity recovery", () => 
     });
   });
 
+  it("recovers rejected estimates from independent exact description owners and preserves reference measures", () => {
+    const ledger = buildSinglePassEvidenceLedger({
+      sourceText: [
+        "[SOURCE: description]",
+        "RECIPE",
+        "2 Tablespoons | 30ml Olive Oil",
+        "1 Tablespoon | 15ml Balsamic Vinegar",
+        "[SOURCE: transcript(en)]",
+        "[00:01.000] The first is Olive Oil, add a few tablespoons, don't worry about measuring it.",
+        "[00:02.000] As well as oil add about a tablespoon of Balsamic Vinegar.",
+      ].join("\n"),
+      sourceAnchored: true,
+    });
+    const owner = (name: string) => ledger.find((entry: { sourceQuantityBindings?: Array<{ sourceName?: string }> }) =>
+      entry.sourceQuantityBindings?.some((binding) => binding.sourceName === name));
+    const caption = (name: string) => ledger.find((entry: { source_method?: string; text?: string }) =>
+      entry.source_method === "caption" && entry.text?.includes(name));
+    const oliveOwner = owner("Olive Oil");
+    const balsamicOwner = owner("Balsamic Vinegar");
+    const oliveCaption = caption("Olive Oil");
+    const balsamicCaption = caption("Balsamic Vinegar");
+    if (!oliveOwner || !balsamicOwner || !oliveCaption || !balsamicCaption) throw new Error("missing estimate evidence");
+
+    const checked = validateSourceAnchoredResult({
+      recipes: [{
+        title: "One Pot Pasta",
+        ingredients: [
+          {
+            name: "올리브 오일", sourceName: "Olive Oil", amount: "a few", unit: "tablespoons",
+            quantityState: "estimated", optional: false,
+            evidence: [{ id: oliveOwner.id, quote: oliveOwner.text }, { id: oliveCaption.id, quote: oliveCaption.text }],
+          },
+          {
+            name: "발사믹 식초", sourceName: "Balsamic Vinegar", amount: "about a", unit: "tablespoon",
+            quantityState: "estimated", optional: false,
+            evidence: [{ id: balsamicOwner.id, quote: balsamicOwner.text }, { id: balsamicCaption.id, quote: balsamicCaption.text }],
+          },
+        ],
+        steps: ["Cook."],
+      }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients).toEqual([
+      expect.objectContaining({ name: "올리브 오일", originalName: "Olive Oil", amount: "2", unit: "Tablespoons",
+        quantityState: "explicit", amountBasis: "source-bound-stated" }),
+      expect.objectContaining({ name: "발사믹 식초", originalName: "Balsamic Vinegar", amount: "1", unit: "Tablespoon",
+        quantityState: "explicit", amountBasis: "source-bound-stated" }),
+    ]);
+    expect(checked.issues).toEqual([]);
+    expect(checked.corrections).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-bound-quantity-recovered", ingredientIndex: 0,
+        owner: expect.objectContaining({ references: [expect.objectContaining({ amount: "30", unit: "ml" })] }) }),
+      expect.objectContaining({ code: "source-bound-quantity-recovered", ingredientIndex: 1,
+        owner: expect.objectContaining({ references: [expect.objectContaining({ amount: "15", unit: "ml" })] }) }),
+    ]));
+  });
+
+  it("infers one-half count only when an independent article-bearing caption confirms the same ingredient", () => {
+    const ledger = buildSinglePassEvidenceLedger({
+      sourceText: [
+        "[SOURCE: description]",
+        "RECIPE",
+        "1/2 Onion",
+        "[SOURCE: transcript(en)]",
+        "[00:01.000] Next I'm slicing half of a yellow onion and adding it to the pan.",
+      ].join("\n"),
+      sourceAnchored: true,
+    });
+    const owner = ledger.find((entry: { sourceQuantityBindings?: Array<{ sourceName?: string }> }) =>
+      entry.sourceQuantityBindings?.some((binding) => binding.sourceName === "Onion"));
+    const caption = ledger.find((entry: { source_method?: string }) => entry.source_method === "caption");
+    if (!owner || !caption) throw new Error("missing inferred count evidence");
+
+    const checked = validateSourceAnchoredResult({
+      recipes: [{
+        title: "Onion count",
+        ingredients: [{
+          name: "양파", sourceName: "Onion", amount: "1/2", unit: null,
+          quantityState: "explicit", optional: false,
+          evidence: [{ id: owner.id, quote: owner.text }, { id: caption.id, quote: caption.text }],
+        }],
+        steps: ["Slice."],
+      }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      name: "양파",
+      originalName: "Onion",
+      amount: "1/2",
+      unit: "개",
+      quantityState: "explicit",
+      amountBasis: "source-bound-stated",
+      evidenceRefs: [expect.objectContaining({ source_method: "description" }),
+        expect.objectContaining({ source_method: "caption" })],
+    });
+    expect(checked.issues).toEqual([]);
+    expect(checked.corrections).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "source-bound-quantity-recovered",
+        owner: expect.objectContaining({ unitInference: expect.objectContaining({ version: "count-half-article-caption-v1" }) }),
+      }),
+    ]));
+  });
+
+  it.each([
+    ["no independent caption", "1/2 Onion", null],
+    ["unitless mass", "1/2 Flour", "[00:01.000] Use half of a cup of flour."],
+    ["different ingredient", "1/2 Onion", "[00:01.000] Slice half of a yellow lemon."],
+    ["compound green onion", "1/2 Onion", "[00:01.000] Slice half of a green onion."],
+    ["conditional caption", "1/2 Onion", "[00:01.000] If you have half of a yellow onion, add it."],
+    ["alternative row", "1/2 Onion or Leek", "[00:01.000] Slice half of a yellow onion."],
+    ["unitless weight", "250 Flour", "[00:01.000] Use 250 grams of flour."],
+  ])("does not infer a count for %s", (_label, description, transcript) => {
+    const ledger = buildSinglePassEvidenceLedger({
+      sourceText: ["[SOURCE: description]", "RECIPE", description,
+        ...(transcript ? ["[SOURCE: transcript(en)]", transcript] : [])].join("\n"),
+      sourceAnchored: true,
+    });
+    expect(ledger.some((entry: { sourceQuantityBindings?: Array<{ unitInference?: unknown }> }) =>
+      entry.sourceQuantityBindings?.some((binding) => binding.unitInference))).toBe(false);
+  });
+
+  it("does not let two inferred-count rows consume one caption confirmation", () => {
+    const ledger = buildSinglePassEvidenceLedger({
+      sourceText: [
+        "[SOURCE: description]",
+        "RECIPE",
+        "1/2 Onion",
+        "1/2 Yellow Onion",
+        "[SOURCE: transcript(en)]",
+        "[00:01.000] Slice half of a yellow onion.",
+      ].join("\n"),
+      sourceAnchored: true,
+    });
+    const caption = ledger.find((entry: { source_method?: string }) => entry.source_method === "caption");
+    const owner = (name: string) => ledger.find((entry: { sourceQuantityBindings?: Array<{ sourceName?: string }> }) =>
+      entry.sourceQuantityBindings?.some((binding) => binding.sourceName === name));
+    const onionOwner = owner("Onion");
+    const yellowOnionOwner = owner("Yellow Onion");
+    if (!caption || !onionOwner || !yellowOnionOwner) throw new Error("missing shared count evidence");
+
+    const ingredient = (name: string, sourceOwner: { id: string; text: string }) => ({
+      name,
+      sourceName: name,
+      amount: "1/2",
+      unit: null,
+      quantityState: "explicit",
+      optional: false,
+      evidence: [{ id: sourceOwner.id, quote: sourceOwner.text }, { id: caption.id, quote: caption.text }],
+    });
+    const checked = validateSourceAnchoredResult({
+      recipes: [{
+        title: "Ambiguous onion count",
+        ingredients: [ingredient("Onion", onionOwner), ingredient("Yellow Onion", yellowOnionOwner)],
+        steps: ["Slice."],
+      }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients).toEqual([
+      expect.objectContaining({ amount: null, unit: null, quantityState: "unknown" }),
+      expect.objectContaining({ amount: null, unit: null, quantityState: "unknown" }),
+    ]);
+    expect(checked.corrections.filter((correction: { reason?: string }) =>
+      correction.reason === "owner-claimed-by-multiple-rows")).toHaveLength(2);
+  });
+
+  it("keeps an accepted source-qualified estimate instead of replacing it with an exact source-bound value", () => {
+    const sourceText = "[SOURCE: description]\nRECIPE\nabout 2 Tablespoons Olive Oil";
+    const ledger = buildSinglePassEvidenceLedger({ sourceText, sourceAnchored: true });
+    const owner = ledger.find((entry: { text?: string }) => entry.text === "about 2 Tablespoons Olive Oil");
+    if (!owner) throw new Error("missing qualified estimate owner");
+    const checked = validateSourceAnchoredResult({
+      recipes: [{ title: "Qualified estimate", ingredients: [{
+        name: "Olive Oil", sourceName: "Olive Oil", amount: "2", unit: "Tablespoons",
+        quantityState: "estimated", optional: false, evidence: [{ id: owner.id, quote: owner.text }],
+      }], steps: ["Cook."], }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      amount: "2", unit: "Tablespoons", quantityState: "estimated", amountBasis: "source-approximate",
+    });
+    expect(checked.corrections).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-bound-quantity-recovered" }),
+    ]));
+  });
+
+  it("keeps a rejected estimate unrecovered when exact source owners conflict", () => {
+    const ledger = buildSinglePassEvidenceLedger({
+      sourceText: [
+        "[SOURCE: description]",
+        "RECIPE",
+        "2 Tablespoons Olive Oil",
+        "1 Cup Water",
+        "[SOURCE: author_comment]",
+        "Ingredients:",
+        "3 Tablespoons Olive Oil",
+        "1 Cup Water",
+        "[SOURCE: transcript(en)]",
+        "[00:01.000] Add a few tablespoons of Olive Oil.",
+      ].join("\n"),
+      sourceAnchored: true,
+    });
+    const owners = ledger.filter((entry: { sourceQuantityBindings?: Array<{ sourceName?: string }> }) =>
+      entry.sourceQuantityBindings?.some((binding) => binding.sourceName === "Olive Oil"));
+    if (owners.length !== 2) throw new Error("missing conflicting estimate evidence");
+
+    const checked = validateSourceAnchoredResult({
+      recipes: [{
+        title: "Conflicting oil",
+        ingredients: [{
+          name: "올리브 오일",
+          sourceName: "Olive Oil",
+          amount: "a few",
+          unit: "tablespoons",
+          quantityState: "estimated",
+          optional: false,
+          evidence: owners.map((entry: { id: string; text: string }) => ({ id: entry.id, quote: entry.text })),
+        }],
+        steps: ["Cook."],
+      }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      amount: null,
+      unit: null,
+      quantityState: "conflicting",
+    });
+    expect(checked.corrections).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-bound-quantity-recovered" }),
+    ]));
+  });
+
+  it("keeps a rejected estimate unrecovered when a caption states a conflicting exact amount", () => {
+    const ledger = buildSinglePassEvidenceLedger({
+      sourceText: [
+        "[SOURCE: description]",
+        "RECIPE",
+        "2 Tablespoons Olive Oil",
+        "1 Cup Water",
+        "[SOURCE: transcript(en)]",
+        "[00:01.000] Add 3 tablespoons of Olive Oil.",
+      ].join("\n"),
+      sourceAnchored: true,
+    });
+    const owner = ledger.find((entry: { sourceQuantityBindings?: Array<{ sourceName?: string }> }) =>
+      entry.sourceQuantityBindings?.some((binding) => binding.sourceName === "Olive Oil"));
+    const caption = ledger.find((entry: { source_method?: string }) => entry.source_method === "caption");
+    if (!owner || !caption) throw new Error("missing contradictory caption evidence");
+
+    const checked = validateSourceAnchoredResult({
+      recipes: [{
+        title: "Contradictory oil caption",
+        ingredients: [{
+          name: "올리브 오일",
+          sourceName: "Olive Oil",
+          amount: "a few",
+          unit: "tablespoons",
+          quantityState: "estimated",
+          optional: false,
+          evidence: [{ id: owner.id, quote: owner.text }, { id: caption.id, quote: caption.text }],
+        }],
+        steps: ["Cook."],
+      }],
+    }, ledger);
+
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({
+      amount: null,
+      unit: null,
+    });
+    expect(checked.corrections).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-bound-quantity-recovered" }),
+    ]));
+  });
+
   it("requires the baseline verifier to bind the model row to the server owner", () => {
     const testCase = {
       ...fixture.positive_cases[0],
@@ -522,9 +796,9 @@ describe("server-bound description and author-comment quantity recovery", () => 
     expect(prompt).not.toContain("source_block_index");
   });
 
-  it.each(["explicit", "estimated", "to_taste", "conflicting"])("does not overwrite an existing %s state", (quantityState) => {
+  it.each(["explicit", "to_taste", "conflicting"])("does not overwrite an existing %s state", (quantityState) => {
     const testCase = fixture.positive_cases[1];
-    const submitted = ["explicit", "estimated"].includes(quantityState)
+    const submitted = quantityState === "explicit"
       ? { quantityState, amount: "450", unit: "g" }
       : { quantityState, amount: null, unit: null };
     const { checked } = verify(testCase, submitted);

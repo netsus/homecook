@@ -42,6 +42,8 @@ const adminMigrations = new Set([
   "20260922021000_recipe_product_nutrition.sql",
   "20261009090000_ingredient_canonical_search.sql",
   "20261009200000_youtube_ingredient_resolution.sql",
+  "20261010120000_ingredient_exclusion_recovery_selection.sql",
+  "20261011140000_retire_unused_ingredients.sql",
 ]);
 const pieceUnitMigration = "20261009130000_ingredient_piece_unit_evidence.sql";
 // The long-lived 212-migration database renamed this exact predecessor while
