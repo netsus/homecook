@@ -78,7 +78,12 @@ function sortBackfillRecipes(recipes: RecipeTagBackfillRecipe[]) {
 }
 
 function normalizeTagLabels(labels: string[]) {
-  return labels.map(normalizeRecipeTagKey).filter(Boolean);
+  const normalized: string[] = [];
+  for (const label of labels) {
+    const key = normalizeRecipeTagKey(label);
+    if (key) normalized.push(key);
+  }
+  return normalized;
 }
 
 function areTagLabelsEqual(left: string[], right: string[]) {
@@ -162,18 +167,18 @@ export function buildRecipeTagUsageReconcileReport(
     );
   }
 
-  return input.tags
-    .map((tag) => {
-      const afterCount = approvedCountByTagId.get(tag.id) ?? 0;
-
-      return {
-        tag_id: tag.id,
-        normalized_key: tag.normalized_key,
-        label: tag.label,
-        before_count: tag.usage_count,
-        after_count: afterCount,
-        would_update: tag.usage_count !== afterCount,
-      };
-    })
-    .filter((item) => item.would_update);
+  const report: RecipeTagUsageReconcileItem[] = [];
+  for (const tag of input.tags) {
+    const afterCount = approvedCountByTagId.get(tag.id) ?? 0;
+    if (tag.usage_count === afterCount) continue;
+    report.push({
+      tag_id: tag.id,
+      normalized_key: tag.normalized_key,
+      label: tag.label,
+      before_count: tag.usage_count,
+      after_count: afterCount,
+      would_update: true,
+    });
+  }
+  return report;
 }
