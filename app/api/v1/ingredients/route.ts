@@ -31,10 +31,80 @@ interface IngredientRow {
 interface IngredientSynonymRow {
   ingredient_id: string;
   synonym: string;
-  ingredients:
-    | IngredientRow
-    | IngredientRow[]
-    | null;
+  ingredients: IngredientRow | null;
+}
+
+interface RankedIngredientItem {
+  item: IngredientItem;
+  normalizedName: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseIngredientRow(value: unknown): IngredientRow | null {
+  if (
+    !isRecord(value)
+    || typeof value.id !== "string"
+    || typeof value.standard_name !== "string"
+    || typeof value.category !== "string"
+    || (value.category_code !== undefined
+      && value.category_code !== null
+      && typeof value.category_code !== "string")
+  ) {
+    return null;
+  }
+
+  const row: IngredientRow = {
+    id: value.id,
+    standard_name: value.standard_name,
+    category: value.category,
+  };
+  if (value.category_code !== undefined) {
+    row.category_code = value.category_code;
+  }
+  return row;
+}
+
+function parseIngredientRows(value: unknown): IngredientRow[] | null {
+  if (!Array.isArray(value)) return null;
+  const rows: IngredientRow[] = [];
+  for (const valueRow of value) {
+    const row = parseIngredientRow(valueRow);
+    if (!row) return null;
+    rows.push(row);
+  }
+  return rows;
+}
+
+function parseSynonymIngredient(value: unknown): IngredientRow | null | undefined {
+  if (value === undefined) return undefined;
+  const selected = Array.isArray(value) ? value[0] : value;
+  if (selected === null || selected === undefined) return null;
+  return parseIngredientRow(selected) ?? undefined;
+}
+
+function parseIngredientSynonymRows(value: unknown): IngredientSynonymRow[] | null {
+  if (!Array.isArray(value)) return null;
+  const rows: IngredientSynonymRow[] = [];
+  for (const valueRow of value) {
+    if (
+      !isRecord(valueRow)
+      || typeof valueRow.ingredient_id !== "string"
+      || typeof valueRow.synonym !== "string"
+    ) {
+      return null;
+    }
+    const ingredient = parseSynonymIngredient(valueRow.ingredients);
+    if (ingredient === undefined) return null;
+    rows.push({
+      ingredient_id: valueRow.ingredient_id,
+      synonym: valueRow.synonym,
+      ingredients: ingredient,
+    });
+  }
+  return rows;
 }
 
 function normalizeIngredientRow(row: IngredientRow | null | undefined): IngredientItem | null {
@@ -58,24 +128,68 @@ function normalizeIngredientRow(row: IngredientRow | null | undefined): Ingredie
 }
 
 function normalizeSynonymIngredient(row: IngredientSynonymRow, aliases: IngredientAliases) {
-  const ingredient = Array.isArray(row.ingredients) ? row.ingredients[0] : row.ingredients;
-
-  return normalizeIngredientRow(ingredient ? canonicalizeIngredient(ingredient, aliases) : null);
+  return normalizeIngredientRow(
+    row.ingredients ? canonicalizeIngredient(row.ingredients, aliases) : null,
+  );
 }
 
-function mergeIngredientItems(
-  directItems: IngredientItem[],
-  synonymItems: IngredientItem[],
-) {
-  const merged = new Map<string, IngredientItem>();
+function collectRankedIngredientItems({
+  ingredientRows,
+  synonymRows,
+  aliases,
+  searchName,
+}: {
+  ingredientRows: IngredientRow[];
+  synonymRows: IngredientSynonymRow[];
+  aliases: IngredientAliases;
+  searchName: string;
+}) {
+  const candidates = new Map<string, RankedIngredientItem>();
+  const exactSynonymIds = new Set<string>();
 
-  for (const item of [...directItems, ...synonymItems]) {
-    if (!merged.has(item.id)) {
-      merged.set(item.id, item);
+  for (const row of ingredientRows) {
+    const rowSearchName = normalizeIngredientSearchName(row.standard_name);
+    if (!rowSearchName.includes(searchName)) continue;
+    const representative = aliases.get(row.id);
+    if (representative && rowSearchName === searchName) {
+      exactSynonymIds.add(representative.id);
     }
+    const canonical = canonicalizeIngredient(row, aliases);
+    if (candidates.has(canonical.id)) continue;
+    const item = normalizeIngredientRow(canonical);
+    if (!item) continue;
+    candidates.set(item.id, {
+      item,
+      normalizedName: normalizeIngredientSearchName(item.standard_name),
+    });
   }
 
-  return Array.from(merged.values());
+  for (const row of synonymRows) {
+    const synonymSearchName = normalizeIngredientSearchName(row.synonym);
+    if (!synonymSearchName.includes(searchName)) continue;
+    const canonicalId = aliases.get(row.ingredient_id)?.id ?? row.ingredient_id;
+    if (synonymSearchName === searchName) {
+      exactSynonymIds.add(canonicalId);
+    }
+    const item = normalizeSynonymIngredient(row, aliases);
+    if (!item || candidates.has(item.id)) continue;
+    candidates.set(item.id, {
+      item,
+      normalizedName: normalizeIngredientSearchName(item.standard_name),
+    });
+  }
+
+  const rank = (candidate: RankedIngredientItem) => {
+    if (!searchName || candidate.normalizedName === searchName) return 0;
+    if (exactSynonymIds.has(candidate.item.id)) return 1;
+    if (candidate.normalizedName.startsWith(searchName)) return 2;
+    return 3;
+  };
+  return Array.from(candidates.values())
+    .sort((left, right) => rank(left) - rank(right) ||
+      left.item.standard_name.localeCompare(right.item.standard_name, "ko") ||
+      left.item.id.localeCompare(right.item.id))
+    .map((candidate) => candidate.item);
 }
 
 function createEmptyIngredientList(): IngredientListData {
@@ -162,14 +276,18 @@ export async function GET(request: NextRequest) {
         query.q,
         query.category_code || query.category_group_code ? undefined : query.category,
       );
+      const items: IngredientItem[] = [];
+      for (const mockItem of mockData.items) {
+        const item = normalizeIngredientRow(mockItem);
+        if (item && ingredientMatchesV2Filter(item, {
+          categoryCode: query.category_code,
+          categoryGroupCode: query.category_group_code,
+        })) {
+          items.push(item);
+        }
+      }
       return ok({
-        items: mockData.items
-          .map((item) => normalizeIngredientRow(item))
-          .filter((item): item is IngredientItem => item !== null)
-          .filter((item) => ingredientMatchesV2Filter(item, {
-            categoryCode: query.category_code,
-            categoryGroupCode: query.category_group_code,
-          })),
+        items,
       });
     }
 
@@ -236,50 +354,40 @@ export async function GET(request: NextRequest) {
         includeTaxonomyColumn = false;
         [ingredientResult, synonymResult] = await readPage(false, offset);
       }
-      if (ingredientResult.error || synonymResult.error ||
-        !ingredientResult.data || !synonymResult.data) {
+      const pageIngredientRows = ingredientResult.error
+        ? null
+        : parseIngredientRows(ingredientResult.data);
+      const pageSynonymRows = synonymResult.error
+        ? null
+        : parseIngredientSynonymRows(synonymResult.data);
+      if (!pageIngredientRows || !pageSynonymRows) {
         return fail("INTERNAL_ERROR", "재료 검색을 불러오지 못했어요. 다시 시도해 주세요.", 500);
       }
-      ingredientRows.push(...ingredientResult.data as unknown as IngredientRow[]);
-      synonymRows.push(...synonymResult.data as unknown as IngredientSynonymRow[]);
-      ingredientsFinished = ingredientResult.data.length < pageSize;
-      synonymsFinished = synonymResult.data.length < pageSize;
+      ingredientRows.push(...pageIngredientRows);
+      synonymRows.push(...pageSynonymRows);
+      ingredientsFinished = pageIngredientRows.length < pageSize;
+      synonymsFinished = pageSynonymRows.length < pageSize;
       if (ingredientsFinished && synonymsFinished) break;
     }
 
     const searchName = normalizeIngredientSearchName(query.q ?? "");
-    const items = mergeIngredientItems(
-      ingredientRows
-        .filter((row) => normalizeIngredientSearchName(row.standard_name).includes(searchName))
-        .map((row) => normalizeIngredientRow(canonicalizeIngredient(row, aliases)))
-        .filter((row): row is IngredientItem => row !== null),
-      synonymRows
-        .filter((row) => normalizeIngredientSearchName(row.synonym).includes(searchName))
-        .map((row) => normalizeSynonymIngredient(row, aliases))
-        .filter((row): row is IngredientItem => row !== null),
-    ).filter((item) => !shouldApplyLegacyCategory || item.category === query.category)
-      .filter((item) => ingredientMatchesV2Filter(item, {
+    const items: IngredientItem[] = [];
+    for (const item of collectRankedIngredientItems({
+      ingredientRows,
+      synonymRows,
+      aliases,
+      searchName,
+    })) {
+      if (
+        (!shouldApplyLegacyCategory || item.category === query.category)
+        && ingredientMatchesV2Filter(item, {
         categoryCode: query.category_code,
         categoryGroupCode: query.category_group_code,
-      }));
-
-    const exactSynonymIds = new Set(synonymRows
-      .filter((row) => normalizeIngredientSearchName(row.synonym) === searchName)
-      .map((row) => aliases.get(row.ingredient_id)?.id ?? row.ingredient_id));
-    for (const row of ingredientRows) {
-      if (aliases.has(row.id) && normalizeIngredientSearchName(row.standard_name) === searchName) {
-        exactSynonymIds.add(aliases.get(row.id)!.id);
+        })
+      ) {
+        items.push(item);
       }
     }
-    const rank = (item: IngredientItem) => {
-      if (!searchName) return 0;
-      if (normalizeIngredientSearchName(item.standard_name) === searchName) return 0;
-      if (exactSynonymIds.has(item.id)) return 1;
-      if (normalizeIngredientSearchName(item.standard_name).startsWith(searchName)) return 2;
-      return 3;
-    };
-    items.sort((left, right) => rank(left) - rank(right) ||
-      left.standard_name.localeCompare(right.standard_name, "ko") || left.id.localeCompare(right.id));
     return ok({ items });
   } catch {
     return fail("INTERNAL_ERROR", "재료 검색을 불러오지 못했어요. 다시 시도해 주세요.", 500);
