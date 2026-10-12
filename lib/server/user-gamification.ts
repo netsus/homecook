@@ -845,17 +845,18 @@ export async function projectUserGamificationAfterProgressEvent(
       input.awardInput.eventType,
       input.progress,
     );
+    const xpPayload: Record<string, unknown> = {
+      event_type: input.awardInput.eventType,
+      label: SOURCE_EVENT_LABELS[input.awardInput.eventType],
+      xp_delta: input.xpDelta,
+    };
+    if (archiveOnlyFirstXpToast) xpPayload.xp_kind = "first";
     const notificationResult = await insertProgressNotification(dbClient, {
       userId: input.userId,
       notificationKey: `xp-toast:${input.progressEventId}`,
       notificationType: "xp_awarded",
       sourceEventId: input.progressEventId,
-      payload: {
-        event_type: input.awardInput.eventType,
-        label: SOURCE_EVENT_LABELS[input.awardInput.eventType],
-        xp_delta: input.xpDelta,
-        ...(archiveOnlyFirstXpToast ? { xp_kind: "first" } : {}),
-      },
+      payload: xpPayload,
       groupKey,
       deliveryChannel: archiveOnlyFirstXpToast ? "archive_only" : "toast",
       toastEligible: !archiveOnlyFirstXpToast,
@@ -1188,16 +1189,14 @@ export function buildUserGamificationData({
     deriveAchievementCountsFromActivityRows(activityRows),
   );
   const badgeRowsByKey = new Map(badgeRows.map((row) => [row.badge_key, row]));
-  const earned = USER_BADGE_DEFINITIONS
-    .map((definition) => {
-      const row = badgeRowsByKey.get(definition.badge_key);
-      return row ? toEarnedBadgeData(definition, row) : null;
-    })
-    .filter((badge): badge is NonNullable<typeof badge> => Boolean(badge))
-    .sort(compareEarnedBadges);
-  const locked = USER_BADGE_DEFINITIONS
-    .filter((definition) => !badgeRowsByKey.has(definition.badge_key))
-    .map((definition) => toLockedBadgeData(definition, progress));
+  const earned: ReturnType<typeof toEarnedBadgeData>[] = [];
+  const locked: ReturnType<typeof toLockedBadgeData>[] = [];
+  for (const definition of USER_BADGE_DEFINITIONS) {
+    const row = badgeRowsByKey.get(definition.badge_key);
+    if (row) earned.push(toEarnedBadgeData(definition, row));
+    else locked.push(toLockedBadgeData(definition, progress));
+  }
+  earned.sort(compareEarnedBadges);
   const questRowsByKey = new Map(questRows.map((row) => [row.quest_key, row]));
   const questData = USER_QUEST_DEFINITIONS.map((definition) =>
     toQuestData(definition, questRowsByKey.get(definition.quest_key), progress, mergedAchievementCounts),
@@ -1484,22 +1483,23 @@ async function reconcileUserGamification(
     }
 
     if (notificationMode === "live" && achievementResult.created) {
+      const payload: Record<string, unknown> = {
+        achievement_key: definition.achievement_key,
+        category_key: definition.category_key,
+        track_key: definition.track_key,
+        title: definition.title,
+        description: definition.description,
+        badge_key: definition.badge_key,
+      };
+      if (typeof input.sourceXpDelta === "number" && input.sourceXpDelta > 0) {
+        payload.xp_delta = input.sourceXpDelta;
+      }
       const notificationResult = await insertProgressNotification(dbClient, {
         userId: input.userId,
         notificationKey: `achievement:${definition.achievement_key}:${input.userId}`,
         notificationType: "achievement_unlocked",
         sourceEventId: input.sourceEventId ?? null,
-        payload: {
-          achievement_key: definition.achievement_key,
-          category_key: definition.category_key,
-          track_key: definition.track_key,
-          title: definition.title,
-          description: definition.description,
-          badge_key: definition.badge_key,
-          ...(input.sourceXpDelta && input.sourceXpDelta > 0
-            ? { xp_delta: input.sourceXpDelta }
-            : {}),
-        },
+        payload,
         groupKey: input.sourceEventId
           ? `progress-event:${input.sourceEventId}`
           : input.sourceActivityId

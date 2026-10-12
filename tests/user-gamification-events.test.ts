@@ -200,6 +200,8 @@ describe("user gamification event projection", () => {
 
     expect(result.error).toBeNull();
     expect(notificationRows.some((row) => row.notification_type === "level_up")).toBe(false);
+    expect(notificationRows.find((row) => row.notification_type === "xp_awarded")?.payload_json)
+      .not.toHaveProperty("xp_kind");
   });
 
   it("projects the canonical first-cook achievement title into a new notification", async () => {
@@ -442,6 +444,7 @@ describe("user gamification event projection", () => {
           event_type: "shopping_completed",
           label: "장보기 완료",
           xp_delta: USER_PROGRESS_XP_AWARDS.shopping_completed,
+          xp_kind: "first",
         }),
       }),
     );

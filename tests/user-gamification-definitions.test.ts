@@ -166,6 +166,36 @@ describe("user gamification definitions", () => {
     ]);
   });
 
+  it("keeps badge definition order and the last duplicate award state on timestamp ties", () => {
+    const earnedAt = "2026-06-10T12:00:00.000Z";
+    const data = buildUserGamificationData({
+      progress: buildProgress(),
+      badgeRows: [
+        { badge_key: "first_cook_done", earned_at: earnedAt, seen_at: null },
+        { badge_key: "first_recipe_saved", earned_at: earnedAt, seen_at: null },
+        {
+          badge_key: "first_cook_done",
+          earned_at: earnedAt,
+          seen_at: "2026-06-10T12:01:00.000Z",
+        },
+      ],
+      questRows: [],
+      achievementRows: [],
+      activityRows: [],
+      notificationRows: [],
+    });
+
+    expect(data.badges.earned.map(({ badge_key, is_new }) => ({ badge_key, is_new }))).toEqual([
+      { badge_key: "first_recipe_saved", is_new: true },
+      { badge_key: "first_cook_done", is_new: false },
+    ]);
+    expect(data.badges.locked.slice(0, 3).map((badge) => badge.badge_key)).toEqual([
+      "first_shopping_done",
+      "first_custom_book_created",
+      "recipe_collector",
+    ]);
+  });
+
   it("maps earned badges, active quests, completed quests, and unseen notifications", () => {
     const data = buildUserGamificationData({
       progress: buildProgress({

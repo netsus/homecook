@@ -157,6 +157,7 @@ describe("user achievement awards", () => {
       group_key: "progress-event:progress-event-1",
       payload_json: expect.objectContaining({
         achievement_key: "tutorial_recipe_saved",
+        xp_delta: 15,
       }),
     }));
     expect(progressEventsTable.insert).not.toHaveBeenCalled();
@@ -574,8 +575,12 @@ describe("user achievement awards", () => {
       select: vi.fn(() => createArrayQuery({ data: [], error: null })),
       upsert: vi.fn((values) => createUpsertQuery({ data: { ...values, seen_at: null }, error: null })),
     };
+    const notificationRows: Record<string, unknown>[] = [];
     const notificationsTable = {
-      insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "notice-1" }, error: null })),
+      insert: vi.fn((row: Record<string, unknown>) => {
+        notificationRows.push(row);
+        return createMaybeSingleQuery({ data: { id: "notice-1" }, error: null });
+      }),
     };
     const dbClient = {
       from: vi.fn((tableName: string) => {
@@ -615,6 +620,10 @@ describe("user achievement awards", () => {
         title: "팬트리 재료 10",
       }),
     }));
+    const pantryNotification = notificationRows
+      .find((row) => row.notification_key === "achievement:pantry_distinct_10:user-1");
+    expect(pantryNotification).toBeDefined();
+    expect(pantryNotification?.payload_json).not.toHaveProperty("xp_delta");
   });
 
   it("creates a shopping-list-created achievement notification without a duplicate tutorial quest notification", async () => {

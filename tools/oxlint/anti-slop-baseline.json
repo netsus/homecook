@@ -1026,30 +1026,6 @@
       "count": 1
     },
     {
-      "file": "lib/server/user-gamification.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "66e113c8ce5745977e30964983de8e65c5d2285b784218d47bc6b2ed8c0e39bf",
-      "count": 1
-    },
-    {
-      "file": "lib/server/user-gamification.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "8f57fed0030e12a7aeb10aad16b1b050dcbff14a99c6ce22c72656c07860d503",
-      "count": 1
-    },
-    {
-      "file": "lib/server/user-gamification.ts",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "4f0c6a7e112afd07d9258d419d7eaf3817b7036b9e7e1a445c4ded4726cfba1f",
-      "count": 1
-    },
-    {
-      "file": "lib/server/user-gamification.ts",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "ac5acd99e97cc3eada201b2eb9caedf60f1c55754152581e4529cebb646065d7",
-      "count": 1
-    },
-    {
       "file": "lib/server/user-growth-activity.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "4d0a30d6891165e87b8ad349dc6c268b125b55a22ae06cd50835576b733680ab",
