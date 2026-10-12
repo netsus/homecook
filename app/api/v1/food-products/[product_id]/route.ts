@@ -41,6 +41,10 @@ interface CatalogMutationDbClient {
   ): PromiseLike<{ data: unknown; error: RpcError | null }>;
 }
 
+function asCatalogMutationDbClient(value: unknown) {
+  return value as CatalogMutationDbClient;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function databaseFailure(error: RpcError | null, fallback: string) {
@@ -111,7 +115,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = routeClient as unknown as CatalogMutationDbClient;
+  const db = asCatalogMutationDbClient(routeClient);
   const stateResult = await readProductState(db, productId);
   if (stateResult.error) return fail("INTERNAL_ERROR", "완제품을 수정하지 못했어요.", 500);
   const state = stateResult.data;
@@ -147,7 +151,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return fail("RESOURCE_NOT_FOUND", "완제품을 찾을 수 없어요.", 404);
   }
 
-  const db = routeClient as unknown as CatalogMutationDbClient;
+  const db = asCatalogMutationDbClient(routeClient);
   const stateResult = await readProductState(db, productId);
   if (stateResult.error) return fail("INTERNAL_ERROR", "완제품을 삭제하지 못했어요.", 500);
   const authorization = authorizeOwnerManualMutation(stateResult.data, user.id);
