@@ -19,6 +19,10 @@ function validDateKey(value: string) {
   return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
 
+function plannerNutritionReadClient(value: unknown): Pick<PlannerNutritionDbClient, "from"> {
+  return value as Pick<PlannerNutritionDbClient, "from">;
+}
+
 function weightIngredient(
   value: unknown,
   index: number,
@@ -98,17 +102,24 @@ export async function readPlannerMealNutrition(
       weightsByMeal = new Map();
     }
   }
-  return Object.fromEntries(recipes.map(({ mealId, plannedServings, entry }) => [
-    mealId,
-    {
+  return Object.fromEntries(recipes.map(({ mealId, plannedServings, entry }) => {
+    const totalWeightGrams = Number.isFinite(weightsByMeal.get(mealId))
+      ? weightsByMeal.get(mealId)!
+      : null;
+    if (entry.warnings?.includes("AI_NUTRITION_ESTIMATE_USED")) {
+      return [mealId, {
+        plannedServings,
+        containsAiEstimate: true,
+        totalWeightGrams,
+        values: entry.values,
+      } satisfies PlannerMealNutritionViewMap[string]];
+    }
+    return [mealId, {
       plannedServings,
-      ...(entry.warnings?.includes("AI_NUTRITION_ESTIMATE_USED") ? { containsAiEstimate: true } : {}),
-      totalWeightGrams: Number.isFinite(weightsByMeal.get(mealId))
-        ? weightsByMeal.get(mealId)!
-        : null,
+      totalWeightGrams,
       values: entry.values,
-    },
-  ]));
+    } satisfies PlannerMealNutritionViewMap[string]];
+  }));
 }
 
 export async function loadPlannerMealNutritionForServer(
@@ -126,7 +137,7 @@ export async function loadPlannerMealNutritionForServer(
     // E2E/UI authentication hints never authorize private server reads.
     if (error || !data.user) return {};
     return await readPlannerMealNutrition(
-      dbClient as unknown as Pick<PlannerNutritionDbClient, "from">,
+      plannerNutritionReadClient(dbClient),
       data.user.id,
       range,
       createRecipeMealWeightReadInternalClient() ?? undefined,
