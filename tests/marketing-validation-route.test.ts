@@ -402,13 +402,13 @@ describe("marketing validation v2 route", () => {
     vi.stubEnv("MARKETING_CAMPAIGN_END_AT", MARKETING_VALIDATION_CAMPAIGN_END_AT);
     vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", "replace-with-reviewed-edge-rule-evidence");
 
-    await expect(createMarketingLeadGateFromEnv()()).resolves.toMatchObject({
+    await expect(createMarketingLeadGateFromEnv({ now: () => new Date(NOW) })()).resolves.toMatchObject({
       ok: false,
       code: "LEAD_CAPTURE_NOT_READY",
     });
 
     vi.stubEnv("MARKETING_EDGE_RATE_LIMIT_RULE_EVIDENCE", MARKETING_VALIDATION_EDGE_EVIDENCE_DIGEST);
-    await expect(createMarketingLeadGateFromEnv()()).resolves.toMatchObject({
+    await expect(createMarketingLeadGateFromEnv({ now: () => new Date(NOW) })()).resolves.toMatchObject({
       ok: true,
       allowedOrigins: [ORIGIN],
       allowedHostnames: ["app.mumeok.kr"],

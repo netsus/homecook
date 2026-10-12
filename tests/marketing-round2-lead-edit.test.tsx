@@ -8,7 +8,7 @@ import { RETENTION_UNTIL, type Round2Request, type Round2SuccessData } from "@/l
 
 vi.mock("@/components/marketing/round2/round2.module.css", () => ({ default: {} }));
 vi.mock("@/components/marketing/round2/round2-turnstile", () => ({ Round2Turnstile: ({ onToken }: { onToken: (token: string) => void }) => <button type="button" onClick={() => onToken("fresh-challenge")}>테스트 보안 확인</button> }));
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const direct = { first_channel: "direct" as const, utm_source: null, utm_medium: null, utm_campaign: null, utm_content: null };
 function transport(failure: "NETWORK_ERROR" | "LEAD_CAPTURE_UNAVAILABLE") {
   const requests: Round2Request[] = [];
@@ -96,6 +96,7 @@ describe("R2-S5-001 immutable request and editable draft", () => {
 describe("real R2 client connected to the lead screen", () => {
   for (const failure of ["NETWORK_ERROR", "LEAD_CAPTURE_UNAVAILABLE"] as const) for (const edit of ["email", "consent"] as const) {
     it(`${failure}: ${edit} can explicitly recover in the same form`, async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-09-11T00:00:00Z"));
       const t = transport(failure); vi.stubGlobal("fetch", t.fetcher);
       render(<Round2Landing topic="recording" attribution={direct} pageContext="" preview={false} leadReady turnstileSiteKey="fixture-public-key"/>);
       fireEvent.click(screen.getByRole("button", { name: "베타 오픈 알림 받기" }));
