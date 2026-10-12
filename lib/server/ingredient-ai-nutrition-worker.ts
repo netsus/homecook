@@ -17,7 +17,7 @@ interface ClaimedJob {
 }
 interface RefreshJob {
   job_id: string;
-  pending_recipe_ids: string[];
+  pending_recipe_ids: unknown[];
 }
 interface WorkerDependencies {
   client: AiNutritionRpcClient;
@@ -28,6 +28,21 @@ interface WorkerDependencies {
 }
 function record(v: unknown): v is Record<string, unknown> { return typeof v === 'object' && v !== null && !Array.isArray(v); }
 function text(v: unknown): v is string { return typeof v === 'string' && v.length > 0; }
+function isRefreshJob(value: unknown): value is RefreshJob {
+  return record(value)
+    && text(value.job_id)
+    && Array.isArray(value.pending_recipe_ids);
+}
+function isClaimedJob(value: unknown): value is ClaimedJob {
+  return record(value)
+    && value.status === 'claimed'
+    && text(value.job_id)
+    && text(value.ingredient_id)
+    && text(value.lease_token)
+    && text(value.policy_version)
+    && text(value.prompt_version)
+    && text(value.model);
+}
 function persistedErrorCode(code: string) {
   if (code === 'AI_NUTRITION_UNESTIMABLE')
     return 'NO_ESTIMATE';
@@ -55,15 +70,14 @@ export function createIngredientAiNutritionWorker(deps: WorkerDependencies) {
     const jobs = Array.isArray(result) ? result : record(result) && Array.isArray(result.jobs) ? result.jobs : [];
     let refreshed = 0;
     for (const raw of jobs) {
-      if (!record(raw) || !text(raw.job_id) || !Array.isArray(raw.pending_recipe_ids))
+      if (!isRefreshJob(raw))
         continue;
-      const job = raw as unknown as RefreshJob;
-      for (const recipeId of job.pending_recipe_ids.slice(0, 10)) {
+      for (const recipeId of raw.pending_recipe_ids.slice(0, 10)) {
         if (!text(recipeId))
           continue;
         try {
-          await deps.refresh(job.job_id, recipeId);
-          await rpc('acknowledge_ingredient_ai_nutrition_refresh', { p_job_id: job.job_id, p_recipe_ids: [recipeId] });
+          await deps.refresh(raw.job_id, recipeId);
+          await rpc('acknowledge_ingredient_ai_nutrition_refresh', { p_job_id: raw.job_id, p_recipe_ids: [recipeId] });
           refreshed++;
         }
         catch { /* Pending ID stays in DB for the next tick. */ }
@@ -76,9 +90,9 @@ export function createIngredientAiNutritionWorker(deps: WorkerDependencies) {
     const raw = await rpc('claim_ingredient_ai_nutrition_job', { p_worker_id: workerId, p_lease_seconds: 180 });
     if (!record(raw) || raw.status !== 'claimed')
       return { status: record(raw) && text(raw.status) ? raw.status : 'idle', refreshed };
-    if (!['job_id', 'ingredient_id', 'lease_token', 'policy_version', 'prompt_version', 'model'].every(k => text(raw[k])))
+    if (!isClaimedJob(raw))
       throw new AiNutritionError('AI_NUTRITION_INVALID_CLAIM');
-    const job = raw as unknown as ClaimedJob;
+    const job = raw;
     let completed: unknown;
     try {
       const context = await rpc('get_ingredient_ai_nutrition_context', { p_job_id: job.job_id, p_lease_token: job.lease_token });
