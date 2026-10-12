@@ -37,6 +37,18 @@ describe("recipe product identity display", () => {
     })).toMatchObject({ standard_name: "원래 브랜드 · 원래 우유", display_text: "원래 브랜드 · 원래 우유 200g" });
   });
 
+  it("keeps product identity when the nutrition version is unavailable", () => {
+    const [normalized] = normalizeRecipeIngredients([{
+      ...ingredient,
+      food_product_nutrition_version_id: null,
+    }]);
+
+    expect(normalized).toMatchObject({
+      food_product_id: "product-1",
+      food_product_nutrition_version_id: null,
+    });
+  });
+
   it("never substitutes an inaccessible product from another authority", async () => {
     const client = { from: vi.fn(() => ({ select: vi.fn(() => ({
       in: vi.fn(async () => ({ data: [], error: null })),

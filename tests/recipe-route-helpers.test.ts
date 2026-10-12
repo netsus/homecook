@@ -98,33 +98,33 @@ describe("recipe route helpers", () => {
   });
 
   it("normalizes ingredient rows from object or array relations", () => {
-    expect(
-      normalizeRecipeIngredients([
-        {
-          id: "ing-1",
-          ingredient_id: "ingredient-1",
-          amount: "2",
-          unit: "개",
-          ingredient_type: "QUANT",
-          display_text: "[빵 반죽] 양파 2개",
-          component_label: "빵 반죽",
-          scalable: true,
-          sort_order: 1,
-          ingredients: [{ standard_name: "양파" }],
-        },
-        {
-          id: "ing-2",
-          ingredient_id: "ingredient-2",
-          amount: null,
-          unit: null,
-          ingredient_type: "TO_TASTE",
-          display_text: "소금 약간",
-          scalable: false,
-          sort_order: 2,
-          ingredients: { standard_name: "소금" },
-        },
-      ]),
-    ).toEqual([
+    const normalized = normalizeRecipeIngredients([
+      {
+        id: "ing-1",
+        ingredient_id: "ingredient-1",
+        amount: "2",
+        unit: "개",
+        ingredient_type: "QUANT",
+        display_text: "[빵 반죽] 양파 2개",
+        component_label: "빵 반죽",
+        scalable: true,
+        sort_order: 1,
+        ingredients: [{ standard_name: "양파" }],
+      },
+      {
+        id: "ing-2",
+        ingredient_id: "ingredient-2",
+        amount: null,
+        unit: null,
+        ingredient_type: "TO_TASTE",
+        display_text: "소금 약간",
+        scalable: false,
+        sort_order: 2,
+        ingredients: { standard_name: "소금" },
+      },
+    ]);
+
+    expect(normalized).toEqual([
       expect.objectContaining({
         standard_name: "양파",
         amount: 2,
@@ -133,6 +133,8 @@ describe("recipe route helpers", () => {
       }),
       expect.objectContaining({ standard_name: "소금", amount: null }),
     ]);
+    expect(normalized[0]).not.toHaveProperty("food_product_id");
+    expect(normalized[0]).not.toHaveProperty("food_product_nutrition_version_id");
   });
 
   it("normalizes step rows and defaults invalid arrays safely", () => {

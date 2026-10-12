@@ -75,13 +75,9 @@ export function normalizeRecipeIngredients(
   return (
     rows?.map((item) => {
       const componentLabel = normalizeRecipeSectionLabel(item.component_label);
-      return {
+      const ingredient: RecipeIngredient = {
         id: item.id,
         ingredient_id: item.ingredient_id,
-        ...(item.food_product_id ? {
-          food_product_id: item.food_product_id,
-          food_product_nutrition_version_id: item.food_product_nutrition_version_id ?? null,
-        } : {}),
         standard_name: recipeProductLabel(item) ?? (
           Array.isArray(item.ingredients) && item.ingredients[0]
             ? item.ingredients[0].standard_name ?? ""
@@ -96,6 +92,14 @@ export function normalizeRecipeIngredients(
         scalable: item.scalable,
         sort_order: item.sort_order,
       };
+
+      if (item.food_product_id) {
+        ingredient.food_product_id = item.food_product_id;
+        ingredient.food_product_nutrition_version_id =
+          item.food_product_nutrition_version_id ?? null;
+      }
+
+      return ingredient;
     }) ?? []
   );
 }
