@@ -143,19 +143,31 @@ describe("08b pantry match backend", () => {
     const recipeIngredientsTable = createSimpleSelectTable([
       {
         data: [
+          { recipe_id: "recipe-2", ingredient_id: "ing-a" },
           { recipe_id: "recipe-1", ingredient_id: "ing-a" },
           { recipe_id: "recipe-1", ingredient_id: "ing-b" },
-          { recipe_id: "recipe-2", ingredient_id: "ing-a" },
+          { recipe_id: "recipe-0", ingredient_id: "ing-a" },
+          { recipe_id: "recipe-0", ingredient_id: "ing-b" },
+          { recipe_id: "recipe-3", ingredient_id: "ing-a" },
+          { recipe_id: "recipe-3", ingredient_id: "ing-b" },
         ],
         error: null,
       },
       {
         data: [
-          { recipe_id: "recipe-1", ingredient_id: "ing-a" },
-          { recipe_id: "recipe-1", ingredient_id: "ing-b" },
-          { recipe_id: "recipe-1", ingredient_id: "ing-c" },
           { recipe_id: "recipe-2", ingredient_id: "ing-a" },
           { recipe_id: "recipe-2", ingredient_id: "ing-d" },
+          { recipe_id: "recipe-1", ingredient_id: "ing-a" },
+          { recipe_id: "recipe-1", ingredient_id: "ing-b" },
+          { recipe_id: "recipe-1", ingredient_id: "ing-e" },
+          { recipe_id: "recipe-1", ingredient_id: "ing-c" },
+          { recipe_id: "recipe-0", ingredient_id: "ing-a" },
+          { recipe_id: "recipe-0", ingredient_id: "ing-b" },
+          { recipe_id: "recipe-0", ingredient_id: "ing-g" },
+          { recipe_id: "recipe-0", ingredient_id: "ing-f" },
+          { recipe_id: "recipe-3", ingredient_id: "ing-a" },
+          { recipe_id: "recipe-3", ingredient_id: "ing-b" },
+          { recipe_id: "recipe-3", ingredient_id: "ing-h" },
         ],
         error: null,
       },
@@ -165,6 +177,10 @@ describe("08b pantry match backend", () => {
         data: [
           { id: "ing-c", standard_name: "두부" },
           { id: "ing-d", standard_name: "애호박" },
+          { id: "ing-e", standard_name: "대파" },
+          { id: "ing-f", standard_name: "마늘" },
+          { id: "ing-g", standard_name: "양파" },
+          { id: "ing-h", standard_name: "버섯" },
         ],
         error: null,
       },
@@ -172,8 +188,10 @@ describe("08b pantry match backend", () => {
     const recipesTable = createSimpleSelectTable([
       {
         data: [
-          { id: "recipe-1", title: "김치찌개", thumbnail_url: "https://example.com/kimchi.jpg" },
           { id: "recipe-2", title: "된장찌개", thumbnail_url: "https://example.com/doenjang.jpg" },
+          { id: "recipe-1", title: "김치찌개", thumbnail_url: "https://example.com/kimchi.jpg" },
+          { id: "recipe-0", title: "순두부찌개", thumbnail_url: null },
+          { id: "recipe-3", title: "버섯찌개", thumbnail_url: null },
         ],
         error: null,
       },
@@ -203,13 +221,49 @@ describe("08b pantry match backend", () => {
       data: {
         items: [
           {
-            id: "recipe-1",
-            title: "김치찌개",
-            thumbnail_url: "https://example.com/kimchi.jpg",
+            id: "recipe-3",
+            title: "버섯찌개",
+            thumbnail_url: null,
             match_score: 0.67,
             matched_ingredients: 2,
             total_ingredients: 3,
             missing_ingredients: [
+              {
+                id: "ing-h",
+                standard_name: "버섯",
+              },
+            ],
+          },
+          {
+            id: "recipe-0",
+            title: "순두부찌개",
+            thumbnail_url: null,
+            match_score: 0.5,
+            matched_ingredients: 2,
+            total_ingredients: 4,
+            missing_ingredients: [
+              {
+                id: "ing-g",
+                standard_name: "양파",
+              },
+              {
+                id: "ing-f",
+                standard_name: "마늘",
+              },
+            ],
+          },
+          {
+            id: "recipe-1",
+            title: "김치찌개",
+            thumbnail_url: "https://example.com/kimchi.jpg",
+            match_score: 0.5,
+            matched_ingredients: 2,
+            total_ingredients: 4,
+            missing_ingredients: [
+              {
+                id: "ing-e",
+                standard_name: "대파",
+              },
               {
                 id: "ing-c",
                 standard_name: "두부",
