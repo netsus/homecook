@@ -42,12 +42,6 @@
       "count": 1
     },
     {
-      "file": "app/api/v1/cooking-methods/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "37ddd1abf8178065c916898f038e349fcb2cec3fe8fc01a1a27aeba465767554",
-      "count": 1
-    },
-    {
       "file": "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862",

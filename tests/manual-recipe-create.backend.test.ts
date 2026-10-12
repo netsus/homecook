@@ -239,6 +239,80 @@ describe("18 manual recipe create backend", () => {
     expect(cookingMethodsTable.__query.order).toHaveBeenCalledWith("created_at", { ascending: true });
   });
 
+  it("GET /api/v1/cooking-methods reuses the ordered query for the legacy schema fallback", async () => {
+    interface CookingMethodFixtureRow {
+      id: string;
+      code: string;
+      label: string;
+      color_key: string;
+      is_system: boolean;
+    }
+
+    const selectResults: Array<QueryResult<CookingMethodFixtureRow[] | null>> = [
+      {
+        data: null,
+        error: { message: "column category_code does not exist in schema cache" },
+      },
+      {
+        data: [{
+          id: cookingMethodId,
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        }],
+        error: null,
+      },
+    ];
+    const queryOrders: Array<Array<[string, { ascending: boolean }]>> = [];
+    const select = vi.fn(() => {
+      const orders: Array<[string, { ascending: boolean }]> = [];
+      queryOrders.push(orders);
+      const query = {
+        order: vi.fn((column: string, options: { ascending: boolean }) => {
+          orders.push([column, options]);
+          return query;
+        }),
+        then: createAwaitableQuery(selectResults.shift()!).then,
+      };
+      return query;
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "cooking_methods") return { select };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importCookingMethodsRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/cooking-methods"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(select.mock.calls).toEqual([
+      ["id, code, label, color_key, category_code, is_system"],
+      ["id, code, label, color_key, is_system"],
+    ]);
+    expect(queryOrders).toEqual([
+      [
+        ["display_order", { ascending: true }],
+        ["created_at", { ascending: true }],
+      ],
+      [
+        ["display_order", { ascending: true }],
+        ["created_at", { ascending: true }],
+      ],
+    ]);
+    expect(body.data.methods).toEqual([
+      expect.objectContaining({
+        id: cookingMethodId,
+        code: "stir_fry",
+        label: "볶기",
+      }),
+    ]);
+  });
+
   it("GET /api/v1/cooking-methods returns QA fixture methods before initializing a database client", async () => {
     vi.stubEnv("HOMECOOK_ENABLE_QA_FIXTURES", "1");
     createRouteHandlerClient.mockRejectedValue(new Error("missing Supabase environment"));

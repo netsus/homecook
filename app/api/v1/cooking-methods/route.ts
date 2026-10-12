@@ -49,6 +49,18 @@ interface CookingMethodsDbClient {
   from(table: "cooking_method_synonyms"): CookingMethodSynonymsTable;
 }
 
+function asCookingMethodsDbClient(client: unknown) {
+  return client as CookingMethodsDbClient;
+}
+
+function readCookingMethods(dbClient: CookingMethodsDbClient, columns: string) {
+  return dbClient
+    .from("cooking_methods")
+    .select(columns)
+    .order("display_order", { ascending: true })
+    .order("created_at", { ascending: true });
+}
+
 interface CookingMethodRow {
   id: string;
   code: string;
@@ -139,21 +151,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const dbClient = await createRouteHandlerClient({
+    const dbClient = asCookingMethodsDbClient(await createRouteHandlerClient({
       anonymousPublicReadScope: "cooking-methods",
-    }) as unknown as CookingMethodsDbClient;
-    let result = await dbClient
-      .from("cooking_methods")
-      .select("id, code, label, color_key, category_code, is_system")
-      .order("display_order", { ascending: true })
-      .order("created_at", { ascending: true });
+    }));
+    let result = await readCookingMethods(
+      dbClient,
+      "id, code, label, color_key, category_code, is_system",
+    );
 
     if (isSchemaCacheMiss(result.error)) {
-      result = await dbClient
-        .from("cooking_methods")
-        .select("id, code, label, color_key, is_system")
-        .order("display_order", { ascending: true })
-        .order("created_at", { ascending: true });
+      result = await readCookingMethods(
+        dbClient,
+        "id, code, label, color_key, is_system",
+      );
     }
 
     if (result.error || !result.data) {
