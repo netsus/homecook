@@ -1,0 +1,330 @@
+{
+  "schema_version": "homecook-youtube-source-bound-quantity-recovery-v2",
+  "positive_cases": [
+    {
+      "case_id": "titled-description-nfkc-bullet",
+      "source_text": "[SOURCE: description]\n[재료]\n- 통삼겹살 ５００ｇ\n- 양파 2개(500g)",
+      "ingredient": "통삼겹살",
+      "expected": { "amount": "500", "unit": "g", "owner_text": "- 통삼겹살 500g" }
+    },
+    {
+      "case_id": "headerless-author-comment-list",
+      "source_text": "[SOURCE: author_comment]\n돼지고기 앞다리살 400g\n양파 2개(500g)\n대파 1대",
+      "ingredient": "돼지고기 앞다리살",
+      "submitted_evidence_text": "돼지고기 앞다리살 400g",
+      "expected": { "amount": "400", "unit": "g", "owner_text": "돼지고기 앞다리살 400g" }
+    },
+    {
+      "case_id": "english-titled-author-comment-list",
+      "source_text": "[SOURCE: author_comment]\nIngredients:\npork belly 500g\nonion 2 pieces",
+      "ingredient": "pork belly",
+      "display_name": "돼지 삼겹살",
+      "submitted_evidence_text": "pork belly 500g",
+      "expected": { "amount": "500", "unit": "g", "owner_text": "pork belly 500g" }
+    },
+    {
+      "case_id": "matching-description-and-comment",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 2개(500g)\n대파 1대\n[SOURCE: author_comment]\n[재료]\n양파 2개(500g)\n대파 1대",
+      "ingredient": "양파",
+      "expected": { "amount": "2", "unit": "개", "owner_text": "양파 2개(500g)", "reference_amount": "500", "reference_unit": "g" }
+    },
+    {
+      "case_id": "korean-i-ending-name",
+      "source_text": "[SOURCE: description]\n[재료]\n오이 2개\n대파 1대",
+      "ingredient": "오이",
+      "expected": { "amount": "2", "unit": "개", "owner_text": "오이 2개" }
+    },
+    {
+      "case_id": "korean-i-ending-headerless-name",
+      "source_text": "[SOURCE: author_comment]\n냉이 100g\n소금 1큰술",
+      "ingredient": "냉이",
+      "expected": { "amount": "100", "unit": "g", "owner_text": "냉이 100g" }
+    },
+    {
+      "case_id": "korean-ina-inside-ingredient-name",
+      "source_text": "[SOURCE: description]\n[재료]\n명이나물 100g\n소금 1큰술",
+      "ingredient": "명이나물",
+      "expected": { "amount": "100", "unit": "g", "owner_text": "명이나물 100g" }
+    },
+    {
+      "case_id": "prepared-ingredient-identity-no-space",
+      "source_text": "[SOURCE: description]\n[재료]\n다진마늘 2큰술\n소금 1큰술",
+      "ingredient": "다진마늘",
+      "expected": { "amount": "2", "unit": "큰술", "owner_text": "다진마늘 2큰술" }
+    },
+    {
+      "case_id": "prepared-ingredient-identity-with-space",
+      "source_text": "[SOURCE: description]\n[재료]\n다진 마늘 2큰술\n소금 1큰술",
+      "ingredient": "다진 마늘",
+      "expected": { "amount": "2", "unit": "큰술", "owner_text": "다진 마늘 2큰술" }
+    },
+    {
+      "case_id": "cooked-ingredient-identity",
+      "source_text": "[SOURCE: description]\n[재료]\n볶은깨 1큰술\n소금 1큰술",
+      "ingredient": "볶은깨",
+      "expected": { "amount": "1", "unit": "큰술", "owner_text": "볶은깨 1큰술" }
+    }
+  ],
+  "guard_cases": [
+    {
+      "case_id": "description-comment-conflict",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 2개\n대파 1대\n[SOURCE: author_comment]\n[재료]\n양파 3개\n대파 1대",
+      "ingredient": "양파",
+      "expected_state": "conflicting"
+    },
+    {
+      "case_id": "different-source-blocks-do-not-compose",
+      "source_text": "[SOURCE: description]\n[재료]\n통삼겹살\n대파 1대\n[SOURCE: author_comment]\n[재료]\n500g\n양파 2개",
+      "ingredient": "통삼겹살",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "repeated-input-stays-reviewable",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n돼지고기 앞다리살 400g\n돼지고기 앞다리살 100g 추가\n양파 2개",
+      "ingredient": "돼지고기 앞다리살",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "alternative-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n돼지고기 앞다리살 400g 또는 통삼겹살 500g\n양파 2개",
+      "ingredient": "돼지고기 앞다리살",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "conditional-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n원하면 설탕 2큰술\n양파 2개",
+      "ingredient": "설탕",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "negated-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n소금 1큰술 넣지 마세요\n양파 2개",
+      "ingredient": "소금",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "action-row-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n양파를 넣고 2개\n대파 1대",
+      "ingredient": "양파를 넣고",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "english-action-row-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\nIngredients:\nadd sugar 2 tablespoons\nonion 2 pieces",
+      "ingredient": "sugar",
+      "display_name": "설탕",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "range-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n꿀 2~3큰술\n양파 2개",
+      "ingredient": "꿀",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "qualitative-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n통마늘 넉넉히\n양파 2개",
+      "ingredient": "통마늘",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "multiple-owners-on-one-row-stay-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n소금 1큰술, 설탕 2큰술\n양파 2개",
+      "ingredient": "소금",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "isolated-headerless-comment-is-not-a-list",
+      "source_text": "[SOURCE: author_comment]\n통삼겹살 500g",
+      "ingredient": "통삼겹살",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "unsafe-neighbor-does-not-create-a-headerless-list",
+      "source_text": "[SOURCE: author_comment]\nadd sugar 2 tablespoons\nonion 2개",
+      "ingredient": "onion",
+      "display_name": "양파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "matching-primary-conflicting-reference-mass",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 2개(500g)\n대파 1대\n[SOURCE: author_comment]\n[재료]\n양파 2개(600g)\n대파 1대",
+      "ingredient": "양파",
+      "expected_state": "conflicting"
+    },
+    {
+      "case_id": "possible-if-prefix-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n가능하면 설탕 2큰술\n양파 2개",
+      "ingredient": "설탕",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "english-when-prefix-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\nIngredients:\nwhen sugar 2 tablespoons\nonion 2 pieces",
+      "ingredient": "sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "joined-ina-alternative-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n설탕이나올리고당 2큰술\n양파 2개",
+      "ingredient": "설탕",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "joined-na-alternative-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n버터나올리브유 2큰술\n양파 2개",
+      "ingredient": "버터",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "prepare-action-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n양파 준비 2개\n대파 1대",
+      "ingredient": "양파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "cut-action-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n양파 자른후 2개\n대파 1대",
+      "ingredient": "양파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "chop-action-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\n[재료]\n양파를 다져서 2개\n대파 1대",
+      "ingredient": "양파를 다져서",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "spaced-na-alternative-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파나 대파 2개\n소금 1큰술",
+      "ingredient": "양파나 대파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "wa-joined-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파와 대파 2개\n소금 1큰술",
+      "ingredient": "양파와 대파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "mit-joined-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 및 대파 2개\n소금 1큰술",
+      "ingredient": "양파 및 대파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "plus-joined-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 + 대파 2개\n소금 1큰술",
+      "ingredient": "양파 + 대파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "leading-qualifier-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n넉넉히 양파 2개\n소금 1큰술",
+      "ingredient": "넉넉히 양파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "heaped-qualifier-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 듬뿍 2개\n소금 1큰술",
+      "ingredient": "양파 듬뿍",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "suitable-qualifier-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 적당히 2개\n소금 1큰술",
+      "ingredient": "양파 적당히",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "single-syllable-both-alternative-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n꿀이나 물 2큰술\n소금 1큰술",
+      "ingredient": "꿀이나 물",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "single-syllable-second-ina-alternative-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n설탕이나 꿀 2큰술\n소금 1큰술",
+      "ingredient": "설탕이나 꿀",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "single-syllable-second-na-alternative-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n버터나 꿀 2큰술\n소금 1큰술",
+      "ingredient": "버터나 꿀",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "use-action-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파를 사용해 2개\n소금 1큰술",
+      "ingredient": "양파를 사용해",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "wash-action-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파를 씻어 2개\n소금 1큰술",
+      "ingredient": "양파를 씻어",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "sliced-action-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파를 썬 것 2개\n소금 1큰술",
+      "ingredient": "양파를 썬 것",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "needed-condition-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n필요하면 설탕 2큰술\n소금 1큰술",
+      "ingredient": "설탕",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "when-adding-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n설탕 넣을 때 2큰술\n소금 1큰술",
+      "ingredient": "설탕 넣을 때",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "large-qualifier-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n크게 양파 2개\n소금 1큰술",
+      "ingredient": "크게 양파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "heaping-qualifier-owner-stays-unknown",
+      "source_text": "[SOURCE: author_comment]\nIngredients:\nheaping sugar 2 tablespoons\nsalt 1 tablespoon",
+      "ingredient": "heaping sugar",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "korean-word-range-han-du-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 한두 개\n소금 1큰술",
+      "ingredient": "양파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "korean-word-range-du-se-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 두세 개\n소금 1큰술",
+      "ingredient": "양파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "middot-multi-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파·대파 2개\n소금 1큰술",
+      "ingredient": "양파·대파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "wa-no-space-multi-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파와대파 2개\n소금 1큰술",
+      "ingredient": "양파와대파",
+      "expected_state": "unknown"
+    },
+    {
+      "case_id": "mit-no-space-multi-owner-stays-unknown",
+      "source_text": "[SOURCE: description]\n[재료]\n양파 및대파 2개\n소금 1큰술",
+      "ingredient": "양파 및대파",
+      "expected_state": "unknown"
+    }
+  ]
+}

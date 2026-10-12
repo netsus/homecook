@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-12 — YouTube 설명란·작성자 댓글 원천 결속 수량 복구 (로컬, 미배포)
+
+설명란과 각 작성자 댓글의 닫힌 재료 행에서 서버가 재료명·literal 수량·정규화 좌표를 request-local로 결속하고, 기존 verifier가 같은 원천 행을 다시 증명한 `unknown/null`만 보수적으로 복구한다. 댓글 구분자별 source block을 분리하며 설명/댓글 충돌·반복·대체·조건·부정·조리 행동·범위·정성량·다중 소유자는 덮지 않는다. prompt/DB/API/UI는 변경하지 않았고 모델·OCR·다운로드·네트워크 평가는0회다. 승인 controller는 exact 3건 runner의 provider 직전 후보 재검증·영상별 durable 소비 경계에 mock으로 연결했다. 다만 Shorts 2건의 완전한 source snapshot과 authoritative message-store support adapter가 없어 실제 평가는 fail-closed이며, 현재 캐시 실행 가능 입력은 설명란 사례 `eJyoszbyNNQ` 1건뿐이다. [구현 계약·후보 hash·평가 입력·검증 한계](../engineering/youtube-source-bound-quantity-recovery-20261012.md)를 따른다.
+
 ## 2026-10-11 — 원문 확인 밥숟가락 중량 운영 반영
 
 스푼·숟가락11종의 실제27행을 검토해 7종 추정중량을 4레시피16행에 반영했다. 화면은 `밥숟가락` 수량을 표시하고 계산에만 승인된 g을 쓴다. 수북한 담음·분량충돌11행과 기존15ml 별칭은 유지한다. 새영양/내용저장본 각4개, 다른47레시피·과거기록 보존, 운영51레시피 계산일치를 검증했다. 원장218·웹f970bc1d1f1e이며 worker·AI비활성은 유지한다. [처리·근거·검증·남은 범위](../engineering/household-spoon-review-20261011.md)를 따른다.

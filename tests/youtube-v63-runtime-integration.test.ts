@@ -5,14 +5,14 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { I031_EXACT_IDENTITY } from "@/lib/server/youtube-i031-runtime";
-import { YOUTUBE_ASYNC_POLICY } from "@/lib/server/youtube-async-extraction";
+import { I031_CODEX_CLI_VERSION, I031_EXACT_IDENTITY } from "@/lib/server/youtube-i031-runtime";
+import { canonicalJson, YOUTUBE_ASYNC_POLICY } from "@/lib/server/youtube-async-extraction";
 import { YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
 
 const bundleRoot = path.join(process.cwd(), "lib/server/youtube-i031-runtime/bundle");
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
-describe("v63 source-anchored runtime integration", () => {
+describe("v64 source-anchored runtime integration", () => {
   it("activates Luna low with the exact source-anchored identity and bounded options", async () => {
     const worker = await import(/* @vite-ignore */ `${pathToFileURL(path.join(bundleRoot, "worker.mjs")).href}?v63-test=1`);
     expect(worker.ACTIVE_ANALYSIS_MODE).toBe("source-anchored");
@@ -30,7 +30,10 @@ describe("v63 source-anchored runtime integration", () => {
     });
     expect(worker.createExtractionClientOptions(() => undefined).timeoutMs).toBe(1_200_000);
     expect(worker.createExtractionIdentity(options)).toEqual({ ...I031_EXACT_IDENTITY, codexCliVersion: "0.154.0-alpha.6.2" });
-    expect(YOUTUBE_ASYNC_POLICY.pipelineIdentity).toBe("1c9c47074da3bf1c55ed83f1ba5131d9d48ad486503919c554a5530d7972d935");
+    expect(YOUTUBE_ASYNC_POLICY.pipelineIdentity).toBe(sha256(Buffer.from(canonicalJson({
+      ...I031_EXACT_IDENTITY,
+      codexCliVersion: I031_CODEX_CLI_VERSION,
+    }))));
     expect(YOUTUBE_ASYNC_POLICY.policyVersion).toBe(3);
   });
 
