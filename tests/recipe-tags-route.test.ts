@@ -99,4 +99,27 @@ describe("36c public tags route", () => {
       error: null,
     });
   });
+
+  it.each(["ingredient", "method", "source", "user"])(
+    "passes the supported %s kind to the public policy function",
+    async (kind) => {
+      const rpc = vi.fn(async () => ({ data: [], error: null }));
+      createRouteHandlerClient.mockResolvedValue({ rpc });
+
+      const { GET } = await importTagsRoute();
+      const response = await GET(new NextRequest(
+        `http://localhost:3000/api/v1/tags?kind=${kind}`,
+      ));
+
+      expect(response.status).toBe(200);
+      expect(rpc).toHaveBeenCalledWith("list_public_recipe_tags", expect.objectContaining({
+        p_kind: kind,
+      }));
+      await expect(response.json()).resolves.toEqual({
+        success: true,
+        data: { items: [] },
+        error: null,
+      });
+    },
+  );
 });
