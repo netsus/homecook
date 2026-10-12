@@ -21,10 +21,209 @@ type ValidationFailure = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ALLOWED_UNITS = new Set<string>(FOOD_PRODUCT_BASIS_UNITS);
+const NUTRIENT_STATUSES = new Set<string>(["complete", "partial", "unavailable"]);
+const NUTRIENT_DISPLAY_MODES = new Set<string>(["total", "minimum"]);
+const CALCULATION_STATUSES = new Set<string>(["complete", "partial", "unavailable"]);
+const CALCULATION_QUALITIES = new Set<string>(["direct", "estimated", "mixed"]);
 const DATABASE_NUMERIC_MAX_EXCLUSIVE = 100_000_000;
+
+type ProductNutrition = FoodProductData["nutrition"];
+type ProductNutrientValue = ProductNutrition["values"][string];
+type ProductSource = ProductNutrition["sources"][number];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isFoodProductBasisUnit(value: unknown): value is FoodProductBasisUnit {
+  return typeof value === "string" && ALLOWED_UNITS.has(value);
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
+}
+
+function parseReadBasis(
+  value: unknown,
+): { amount: number; unit: FoodProductBasisUnit } | null {
+  if (
+    !isRecord(value)
+    || typeof value.amount !== "number"
+    || !Number.isFinite(value.amount)
+    || value.amount <= 0
+    || !isFoodProductBasisUnit(value.unit)
+  ) {
+    return null;
+  }
+  return { amount: value.amount, unit: value.unit };
+}
+
+function isNutrientStatus(value: unknown): value is ProductNutrientValue["status"] {
+  return typeof value === "string" && NUTRIENT_STATUSES.has(value);
+}
+
+function isNutrientDisplayMode(
+  value: unknown,
+): value is ProductNutrientValue["display_mode"] {
+  return value === null
+    || (typeof value === "string" && NUTRIENT_DISPLAY_MODES.has(value));
+}
+
+function parseNutrientValue(value: unknown): ProductNutrientValue | null {
+  if (
+    !isRecord(value)
+    || (value.amount !== null
+      && (typeof value.amount !== "number" || !Number.isFinite(value.amount)))
+    || (value.known_amount !== null
+      && (typeof value.known_amount !== "number" || !Number.isFinite(value.known_amount)))
+    || !isNutrientStatus(value.status)
+    || !isNutrientDisplayMode(value.display_mode)
+  ) {
+    return null;
+  }
+  return {
+    amount: value.amount,
+    known_amount: value.known_amount,
+    status: value.status,
+    display_mode: value.display_mode,
+  };
+}
+
+function parseProductSource(value: unknown): ProductSource | null {
+  if (
+    !isRecord(value)
+    || typeof value.provider !== "string"
+    || !isNullableString(value.dataset)
+    || !isNullableString(value.source_version)
+    || !isNullableString(value.data_basis_date)
+    || !isNullableString(value.license)
+    || !isNullableString(value.source_url)
+  ) {
+    return null;
+  }
+  return {
+    provider: value.provider,
+    dataset: value.dataset,
+    source_version: value.source_version,
+    data_basis_date: value.data_basis_date,
+    license: value.license,
+    source_url: value.source_url,
+  };
+}
+
+function isCalculationStatus(
+  value: unknown,
+): value is ProductNutrition["calculation_status"] {
+  return typeof value === "string" && CALCULATION_STATUSES.has(value);
+}
+
+function isCalculationQuality(
+  value: unknown,
+): value is ProductNutrition["calculation_quality"] {
+  return value === null
+    || (typeof value === "string" && CALCULATION_QUALITIES.has(value));
+}
+
+function parseProductNutrition(value: unknown): ProductNutrition | null {
+  if (
+    !isRecord(value)
+    || (value.label_basis_text !== undefined && !isNullableString(value.label_basis_text))
+    || !isRecord(value.values)
+    || !isCalculationStatus(value.calculation_status)
+    || !isCalculationQuality(value.calculation_quality)
+    || !Array.isArray(value.warnings)
+    || !value.warnings.every((warning) => typeof warning === "string")
+    || !Array.isArray(value.sources)
+  ) {
+    return null;
+  }
+
+  const basis = parseReadBasis(value.basis);
+  if (!basis) return null;
+
+  const values: ProductNutrition["values"] = {};
+  for (const [code, nutrient] of Object.entries(value.values)) {
+    const parsedNutrient = parseNutrientValue(nutrient);
+    if (!parsedNutrient) return null;
+    values[code] = parsedNutrient;
+  }
+
+  const sources: ProductSource[] = [];
+  for (const source of value.sources) {
+    const parsedSource = parseProductSource(source);
+    if (!parsedSource) return null;
+    sources.push(parsedSource);
+  }
+
+  const nutrition: ProductNutrition = {
+    basis,
+    values,
+    calculation_status: value.calculation_status,
+    calculation_quality: value.calculation_quality,
+    warnings: [...value.warnings],
+    sources,
+  };
+  if (value.label_basis_text !== undefined) {
+    nutrition.label_basis_text = value.label_basis_text;
+  }
+  return nutrition;
+}
+
+function parseProductPlannerEntry(value: unknown): ProductPlannerEntryData | null {
+  if (
+    !isRecord(value)
+    || value.entry_type !== "product"
+    || typeof value.id !== "string"
+    || typeof value.product_id !== "string"
+    || typeof value.product_name !== "string"
+    || !isNullableString(value.product_brand)
+    || typeof value.plan_date !== "string"
+    || typeof value.column_id !== "string"
+    || value.workflow_status !== null
+    || typeof value.product_nutrition_version_id !== "string"
+    || !Array.isArray(value.basis_relations)
+  ) {
+    return null;
+  }
+
+  const quantity = parseReadBasis(value.quantity);
+  const nutrition = parseProductNutrition(value.nutrition);
+  if (!quantity || !nutrition) return null;
+
+  const basisRelations: FoodProductData["basis_relations"] = [];
+  for (const relation of value.basis_relations) {
+    if (!isRecord(relation)) return null;
+    const from = parseReadBasis(relation.from);
+    const to = parseReadBasis(relation.to);
+    if (!from || !to) return null;
+    basisRelations.push({ from, to });
+  }
+
+  return {
+    entry_type: value.entry_type,
+    id: value.id,
+    product_id: value.product_id,
+    product_name: value.product_name,
+    product_brand: value.product_brand,
+    plan_date: value.plan_date,
+    column_id: value.column_id,
+    quantity,
+    workflow_status: value.workflow_status,
+    product_nutrition_version_id: value.product_nutrition_version_id,
+    basis_relations: basisRelations,
+    nutrition,
+  };
+}
+
+export function parseProductPlannerEntries(value: unknown): ProductPlannerEntryData[] | null {
+  if (!Array.isArray(value)) return null;
+  const entries: ProductPlannerEntryData[] = [];
+  for (const entry of value) {
+    const parsedEntry = parseProductPlannerEntry(entry);
+    if (!parsedEntry) return null;
+    entries.push(parsedEntry);
+  }
+  return entries;
 }
 
 function unexpectedFields(body: Record<string, unknown>, allowed: Set<string>) {

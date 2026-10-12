@@ -4,7 +4,10 @@ import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import { getQaFixturePlannerData, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
-import { dedupeProductPlannerEntries } from "@/lib/server/prepared-food-planner-entry";
+import {
+  dedupeProductPlannerEntries,
+  parseProductPlannerEntries,
+} from "@/lib/server/prepared-food-planner-entry";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -14,7 +17,6 @@ import {
 import { resolveAuthorizedRecipeImageUrls } from "@/lib/server/recipe-image-read";
 import { createRecipeImageInternalClient, createRouteHandlerClient } from "@/lib/supabase/server";
 import type { MealStatus, PlannerData, PlannerMealData } from "@/types/planner";
-import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 interface QueryError {
   message: string;
@@ -288,12 +290,13 @@ export async function GET(request: NextRequest) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
 
-  if (productEntriesResult.error || !Array.isArray(productEntriesResult.data)) {
+  const parsedProductEntries = productEntriesResult.error
+    ? null
+    : parseProductPlannerEntries(productEntriesResult.data);
+  if (!parsedProductEntries) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
-  const productEntries = dedupeProductPlannerEntries(
-    productEntriesResult.data as ProductPlannerEntryData[],
-  );
+  const productEntries = dedupeProductPlannerEntries(parsedProductEntries);
 
   const recipeIds = [...new Set(mealsResult.data.map((meal) => meal.recipe_id))];
   const shoppingListIds = [

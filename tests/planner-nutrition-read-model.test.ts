@@ -135,7 +135,15 @@ describe("planner nutrition bounded read model", () => {
         sources: [SOURCE],
       },
     };
-    const rpc = vi.fn(async () => ({ data: [productEntry, productEntry], error: null }));
+    const laterDuplicate = {
+      ...productEntry,
+      product_name: "후행 중복 제품",
+      nutrition: {
+        ...productEntry.nutrition,
+        values: completeValues(999),
+      },
+    };
+    const rpc = vi.fn(async () => ({ data: [productEntry, laterDuplicate], error: null }));
     const from = vi.fn((table: string) => {
       if (table === "meals") return { select: vi.fn(() => meals) };
       if (table === "recipe_nutrition_snapshots") return { select: vi.fn(() => snapshots) };
@@ -314,6 +322,49 @@ describe("planner nutrition bounded read model", () => {
     const db = {
       from: vi.fn(() => ({ select: vi.fn(() => meals) })),
       rpc: vi.fn(),
+    } as unknown as PlannerNutritionDbClient;
+
+    await expect(readPlannerNutritionSummary(db, USER_ID, {
+      startDate: "2026-07-17",
+      endDate: "2026-07-17",
+    })).rejects.toThrow("PLANNER_NUTRITION_READ_FAILED");
+  });
+
+  it("rejects a malformed product RPC row instead of returning a partial summary", async () => {
+    const meals = thenableQuery({ data: [], error: null });
+    const db = {
+      from: vi.fn(() => ({ select: vi.fn(() => meals) })),
+      rpc: vi.fn(async () => ({
+        data: [{
+          entry_type: "product",
+          id: "product-entry-bad",
+          product_id: "product-bad",
+          product_name: "깨진 제품",
+          product_brand: null,
+          plan_date: "2026-07-17",
+          column_id: COLUMN_A,
+          quantity: { amount: 1, unit: "serving" },
+          workflow_status: null,
+          product_nutrition_version_id: "version-bad",
+          basis_relations: [],
+          nutrition: {
+            basis: { amount: 1, unit: "serving" },
+            values: {
+              energy_kcal: {
+                amount: "100",
+                known_amount: null,
+                status: "complete",
+                display_mode: "total",
+              },
+            },
+            calculation_status: "complete",
+            calculation_quality: "direct",
+            warnings: [],
+            sources: [],
+          },
+        }],
+        error: null,
+      })),
     } as unknown as PlannerNutritionDbClient;
 
     await expect(readPlannerNutritionSummary(db, USER_ID, {
