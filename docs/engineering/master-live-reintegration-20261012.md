@@ -83,9 +83,9 @@
 - `tests/youtube-result-first.ui.test.tsx`
 - `tests/youtube-v63-runtime-integration.test.ts`
 
-## 남은 통합 순서
+## 통합 진행 상태
 
-1. 운영 이력 연결 merge commit을 고정한다.
-2. master 기반 YouTube 레시피북·공개 검색·플래너 bridge 커밋을 적용한다.
-3. 관련 회귀, post-218 대상 migration, 브라우저, build와 배포 plan을 검증한다.
+1. 운영 이력 연결 merge commit `d7fb78ae4c459eed8555046f6480dbe61dc24b79`을 고정했다.
+2. master 기반 YouTube 레시피북·공개 검색·플래너 bridge 커밋 `42ce90f59`, `cbb0f2228`과 DB 검증 경계 문서 `f2bce7fc0`을 적용했다.
+3. 관련 회귀, post-218 대상 migration, 브라우저, build와 배포 plan 검증은 이 통합 후보에서 수행한다.
 4. 운영 DB 쓰기·백업·배포·push·PR은 별도 승인 전 실행하지 않는다.

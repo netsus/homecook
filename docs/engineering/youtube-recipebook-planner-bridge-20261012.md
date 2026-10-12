@@ -2,6 +2,12 @@
 
 상태: 로컬 구현 및 검증 중. 운영 DB·웹 미반영.
 
+## 첨부 화면에서 확인한 원인
+
+- Library `libfile_7b81fb6dc7cc81918a33891255790716`의 2048×1284 PNG를 실제 픽셀로 확인했다. 운영 화면은 `/recipes/youtube/saved`에서 세 저장 레시피를 `유튜브에서 가져온 레시피` 전용 카드 목록으로만 보여준다.
+- Library `libfile_ca3a3faef864819193576b66090f309a`의 2048×352 PNG를 실제 픽셀로 확인했다. 일반 레시피북 상단에도 `유튜브에서 가져온 레시피` 별도 진입 배너가 있어 `내가 추가한 레시피`와 분리된 정보 구조다.
+- 화면 분류는 별도 배너·목록 때문에 발생하지만 플래너 단절의 근본 원인은 저장 결과에 일반 플래너가 소비하는 canonical `recipes.id`가 없던 점이다. 이번 변경은 전용 상세를 삭제하지 않고 호환 경로로 유지하면서 canonical 연결을 추가하고, 기본 노출·재사용 흐름만 일반 사용자 레시피와 합친다.
+
 ## 사용자 흐름
 
 유튜브 추출 결과의 원본 보존형 편집 문서는 그대로 유지한다. 자동 저장이 완료되면 같은 소유자의 공개 canonical recipe ID를 1:1로 연결한다. 이 ID 때문에 저장 결과는 `내가 추가한 레시피`의 기존 목록·개수 계약에 포함되고 공개 레시피 검색에도 제목으로 노출된다. 저장 태그 중 기존 승인 시스템 태그는 `recipe_tags`에도 동기화되어 태그 검색·테마에 참여하고, 미승인 자유 태그는 공개 검색 인덱스로 승격하지 않는다. 카드에서 다시 열면 기존 유튜브 편집 화면으로 돌아가며, 저장 후에는 `내가 추가한 레시피에서 보기`로 기존 레시피북 reader에 진입한다. reader의 저장·플래너·요리 동작과 편집 화면의 플래너 추가를 재사용한다.
@@ -39,9 +45,9 @@
 - 운영 배포, 인증·보안 설정
 - P5 추출 모델의 분량 판정과 영양 계산 정책
 
-## 운영 웹 기반 release 후보와 DB 검증 경계
+## master·운영 웹 통합 후보와 DB 검증 경계
 
-- release 후보는 현재 운영 웹 `f970bc1d1f1e981d8947e852a9b51ada4a74570a`의 후속 커밋으로 구성한다. 일반 master 리팩터링과 P5 추출기·평가 이력은 포함하지 않는다.
+- 통합 후보는 master `7e466b170ba39795220ef64e67eac3fab4429420`에서 시작해 현재 운영 웹 `f970bc1d1f1e981d8947e852a9b51ada4a74570a`를 두 번째 부모로 연결한 `d7fb78ae4c459eed8555046f6480dbe61dc24b79` 위에 이 기능을 적용했다. 47개 충돌은 최신 master 후속 구현을 유지했고, 운영 이력 대응과 파일별 결정은 [재통합 기록](./master-live-reintegration-20261012.md)에 고정했다. 미완성 leftovers, 보류 `444fe1f6f`, P5 추출기·평가 이력과 별도 source-bound worker 후보는 포함하지 않는다.
 - 운영 DB 원장 218개에 이미 반영된 `20261011140000_retire_unused_ingredients.sql`, `20261011200000_household_spoon_measurement.sql`은 운영 영수증과 같은 checksum의 migration source closure로만 포함한다. 이 두 파일은 다시 실행하지 않는다.
 - migration source는 이번 bridge까지 219개지만, 성공한 DB 통합 검사는 운영과 동등한 post-218 schema 복제본에 `20261012120000_youtube_saved_recipe_canonical_bridge.sql`만 적용한 **target migration 검증**이다. 이를 219개 전체 replay 성공으로 표현하지 않는다.
 - 빈 DB에서 219개를 순서대로 적용하는 현재 전체 replay는 이번 변경 전부터 있던 `20260919001000_ingredient_search_normalization.sql`의 `INGREDIENT_SEARCH_YOUTUBE_LOOKUP_SHAPE_CHANGED`에서 중단된다. 기존 migration의 checksum은 운영 기준·master·release 후보에서 동일하며, 이 실패를 이번 target migration 성공으로 덮지 않는다.

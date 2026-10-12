@@ -8,6 +8,7 @@ const enabled = Boolean(databaseUrl && projectId);
 const container = `supabase_db_${projectId}`;
 
 const ownerId = "7c000000-0000-4000-8000-000000000001";
+const viewerId = "7c000000-0000-4000-8000-00000000000a";
 const savedId = "7c000000-0000-4000-8000-000000000002";
 const extractionId = "7c000000-0000-4000-8000-000000000003";
 const resolvedRowId = "7c000000-0000-4000-8000-000000000004";
@@ -47,9 +48,13 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
       begin;
       set local session_replication_role = replica;
       insert into auth.users (id, created_at, email)
-      values ('${ownerId}', '2026-10-12T00:00:00Z', 'youtube-bridge@example.invalid');
+      values
+        ('${ownerId}', '2026-10-12T00:00:00Z', 'youtube-bridge@example.invalid'),
+        ('${viewerId}', '2026-10-12T00:00:00Z', 'youtube-viewer@example.invalid');
       insert into public.users (id, nickname, social_provider, social_id)
-      values ('${ownerId}', '유튜브 브리지 검증', 'google', 'youtube-bridge');
+      values
+        ('${ownerId}', '유튜브 브리지 검증', 'google', 'youtube-bridge'),
+        ('${viewerId}', '공개 레시피 플래너 검증', 'google', 'youtube-viewer');
       set local session_replication_role = origin;
 
       insert into public.tags (
@@ -139,6 +144,7 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
         v_unresolved uuid;
         v_cutover_attempt_id uuid;
         v_pinned_snapshot_id uuid;
+        v_viewer_snapshot_id uuid;
         v_public_detail jsonb;
       begin
         select * into strict v_saved
@@ -239,23 +245,40 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
           true
         );
         insert into public.meal_plan_columns (id, user_id, name, sort_order)
-        values (
-          '7c000000-0000-4000-8000-000000000008',
-          '${ownerId}',
-          '저녁',
-          1
-        );
+        values
+          (
+            '7c000000-0000-4000-8000-000000000008',
+            '${ownerId}',
+            '저녁',
+            1
+          ),
+          (
+            '7c000000-0000-4000-8000-00000000000b',
+            '${viewerId}',
+            '점심',
+            1
+          );
         insert into public.meals (
           id, user_id, recipe_id, plan_date, column_id, planned_servings, status
-        ) values (
-          '7c000000-0000-4000-8000-000000000009',
-          '${ownerId}',
-          v_recipe.id,
-          '2026-10-13',
-          '7c000000-0000-4000-8000-000000000008',
-          2,
-          'registered'
-        );
+        ) values
+          (
+            '7c000000-0000-4000-8000-000000000009',
+            '${ownerId}',
+            v_recipe.id,
+            '2026-10-13',
+            '7c000000-0000-4000-8000-000000000008',
+            2,
+            'registered'
+          ),
+          (
+            '7c000000-0000-4000-8000-00000000000c',
+            '${viewerId}',
+            v_recipe.id,
+            '2026-10-13',
+            '7c000000-0000-4000-8000-00000000000b',
+            1,
+            'registered'
+          );
         perform public.set_account_generation_internal_writer_marker(
           v_cutover_attempt_id,
           false
@@ -273,6 +296,20 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
               and jsonb_array_length(snapshot.ingredients_json) = 2
           ) then
           raise exception 'PLANNER_SNAPSHOT_NOT_PINNED';
+        end if;
+        select meal.recipe_content_snapshot_id
+          into strict v_viewer_snapshot_id
+        from public.meals as meal
+        where meal.id = '7c000000-0000-4000-8000-00000000000c';
+        if v_viewer_snapshot_id is null
+          or not exists (
+            select 1
+            from public.recipe_content_snapshots as snapshot
+            where snapshot.id = v_viewer_snapshot_id
+              and snapshot.owner_user_id is null
+              and jsonb_array_length(snapshot.ingredients_json) = 2
+          ) then
+          raise exception 'OTHER_USER_PLANNER_SNAPSHOT_NOT_PINNED';
         end if;
 
         update public.youtube_saved_recipe_results
@@ -303,5 +340,98 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
     `);
 
     expect(result).toBe("youtube_saved_recipe_canonical_bridge_ok");
+  });
+
+  it("backfills four owner rows without requiring or inventing a privacy choice", () => {
+    const result = psql(`
+      begin;
+      set local session_replication_role = replica;
+      insert into auth.users (id, created_at, email)
+      values (
+        '7d000000-0000-4000-8000-000000000001',
+        '2026-10-12T00:00:00Z',
+        'youtube-four-row-owner@example.invalid'
+      );
+      insert into public.users (id, nickname, social_provider, social_id)
+      values (
+        '7d000000-0000-4000-8000-000000000001',
+        '기존 4건 검증',
+        'google',
+        'youtube-four-row-owner'
+      );
+      alter table public.youtube_saved_recipe_results
+        alter column canonical_recipe_id drop not null;
+      insert into public.youtube_saved_recipe_results (
+        id, owner_user_id, account_generation, extraction_session_id,
+        source_snapshot_json, editable_content_json, editable_content_hash,
+        revision, created_at, updated_at
+      )
+      select fixture.saved_id,
+             '7d000000-0000-4000-8000-000000000001'::uuid,
+             1,
+             fixture.extraction_id,
+             jsonb_build_object(
+               'youtube_url', 'https://www.youtube.com/watch?v=' || fixture.video_id,
+               'youtube_video_id', fixture.video_id,
+               'thumbnail_url', null,
+               'extraction_methods', jsonb_build_array('description'),
+               'draft_json', jsonb_build_object('ingredients', '[]'::jsonb)
+             ),
+             jsonb_build_object(
+               'title', fixture.title,
+               'base_servings', 2,
+               'tags', '[]'::jsonb,
+               'ingredients', '[]'::jsonb,
+               'steps', '[]'::jsonb
+             ),
+             repeat('0', 64),
+             1,
+             '2026-10-12T00:00:00Z'::timestamptz,
+             '2026-10-12T00:00:00Z'::timestamptz
+      from (values
+        ('7d000000-0000-4000-8000-000000000002'::uuid, '7d000000-0000-4000-8000-000000000012'::uuid, 'fixture0001', '기존 유튜브 레시피 1'),
+        ('7d000000-0000-4000-8000-000000000003'::uuid, '7d000000-0000-4000-8000-000000000013'::uuid, 'fixture0002', '기존 유튜브 레시피 2'),
+        ('7d000000-0000-4000-8000-000000000004'::uuid, '7d000000-0000-4000-8000-000000000014'::uuid, 'fixture0003', '기존 유튜브 레시피 3'),
+        ('7d000000-0000-4000-8000-000000000005'::uuid, '7d000000-0000-4000-8000-000000000015'::uuid, 'fixture0004', '기존 유튜브 레시피 4')
+      ) as fixture(saved_id, extraction_id, video_id, title);
+      set local session_replication_role = origin;
+
+      update public.youtube_saved_recipe_results
+      set editable_content_json = editable_content_json
+      where owner_user_id = '7d000000-0000-4000-8000-000000000001';
+
+      do $four_rows$
+      declare
+        v_count integer;
+      begin
+        select count(*) into strict v_count
+        from public.youtube_saved_recipe_results as saved
+        join public.recipes as recipe on recipe.id = saved.canonical_recipe_id
+        join public.recipe_sources as source on source.recipe_id = recipe.id
+        where saved.owner_user_id = '7d000000-0000-4000-8000-000000000001'
+          and recipe.created_by = saved.owner_user_id
+          and recipe.visibility = 'public'
+          and recipe.source_type = 'youtube'
+          and source.extraction_meta_json ->> 'youtube_saved_draft_id' = saved.id::text
+          and not (saved.source_snapshot_json ?| array['visibility', 'privacy', 'is_public'])
+          and not (saved.editable_content_json ?| array['visibility', 'privacy', 'is_public']);
+        if v_count <> 4 then
+          raise exception 'FOUR_ROW_BACKFILL_MISMATCH count=%', v_count;
+        end if;
+        if exists (
+          select 1 from public.youtube_saved_recipe_results
+          where owner_user_id = '7d000000-0000-4000-8000-000000000001'
+            and canonical_recipe_id is null
+        ) then
+          raise exception 'FOUR_ROW_BACKFILL_LEFT_NULL_CANONICAL_ID';
+        end if;
+      end;
+      $four_rows$;
+
+      select 'youtube_saved_recipe_four_row_backfill_ok';
+      rollback;
+    `);
+
+    expect(result).toBe("youtube_saved_recipe_four_row_backfill_ok");
   });
 });
