@@ -13,11 +13,18 @@ const migration = readFileSync(
 
 describe("food catalog search security boundary", () => {
   it("authenticates before parsing filters or invoking the service-only RPC", () => {
-    expect(route.indexOf("auth.getUser()")).toBeLessThan(
+    const authIndex = route.indexOf("auth.getUser()");
+    expect(authIndex).toBeGreaterThan(-1);
+    expect(authIndex).toBeLessThan(
       route.indexOf("const parsed = parseFoodCatalogSearchQuery"),
     );
+    expect(authIndex).toBeLessThan(
+      route.indexOf('db.rpc("read_food_catalog_source"'),
+    );
+    expect(authIndex).toBeLessThan(
+      route.indexOf('db.rpc("search_food_catalog_ranked"'),
+    );
     expect(route).not.toMatch(/createServiceRoleClient/i);
-    expect(route).toMatch(/const db = routeClient as unknown as/i);
     expect(route).toMatch(/p_actor_id:\s*user\.id/i);
   });
 

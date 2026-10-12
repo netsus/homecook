@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   if (!user) return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
 
   const params = new URL(request.url).searchParams;
-  const db = routeClient as unknown as FoodCatalogSearchDb;
+  const db: FoodCatalogSearchDb = routeClient;
   if (params.has("source_type") || params.has("source_id")) {
     const sourceType = params.get("source_type");
     const sourceId = params.get("source_id")?.trim().toLowerCase();
