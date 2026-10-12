@@ -62,7 +62,7 @@ describe("YTASYNC-CONTRACT/API", () => {
       policyKey: "primary",
       policyVersion: 3,
       extractorMode: "i031_codex_vision",
-      pipelineIdentity: "614233be53ee0f0a82b2e669bc8914b83d8046ba1f21fe6ab3972654a041a76d",
+      pipelineIdentity: "c9dbfd4007ce53a508b3fa37dba5f6149a7d3579ec37916bbf47d876952c66fb",
       fingerprintKeyVersion: "1",
       enabled: false,
     });

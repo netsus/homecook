@@ -31,7 +31,7 @@ export const YOUTUBE_ASYNC_POLICY_OPTIONS = Object.freeze({
 } as const);
 
 const POLICY_PIPELINE_IDENTITY =
-  "614233be53ee0f0a82b2e669bc8914b83d8046ba1f21fe6ab3972654a041a76d";
+  "c9dbfd4007ce53a508b3fa37dba5f6149a7d3579ec37916bbf47d876952c66fb";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
