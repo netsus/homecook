@@ -846,12 +846,6 @@
       "count": 1
     },
     {
-      "file": "lib/recipe-editor-ingredients.ts",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "55baaaade70d2d7c6d7d3608a5e7fde0744b4659735947850d92b86a8c742f3f",
-      "count": 1
-    },
-    {
       "file": "lib/server/account-generation/session-authority.ts",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "85a9086b2ebf866ef15a1c5987f5df4140b9a6401ca3c689124701537c1b749e",
