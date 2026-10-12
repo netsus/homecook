@@ -602,11 +602,18 @@ describe("18 manual recipe create backend", () => {
       }),
     });
 
+    const requestBody = buildValidBody();
+    requestBody.steps.push({
+      ...requestBody.steps[0],
+      step_number: 2,
+      instruction: "한 번 더 끓여주세요.",
+    });
+
     const { POST } = await importRecipesRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(buildValidBody()),
+      body: JSON.stringify(requestBody),
     }));
     const body = await response.json();
 
@@ -616,7 +623,10 @@ describe("18 manual recipe create backend", () => {
       data: null,
       error: {
         code: "VALIDATION_ERROR",
-        fields: [{ field: "steps[0].cooking_method_id", reason: "not_found" }],
+        fields: [
+          { field: "steps[0].cooking_method_id", reason: "not_found" },
+          { field: "steps[1].cooking_method_id", reason: "not_found" },
+        ],
       },
     });
   });
