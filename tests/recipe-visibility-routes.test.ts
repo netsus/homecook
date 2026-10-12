@@ -51,11 +51,12 @@ describe("recipe visibility public reader boundaries", () => {
     expect(themes).toMatch(/dbClient[\s\S]*\.from\("recipes"\)/);
     expect(themes).toContain('dbClient.rpc("list_home_theme_recipes"');
     expect(tags).toContain(
-      "const dbClient = routeClient as unknown as TagsDbClient",
+      "const dbClient = asTagsDbClient(routeClient)",
     );
-    expect(tags).not.toContain(
-      "createServiceRoleClient() ?? routeClient",
-    );
+    expect(tags).toContain("return client as TagsDbClient");
+    expect(tags).not.toContain("as unknown as TagsDbClient");
+    expect(tags).not.toContain("createServiceRoleClient");
+    expect(tags).not.toContain("createRemoteCompatibilityServiceRoleClient");
   });
 
   it("filters sitemap rows explicitly in addition to relying on RLS", () => {

@@ -6,13 +6,14 @@ import type { RecipeTagItem, RecipeTagKind, RecipeTagListData } from "@/types/re
 
 const TAG_LIMIT_DEFAULT = 30;
 const TAG_LIMIT_MAX = 100;
-const TAG_KINDS = new Set<RecipeTagKind>([
+const TAG_KIND_VALUES = [
   "semantic",
   "ingredient",
   "method",
   "source",
   "user",
-]);
+] as const satisfies readonly RecipeTagKind[];
+const TAG_KINDS: ReadonlySet<string> = new Set(TAG_KIND_VALUES);
 
 interface PublicRecipeTagRow {
   normalized_key: string;
@@ -39,6 +40,14 @@ interface TagsDbClient {
   }>;
 }
 
+function asTagsDbClient(client: unknown) {
+  return client as TagsDbClient;
+}
+
+function isRecipeTagKind(value: string): value is RecipeTagKind {
+  return TAG_KINDS.has(value);
+}
+
 function clampTagLimit(value: string | null) {
   if (!value) {
     return TAG_LIMIT_DEFAULT;
@@ -63,11 +72,11 @@ function parseKind(value: string | null) {
     return { kind: null, valid: true };
   }
 
-  if (!TAG_KINDS.has(value as RecipeTagKind)) {
+  if (!isRecipeTagKind(value)) {
     return { kind: null, valid: false };
   }
 
-  return { kind: value as RecipeTagKind, valid: true };
+  return { kind: value, valid: true };
 }
 
 function createEmptyTagList(): RecipeTagListData {
@@ -101,7 +110,7 @@ export async function GET(request: NextRequest) {
     const routeClient = await createRouteHandlerClient({
       anonymousPublicReadScope: "tags",
     });
-    const dbClient = routeClient as unknown as TagsDbClient;
+    const dbClient = asTagsDbClient(routeClient);
     const { data, error } = await dbClient.rpc("list_public_recipe_tags", {
       p_q: q,
       p_kind: kindResult.kind,

@@ -510,12 +510,6 @@
       "count": 1
     },
     {
-      "file": "app/api/v1/tags/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "97613083c140bb26e71c1c72b62f12ede9ec61b26fa2e66f8902eed47aeab1d3",
-      "count": 1
-    },
-    {
       "file": "app/api/v1/users/me/_account-generation-active.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "6ffeb26c3ea5844adc99e5d696e54ab8c817d988b959ca6628737fc04a45c64c",
