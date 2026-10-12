@@ -5,7 +5,7 @@
 - 날짜: 2026-10-12
 - 기준: 기존 source-bound 후보 `7e5f8ddd4d4fa22cbd3c8ad620686ea46efd8a77`에서 분기한 독립 작업 브랜치
 - 구현: 로컬 완료, 운영·DB·웹 미반영
-- 현재 런타임 후보: client v67, verifier v41, source binding v4
+- 현재 런타임 후보: client v68, verifier v42, source binding v5
 - 이번 후속 작업의 모델·OCR·영상 다운로드·네트워크 호출: 0회
 
 앞선 정확 3건 평가는 승인된 Luna low 호출 3/3을 이미 모두 소비했고 남은 예산은 0이다. 이번
@@ -21,8 +21,8 @@ post-verifier 결과에서 `unknown/null`로 남은 사례가 있었다. 저장�
 최초 진단만으로는 모델 누락과 verifier 강등의 비율을 나누지 않는다.
 
 v65까지 emoji bullet, amount-first 영문 행, 이전 정성량 행의 scope, `lb`, plain `RECIPE`
-제목을 보완했다. v66은 저장 raw 재생에서 남은 세 경계를 좁게 보완했고, v67은 독립 검토에서
-확인된 영문 절반 개수 문법의 부정·범위·근사 표현을 fail-closed로 강화했다.
+제목을 보완했다. v66은 저장 raw 재생에서 남은 세 경계를 좁게 보완했고, v67~v68은 독립 검토에서
+확인된 영문 절반 개수 문법의 부정 축약·조건·대체·범위·근사 표현을 fail-closed로 강화했다.
 
 - `1/2 Onion`은 단위가 없으므로 그 행만으로는 복구하지 않는다. 별도의 caption에 정확히
   `half of a/an/one [허용 descriptor] Onion`이 한 번 있어 개수임을 확인할 때만 `1/2개`로
@@ -55,7 +55,7 @@ block의 목록, 이름 또는 수량을 조립하지 않는다. 명시적 재�
 3. 단위 없는 절반 복구는 단일 `invalid-quantity-or-measurement`와 독립 caption의 개수 증명을
    모두 만족해야 한다.
 
-복구된 값은 transient `amountBasis=source-bound-stated`로 표시한다. v67의 estimate/절반 복구는
+복구된 값은 transient `amountBasis=source-bound-stated`로 표시한다. v68의 estimate/절반 복구는
 verifier가 이미 확인한 한국어 display name을 resolver lookup에 유지하고, 영문 원문 이름은
 `originalName/sourceName`과 evidence에 보존한다. 기존 unknown/null 복구는 모델 display name을
 신뢰하지 않고 서버가 결속한 source name을 사용한다.
@@ -70,21 +70,21 @@ resolver의 authoritative `resolution_status=resolved`인 행만 저장 직전�
 
 ## 버전·무결성
 
-- client: `codex-vision-source-anchored-v67-source-bound-review-hardening`
-- verifier: `source-anchor-fidelity-v41-source-bound-review-hardening`
-- source-bound recovery policy: `source-bound-quantity-recovery-v3`
-- source binding: `source-quantity-bindings-v4`
+- client: `codex-vision-source-anchored-v68-source-bound-review-hardening`
+- verifier: `source-anchor-fidelity-v42-source-bound-review-hardening`
+- source-bound recovery policy: `source-bound-quantity-recovery-v4`
+- source binding: `source-quantity-bindings-v5`
 - prompt: `source-anchored-single-recipe-v17-source-first-quantity` (변경 없음)
 - selector: `deterministic-evidence-v3-ingredient-event-preserving-largest-gap` (변경 없음)
 - OCR policy: `source-anchored-full-frame-ocr-v1` (변경 없음)
-- execution config signature: `be23a3d47803e2e0d3b86437`
-- candidate pipeline identity: `c9dbfd4007ce53a508b3fa37dba5f6149a7d3579ec37916bbf47d876952c66fb`
-- runtime bundle SHA-256: `93985a56228f9c4f18f16181e49afc6f0b86a3616aac9776d9635a9806308395`
-- bundle manifest SHA-256: `fab1a5b8a65c248f78dc24f2dde092d54fd62920075a19b8a3c8d169002b2ba8`
+- execution config signature: `76a4894438632c7723571f7c`
+- candidate pipeline identity: `e26ccfe3d7dbfa7684e84b39b22e4cfed55fd618562f4d5485a8b6d1c2b9c817`
+- runtime bundle SHA-256: `a44f99c11dcb7a00d09fd5fc478f3ed13331ec677d58acd75da94bf7a5be141a`
+- bundle manifest SHA-256: `84479ff4fd79de8501951667480059f448fae165d9871f0e3c5b89ff416882bd`
 - `literal-quantity-grammar.mjs`: `e3a2f2537f98219d56f36a320f8cffa8a969cb2473aad87166f66997fac2bc20`
 - `single-pass-vision.mjs`: `a8614a16b2588e311262c8c3fede756bc6fe7f8b11ee2cbb2ba27f9e3759b4f3`
-- `source-anchored-vision.mjs`: `5e79ab15ab95f5ec5c7af2f795fbc047785c100b631b73b1669ac44ff25776fa`
-- `source-quantity-owner-hints.mjs`: `a37fa9f051a1bc3707c2acb92abddc84c9f92e0f34330c9f2b7c051b952a1d06`
+- `source-anchored-vision.mjs`: `eff530346102507649b0bb7cf2fa50371366b7f3236bdd3420c21aa80d9c677e`
+- `source-quantity-owner-hints.mjs`: `3a830da8e81980a47fcd2d3e6a2e06bf6ac5b18525673daf50475665d5519e23`
 - async resolver/finalization gate: `11c72f3d61dd402c14a7846b1972a44f246b17289761837cd4718358a87ae12a`
 
 manifest의 모든 선언 파일을 실제 바이트와 다시 대조했고 불일치는 0이다. 실제 bundle worker가
@@ -98,13 +98,13 @@ bundle과 다르면 fail-closed한다. 새 후보로 그 승인이나 3회 budge
 `.omx/source-bound-evaluation-20261012/replay-saved-results.mjs`이고 SHA-256은
 `6199f4b1feecf02ef36f729822883f0f04643e41bae9f91f4b5d34ac58a0e492`이다. source와 durable
 result SHA를 먼저 확인하고 저장 invocation의 id/text/provider/method/block/line/`timestampSec`와
-현재 ledger 좌표가 같은지 검사한 뒤 저장 raw proposal을 v41 verifier에 넣는다. 모델·네트워크
+현재 ledger 좌표가 같은지 검사한 뒤 저장 raw proposal을 v42 verifier에 넣는다. 모델·네트워크
 호출 수는 모두 0이다.
 
 결과 `.omx/source-bound-evaluation-20261012/replay-result-v3.json`의 SHA-256은
-`f6bad44a16926363cdf31dee6200fa69d3056f81500715448150b8ecdc24c7c6`이다.
+`c619a435f3d68cafde878814374e6a25a30bccef24c6b307bd4e07534a3fe62d`이다.
 
-| 영상 | immutable source SHA-256 | 저장 result SHA-256 | v38 → v41 실제 차이 |
+| 영상 | immutable source SHA-256 | 저장 result SHA-256 | v38 → v42 실제 차이 |
 |---|---|---|---|
 | `D9jzKcu9Snc` | `ccb47ccf7b40c6ebacdc6ea1a6b5b07736546b9decaebbb2cc4d57a4e513cb11` | `fd20faf126ed85724295ecfd0b8c056576e91d2f38d02c70abf1c469a1c49c13` | `통삼겹살` unknown→`500 g explicit`, 두 번째 `소금` unknown→`1 티스푼 explicit`; verified 0→2, rejected 3→1 |
 | `AtGAVBl1vrQ` | `074b583eb201f3bcc1da1eae43466d0d9bce33bef91552ce85a95bec2a4ffefc` | `89d71e1a5761faf183774336f75079509f2df5af7ab64f998738b9e71d3084ae` | `돼지고기 앞다리살` unknown→`400 g explicit`; verified 10→11, rejected 1→0. `양파 2개`가 primary이고 `500g`은 reference로만 보존 |
@@ -115,7 +115,7 @@ D9의 시각 원천 `한두 꼬집`과 honey conflict도 복구하지 않는다.
 
 ## 실제 경계 검증과 한계
 
-관련 unit/runtime 회귀 10개 파일 274개를 통과했다. 여기에 raw estimate 단순 부활 방지,
+관련 unit/runtime 회귀 10개 파일 281개를 통과했다. 여기에 raw estimate 단순 부활 방지,
 source/caption exact 모순, 조건·대체·부정·범위·근사, unitless 무게, compound green onion, 공유 caption,
 accepted estimate 비덮기, localized resolver name 유지, 비재료 fail-closed를 포함한다.
 
