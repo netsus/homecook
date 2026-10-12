@@ -241,7 +241,7 @@ export function projectCookedBatch(value: unknown): CookedBatchProjection | null
       && ["consumed", "consumed_unweighed"].includes(String(value.depleted_reason))
     ? "eaten"
     : value.batch_status === null ? value.status as "leftover" | "eaten" : "leftover";
-  return {
+  const projection: CookedBatchProjection = {
     id: value.id,
     recipe_id: value.recipe_id,
     recipe_title: value.recipe_title,
@@ -252,13 +252,15 @@ export function projectCookedBatch(value: unknown): CookedBatchProjection | null
     finished_weight_g: value.finished_weight_g as number | null,
     remaining_weight_g: value.remaining_weight_g as number | null,
     weight_status: value.weight_status as CookedBatchProjection["weight_status"],
-    ...(value.weight_source !== undefined ? { weight_source: value.weight_source as CookedBatchProjection["weight_source"] } : {}),
+    weight_source: value.weight_source as CookedBatchProjection["weight_source"],
     batch_status: value.batch_status as CookedBatchProjection["batch_status"],
     depleted_reason: value.depleted_reason as CookedBatchProjection["depleted_reason"],
     revision: value.revision as number | null,
     nutrition_calculation_status: value.nutrition_calculation_status as CookedBatchProjection["nutrition_calculation_status"],
     current_unweighed_closure_event_id: value.current_unweighed_closure_event_id as string | null,
   };
+  if (value.weight_source === undefined) delete projection.weight_source;
+  return projection;
 }
 
 export function projectSnapshotV2CompleteData(value: unknown) {
@@ -399,17 +401,18 @@ function readProgressEventCounts(value: unknown): UserProgressEventCounts | null
     && (!Number.isSafeInteger(value.leftover_eaten) || Number(value.leftover_eaten) < 0)) {
     return null;
   }
-  return {
+  const eventCounts: UserProgressEventCounts = {
     cooking_completed: Number(value.cooking_completed),
     shopping_completed: Number(value.shopping_completed),
     recipe_saved_distinct_ever: Number(value.recipe_saved_distinct_ever),
     custom_book_created: Number(value.custom_book_created),
     planner_registered_first: Number(value.planner_registered_first),
     planner_registered_repeat: Number(value.planner_registered_repeat),
-    ...(value.leftover_eaten === undefined
-      ? {}
-      : { leftover_eaten: Number(value.leftover_eaten) }),
   };
+  if (value.leftover_eaten !== undefined) {
+    eventCounts.leftover_eaten = Number(value.leftover_eaten);
+  }
+  return eventCounts;
 }
 
 /**
