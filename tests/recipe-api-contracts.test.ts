@@ -7,7 +7,9 @@ const createRecipeViewInternalClient = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
+const prepareRecipeNutritionSnapshot = vi.fn();
 const recalculateRecipeNutritionSnapshot = vi.fn();
+const publishManualRecipe = vi.fn();
 const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 const readRecipeImageProjection = vi.fn();
@@ -50,7 +52,16 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 }));
 
 vi.mock("@/lib/server/recipe-nutrition-service", () => ({
+  prepareRecipeNutritionSnapshot,
   recalculateRecipeNutritionSnapshot,
+}));
+
+vi.mock("@/lib/server/recipe-nutrition-snapshot", () => ({
+  createRecipeNutritionSnapshotPayload: (calculation: unknown) => calculation,
+}));
+
+vi.mock("@/lib/server/manual-recipe-publication", () => ({
+  publishManualRecipe,
 }));
 
 vi.mock("@/lib/server/recipe-image-read", () => ({
@@ -138,6 +149,16 @@ function deferredDetailQuery() {
 const manualIngredientId = "550e8400-e29b-41d4-a716-446655440010";
 const manualMethodId = "550e8400-e29b-41d4-a716-446655440020";
 const manualImageObjectId = "550e8400-e29b-41d4-a716-446655440030";
+const managedRecipeCreateRow = {
+  id: "recipe-managed-rpc",
+  title: "관리형 이미지 레시피",
+  source_type: "manual",
+  created_by: "user-1",
+  base_servings: 2,
+  visibility: "private",
+  image_object_id: manualImageObjectId,
+  image_state: "attached_private",
+};
 
 function manualRecipeCreateBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -174,16 +195,7 @@ function manualRecipeCreateBody(overrides: Record<string, unknown> = {}) {
 
 function setupManagedRecipeCreate(
   rpcResult: QueryResult<Record<string, unknown> | null> = {
-    data: {
-      id: "recipe-managed-rpc",
-      title: "관리형 이미지 레시피",
-      source_type: "manual",
-      created_by: "user-1",
-      base_servings: 2,
-      visibility: "private",
-      image_object_id: manualImageObjectId,
-      image_state: "attached_private",
-    },
+    data: managedRecipeCreateRow,
     error: null,
   },
 ) {
@@ -231,6 +243,15 @@ function setupManagedRecipeCreate(
       sessionKeyHash: "a".repeat(64),
     },
   });
+  prepareRecipeNutritionSnapshot.mockResolvedValue({
+    calculation: { calculation_status: "unavailable" },
+    expectedRecipeVersion: "2026-07-26T00:00:00.000Z",
+    inputGuard: {},
+  });
+  publishManualRecipe.mockResolvedValue({
+    ...managedRecipeCreateRow,
+    visibility: "public",
+  });
 
   return { routeClient, rpc };
 }
@@ -246,7 +267,9 @@ describe("recipe API contracts", () => {
     hasSupabasePublicEnv.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
+    prepareRecipeNutritionSnapshot.mockReset();
     recalculateRecipeNutritionSnapshot.mockReset();
+    publishManualRecipe.mockReset();
     readAccountGenerationCapability.mockReset();
     readVerifiedAccountGenerationSession.mockReset();
     readRecipeImageProjection.mockReset();
@@ -2522,8 +2545,12 @@ describe("recipe API contracts", () => {
       body: JSON.stringify({ ...body, ingredients: [{ ...body.ingredients[0], ...product }] }),
     }));
     expect(response.status).toBe(201);
-    expect(rpc).toHaveBeenCalledWith("create_manual_recipe_with_managed_image",
-      expect.objectContaining({ p_ingredients: [expect.objectContaining(product)] }));
+    expect(rpc).toHaveBeenCalledWith("create_manual_recipe_recoverable",
+      expect.objectContaining({
+        p_create_payload: expect.objectContaining({
+          p_ingredients: [expect.objectContaining(product)],
+        }),
+      }));
   });
 
   it.each([
@@ -2542,6 +2569,8 @@ describe("recipe API contracts", () => {
     }));
     expect(response.status).toBe(422);
     expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
+    expect(prepareRecipeNutritionSnapshot).not.toHaveBeenCalled();
+    expect(publishManualRecipe).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
   });
 
@@ -2571,6 +2600,8 @@ describe("recipe API contracts", () => {
     }));
     expect(response.status).toBe(422);
     expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
+    expect(prepareRecipeNutritionSnapshot).not.toHaveBeenCalled();
+    expect(publishManualRecipe).not.toHaveBeenCalled();
   });
 
   it("sends only supported named arguments when creating a derived personal recipe", async () => {
@@ -2625,17 +2656,37 @@ describe("recipe API contracts", () => {
       expect.objectContaining({ auth: routeClient.auth }),
     );
     expect(rpc).toHaveBeenCalledWith(
-      "create_manual_recipe_with_managed_image",
+      "create_manual_recipe_recoverable",
       expect.objectContaining({
         p_owner_uuid: "user-1",
         p_auth_identity_created_at_snapshot: "2026-07-23T00:00:00.000Z",
         p_session_key_hash: "a".repeat(64),
         p_hmac_key_version: 1,
-        p_image_object_id: manualImageObjectId,
-        p_expected_cleanup_generation: 0,
-        p_thumbnail_url: null,
+        p_idempotency_key: expect.any(String),
+        p_request_body: expect.objectContaining({
+          image_object_id: manualImageObjectId,
+        }),
+        p_create_payload: expect.objectContaining({
+          p_thumbnail_url: null,
+        }),
       }),
     );
+    expect(prepareRecipeNutritionSnapshot).toHaveBeenCalledWith(
+      expect.anything(),
+      managedRecipeCreateRow.id,
+      expect.objectContaining({ rpc }),
+    );
+    expect(publishManualRecipe).toHaveBeenCalledWith(expect.objectContaining({
+      recipeId: managedRecipeCreateRow.id,
+      idempotencyKey: expect.any(String),
+      expectedUpdatedAt: "2026-07-26T00:00:00.000Z",
+      nutritionSnapshot: { calculation_status: "unavailable" },
+      inputGuard: {},
+    }));
+    expect(rpc.mock.invocationCallOrder[0])
+      .toBeLessThan(prepareRecipeNutritionSnapshot.mock.invocationCallOrder[0]);
+    expect(prepareRecipeNutritionSnapshot.mock.invocationCallOrder[0])
+      .toBeLessThan(publishManualRecipe.mock.invocationCallOrder[0]);
     expect(rpc).not.toHaveBeenCalledWith(
       "create_manual_recipe",
       expect.anything(),
@@ -2656,10 +2707,12 @@ describe("recipe API contracts", () => {
 
     expect(response.status).toBe(201);
     expect(rpc).toHaveBeenCalledWith(
-      "create_manual_recipe_with_managed_image",
+      "create_manual_recipe_recoverable",
       expect.objectContaining({
-        p_image_object_id: null,
-        p_expected_cleanup_generation: null,
+        p_request_body: manualRecipeCreateBody(),
+        p_create_payload: expect.objectContaining({
+          p_thumbnail_url: null,
+        }),
       }),
     );
   });
@@ -2685,11 +2738,12 @@ describe("recipe API contracts", () => {
 
     expect(response.status).toBe(201);
     expect(rpc).toHaveBeenCalledWith(
-      "create_manual_recipe_with_managed_image",
+      "create_manual_recipe_recoverable",
       expect.objectContaining({
-        p_image_object_id: null,
-        p_expected_cleanup_generation: null,
-        p_thumbnail_url: thumbnailUrl,
+        p_request_body: manualRecipeCreateBody({ thumbnail_url: thumbnailUrl }),
+        p_create_payload: expect.objectContaining({
+          p_thumbnail_url: thumbnailUrl,
+        }),
       }),
     );
   });
@@ -3012,6 +3066,8 @@ describe("recipe API contracts", () => {
     expect(response.status).toBe(422);
     expect(body.error.code).toBe("IMAGE_VISIBILITY_MISMATCH");
     expect(recalculateRecipeNutritionSnapshot).not.toHaveBeenCalled();
+    expect(prepareRecipeNutritionSnapshot).not.toHaveBeenCalled();
+    expect(publishManualRecipe).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -3046,9 +3102,11 @@ describe("recipe API contracts", () => {
       expect(body.error.code).toBe(errorCode);
       expect(rpc).toHaveBeenCalledTimes(1);
       expect(rpc).toHaveBeenCalledWith(
-        "create_manual_recipe_with_managed_image",
+        "create_manual_recipe_recoverable",
         expect.objectContaining({
-          p_image_object_id: manualImageObjectId,
+          p_request_body: expect.objectContaining({
+            image_object_id: manualImageObjectId,
+          }),
         }),
       );
       expect(rpc).not.toHaveBeenCalledWith(
@@ -3056,6 +3114,8 @@ describe("recipe API contracts", () => {
         expect.anything(),
       );
       expect(recalculateRecipeNutritionSnapshot).not.toHaveBeenCalled();
+      expect(prepareRecipeNutritionSnapshot).not.toHaveBeenCalled();
+      expect(publishManualRecipe).not.toHaveBeenCalled();
     },
   );
 
