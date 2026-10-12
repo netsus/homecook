@@ -726,7 +726,7 @@ describe("YouTube background extraction contract evolution", () => {
     expect(worker).toContain("workerRpcClient");
     expect(worker).toContain("noCache: true");
     expect(worker).toContain('runType: "cold"');
-    expect(worker).toContain("timeoutMs: TOTAL_TIMEOUT_MS");
+    expect(worker).toContain("timeoutMs: analysisMode ? 180_000 : TOTAL_TIMEOUT_MS");
   });
 
   it("binds every worker claim to the complete policy snapshot digest", () => {
