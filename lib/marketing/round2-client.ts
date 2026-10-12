@@ -26,7 +26,7 @@ import {
   Round2Error, canonicalRound2Json, normalizeRound2Email, parseRound2Request, type Round2Activity, type Round2Request,
 } from "../marketing-round2";
 import { buildRound2BootstrapRequest, checkRound2BootstrapOwnership, confirmRound2Bootstrap, markRound2ParticipationExpired, prepareRound2Bootstrap, restartRound2Bootstrap, round2BootstrapContextUrl, type Round2BootstrapPreparation } from "./round2-session";
-import { enqueueRound2Request, loadRound2ClientRecord, removeRound2Request, validateRound2Draft, writeRound2ClientDraft, type Round2NonPiiRequest } from "./round2-client-storage";
+import { enqueueRound2Request, loadRound2ClientRecord, removeRound2Request, validateRound2Draft, writeRound2ClientDraft, type Round2ClientStorageOptions, type Round2NonPiiRequest } from "./round2-client-storage";
 
 /** A tab owns its private form; only nonPII requests can enter persistent storage. */
 export function createRound2Client(options: Round2ClientOptions): Round2Client {
@@ -45,9 +45,17 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
   let tabOwnership: Promise<void> | null = null;
   let releaseTab: (() => void) | null = null;
   const listeners = new Set<() => void>();
-  const storageOptions = () => ({ topic: options.topic, nowMs: now(), ...(Object.hasOwn(options, "indexedDB") ? { indexedDB: options.indexedDB } : {}) });
+  const storageOptions = (): Round2ClientStorageOptions => {
+    const storage: Round2ClientStorageOptions = { topic: options.topic, nowMs: now() };
+    if (Object.hasOwn(options, "indexedDB")) storage.indexedDB = options.indexedDB;
+    return storage;
+  };
   const bootstrapOptions = () => ({ ...storageOptions(), attribution: options.attribution });
-  const activityOptions = () => ({ ...storageOptions(), ...(preparation?.kind === "key" ? { bootstrapKey: preparation.bootstrap_key } : {}) });
+  const activityOptions = () => {
+    const storage = storageOptions();
+    if (preparation?.kind === "key") storage.bootstrapKey = preparation.bootstrap_key;
+    return storage;
+  };
   function leadDraftEdited() {
     if (!leadAttempt) return false;
     if (!state.leadForm.consent) return true;
@@ -145,7 +153,9 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
   }
   async function expire(campaign: boolean) {
     const key = preparation?.kind === "key" ? preparation.bootstrap_key : undefined;
-    await markRound2ParticipationExpired({ ...storageOptions(), ...(key ? { bootstrapKey: key } : {}) });
+    const expiredOptions = storageOptions();
+    if (key) expiredOptions.bootstrapKey = key;
+    await markRound2ParticipationExpired(expiredOptions);
     // The matching-key transaction already clears activity data. A stale 410
     // must not perform a second unowned delete after another tab has restarted.
     preparation = null; outbox = []; requestedStarts.clear(); token = null; leadAttempt = null;
@@ -308,7 +318,8 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
       const email = options.preview ? "preview@example.com" : normalizeRound2Email(state.leadForm.email);
       leadAttempt = { ...common(), action: "lead_submit", email, consent: true, consent_version: ROUND2_CONSENT_VERSION, purpose: ROUND2_PURPOSE, consent_generation: state.snapshot!.consent_generation };
     }
-    const request = { ...leadAttempt, ...(!receiptOnly && submittedToken ? { turnstile_token: submittedToken } : {}) };
+    const request: Extract<Round2Request, { action: "lead_submit" }> = { ...leadAttempt };
+    if (!receiptOnly && submittedToken) request.turnstile_token = submittedToken;
     const result = await post(request);
     delete request.turnstile_token;
     if (result) { leadAttempt = null; update({ leadForm: { email: options.preview ? "preview@example.com" : "", consent: false } }); }
@@ -336,7 +347,8 @@ export function createRound2Client(options: Round2ClientOptions): Round2Client {
     },
     submitSurvey: answers => run(() => nonPii(parseRound2Request(JSON.stringify({ ...common(), action: "survey_submit", survey_version: options.surveyVersion ?? `${ROUND2_VERSION}-${options.topic}`, answers })) as Round2NonPiiRequest)),
     setLeadForm(patch) {
-      const next = { ...state.leadForm, ...patch, ...(options.preview ? { email: "preview@example.com" } : {}) };
+      const next = { ...state.leadForm, ...patch };
+      if (options.preview) next.email = "preview@example.com";
       if (next.email !== state.leadForm.email || next.consent !== state.leadForm.consent) { token = null; update({ tokenReady: false, challengeEpoch: state.challengeEpoch + 1 }); }
       update({ leadForm: next });
     },
