@@ -248,6 +248,18 @@ describe("community prepared food catalog API contract", () => {
       body: JSON.stringify({ brand: "새 브랜드" }),
     }), { params: Promise.resolve({ product_id: PRODUCT_ID }) });
     expect(visibleResponse.status).toBe(200);
+    expect(await visibleResponse.json()).toEqual({
+      success: true,
+      data: { product: sharedManualProduct },
+      error: null,
+    });
+    expect(visibleDb.from).toHaveBeenCalledWith("food_products");
+    expect(visibleDb.rpc).toHaveBeenCalledWith("update_manual_food_product", {
+      p_user_id: USER_ID,
+      p_product_id: PRODUCT_ID,
+      p_patch: { brand: "새 브랜드" },
+      p_expected_current_version_id: VERSION_ID,
+    });
 
     const hiddenDb = serviceClient({
       productState: {
@@ -296,6 +308,11 @@ describe("community prepared food catalog API contract", () => {
       body: JSON.stringify({ reason_code: "incorrect_nutrition", detail_text: "열량 확인" }),
     }), { params: Promise.resolve({ product_id: PRODUCT_ID }) });
     expect(accepted.status).toBe(201);
+    expect(await accepted.json()).toEqual({
+      success: true,
+      data: { reported: true },
+      error: null,
+    });
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: USER_ID });
     expect(acceptedDb.rpc).toHaveBeenCalledWith("report_food_product", {
       p_user_id: USER_ID,

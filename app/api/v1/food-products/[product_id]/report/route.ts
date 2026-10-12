@@ -19,6 +19,10 @@ interface ReportDbClient {
   ): PromiseLike<{ data: unknown; error: RpcError | null }>;
 }
 
+function asReportDbClient(value: unknown) {
+  return value as ReportDbClient & UserBootstrapDbClient;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function mapDatabaseError(error: RpcError | null) {
@@ -66,7 +70,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = routeClient as unknown as ReportDbClient & UserBootstrapDbClient;
+  const db = asReportDbClient(routeClient);
   try {
     await ensurePublicUserRow(db, user);
   } catch {
