@@ -19,6 +19,14 @@ interface CatalogDbClient {
   ): PromiseLike<{ data: unknown; error: RpcError | null }>;
 }
 
+function asCatalogDbClient(value: unknown) {
+  return value as CatalogDbClient;
+}
+
+function asCatalogCreateDbClient(value: unknown) {
+  return value as CatalogDbClient & UserBootstrapDbClient;
+}
+
 function mapDatabaseError(error: RpcError | null, fallbackMessage: string) {
   const detail = `${error?.code ?? ""} ${error?.message ?? ""}`;
   if (/NUTRITION_VERSION_CONFLICT/i.test(detail)) {
@@ -51,7 +59,7 @@ export async function GET(request: Request) {
     return fail(parsed.code, "검색 조건을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = routeClient as unknown as CatalogDbClient;
+  const db = asCatalogDbClient(routeClient);
   const result = await db.rpc("list_food_products", {
     p_user_id: user.id,
     p_query: parsed.value.q || null,
@@ -85,7 +93,7 @@ export async function POST(request: Request) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = routeClient as unknown as CatalogDbClient & UserBootstrapDbClient;
+  const db = asCatalogCreateDbClient(routeClient);
   try {
     await ensurePublicUserRow(db, user);
   } catch {
