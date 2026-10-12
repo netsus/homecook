@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { addPantryItems } from "@/lib/api/pantry";
+import { addPantryItems, deletePantryItems } from "@/lib/api/pantry";
 import { createShoppingList } from "@/lib/api/shopping";
 import { eatLeftover } from "@/lib/api/leftovers";
 import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
@@ -96,6 +96,54 @@ describe("growth source API clients", () => {
     await vi.advanceTimersByTimeAsync(3_500);
     expect(listener).toHaveBeenCalledTimes(3);
     window.removeEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, listener);
+  });
+
+  it.each([
+    {
+      label: "ingredient ids only",
+      ingredientIds: ["ingredient-1"],
+      pantryItemIds: [],
+      expectedBody: { ingredient_ids: ["ingredient-1"] },
+    },
+    {
+      label: "pantry item ids only",
+      ingredientIds: [],
+      pantryItemIds: ["pantry-item-1"],
+      expectedBody: { pantry_item_ids: ["pantry-item-1"] },
+    },
+    {
+      label: "both id types",
+      ingredientIds: ["ingredient-1"],
+      pantryItemIds: ["pantry-item-1"],
+      expectedBody: {
+        ingredient_ids: ["ingredient-1"],
+        pantry_item_ids: ["pantry-item-1"],
+      },
+    },
+  ])("sends only populated pantry delete fields for $label", async ({
+    ingredientIds,
+    pantryItemIds,
+    expectedBody,
+  }) => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn(async () => ({
+        success: true,
+        data: { removed: 1 },
+        error: null,
+      })),
+    });
+
+    await expect(deletePantryItems(ingredientIds, pantryItemIds)).resolves.toEqual({
+      removed: 1,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/v1/pantry", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(expectedBody),
+    });
   });
 
   it("dispatches a gamification refresh immediately after a leftover is marked eaten", async () => {

@@ -121,13 +121,22 @@ export async function addPantryItems(
 }
 
 export async function deletePantryItems(ingredientIds: string[], pantryItemIds: string[] = []) {
+  const body: {
+    ingredient_ids?: string[];
+    pantry_item_ids?: string[];
+  } = {};
+
+  if (ingredientIds.length > 0) {
+    body.ingredient_ids = ingredientIds;
+  }
+  if (pantryItemIds.length > 0) {
+    body.pantry_item_ids = pantryItemIds;
+  }
+
   return requestPantry<PantryDeleteData>("/api/v1/pantry", {
     method: "DELETE",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      ...(ingredientIds.length > 0 ? { ingredient_ids: ingredientIds } : {}),
-      ...(pantryItemIds.length > 0 ? { pantry_item_ids: pantryItemIds } : {}),
-    }),
+    body: JSON.stringify(body),
   });
 }
 
