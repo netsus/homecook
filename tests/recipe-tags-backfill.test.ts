@@ -87,7 +87,7 @@ describe("36d recipe tags backfill and usage reconcile", () => {
           ingredientNames: ["닭가슴살", "상추", "무설탕 요거트"],
           stepTexts: ["샐러드로 담아요."],
           cookingMethodLabels: ["무치기"],
-          currentTags: ["샐러드", "초보가능", "고단백", "저당", "발효한끼"],
+          currentTags: ["샐러드", "초보가능", "고단백", "저당", "발효한끼", "   "],
         },
       ],
     });
@@ -130,6 +130,26 @@ describe("36d recipe tags backfill and usage reconcile", () => {
         would_update: true,
       },
     ]);
+  });
+
+  it("omits usage rows whose approved relation count already matches", () => {
+    expect(buildRecipeTagUsageReconcileReport({
+      tags: [
+        { id: "tag-current", normalized_key: "한식", label: "한식", usage_count: 1 },
+        { id: "tag-stale", normalized_key: "국물요리", label: "국물요리", usage_count: 2 },
+      ],
+      recipeTags: [
+        { tag_id: "tag-current", visibility: "public", review_status: "approved" },
+        { tag_id: "tag-stale", visibility: "private", review_status: "approved" },
+      ],
+    })).toEqual([{
+      tag_id: "tag-stale",
+      normalized_key: "국물요리",
+      label: "국물요리",
+      before_count: 2,
+      after_count: 0,
+      would_update: true,
+    }]);
   });
 
   it("adds service-role-only dry-run and usage reconcile RPCs in migration", () => {
