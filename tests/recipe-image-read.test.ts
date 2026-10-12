@@ -130,6 +130,20 @@ describe("recipe image registry-aware read adapter", () => {
     })).rejects.toThrow("managed recipe image projection is unavailable");
   });
 
+  it.each([
+    { name: "an unexpected key", value: { ...projection(), unexpected: true } },
+    { name: "an invalid field type", value: { ...projection(), account_generation: "7" } },
+  ])("rejects projection evidence with $name", async ({ value }) => {
+    const client = {
+      rpc: vi.fn(async () => ({ data: [value], error: null })),
+    };
+
+    await expect(readRecipeImageProjection({
+      client,
+      recipeId: RECIPE_ID,
+    })).rejects.toThrow("managed recipe image read evidence is invalid");
+  });
+
   it("keeps the legacy URL when no managed reference exists", async () => {
     const { client } = storageClient();
 

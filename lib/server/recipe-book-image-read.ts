@@ -56,26 +56,30 @@ function nullablePositiveSafeInteger(value: unknown): value is number | null {
     || (Number.isSafeInteger(value) && typeof value === "number" && value > 0);
 }
 
+function isRecipeBookImageReadProjection(
+  value: unknown,
+): value is RecipeBookImageReadProjection {
+  return isRecord(value)
+    && Object.keys(value).sort().join(",") === PROJECTION_KEYS.join(",")
+    && typeof value.book_id === "string"
+    && UUID_PATTERN.test(value.book_id)
+    && nullableString(value.legacy_cover_image_url)
+    && nullableString(value.image_object_id)
+    && nullableString(value.bucket_id)
+    && nullableString(value.object_path)
+    && nullableString(value.owner_uuid)
+    && nullablePositiveSafeInteger(value.account_generation)
+    && nullableString(value.visibility)
+    && nullableString(value.state)
+    && nullableString(value.reference_type);
+}
+
 function parseProjection(value: unknown): RecipeBookImageReadProjection {
-  if (
-    !isRecord(value)
-    || Object.keys(value).sort().join(",") !== PROJECTION_KEYS.join(",")
-    || typeof value.book_id !== "string"
-    || !UUID_PATTERN.test(value.book_id)
-    || !nullableString(value.legacy_cover_image_url)
-    || !nullableString(value.image_object_id)
-    || !nullableString(value.bucket_id)
-    || !nullableString(value.object_path)
-    || !nullableString(value.owner_uuid)
-    || !nullablePositiveSafeInteger(value.account_generation)
-    || !nullableString(value.visibility)
-    || !nullableString(value.state)
-    || !nullableString(value.reference_type)
-  ) {
+  if (!isRecipeBookImageReadProjection(value)) {
     throw new Error("managed recipe book image read evidence is invalid");
   }
 
-  return value as unknown as RecipeBookImageReadProjection;
+  return value;
 }
 
 export async function readRecipeBookImageProjections({
