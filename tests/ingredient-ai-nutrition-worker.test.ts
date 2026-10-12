@@ -39,5 +39,33 @@ describe('durable AI nutrition worker', () => {
   it('does not endlessly retry structurally invalid estimates', async () => { const s = setup(); const w = createIngredientAiNutritionWorker({ ...s, generate: async () => { throw new AiNutritionError('AI_NUTRITION_UNESTIMABLE'); }, refresh: vi.fn() }); await w.runOnce(); expect(s.calls.find(c => c.name === 'fail_ingredient_ai_nutrition_job')?.args.p_retryable).toBe(false); });
   it('leaves failed snapshot refreshes pending and acknowledges successful ones only', async () => { const s = setup({ claim_ingredient_ai_nutrition_job: { status: 'idle' }, list_ingredient_ai_nutrition_refresh_jobs: [{ job_id: 'j', pending_recipe_ids: ['good', 'bad'] }] }); const refresh = vi.fn(async (_j, id) => { if (id === 'bad')
     throw Error('retry later'); }); await createIngredientAiNutritionWorker({ ...s, generate: vi.fn(), refresh }).runOnce(); expect(s.calls.filter(c => c.name === 'acknowledge_ingredient_ai_nutrition_refresh')).toEqual([{ name: 'acknowledge_ingredient_ai_nutrition_refresh', args: { p_job_id: 'j', p_recipe_ids: ['good'] } }]); });
+  it('skips malformed snapshot refresh rows at the RPC boundary', async () => {
+    const s = setup({
+      claim_ingredient_ai_nutrition_job: { status: 'idle' },
+      list_ingredient_ai_nutrition_refresh_jobs: [
+        { job_id: 'missing-recipes' },
+        { job_id: 42, pending_recipe_ids: ['wrong-job-id'] },
+        { job_id: 'valid', pending_recipe_ids: [null, 'recipe'] },
+      ],
+    });
+    const refresh = vi.fn();
+
+    await createIngredientAiNutritionWorker({ ...s, generate: vi.fn(), refresh }).runOnce();
+
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledWith('valid', 'recipe');
+    expect(s.calls.filter(c => c.name === 'acknowledge_ingredient_ai_nutrition_refresh')).toEqual([
+      { name: 'acknowledge_ingredient_ai_nutrition_refresh', args: { p_job_id: 'valid', p_recipe_ids: ['recipe'] } },
+    ]);
+  });
+  it('rejects malformed claimed jobs before invoking the provider', async () => {
+    const s = setup({ claim_ingredient_ai_nutrition_job: { ...job, lease_token: null } });
+    const generate = vi.fn();
+
+    await expect(createIngredientAiNutritionWorker({ ...s, generate, refresh: vi.fn() }).runOnce())
+      .rejects.toMatchObject({ code: 'AI_NUTRITION_INVALID_CLAIM' });
+
+    expect(generate).not.toHaveBeenCalled();
+  });
   it('serializes overlapping local wakes while DB leases cover other processes', async () => { const s = setup(); let release!: () => void; const pending = new Promise<void>(r => { release = r; }); const generate = vi.fn(async () => { await pending; return estimate; }); const w = createIngredientAiNutritionWorker({ ...s, generate, refresh: vi.fn() }); const a = w.runOnce(), b = w.runOnce(); expect(a).toBe(b); release(); await a; expect(s.calls.filter(c => c.name === 'claim_ingredient_ai_nutrition_job')).toHaveLength(1); });
 });
