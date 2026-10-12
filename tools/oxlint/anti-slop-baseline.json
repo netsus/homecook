@@ -774,18 +774,6 @@
       "count": 1
     },
     {
-      "file": "lib/api/pantry.ts",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "8cb8f597e9b5b2e22f112fd80cc528727ea2b16036263d17a9dfba89528c2e02",
-      "count": 1
-    },
-    {
-      "file": "lib/api/pantry.ts",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "ddfde003c235a9bfda893626784154aeaa697a8ad4d284c86390d86d27e22949",
-      "count": 1
-    },
-    {
       "file": "lib/marketing/round2-client.ts",
       "rule": "anti-slop(no-conditional-empty-object-spread)",
       "snippetSha256": "28b4ca500b9c65f988b7ec067b8019baad7c658e83ff9ebadbacf3f460265b11",
