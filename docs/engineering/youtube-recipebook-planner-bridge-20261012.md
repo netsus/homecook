@@ -1,6 +1,6 @@
 # 유튜브 저장 레시피북·플래너 연결
 
-상태: 로컬 구현 및 검증 중. 운영 DB·웹 미반영.
+상태: 로컬 구현·검증 완료. 운영 DB·웹 미반영이며 현재 빠른 배포 경로는 통합 범위를 거부한다.
 
 ## 첨부 화면에서 확인한 원인
 
@@ -62,3 +62,13 @@
 - owner-only 편집/RPC와 다른 사용자의 공개 상세·검색·플래너 추가를 각각 검증
 - 미확인 분량은 경고 1개만 보이고, 확인/직접 입력 후 중복 상태 배지가 남지 않으며 영양 계산 제외 계약 유지
 - 좁은 모바일 폭, 긴 단위, 키보드 입력에서 단위 입력이 행 밖으로 넘치지 않음
+
+## 로컬 검증 결과
+
+- 직접 관련 Vitest는 10개 파일, 107개가 통과했다. 함께 실행한 `recipe-add-to-planner`의 3개 실패는 이 변경의 기준 master `7e466b170`에서도 같은 파일·컴포넌트로 동일하게 재현돼 통합 회귀에서 제외했다.
+- 수동 레시피, 레시피 상세·영양, 플래너, 쇼핑, 식사 기록, 인증과 YouTube 공개·저장 흐름의 넓은 회귀 묶음은 27개 파일, 461개가 통과했다.
+- 운영 원장 218개와 동등한 schema 복제본에 target bridge migration만 적용한 PostgreSQL 검사는 2개 모두 통과했다. 공개 태그 검색, owner 공개 projection, 다른 사용자의 플래너 추가와 owner-neutral snapshot, owner-scoped update, canonical ID 불변성, 기존 4행의 정확한 backfill을 확인했다. 격리 컨테이너는 검사 후 제거했고 운영 데이터는 읽기 전용 집계 외에 변경하지 않았다.
+- `pnpm typecheck`와 `pnpm build`가 통과했다. build는 93개 정적 페이지를 만들었다. `pnpm lint`는 오류 0개, 기준 master에도 있는 경고 9개로 통과했다.
+- Playwright Chromium에서 `desktop-chrome`, Pixel 7 기반 `mobile-chrome`, iPhone SE 크기의 `mobile-ios-small` 3개 프로젝트가 모두 통과했다. 독립 포트 3118에서 저장 결과 재진입, 편집·저장, 새로고침, `내가 추가한 레시피` 이동, 반복 클릭 중복 방지와 좁은 화면 overflow를 확인했다. 포트 3100은 다른 세션의 프로세스가 사용 중이어서 종료하지 않았다. 이는 사용자의 기존 대화형 Google Chrome이 아니라 저장소가 관리하는 Chromium 검사다.
+- 배포 도구 자체 회귀는 4개 파일, 155개가 통과했다. 다만 실제 통합 후보의 `deploy:dev:plan`은 master와 운영 웹을 다시 합치며 생긴 보호 대상 server/tooling/config 파일을 현재 빠른 웹 배포 허용 범위 밖으로 판정해 중단했다. 배포 guard를 완화하지 않았으며, 이 통합 delta를 허용하는 별도 readiness 결정 또는 더 작은 배포 source가 필요하다.
+- 위 plan 차단을 해소하더라도 bridge SQL은 함수·트리거·기존 저장 결과 UPDATE를 포함하므로 빠른 추가형 DB 경로로는 적용할 수 없다. 운영 대상 건수·백업을 확인한 승인된 DB transaction/backfill 뒤 `--already-applied-db` 웹 배포가 필요하다.

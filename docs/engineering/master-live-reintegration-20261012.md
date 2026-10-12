@@ -1,6 +1,6 @@
 # Master·운영 웹 재통합 기록
 
-상태: 로컬 통합 후보 작성 및 검증 중. 운영 DB·웹·worker 미반영.
+상태: 로컬 통합 후보 작성·검증 완료. 운영 DB·웹·worker 미반영이며 현재 빠른 배포 경로는 통합 범위를 거부한다.
 
 ## 고정 입력과 제외 범위
 
@@ -87,5 +87,7 @@
 
 1. 운영 이력 연결 merge commit `d7fb78ae4c459eed8555046f6480dbe61dc24b79`을 고정했다.
 2. master 기반 YouTube 레시피북·공개 검색·플래너 bridge 커밋 `42ce90f59`, `cbb0f2228`과 DB 검증 경계 문서 `f2bce7fc0`을 적용했다.
-3. 관련 회귀, post-218 대상 migration, 브라우저, build와 배포 plan 검증은 이 통합 후보에서 수행한다.
-4. 운영 DB 쓰기·백업·배포·push·PR은 별도 승인 전 실행하지 않는다.
+3. 직접 관련 107개와 넓은 회귀 461개, post-218 대상 migration 2개, Playwright Chromium 3개 프로젝트, typecheck·lint·build, 배포 도구 회귀 155개를 통과했다. 세부 범위와 경계는 [유튜브 저장 레시피북·플래너 연결](./youtube-recipebook-planner-bridge-20261012.md)에 기록했다.
+4. 실제 통합 후보의 `deploy:dev:plan`은 master·운영 웹 재통합에 포함된 보호 대상 server/tooling/config 파일이 빠른 웹 배포 허용 범위를 넘는다고 차단했다. guard를 완화하지 않았으며 별도 readiness 결정 또는 더 작은 배포 source가 필요하다.
+5. bridge migration은 함수·트리거·기존 저장 결과 UPDATE를 포함하므로 빠른 추가형 DB 경로가 아니라 대상 건수·백업 확인을 거친 별도 승인 transaction으로 적용해야 한다.
+6. 운영 DB 쓰기·백업·배포·push·PR은 별도 승인 전 실행하지 않는다.
