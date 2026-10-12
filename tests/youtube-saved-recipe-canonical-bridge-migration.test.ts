@@ -12,7 +12,9 @@ describe("YouTube saved recipe canonical bridge migration", () => {
     expect(sql).toContain("youtube_saved_recipe_results_canonical_recipe_idx");
     expect(sql).toMatch(/created_by,\s*visibility,\s*revision/iu);
     expect(sql).toMatch(/new\.owner_user_id,\s*'public'/u);
-    expect(sql).toContain("youtube_saved_draft_id");
+    expect(sql).toContain("youtube_saved_canonical_bridge");
+    expect(sql).not.toContain("youtube_saved_draft_id");
+    expect(sql).toMatch(/where canonical_recipe_id = p_result_id/iu);
     expect(sql).toContain("set_account_generation_internal_writer_marker");
     expect(sql).toContain("v_existing_writer_txid");
     expect(sql).toContain("public.build_recipe_tag_payload(v_tags, 'system_suggested')");

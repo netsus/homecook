@@ -158,7 +158,8 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
           or v_recipe.visibility <> 'public'
           or v_recipe.source_type <> 'youtube'
           or v_recipe.title <> '브리지 레시피'
-          or v_source.extraction_meta_json ->> 'youtube_saved_draft_id' <> '${savedId}' then
+          or v_source.extraction_meta_json <> '{"youtube_saved_canonical_bridge":true}'::jsonb
+          or v_source.extraction_meta_json ? 'youtube_saved_draft_id' then
           raise exception 'CANONICAL_BRIDGE_MISMATCH';
         end if;
         if not exists (
@@ -412,7 +413,7 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
           and recipe.created_by = saved.owner_user_id
           and recipe.visibility = 'public'
           and recipe.source_type = 'youtube'
-          and source.extraction_meta_json ->> 'youtube_saved_draft_id' = saved.id::text
+          and source.extraction_meta_json = '{"youtube_saved_canonical_bridge":true}'::jsonb
           and not (saved.source_snapshot_json ?| array['visibility', 'privacy', 'is_public'])
           and not (saved.editable_content_json ?| array['visibility', 'privacy', 'is_public']);
         if v_count <> 4 then

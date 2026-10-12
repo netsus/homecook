@@ -232,29 +232,28 @@ function mapRecipeBookItem({
   recipe,
   addedAt,
   durationSeconds,
+  viewerUserId,
 }: {
   recipeId: string;
   recipe: RecipeRow | undefined;
   addedAt: string;
   durationSeconds: number | null | undefined;
+  viewerUserId: string;
 }) {
   const totalDurationSeconds = durationSeconds ?? null;
   const source = Array.isArray(recipe?.recipe_sources)
     ? recipe.recipe_sources[0]
     : recipe?.recipe_sources;
   const extractionMeta = source?.extraction_meta_json;
-  const savedDraftId = extractionMeta
+  const isSavedCanonicalBridge = extractionMeta
     && typeof extractionMeta === "object"
     && !Array.isArray(extractionMeta)
-    && typeof (extractionMeta as Record<string, unknown>).youtube_saved_draft_id === "string"
-    && isUuid((extractionMeta as Record<string, string>).youtube_saved_draft_id)
-    ? (extractionMeta as Record<string, string>).youtube_saved_draft_id
-    : null;
+    && (extractionMeta as Record<string, unknown>).youtube_saved_canonical_bridge === true;
 
   return {
     recipe_id: recipeId,
-    ...(savedDraftId
-      ? { detail_href: `/recipes/youtube/saved/${savedDraftId}` }
+    ...(isSavedCanonicalBridge && recipe?.created_by === viewerUserId
+      ? { detail_href: `/recipes/youtube/saved/${recipeId}` }
       : {}),
     title: recipe?.title ?? "",
     thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
@@ -378,6 +377,7 @@ async function mapUserRecipeRows(
   rows: UserRecipeRow[],
   cursor: string | null,
   limit: number,
+  viewerUserId: string,
 ) {
   const sourceRows = rows.map((row) => ({
     id: row.id,
@@ -398,6 +398,7 @@ async function mapUserRecipeRows(
         recipe: recipeMap.get(row.recipe_id),
         addedAt: row.added_at,
         durationSeconds: durationMap.get(row.recipe_id),
+        viewerUserId,
       }),
     ),
     next_cursor: nextCursor,
@@ -517,6 +518,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         await hydrateRecipeImages(itemsResult.data as UserRecipeRow[]),
         cursor,
         limit,
+        user.id,
       ));
     } catch {
       return fail("INTERNAL_ERROR", "레시피북 이미지를 불러오지 못했어요.", 500);
@@ -561,6 +563,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         recipe: recipeMap.get(row.recipe_id),
         addedAt: row.added_at,
         durationSeconds: durationMap.get(row.recipe_id),
+        viewerUserId: user.id,
       }),
     ),
     next_cursor: nextCursor,

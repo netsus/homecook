@@ -93,10 +93,9 @@ function normalizePositiveNumber(value: unknown) {
   return numberValue;
 }
 
-function hasYoutubeSavedDraftMarker(value: unknown) {
+function hasYoutubeSavedCanonicalBridgeMarker(value: unknown) {
   return isRecord(value)
-    && typeof value.youtube_saved_draft_id === "string"
-    && isUuid(value.youtube_saved_draft_id);
+    && value.youtube_saved_canonical_bridge === true;
 }
 
 function readExpectedStorageOrigin() {
@@ -439,7 +438,7 @@ export async function GET(request: Request, context: RouteContext) {
     if (
       recipeResult.data.visibility === "public"
       && recipeResult.data.source_type === "youtube"
-      && hasYoutubeSavedDraftMarker(sourceResult.data?.extraction_meta_json)
+      && hasYoutubeSavedCanonicalBridgeMarker(sourceResult.data?.extraction_meta_json)
     ) {
       const internalClient = createRecipeFuturePropagationInternalClient();
       if (!internalClient) {

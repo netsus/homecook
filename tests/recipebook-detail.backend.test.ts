@@ -461,7 +461,6 @@ describe("17b recipebook detail backend", () => {
   });
 
   it("GET /recipe-books/{book_id}/recipes links bridged YouTube rows back to their editor", async () => {
-    const draftId = "660e8400-e29b-41d4-a716-446655440061";
     const recipeBooksTable = createTable([
       { data: { id: BOOK_ID, user_id: "user-1", book_type: "my_added" }, error: null },
     ]);
@@ -474,9 +473,10 @@ describe("17b recipebook detail backend", () => {
           tags: ["유튜브"],
           view_count: 0,
           base_servings: 2,
+          created_by: "user-1",
           created_at: "2026-10-12T08:00:00.000Z",
           recipe_sources: {
-            extraction_meta_json: { youtube_saved_draft_id: draftId },
+            extraction_meta_json: { youtube_saved_canonical_bridge: true },
           },
         }],
         error: null,
@@ -503,7 +503,7 @@ describe("17b recipebook detail backend", () => {
     expect(body.data.items).toEqual([
       expect.objectContaining({
         recipe_id: RECIPE_ID,
-        detail_href: `/recipes/youtube/saved/${draftId}`,
+        detail_href: `/recipes/youtube/saved/${RECIPE_ID}`,
         title: "유튜브 된장찌개",
       }),
     ]);

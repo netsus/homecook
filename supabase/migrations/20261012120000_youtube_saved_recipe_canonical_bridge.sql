@@ -36,11 +36,12 @@ begin
     coalesce(new.editable_content_json -> 'tags', '[]'::jsonb)
   ) with ordinality tag(value, ordinality);
 
-  v_extraction_meta := case
-    when jsonb_typeof(new.source_snapshot_json -> 'extraction_meta_json') = 'object'
-      then new.source_snapshot_json -> 'extraction_meta_json'
-    else '{}'::jsonb
-  end || jsonb_build_object('youtube_saved_draft_id', new.id);
+  -- recipe_sources is readable with a public parent recipe. Keep only a
+  -- non-sensitive bridge discriminator there: never copy the private saved
+  -- draft id, extraction evidence, or mutation metadata into the public row.
+  v_extraction_meta := jsonb_build_object(
+    'youtube_saved_canonical_bridge', true
+  );
 
   select capability.state, capability.current_cutover_attempt_id
     into v_capability_state, v_cutover_attempt_id
@@ -339,6 +340,17 @@ begin
     where id = p_result_id
       and owner_user_id = p_owner_uuid
       and account_generation = v_generation;
+
+    -- Owner-facing editor links use the public canonical id so the private
+    -- saved draft id never has to be stored in recipe_sources. Existing URLs
+    -- with the saved-result id keep taking precedence and remain compatible.
+    if v_result.id is null then
+      select * into v_result
+      from public.youtube_saved_recipe_results
+      where canonical_recipe_id = p_result_id
+        and owner_user_id = p_owner_uuid
+        and account_generation = v_generation;
+    end if;
 
     if v_result.id is null then
       raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';

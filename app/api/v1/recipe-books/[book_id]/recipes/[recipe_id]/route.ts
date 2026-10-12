@@ -25,8 +25,14 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
+import {
+  parseYoutubeSavedPublicRecipeProjection,
+} from "@/lib/server/youtube-saved-public-recipe";
 import { handleGetYoutubeSavedRecipe } from "@/lib/server/youtube-saved-recipes";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import {
+  createRecipeFuturePropagationInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type {
   RecipeBookDeleteData,
   RecipeBookReaderRecipeData,
@@ -262,13 +268,9 @@ function mapReaderData({
   steps: RecipeStep[];
 }): RecipeBookReaderRecipeData {
   const totalDurationSeconds = sumStepDurationSeconds(steps);
-  const savedDraftId = getYoutubeSavedDraftId(recipe);
 
   return {
     recipe_id: recipe.id,
-    ...(savedDraftId
-      ? { detail_href: `/recipes/youtube/saved/${savedDraftId}` }
-      : {}),
     title: recipe.title,
     thumbnail_url: normalizeFoodSafetyImageUrl(recipe.thumbnail_url),
     tags: recipe.tags ?? [],
@@ -282,18 +284,17 @@ function mapReaderData({
   };
 }
 
-function getYoutubeSavedDraftId(recipe: RecipeReaderRow) {
+function isYoutubeSavedCanonicalBridge(recipe: RecipeReaderRow) {
   const source = Array.isArray(recipe.recipe_sources)
     ? recipe.recipe_sources[0]
     : recipe.recipe_sources;
   const extractionMeta = source?.extraction_meta_json;
 
   if (!extractionMeta || typeof extractionMeta !== "object" || Array.isArray(extractionMeta)) {
-    return null;
+    return false;
   }
 
-  const draftId = (extractionMeta as Record<string, unknown>).youtube_saved_draft_id;
-  return typeof draftId === "string" && isUuid(draftId) ? draftId : null;
+  return (extractionMeta as Record<string, unknown>).youtube_saved_canonical_bridge === true;
 }
 
 function mapYoutubeSavedReaderData(
@@ -572,9 +573,9 @@ export async function GET(request: Request, context: RouteContext) {
     return fail("RESOURCE_NOT_FOUND", "레시피북에서 레시피를 찾을 수 없어요.", 404);
   }
 
-  const savedDraftId = getYoutubeSavedDraftId(recipeResult.data);
-  if (savedDraftId) {
-    const savedResponse = await handleGetYoutubeSavedRecipe(savedDraftId);
+  const isSavedCanonicalBridge = isYoutubeSavedCanonicalBridge(recipeResult.data);
+  if (isSavedCanonicalBridge && recipeResult.data.created_by === user.id) {
+    const savedResponse = await handleGetYoutubeSavedRecipe(recipeId);
     const savedPayload = await savedResponse.json() as {
       success?: boolean;
       data?: YoutubeSavedRecipeResult | null;
@@ -589,6 +590,32 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     return ok(mapYoutubeSavedReaderData(recipeResult.data, savedPayload.data));
+  }
+
+  if (isSavedCanonicalBridge) {
+    const internalClient = createRecipeFuturePropagationInternalClient();
+    if (!internalClient) {
+      return fail("INTERNAL_ERROR", "유튜브 레시피를 불러오지 못했어요.", 500);
+    }
+
+    const projectionResult = await internalClient.rpc(
+      "read_public_youtube_saved_recipe_detail",
+      { p_recipe_id: recipeId },
+    );
+    const projection = projectionResult.error
+      ? null
+      : parseYoutubeSavedPublicRecipeProjection(projectionResult.data);
+
+    if (!projection) {
+      return fail("INTERNAL_ERROR", "유튜브 레시피를 불러오지 못했어요.", 500);
+    }
+
+    return ok(mapReaderData({
+      recipe: recipeResult.data,
+      addedAt: membershipResult.addedAt,
+      ingredients: projection.ingredients,
+      steps: projection.steps,
+    }));
   }
 
   const [ingredientsResult, stepsResult] = await Promise.all([
