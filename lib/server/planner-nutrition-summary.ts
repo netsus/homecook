@@ -158,16 +158,33 @@ function safeSourceUrl(value: string | null) {
     [...url.searchParams.keys()].every((key) => !decodedQueryKeyIsUnsafe(key));
 }
 
+function nullableSourceField(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
 function sanitizeSource(source: unknown): PlannerNutritionSource | null {
   if (!isRecord(source) || typeof source.provider !== "string" || source.provider.trim() === "") {
     return null;
   }
-  const projected = Object.fromEntries(SOURCE_KEYS.map((key) => [key, source[key]])) as unknown as
-    PlannerNutritionSource;
-  for (const key of SOURCE_KEYS.slice(1)) {
-    const value = projected[key];
-    if (value !== null && (typeof value !== "string" || value.trim() === "")) return null;
-  }
+  const dataset = nullableSourceField(source.dataset);
+  const sourceVersion = nullableSourceField(source.source_version);
+  const dataBasisDate = nullableSourceField(source.data_basis_date);
+  const license = nullableSourceField(source.license);
+  const sourceUrl = nullableSourceField(source.source_url);
+  if (
+    dataset === undefined || sourceVersion === undefined || dataBasisDate === undefined ||
+    license === undefined || sourceUrl === undefined
+  ) return null;
+
+  const projected: PlannerNutritionSource = {
+    provider: source.provider,
+    dataset,
+    source_version: sourceVersion,
+    data_basis_date: dataBasisDate,
+    license,
+    source_url: sourceUrl,
+  };
   if (FORBIDDEN_SOURCE_TEXT.test(JSON.stringify(projected)) || !safeSourceUrl(projected.source_url)) {
     return null;
   }
@@ -383,7 +400,7 @@ function projectRecipeMeal(
 
 function projectProductEntry(entry: ProductPlannerEntryData): PlannerNutritionEntryProjection {
   const nutrition: Record<string, unknown> = isRecord(entry.nutrition)
-    ? entry.nutrition as unknown as Record<string, unknown>
+    ? entry.nutrition
     : {};
   return {
     storage_key: `product:${entry.id}`,
