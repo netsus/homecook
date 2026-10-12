@@ -1002,18 +1002,6 @@
       "count": 1
     },
     {
-      "file": "lib/server/recipe-ingredient-search.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "09de2a8e8968c1c34d20ba5aa135b361dc2de456b179e6f5fb297e87d4c2aac8",
-      "count": 1
-    },
-    {
-      "file": "lib/server/recipe-ingredient-search.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "de177d7285997f3ae2af0996e415abf1fe2f9116a6e86a6cca2d7daa6d2395e8",
-      "count": 1
-    },
-    {
       "file": "lib/server/recipe-snapshot-entrypoint.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "ee99d0adf654714439b09c21da494c80c1b12426b1af02509dd00093777ef9c9",
