@@ -410,6 +410,49 @@ describe("shopping stage2 backend", () => {
     });
   });
 
+  it("omits empty ingredient groups and preserves the stable ingredient sort", () => {
+    const merged = aggregateShoppingIngredients([
+      {
+        ingredient_id: "ing-empty",
+        standard_name: "가지",
+        ingredient_type: "QUANT",
+        amount: 1,
+        unit: "개",
+        display_text: null,
+        planned_servings: 1,
+        shopping_servings: 0,
+      },
+      {
+        ingredient_id: "ing-b",
+        standard_name: "양파",
+        ingredient_type: "QUANT",
+        amount: 2,
+        unit: "개",
+        display_text: null,
+        planned_servings: 1,
+        shopping_servings: 1,
+      },
+      {
+        ingredient_id: "ing-a",
+        standard_name: "양파",
+        ingredient_type: "QUANT",
+        amount: 1,
+        unit: "개",
+        display_text: null,
+        planned_servings: 1,
+        shopping_servings: 1,
+      },
+    ]);
+
+    expect(merged.map((ingredient) => ingredient.ingredient_id))
+      .toEqual(["ing-a", "ing-b"]);
+    expect(merged.map((ingredient) => ingredient.amounts_json))
+      .toEqual([
+        [{ amount: 1, unit: "개" }],
+        [{ amount: 2, unit: "개" }],
+      ]);
+  });
+
   it("returns 401 for shopping preview when user is not authenticated", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {
