@@ -702,12 +702,6 @@
       "count": 2
     },
     {
-      "file": "lib/server/external-ingredient-source-adapters.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "49ea02b09f24a1b33bce23fe1cc399cd00843791d8c480cca8a5d65d73584256",
-      "count": 1
-    },
-    {
       "file": "lib/server/hybrid-auth/bootstrap.ts",
       "rule": "anti-slop(no-array-filter-map)",
       "snippetSha256": "e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596",

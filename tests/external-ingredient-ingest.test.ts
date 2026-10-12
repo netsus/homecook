@@ -349,6 +349,28 @@ describe("external ingredient ingest gate", () => {
     ]);
   });
 
+  it("uses later non-empty source and category fields", () => {
+    const [row] = mapDataGoKrNutritionRowsToExternalIngredientSourceRows([
+      {
+        FOOD_CD: 1001,
+        FOOD_NM: "시험 식품",
+        SRC_NM: "   ",
+        INSTT_NM: "  국립수산과학원  ",
+        TYPE_NM: 0,
+        FOOD_LV3_NM: "   ",
+        FOOD_LV4_NM: "  채소류  ",
+      },
+    ], {
+      sourceFile: "field-order-fixture",
+    });
+
+    expect(row).toMatchObject({
+      source_row_id: "1001",
+      source_system: "nifs",
+      legacy_category: "채소",
+    });
+  });
+
   it("keeps the gate file-backed without production ingredient writes", () => {
     const source = [
       "lib/server/external-ingredient-ingest.ts",
