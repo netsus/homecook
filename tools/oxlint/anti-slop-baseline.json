@@ -834,18 +834,6 @@
       "count": 1
     },
     {
-      "file": "lib/server/planner-meal-nutrition-view.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "814ea4efc86ddeaa9b288934a117f65042e63e2d54f3dfb8e839ccc92d6a7fcd",
-      "count": 1
-    },
-    {
-      "file": "lib/server/planner-meal-nutrition-view.ts",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "cbc813f91e8c0772f169316901a0d28d319ea44fd89a591b86dcbaddb2c30d66",
-      "count": 1
-    },
-    {
       "file": "lib/server/recipe-book-image-read.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "ddf1ca6c7a27e60abd6c069c39fe5530cbdf1dfb7ad7f13c0eb5b3c6e56b5282",

@@ -100,5 +100,8 @@ it("reads AI provenance exclusively from the pinned nutrition warning", async ()
     }]);
     const view = await readPlannerMealNutrition({ from: vi.fn() }, "owner", range);
     expect(view["meal-1"].containsAiEstimate ?? false).toBe(warnings.length > 0);
+    expect(Object.keys(view["meal-1"])).toEqual(warnings.length > 0
+      ? ["plannedServings", "containsAiEstimate", "totalWeightGrams", "values"]
+      : ["plannedServings", "totalWeightGrams", "values"]);
   }
 });
