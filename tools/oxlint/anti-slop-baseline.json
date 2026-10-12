@@ -882,12 +882,6 @@
       "count": 1
     },
     {
-      "file": "lib/server/shopping.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "7daa40ada366b9b3081a8cd469ee6e57be9c2d5769443222c8c91aa79343af44",
-      "count": 1
-    },
-    {
       "file": "lib/server/user-growth-activity.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "4d0a30d6891165e87b8ad349dc6c268b125b55a22ae06cd50835576b733680ab",

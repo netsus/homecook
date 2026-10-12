@@ -270,7 +270,7 @@ export function aggregateShoppingIngredients(
   });
 
   return [...grouped.entries()]
-    .map(([ingredientId, state]) => {
+    .flatMap(([ingredientId, state]): AggregatedShoppingIngredient[] => {
       const numericParts = [...state.numeric.values()]
         .filter((part) => part.amount > 0)
         .sort((left, right) => left.unit.localeCompare(right.unit, "ko-KR"));
@@ -288,7 +288,7 @@ export function aggregateShoppingIngredients(
       ];
 
       if (amounts_json.length === 0) {
-        return null;
+        return [];
       }
 
       const displayParts = [
@@ -296,14 +296,13 @@ export function aggregateShoppingIngredients(
         ...textParts,
       ];
 
-      return {
+      return [{
         ingredient_id: ingredientId,
         standard_name: state.standard_name,
         display_text: `${state.standard_name} ${displayParts.join(" + ")}`,
         amounts_json,
-      } satisfies AggregatedShoppingIngredient;
+      } satisfies AggregatedShoppingIngredient];
     })
-    .filter((value): value is AggregatedShoppingIngredient => value !== null)
     .sort((left, right) => {
       const byName = left.standard_name.localeCompare(right.standard_name, "ko-KR");
       if (byName !== 0) {
