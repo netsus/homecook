@@ -21,18 +21,34 @@ function searchErrorMessage(error: unknown) {
 }
 
 export function recipeIngredientFromCatalog(item: FoodCatalogSearchItem, sortOrder: number): ManualRecipeIngredientInput | null {
-  if (item.type === "food_product" && !item.recipe_ingredient_id) return null;
-  const amount = item.type === "ingredient" ? 100 : item.nutrition.basis.amount;
-  const unit = item.type === "ingredient" ? "g" : item.nutrition.basis.unit;
+  let ingredientId: string;
+  let amount: number;
+  let unit: string;
+
+  if (item.type === "ingredient") {
+    ingredientId = item.id;
+    amount = 100;
+    unit = "g";
+  } else {
+    if (!item.recipe_ingredient_id) return null;
+    ingredientId = item.recipe_ingredient_id;
+    amount = item.nutrition.basis.amount;
+    unit = item.nutrition.basis.unit;
+  }
+
   const name = itemName(item);
-  return {
-    ingredient_id: item.type === "ingredient" ? item.id : item.recipe_ingredient_id!,
+  const ingredient: ManualRecipeIngredientInput = {
+    ingredient_id: ingredientId,
     standard_name: name, amount, unit, ingredient_type: "QUANT", scalable: true,
     display_text: `${name} ${amount}${unit}`, sort_order: sortOrder,
-    ...(item.type === "food_product" ? {
-      food_product_id: item.id, food_product_nutrition_version_id: item.nutrition_version_id,
-    } : {}),
   };
+
+  if (item.type === "food_product") {
+    ingredient.food_product_id = item.id;
+    ingredient.food_product_nutrition_version_id = item.nutrition_version_id;
+  }
+
+  return ingredient;
 }
 
 export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, excludedIngredientIds = [] }: {
