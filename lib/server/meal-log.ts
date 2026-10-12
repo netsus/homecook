@@ -176,15 +176,17 @@ export function parseMealLogDeleteRequest(value: unknown): ParseResult<{ expecte
 }
 
 export function toMealLogRpcPayload(value: MealLogMutationInput) {
-  return {
+  const payload = {
     consumed_local_date: value.consumedLocalDate,
     timezone_name_snapshot: value.timezoneNameSnapshot,
     consumed_at: value.consumedAt,
     meal_plan_column_id: value.mealPlanColumnId,
     source: value.source,
     quantity: value.quantity,
-    ...(value.expectedRevision === null ? {} : { expected_revision: value.expectedRevision }),
   };
+  return value.expectedRevision === null
+    ? payload
+    : { ...payload, expected_revision: value.expectedRevision };
 }
 
 export interface MealLogRpcClient {
@@ -255,8 +257,7 @@ export function isMealLogNutritionEvidence(value: unknown): value is MealLogNutr
 
 function projectMealLogNutrition(value: unknown): MealLogNutritionEvidence | null {
   if (!isMealLogNutritionEvidence(value)) return null;
-  return {
-    ...(value.contains_ai_estimate === undefined ? {} : { contains_ai_estimate: value.contains_ai_estimate }),
+  const nutrition = {
     calculation_status: value.calculation_status,
     calories_kcal: value.calories_kcal,
     carbohydrate_g: value.carbohydrate_g,
@@ -264,6 +265,9 @@ function projectMealLogNutrition(value: unknown): MealLogNutritionEvidence | nul
     fat_g: value.fat_g,
     sodium_mg: value.sodium_mg,
   };
+  return value.contains_ai_estimate === undefined
+    ? nutrition
+    : { contains_ai_estimate: value.contains_ai_estimate, ...nutrition };
 }
 
 const ENTRY_KEYS = [
