@@ -1,4 +1,4 @@
-import { ok } from "@/lib/api/response";
+import { fail, ok } from "@/lib/api/response";
 import {
   getMockRecipeThemes,
   isDiscoveryFilterManualMockEnabled,
@@ -451,7 +451,7 @@ export async function GET() {
     ]);
 
     if (baseRowsResult.error) {
-      return ok(getMockRecipeThemes());
+      return fail("INTERNAL_ERROR", "레시피 테마를 불러오지 못했어요.", 500);
     }
 
     const rows = baseRowsResult.data ?? [];
@@ -536,6 +536,6 @@ export async function GET() {
       tagGroups: createTagGroups(themeRows, userStatusByRecipeId),
     }));
   } catch {
-    return ok(getMockRecipeThemes());
+    return fail("INTERNAL_ERROR", "레시피 테마를 불러오지 못했어요.", 500);
   }
 }

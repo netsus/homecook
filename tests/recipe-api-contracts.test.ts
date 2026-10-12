@@ -1378,6 +1378,66 @@ describe("recipe API contracts", () => {
     ).not.toContain("recipe-side");
   });
 
+  it("reports a base recipe query failure instead of serving mock themes", async () => {
+    const failedBaseRecipesQuery = createQuery({
+      data: null,
+      error: { message: "base recipes unavailable" },
+    });
+    const youtubeRecipesQuery = createQuery({ data: [], error: null });
+    let recipeQueryCount = 0;
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn((table: string) => {
+        if (table !== "recipes") {
+          throw new Error(`unexpected table: ${table}`);
+        }
+
+        recipeQueryCount += 1;
+        return recipeQueryCount === 1
+          ? failedBaseRecipesQuery
+          : youtubeRecipesQuery;
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/themes/route");
+    const response = await GET();
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "레시피 테마를 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+  });
+
+  it("reports an unexpected theme read failure instead of serving mock themes", async () => {
+    createRouteHandlerClient.mockRejectedValue(new Error("theme client unavailable"));
+
+    const { GET } = await import("@/app/api/v1/recipes/themes/route");
+    const response = await GET();
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "레시피 테마를 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+  });
+
   it("fails the recent planner theme closed when a visibility batch fails", async () => {
     const baseRecipesQuery = createQuery({ data: [], error: null });
     const youtubeRecipesQuery = createQuery({ data: [], error: null });
