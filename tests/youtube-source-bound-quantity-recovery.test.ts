@@ -286,14 +286,20 @@ describe("server-bound description and author-comment quantity recovery", () => 
     ]));
   });
 
-  it("infers one-half count only when an independent article-bearing caption confirms the same ingredient", () => {
+  it.each([
+    ["plain action", "[00:01.000] Next I'm slicing half of a yellow onion and adding it to the pan."],
+    ["cooking heat", "[00:01.000] Slice half of a yellow onion and cook it over medium heat."],
+    ["broiler location", "[00:01.000] Place half of a yellow onion under the broiler."],
+    ["reference above", "[00:01.000] Slice half of a yellow onion as shown above."],
+    ["reference below", "[00:01.000] Slice half of a yellow onion in the bowl below."],
+  ])("infers one-half count for safe %s context", (_label, transcript) => {
     const ledger = buildSinglePassEvidenceLedger({
       sourceText: [
         "[SOURCE: description]",
         "RECIPE",
         "1/2 Onion",
         "[SOURCE: transcript(en)]",
-        "[00:01.000] Next I'm slicing half of a yellow onion and adding it to the pan.",
+        transcript,
       ].join("\n"),
       sourceAnchored: true,
     });
