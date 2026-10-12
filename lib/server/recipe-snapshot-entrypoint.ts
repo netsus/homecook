@@ -161,7 +161,14 @@ function parseEntrypointContext(value: unknown): RecipeSnapshotEntrypointContext
     return null;
   }
 
-  return value as unknown as RecipeSnapshotEntrypointContext;
+  return {
+    revision: value.revision,
+    edit_context: {
+      base_recipe_revision: value.edit_context.base_recipe_revision,
+      draft: value.edit_context.draft,
+      image_object_id: value.edit_context.image_object_id,
+    },
+  };
 }
 
 function parseForkEntrypointContext(
@@ -184,7 +191,14 @@ function parseForkEntrypointContext(
     return null;
   }
 
-  return value as unknown as RecipeSnapshotForkEntrypointContext;
+  return {
+    revision: value.revision,
+    fork_context: {
+      base_recipe_revision: value.fork_context.base_recipe_revision,
+      draft: value.fork_context.draft,
+      image_object_id: null,
+    },
+  };
 }
 
 export async function readRecipeSnapshotUiMode(

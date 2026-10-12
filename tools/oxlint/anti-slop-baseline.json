@@ -930,18 +930,6 @@
       "count": 1
     },
     {
-      "file": "lib/server/recipe-snapshot-entrypoint.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "ee99d0adf654714439b09c21da494c80c1b12426b1af02509dd00093777ef9c9",
-      "count": 1
-    },
-    {
-      "file": "lib/server/recipe-snapshot-entrypoint.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "f69d7457e7f785ef15743982092c8b3890703c620fe578c469d84ee885150131",
-      "count": 1
-    },
-    {
       "file": "lib/server/recipe-tags-backfill.ts",
       "rule": "anti-slop(no-array-filter-map)",
       "snippetSha256": "9fb1f822294c6e38a486b8503291bdae79d0d7bb90b282819517e5e3cdc8ca2b",
