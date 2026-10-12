@@ -1844,34 +1844,25 @@ async function findMissingIds(
   };
 }
 
-function buildMissingIngredientFields(
-  ingredients: ManualRecipeIngredientInput[],
+function buildMissingReferenceFields(
+  referenceIds: string[],
   missingIds: string[],
+  collection: "ingredients" | "steps",
+  fieldName: "ingredient_id" | "cooking_method_id",
 ) {
   const missingIdSet = new Set(missingIds);
+  const fields: ValidationField[] = [];
 
-  return ingredients
-    .map((ingredient, index) =>
-      missingIdSet.has(ingredient.ingredient_id)
-        ? { field: `ingredients[${index}].ingredient_id`, reason: "not_found" }
-        : null,
-    )
-    .filter((field): field is ValidationField => field !== null);
-}
+  for (const [index, referenceId] of referenceIds.entries()) {
+    if (missingIdSet.has(referenceId)) {
+      fields.push({
+        field: `${collection}[${index}].${fieldName}`,
+        reason: "not_found",
+      });
+    }
+  }
 
-function buildMissingCookingMethodFields(
-  steps: ManualRecipeStepInput[],
-  missingIds: string[],
-) {
-  const missingIdSet = new Set(missingIds);
-
-  return steps
-    .map((step, index) =>
-      missingIdSet.has(step.cooking_method_id)
-        ? { field: `steps[${index}].cooking_method_id`, reason: "not_found" }
-        : null,
-    )
-    .filter((field): field is ValidationField => field !== null);
+  return fields;
 }
 
 function validateManualDraftOwner(request: Request, userId: string) {
@@ -2115,7 +2106,12 @@ async function postRecipe(request: Request) {
       "VALIDATION_ERROR",
       "요청 값을 확인해 주세요.",
       422,
-      buildMissingIngredientFields(parsed.ingredients, ingredientLookup.missingIds),
+      buildMissingReferenceFields(
+        parsed.ingredients.map((ingredient) => ingredient.ingredient_id),
+        ingredientLookup.missingIds,
+        "ingredients",
+        "ingredient_id",
+      ),
     );
   }
 
@@ -2134,7 +2130,12 @@ async function postRecipe(request: Request) {
       "VALIDATION_ERROR",
       "요청 값을 확인해 주세요.",
       422,
-      buildMissingCookingMethodFields(parsed.steps, cookingMethodLookup.missingIds),
+      buildMissingReferenceFields(
+        parsed.steps.map((step) => step.cooking_method_id),
+        cookingMethodLookup.missingIds,
+        "steps",
+        "cooking_method_id",
+      ),
     );
   }
 
