@@ -52,6 +52,10 @@ interface RecipeRow {
   tags: string[] | null;
   view_count: number | null;
   base_servings: number | null;
+  recipe_sources?:
+    | { extraction_meta_json?: unknown }
+    | Array<{ extraction_meta_json?: unknown }>
+    | null;
 }
 
 interface UserRecipeRow extends RecipeRow {
@@ -235,9 +239,23 @@ function mapRecipeBookItem({
   durationSeconds: number | null | undefined;
 }) {
   const totalDurationSeconds = durationSeconds ?? null;
+  const source = Array.isArray(recipe?.recipe_sources)
+    ? recipe.recipe_sources[0]
+    : recipe?.recipe_sources;
+  const extractionMeta = source?.extraction_meta_json;
+  const savedDraftId = extractionMeta
+    && typeof extractionMeta === "object"
+    && !Array.isArray(extractionMeta)
+    && typeof (extractionMeta as Record<string, unknown>).youtube_saved_draft_id === "string"
+    && isUuid((extractionMeta as Record<string, string>).youtube_saved_draft_id)
+    ? (extractionMeta as Record<string, string>).youtube_saved_draft_id
+    : null;
 
   return {
     recipe_id: recipeId,
+    ...(savedDraftId
+      ? { detail_href: `/recipes/youtube/saved/${savedDraftId}` }
+      : {}),
     title: recipe?.title ?? "",
     thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     tags: recipe?.tags ?? [],
@@ -317,7 +335,7 @@ async function readBookSourceRows({
   if (book.book_type === "my_added") {
     let recipesQuery = recipeReaderClient
       .from("recipes")
-      .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings, created_at")
+      .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings, created_at, recipe_sources(extraction_meta_json)")
       .eq("created_by", userId)
       .in("source_type", ["youtube", "manual"])
       .order("created_at", { ascending: false })
@@ -518,7 +536,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const recipeIds = [...new Set(pagedRows.map((row) => row.recipe_id))];
   const recipesResult = await recipeReaderClient
     .from("recipes")
-    .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings")
+    .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings, recipe_sources(extraction_meta_json)")
     .in("id", recipeIds);
 
   if (recipesResult.error || !recipesResult.data) {

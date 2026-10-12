@@ -9,6 +9,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
+import {
+  PlannerAddSheet,
+  type PlannerAddSheetState,
+} from "@/components/recipe/planner-add-sheet";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { Button } from "@/components/ui/button";
 import { trackYoutubeExtractionJob } from "@/lib/youtube-extraction-client-state";
@@ -43,6 +47,8 @@ import {
   fetchYoutubeSavedRecipe,
   updateYoutubeSavedRecipe,
 } from "@/lib/api/youtube-saved-recipes";
+import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { fetchPlanner } from "@/lib/api/planner";
 import type {
   BulkRegistrationRowResult,
 } from "@/lib/api/youtube-import";
@@ -76,6 +82,7 @@ import type {
 import type {
   YoutubeExtractionJobData,
 } from "@/types/youtube-extraction";
+import type { PlannerColumnData } from "@/types/planner";
 import type { YoutubeSavedRecipeEditableContent, YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -2493,6 +2500,7 @@ function ActiveYoutubeImportScreen({
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [savedDraftId, setSavedDraftId] = useState(initialSavedDraftId);
+  const [savedRecipeId, setSavedRecipeId] = useState("");
   const [savedDraftRevision, setSavedDraftRevision] = useState<number | null>(null);
   const savedRowIdsRef = useRef(new Map<string, string>());
   const originalIngredientNamesRef = useRef(new Map<string, string>());
@@ -2501,14 +2509,39 @@ function ActiveYoutubeImportScreen({
   const ensureInFlightRef = useRef<string | null>(null);
   const ensureRequestTokenRef = useRef(0);
   const [ensureError, setEnsureError] = useState<{ message: string; unauthorized: boolean } | null>(null);
+  const [isPlannerAddSheetOpen, setIsPlannerAddSheetOpen] = useState(false);
+  const [plannerAddSheetState, setPlannerAddSheetState] =
+    useState<PlannerAddSheetState>("loading-columns");
+  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
+  const [selectedPlanDate, setSelectedPlanDate] = useState("");
+  const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
+  const [plannerServings, setPlannerServings] = useState(1);
+  const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
 
   // API data
   const [cookingMethods, setCookingMethods] = useState<CookingMethodItem[]>([]);
+
+  const selectablePlannerDates = useMemo(() => {
+    const dates: string[] = [];
+    const today = new Date();
+
+    for (let index = 0; index < 14; index += 1) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + index);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      dates.push(`${year}-${month}-${day}`);
+    }
+
+    return dates;
+  }, []);
 
   const applySavedResult = useCallback((saved: YoutubeSavedRecipeResult) => {
     originalIngredientNamesRef.current.clear();
     savedRowIdsRef.current.clear();
     setSavedDraftId(saved.draft_id);
+    setSavedRecipeId(saved.recipe_id ?? "");
     setSavedDraftRevision(saved.revision);
     setEditingSection(null);
     setHasUnsavedChanges(false);
@@ -3063,6 +3096,7 @@ function ActiveYoutubeImportScreen({
     setSelectedCandidateId(result.data.candidate_id);
     setRecipeCandidates([]);
     setSavedDraftId("");
+    setSavedRecipeId("");
     setSavedDraftRevision(null);
     applyExtractDataToReview(result.data.draft);
     setCurrentStep("saving-result");
@@ -3408,6 +3442,7 @@ function ActiveYoutubeImportScreen({
     }
 
     setSavedDraftId(result.data.draft_id);
+    setSavedRecipeId(result.data.recipe_id ?? "");
     setSavedDraftRevision(result.data.revision);
     setHasUnsavedChanges(false);
     saveAttemptRef.current = null;
@@ -3423,6 +3458,98 @@ function ActiveYoutubeImportScreen({
     savedDraftId,
     savedDraftRevision,
     router,
+  ]);
+
+  const loadPlannerColumns = useCallback(async () => {
+    setPlannerAddSheetState("loading-columns");
+    setPlannerAddError(null);
+
+    try {
+      const today = selectablePlannerDates[0] ?? "";
+      const data = await fetchPlanner(today, today);
+      setPlannerColumns(data.columns);
+      setSelectedPlanColumnId((current) => {
+        if (current && data.columns.some((column) => column.id === current)) {
+          return current;
+        }
+
+        return data.columns.find((column) => column.name === "저녁")?.id
+          ?? data.columns[0]?.id
+          ?? "";
+      });
+      setPlannerAddSheetState("ready");
+    } catch {
+      setPlannerAddSheetState("error");
+      setPlannerAddError("플래너 슬롯을 불러오지 못했어요.");
+    }
+  }, [selectablePlannerDates]);
+
+  const openPlannerAddSheet = useCallback(async () => {
+    if (!savedRecipeId || hasUnsavedChanges || isRegistering) return;
+
+    setIsPlannerAddSheetOpen(true);
+    setSelectedPlanDate(selectablePlannerDates[0] ?? "");
+    setPlannerServings(baseServings);
+    await loadPlannerColumns();
+  }, [
+    baseServings,
+    hasUnsavedChanges,
+    isRegistering,
+    loadPlannerColumns,
+    savedRecipeId,
+    selectablePlannerDates,
+  ]);
+
+  const closePlannerAddSheet = useCallback(() => {
+    if (plannerAddSheetState === "submitting") return;
+    setIsPlannerAddSheetOpen(false);
+    setPlannerAddError(null);
+  }, [plannerAddSheetState]);
+
+  const handlePlannerAddSubmit = useCallback(async () => {
+    if (
+      !savedRecipeId
+      || !selectedPlanDate
+      || !selectedPlanColumnId
+      || plannerAddSheetState !== "ready"
+    ) {
+      return;
+    }
+
+    setPlannerAddSheetState("submitting");
+    setPlannerAddError(null);
+
+    try {
+      await createMeal({
+        recipe_id: savedRecipeId,
+        plan_date: selectedPlanDate,
+        column_id: selectedPlanColumnId,
+        planned_servings: plannerServings,
+      });
+      setIsPlannerAddSheetOpen(false);
+      setPlannerAddSheetState("ready");
+      const [, month, day] = selectedPlanDate.split("-").map(Number);
+      const columnName = plannerColumns.find(
+        (column) => column.id === selectedPlanColumnId,
+      )?.name ?? "선택한 끼니";
+      showActionConfirmation(`${month}월 ${day}일 ${columnName}에 추가됐어요`);
+    } catch (error) {
+      setPlannerAddError(
+        isMealApiError(error) && error.status === 403
+          ? "내 플래너 슬롯에만 추가할 수 있어요."
+          : error instanceof Error
+            ? error.message
+            : "플래너 추가에 실패했어요.",
+      );
+      setPlannerAddSheetState("ready");
+    }
+  }, [
+    plannerAddSheetState,
+    plannerColumns,
+    plannerServings,
+    savedRecipeId,
+    selectedPlanColumnId,
+    selectedPlanDate,
   ]);
 
   // ─── Back handling ─────────────────────────────────────────────────
@@ -3775,14 +3902,53 @@ function ActiveYoutubeImportScreen({
               setModalMode("step-edit");
             }}
           />
+          {savedRecipeId && !hasUnsavedChanges ? (
+            <div className="web-yt-actions" data-testid="youtube-saved-planner-action">
+              <WebButton
+                disabled={isRegistering}
+                onClick={() => void openPlannerAddSheet()}
+                variant="secondary"
+              >
+                플래너에 추가
+              </WebButton>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
     </DesktopImportFrame>
   );
 
+  const plannerAddSheet = (
+    <PlannerAddSheet
+      columns={plannerColumns}
+      errorMessage={plannerAddError}
+      isOpen={isPlannerAddSheetOpen}
+      onChangeServings={setPlannerServings}
+      onClose={closePlannerAddSheet}
+      onRetryLoad={() => void loadPlannerColumns()}
+      onSelectColumn={setSelectedPlanColumnId}
+      onSelectDate={setSelectedPlanDate}
+      onSubmit={() => void handlePlannerAddSubmit()}
+      recipePreview={{
+        background: "var(--wave1-surface-fill)",
+        emoji: "🍳",
+        imageUrl: draftThumbnailUrl ?? undefined,
+        meta: `${baseServings}인분`,
+        title,
+      }}
+      selectableDates={selectablePlannerDates}
+      selectedColumnId={selectedPlanColumnId}
+      selectedDate={selectedPlanDate}
+      servings={plannerServings}
+      sheetState={plannerAddSheetState}
+      variant="recipe-detail"
+    />
+  );
+
   const desktopModals = (
     <>
+      {plannerAddSheet}
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
           emptyActionLabel={canRegisterReplacingIngredient ? "새 재료로 등록" : undefined}
@@ -4085,6 +4251,18 @@ function ActiveYoutubeImportScreen({
             }}
           />
         )}
+        {currentStep === "review" && savedRecipeId && !hasUnsavedChanges ? (
+          <div className="px-4 pb-4" data-testid="youtube-saved-planner-action">
+            <Button
+              disabled={isRegistering}
+              fullWidth
+              onClick={() => void openPlannerAddSheet()}
+              variant="neutral"
+            >
+              플래너에 추가
+            </Button>
+          </div>
+        ) : null}
 
       </div>
 
@@ -4159,6 +4337,7 @@ function ActiveYoutubeImportScreen({
           onCancel={() => setModalMode("none")}
         />
       )}
+      {plannerAddSheet}
     </div>
   );
 }

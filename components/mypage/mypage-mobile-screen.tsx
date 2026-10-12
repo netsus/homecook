@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import { YoutubeSavedRecipesLink } from "@/components/recipe/youtube-saved-recipes-link";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import type { MypageGrowthPanel } from "@/components/mypage/mypage-growth-detail-dialog";
@@ -851,7 +850,6 @@ function MobileRecipebookSurface({
       className="mobile-recipebooks-diary-screen mobile-recipebooks-diary-screen-fit px-4 pb-8 pt-4"
       data-testid="recipebook-tab"
     >
-      <YoutubeSavedRecipesLink />
       <section className="mobile-recipebooks-diary-hero rounded-[28px] p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">

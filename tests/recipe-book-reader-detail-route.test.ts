@@ -7,6 +7,7 @@ const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((_error: unknown, fallbackMessage: string) =>
   fallbackMessage,
 );
+const handleGetYoutubeSavedRecipe = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRecipeImageInternalClient: () => null,
@@ -28,6 +29,10 @@ vi.mock("@/lib/mock/recipes", () => ({
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverrideHeader: vi.fn(() => null),
+}));
+
+vi.mock("@/lib/server/youtube-saved-recipes", () => ({
+  handleGetYoutubeSavedRecipe,
 }));
 
 interface QueryError {
@@ -91,6 +96,7 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    handleGetYoutubeSavedRecipe.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -364,5 +370,118 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
     expect(serviceRecipesTable.select).not.toHaveBeenCalled();
     expect(serviceIngredientsTable.select).not.toHaveBeenCalled();
     expect(serviceStepsTable.select).not.toHaveBeenCalled();
+  });
+
+  it("GET projects bridged YouTube content without inventing canonical ingredient rows", async () => {
+    const bookId = "11111111-1111-4111-8111-111111111111";
+    const recipeId = "22222222-2222-4222-8222-222222222222";
+    const draftId = "33333333-3333-4333-8333-333333333333";
+    const ingredientRowId = "44444444-4444-4444-8444-444444444444";
+    const stepRowId = "55555555-5555-4555-8555-555555555555";
+    const recipeIngredientsTable = createArrayTable([]);
+    const recipeStepsTable = createArrayTable([]);
+    const recipesTable = createMaybeSingleTable([{
+      data: {
+        id: recipeId,
+        title: "유튜브 김치찌개",
+        thumbnail_url: null,
+        tags: ["찌개"],
+        view_count: 0,
+        base_servings: 2,
+        created_by: "user-1",
+        source_type: "youtube",
+        recipe_sources: {
+          extraction_meta_json: { youtube_saved_draft_id: draftId },
+        },
+      },
+      error: null,
+    }]);
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "recipe_books") {
+          return createMaybeSingleTable([{
+            data: { id: bookId, user_id: "user-1", book_type: "my_added" },
+            error: null,
+          }]);
+        }
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_ingredients") return recipeIngredientsTable;
+        if (table === "recipe_steps") return recipeStepsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: dbClient.from,
+    });
+    handleGetYoutubeSavedRecipe.mockResolvedValue(new Response(JSON.stringify({
+      success: true,
+      data: {
+        draft_id: draftId,
+        recipe_id: recipeId,
+        revision: 1,
+        created_at: "2026-10-12T08:00:00.000Z",
+        updated_at: "2026-10-12T08:00:00.000Z",
+        content: {
+          title: "유튜브 김치찌개",
+          base_servings: 2,
+          tags: ["찌개"],
+          ingredients: [{
+            row_id: ingredientRowId,
+            source_draft_ingredient_id: null,
+            standard_name: "김치",
+            quantity_mode: "unknown",
+            amount: null,
+            unit: null,
+            display_text: "김치 적당량",
+            component_label: null,
+          }],
+          steps: [{
+            row_id: stepRowId,
+            source_step_index: 0,
+            instruction: "끓인다",
+            component_label: null,
+            duration_text: "10분",
+          }],
+        },
+        ingredient_links: {
+          [ingredientRowId]: {
+            ingredient_id: null,
+            resolution_status: "unresolved",
+            candidates: [],
+          },
+        },
+        source: {
+          extraction_id: "66666666-6666-4666-8666-666666666666",
+          youtube_url: "https://www.youtube.com/watch?v=abcdefghijk",
+          youtube_video_id: "abcdefghijk",
+          thumbnail_url: null,
+        },
+      },
+      error: null,
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new Request(`http://localhost:3000/api/v1/recipe-books/${bookId}/recipes/${recipeId}`),
+      { params: Promise.resolve({ book_id: bookId, recipe_id: recipeId }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({
+      recipe_id: recipeId,
+      detail_href: `/recipes/youtube/saved/${draftId}`,
+      title: "유튜브 김치찌개",
+      ingredients: [{
+        id: ingredientRowId,
+        ingredient_id: ingredientRowId,
+        standard_name: "김치",
+      }],
+      steps: [{ id: stepRowId, instruction: "끓인다" }],
+    });
+    expect(handleGetYoutubeSavedRecipe).toHaveBeenCalledWith(draftId);
+    expect(recipeIngredientsTable.select).not.toHaveBeenCalled();
+    expect(recipeStepsTable.select).not.toHaveBeenCalled();
   });
 });

@@ -772,6 +772,38 @@ describe("RecipeBookDetailScreen", () => {
     expect(returnUrl.hash).toBe("#recipebook-recipe-recipe-2");
   });
 
+  it.each([true, false])("reopens bridged YouTube recipes in their editable saved route on mobile=%s", async (mobile) => {
+    installMatchMedia(mobile);
+    const draftId = "33333333-3333-4333-8333-333333333333";
+    mockFetchRecipeBookRecipes.mockResolvedValue({
+      ...MOCK_ITEMS,
+      data: {
+        ...MOCK_ITEMS.data,
+        items: MOCK_ITEMS.data.items.map((item) => item.recipe_id === "recipe-1"
+          ? { ...item, detail_href: `/recipes/youtube/saved/${draftId}` }
+          : item),
+      },
+    });
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-my"
+        bookName="내가 추가한 레시피"
+        bookType="my_added"
+        initialAuthenticated
+      />,
+    );
+
+    const card = await screen.findByTestId("recipe-item-recipe-1");
+    const detailLink = within(card).getByRole("link", { name: "레시피 상세" });
+    const detailUrl = new URL(detailLink.getAttribute("href")!, "https://homecook.test");
+    const returnUrl = new URL(detailUrl.searchParams.get("returnTo")!, "https://homecook.test");
+
+    expect(detailUrl.pathname).toBe(`/recipes/youtube/saved/${draftId}`);
+    expect(detailUrl.searchParams.get("restore")).toBe("recipebook-tab");
+    expect(returnUrl.pathname).toBe("/mypage/recipe-books/book-my");
+    expect(returnUrl.searchParams.get("readerRecipe")).toBe("recipe-1");
+  });
+
   it.each([true, false])("keeps list-card navigation and restores list mode on mobile=%s", async (mobile) => {
     installMatchMedia(mobile);
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ readerRecipe: "recipe-2", readerMode: "list" }));

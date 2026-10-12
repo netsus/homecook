@@ -45,6 +45,8 @@ export interface YoutubeSavedRecipeSource {
 
 export interface YoutubeSavedRecipeResult {
   draft_id: string;
+  /** Present after the additive canonical-recipe bridge migration. */
+  recipe_id?: string;
   revision: number;
   created_at: string;
   updated_at: string;
@@ -59,6 +61,8 @@ export interface YoutubeSavedRecipeResult {
 
 export interface YoutubeSavedRecipeSummary {
   draft_id: string;
+  /** Present after the additive canonical-recipe bridge migration. */
+  recipe_id?: string;
   revision: number;
   title: string;
   thumbnail_url: string | null;

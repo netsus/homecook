@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
+import * as mealApi from "@/lib/api/meal";
+import * as plannerApi from "@/lib/api/planner";
 import * as extractionApi from "@/lib/api/youtube-extraction-jobs";
 import * as youtubeApi from "@/lib/api/youtube-import";
 import * as savedRecipeApi from "@/lib/api/youtube-saved-recipes";
@@ -20,7 +22,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/menu/add/youtube",
 }));
 vi.mock("@/lib/api/cooking-methods", () => ({ fetchCookingMethods: vi.fn() }));
-vi.mock("@/lib/api/meal", () => ({ createMealSafe: vi.fn() }));
+vi.mock("@/lib/api/meal", () => ({
+  createMeal: vi.fn(),
+  isMealApiError: (error: unknown) => error instanceof Error && "status" in error,
+}));
+vi.mock("@/lib/api/planner", () => ({ fetchPlanner: vi.fn() }));
 vi.mock("@/lib/api/youtube-import", () => ({
   validateYoutubeUrl: vi.fn(),
   extractYoutubeRecipe: vi.fn(),
@@ -141,6 +147,8 @@ describe("YouTube result-first UI", () => {
     vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockReset();
     vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockReset();
     vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mockReset();
+    vi.mocked(mealApi.createMeal).mockReset();
+    vi.mocked(plannerApi.fetchPlanner).mockReset();
     vi.mocked(youtubeApi.createYoutubeCandidateDraft).mockReset();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -151,6 +159,12 @@ describe("YouTube result-first UI", () => {
       }),
     });
     vi.mocked(fetchCookingMethods).mockResolvedValue({ success: true, data: { methods: [] }, error: null });
+    vi.mocked(plannerApi.fetchPlanner).mockResolvedValue({
+      columns: [{ id: "column-dinner", name: "저녁", sort_order: 0 }],
+      meals: [],
+      product_entries: [],
+    });
+    vi.mocked(mealApi.createMeal).mockResolvedValue({ id: "meal-1" } as Awaited<ReturnType<typeof mealApi.createMeal>>);
     vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockResolvedValue({
       success: true,
       data: {
@@ -683,6 +697,61 @@ describe("YouTube result-first UI", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "엄마표 된장찌개" })).toBeTruthy();
+  });
+
+  it("adds an already saved YouTube recipe to the planner with its canonical recipe id", async () => {
+    const draftId = "11111111-1111-4111-8111-111111111111";
+    const recipeId = "77777777-7777-4777-8777-777777777777";
+    vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        draft_id: draftId,
+        recipe_id: recipeId,
+        revision: 1,
+        created_at: "2026-10-12T08:00:00.000Z",
+        updated_at: "2026-10-12T08:00:00.000Z",
+        content: {
+          title: "유튜브 된장찌개",
+          base_servings: 2,
+          tags: ["찌개"],
+          ingredients: [],
+          steps: [],
+        },
+        source: {
+          extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          youtube_url: "https://www.youtube.com/watch?v=abcdefghijk",
+          youtube_video_id: "abcdefghijk",
+          thumbnail_url: null,
+        },
+      },
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(
+      <YoutubeImportScreen
+        columnId=""
+        entryContext="standalone"
+        initialSavedDraftId={draftId}
+        planDate=""
+        slotName=""
+      />,
+    );
+
+    const plannerAction = await screen.findByTestId("youtube-saved-planner-action");
+    await user.click(within(plannerAction).getByRole("button", { name: "플래너에 추가" }));
+    await waitFor(() => expect(plannerApi.fetchPlanner).toHaveBeenCalledTimes(1));
+    const plannerConfirm = screen.getAllByRole("button", { name: "플래너에 추가" })
+      .find((button) => button.getAttribute("aria-label") === "플래너에 추가");
+    expect(plannerConfirm).toBeTruthy();
+    await user.click(plannerConfirm!);
+
+    await waitFor(() => {
+      expect(mealApi.createMeal).toHaveBeenCalledWith(expect.objectContaining({
+        recipe_id: recipeId,
+        column_id: "column-dinner",
+        planned_servings: 2,
+      }));
+    });
   });
 
   it("deduplicates candidate input, retries promotion, and only saves the promoted child", async () => {

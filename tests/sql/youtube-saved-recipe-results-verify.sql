@@ -74,6 +74,7 @@ begin
   );
   v_id := (v_first #>> '{data,draft_id}')::uuid;
   if v_id is null
+    or nullif(v_first #>> '{data,recipe_id}', '') is null
     or v_first #>> '{data,content,ingredients,0,quantity_mode}' <> 'unknown'
     or v_first #>> '{data,content,ingredients,0,amount}' <> '2'
     or v_first #>> '{data,content,ingredients,0,unit}' is not null
@@ -85,9 +86,19 @@ begin
       from public.youtube_saved_recipe_results where id=v_id) <> '원본 근거' then
     raise exception 'trusted raw/evidence snapshot was not preserved';
   end if;
-  if (select count(*) from public.recipes) <> v_recipe_count
+  if (select count(*) from public.recipes) <> v_recipe_count + 1
     or (select count(*) from public.ingredients) <> v_ingredient_count then
-    raise exception 'private draft unexpectedly changed canonical catalogs';
+    raise exception 'saved result canonical bridge changed an unexpected catalog';
+  end if;
+  if not exists (
+    select 1
+    from public.recipes recipe
+    where recipe.id = (v_first #>> '{data,recipe_id}')::uuid
+      and recipe.created_by = '10000000-0000-4000-8000-000000000001'
+      and recipe.visibility = 'private'
+      and recipe.source_type = 'youtube'
+  ) then
+    raise exception 'saved result canonical recipe authority mismatch';
   end if;
 
   v_replay := public.write_youtube_saved_recipe_result(
@@ -200,7 +211,7 @@ select jsonb_build_object(
     'quantity_modes_and_raw_preserved','spoofed_evidence_rejected',
     'source_only_ensure','ensure_latest_after_expiry','stable_server_row_ids',
     'confirmed_empty_quant_stays_unknown','explicit_to_taste_preserved','legacy_unknown_to_taste_stays_unknown',
-    'stubbed_authority_boundary_only','no_catalog_or_recipe_insert'
+    'stubbed_authority_boundary_only','owner_private_canonical_recipe_only'
   ]
 );
 

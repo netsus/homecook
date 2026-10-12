@@ -25,6 +25,7 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
+import { handleGetYoutubeSavedRecipe } from "@/lib/server/youtube-saved-recipes";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type {
   RecipeBookDeleteData,
@@ -33,6 +34,7 @@ import type {
   RecipeIngredient,
   RecipeStep,
 } from "@/types/recipe";
+import type { YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
 
 interface RouteContext {
   params: Promise<{
@@ -71,6 +73,10 @@ interface RecipeReaderRow {
   base_servings: number | null;
   created_by: string | null;
   source_type: "system" | "youtube" | "manual";
+  recipe_sources?:
+    | { extraction_meta_json?: unknown }
+    | Array<{ extraction_meta_json?: unknown }>
+    | null;
 }
 
 interface RecipeIngredientRow {
@@ -256,9 +262,13 @@ function mapReaderData({
   steps: RecipeStep[];
 }): RecipeBookReaderRecipeData {
   const totalDurationSeconds = sumStepDurationSeconds(steps);
+  const savedDraftId = getYoutubeSavedDraftId(recipe);
 
   return {
     recipe_id: recipe.id,
+    ...(savedDraftId
+      ? { detail_href: `/recipes/youtube/saved/${savedDraftId}` }
+      : {}),
     title: recipe.title,
     thumbnail_url: normalizeFoodSafetyImageUrl(recipe.thumbnail_url),
     tags: recipe.tags ?? [],
@@ -267,6 +277,67 @@ function mapReaderData({
     total_duration_text: formatDurationText(totalDurationSeconds),
     base_servings: recipe.base_servings ?? 1,
     added_at: addedAt ?? "",
+    ingredients,
+    steps,
+  };
+}
+
+function getYoutubeSavedDraftId(recipe: RecipeReaderRow) {
+  const source = Array.isArray(recipe.recipe_sources)
+    ? recipe.recipe_sources[0]
+    : recipe.recipe_sources;
+  const extractionMeta = source?.extraction_meta_json;
+
+  if (!extractionMeta || typeof extractionMeta !== "object" || Array.isArray(extractionMeta)) {
+    return null;
+  }
+
+  const draftId = (extractionMeta as Record<string, unknown>).youtube_saved_draft_id;
+  return typeof draftId === "string" && isUuid(draftId) ? draftId : null;
+}
+
+function mapYoutubeSavedReaderData(
+  recipe: RecipeReaderRow,
+  saved: YoutubeSavedRecipeResult,
+): RecipeBookReaderRecipeData {
+  const ingredients: RecipeIngredient[] = saved.content.ingredients.map((ingredient, index) => ({
+    id: ingredient.row_id,
+    ingredient_id:
+      saved.ingredient_links?.[ingredient.row_id]?.ingredient_id
+      ?? ingredient.row_id,
+    standard_name: ingredient.standard_name,
+    amount: ingredient.quantity_mode === "quantity" ? ingredient.amount : null,
+    unit: ingredient.quantity_mode === "quantity" ? ingredient.unit : null,
+    ingredient_type: ingredient.quantity_mode === "to_taste" ? "TO_TASTE" : "QUANT",
+    display_text: ingredient.display_text,
+    component_label: ingredient.component_label,
+    scalable: ingredient.quantity_mode === "quantity",
+    sort_order: index,
+  }));
+  const steps: RecipeStep[] = saved.content.steps.map((step, index) => ({
+    id: step.row_id,
+    step_number: index + 1,
+    instruction: step.instruction,
+    component_label: step.component_label,
+    cooking_method: null,
+    cooking_methods: [],
+    ingredients_used: [],
+    heat_level: null,
+    duration_seconds: null,
+    duration_text: step.duration_text,
+  }));
+
+  return {
+    recipe_id: saved.recipe_id ?? recipe.id,
+    detail_href: `/recipes/youtube/saved/${saved.draft_id}`,
+    title: saved.content.title,
+    thumbnail_url: normalizeFoodSafetyImageUrl(saved.source.thumbnail_url),
+    tags: saved.content.tags,
+    view_count: recipe.view_count ?? 0,
+    total_duration_seconds: null,
+    total_duration_text: null,
+    base_servings: saved.content.base_servings,
+    added_at: saved.created_at,
     ingredients,
     steps,
   };
@@ -356,7 +427,7 @@ async function readReaderRecipe(
 ) {
   return dbClient
     .from("recipes")
-    .select("id, title, thumbnail_url, tags, view_count, base_servings, created_by, source_type")
+    .select("id, title, thumbnail_url, tags, view_count, base_servings, created_by, source_type, recipe_sources(extraction_meta_json)")
     .eq("id", recipeId)
     .maybeSingle();
 }
@@ -499,6 +570,25 @@ export async function GET(request: Request, context: RouteContext) {
     )
   ) {
     return fail("RESOURCE_NOT_FOUND", "레시피북에서 레시피를 찾을 수 없어요.", 404);
+  }
+
+  const savedDraftId = getYoutubeSavedDraftId(recipeResult.data);
+  if (savedDraftId) {
+    const savedResponse = await handleGetYoutubeSavedRecipe(savedDraftId);
+    const savedPayload = await savedResponse.json() as {
+      success?: boolean;
+      data?: YoutubeSavedRecipeResult | null;
+    };
+
+    if (!savedResponse.ok || !savedPayload.success || !savedPayload.data) {
+      return fail("INTERNAL_ERROR", "유튜브 레시피를 불러오지 못했어요.", 500);
+    }
+
+    if (savedPayload.data.recipe_id !== recipeId) {
+      return fail("RESOURCE_NOT_FOUND", "레시피북에서 레시피를 찾을 수 없어요.", 404);
+    }
+
+    return ok(mapYoutubeSavedReaderData(recipeResult.data, savedPayload.data));
   }
 
   const [ingredientsResult, stepsResult] = await Promise.all([
