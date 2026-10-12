@@ -594,12 +594,6 @@
       "count": 1
     },
     {
-      "file": "components/marketing/homeflow-landing.tsx",
-      "rule": "anti-slop(no-conditional-empty-object-spread)",
-      "snippetSha256": "845749623820e1a057c90c4ec89efa8d39582d33b4c15f5f7417bac6f498205b",
-      "count": 1
-    },
-    {
       "file": "components/marketing/round2/round2-turnstile.tsx",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "9e2a0750b99b350e4bb98d094219cdfbbf3c9b2f5a2453cb1b46fc8c98d1fff2",

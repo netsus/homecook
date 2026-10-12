@@ -93,7 +93,14 @@ export function HomeflowLanding({ preview, pageContext, attribution, sharedResul
     try {
       const data = applyServer(await postHomeflowRequest(request));
       if (request.action === "survey_submit") knownSurvey.current = true;
-      commit(current => ({ ...current, pending: null, ...(request.action === "survey_submit" ? { confirmedSurveyEventId: request.event_id, answers: request.answers } : {}) }));
+      commit(current => {
+        const next = { ...current, pending: null };
+        if (request.action === "survey_submit") {
+          next.confirmedSurveyEventId = request.event_id;
+          next.answers = request.answers;
+        }
+        return next;
+      });
       return data;
     } catch (caught) {
       if (caught instanceof HomeflowClientError && !caught.retryable) commit(current => ({ ...current, pending: null }));
