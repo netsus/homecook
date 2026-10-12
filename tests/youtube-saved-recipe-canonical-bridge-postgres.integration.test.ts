@@ -42,7 +42,7 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
     );
   });
 
-  it("creates, updates, and snapshots one owner-private canonical recipe", () => {
+  it("creates, publicly projects, updates, and snapshots one canonical recipe", () => {
     const result = psql(`
       begin;
       set local session_replication_role = replica;
@@ -51,6 +51,12 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
       insert into public.users (id, nickname, social_provider, social_id)
       values ('${ownerId}', '유튜브 브리지 검증', 'google', 'youtube-bridge');
       set local session_replication_role = origin;
+
+      insert into public.tags (
+        normalized_key, label, slug, kind, is_system, theme_eligible
+      ) values (
+        '간단요리', '간단요리', 'easy', 'semantic', true, true
+      ) on conflict (normalized_key) do nothing;
 
       insert into public.youtube_saved_recipe_results (
         id, owner_user_id, account_generation, extraction_session_id,
@@ -133,6 +139,7 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
         v_unresolved uuid;
         v_cutover_attempt_id uuid;
         v_pinned_snapshot_id uuid;
+        v_public_detail jsonb;
       begin
         select * into strict v_saved
         from public.youtube_saved_recipe_results where id = '${savedId}';
@@ -142,11 +149,26 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
         from public.recipe_sources where recipe_id = v_recipe.id;
 
         if v_recipe.created_by <> '${ownerId}'::uuid
-          or v_recipe.visibility <> 'private'
+          or v_recipe.visibility <> 'public'
           or v_recipe.source_type <> 'youtube'
           or v_recipe.title <> '브리지 레시피'
           or v_source.extraction_meta_json ->> 'youtube_saved_draft_id' <> '${savedId}' then
           raise exception 'CANONICAL_BRIDGE_MISMATCH';
+        end if;
+        if not exists (
+          select 1
+          from public.recipe_tags as recipe_tag
+          join public.tags as tag on tag.id = recipe_tag.tag_id
+          where recipe_tag.recipe_id = v_recipe.id
+            and tag.normalized_key = '간단요리'
+            and recipe_tag.visibility = 'public'
+            and recipe_tag.review_status = 'approved'
+        ) or not exists (
+          select 1
+          from public.find_recipe_ids_by_public_tags('간단요리', null) as found
+          where found.recipe_id = v_recipe.id
+        ) then
+          raise exception 'PUBLIC_TAG_SEARCH_MISMATCH';
         end if;
 
         select * into strict v_snapshot
@@ -168,6 +190,44 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
           )
           or exists (select 1 from public.ingredients where id = v_unresolved) then
           raise exception 'UNRESOLVED_ID_PROMOTED_TO_CATALOG';
+        end if;
+
+        perform set_config(
+          'request.headers',
+          '{"x-homecook-internal-scope":"recipe-future-propagation"}',
+          true
+        );
+        perform set_config('request.method', 'POST', true);
+        perform set_config(
+          'request.path',
+          '/rpc/read_public_youtube_saved_recipe_detail',
+          true
+        );
+        v_public_detail := public.read_public_youtube_saved_recipe_detail(v_recipe.id);
+        if jsonb_array_length(v_public_detail -> 'ingredients') <> 2
+          or v_public_detail #>> '{ingredients,0,standard_name}' <> '양파'
+          or v_public_detail #>> '{steps,0,instruction}' <> '재료를 섞는다.'
+          or (v_public_detail -> 'ingredients' -> 1) ? 'catalog_resolution_status'
+          or (v_public_detail -> 'ingredients' -> 0) ? 'food_product_id'
+          or v_public_detail ? 'owner_user_id'
+          or v_public_detail ? 'draft_id'
+          or v_public_detail ? 'source' then
+          raise exception 'PUBLIC_DETAIL_PROJECTION_MISMATCH detail=%', v_public_detail;
+        end if;
+        if has_function_privilege(
+          'anon',
+          'public.read_public_youtube_saved_recipe_detail(uuid)',
+          'EXECUTE'
+        ) or has_function_privilege(
+          'authenticated',
+          'public.read_public_youtube_saved_recipe_detail(uuid)',
+          'EXECUTE'
+        ) or not has_function_privilege(
+          'service_role',
+          'public.read_public_youtube_saved_recipe_detail(uuid)',
+          'EXECUTE'
+        ) then
+          raise exception 'PUBLIC_DETAIL_RPC_ACL_MISMATCH';
         end if;
 
         select capability.current_cutover_attempt_id
@@ -209,7 +269,7 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
             select 1
             from public.recipe_content_snapshots as snapshot
             where snapshot.id = v_pinned_snapshot_id
-              and snapshot.owner_user_id = '${ownerId}'
+              and snapshot.owner_user_id is null
               and jsonb_array_length(snapshot.ingredients_json) = 2
           ) then
           raise exception 'PLANNER_SNAPSHOT_NOT_PINNED';

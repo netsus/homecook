@@ -157,7 +157,7 @@ async function openYoutubeReview(page: Page) {
   await stabilize(page);
   await page.getByLabel("유튜브 URL").fill("https://www.youtube.com/watch?v=visual12345");
   await page.getByRole("button", { name: "가져오기" }).click();
-  await expect(page.getByTestId("quantity-source-yt-ing-0")).toHaveText("화면 확인");
+  await expect(page.getByTestId("quantity-source-yt-ing-0")).toHaveCount(0);
   await expect(page.getByTestId("quantity-review-yt-ing-0")).toBeVisible();
 }
 
@@ -288,7 +288,7 @@ test.describe("Slice 32: YouTube visual quantity enrichment", () => {
 
     await openYoutubeReview(page);
     await page.getByLabel("두부 수량").fill("250");
-    await expect(page.getByTestId("quantity-source-yt-ing-0")).toHaveText("직접 입력");
+    await expect(page.getByTestId("quantity-source-yt-ing-0")).toHaveCount(0);
     await page.getByRole("button", { name: "등록" }).click();
 
     expect(registerBodies[0]).toMatchObject({

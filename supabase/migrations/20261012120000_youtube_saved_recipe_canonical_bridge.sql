@@ -1,8 +1,8 @@
 begin;
 
 -- Saved YouTube results keep their evidence-preserving editable document, but
--- every result also needs a private canonical recipe identity so recipe books,
--- planner meals, and immutable meal snapshots can reference it safely.
+-- every result also needs a public canonical recipe identity so recipe books,
+-- discovery, planner meals, and immutable meal snapshots can reference it.
 alter table public.youtube_saved_recipe_results
   add column canonical_recipe_id uuid
     references public.recipes(id) on delete cascade;
@@ -85,7 +85,7 @@ begin
       v_tags,
       'youtube',
       new.owner_user_id,
-      'private',
+      'public',
       new.revision,
       new.created_at,
       new.updated_at
@@ -116,6 +116,21 @@ begin
       v_extraction_meta
     );
 
+    -- Keep public discovery aligned with the established reviewed-tag model.
+    -- Known system tags become searchable; unknown labels remain pending and
+    -- private in recipe_tags. The saved display labels stay intact on recipes.
+    perform public.set_recipe_tags(
+      new.canonical_recipe_id,
+      public.build_recipe_tag_payload(v_tags, 'system_suggested'),
+      new.owner_user_id,
+      'system_suggested'
+    );
+    update public.recipes
+    set tags = v_tags,
+        revision = new.revision,
+        updated_at = new.updated_at
+    where id = new.canonical_recipe_id;
+
     if v_acquired_writer_marker then
       perform public.set_account_generation_internal_writer_marker(
         v_cutover_attempt_id,
@@ -136,7 +151,7 @@ begin
   where recipe.id = new.canonical_recipe_id
     and recipe.created_by = new.owner_user_id
     and recipe.source_type = 'youtube'
-    and recipe.visibility = 'private'
+    and recipe.visibility = 'public'
     and recipe.deleted_at is null
   returning recipe.id into v_recipe_id;
 
@@ -162,6 +177,18 @@ begin
       ),
       extraction_meta_json = v_extraction_meta
   where source.recipe_id = new.canonical_recipe_id;
+
+  perform public.set_recipe_tags(
+    new.canonical_recipe_id,
+    public.build_recipe_tag_payload(v_tags, 'system_suggested'),
+    new.owner_user_id,
+    'system_suggested'
+  );
+  update public.recipes
+  set tags = v_tags,
+      revision = new.revision,
+      updated_at = new.updated_at
+  where id = new.canonical_recipe_id;
 
   if v_acquired_writer_marker then
     perform public.set_account_generation_internal_writer_marker(
@@ -205,8 +232,9 @@ begin
 end;
 $function$;
 
--- Existing rows pass through the same trigger as new writes. This creates one
--- private recipe per owner without mutating the saved content or its revision.
+-- Existing rows pass through the same trigger as new writes. There was no
+-- saved-result visibility choice before this bridge, so the same public
+-- contract applies without mutating saved content or its revision.
 do $backfill_writer_marker$
 declare
   v_cutover_attempt_id uuid;
@@ -505,7 +533,9 @@ begin
     coalesce(v_result.editable_content_json -> 'steps', '[]'::jsonb)
   ) with ordinality rows(item, ordinality);
 
-  owner_user_id := v_result.owner_user_id;
+  -- Public recipe snapshots are owner-neutral so another signed-in user can
+  -- safely pin this recipe to their own planner without crossing ownership.
+  owner_user_id := null;
   title := v_result.editable_content_json ->> 'title';
   base_servings := (v_result.editable_content_json ->> 'base_servings')::numeric(8,2);
   ingredients_json := v_ingredients;
@@ -524,6 +554,106 @@ begin
 end;
 $function$;
 
+-- Public detail/cook-mode readers need the evidence-preserving document
+-- because unresolved ingredients deliberately do not create catalog rows.
+-- Return only the display contract: no owner, saved draft id, extraction
+-- evidence, source snapshot, ingredient link state, or mutation metadata.
+create or replace function public.read_public_youtube_saved_recipe_detail(
+  p_recipe_id uuid
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog, public, private, extensions, pg_temp
+as $function$
+declare
+  v_snapshot record;
+  v_ingredients jsonb;
+  v_steps jsonb;
+begin
+  perform private.verify_full_local_internal_scope();
+
+  if not exists (
+    select 1
+    from public.youtube_saved_recipe_results as saved
+    join public.recipes as recipe
+      on recipe.id = saved.canonical_recipe_id
+    where saved.canonical_recipe_id = p_recipe_id
+      and recipe.source_type = 'youtube'
+      and recipe.visibility = 'public'
+      and recipe.deleted_at is null
+      and recipe_visibility_guard.is_owner_publicly_visible(recipe.created_by)
+  ) then
+    return null;
+  end if;
+
+  select * into strict v_snapshot
+  from public.build_recipe_content_snapshot_input(p_recipe_id);
+
+  select coalesce(
+    jsonb_agg(
+      (item
+        - 'catalog_resolution_status'
+        - 'food_product_id'
+        - 'food_product_nutrition_version_id'
+        - 'food_product_name'
+        - 'food_product_brand')
+      || jsonb_build_object('id', item ->> 'ingredient_id')
+      order by (item ->> 'sort_order')::integer
+    ),
+    '[]'::jsonb
+  ) into v_ingredients
+  from jsonb_array_elements(v_snapshot.ingredients_json) as rows(item);
+
+  select coalesce(
+    jsonb_agg(
+      item || jsonb_build_object(
+        'id', p_recipe_id::text || ':step:' || (item ->> 'step_number')
+      )
+      order by (item ->> 'step_number')::integer
+    ),
+    '[]'::jsonb
+  ) into v_steps
+  from jsonb_array_elements(v_snapshot.steps_json) as rows(item);
+
+  return jsonb_build_object(
+    'ingredients', v_ingredients,
+    'steps', v_steps
+  );
+end;
+$function$;
+
+-- Keep the service-role RPC behind the existing exact internal transport.
+alter function private.verify_full_local_internal_scope()
+  rename to verify_internal_scope_before_youtube_public_detail_20261012;
+
+create function private.verify_full_local_internal_scope()
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+declare
+  v_headers jsonb := coalesce(
+    nullif(current_setting('request.headers', true), ''),
+    '{}'
+  )::jsonb;
+  v_scope text := v_headers ->> 'x-homecook-internal-scope';
+  v_method text := upper(coalesce(current_setting('request.method', true), ''));
+  v_path text := coalesce(current_setting('request.path', true), '');
+begin
+  if v_scope = 'recipe-future-propagation'
+    and v_method = 'POST'
+    and v_path = '/rpc/read_public_youtube_saved_recipe_detail' then
+    return;
+  end if;
+
+  perform private.verify_internal_scope_before_youtube_public_detail_20261012();
+end;
+$function$;
+
 alter function private.sync_youtube_saved_recipe_canonical() owner to postgres;
 alter function private.guard_youtube_saved_recipe_source_snapshot() owner to postgres;
 alter function private.project_youtube_saved_recipe_result(
@@ -538,6 +668,10 @@ alter function public.build_recipe_content_snapshot_before_yt_saved_20261012(
   uuid
 ) owner to postgres;
 alter function public.build_recipe_content_snapshot_input(uuid) owner to postgres;
+alter function public.read_public_youtube_saved_recipe_detail(uuid) owner to postgres;
+alter function private.verify_full_local_internal_scope() owner to postgres;
+alter function private.verify_internal_scope_before_youtube_public_detail_20261012()
+  owner to postgres;
 
 revoke all on function private.sync_youtube_saved_recipe_canonical()
   from public, anon, authenticated, service_role;
@@ -558,6 +692,14 @@ revoke all on function public.build_recipe_content_snapshot_before_yt_saved_2026
   uuid
 ) from public, anon, authenticated, service_role;
 revoke all on function public.build_recipe_content_snapshot_input(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.read_public_youtube_saved_recipe_detail(uuid)
+  from public, anon, authenticated;
+grant execute on function public.read_public_youtube_saved_recipe_detail(uuid)
+  to service_role;
+revoke all on function private.verify_full_local_internal_scope()
+  from public, anon, authenticated, service_role;
+revoke all on function private.verify_internal_scope_before_youtube_public_detail_20261012()
   from public, anon, authenticated, service_role;
 
 commit;

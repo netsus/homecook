@@ -4,22 +4,24 @@
 
 ## 사용자 흐름
 
-유튜브 추출 결과의 원본 보존형 편집 문서는 그대로 유지한다. 자동 저장이 완료되면 같은 소유자의 비공개 canonical recipe ID를 1:1로 연결한다. 이 ID 때문에 저장 결과는 `내가 추가한 레시피`의 기존 목록·개수 계약에 포함되고, 카드에서 다시 열면 기존 유튜브 편집 화면으로 돌아간다. 편집 화면과 레시피북 reader 모두 같은 저장 결과를 읽으며, 저장된 상태에서 플래너 추가를 사용할 수 있다.
+유튜브 추출 결과의 원본 보존형 편집 문서는 그대로 유지한다. 자동 저장이 완료되면 같은 소유자의 공개 canonical recipe ID를 1:1로 연결한다. 이 ID 때문에 저장 결과는 `내가 추가한 레시피`의 기존 목록·개수 계약에 포함되고 공개 레시피 검색에도 제목으로 노출된다. 저장 태그 중 기존 승인 시스템 태그는 `recipe_tags`에도 동기화되어 태그 검색·테마에 참여하고, 미승인 자유 태그는 공개 검색 인덱스로 승격하지 않는다. 카드에서 다시 열면 기존 유튜브 편집 화면으로 돌아가며, 저장 후에는 `내가 추가한 레시피에서 보기`로 기존 레시피북 reader에 진입한다. reader의 저장·플래너·요리 동작과 편집 화면의 플래너 추가를 재사용한다.
 
 마이페이지의 별도 `유튜브에서 가져온 레시피` 진입 배너는 제거한다. 기존 `/recipes/youtube/saved` 목록과 상세 URL은 북마크·뒤로가기 호환을 위해 유지한다.
 
 ## 데이터·권한 계약
 
 - `youtube_saved_recipe_results.canonical_recipe_id`는 `recipes.id`와 1:1이며 최초 배정 후 바뀌지 않는다.
-- 연결 recipe는 `created_by=owner_user_id`, `visibility='private'`, `source_type='youtube'`다. 공개 레시피나 공용 재료 행을 만들지 않는다.
+- 연결 recipe는 `created_by=owner_user_id`, `visibility='public'`, `source_type='youtube'`다. 원본 저장 결과의 소유권과 편집 권한은 owner에게만 있고, 다른 사용자는 공개 recipe projection만 읽는다.
 - 제목·썸네일·인분·태그·revision만 canonical recipe에 동기화한다. 원본 근거와 편집 JSON, ingredient link projection이 저장 내용의 권위다.
 - 미해결 재료는 공용 catalog ID를 꾸며내지 않는다. 플래너의 불변 content snapshot 안에서만 recipe ID와 row ID로 결정적 synthetic UUID를 만들고, 실제 catalog ID와 충돌하지 않음을 확인한 뒤 원문 이름·표시 문자열·미해결 상태를 함께 고정한다. 장보기의 catalog 집계는 실제 연결 ID가 없는 행을 catalog 재료로 승격하지 않는다.
+- 공개 상세·독립 요리모드는 저장 문서에서 표시용 재료와 단계만 투영한다. owner ID, 저장 draft ID, 원본 evidence, source snapshot, ingredient link 상태와 mutation metadata는 공개 응답에 넣지 않는다. 미확인 분량은 그대로 표시하되 영양 계산에는 포함하지 않는다.
+- 공개 recipe snapshot은 `owner_user_id=null`로 고정해 다른 사용자가 자기 플래너에 추가해도 원 작성자의 private ownership으로 잘못 묶이지 않는다.
 - 레시피북 상세는 owner 검증과 `my_added` membership 검증 뒤 기존 owner-scoped 저장 RPC를 통해 내용을 읽는다.
-- canonical recipe가 삭제되면 연결 저장 결과도 함께 삭제되며, 계정 삭제의 기존 private recipe 정리 범위를 유지한다.
+- canonical recipe가 삭제되면 연결 저장 결과도 함께 삭제된다. 공개 recipe 노출은 기존 계정 공개 상태/RLS를 따르며 비활성 소유자를 우회하지 않는다.
 
 ## 기존 데이터 backfill
 
-새 migration은 기존 저장 결과마다 owner-private recipe 한 행과 recipe source 한 행을 만든다. 저장 결과의 `editable_content_json`, `editable_content_hash`, revision, source snapshot은 바꾸지 않는다. 기존 멱등 응답에는 새 recipe ID만 보완한다.
+새 migration은 기존 저장 결과마다 owner-created public recipe 한 행과 recipe source 한 행을 만든다. 기존 4건의 저장 JSON과 source snapshot에는 공개/비공개 선택 필드가 없음을 읽기 전용 집계로 확인했으므로 별도 비공개 예외 없이 같은 계약을 적용한다. 저장 결과의 `editable_content_json`, `editable_content_hash`, revision, source snapshot은 바꾸지 않는다. 기존 멱등 응답에는 새 recipe ID만 보완한다.
 
 운영 적용 전 확인할 범위와 위험은 다음과 같다.
 
@@ -33,9 +35,9 @@
 
 - P5 추출 모델, worker, 평가 데이터
 - 저장 결과의 원본/편집 JSON 계약과 optimistic revision
-- 사용자 간 공개 범위, 공개 recipe 등록 정책
 - 구형 `/recipes/{id}/save` service-role fallback
 - 운영 배포, 인증·보안 설정
+- P5 추출 모델의 분량 판정과 영양 계산 정책
 
 ## 검증 계약
 
@@ -43,4 +45,6 @@
 - 기존 저장분 backfill과 멱등 응답 replay
 - 반복 클릭, 새로고침, 취소/뒤로가기에서 중복 canonical recipe 및 편집 덮어쓰기 없음
 - manual recipe 목록·reader·플래너 회귀 없음
-- owner-private RLS와 다른 사용자 404 유지
+- owner-only 편집/RPC와 다른 사용자의 공개 상세·검색·플래너 추가를 각각 검증
+- 미확인 분량은 경고 1개만 보이고, 확인/직접 입력 후 중복 상태 배지가 남지 않으며 영양 계산 제외 계약 유지
+- 좁은 모바일 폭, 긴 단위, 키보드 입력에서 단위 입력이 행 밖으로 넘치지 않음
