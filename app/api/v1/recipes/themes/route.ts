@@ -105,12 +105,18 @@ interface ThemeDbClient {
   from(table: "recipes"): ThemeTable<RecipeCardRow>;
 }
 
+type RecipeThemesDbClient = ThemeDbClient & RecipeCardUserStatusDbClient;
+
 const RECENT_PLANNER_THEME_DAYS = 3;
 const RECIPES_PER_THEME = 10;
 const CARD_QUERY_LIMIT = 100;
 const RECENT_PLANNER_ROW_LIMIT = 500;
 const RECIPE_CARD_COLUMNS =
   "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, source_type";
+
+function asRecipeThemesDbClient(value: unknown): RecipeThemesDbClient {
+  return value as RecipeThemesDbClient;
+}
 
 function createThemeResponse(input: RecipeThemeInput): RecipeThemesData {
   return {
@@ -243,11 +249,13 @@ async function readRecipeCardsByIds(
   }
 
   const rowById = new Map(visibleRows.map((row) => [row.id, row]));
-
-  return ids
-    .map((id) => rowById.get(id))
-    .filter((row): row is RecipeCardRow => Boolean(row))
-    .slice(0, maxRows);
+  const orderedRows: RecipeCardRow[] = [];
+  for (const id of ids) {
+    if (orderedRows.length >= maxRows) break;
+    const row = rowById.get(id);
+    if (row) orderedRows.push(row);
+  }
+  return orderedRows;
 }
 
 function collectRecipeIngredientSets(rows: RecipeIngredientRow[]) {
@@ -314,22 +322,25 @@ async function readPantryMatchedRecipeIds(dbClient: ThemeDbClient, userId: strin
   const pantryIngredientSet = new Set(pantryIngredientIds);
   const totalByRecipe = collectRecipeIngredientSets(recipeIngredientsResult.data);
 
-  return candidateRecipeIds
-    .map((recipeId) => {
-      const matchedIngredients = matchedByRecipe.get(recipeId)?.size ?? 0;
-      const totalIngredients = totalByRecipe.get(recipeId)?.size ?? 0;
-      const missingIngredients = [...(totalByRecipe.get(recipeId) ?? new Set<string>())]
-        .filter((ingredientId) => !pantryIngredientSet.has(ingredientId))
-        .length;
+  const rankedCandidates = [];
+  for (const recipeId of candidateRecipeIds) {
+    const matchedIngredients = matchedByRecipe.get(recipeId)?.size ?? 0;
+    const totalIngredientsForRecipe = totalByRecipe.get(recipeId) ?? new Set<string>();
+    const totalIngredients = totalIngredientsForRecipe.size;
+    if (totalIngredients === 0) continue;
+    let missingIngredients = 0;
+    for (const ingredientId of totalIngredientsForRecipe) {
+      if (!pantryIngredientSet.has(ingredientId)) missingIngredients += 1;
+    }
+    rankedCandidates.push({
+      recipeId,
+      matchedIngredients: Math.min(matchedIngredients, totalIngredients),
+      missingIngredients,
+      totalIngredients,
+    });
+  }
 
-      return {
-        recipeId,
-        matchedIngredients: Math.min(matchedIngredients, totalIngredients),
-        missingIngredients,
-        totalIngredients,
-      };
-    })
-    .filter((item) => item.totalIngredients > 0)
+  return rankedCandidates
     .sort((left, right) => {
       const leftScore = left.matchedIngredients / left.totalIngredients;
       const rightScore = right.matchedIngredients / right.totalIngredients;
@@ -348,8 +359,8 @@ async function readPantryMatchedRecipeIds(dbClient: ThemeDbClient, userId: strin
 
       return left.recipeId.localeCompare(right.recipeId);
     })
-    .map((item) => item.recipeId)
-    .slice(0, RECIPES_PER_THEME);
+    .slice(0, RECIPES_PER_THEME)
+    .map((item) => item.recipeId);
 }
 
 function createTagGroups(
@@ -407,17 +418,14 @@ export async function GET() {
     } catch {
       userId = null;
     }
-    const serviceClient = routeClient;
-    const supabase = routeClient;
-    const themeDbClient = supabase as unknown as ThemeDbClient;
-    const privateThemeDbClient = serviceClient as unknown as ThemeDbClient;
+    const dbClient = asRecipeThemesDbClient(routeClient);
     const [
       baseRowsResult,
       youtubeRowsResult,
       recentPlannerRowsResult,
       themeRowsResult,
     ] = await Promise.all([
-      supabase
+      dbClient
       .from("recipes")
       .select(
         RECIPE_CARD_COLUMNS,
@@ -427,7 +435,7 @@ export async function GET() {
       .order("view_count", { ascending: false })
       .order("id", { ascending: true })
         .limit(CARD_QUERY_LIMIT),
-      themeDbClient
+      dbClient
         .from("recipes")
         .select(RECIPE_CARD_COLUMNS)
         .eq("visibility", "public")
@@ -437,14 +445,14 @@ export async function GET() {
         .order("id", { ascending: true })
         .limit(RECIPES_PER_THEME),
       userId
-        ? privateThemeDbClient
+        ? dbClient
           .from("meals")
           .select("recipe_id")
           .gte("created_at", getRecentPlannerSinceIso())
           .order("created_at", { ascending: false })
           .limit(RECENT_PLANNER_ROW_LIMIT)
         : Promise.resolve({ data: [], error: null }),
-      themeDbClient.rpc("list_home_theme_recipes", {
+      dbClient.rpc("list_home_theme_recipes", {
         p_tag_limit: 8,
         p_recipes_per_tag: 10,
       }),
@@ -460,7 +468,7 @@ export async function GET() {
       ? []
       : (recentPlannerRowsResult.data ?? []);
     const visibleRecentPlannerRows = await readRecipeCardsByIds(
-      themeDbClient,
+      dbClient,
       rankRecipeIdsByRecentPlannerUse(
         recentPlannerRows,
         RECENT_PLANNER_ROW_LIMIT,
@@ -478,15 +486,15 @@ export async function GET() {
     const themeRows = themeRowsResult.error ? [] : (themeRowsResult.data ?? []);
     const methodRowsResult = rows.length === 0
       ? { data: [], error: null }
-      : await themeDbClient
+      : await dbClient
         .from("recipe_steps")
         .select("recipe_id, cooking_methods(code)")
         .in("recipe_id", rows.map((recipe) => recipe.id));
     const noFlameRecipeIds = methodRowsResult.error
       ? []
       : selectNoFlameApplianceRecipeIds(normalizeMethodRows(methodRowsResult.data ?? []));
-    const pantryRecipeIds = await readPantryMatchedRecipeIds(themeDbClient, userId);
-    const supplementalRows = await readRecipeCardsByIds(themeDbClient, [
+    const pantryRecipeIds = await readPantryMatchedRecipeIds(dbClient, userId);
+    const supplementalRows = await readRecipeCardsByIds(dbClient, [
       ...pantryRecipeIds,
       ...noFlameRecipeIds,
     ]);
@@ -500,19 +508,6 @@ export async function GET() {
       rowById.set(row.id, row);
     });
     const noFlameThemeRecipeIds = sortRecipeIdsByCardPopularity(noFlameRecipeIds, rowById);
-    const hydrateRows = (recipeRows: RecipeCardRow[]) =>
-      recipeRows.map((recipe) => mapRecipeCard(
-        recipe,
-        userStatusByRecipeId.get(recipe.id) ?? null,
-      ));
-    const hydrateByIds = (recipeIds: string[]) =>
-      recipeIds
-        .map((recipeId) => rowById.get(recipeId))
-        .filter((recipe): recipe is RecipeCardRow => Boolean(recipe))
-        .map((recipe) => mapRecipeCard(
-          recipe,
-          userStatusByRecipeId.get(recipe.id) ?? null,
-        ));
     const allThemeRecipeIds = uniqueIds([
       ...recentPlannerRecipeIds,
       ...pantryRecipeIds,
@@ -522,10 +517,28 @@ export async function GET() {
       ...themeRows.map((recipe) => recipe.id),
     ]);
     const userStatusByRecipeId = await readRecipeCardUserStatuses({
-      dbClient: serviceClient as unknown as RecipeCardUserStatusDbClient,
+      dbClient,
       recipeIds: allThemeRecipeIds,
       userId,
     });
+    const hydrateRows = (recipeRows: RecipeCardRow[]) =>
+      recipeRows.map((recipe) => mapRecipeCard(
+        recipe,
+        userStatusByRecipeId.get(recipe.id) ?? null,
+      ));
+    const hydrateByIds = (recipeIds: string[]) => {
+      const hydrated: RecipeCardItem[] = [];
+      for (const recipeId of recipeIds) {
+        const recipe = rowById.get(recipeId);
+        if (recipe) {
+          hydrated.push(mapRecipeCard(
+            recipe,
+            userStatusByRecipeId.get(recipe.id) ?? null,
+          ));
+        }
+      }
+      return hydrated;
+    };
 
     return ok(createThemeResponse({
       recentPlannerItems: hydrateByIds(recentPlannerRecipeIds),

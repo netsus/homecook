@@ -450,42 +450,6 @@
       "count": 1
     },
     {
-      "file": "app/api/v1/recipes/themes/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "4131b5247545ea556e12379a093c680000352ec89bf6487373d5f795cf776103",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/recipes/themes/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "4b510350e3548c8e4eee5fe62789b61c2e4990e3e4bc10e799617eda1c8863c5",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/recipes/themes/route.ts",
-      "rule": "anti-slop(no-array-filter-map)",
-      "snippetSha256": "eeeeb203b0ef8e079f3873ce11b842cc88c20bf677d5f820e1ead2d39573a27f",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/recipes/themes/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "08f668719e7e34d25ad489387d1a416a6eb359b7d779372897a9489cb277131c",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/recipes/themes/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "16dfc41fb59a53354b165190058a82a2a311e0ebfdc629b3646f198ce49599d1",
-      "count": 1
-    },
-    {
-      "file": "app/api/v1/recipes/themes/route.ts",
-      "rule": "anti-slop(no-chained-type-assertions)",
-      "snippetSha256": "f9c3897e564b00092e600c6cf40b71d84c7adfe4c4945dff776fbb5c8f4b7211",
-      "count": 1
-    },
-    {
       "file": "app/api/v1/shopping/lists/[list_id]/complete/route.ts",
       "rule": "anti-slop(no-chained-type-assertions)",
       "snippetSha256": "a309e12ebc96615a9a578ed2c5fde4ad761a0e7750b896e81b2cd8518ed07f01",

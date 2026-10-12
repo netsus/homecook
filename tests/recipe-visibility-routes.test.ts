@@ -43,12 +43,13 @@ describe("recipe visibility public reader boundaries", () => {
     const themes = readSource("app/api/v1/recipes/themes/route.ts");
     const tags = readSource("app/api/v1/tags/route.ts");
 
-    expect(themes).toContain("const supabase = routeClient");
-    expect(themes).not.toContain(
-      "const supabase = createServiceRoleClient() ?? routeClient",
+    expect(themes).toContain(
+      "const dbClient = asRecipeThemesDbClient(routeClient)",
     );
+    expect(themes).not.toContain("createServiceRoleClient");
     expect(themes).not.toContain("createRemoteCompatibilityServiceRoleClient");
-    expect(themes).toContain("const serviceClient = routeClient");
+    expect(themes).toMatch(/dbClient[\s\S]*\.from\("recipes"\)/);
+    expect(themes).toContain('dbClient.rpc("list_home_theme_recipes"');
     expect(tags).toContain(
       "const dbClient = routeClient as unknown as TagsDbClient",
     );
