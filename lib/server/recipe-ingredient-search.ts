@@ -64,10 +64,14 @@ export function createRecipeIngredientSearch(
       ]);
       const candidates = [...direct, ...cuts, ...synonyms.flatMap((row) =>
         Array.isArray(row.ingredients) ? row.ingredients : row.ingredients ? [row.ingredients] : [])];
-      return expandIngredientIdentityIds(candidates.filter((row) => {
+      const candidateIds: string[] = [];
+      for (const row of candidates) {
         const canonical = canonicalizeIngredient(row, aliases);
-        return !pork || canonical.category === "육류" || canonical.category_code === "pork_beef_lamb";
-      }).map((row) => row.id), aliases);
+        if (!pork || canonical.category === "육류" || canonical.category_code === "pork_beef_lamb") {
+          candidateIds.push(row.id);
+        }
+      }
+      return expandIngredientIdentityIds(candidateIds, aliases);
     })());
     return names.get(searchKey)!;
   }
@@ -112,8 +116,17 @@ export function createRecipeIngredientSearch(
         byRecipe.set(row.recipe_id, matched);
       }
       // OR within each ingredient family; AND between the user's selections.
-      return [...byRecipe].filter(([, ids]) => groups.every((group) => [...ids].some((id) => group.has(id))))
-        .map(([id]) => id);
+      const recipeIds: string[] = [];
+      for (const [recipeId, ids] of byRecipe) {
+        const matchesEveryGroup = groups.every((group) => {
+          for (const id of ids) {
+            if (group.has(id)) return true;
+          }
+          return false;
+        });
+        if (matchesEveryGroup) recipeIds.push(recipeId);
+      }
+      return recipeIds;
     },
   };
 }
