@@ -1,17 +1,35 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useCallback, useRef, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useActionConfirmationStore } from "@/stores/ui-store";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 
 export function ActionConfirmation() {
   const message = useActionConfirmationStore((state) => state.message);
+  const fallbackFocusRef = useActionConfirmationStore((state) => state.fallbackFocusRef);
+  const confirmationId = useActionConfirmationStore((state) => state.confirmationId);
+  const returnFocusPath = useActionConfirmationStore((state) => state.returnFocusPath);
   const dismiss = useActionConfirmationStore((state) => state.dismiss);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useDialogBoundary({ active: Boolean(message), priority: 120, dialogRef, onClose: dismiss });
 
   if (!message || typeof document === "undefined") return null;
+
+  // Equal messages can still belong to different callers and dialog lifetimes.
+  return <ActionConfirmationDialog key={confirmationId} message={message} fallbackFocusRef={fallbackFocusRef} confirmationId={confirmationId} returnFocusPath={returnFocusPath} dismiss={dismiss} />;
+}
+
+function ActionConfirmationDialog({ message, fallbackFocusRef, confirmationId, returnFocusPath, dismiss }: {
+  message: string;
+  fallbackFocusRef: RefObject<HTMLElement | null> | null;
+  confirmationId: number;
+  returnFocusPath: string | null;
+  dismiss: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusWhen = useCallback(() =>
+    useActionConfirmationStore.getState().confirmationId === confirmationId && window.location.pathname === returnFocusPath,
+  [confirmationId, returnFocusPath]);
+  useDialogBoundary({ priority: 120, dialogRef, fallbackFocusRef: fallbackFocusRef ?? undefined, onClose: dismiss, restoreFocusWhen: fallbackFocusRef ? restoreFocusWhen : undefined });
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/30 p-6 backdrop-blur-[2px]" onClick={dismiss}>

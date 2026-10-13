@@ -232,6 +232,96 @@ describe("planner add flow", () => {
   });
 
   // accept-happy-path: authenticated user submits → meal created → confirmation dialog
+  it.each([false, true])("keeps cancellation and failed submission focus without creating a success owner (desktop=%s)", async (desktop) => {
+    installMatchMedia(desktop);
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    createMeal.mockRejectedValue(new Error("추가 시험 실패"));
+    const user = userEvent.setup();
+    render(<><RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} /><ActionConfirmation /></>);
+    const opener = (await screen.findAllByRole("button", { name: "플래너에 추가" }))[0]!;
+    await user.click(opener);
+    await screen.findByRole("dialog", { name: "플래너에 추가" });
+    await user.keyboard("{Escape}{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(opener));
+    expect(createMeal).not.toHaveBeenCalled();
+    expect(useActionConfirmationStore.getState().fallbackFocusRef).toBeNull();
+
+    await user.click(opener);
+    const planner = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    await user.click(within(planner).getByRole("button", { name: desktop ? /저녁에 추가$/ : "플래너에 추가" }));
+    expect(await within(planner).findByText("추가 시험 실패")).toBeTruthy();
+    expect(createMeal).toHaveBeenCalledTimes(1);
+    expect(useActionConfirmationStore.getState().message).toBeNull();
+    expect(useActionConfirmationStore.getState().fallbackFocusRef).toBeNull();
+    await user.click(within(planner).getByRole("button", { name: desktop ? "취소" : "닫기" }));
+    await waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+
+  it.each(["unmount", "pathname"])("ignores a pending success after its owner leaves by %s", async (leaveBy) => {
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    let finishMeal!: (data: MealCreateData) => void;
+    createMeal.mockReturnValue(new Promise<MealCreateData>((resolve) => { finishMeal = resolve; }));
+    const previousPath = window.location.pathname;
+    const user = userEvent.setup();
+    const view = render(<><RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} /><ActionConfirmation /></>);
+    await user.click((await screen.findAllByRole("button", { name: "플래너에 추가" }))[0]!);
+    const planner = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    await user.click(within(planner).getByRole("button", { name: "플래너에 추가" }));
+    if (leaveBy === "unmount") view.rerender(<><button>새 페이지 작업</button><ActionConfirmation /></>);
+    else window.history.replaceState({}, "", "/planner/after-submit");
+    try {
+      await act(async () => finishMeal(buildMealCreateData()));
+      expect(useActionConfirmationStore.getState().message).toBeNull();
+      expect(useActionConfirmationStore.getState().fallbackFocusRef).toBeNull();
+      expect(screen.queryByRole("dialog", { name: /추가됐어요$/ })).toBeNull();
+      expect(createMeal).toHaveBeenCalledTimes(1);
+    } finally {
+      window.history.replaceState({}, "", previousPath);
+    }
+  });
+
+  it.each([
+    { desktop: false, closeWith: "confirm" },
+    { desktop: false, closeWith: "escape" },
+    { desktop: true, closeWith: "confirm" },
+    { desktop: true, closeWith: "escape" },
+  ])("restores the actual planner opener after success (desktop=$desktop, close=$closeWith)", async ({ desktop, closeWith }) => {
+    installMatchMedia(desktop);
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    createMeal.mockResolvedValue(buildMealCreateData());
+    const frames = new Map<number, FrameRequestCallback>();
+    let frameId = 0;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => { frames.set(++frameId, callback); return frameId; });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => { frames.delete(id); });
+    const flushFrames = () => act(() => {
+      while (frames.size) {
+        const pending = Array.from(frames.entries());
+        frames.clear();
+        for (const [, callback] of pending) callback(0);
+      }
+    });
+    const user = userEvent.setup();
+    try {
+      render(<><RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} /><ActionConfirmation /></>);
+      const opener = (await screen.findAllByRole("button", { name: "플래너에 추가" }))[0]!;
+      await user.click(opener);
+      const planner = await screen.findByRole("dialog", { name: "플래너에 추가" });
+      await user.click(within(planner).getByRole("button", { name: desktop ? /저녁에 추가$/ : "플래너에 추가" }));
+      const confirmation = await screen.findByRole("dialog", { name: /저녁에 추가됐어요$/ });
+      flushFrames();
+      expect(confirmation.contains(document.activeElement)).toBe(true);
+      expect(useActionConfirmationStore.getState().fallbackFocusRef?.current).toBe(opener);
+      if (closeWith === "escape") await user.keyboard("{Escape}");
+      else await user.click(within(confirmation).getByRole("button", { name: "확인" }));
+      flushFrames();
+      expect(document.activeElement).toBe(opener);
+      expect(useActionConfirmationStore.getState().fallbackFocusRef).toBeNull();
+    } finally {
+      cleanup();
+      vi.restoreAllMocks();
+    }
+  });
+
   it("creates a meal and shows success feedback on submit", async () => {
     fetchPlanner.mockResolvedValue(buildPlannerData());
     const createdMeal = buildMealCreateData();
@@ -689,6 +779,23 @@ describe("planner add flow", () => {
   });
 
   // accept-return-to-action: pending "planner" action after login → sheet auto-opens
+  it("uses no guessed caller ref for a successful planner action resumed after login", async () => {
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    createMeal.mockResolvedValue(buildMealCreateData());
+    expect(savePendingAction({
+      type: "planner",
+      recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      createdAt: Date.now(),
+    })).toBe(true);
+    render(<><RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} /><ActionConfirmation /></>);
+    const dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "플래너에 추가" }));
+    expect(await screen.findByRole("dialog", { name: /저녁에 추가됐어요$/ })).toBeTruthy();
+    expect(useActionConfirmationStore.getState().fallbackFocusRef).toBeNull();
+    expect(useActionConfirmationStore.getState().returnFocusPath).toBeNull();
+  });
+
   it("auto-opens planner add sheet when returning from login gate with pending planner action", async () => {
     fetchPlanner.mockResolvedValue(buildPlannerData());
 
