@@ -5,6 +5,9 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Responsive Playwright tests verify CSS; Vitest exercises the view behavior.
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
+
 import { SnapshotV2CookModeScreen } from "@/components/cooking/snapshot-v2-cook-mode-screen";
 import { SnapshotV2CookModeView } from "@/components/cooking/snapshot-v2-cook-mode-view";
 import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
