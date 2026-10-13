@@ -27,6 +27,7 @@ import {
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
   ingredientMatchesCategoryGroup,
 } from "@/lib/ingredient-categories";
+import { formatRegisteredCompany } from "@/lib/registered-company-name";
 import type { FoodProductData } from "@/types/food-product";
 import type { PantryProductInput } from "@/types/pantry";
 import type { IngredientItem } from "@/types/recipe";
@@ -448,7 +449,9 @@ export function PantryAddSheet({
             </div>
             {selectedCount > 0 ? (
               <div
-                className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto"
+                className={selectedProducts.some((product) => product.source_type === "public_dataset")
+                  ? "mt-3 flex flex-wrap gap-1.5"
+                  : "scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto"}
                 data-testid="pantry-add-selected-ingredients"
               >
                 {selectedIngredients.map((ingredient) => (
@@ -464,13 +467,14 @@ export function PantryAddSheet({
                 ))}
                 {selectedProducts.map((product) => (
                   <button
-                    aria-label={`${product.name} 선택 해제`}
-                    className="shrink-0 rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-extrabold text-[var(--brand)]"
+                    aria-label={`${productAccessibleLabel(product, true, false)} 선택 해제`}
+                    className="inline-flex max-w-[calc(100vw-48px)] shrink-0 items-center gap-2 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-2.5 py-1 text-left text-[12px] font-extrabold text-[var(--brand)]"
                     key={product.id}
                     onClick={() => removeSelectedProduct(product.id)}
                     type="button"
                   >
-                    {product.name} ×
+                    <SelectedProductText product={product} />
+                    <span aria-hidden="true" className="shrink-0">×</span>
                   </button>
                 ))}
               </div>
@@ -571,7 +575,12 @@ export function PantryAddSheet({
                 <h3 className="mb-2 px-0.5 text-[13px] font-extrabold text-[var(--text-2)]">
                   제품
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
+                {products.some((product) => product.source_type === "public_dataset") ? (
+                  <p className="mb-2 px-0.5 text-[12px] text-[var(--text-3)]">
+                    배지는 등록업체명이에요. 선택하면 전체 이름을 볼 수 있어요.
+                  </p>
+                ) : null}
+                <div className="grid grid-cols-1 gap-2">
                   {products.map((product) => {
                     const isExisting = existingProductSet.current.has(
                       productIdentityKey({
@@ -585,7 +594,7 @@ export function PantryAddSheet({
                     return (
                       <button
                         aria-checked={isChecked}
-                        aria-label={productAccessibleLabel(product)}
+                        aria-label={productAccessibleLabel(product, isChecked, isExisting)}
                         className={[
                           "flex min-h-[54px] items-center gap-2 rounded-[var(--radius-card)] border px-3 text-left disabled:opacity-60",
                           isExisting
@@ -601,19 +610,16 @@ export function PantryAddSheet({
                         role="checkbox"
                         type="button"
                       >
-                        <span
-                          aria-hidden="true"
-                          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]"
-                        >
-                          📦
-                        </span>
+                        <PantryProductVisual mobile product={product} />
                         <span className="min-w-0 flex-1">
                           <strong className="block truncate text-[13px]">
                             {product.name}
                           </strong>
-                          <small className="block truncate text-[10px] text-[var(--text-3)]">
-                            {productDetailText(product)}
-                          </small>
+                          {product.source_type === "manual" ? (
+                            <small className="block truncate text-[10px] text-[var(--text-3)]">
+                              {product.brand ?? "브랜드 없음"}
+                            </small>
+                          ) : null}
                         </span>
                         {isChecked ? (
                           <span className="shrink-0 text-[15px] font-extrabold text-[var(--brand)]">
@@ -710,13 +716,13 @@ export function PantryAddSheet({
                   ))}
                   {selectedProducts.map((product) => (
                     <button
-                      aria-label={`${product.name} 선택 해제`}
-                      className="web-ingredient-pill"
+                      aria-label={`${productAccessibleLabel(product, true, false)} 선택 해제`}
+                      className="web-ingredient-pill max-w-full"
                       key={product.id}
                       onClick={() => removeSelectedProduct(product.id)}
                       type="button"
                     >
-                      <span>{product.name}</span>
+                      <SelectedProductText product={product} />
                       <span aria-hidden="true" className="web-ingredient-pill-remove">
                         ×
                       </span>
@@ -730,6 +736,11 @@ export function PantryAddSheet({
           </div>
 
           <div className="web-ingredient-list-region" data-testid="pantry-add-list-region">
+            {products.some((product) => product.source_type === "public_dataset") ? (
+              <p className="web-modal-copy mb-2">
+                배지는 등록업체명이에요. 선택하면 전체 이름을 볼 수 있어요.
+              </p>
+            ) : null}
             {visibleSheetState === "loading" ? (
               <div className="web-ingredient-grid">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
@@ -801,7 +812,7 @@ export function PantryAddSheet({
                   return (
                     <button
                       aria-checked={isChecked}
-                      aria-label={productAccessibleLabel(product)}
+                      aria-label={productAccessibleLabel(product, isChecked, isExisting)}
                       className={[
                         "web-ingredient-cell",
                         isChecked ? "web-ingredient-cell-selected" : "",
@@ -814,14 +825,14 @@ export function PantryAddSheet({
                       key={product.id}
                       onClick={() => handleProductToggle(product)}
                       role="checkbox"
-                      title={productAccessibleLabel(product)}
+                      title={productAccessibleLabel(product, isChecked, isExisting)}
                       type="button"
                     >
-                      <span aria-hidden="true" className="web-ingredient-cell-visual">
-                        📦
-                      </span>
+                      <PantryProductVisual mobile={false} product={product} />
                       <strong>{product.name}</strong>
-                      <small>{productDetailText(product)}</small>
+                      {product.source_type === "manual" ? (
+                        <small>{product.brand ?? "브랜드 없음"}</small>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -934,10 +945,57 @@ function SearchGlyph({ className }: { className?: string }) {
   );
 }
 
-function productDetailText(product: FoodProductData) {
-  return `${product.brand ?? "브랜드 없음"} · 영양 버전 ${product.nutrition_version_id}`;
+function PantryProductVisual({ product, mobile }: { product: FoodProductData; mobile: boolean }) {
+  if (product.source_type === "manual") {
+    return (
+      <span
+        aria-hidden="true"
+        className={mobile
+          ? "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]"
+          : "web-ingredient-cell-visual"}
+      >
+        📦
+      </span>
+    );
+  }
+  const company = formatRegisteredCompany(product.brand);
+  return (
+    <span
+      aria-hidden="true"
+      className={mobile
+        ? "flex h-[40px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--surface-fill)]"
+        : "web-ingredient-cell-visual"}
+      title={company.originalName ?? "등록업체 정보 없음"}
+    >
+      <span className="line-clamp-2 px-1 text-center text-[11px] font-bold leading-[14px] [overflow-wrap:anywhere]">
+        {company.displayName}
+      </span>
+    </span>
+  );
 }
 
-function productAccessibleLabel(product: FoodProductData) {
-  return `${product.name} · ${productDetailText(product)}`;
+function SelectedProductText({ product }: { product: FoodProductData }) {
+  return (
+    <span className="min-w-0 whitespace-normal text-left [overflow-wrap:anywhere]">
+      <span className="block">{product.name}</span>
+      {product.source_type === "public_dataset" ? (
+        <span className="block text-[11px] font-medium">
+          {registeredCompanyDescription(product)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function registeredCompanyDescription(product: FoodProductData) {
+  const originalName = formatRegisteredCompany(product.brand).originalName;
+  return originalName ? `등록업체 ${originalName}` : "등록업체 정보 없음";
+}
+
+function productAccessibleLabel(product: FoodProductData, isChecked: boolean, isExisting: boolean) {
+  const company = product.source_type === "public_dataset"
+    ? registeredCompanyDescription(product)
+    : product.brand ?? "브랜드 없음";
+  const state = isExisting ? "보유중" : isChecked ? "선택됨" : "선택 안 됨";
+  return `${product.name} · ${company} · ${state}`;
 }
