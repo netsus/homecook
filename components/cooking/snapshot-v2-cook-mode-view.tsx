@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import styles from "./cook-mode-layout.module.css";
 
 import { CookModeWholeBoard } from "@/components/cooking/cook-mode-whole-board";
 import type { SnapshotV2CookModeData } from "@/types/cooking";
@@ -29,7 +30,7 @@ export function SnapshotV2CookModeView({
   return (
     <div
       aria-label="요리 화면"
-      className="cook-mobile-whole-screen relative mx-auto h-dvh max-w-[430px] overflow-y-auto overscroll-y-contain"
+      className={`${styles.snapshotScreen} cook-mobile-whole-screen relative mx-auto h-dvh max-w-[430px] overflow-y-auto overscroll-y-contain`}
       role="region"
       tabIndex={0}
       data-cook-theme="dark"

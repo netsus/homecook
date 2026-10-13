@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import styles from "./cook-mode-layout.module.css";
 
 import { CookModeWholeBoard } from "@/components/cooking/cook-mode-whole-board";
 import type { ScreenWakeLockStatus } from "@/components/cooking/use-screen-wake-lock";
@@ -47,7 +48,7 @@ export function CookModeDesktopView({
   ];
 
   return (
-    <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
+    <WebShell className={`${styles.desktopShell} web-cooking-shell web-cooking-shell-dark`} footer={false} wide>
       <WebTopNav
         activeId={variant === "planner" ? "planner" : undefined}
         brandTone="dark"

@@ -1123,12 +1123,21 @@ describe("YouTube extraction notification center", () => {
     await user.click(await screen.findByRole("button", { name: "알림 3개" }));
     const link = await screen.findByRole("link", { name: activity.title });
     expect(link.getAttribute("href")).toBe("/leftovers");
+    const list = screen.getByTestId("youtube-notification-list");
+    const resultRows = list.querySelectorAll("[data-youtube-job-id]");
+    const actionRow = list.querySelector("[data-app-action-notification-id]");
+    expect([...resultRows].map((row) => row.getAttribute("data-youtube-job-id"))).toEqual([successItem.job_id, failedItem.job_id]);
+    expect(resultRows[1].compareDocumentPosition(actionRow!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
     await waitFor(() => expect(actionApi.markActionNotificationsSeen).toHaveBeenCalledWith([activity.id]));
     await user.click(screen.getByRole("tab", { name: "지난 알림" }));
     expect(await screen.findByRole("link", { name: activity.title })).toBeTruthy();
     expect(actionApi.fetchActionNotifications).toHaveBeenCalledWith("archive", null);
     expect(screen.queryByText("지난 알림이 없어요.")).toBeNull();
     const archiveLink = screen.getByRole("link", { name: activity.title });
+    const archiveResults = screen.getByTestId("youtube-notification-list").querySelectorAll("[data-youtube-job-id]");
+    expect(archiveResults[1].compareDocumentPosition(archiveLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
     archiveLink.addEventListener("click", event => event.preventDefault());
     await user.click(archiveLink);
     expect(screen.queryByRole("heading", { name: "알림" })).toBeNull();
