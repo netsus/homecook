@@ -78,6 +78,8 @@ describe("YouTube v71 controlled cutover", () => {
     expect(source).not.toContain("private.youtube_extraction_policy_snapshot_digest(");
     expect(source).toContain("async function stoppedWorker()");
     expect(source).toContain("await stoppedWorker()");
+    expect(source).toContain("health.ok === true && health.ready === true");
+    expect(source).not.toContain("health.healthy === true");
     expect(source).toContain("durablePrivateJson(VERIFICATION_RECEIPT_PATH, receipt)");
     expect(source).toContain("durablePrivateJson(RECEIPT_PATH, receipt)");
     expect(source).toContain("reconcileActivationReceipt(verificationReceipt)");
