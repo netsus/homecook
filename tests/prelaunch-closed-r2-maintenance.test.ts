@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { createServer } from "node:http";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -11,7 +12,7 @@ import { createPrelaunchDatabaseEngine } from "../scripts/lib/prelaunch-database
 import {
   acquireClosedR2ControlLease, assertClosedR2CompensationTarget, assertClosedR2ContinuationOptions, assertClosedR2Database, assertClosedR2Environment, assertClosedR2LiveMarker, assertClosedR2LiveUnchanged, assertClosedR2MaintenanceFence, assertClosedR2PredecessorState,
   assertClosedR2Retry, assertClosedR2Review, assertClosedR2Rollback, assertRound2InheritanceBoundaries,
-  assertClosedR2Source, closedR2RollbackPlist, deployTransaction, parsePrelaunchOptions, prelaunchVerificationEnvironment, retargetPlist, verifyClosedR2Control,
+  assertClosedR2Source, closedR2RollbackPlist, deployTransaction, parsePrelaunchOptions, prelaunchVerificationEnvironment, retargetPlist, verifyClosedR2Collector, verifyClosedR2Control,
 } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const roots: string[] = [];
@@ -395,6 +396,52 @@ describe("live release marker independent fence", () => {
       expect(assertClosedR2PredecessorState(restore)).toEqual(rolledBack);
       expect(() => assertClosedR2PredecessorState({ ...restore, plist: f.previous, plistSha256: f.marker.previousPlistSha256 })).toThrow();
       expect(readFileSync(f.controlPath, "utf8")).toBe(JSON.stringify(f.control));
+    }
+  });
+});
+
+
+describe("closed collector real HTTP smoke", () => {
+  it("sends the configured Host and Origin over loopback without relaxing the endpoint boundary", async () => {
+    const seen: { host?: string; origin?: string; method?: string; path?: string; body: string }[] = [];
+    const server = createServer(async (request, response) => {
+      let body = "";
+      for await (const chunk of request) body += chunk.toString();
+      seen.push({ host: request.headers.host, origin: request.headers.origin, method: request.method, path: request.url, body });
+      const allowed = request.headers.host === "app.mumeok.kr" && request.headers.origin === "https://app.mumeok.kr";
+      response.writeHead(allowed ? 503 : 403, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: { code: allowed ? "ROUND2_DISABLED" : "ORIGIN_NOT_ALLOWED" } }));
+    });
+    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("missing owned server port");
+      await expect(verifyClosedR2Collector(address.port)).resolves.toBeUndefined();
+      expect(seen).toEqual([{ host: "app.mumeok.kr", origin: "https://app.mumeok.kr", method: "POST", path: "/api/v1/marketing/round2", body: "{}" }]);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  });
+  it.each([
+    [200, '{"error":{"code":"ROUND2_DISABLED"}}'],
+    [503, '{"error":{"code":"ROUND2_UNAVAILABLE"}}'],
+    [403, '{"error":{"code":"ORIGIN_NOT_ALLOWED"}}'],
+    [302, '{"error":{"code":"ROUND2_DISABLED"}}'],
+    [503, 'not JSON'],
+  ])("still refuses response status %s and body %s", async (status, body) => {
+    const server = createServer((_request, response) => {
+      response.writeHead(status, { "content-type": "application/json", location: "/never-follow" });
+      response.end(body);
+    });
+    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("missing owned server port");
+      await expect(verifyClosedR2Collector(address.port)).rejects.toThrow();
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     }
   });
 });
