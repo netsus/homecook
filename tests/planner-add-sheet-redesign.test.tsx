@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
+import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { RecipeNutrition } from "@/types/recipe";
 const api = vi.hoisted(() => ({ search: vi.fn(), create: vi.fn(), preview: vi.fn() }));
 vi.mock("@/lib/api/recipe", () => ({ fetchRecipes: api.search, fetchRecipePreview: api.preview }));
@@ -14,6 +15,70 @@ beforeEach(() => {
   api.preview.mockResolvedValue({ ...recipe, ingredients: [], nutrition: { basis: { amount: 2, unit: "serving" }, warnings: [], sources: [], base_servings: 2, values: {}, calculation_status: "unavailable", calculation_quality: null, availability_reason: "missing" } satisfies RecipeNutrition });
   api.search.mockResolvedValue({ success: true, data: { items: [recipe], has_next: false, next_cursor: null } });
   api.create.mockResolvedValue({ success: false, error: { message: "잠시 후 다시 시도해 주세요." } });
+});
+
+function PlannerDialogHarness({ variant, sheetState = "ready" }: {
+  variant: "default" | "recipe-detail";
+  sheetState?: React.ComponentProps<typeof PlannerAddSheet>["sheetState"];
+}) {
+  const [open, setOpen] = React.useState(false);
+  return <>
+    <button onClick={() => setOpen(true)}>상세에서 추가</button>
+    {open ? <PlannerAddSheet
+      columns={[{ id: "column", name: "저녁", sort_order: 0 }]}
+      errorMessage={null}
+      isOpen={open}
+      onChangeServings={vi.fn()}
+      onClose={() => { if (sheetState !== "submitting") setOpen(false); }}
+      onRetryLoad={vi.fn()}
+      onSelectColumn={vi.fn()}
+      onSelectDate={vi.fn()}
+      onSubmit={vi.fn()}
+      selectableDates={["2026-10-13"]}
+      selectedColumnId="column"
+      selectedDate="2026-10-13"
+      servings={3}
+      sheetState={sheetState}
+      variant={variant}
+    /> : null}
+  </>;
+}
+
+describe("PlannerAddSheet mobile dialog boundary", () => {
+  afterEach(() => Reflect.deleteProperty(window, "matchMedia"));
+
+  it.each(["default", "recipe-detail"] as const)("contains focus across loading and ready, then restores the invoker in %s", async (variant) => {
+    const user = userEvent.setup();
+    const view = render(<PlannerDialogHarness sheetState="loading-columns" variant={variant} />);
+    const invoker = screen.getByRole("button", { name: "상세에서 추가" });
+    await user.click(invoker);
+    const close = screen.getByRole("button", { name: "닫기" });
+    expect(document.activeElement).toBe(close);
+    expect(invoker.inert).toBe(true);
+    view.rerender(<PlannerDialogHarness variant={variant} />);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "플래너에 추가" }));
+    await user.tab();
+    expect(document.activeElement).toBe(close);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(invoker));
+    expect(invoker.inert).not.toBe(true);
+  });
+
+  it.each(["default", "recipe-detail"] as const)("keeps the boundary active and blocks Escape while submitting in %s", async (variant) => {
+    const user = userEvent.setup();
+    const view = render(<PlannerDialogHarness variant={variant} />);
+    const invoker = screen.getByRole("button", { name: "상세에서 추가" });
+    await user.click(invoker);
+    view.rerender(<PlannerDialogHarness sheetState="submitting" variant={variant} />);
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "플래너에 추가" })).toBeTruthy();
+    expect(invoker.inert).toBe(true);
+    expect(document.body.style.overflow).toBe("hidden");
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("dialog", { name: "플래너에 추가" }));
+  });
 });
 afterEach(cleanup);
 const openPicker = (onClose = vi.fn()) => render(<MealAddPickerFlow columnId="column" entryMode="search" onClose={onClose} onComplete={vi.fn()} planDate="2026-10-06" slotName="점심" />);
