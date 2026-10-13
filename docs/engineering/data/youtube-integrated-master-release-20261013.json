@@ -1030,7 +1030,7 @@
     {
       "path": "scripts/youtube-integrated-controlled-db.mjs",
       "beforeSha256": null,
-      "afterSha256": "588515325639eb57e219e47562b8bec6003d440bb8dc5965e9977dffa3af028c"
+      "afterSha256": "9eac35db2d04dd92cb7e0f29b0c9aee94275399082dcf9d8ac17609bc457a87b"
     },
     {
       "path": "scripts/youtube-resolution-controlled-db.mjs",
@@ -1275,7 +1275,7 @@
     {
       "path": "tests/prelaunch-integrated-master-readiness.test.ts",
       "beforeSha256": null,
-      "afterSha256": "0103698fbd71066f131728d18f558d1a33afb13bc54d5ee6c5777f28b0886548"
+      "afterSha256": "33713ea67a0b1ef9d23a412da7a8bed77777e67c17edef3aa6f9d689cb083eb9"
     },
     {
       "path": "tests/prelaunch-nutrition-recovery-readiness.test.ts",
