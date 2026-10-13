@@ -539,9 +539,12 @@ export function RecipeDetailScreen({
   }, [selectableDates]);
 
   const openPlannerAddSheet = useCallback(
-    async ({ source }: { source: "manual" | "return-to-action" }) => {
+    async ({ source, servings = selectedServings }: {
+      source: "manual" | "return-to-action";
+      servings?: number;
+    }) => {
       if (!isAuthenticated) {
-        openAuthGate({ recipeId, type: "planner" });
+        openAuthGate({ recipeId, type: "planner", plannedServings: servings });
         return;
       }
 
@@ -553,11 +556,11 @@ export function RecipeDetailScreen({
       }
 
       setSelectedPlanDate(selectableDates[0] ?? "");
-      setPlannerServings(recipe?.base_servings ?? 1);
+      setPlannerServings(servings);
 
       await loadPlannerColumns();
     },
-    [isAuthenticated, loadPlannerColumns, openAuthGate, recipe?.base_servings, recipeId, selectableDates],
+    [isAuthenticated, loadPlannerColumns, openAuthGate, recipeId, selectableDates, selectedServings],
   );
 
   const closePlannerAddSheet = useCallback(() => {
@@ -1179,11 +1182,13 @@ export function RecipeDetailScreen({
       }
 
       if (pendingAction.type === "planner") {
+        const restoredServings = pendingAction.plannedServings ?? recipe.base_servings;
+        setSelectedServings(restoredServings);
         setFeedback({
           message: "로그인 완료. 플래너에 추가할 날짜와 끼니를 선택해 주세요.",
           tone: "status",
         });
-        void openPlannerAddSheet({ source: "return-to-action" });
+        void openPlannerAddSheet({ source: "return-to-action", servings: restoredServings });
         return;
       }
 

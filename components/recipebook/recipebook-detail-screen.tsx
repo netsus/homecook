@@ -167,6 +167,7 @@ export function RecipeBookDetailScreen({
   } | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [bookMenuOpen, setBookMenuOpen] = useState(false);
+  const bookMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [bookRenameOpen, setBookRenameOpen] = useState(false);
   const [bookRenameValue, setBookRenameValue] = useState(bookName);
   const [bookDeleteOpen, setBookDeleteOpen] = useState(false);
@@ -786,6 +787,7 @@ export function RecipeBookDetailScreen({
         bookName={currentBookName}
         disabled={isBookActionSaving}
         errorMessage={bookActionError}
+        fallbackFocusRef={bookMenuButtonRef}
         mobile={isMobileViewport}
         onCancel={() => {
           setBookDeleteOpen(false);
@@ -1031,6 +1033,7 @@ export function RecipeBookDetailScreen({
             aria-haspopup="menu"
             aria-label={`${currentBookName} 옵션 메뉴`}
             onClick={() => setBookMenuOpen((current) => !current)}
+            ref={bookMenuButtonRef}
           >
             ⋯
           </WebIconButton>
@@ -1101,6 +1104,7 @@ export function RecipeBookDetailScreen({
           <DesktopBookRenameDialog
             disabled={isBookActionSaving}
             errorMessage={bookActionError}
+            fallbackFocusRef={bookMenuButtonRef}
             onCancel={handleBookRenameCancel}
             onConfirm={() => void handleBookRename()}
             onValueChange={setBookRenameValue}
@@ -1484,6 +1488,7 @@ function DesktopRecipeBookRail({
 function DesktopBookRenameDialog({
   disabled,
   errorMessage,
+  fallbackFocusRef,
   onCancel,
   onConfirm,
   onValueChange,
@@ -1491,14 +1496,15 @@ function DesktopBookRenameDialog({
 }: {
   disabled: boolean;
   errorMessage: string | null;
+  fallbackFocusRef: React.RefObject<HTMLElement | null>;
   onCancel: () => void;
   onConfirm: () => void;
   onValueChange: (value: string) => void;
   value: string;
 }) {
   return (
-    <WebModal onBackdropClick={onCancel}>
-      <WebDialog aria-labelledby="recipebook-rename-title" size="narrow">
+    <WebModal closeDisabled={disabled} onBackdropClick={onCancel}>
+      <WebDialog aria-labelledby="recipebook-rename-title" fallbackFocusRef={fallbackFocusRef} size="narrow">
         <WebDialogHeader>
           <WebDialogTitle id="recipebook-rename-title">
             레시피북 이름 변경
@@ -1703,6 +1709,7 @@ function BookDeleteConfirmDialog({
   bookName,
   disabled,
   errorMessage,
+  fallbackFocusRef,
   mobile = false,
   onCancel,
   onConfirm,
@@ -1710,6 +1717,7 @@ function BookDeleteConfirmDialog({
   bookName: string;
   disabled: boolean;
   errorMessage: string | null;
+  fallbackFocusRef: React.RefObject<HTMLElement | null>;
   mobile?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -1772,10 +1780,11 @@ function BookDeleteConfirmDialog({
   }
 
   return (
-    <WebModal onBackdropClick={onCancel}>
+    <WebModal closeDisabled={disabled} onBackdropClick={onCancel}>
       <WebDialog
         aria-describedby="recipebook-delete-description"
         aria-labelledby="recipebook-delete-title"
+        fallbackFocusRef={fallbackFocusRef}
         className="web-confirm-dialog"
         role="alertdialog"
         size="narrow"
@@ -1885,7 +1894,7 @@ function RecipeRemoveConfirmDialog({
   }
 
   return (
-    <WebModal onBackdropClick={onCancel}>
+    <WebModal closeDisabled={disabled} onBackdropClick={onCancel}>
       <WebDialog
         aria-describedby="recipe-remove-description"
         aria-labelledby="recipe-remove-title"

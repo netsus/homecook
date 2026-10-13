@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-13 — 베타 v9 계획 입력 묶음 (구현 중)
+
+사용자 승인으로 최신 v9의 미완료 항목을 작은 배포 단위로 구현한다. 첫 묶음은 상세 선택 인분의 플래너 추가·로그인 복귀 보존과 기존 dialog 경계를 재사용하는 키보드 순환·Escape·포커스 복귀다. 저장 중 보호를 유지하고 DB·worker·인증 권한 정책은 변경하지 않는다. 아직 미배포이며 [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md)에 검사·리뷰·PR·배포·운영 확인을 구분한다. 제품·단위·무게·선택 참여의 운영DB/권한/개인정보 정책은 구체 승인 전 보류한다. 새 추출·P5·외부 AI 호출은 금지한다.
+
 ## 2026-10-12 — YouTube 설명란·작성자 댓글 원천 결속 수량 복구 (로컬, 미배포)
 
 설명란과 각 작성자 댓글의 닫힌 재료 행에서 서버가 재료명·literal primary/reference 수량·정규화 좌표를 request-local로 결속한다. v70/v44/source-binding-v7은 기존 v65 경계에 더해, 최종 `unknown/null`로 거절된 raw estimate를 독립된 exact owner가 있을 때만 복구하고, `1/2 Onion`은 별도 caption이 같은 재료의 절반 개수를 좁게 증명할 때만 `1/2개`로 해석한다. source/caption 수량 모순, 조건·대체·부정 축약·범위·근사, unitless 무게, compound green onion, 공유 caption 소비는 차단한다. 복구값은 기존 재료 사전/SQL resolver가 localized lookup name을 단일 canonical/synonym으로 해결해야만 최종 explicit으로 공개되며 미해결·다중 후보·`그릇 2개` 같은 비재료는 unknown/review-required로 남는다. 저장된 3건의 immutable source/raw proposal을 모델·네트워크 호출0회로 재생해 기존 `통삼겹살 500g`, 두 번째 `소금 1티스푼`, `돼지고기 앞다리살 400g`을 유지하고, eJ의 `양파 1/2개`, `올리브 오일 2 Tablespoons`(reference30ml), `발사믹 식초 1 Tablespoon`(reference15ml)을 추가 복구해 verified7/rejected0을 확인했다. Garlic의 원문/caption 충돌은 유지한다. disposable local DB에서 218개 migration과 실제 SQL resolver→JS finalizer→finalize RPC/저장 postimage를 포함한 경계8검사를 통과했다. 저장 raw verifier 재생과 DB 경계 fixture는 별도 증거다. 앞선 정확3건 평가 budget은3/3 소비됐고 새 후보에 재사용하지 않는다. prompt/DB schema·SQL allowlist/API/UI·운영은 변경하지 않았다. [구현 계약·저장 결과 replay·hash·검증 한계](../engineering/youtube-source-bound-quantity-recovery-20261012.md)를 따른다.

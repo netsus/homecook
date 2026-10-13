@@ -17,7 +17,8 @@ interface PendingRecipeActionBase {
 }
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
-  | { type: "like" | "save" | "planner" | "recipe-delete" }
+  | { type: "like" | "save" | "recipe-delete" }
+  | { type: "planner"; plannedServings?: number }
   | { type: "recipe-fork"; editContext?: RecipeEditContext }
   | { type: "recipe-edit-save" | "recipe-save-as-new"; editContext: RecipeEditContext }
 );
@@ -167,6 +168,9 @@ export function parsePendingAction(raw: string, now = Date.now()) {
         || value.type === "save"
         || value.type === "planner"
         || value.type === "recipe-delete") &&
+      (value.type !== "planner"
+        || value.plannedServings === undefined
+        || isPositiveInteger(value.plannedServings)) &&
       typeof value.recipeId === "string" &&
       typeof value.redirectTo === "string" &&
       Number.isFinite(value.createdAt)

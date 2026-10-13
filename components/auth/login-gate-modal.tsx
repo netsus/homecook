@@ -80,7 +80,7 @@ export function LoginGateModal() {
   if (isDesktopViewport) {
     return (
       <WebModal onBackdropClick={close}>
-        <WebDialog aria-labelledby="login-gate-title" ref={dialogRef} size="narrow">
+        <WebDialog aria-labelledby="login-gate-title" manageFocus={false} ref={dialogRef} size="narrow">
           <WebDialogHeader>
             <WebDialogTitle id="login-gate-title">
               로그인이 필요한 작업이에요
