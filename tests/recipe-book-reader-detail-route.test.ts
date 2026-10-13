@@ -488,7 +488,7 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
     expect(recipeStepsTable.select).not.toHaveBeenCalled();
   });
 
-  it("GET keeps another owner's bridged recipe read-only and uses the public projection", async () => {
+  it("GET passes the authenticated reader to a bridged recipe projection", async () => {
     const bookId = "11111111-1111-4111-8111-111111111111";
     const recipeId = "22222222-2222-4222-8222-222222222222";
     const ingredientRowId = "44444444-4444-4444-8444-444444444444";
@@ -571,7 +571,7 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
     expect(handleGetYoutubeSavedRecipe).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledWith(
       "read_public_youtube_saved_recipe_detail",
-      { p_recipe_id: recipeId },
+      { p_actor_id: "user-1", p_recipe_id: recipeId },
     );
     expect(recipeIngredientsTable.select).not.toHaveBeenCalled();
     expect(recipeStepsTable.select).not.toHaveBeenCalled();

@@ -15,6 +15,7 @@ import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-
 import {
   readYoutubeExtractionAppDescriptor,
   readYoutubeExtractionExpectedSchema,
+  buildYoutubeExtractionWorkerPolicySnapshotDigest,
   sha256File,
   verifyYoutubeExtractionWorkerArtifact,
 } from "@/scripts/lib/youtube-extraction-worker-artifact.mjs";
@@ -53,6 +54,7 @@ interface EnqueueReadiness {
   currentFingerprintKeyVersion: string;
   previousFingerprintKeyVersion: string | null;
   previousFingerprintValidUntil: string | null;
+  fingerprintPipelineIdentity?: string;
 }
 
 interface EnqueueReadinessFailure {
@@ -259,7 +261,11 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
         secret: keys.current.secret,
         userId: auth.userId,
         videoId,
-        policy: YOUTUBE_ASYNC_POLICY,
+        policy: {
+          ...YOUTUBE_ASYNC_POLICY,
+          pipelineIdentity: readiness.fingerprintPipelineIdentity
+            ?? YOUTUBE_ASYNC_POLICY.pipelineIdentity,
+        },
       });
       const previousKey = keys.previous;
       const previous = previousKey
@@ -267,7 +273,11 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
             secret: previousKey.secret,
             userId: auth.userId,
             videoId,
-            policy: YOUTUBE_ASYNC_POLICY,
+            policy: {
+              ...YOUTUBE_ASYNC_POLICY,
+              pipelineIdentity: readiness.fingerprintPipelineIdentity
+                ?? YOUTUBE_ASYNC_POLICY.pipelineIdentity,
+            },
           })
         : null;
       const rpcResult = await auth.rpc("enqueue_youtube_extraction_job", {
@@ -543,6 +553,16 @@ export async function loadYoutubeExtractionEnqueueReadiness(
     const descriptorPolicyDigest = descriptor.expected_policy_snapshot_digest;
     const rowPolicyVersion = row.policy_version;
     const rowPolicyDigest = row.policy_snapshot_digest;
+    const manifestPipelineIdentity = workerManifest.pipeline_identity;
+    const manifestPolicyDigest = typeof manifestPipelineIdentity === "string"
+      && /^[a-f0-9]{64}$/u.test(manifestPipelineIdentity)
+      ? buildYoutubeExtractionWorkerPolicySnapshotDigest({
+        extractorMode: YOUTUBE_ASYNC_POLICY.extractorMode,
+        pipelineIdentity: manifestPipelineIdentity,
+        policyVersion: YOUTUBE_ASYNC_POLICY.policyVersion,
+        resultAffectingOptions: YOUTUBE_ASYNC_POLICY.resultAffectingOptions,
+      })
+      : null;
     if (
       descriptor.schema !== "homecook.youtube-extraction-app-descriptor"
       || descriptor.version !== 1
@@ -571,7 +591,7 @@ export async function loadYoutubeExtractionEnqueueReadiness(
       || descriptorPolicyVersion !== workerManifest.policy_version
       || typeof descriptorPolicyDigest !== "string"
       || !/^[a-f0-9]{64}$/u.test(descriptorPolicyDigest)
-      || descriptorPolicyDigest !== YOUTUBE_ASYNC_POLICY.snapshotDigest
+      || descriptorPolicyDigest !== manifestPolicyDigest
       || descriptorPolicyDigest !== workerManifest.allowed_snapshot_digest
       || !Number.isInteger(rowPolicyVersion)
       || Number(rowPolicyVersion) <= 0
@@ -604,6 +624,7 @@ export async function loadYoutubeExtractionEnqueueReadiness(
         previousIsActive ? previousVersion : null,
       previousFingerprintValidUntil:
         previousIsActive ? previousValidUntil : null,
+      fingerprintPipelineIdentity: manifestPipelineIdentity,
     };
   } catch {
     return null;

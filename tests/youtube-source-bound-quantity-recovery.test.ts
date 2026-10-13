@@ -361,6 +361,7 @@ describe("server-bound description and author-comment quantity recovery", () => 
     ["over-a-half range caption", "1/2 Onion", "[00:01.000] Use over a half of a yellow onion."],
     ["under-a-half range caption", "1/2 Onion", "[00:01.000] Use under a half of a yellow onion."],
     ["rather-than alternative caption", "1/2 Onion", "[00:01.000] Use half of a yellow onion rather than a whole one."],
+    ["word range caption", "1/2 Onion", "[00:01.000] Use half of a yellow onion to one whole onion."],
     ["unless conditional caption", "1/2 Onion", "[00:01.000] Use half of a yellow onion unless you dislike onions."],
     ["about caption", "1/2 Onion", "[00:01.000] Use about half of a yellow onion."],
     ["approximately caption", "1/2 Onion", "[00:01.000] Use approximately half of a yellow onion."],

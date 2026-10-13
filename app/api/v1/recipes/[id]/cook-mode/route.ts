@@ -193,24 +193,26 @@ export async function GET(request: Request, context: RouteContext) {
     let cookingSteps = stepsResult.data;
     if (ingredientsResult.data.length === 0 && stepsResult.data.length === 0) {
       const internalClient = createRecipeFuturePropagationInternalClient();
-      if (internalClient) {
-        const projectionResult = await internalClient.rpc(
-          "read_public_youtube_saved_recipe_detail",
-          { p_recipe_id: recipeId },
-        );
-        if (projectionResult.error) {
-          return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
-        }
+      if (!internalClient) {
+        return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
+      }
+      const projectionResult = await internalClient.rpc(
+        "read_public_youtube_saved_recipe_detail",
+        { p_actor_id: user?.id ?? null, p_recipe_id: recipeId },
+      );
+      if (projectionResult.error) {
+        return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
+      }
 
-        const projection = projectionResult.data === null
-          ? null
-          : parseYoutubeSavedPublicRecipeProjection(projectionResult.data);
-        if (projectionResult.data !== null && !projection) {
-          return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
-        }
+      const projection = projectionResult.data === null
+        ? null
+        : parseYoutubeSavedPublicRecipeProjection(projectionResult.data);
+      if (projectionResult.data !== null && !projection) {
+        return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
+      }
 
-        if (projection) {
-          productIngredients = projection.ingredients.map((ingredient) => ({
+      if (projection) {
+        productIngredients = projection.ingredients.map((ingredient) => ({
             ingredient_id: ingredient.ingredient_id,
             amount: ingredient.amount,
             unit: ingredient.unit,
@@ -221,7 +223,7 @@ export async function GET(request: Request, context: RouteContext) {
             sort_order: ingredient.sort_order,
             ingredients: { standard_name: ingredient.standard_name },
           }));
-          cookingSteps = projection.steps.map((step) => ({
+        cookingSteps = projection.steps.map((step) => ({
             step_number: step.step_number,
             instruction: step.instruction,
             component_label: step.component_label,
@@ -236,8 +238,7 @@ export async function GET(request: Request, context: RouteContext) {
                 cooking_methods: method,
               }),
             ),
-          }));
-        }
+        }));
       }
     }
 

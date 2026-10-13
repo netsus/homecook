@@ -5,7 +5,7 @@
 - 날짜: 2026-10-12
 - 기준: 기존 source-bound 후보 `7e5f8ddd4d4fa22cbd3c8ad620686ea46efd8a77`에서 분기한 독립 작업 브랜치
 - 구현: 로컬 완료, 운영·DB·웹 미반영
-- 현재 런타임 후보: client v70, verifier v44, source binding v7
+- 현재 런타임 후보: client v71, verifier v44, source binding v8
 - 이번 후속 작업의 모델·OCR·영상 다운로드·네트워크 호출: 0회
 
 앞선 정확 3건 평가는 승인된 Luna low 호출 3/3을 이미 모두 소비했고 남은 예산은 0이다. 이번
@@ -22,7 +22,8 @@ post-verifier 결과에서 `unknown/null`로 남은 사례가 있었다. 저장�
 
 v65까지 emoji bullet, amount-first 영문 행, 이전 정성량 행의 scope, `lb`, plain `RECIPE`
 제목을 보완했다. v66은 저장 raw 재생에서 남은 세 경계를 좁게 보완했고, v67~v70은 독립 검토에서
-확인된 영문 절반 개수 문법의 부정 축약·조건·대체·범위·근사 표현을 fail-closed로 강화했다.
+확인된 영문 절반 개수 문법의 부정 축약·조건·대체·기호 범위·근사 표현을 fail-closed로 강화했다.
+v71은 `half ... to/through a/an/one whole ...`처럼 단어로 적힌 범위도 exact 절반으로 오인하지 않도록 막았다.
 
 - `1/2 Onion`은 단위가 없으므로 그 행만으로는 복구하지 않는다. 별도의 caption에 정확히
   `half of a/an/one [허용 descriptor] Onion`이 한 번 있어 개수임을 확인할 때만 `1/2개`로
@@ -55,7 +56,7 @@ block의 목록, 이름 또는 수량을 조립하지 않는다. 명시적 재�
 3. 단위 없는 절반 복구는 단일 `invalid-quantity-or-measurement`와 독립 caption의 개수 증명을
    모두 만족해야 한다.
 
-복구된 값은 transient `amountBasis=source-bound-stated`로 표시한다. v70의 estimate/절반 복구는
+복구된 값은 transient `amountBasis=source-bound-stated`로 표시한다. v71의 estimate/절반 복구는
 verifier가 이미 확인한 한국어 display name을 resolver lookup에 유지하고, 영문 원문 이름은
 `originalName/sourceName`과 evidence에 보존한다. 기존 unknown/null 복구는 모델 display name을
 신뢰하지 않고 서버가 결속한 source name을 사용한다.
@@ -70,21 +71,20 @@ resolver의 authoritative `resolution_status=resolved`인 행만 저장 직전�
 
 ## 버전·무결성
 
-- client: `codex-vision-source-anchored-v70-source-bound-review-hardening`
+- client: `codex-vision-source-anchored-v71-word-range-hardening`
 - verifier: `source-anchor-fidelity-v44-source-bound-review-hardening`
 - source-bound recovery policy: `source-bound-quantity-recovery-v6`
-- source binding: `source-quantity-bindings-v7`
+- source binding: `source-quantity-bindings-v8`
 - prompt: `source-anchored-single-recipe-v17-source-first-quantity` (변경 없음)
 - selector: `deterministic-evidence-v3-ingredient-event-preserving-largest-gap` (변경 없음)
 - OCR policy: `source-anchored-full-frame-ocr-v1` (변경 없음)
-- execution config signature: `023e2eb79ccfd93d2070eb90`
-- candidate pipeline identity: `408d9958c869312ce26a3a80ec824bd82e2f74b4d008147c759e0e79cdce1fdc`
-- runtime bundle SHA-256: `7918a66335b57913434c95f71adedcdb4b107fe50e9063d84e07656f067deb10`
-- bundle manifest SHA-256: `061fbeeb8403d3f613cd625c76734a101f4bcf15bdb0c0c7b0f4f59def6b9d98`
+- execution config signature: `c9f578ce47bc4bf8573142e0`
+- candidate pipeline identity: `85fbf4877e6f2894841bfd160f2d9a63894eb709fd63e897483efe71fd4016cd`
+- bundle manifest SHA-256: `cdddf47409303e6235e00b8a13177845356d5cf16f9e7509fc47f2ac4b7c2969`
 - `literal-quantity-grammar.mjs`: `e3a2f2537f98219d56f36a320f8cffa8a969cb2473aad87166f66997fac2bc20`
 - `single-pass-vision.mjs`: `a8614a16b2588e311262c8c3fede756bc6fe7f8b11ee2cbb2ba27f9e3759b4f3`
-- `source-anchored-vision.mjs`: `6cd4bc63a72082be8cf928afea50f4c7bb6c9a8dc6392a3fdc2228983720ea4c`
-- `source-quantity-owner-hints.mjs`: `d223917187442c8d812c392d59cee95edfa84633de0be96832a9373b58239853`
+- `source-anchored-vision.mjs`: `cf2b15e279272dc90d331471083adc9ad86e37758bc22ffa3e363db1fc8c10dc`
+- `source-quantity-owner-hints.mjs`: `e70c3484aa5edd4547c19a3b7bdac7dc13ea817df486d1d7e7c5fb0e59f8b691`
 - async resolver/finalization gate: `11c72f3d61dd402c14a7846b1972a44f246b17289761837cd4718358a87ae12a`
 
 manifest의 모든 선언 파일을 실제 바이트와 다시 대조했고 불일치는 0이다. 실제 bundle worker가

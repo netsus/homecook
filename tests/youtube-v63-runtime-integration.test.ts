@@ -12,7 +12,7 @@ import { YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES } from "../scripts/lib
 const bundleRoot = path.join(process.cwd(), "lib/server/youtube-i031-runtime/bundle");
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
-describe("v70 source-anchored runtime integration", () => {
+describe("v71 source-anchored runtime integration", () => {
   it("activates Luna low with the exact source-anchored identity and bounded options", async () => {
     const worker = await import(/* @vite-ignore */ `${pathToFileURL(path.join(bundleRoot, "worker.mjs")).href}?v63-test=1`);
     expect(worker.ACTIVE_ANALYSIS_MODE).toBe("source-anchored");

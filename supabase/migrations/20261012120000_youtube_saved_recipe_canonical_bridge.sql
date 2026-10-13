@@ -1,8 +1,8 @@
 begin;
 
 -- Saved YouTube results keep their evidence-preserving editable document, but
--- every result also needs a public canonical recipe identity so recipe books,
--- discovery, planner meals, and immutable meal snapshots can reference it.
+-- every result also needs an owner-scoped canonical recipe identity so recipe
+-- books, planner meals, and immutable meal snapshots can reference it.
 alter table public.youtube_saved_recipe_results
   add column canonical_recipe_id uuid
     references public.recipes(id) on delete cascade;
@@ -36,9 +36,9 @@ begin
     coalesce(new.editable_content_json -> 'tags', '[]'::jsonb)
   ) with ordinality tag(value, ordinality);
 
-  -- recipe_sources is readable with a public parent recipe. Keep only a
-  -- non-sensitive bridge discriminator there: never copy the private saved
-  -- draft id, extraction evidence, or mutation metadata into the public row.
+  -- Keep only a non-sensitive bridge discriminator here: never copy the
+  -- private saved draft id, extraction evidence, or mutation metadata into
+  -- the canonical row.
   v_extraction_meta := jsonb_build_object(
     'youtube_saved_canonical_bridge', true
   );
@@ -86,7 +86,7 @@ begin
       v_tags,
       'youtube',
       new.owner_user_id,
-      'public',
+      'private',
       new.revision,
       new.created_at,
       new.updated_at
@@ -117,9 +117,8 @@ begin
       v_extraction_meta
     );
 
-    -- Keep public discovery aligned with the established reviewed-tag model.
-    -- Known system tags become searchable; unknown labels remain pending and
-    -- private in recipe_tags. The saved display labels stay intact on recipes.
+    -- Reuse the established reviewed-tag model without making this private
+    -- canonical recipe discoverable. The saved display labels stay intact.
     perform public.set_recipe_tags(
       new.canonical_recipe_id,
       public.build_recipe_tag_payload(v_tags, 'system_suggested'),
@@ -152,7 +151,7 @@ begin
   where recipe.id = new.canonical_recipe_id
     and recipe.created_by = new.owner_user_id
     and recipe.source_type = 'youtube'
-    and recipe.visibility = 'public'
+    and recipe.visibility = 'private'
     and recipe.deleted_at is null
   returning recipe.id into v_recipe_id;
 
@@ -234,8 +233,8 @@ end;
 $function$;
 
 -- Existing rows pass through the same trigger as new writes. There was no
--- saved-result visibility choice before this bridge, so the same public
--- contract applies without mutating saved content or its revision.
+-- saved-result visibility choice before this bridge, so the canonical rows
+-- remain private without mutating saved content or its revision.
 do $backfill_writer_marker$
 declare
   v_cutover_attempt_id uuid;
@@ -281,11 +280,9 @@ $backfill_writer_marker$;
 alter table public.youtube_saved_recipe_results
   alter column canonical_recipe_id set not null;
 
--- Account deletion removes the private saved document. Public manual recipes
--- are otherwise anonymized and preserved, but a bridge recipe cannot render
--- without that document. Retire only the bridge's public discovery/book
--- surface while keeping the recipe tombstone and immutable meal snapshots for
--- other users' existing planner history.
+-- Account deletion removes the private saved document. A bridge recipe cannot
+-- render without that document, so retire its canonical recipe/book surface
+-- while keeping the tombstone and immutable owner planner snapshots.
 create or replace function private.retire_youtube_saved_canonical_on_account_delete()
 returns trigger
 language plpgsql
@@ -382,8 +379,8 @@ begin
       and owner_user_id = p_owner_uuid
       and account_generation = v_generation;
 
-    -- Owner-facing editor links use the public canonical id so the private
-    -- saved draft id never has to be stored in recipe_sources. Existing URLs
+    -- Owner-facing editor links use the canonical id so the private saved
+    -- draft id never has to be stored in recipe_sources. Existing URLs
     -- with the saved-result id keep taking precedence and remain compatible.
     if v_result.id is null then
       select * into v_result
@@ -443,7 +440,7 @@ where mutation.durable_result is not null
 -- Unresolved editable row IDs are user-controlled identifiers, not catalog
 -- identities. Derive a stable UUID for immutable snapshots and explicitly
 -- avoid every current catalog ID so shopping cannot promote an unresolved row
--- merely because its row UUID happens to equal a public ingredient UUID.
+-- merely because its row UUID happens to equal a catalog ingredient UUID.
 create or replace function private.youtube_saved_snapshot_ingredient_id(
   p_recipe_id uuid,
   p_row_id uuid,
@@ -586,9 +583,9 @@ begin
     coalesce(v_result.editable_content_json -> 'steps', '[]'::jsonb)
   ) with ordinality rows(item, ordinality);
 
-  -- Public recipe snapshots are owner-neutral so another signed-in user can
-  -- safely pin this recipe to their own planner without crossing ownership.
-  owner_user_id := null;
+  -- Saved imports were owner-only before this bridge. Keep their snapshots
+  -- owner-bound so only the same owner can pin them to a planner.
+  owner_user_id := v_result.owner_user_id;
   title := v_result.editable_content_json ->> 'title';
   base_servings := (v_result.editable_content_json ->> 'base_servings')::numeric(8,2);
   ingredients_json := v_ingredients;
@@ -612,7 +609,8 @@ $function$;
 -- Return only the display contract: no owner, saved draft id, extraction
 -- evidence, source snapshot, ingredient link state, or mutation metadata.
 create or replace function public.read_public_youtube_saved_recipe_detail(
-  p_recipe_id uuid
+  p_recipe_id uuid,
+  p_actor_id uuid default null
 )
 returns jsonb
 language plpgsql
@@ -634,9 +632,14 @@ begin
       on recipe.id = saved.canonical_recipe_id
     where saved.canonical_recipe_id = p_recipe_id
       and recipe.source_type = 'youtube'
-      and recipe.visibility = 'public'
+      and (
+        (recipe.visibility = 'private' and recipe.created_by = p_actor_id)
+        or (
+          recipe.visibility = 'public'
+          and recipe_visibility_guard.is_owner_publicly_visible(recipe.created_by)
+        )
+      )
       and recipe.deleted_at is null
-      and recipe_visibility_guard.is_owner_publicly_visible(recipe.created_by)
   ) then
     return null;
   end if;
@@ -652,7 +655,9 @@ begin
         - 'food_product_nutrition_version_id'
         - 'food_product_name'
         - 'food_product_brand')
-      || jsonb_build_object('id', item ->> 'ingredient_id')
+      || jsonb_build_object(
+        'id', p_recipe_id::text || ':ingredient:' || (item ->> 'sort_order')
+      )
       order by (item ->> 'sort_order')::integer
     ),
     '[]'::jsonb
@@ -723,7 +728,7 @@ alter function public.build_recipe_content_snapshot_before_yt_saved_20261012(
   uuid
 ) owner to postgres;
 alter function public.build_recipe_content_snapshot_input(uuid) owner to postgres;
-alter function public.read_public_youtube_saved_recipe_detail(uuid) owner to postgres;
+alter function public.read_public_youtube_saved_recipe_detail(uuid, uuid) owner to postgres;
 alter function private.verify_full_local_internal_scope() owner to postgres;
 alter function private.verify_internal_scope_before_youtube_public_detail_20261012()
   owner to postgres;
@@ -750,9 +755,9 @@ revoke all on function public.build_recipe_content_snapshot_before_yt_saved_2026
 ) from public, anon, authenticated, service_role;
 revoke all on function public.build_recipe_content_snapshot_input(uuid)
   from public, anon, authenticated, service_role;
-revoke all on function public.read_public_youtube_saved_recipe_detail(uuid)
+revoke all on function public.read_public_youtube_saved_recipe_detail(uuid, uuid)
   from public, anon, authenticated;
-grant execute on function public.read_public_youtube_saved_recipe_detail(uuid)
+grant execute on function public.read_public_youtube_saved_recipe_detail(uuid, uuid)
   to service_role;
 revoke all on function private.verify_full_local_internal_scope()
   from public, anon, authenticated, service_role;

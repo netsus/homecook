@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createRecipeFuturePropagationInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -18,6 +19,7 @@ const awardUserProgressEvent = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createRecipeFuturePropagationInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -105,11 +107,13 @@ describe("15b cook standalone complete backend", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createRecipeFuturePropagationInternalClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     awardUserProgressEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
+    createRecipeFuturePropagationInternalClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     awardUserProgressEvent.mockResolvedValue({
@@ -249,6 +253,88 @@ describe("15b cook standalone complete backend", () => {
         },
       },
       error: null,
+    });
+  });
+
+  it("fails closed when an empty canonical recipe cannot reach the saved-result projection", async () => {
+    const recipesQuery = createMaybeSingleQuery([{
+      data: { id: recipeId, title: "가져온 레시피", base_servings: 2 },
+      error: null,
+    }]);
+    const ingredientsQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const stepsQuery = createArraySelectQuery([{ data: [], error: null }]);
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        if (table === "recipe_ingredients") return { select: vi.fn(() => ingredientsQuery) };
+        if (table === "recipe_steps") return { select: vi.fn(() => stepsQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRecipeCookModeRoute();
+    const response = await GET(
+      new Request(`http://localhost:3000/api/v1/recipes/${recipeId}/cook-mode?servings=2`),
+      createRecipeContext(),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({
+      success: false,
+      error: { code: "INTERNAL_ERROR" },
+    });
+  });
+
+  it("passes the authenticated owner to the saved-result cook-mode projection", async () => {
+    const recipesQuery = createMaybeSingleQuery([{
+      data: { id: recipeId, title: "가져온 레시피", base_servings: 2 },
+      error: null,
+    }]);
+    const ingredientsQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const stepsQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const rpc = vi.fn(async () => ({
+      data: {
+        ingredients: [{
+          id: `${recipeId}:ingredient:0`,
+          ingredient_id: ingredientId1,
+          standard_name: "양파",
+          amount: 0.5,
+          unit: "개",
+          display_text: "양파 1/2개",
+          component_label: null,
+          ingredient_type: "QUANT",
+          scalable: true,
+          sort_order: 0,
+        }],
+        steps: [],
+      },
+      error: null,
+    }));
+    createRecipeFuturePropagationInternalClient.mockReturnValue({ rpc });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        if (table === "recipe_ingredients") return { select: vi.fn(() => ingredientsQuery) };
+        if (table === "recipe_steps") return { select: vi.fn(() => stepsQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRecipeCookModeRoute();
+    const response = await GET(
+      new Request(`http://localhost:3000/api/v1/recipes/${recipeId}/cook-mode?servings=2`),
+      createRecipeContext(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("read_public_youtube_saved_recipe_detail", {
+      p_actor_id: "user-1",
+      p_recipe_id: recipeId,
+    });
+    expect(await response.json()).toMatchObject({
+      data: { recipe: { ingredients: [{ standard_name: "양파" }] } },
     });
   });
 

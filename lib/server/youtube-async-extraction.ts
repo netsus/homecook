@@ -31,7 +31,7 @@ export const YOUTUBE_ASYNC_POLICY_OPTIONS = Object.freeze({
 } as const);
 
 const POLICY_PIPELINE_IDENTITY =
-  "408d9958c869312ce26a3a80ec824bd82e2f74b4d008147c759e0e79cdce1fdc";
+  "85fbf4877e6f2894841bfd160f2d9a63894eb709fd63e897483efe71fd4016cd";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -82,6 +82,13 @@ export const YOUTUBE_ASYNC_POLICY = Object.freeze({
 
 export type YoutubeExtractionPolicy = typeof YOUTUBE_ASYNC_POLICY;
 
+export interface YoutubeExtractionFingerprintPolicy {
+  extractorMode: string;
+  pipelineIdentity: string;
+  policyVersion: number;
+  resultAffectingOptions: Readonly<Record<string, unknown>>;
+}
+
 export function isYoutubeAsyncExtractionEnabled(env: RuntimeEnv = process.env) {
   return env.HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION === "1";
 }
@@ -123,7 +130,7 @@ export function buildYoutubeExtractionFingerprint({
   secret: string;
   userId: string;
   videoId: string;
-  policy: YoutubeExtractionPolicy;
+  policy: YoutubeExtractionFingerprintPolicy;
 }) {
   if (Buffer.byteLength(secret, "utf8") < 32) {
     throw new Error("fingerprint HMAC key must be at least 32 bytes");

@@ -600,7 +600,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const projectionResult = await internalClient.rpc(
       "read_public_youtube_saved_recipe_detail",
-      { p_recipe_id: recipeId },
+      { p_actor_id: user.id, p_recipe_id: recipeId },
     );
     const projection = projectionResult.error
       ? null
