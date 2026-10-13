@@ -10,6 +10,7 @@ import {
   cpSync,
   existsSync,
   fsyncSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -176,7 +177,15 @@ function fsyncPath(path) {
 function durablePrivateJson(path, value, { replace = false } = {}) {
   const body = `${JSON.stringify(value, null, 2)}\n`;
   if (!replace) {
-    writePrivateCreateOnly(path, body);
+    const staging = `${path}.create-${randomUUID()}`;
+    try {
+      writePrivateCreateOnly(staging, body);
+      linkSync(staging, path);
+      fsyncPath(dirname(path));
+    } finally {
+      rmSync(staging, { force: true });
+      fsyncPath(dirname(path));
+    }
     return;
   }
   const staging = `${path}.staging-${randomUUID()}`;
