@@ -193,6 +193,9 @@ commit;`,
   }
   run(pnpmCommand, pnpmArgs([
     "exec", "vitest", "run", "tests/youtube-extraction-current-catalog.integration.test.ts",
+    ...(verifyIngredientResolution ? [
+      "tests/youtube-saved-recipe-canonical-bridge-postgres.integration.test.ts",
+    ] : []),
     ...(verifyBetaFlowGaps ? [
       "tests/recipe-product-selection-postgres.integration.test.ts",
       "tests/recipe-product-nutrition.integration.test.ts",
