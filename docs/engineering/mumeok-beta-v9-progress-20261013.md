@@ -105,6 +105,24 @@
 
 사진 대신 등록업체 배지와 원문 확인을 제공하는 코드가 별도 branch에 준비됐다. master 첫 묶음을 통합한 뒤 관련99검사(97+검색복구2)와 typecheck를 다시 통과했다. 독립99검사·320/375/1360화면·원문/ID/버전 보존 근거는 [C06 기록](mumeok-beta-company-20261013.md)을 따른다. C06 운영 반영은 아직 하지 않았다.
 
+## C06 운영 반영 — 2026-10-13 KST
+
+- PR #1670 merged: master `5a0b12105caffffc8ea8db4981f71c1af6583256`. 웹 `72187436d3bbd7201fd1e5fad149a7bfde440ef3`, build `prelaunch-72187436d3bb-8cWCNi`.
+- 직전16bf 웹의 후속 source만 사용했고 master 기능코드/SQL/package/lockfile byte차이0. 기존 deploy plan/최종build/회귀/별도포트/웹교체/GET 성공. DB·worker 변경0.
+- 실제 Chrome1360/320/375의 샘표 검색에서 폰타나시저드레싱→샘표, 샘표우리엄마콩자반→양포식품, 업체가 시아스인 샘표 상품→시아스를 확인했다. 원문 업체명과 제품명을 유지하고 UUID를 목록/checkbox 이름에 노출하지 않는다.
+- 320/375에서 전체 업체명 선택 칩·키보드 Space 선택해제/선택·가로 넘침0 확인. 실제 제품1건을 테스트 팬트리에 추가한 뒤 새로고침에서도 제품명/샘표식품주식회사 원문을 확인했다. 재검색 결과 보유중 disabled로 중복 추가가 막혔다. 원래108개 항목은 유지하며 테스트 제품1개를 남겼다.
+- 실기기 Safari/실제 스크린리더는 미실행. 운영 배지·선택·저장 범위는 확인됐으며 전체 회사 법적 동일성이나 전체 베타 합격을 뜻하지 않는다.
+- 단계 요약은 기존 원준 Discord 목적지 HTTP204로 전송했다.
+
+## 승인된 R2 임시 중지 — F01 선행 운영 조치
+
+- 사용자가 구체적인 대상·영향·복구 안내에 ‘수집만 임시 중지’로 응답했다. 이 승인은 F01 배포 보호 변경이나 R2 재활성 승인이 아니다.
+- 실제 runtime 권위는 DB singleton이 아닌 기존 operation control.json이다. 사용자 승인 전 true/true·consent_generation1을 읽기 확인했고, 승인 뒤 기존 deployed createRound2FileStorage의 동일 lease/writeControl로 false/false·generation1을 저장했다.
+- 비공개 operation: `/Users/cwj/.homecook/operations/mumeok-beta-r2-pause-20261013-oAMEwF`. before 원문·prepared·receipt·검토한1회실행 코드(0700/0600, create-only/fsync) 보존. 실행 코드 SHA256 `52fdf09a003579971493e208cd64a2559a8dccf1826150026d18b6580dda474e`를 독립 검토했고 기존 storage23검사와 문법검사 통과.
+- 기존제어파일 target과 실제 plist·deployed 모듈 hash/현재true,true,1을 재검증했다. 변경 후 readback·백업/결과 hash·잠금 해제·일반 앱 GET200 확인. DB write0·키 변경0·서비스 restart0·세대 변경0. 단계 요약 Discord HTTP204.
+- 자동 재활성·세대 감소·과거 백업 역복원 금지. 재개는 실제 연결 검증 뒤 별도 사용자 승인 대상이다.
+- F01 자체는 여전히 app/privacy 보호 및 과거 Cloudflare R2 증거 계약으로 배포 보류다. 닫힘 사실만으로 guard를 우회하지 않는다. 별도 읽기 진단은 `/tmp/mumeok-beta-f01-deploy-readiness.md`와 `/tmp/mumeok-beta-f01-control-state.md`에 남겼다.
+
 ## 재개 규칙
 
 1. 먼저 이 장부와 각 PR 및 작업 worktree status를 읽고 현재 운영 SHA/DB를 재확인한다.
