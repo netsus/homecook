@@ -90,6 +90,89 @@ R2 광고 설문의 repository root·release SHA·readiness가 현재 실행 che
 repository root와 readiness path를 새 checkout에 함께 연결한다. 관련 변경이나 DB 동시 배포는
 기존 증거로 진행하지 않고 새 R2 검증을 요구한다.
 
+### 검토 중: R2 수집을 닫은 F01 정정과 후속 웹 배포
+
+이 절은 로컬 구현 검토안이다. 기존 수집 중지 승인은 도구 설치나 웹 배포 승인이 아니다.
+`CLOSED_R2_REVIEW_PIN`의 경로·해시는 현재 비어 있어 첫 실행을 거부한다. 마지막 웹 배포 뒤
+실제 predecessor/candidate SHA와 전체 변경 파일 bytes, build/plist, 중지 receipt,
+control, 원 readiness/proof 9개, 읽기 전용 DB source/applied 목록을 고정하고 독립 리뷰와
+사용자 추가 승인을 받은 뒤에만 pin을 설정한다. CLI·환경 입력으로 pin을 바꿀 수 없다.
+
+최초 예외는 `app/privacy/page.tsx`, `app/page.tsx`, `components/home/home-screen.tsx` 세 제품 파일과
+지정한 테스트·설명 문서의 exact diff만 허용한다. 기존 7개 지정 경로에 위 홈 제품 2개와
+`tests/home-screen.test.tsx`만 더해 총 10개 경로로 제한하며 세 제품 파일은 검토한 기존 파일의
+before/after bytes가 모두 필요하다. 새 제품 파일이나 기존 보호 파일 전체에 예외를 주지 않는다.
+홈 수정은 서버의 명시 `MUMEOK_ROUND2_ENABLED=false` 때만 모바일 R2 진입 두 개와 데스크톱
+R2 배너를 숨겨 recording404로 가는 깨진 링크를 없앤다. unset/true의 기존 표시와 collector/API/
+recording route는 그대로다. 이 UI 변경은 수집 권한을 부여하지 않는다.
+비공개 dotenv patch는 다음 두 줄만 포함한다.
+patch 해시는 파싱한 객체가 아니라 줄바꿈을 포함한 **원 dotenv bytes**의 SHA-256이다.
+
+```dotenv
+MUMEOK_ROUND2_ENABLED=false
+MUMEOK_ROUND2_LEADS_ENABLED=false
+```
+
+승인 후 사용할 기존 명령 형태는 다음과 같다. `--`는 pnpm이 Node에 전달하는 인수 경계이므로
+생략하지 않는다. 경로에는 Git 밖의 소유자 전용 파일을 지정하고 키 값을 인수에 넣지 않는다.
+아래 자리표시자는 실제 승인 자료가 아니며 현재 빈 pin으로 실행할 수 없다.
+
+```bash
+pnpm deploy:dev:plan -- --reviewed-r2-closed-maintenance \
+  --reviewed-ref <FINAL_F01_SHA> --env-file <PRIVATE_FALSE_PATCH> \
+  --test-script <REVIEWED_EXISTING_TEST> --already-applied-db --db-config <FULL_LOCAL_CONFIG>
+pnpm deploy:dev -- --reviewed-r2-closed-maintenance \
+  --reviewed-ref <FINAL_F01_SHA> --env-file <PRIVATE_FALSE_PATCH> \
+  --test-script <REVIEWED_EXISTING_TEST> --already-applied-db --db-config <FULL_LOCAL_CONFIG>
+```
+
+DB 쓰기와 SQL source 변경은 금지한다. `--already-applied-db --db-config` 쌍으로 기존
+읽기 전용 container/volume·migration ledger/source 검사를 실행한다. pending/baseline은 0이어야
+하며 ordered source와 applied bytes 해시가 같아야 한다. 검토 핀의 `databasePlanSha256`는
+`JSON.stringify({ source: plan.source, applied: plan.applied })`의 SHA-256이고 준비 전후 결과도
+같아야 한다. 이 검사는 전체 실제 DB schema 동일성의 증명이 아니다. backup/apply/transact,
+baseline 추가, `--db-compatible`, 테스트 생략은 이 경로에서 받지 않는다.
+
+두 flag 외 기존 환경·실행 설정은 유지하며 R2 release/root/readiness 세 결속과 원 proof 파일을
+원본 그대로 보존한다. `round2-closed-maintenance.json`은 활성화를 허용하지 않는 source/build/
+plist 감사 기록이다. 기존 활성 readiness의 새 SHA 권위로 사용하지 않는다. 원 proof가 현재
+direct DNS 운영과 맞는다는 주장도 하지 않는다. 수집 재활성화는 별도 fresh proof 전까지 거부한다.
+
+후속 일반 웹 변경은 기존 `--reviewed-ref`의 현재 live 후손·clean·전체 diff 검사와 원래
+protectedSources/worker/DB/환경 가드를 그대로 통과해야 한다. F01 성공 계보의 실제 marker와
+state/from/cwd/build/plist, false/false flag, control hash·generation 1, 원 proof 9개가 모두 일치할
+때만 닫힘을 승계한다. `plan`도 보호 파일/환경/SQL 거부를 실행한다. 새 env patch, 다른 reviewed
+모드나 DB 쓰기는 허용하지 않는다. 실제 인증·권한 의미 변경의 사용자 승인 규칙은 계속 적용되며
+이 파일 경로 검사가 그런 의미 변경을 자동 판정하지는 않는다.
+
+```bash
+pnpm deploy:dev:plan -- --reviewed-ref <NEXT_REVIEWED_WEB_SHA> \
+  --already-applied-db --db-config <FULL_LOCAL_CONFIG> --test-script <RELATED_EXISTING_TEST>
+pnpm deploy:dev -- --reviewed-ref <NEXT_REVIEWED_WEB_SHA> \
+  --already-applied-db --db-config <FULL_LOCAL_CONFIG> --test-script <RELATED_EXISTING_TEST>
+```
+
+후속 릴리스는 실제 새 from/to/build/plist와 직전 marker·state snapshot 해시를 기록한다.
+실패 보상은 직전부터 닫혀 있던 plist와 그 릴리스 고유 marker/state를 복원한다. 최초 F01 실패만
+원 predecessor의 두 flag를 false로 덮은 별도 plist로 복구하며 원 true plist는 감사용으로 보존한다.
+그 닫힘 predecessor에서 같은 exact F01을 재시도할 수 있으나 누락 state, 다른 candidate,
+변조 backup/marker, 원 true 환경 복구는 거부한다. 재시도 실패도 전회 marker를 덮어쓰지 않는다.
+준비·빌드에는 제어 잠금을 잡지 않고 교체·확인·보상에는 기존 R2 writer와 같은 control.lock
+owner/inode 잠금을 사용한다. 잠금을 훔치거나 control 값을 기록하거나 generation을 줄이지 않는다.
+교체 직전 실제 웹을 다시 읽고, 실패 보상 직전에도 준비한 target 또는 검토한 predecessor와
+source/build/plist가 일치해야 한다. 다른 웹이 감지되면 보상으로 덮지 않고 복구 기록을 유지한다.
+
+수동 `deploy:dev:rollback`의 DB `backwardCompatible=false`와 통합 DB guard는 그대로다.
+현재 DB219의 해당 guard가 남아 있으면 수동 rollback은 계속 거부되며 상태 파일을 편집해서
+우회하지 않는다. SQL이 없는 이번 웹 교체 실패의 즉시 전 웹 보상과, 과거 DB218 웹으로의
+수동 복구는 다른 범위다.
+
+미리보기·교체·보상 시 기존 `/beta`·build/static 검사를 유지하고 R2 POST 503 `ROUND2_DISABLED`,
+recording 404, homeflow의 저장 없는 공개 안내, `/`·`/login`·`/privacy` GET을 확인한다.
+이는 로그인 성공·공개 recipe 업무 기능·신청 화면 전체·Turnstile widget 부재 또는 승인한
+privacy 문구의 실제 표시나 홈 R2 진입 부재를 모두 증명하지 않는다. 이 항목들은 승인 후보의 별도 화면 확인이
+필요하며 로컬 fixture 통과를 실제 운영 검증으로 보고하지 않는다.
+
 ## DB 변경
 
 CREATE TABLE, 일반/UNIQUE INDEX, ALTER TABLE ADD COLUMN/CONSTRAINT를 지원한다.
