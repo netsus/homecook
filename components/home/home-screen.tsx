@@ -3,7 +3,9 @@ import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -48,6 +50,14 @@ import {
   isSafeDisplayText,
 } from "@/lib/display-safety";
 import { resolveRecipeImage } from "@/lib/recipe-image";
+import { buildReturnHref } from "@/lib/navigation/return-context";
+import {
+  buildHomeDiscoveryHref,
+  HOME_DISCOVERY_SCROLL_STATE_KEY,
+  readHomeDiscoveryScrollState,
+  readHomeDiscoveryReturnScrollState,
+  readHomeDiscoveryState,
+} from "@/lib/navigation/home-discovery-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
@@ -273,10 +283,22 @@ function readHomeAuthOverride() {
   return null;
 }
 
+function HomeLocationObserver({ onLocationChange }: { onLocationChange: () => void }) {
+  const pathname = usePathname();
+  const search = useSearchParams()?.toString() ?? "";
+  useEffect(() => onLocationChange(), [onLocationChange, pathname, search]);
+  return null;
+}
+
 export function HomeScreen() {
   const confirmedViewCounts = useRecipeViewCountStore((state) => state.counts);
   const trackRecipeOpen = useRecipeViewCountStore((state) => state.track);
   const [query, setQuery] = useState("");
+  const [searchStateReady, setSearchStateReady] = useState(false);
+  const [homeHref, setHomeHref] = useState("/");
+  const scrollToRestoreRef = useRef<{ top: number; pages: number } | null>(null);
+  const loadedPagesRef = useRef(1);
+  const synchronizedHrefRef = useRef<string | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sort, setSort] = useState<RecipeSortKey>("view_count");
   const [screenState, setScreenState] = useState<ScreenState>("loading");
@@ -305,6 +327,44 @@ export function HomeScreen() {
   );
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
+  const restoreLocation = useCallback((force = false) => {
+    if (window.location.pathname !== "/") return;
+    const href = window.location.pathname + window.location.search + window.location.hash;
+    if (!force && href === synchronizedHrefRef.current) return;
+    synchronizedHrefRef.current = href;
+    const state = readHomeDiscoveryState(new URLSearchParams(window.location.search));
+    recipeRequestIdRef.current += 1;
+    let restoredScroll = readHomeDiscoveryScrollState(window.history.state, href);
+    try {
+      const pendingScroll = readHomeDiscoveryReturnScrollState(window.sessionStorage.getItem(HOME_DISCOVERY_SCROLL_STATE_KEY), href);
+      if (pendingScroll) {
+        window.sessionStorage.removeItem(HOME_DISCOVERY_SCROLL_STATE_KEY);
+        if (!restoredScroll) {
+          restoredScroll = pendingScroll;
+          window.history.replaceState({ ...window.history.state, [HOME_DISCOVERY_SCROLL_STATE_KEY]: { href, ...pendingScroll } }, "", href);
+        }
+      }
+    } catch {
+      // Browser history restoration still works when same-tab storage is unavailable.
+    }
+    scrollToRestoreRef.current = restoredScroll;
+    setQuery(state.query);
+    setDebouncedQuery(state.query);
+    setSort(state.sort);
+    setAppliedIngredientIds(state.ingredientIds);
+    setActiveTagKey(state.tagKey);
+    setActiveTagLabel(null);
+    setActiveThemeId(state.themeId);
+    setHomeHref(href);
+    setScreenState("loading");
+    setSearchStateReady(true);
+  }, [setAppliedIngredientIds]);
+  useEffect(() => {
+    restoreLocation();
+    const restoreHistoryEntry = () => restoreLocation(true);
+    window.addEventListener("popstate", restoreHistoryEntry);
+    return () => window.removeEventListener("popstate", restoreHistoryEntry);
+  }, [restoreLocation]);
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedQuery(query);
@@ -316,21 +376,40 @@ export function HomeScreen() {
   }, [query]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-
-    if (appliedIngredientIds.length > 0) {
-      params.set("ingredient_ids", appliedIngredientIds.join(","));
-    } else {
-      params.delete("ingredient_ids");
+    if (!searchStateReady || window.location.pathname !== "/") return;
+    const currentHref = window.location.pathname + window.location.search + window.location.hash;
+    const nextHref = buildHomeDiscoveryHref(currentHref, {
+      query, sort, ingredientIds: appliedIngredientIds, tagKey: activeTagKey, themeId: activeThemeId,
+    });
+    if (nextHref !== currentHref) {
+      scrollToRestoreRef.current = null;
+      synchronizedHrefRef.current = nextHref;
+      const historyState = { ...window.history.state };
+      // Next copies these markers itself; passing them skips its URL subscriptions.
+      delete historyState.__NA;
+      delete historyState._N;
+      window.history.replaceState(historyState, "", nextHref);
     }
+    setHomeHref(nextHref);
+  }, [activeTagKey, activeThemeId, appliedIngredientIds, query, searchStateReady, sort]);
 
-    const queryString = params.toString();
-    const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ""}${window.location.hash}`;
-
-    if (nextUrl !== window.location.pathname + window.location.search + window.location.hash) {
-      window.history.replaceState({}, "", nextUrl);
+  const handleRecipeOpen = useCallback((recipeId: string) => {
+    trackRecipeOpen(recipeId);
+    const scroll = { href: homeHref, top: window.scrollY, pages: loadedPagesRef.current };
+    window.history.replaceState({
+      ...window.history.state,
+      [HOME_DISCOVERY_SCROLL_STATE_KEY]: scroll,
+    }, "", homeHref);
+    try {
+      window.sessionStorage.setItem(HOME_DISCOVERY_SCROLL_STATE_KEY, JSON.stringify(scroll));
+    } catch {
+      // Keep navigation available when same-tab storage is unavailable.
     }
-  }, [appliedIngredientIds]);
+  }, [homeHref, trackRecipeOpen]);
+  const recipeDetailHref = useCallback((recipeId: string) => buildReturnHref(`/recipe/${recipeId}`, {
+    returnTo: homeHref,
+    returnSurface: "home",
+  }), [homeHref]);
 
   const loadThemes = useCallback(async () => {
     try {
@@ -431,9 +510,11 @@ export function HomeScreen() {
   );
   const effectiveTagKey = activeTagKey ?? selectedTheme?.tag_key ?? null;
   const effectiveTagLabel =
-    activeTagLabel ?? selectedTheme?.tag_label ?? selectedTheme?.title ?? null;
+    activeTagLabel ?? tagOptions.find((tag) => tag.normalized_key === activeTagKey)?.label
+    ?? selectedTheme?.tag_label ?? selectedTheme?.title ?? activeTagKey;
 
   const loadRecipes = useCallback(async () => {
+    if (!searchStateReady) return;
     const currentRequestId = recipeRequestIdRef.current + 1;
     recipeRequestIdRef.current = currentRequestId;
 
@@ -470,6 +551,7 @@ export function HomeScreen() {
       };
 
       setRecipes(safeRecipeData);
+      loadedPagesRef.current = 1;
       setScreenState(safeRecipeData.items.length > 0 ? "ready" : "empty");
     } catch {
       if (currentRequestId !== recipeRequestIdRef.current) {
@@ -479,7 +561,7 @@ export function HomeScreen() {
       setRecipes(null);
       setScreenState("error");
     }
-  }, [appliedIngredientIds, debouncedQuery, effectiveTagKey, sort]);
+  }, [appliedIngredientIds, debouncedQuery, effectiveTagKey, searchStateReady, sort]);
 
   useEffect(() => {
     void loadRecipes();
@@ -523,6 +605,7 @@ export function HomeScreen() {
         ...nextRecipeData,
         items: filterSafeRecipeCards(nextRecipeData.items),
       };
+      loadedPagesRef.current += 1;
 
       setRecipes((currentRecipes) => {
         if (!currentRecipes) {
@@ -556,6 +639,21 @@ export function HomeScreen() {
     recipes?.next_cursor,
     sort,
   ]);
+
+  useEffect(() => {
+    const restore = scrollToRestoreRef.current;
+    if (!restore || (screenState !== "ready" && screenState !== "empty") || isLoadingMoreRecipes) return;
+    if (loadMoreRecipeError) {
+      scrollToRestoreRef.current = null;
+      return;
+    }
+    if (loadedPagesRef.current < restore.pages && recipes?.has_next) {
+      void loadMoreRecipes();
+      return;
+    }
+    scrollToRestoreRef.current = null;
+    window.scrollTo({ top: restore.top, behavior: "instant" });
+  }, [isLoadingMoreRecipes, loadMoreRecipeError, loadMoreRecipes, recipes, screenState]);
 
   const hasQuery = debouncedQuery.trim().length > 0;
   const hasTypedQuery = query.trim().length > 0;
@@ -787,6 +885,9 @@ export function HomeScreen() {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <HomeLocationObserver onLocationChange={restoreLocation} />
+      </Suspense>
       {shouldRenderWebView ? (
       <div className="hidden lg:block">
         <HomeWebScreen
@@ -800,7 +901,8 @@ export function HomeScreen() {
           mealGreeting={mealGreeting}
           emptyStateActionLabel={emptyStateActionLabel}
           onOpenIngredientModal={() => setIngredientModalOpen(true)}
-          onRecipeOpen={trackRecipeOpen}
+          onRecipeOpen={handleRecipeOpen}
+          recipeDetailHref={recipeDetailHref}
           onRecipeSave={homeSaveFlow.openRecipeSaveModal}
           onRetry={() => void loadRecipes()}
           onRetryTags={() => void loadTagOptions()}
@@ -1005,7 +1107,8 @@ export function HomeScreen() {
                       <RecipeCard
                         isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
                         key={recipe.id}
-                        onOpen={() => trackRecipeOpen(recipe.id)}
+                        onOpen={() => handleRecipeOpen(recipe.id)}
+                        detailHref={recipeDetailHref(recipe.id)}
                         onSave={homeSaveFlow.openRecipeSaveModal}
                         priority={index === 0}
                         recipe={recipe}
@@ -1097,6 +1200,7 @@ function HomeWebScreen({
   mealGreeting,
   onOpenIngredientModal,
   onRecipeOpen,
+  recipeDetailHref,
   onRecipeSave,
   onRetry,
   onRetryTags,
@@ -1134,6 +1238,7 @@ function HomeWebScreen({
   mealGreeting: string;
   onOpenIngredientModal: () => void;
   onRecipeOpen: (recipeId: string) => void;
+  recipeDetailHref: (recipeId: string) => string;
   onRecipeSave: (recipe: RecipeCardItem) => void;
   onRetry: () => void;
   onRetryTags: () => void;
@@ -1304,6 +1409,7 @@ function HomeWebScreen({
               <div className="web-home-grid">
                 {displayedRecipes.map((recipe) => (
                   <HomeWebRecipeCard
+                    detailHref={recipeDetailHref(recipe.id)}
                     isSaved={savedRecipeIds.has(recipe.id)}
                     key={recipe.id}
                     onOpen={onRecipeOpen}
@@ -1508,11 +1614,13 @@ function HomeSearchEmptyState({
 }
 
 function HomeWebRecipeCard({
+  detailHref,
   isSaved,
   onOpen,
   onSave,
   recipe,
 }: {
+  detailHref: string;
   isSaved: boolean;
   onOpen: (recipeId: string) => void;
   onSave: (recipe: RecipeCardItem) => void;
@@ -1529,7 +1637,7 @@ function HomeWebRecipeCard({
 
   return (
     <article className="web-home-recipe-card">
-      <Link href={`/recipe/${recipe.id}`} onClick={() => onOpen(recipe.id)} prefetch={false}>
+      <Link href={detailHref} onClick={() => onOpen(recipe.id)} prefetch={false}>
         <WebRecipeCard
           alt={recipe.title}
           badge={sourceBadge}

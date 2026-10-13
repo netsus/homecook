@@ -215,8 +215,10 @@ export function LeftoversScreen({ initialAuthenticated = false }: LeftoversScree
     }
   }, [authState]);
 
+  const selfHref = buildReturnHref("/leftovers", { returnSurface: "leftovers.list", returnTo: appReturn.href });
   const mealLogSheet = mealLogTarget ? (
     <MealLogAddSheet
+      leftoversReturnTo={selfHref}
       columns={mealLogColumns}
       date={mealLogDate}
       initialColumnId={mealLogColumns[0]?.id ?? ""}
@@ -242,7 +244,6 @@ export function LeftoversScreen({ initialAuthenticated = false }: LeftoversScree
       }}
     />
   ) : null;
-  const selfHref = buildReturnHref("/leftovers", { returnSurface: "leftovers.list", returnTo: appReturn.href });
   const eatenHref = buildReturnHref("/leftovers/ate", { returnSurface: "leftovers.list", returnTo: selfHref });
   return <div className="fixed inset-0 flex flex-col overflow-hidden bg-[var(--surface-fill)] text-[var(--foreground)] lg:static lg:mx-auto lg:h-auto lg:max-w-5xl lg:min-h-screen lg:overflow-visible" data-testid="leftovers-screen">
     <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-[var(--surface)] px-4">

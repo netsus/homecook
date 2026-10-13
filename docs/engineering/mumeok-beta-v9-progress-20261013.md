@@ -26,10 +26,10 @@
 | --- | --- | --- |
 | 기존 연결 확인 | T0/B03 | 기존 저장 연결은 이전 배포 해결. 재구현 금지; 기존 결과/fixture 재검증 및 중복 요청 계약 확인. 신규 추출 미검증 유지 |
 | 1 계획 입력 | T1/B01, T2/B02 | 운영에서 상세3→모달2 및 Shift+Tab 배경이탈/Escape 미닫힘 재현. 웹 전용 최소 수정 진행 |
-| 2 탐색 복귀 | T3/B04, T4/B05 | 남은요리 date/segment 복귀, 홈 검색 query/filter/sort/위치 복원. 관련 경로만 수정 |
+| 2 탐색 복귀 | T3/B04, T4/B05, T12/B10, T2 성공 확인 후속 | 날짜/탭·홈 탐색 복원, 비공개 탭 제목, 성공 확인 후 실제 호출 버튼 복귀를 통합. 로컬 검증·독립 리뷰 완료, 운영 미배포 |
 | 3 요리·알림 | T7/B08/C02, T10, T11 | 지정 안내문·원문 보존, 결과 알림 우선, 데스크톱 폭 활용. 요리모드 인분조절 추가 금지 |
 | 4 제품 목록 | C06-B0~B3 | 기존 brand로 등록업체 formatter/정확 별칭/텍스트 배지/원문 접근. DB·사진 작업 없음 |
-| 5 개인 상세 | T12/B10 | 공개 metadata는 중립·private 노출 금지, 소유자 본문 제목 반영. 권한 정책을 바꾸지 않는 방법 우선 |
+| 5 개인 상세 | T12/B10 | 탐색 복귀 단위2에 통합. 공개 metadata는 중립·private 노출 금지, 권한 확인 본문 제목만 탭에 반영 |
 | 외부 표시 | T6/B07 | 네이버 서비스 표시명. 인증 관리자 설정 실행은 대상·영향·복구 설명 후 별도 승인 |
 | 제품·단위 기반 | C03-P0~P8, C04-U0~U5, T5/B06 | 현재 제품 대표 연결 필수 제약 존재. 제품독립/행키/고정버전/근거환산/장보기·팬트리 호환을 최소 단계로 준비. 권한·운영DB는 별도 승인 |
 | 무게·출처 | C01-W0~W5, T8/B09 | 위 제품 단위 계약 의존. 예측/실측 분리, 선택실측, 근거 없는 경우 null. 이력 보존. 운영DB·근거 재사용 정책 별도 승인 |
@@ -48,6 +48,7 @@
 - g/mL 동등 가정 금지, 제품에 일반 재료 밀도 차용 금지. 조리수율과 영양잔존율 분리.
 - 과거 식단·완성배치·제품영양버전·snapshot 자동재계산/일괄변경 금지.
 - C05의 과거 ‘C01-W5 전체 통계’ 표현은 작업표 기준 W6를 의미한다. W5는 검증 단계다.
+- C05 사용자 정정(2026-10-13): 추정 정확도 개선에 필요한 표본량·자료 나이에 따른 유용성 검증과 철회/삭제 방법을 마련한 뒤 기간을 제안한다. 현재 기간 미정·개선 수집 OFF이며 90일/1년은 승인되지 않았다.
 
 ## 단위 1: 계획 입력 — 운영 반영, 성공 확인창 초점 후속 남음
 
@@ -105,6 +106,29 @@
 
 사진 대신 등록업체 배지와 원문 확인을 제공하는 코드가 별도 branch에 준비됐다. master 첫 묶음을 통합한 뒤 관련99검사(97+검색복구2)와 typecheck를 다시 통과했다. 독립99검사·320/375/1360화면·원문/ID/버전 보존 근거는 [C06 기록](mumeok-beta-company-20261013.md)을 따른다. C06 운영 반영은 아직 하지 않았다.
 
+## 단위 2: 탐색 복귀·탭 제목·성공 확인 후속 — 운영 미배포
+
+- 포함: T3/B04, T4/B05, T12/B10, 첫 운영에서 남은 T2 성공 확인창 초점 복귀. 이미 배포한 첫 계획 입력 묶음의 일반 취소/Escape 검증과 구분한다.
+- T3: 선택한 식사기록 날짜와 log 탭을 남은 요리·다 먹은 목록·기록 입력 및 저장 후에도 기존 return helper로 전달한다. 직접 진입 fallback·기록 날짜·API·권한 정책은 유지한다.
+- T4: query/sort/ingredient UUID/tag/theme을 URL로 복원하고 부분/전체 초기화를 구분한다. 상세 진입 전 목록 범위·scroll을 기록하고 화면/browser back에서 목록을 다시 읽은 뒤 복원한다. 헤더/브랜드 Home Link와 same-path URL 변경을 반영하며 Next history와 기존 사용자 metadata를 보존한다. 명시적 home return은 같은 탭·같은 탐색의 snapshot만 한 번 소비한다.
+- T12: 공개 anon metadata의 null 결과는 중립/noindex, client는 기존 권한 확인 API의 ready·현재 ID·안전한 제목만 탭에 반영한다. 404와403/500을 구분하고 목적지 제목·OG/Twitter는 보존한다. 비공개용 서버 reader·권한 확대는 없다.
+- T2 후속: 실제 CTA currentTarget ref를 성공 확인창에 전달하고 확인창 generation/pathname에 맞는 경우만 복귀한다. 같은 문구의 확인창도 별도 수명으로 구분한다. 선택형 restoreFocusWhen은 복귀에만 적용하고 body lock·inert·activeDialogs 정리는 항상 수행한다. 새 모달 초기 초점, 취소/실패/저장 중 보호는 유지하며 로그인 자동 복귀는 임의 버튼을 추측하지 않는다. 화면/경로 이탈 후 늦은 성공·실패는 옛 확인창을 만들지 않는다.
+- 독립 리뷰 최종: 병합 차단0, **15파일314/314 통과·실패0·건너뜀0·exit0**. 21:36:16 시작,16.31초. 이전 부분 검사와 합산하지 않는다. 보고서 `/tmp/mumeok-beta-navigation-review.md`의 통합 HEAD `3d5318f60f2e708c437f640e3f9b5e23d55aab6c`와 추가 T2 source/test diff SHA256 `716c74903e302f317771ea6deba0579d7a12713bf4a07a52f04a9eb930a4aab0`, 새 테스트 SHA256 `fcd65862cd0ddd325ade658a46a9a945bf1fc93965bbc9344f3e53c3801ac65f`를 확인했다. 검사·서버 종료 전후 소스 동일이며 결속 SHA256은 `cd79f24badf80fe0e01c067d15165ee662ed794e1c5649250a27e8409ab3549f`다.
+- 최종 소스 commit: `2c9b636b76daac31ea6cfafc03981f59e9a1ca9e`(총괄). 총괄이 최종 build·targeted ESLint·typecheck exit0과 Anti Slop 신규0을 확인했다. 이 문서 작업에서는 고정된 source/test를 수정하거나 해당 검사를 대신 실행하지 않았다.
+- 독립 실제 Next 로컬 가짜 데이터 UI: 모바일320/375에서 화면 back과 browser back의 탐색 위치 복원, 실제 헤더/브랜드 Home Link 초기화·same-path URL 입력/정렬 동기화를 확인했다. 모바일375 확인 클릭·데스크톱1440 Escape 후 동일 DOM planner opener 복귀, 정상 비공개 fixture 탭 제목과 중립 OG/Twitter도 확인했다. focus/title 두 viewport의 pageErrors·missingFixtures0, meal POST각1건은 모두 가짜 응답이다.
+- T3의 date/log PNG는 로딩 화면이므로 저장 내용 재조회로 확대하지 않는다. 실계정 OAuth·실제 비소유자/익명 DB 조회·운영 저장/재조회·Safari·스크린리더와 의도적으로 서버 metadata를 늦춘 경합은 미실행이다. 이 묶음의 운영 배포·B04/B05/B10 및 T2 성공 복귀의 운영 재검증도 아직 완료되지 않았다.
+
+### 선행 요리·알림 후보의 배포 중단 — 총괄 확인 기록
+
+- 첫 준비 실패는 PostCSS 오류로2개 검사 묶음이 실행되기 전에 중단됐다. PR [#1673](https://github.com/netsus/homecook/pull/1673)의 CSS mock 보완만 검증해 `4479cebdd`로 병합한 뒤 로컬 선택 검사1,308통과·131선택skip을 확인했다. 실제 배포 통과를 뜻하지 않는다.
+- 두 번째 명령: `pnpm deploy:dev -- --reviewed-ref 89ebbc8f817a863f710ed06558d709502ae79830 --already-applied-db --db-config <비공개 full-local 설정> --test-script test:feedback-batch:web`, **exit1·운영 교체 전 중단**. 비공개 로그는 `/Users/cwj/.homecook/prelaunch-web/deploy-1791897309366.log`다.
+- 정확 실패: `tests/use-action-notifications.test.tsx > splits a failed multi-page read retry into at most 50 IDs per request`,176행. 기대 `[50,50,10]`, 실제 `[30,50,10]`. 첫 검사 묶음138통과, 두 번째 검사 묶음1,063통과·1실패; 나머지 묶음은 실행되지 않았다.
+- 두 번째 실패 직후 원인은 **타이밍 경합 의심·독립 진단 중**이었으며, 당시 준비 중인 진단을 확정 근거로 쓰거나 검사/기대값을 생략하지 않았다.
+- 두 번째 중단 후 총괄 status 확인: 운영 `72187436d3bb`, loaded=true, recoveryPending=false. 운영 웹은 보존되었다. 배포 실패를 DB 변경·새 기록 저장 또는 운영 기능 합격으로 해석하지 않는다.
+- 후속 독립 진단 `/tmp/mumeok-beta-notification-retry-diagnosis.md`: 테스트가 DOM60행만 기다린 뒤 이전30행 observer callback에60행을 전달한 경합을 강제해 동일 `[30,50,10]` 실패를 재현했다. 제품의50-ID 상한 분할 결함으로 확인된 것은 아니다. 현재60행의 등록 대상이 정확히 준비된 뒤 callback을 호출하도록 테스트9줄만 보완했고, 기존 `[50,50,10]`·API3호출·60행 읽음·badge0 기대를 유지했다. 제품 hook 변경0이며 구현자/총괄 각각11검사 통과·lint/typecheck exit0을 확인했다.
+- PR [#1674](https://github.com/netsus/homecook/pull/1674)는 `483813287`로 병합됐다. 총괄이 웹 후보 `13d52fe55c21fe473e002596e0880e37f2859390`의 세 번째 배포를 진행 중이며 로그 식별자는 `1791897954993`다. 전체 배포 검사·교체·운영 확인 결과는 아직 전달받지 않았고, 단독11검사를 배포 성공으로 확대하지 않는다. 이 탐색 후속은 여전히 운영 미배포다.
+- 후속 총괄 실행 확인: 세 번째 요리·알림 배포는 웹 `13d52fe55c21fe473e002596e0880e37f2859390`·build `prelaunch-13d52fe55c21-qir8Bl`로 성공했다. 위 ‘진행 중’·운영 `72187436d3bb` 보존·두 차례 실패는 각각 당시 기록이다. 현재 총괄의 운영 UI 확인은 진행 중이며 요리·알림 기능 검증 완료나 탐색 후속 배포를 뜻하지 않는다.
+
 ## C06 운영 반영 — 2026-10-13 KST
 
 - PR #1670 merged: master `5a0b12105caffffc8ea8db4981f71c1af6583256`. 웹 `72187436d3bbd7201fd1e5fad149a7bfde440ef3`, build `prelaunch-72187436d3bb-8cWCNi`.
@@ -129,3 +153,17 @@
 2. 구현 → 관련 테스트·타입·lint → 독립 리뷰 → draft PR → 확인 후 merge → 필요한 구성요소 배포 → 실제 운영 확인 순서.
 3. 운영 배포는 총괄 하나만 실행한다. 다음 미검증 묶음을 현재 배포에 섞지 않는다.
 4. 실패 시 정확 명령/대상/guard 사유를 기록한다. 보호 우회·자동 파괴적 rollback 금지.
+
+
+## 요리·알림 운영 확인 완료 — 2026-10-13
+
+- PR #1671과 준비 검사 보완 #1673/#1674 병합 후 release `13d52fe55c21fe473e002596e0880e37f2859390`, build `prelaunch-13d52fe55c21-qir8Bl`을 기존 `deploy:dev --reviewed-ref ... --already-applied-db --test-script test:feedback-batch:web`로 반영했다. 최종 회귀 1,308통과·131선택제외, build·preview·운영 GET 통과, loaded=true/recoveryPending=false. DB219는 읽기 검증만 했고 worker·DB migration·키·운영 환경은 변경하지 않았다.
+- 실제 운영 Chrome: 기존 두부찌개 선택2→3인분으로 독립 snapshot 요리를 시작했다. 재료 두부450g/물600ml, 조리문 물400ml·2스푼 그대로, 지정 안내문을 확인했다. 모바일375/320 실측 viewport에서 가로넘침0, 데스크톱1440에서 화면1392px 및 가로넘침0을 확인했다. 새로고침 후 같은3인분·문구·재료를 유지했고 취소됨 상태→돌아가기→기존 상세 복귀를 확인했다. 팬트리 소진·요리 완료·식사 기록 저장은 실행하지 않았다.
+- 실제 지난 알림은 기존 유튜브 결과14개 다음에 활동 알림을 표시했다. 지난 알림 탭에서 Tab 이동 시 첫 유튜브 결과 버튼에 초점이 갔다. 새 알림·로딩·지난 알림·닫기를 확인했으며 재추출/재시도 버튼을 실행하지 않았다. 신규 추출·AI·P5 호출0. 변경하지 않은 실패/만료 결과 자체를 성공으로 간주하지 않는다.
+- R2 control 재조회: collection_enabled=false, lead_enabled=false, consent_generation=1. 승인된 임시 중지를 유지한다. 앞선 두 준비 실패는 운영 교체 전에 중단됐으며 위 최종 배포와 구분한다.
+
+## T6 네이버 서비스명 — 승인된 이름만 반영
+
+- 사용자가 `서비스명만 무먹으로 저장`을 승인했다. 네이버 개발자센터의 HomeCook 앱이 운영 custom:naver provider와 같은 client ID인지 운영 DB READ ONLY boolean 비교로 확인했다(credential 조회/출력0).
+- API 설정의 애플리케이션 이름만 HomeCook→무먹으로 변경했다. 저장 전 미리보기, 설정 완료 표시, reload 후 이름 무먹 유지와 service/callback URL·동의 checkbox 값 동일을 확인했다. 키·제공 정보·URL·로고·검수 상태는 변경하지 않았다.
+- 현재 개발 중으로 등록 멤버만 이용할 수 있다는 관리자 표시를 확인했다. 검수 신청·일반 회원 신규 OAuth·원래 액션 복귀는 미실행이며 T6 전체 완료는 아니다. 기존 이름으로 되돌릴 때도 같은 이름 항목만 변경하는 방법이다.
