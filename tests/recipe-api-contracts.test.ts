@@ -1691,7 +1691,10 @@ describe("recipe API contracts", () => {
     ["ACCOUNT_SESSION_STALE", 409],
   ] as const)("preserves %s on detail reads instead of reporting a missing recipe", async (code, status) => {
     const query = createQuery({ data: null, error: { message: hybridAuthorityMarker(code) } });
-    createRouteHandlerClient.mockResolvedValue({ from: () => query });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+      from: () => query,
+    });
     const { GET } = await import("@/app/api/v1/recipes/[id]/route");
     const response = await GET(new Request("http://localhost:3000/api/v1/recipes/recipe-1"), { params: Promise.resolve({ id: "recipe-1" }) });
     expect(response.status).toBe(status);
@@ -1751,7 +1754,18 @@ describe("recipe API contracts", () => {
     expect(readRecipeImageProjection).not.toHaveBeenCalled();
   });
 
-  it.each(["private", "public"])("returns owner-only full edit context for an original manual %s recipe", async (visibility) => {
+  it.each([
+    { label: "original private", originRecipeId: null, visibility: "private" },
+    { label: "original public", originRecipeId: null, visibility: "public" },
+    {
+      label: "private fork",
+      originRecipeId: "550e8400-e29b-41d4-a716-446655440099",
+      visibility: "private",
+    },
+  ])("resolves owner auth before returning full edit context for a $label manual recipe", async ({
+    originRecipeId,
+    visibility,
+  }) => {
     const recipeId = "550e8400-e29b-41d4-a716-446655440002";
     const ownerId = "550e8400-e29b-41d4-a716-446655440001";
     const sessionAuthority = {
@@ -1808,7 +1822,7 @@ describe("recipe API contracts", () => {
         source_type: "manual",
         created_by: ownerId,
         visibility,
-        origin_recipe_id: null,
+        origin_recipe_id: originRecipeId,
         deleted_at: null,
         revision: 12,
         view_count: 0,
@@ -1825,7 +1839,13 @@ describe("recipe API contracts", () => {
       data: { id: recipeId, view_count: 1 },
       error: null,
     }));
+    let ownerAuthResolved = false;
+    const getUser = vi.fn(async () => {
+      ownerAuthResolved = true;
+      return { data: { user: { id: ownerId } } };
+    });
     const from = vi.fn((table: string) => {
+      expect(ownerAuthResolved).toBe(true);
       if (table === "recipes") return recipeQuery;
       if (table === "recipe_sources") return sourceQuery;
       if (table === "recipe_ingredients" || table === "recipe_steps") return emptyQuery;
@@ -1834,7 +1854,7 @@ describe("recipe API contracts", () => {
       throw new Error(`unexpected table: ${table}`);
     });
     createRouteHandlerClient.mockResolvedValue({
-      auth: { getUser: vi.fn(async () => ({ data: { user: { id: ownerId } } })) },
+      auth: { getUser },
       from,
     });
     createServiceRoleClient.mockReturnValue({ from, rpc });
@@ -1856,6 +1876,7 @@ describe("recipe API contracts", () => {
     expect(response.status).toBe(200);
     expect(body.data.revision).toBe(12);
     expect(body.data.visibility).toBe(visibility);
+    expect(body.data.origin_recipe_id).toBe(originRecipeId);
     expect(body.data.edit_context).toEqual(editContext);
     expect(Object.keys(body.data.edit_context)).toEqual([
       "base_recipe_revision",
@@ -1899,7 +1920,7 @@ describe("recipe API contracts", () => {
     const { GET } = await import("@/app/api/v1/recipes/[id]/route");
     const responsePromise = GET(new Request(`http://localhost/api/v1/recipes/${recipeId}`), { params: Promise.resolve({ id: recipeId }) });
     await authStarted.promise;
-    expect(from.mock.calls.map(([table]) => table)).toEqual(["recipes"]);
+    expect(from).not.toHaveBeenCalled();
     auth.resolve({ data: { user: null } });
     await source.started;
     expect(ingredients.query.then).toHaveBeenCalledOnce();
