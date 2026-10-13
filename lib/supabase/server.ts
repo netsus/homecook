@@ -428,6 +428,7 @@ type LocalInternalScope =
   | "session-logout"
   | "shopping-create"
   | "snapshot-v2-session"
+  | "weight-improvement"
   | "youtube-extraction"
   | "youtube-ingredient-registration";
 
@@ -536,6 +537,15 @@ function createScopedInternalRpcClient(scope: LocalInternalScope) {
 
 export function createSnapshotV2SessionInternalClient() {
   return createScopedInternalRpcClient("snapshot-v2-session");
+}
+
+export function createWeightImprovementParticipationInternalClient() {
+  const client = createScopedDataServiceRoleClient("weight-improvement");
+  if (!client) return null;
+  return {
+    read: (args: Record<string, unknown>) => client.rpc("read_weight_improvement_participation", args),
+    mutate: (args: Record<string, unknown>) => client.rpc("mutate_weight_improvement_participation", args),
+  };
 }
 
 // Cooked-batch RPCs share the already isolated snapshot-v2 session scope.

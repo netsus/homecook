@@ -38,6 +38,7 @@ interface SettingsMobileScreenProps {
   isRenamingColumn: boolean;
   plannerColumns: PlannerColumnData[];
   profile: UserProfileData | null;
+  participationSetting?: React.ReactNode;
   renameTarget: PlannerColumnData | null;
   showDeleteDialog: boolean;
   showLogoutDialog: boolean;
@@ -86,6 +87,7 @@ export function SettingsMobileScreen({
   isRenamingColumn,
   plannerColumns,
   profile,
+  participationSetting,
   renameTarget,
   showDeleteDialog,
   showLogoutDialog,
@@ -141,6 +143,7 @@ export function SettingsMobileScreen({
         isAddingColumn={isAddingColumn}
         plannerColumns={plannerColumns}
         profile={profile}
+        participationSetting={participationSetting}
         onAddColumn={onAddColumn}
         onColumnAddInputChange={onColumnAddInputChange}
         onColumnsEditModeChange={onColumnsEditModeChange}
@@ -244,6 +247,7 @@ function SettingsSurface({
   isAddingColumn,
   plannerColumns,
   profile,
+  participationSetting,
   onAddColumn,
   onColumnAddInputChange,
   onColumnsEditModeChange,
@@ -264,6 +268,7 @@ function SettingsSurface({
   isAddingColumn: boolean;
   plannerColumns: PlannerColumnData[];
   profile: UserProfileData | null;
+  participationSetting?: React.ReactNode;
   onAddColumn: () => void;
   onColumnAddInputChange: (value: string) => void;
   onColumnsEditModeChange: (editing: boolean) => void;
@@ -472,6 +477,7 @@ function SettingsSurface({
         </div>
       </section>
 
+      {participationSetting}
       <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
         <h2 className="mb-2 text-[18px] font-extrabold text-[var(--foreground)]">
           계정
