@@ -57,7 +57,17 @@
 - 최종 독립 리뷰: GPT-6.1 Sol xhigh, 변경 소스14파일/테스트8파일 검토, 집중11파일229테스트 통과(실패/skip0), 자동초점·메뉴 제거 후 명시 복귀 target 독립 재현 통과. 검사 전후 source/test diff SHA256 `b7f90ba6174313453907f4f4e6c31549b44179ae5124c500fe3e4946f9492ec2` 동일. 병합 차단0.
 - 최종 코드의 `pnpm typecheck`, `pnpm verify:anti-slop` exit0(신규 위반0), 변경파일 ESLint exit0(기존 showToast 의존성 경고2), diff check exit0. build는1차 통과했으며 배포 후보에서 실제 최종 빌드를 다시 확인한다.
 - 기존 YouTube 공개 projection/저장 route/수량 fixture·meal 멱등성의 로컬16검사 통과. 외부 추출/모델 요청0.
-- PR, master SHA, 배포 SHA, 운영 재확인: 아직 없음. 운영 완료 아님.
+- PR 준비와 후속 화면 결과는 아래 기록한다. master merge·운영 배포·운영 재확인 전이므로 운영 완료가 아니다.
+
+### 화면 검사 후 모바일 보완
+
+- draft PR: `https://github.com/netsus/homecook/pull/1669`, 최초 코드 `90b874147a19017ec10ec691d19fad21e895bc6d`. 아직 merge/배포하지 않았다.
+- 실제 Chromium fixture 화면에서 모바일320/375는 초기 초점이 배경 버튼에 남고 inert=false임을 확인했다. 공용 AppBottomSheet 전체를 변경하지 않고 PlannerAddSheet 모바일 두 변형에만 기존 useDialogBoundary와 panelRef를 연결했다. 저장 중 Escape 보호도 동일하게 적용했다.
+- 추가 회귀4개는 수정 전 실패를 확인한 뒤 통과. 관련4파일38검사 통과. 모바일320/375·데스크톱1440 실제 UI3검사 통과: 상세2→3·모달3·취소재열기·Tab/Shift+Tab·Escape·원버튼 복귀·배경 격리·저장대기 보호·fixture POST3. 페이지/콘솔/실패요청/누락fixture 오류0, 가로 넘침0.
+- 모바일 후속 독립 리뷰: 새2파일 digest `3652c6c9b00ddd3062e84bc17411d45da7bb554138484fb58c0a70a3afc06a62` 전후동일, 관련5파일46검사 통과(실패/skip0), 차단0. 후속 최종 typecheck·Anti Slop 신규0·두 파일 lint·diff check도 exit0.
+- 증거: `/tmp/mumeok-v9-ui-batch1-3216-20261013/`의 viewport별 runtime.json와 PNG. 총괄은320/1440 modal 픽셀도 직접 확인했다. 이는 로컬 모의 API 검증이며 실계정/운영 DB 저장 성공 증거가 아니다.
+- 최초 검토 변경과 동일한 d222 후속 웹 후보 `0bf33c6f9c333b025a86c5789160e3f8eab08eb0`의 기존 deploy plan은 통과했다. 모바일 후속 commit을 포함한 최종 후보 SHA로 다시 검증해야 한다.
+- Discord 초기 조사 요약 전송은 기존 원준 목적지 HTTP204 확인. 전체 구현 완료 알림이 아니다.
 
 ### 진행 중 검증과 배포 경계
 
