@@ -12,6 +12,9 @@ export const CLOSED_R2_REVIEW_PIN = Object.freeze({
   path: "/Users/cwj/.homecook/operations/mumeok-beta-f01-closed-20261014-ifzuefgy/proposed-review.json",
   sha256: "cefb74c46ef6b1d23b2e449aa3255d854da6ecd74c35c8701095df964b9d2c29",
 });
+// No approved C03 source/SQL/authority bundle exists yet. Never accept a CLI/env override.
+export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const PROTECTED_WRITER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
 const closedR2Hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const closedR2Require = (value, message) => { if (!value) throw new DeploymentError(`닫힌 R2 유지 배포: ${message}`); };
 const CLOSED_R2_SHA = /^[a-f0-9]{64}$/u;
@@ -70,6 +73,170 @@ export function loadClosedR2Review(repositoryRoot) {
   const bytes = readClosedR2PrivateBytes(CLOSED_R2_REVIEW_PIN.path, repositoryRoot);
   closedR2Require(closedR2Hash(bytes) === CLOSED_R2_REVIEW_PIN.sha256, "검토 파일이 바뀌었습니다.");
   return assertClosedR2Review(JSON.parse(bytes));
+}
+
+export function loadProtectedRolloutReview(repositoryRoot) {
+  closedR2Require(isAbsolute(PROTECTED_ROLLOUT_REVIEW_PIN.path ?? "") && CLOSED_R2_SHA.test(PROTECTED_ROLLOUT_REVIEW_PIN.sha256 ?? ""),
+    "보호 전환 승인 핀이 비어 있어 실행할 수 없습니다.");
+  const bytes = readClosedR2PrivateBytes(PROTECTED_ROLLOUT_REVIEW_PIN.path, repositoryRoot, 524288);
+  closedR2Require(closedR2Hash(bytes) === PROTECTED_ROLLOUT_REVIEW_PIN.sha256, "보호 전환 승인 자료 bytes가 바뀌었습니다.");
+  return assertProtectedRolloutReview(JSON.parse(bytes));
+}
+
+export function loadProtectedWriterReview(repositoryRoot, rollout) {
+  closedR2Require(isAbsolute(PROTECTED_WRITER_REVIEW_PIN.path ?? "") && CLOSED_R2_SHA.test(PROTECTED_WRITER_REVIEW_PIN.sha256 ?? ""),
+    "신형 쓰기 ON/OFF의 별도 승인 핀이 비어 있어 실행할 수 없습니다.");
+  const bytes = readClosedR2PrivateBytes(PROTECTED_WRITER_REVIEW_PIN.path, repositoryRoot, 65536);
+  closedR2Require(closedR2Hash(bytes) === PROTECTED_WRITER_REVIEW_PIN.sha256, "신형 쓰기 승인 자료 bytes가 바뀌었습니다.");
+  return assertProtectedWriterReview(JSON.parse(bytes), rollout, PROTECTED_ROLLOUT_REVIEW_PIN.sha256);
+}
+
+export function assertProtectedWriterReview(approval, rollout, rolloutReviewSha256) {
+  assertProtectedRolloutReview(rollout);
+  closedR2Require(approval?.schema === "homecook.prelaunch-protected-writer-review.v1"
+    && Object.keys(approval).sort().join() === "databasePlanSha256,readerFlowsSha256,readerReceiptSha256,releaseSha,rolloutReviewSha256,safeOff,schema,writerOn"
+    && CLOSED_R2_SHA.test(rolloutReviewSha256 ?? "") && approval.rolloutReviewSha256 === rolloutReviewSha256
+    && approval.releaseSha === rollout.to && approval.writerOn === true && approval.safeOff === true
+    && approval.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: rollout.database?.after, applied: rollout.database?.after }))
+    && approval.readerFlowsSha256 === rollout.readerFlowsSha256
+    && (approval.readerReceiptSha256 === null || CLOSED_R2_SHA.test(approval.readerReceiptSha256 ?? "")), "ON과 안전 OFF는 최종 source/DB/reader 조건의 별도 정확한 승인이 필요합니다.");
+  return approval;
+}
+
+export function assertProtectedRolloutReview(review) {
+  closedR2Require(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && review.feature === "recipe-product-source"
+    && CLOSED_R2_REF.test(review.from ?? "") && CLOSED_R2_REF.test(review.to ?? "") && review.from !== review.to,
+    "보호 전환의 정확한 source pair가 필요합니다.");
+  closedR2Require(review.files && Object.keys(review.files).length > 0 && Object.entries(review.files).every(([path, pair]) =>
+    /^(?:app|components|lib|stores|types|hooks|tests|docs|supabase\/migrations)\//u.test(path)
+    && !path.split("/").some(part => ["", ".", ".."].includes(part))
+    && Array.isArray(pair) && pair.length === 2 && pair.every(value => value === null || CLOSED_R2_SHA.test(value))
+    && pair[0] !== pair[1]), "보호 전환은 전체 변경 파일의 exact before/after bytes만 허용합니다.");
+  closedR2Require(!Object.keys(review.files).some(path => /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|components\/marketing\/|lib\/(?:marketing[./-]|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u.test(path)),
+    "C03 승인은 기존 R2/인증 runtime 보호 예외를 열지 않습니다.");
+  closedR2Require(typeof review.predecessorBuildId === "string" && review.predecessorBuildId.length > 0
+    && CLOSED_R2_SHA.test(review.predecessorPlistSha256 ?? "") && CLOSED_R2_SHA.test(review.closedArtifactSha256 ?? "")
+    && review.closedReviewSha256 === CLOSED_R2_REVIEW_PIN.sha256 && CLOSED_R2_SHA.test(review.controlSha256 ?? "")
+    && review.consentGeneration === 1 && CLOSED_R2_SHA.test(review.historicalProofsSha256 ?? ""), "보호 전환의 기존 닫힘 출처가 필요합니다.");
+  closedR2Require(review.testScript === "test:feedback-batch:web" && review.approved?.database === true && review.approved.reader === true
+    && review.approved.writerOn === false, "현재 초안은 DB/reader 승인만 다루며 writer ON 승인을 추정하지 않습니다.");
+  closedR2Require(CLOSED_R2_SHA.test(review.isolatedEvidenceSha256 ?? "") && CLOSED_R2_SHA.test(review.readerFlowsSha256 ?? "") && review.allNewShapesOff === true
+    && review.legacyReaderCompatible === true, "신형 marker/rowref 전체의 OFF·구 reader 호환 격리 증거가 필요합니다.");
+  for (const key of ["isolatedEvidence", "readerFlows", "platformInventory", "backupReadiness"]) {
+    closedR2Require(isAbsolute(review[key]?.path ?? "") && CLOSED_R2_SHA.test(review[key]?.sha256 ?? ""), "보호 전환의 비공개 증거 파일 pin이 필요합니다.");
+  }
+  closedR2Require(review.isolatedEvidence.sha256 === review.isolatedEvidenceSha256 && review.readerFlows.sha256 === review.readerFlowsSha256
+    && isAbsolute(review.database?.configPath ?? "") && CLOSED_R2_SHA.test(review.database?.configSha256 ?? ""), "설정 bytes와 격리/reader 증거가 다릅니다.");
+  return review;
+}
+
+export function verifyProtectedRolloutEvidence(review, repositoryRoot) {
+  assertProtectedRolloutReview(review);
+  const result = {};
+  for (const key of ["isolatedEvidence", "readerFlows", "platformInventory", "backupReadiness"]) {
+    const bytes = readClosedR2PrivateBytes(review[key].path, repositoryRoot, 524288);
+    closedR2Require(closedR2Hash(bytes) === review[key].sha256, "보호 전환 증거 bytes가 바뀌었습니다.");
+    result[key] = JSON.parse(bytes);
+  }
+  const isolated = result.isolatedEvidence;
+  closedR2Require(isolated.schema === "homecook.prelaunch-protected-isolated-evidence.v1" && isolated.from === review.from && isolated.to === review.to
+    && isolated.passed === true && isolated.allNewShapesOff === true && isolated.legacyReaderCompatible === true
+    && isolated.beforeCatalogSha256 === review.database.beforeCatalogSha256 && isolated.afterCatalogSha256 === review.database.afterCatalogSha256
+    && isolated.immutableSha256 === review.database.immutableSha256 && isDeepStrictEqual(isolated.migrations, review.database.migrations), "격리 증거는 승인한 source/SQL/전후 catalog/전체 OFF를 증명해야 합니다.");
+  closedR2Require(result.readerFlows.schema === "homecook.prelaunch-protected-reader-flows.v1" && result.readerFlows.releaseSha === review.to
+    && result.readerFlows.passed === true && result.readerFlows.testScript === review.testScript, "reader 흐름 증거는 정확한 후보 source에 묶여야 합니다.");
+  return result;
+}
+
+export function assertProtectedRolloutSource({ review, live, releaseSha, files, digests, closedArtifactSha256 }) {
+  assertProtectedRolloutReview(review);
+  closedR2Require(live.ref === review.from && releaseSha === review.to && live.buildId === review.predecessorBuildId
+    && closedR2Hash(live.bytes) === review.predecessorPlistSha256 && closedArtifactSha256 === review.closedArtifactSha256,
+    "보호 전환의 현재 source/build/plist/marker가 다릅니다.");
+  closedR2Require(isDeepStrictEqual([...files].sort(), Object.keys(review.files).sort()) && isDeepStrictEqual(digests, review.files),
+    "보호 전환의 전체 source diff bytes가 다릅니다.");
+}
+
+export function assertProtectedRolloutEnvironment({ review, before, after, currentControlSha256, currentProofsSha256, currentGeneration }) {
+  assertProtectedRolloutReview(review);
+  closedR2Require(isDeepStrictEqual(after, retargetPlist(before, after.WorkingDirectory))
+    && CLOSED_R2_FLAGS.every(key => before.EnvironmentVariables[key] === "false" && after.EnvironmentVariables[key] === "false")
+    && currentControlSha256 === review.controlSha256 && currentProofsSha256 === review.historicalProofsSha256
+    && currentGeneration === review.consentGeneration, "보호 전환은 R2 false/control/gen/원 proof와 모든 환경을 보존해야 합니다.");
+}
+
+export function protectedRolloutReaderReceipt({ review, reviewSha256, databaseReceipt, live, verifiedFlowsSha256 }) {
+  assertProtectedRolloutReview(review);
+  closedR2Require(CLOSED_R2_SHA.test(reviewSha256 ?? "") && databaseReceipt?.status === "committed"
+    && databaseReceipt.reviewSha256 === reviewSha256 && databaseReceipt.from === review.from && databaseReceipt.to === review.to
+    && databaseReceipt.writerEnabled === false && databaseReceipt.backwardCompatible === false
+    && databaseReceipt.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: review.database?.after, applied: review.database?.after }))
+    && databaseReceipt.catalogSha256 === review.database?.afterCatalogSha256 && databaseReceipt.targetSha256 === review.database?.targetSha256
+    && live.ref === review.to && typeof live.buildId === "string" && live.buildId.length > 0
+    && CLOSED_R2_SHA.test(verifiedFlowsSha256 ?? "") && verifiedFlowsSha256 === review.readerFlowsSha256,
+    "승인된 DB receipt·실제 reader source/build·신구 흐름 검증이 필요합니다.");
+  return { schema: "homecook.prelaunch-protected-reader.v1", reviewSha256, databasePlanSha256: databaseReceipt.databasePlanSha256,
+    releaseSha: live.ref, buildId: live.buildId, plistSha256: closedR2Hash(live.bytes), verifiedFlowsSha256,
+    readerFloor: live.ref, backwardCompatible: false };
+}
+
+export function assertProtectedReaderRollback({ receipt, targetSha, isDescendant }) {
+  closedR2Require(receipt?.schema === "homecook.prelaunch-protected-reader.v1" && receipt.backwardCompatible === false
+    && CLOSED_R2_REF.test(receipt.readerFloor ?? "") && CLOSED_R2_REF.test(targetSha ?? "")
+    && (targetSha === receipt.readerFloor || isDescendant === true), "신형 marker/rowref reader floor보다 이전 웹으로 복구할 수 없습니다.");
+}
+
+export function assertProtectedReaderCompensation({ floorPublished, offLocked, actual, before, target, closedPreviousPlistSha256 }) {
+  closedR2Require(floorPublished === false && offLocked === true, "구 reader 보상은 ready/floor 게시 전의 실제 OFF 잠금에서만 가능합니다.");
+  assertClosedR2CompensationTarget({ actual, before, target, closedPreviousPlistSha256 });
+}
+
+export function protectedRolloutStatus({ review, reviewSha256, guard, reader, writer, readerCompatible = false }) {
+  assertProtectedRolloutReview(review);
+  closedR2Require(guard?.schema === "homecook.prelaunch-protected-db-attempt.v1" && guard.reviewSha256 === reviewSha256
+    && guard.from === review.from && guard.to === review.to && ["applying_precommit", "commit_dispatch_guard", "unknown", "rolled_back_before_commit", "committed", "not_applied"].includes(guard.status),
+    "보호 DB phase/승인 출처가 다릅니다.");
+  const committed = guard.status === "committed", unapplied = guard.status === "not_applied";
+  const ready = committed && reader?.schema === "homecook.prelaunch-protected-reader.v1" && reader.reviewSha256 === reviewSha256
+    && reader.readerFloor === review.to && reader.databasePlanSha256 === guard.databasePlanSha256;
+  if (committed) closedR2Require(guard.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: review.database.after, applied: review.database.after })), "보호 DB 현재 baseline이 다릅니다.");
+  return { phase: guard.status, databasePlanSha256: committed ? guard.databasePlanSha256 : unapplied ? closedR2Hash(JSON.stringify({ source: review.database.before, applied: review.database.before })) : null,
+    appliedLedgerCount: committed ? review.database.after.length : unapplied ? review.database.before.length : null,
+    readerPending: committed && !(ready && readerCompatible), readerFloor: ready ? review.to : null,
+    recordedWriterEnabled: ready && writer ? ["committed", "closed_after_unknown"].includes(writer.status) ? writer.writerEnabled : null : committed ? false : null,
+    normalDeploymentAllowed: unapplied || (ready && readerCompatible && (!writer || ["committed", "not_applied", "closed_after_unknown"].includes(writer.status))), backwardCompatible: false };
+}
+
+export function assertProtectedClosedR2Marker({ state, marker, markerSha256, live, closedReview, rollout, reviewSha256, databaseReceipt, databaseReceiptSha256, readerReceipt, readerReceiptSha256 }) {
+  assertProtectedRolloutReview(rollout);
+  const { rolledBack, artifactSha256, ...recorded } = state.closedR2 ?? {};
+  const authority = marker?.protectedRollout;
+  closedR2Require(marker?.schema === "homecook.prelaunch-closed-r2-state.v1" && marker.activationAuthorized === false
+    && ["protected-reader", "continuation"].includes(marker.kind) && rolledBack !== true && artifactSha256 === markerSha256
+    && isDeepStrictEqual(marker, recorded) && authority?.reviewSha256 === reviewSha256
+    && authority.databaseReceiptSha256 === databaseReceiptSha256 && authority.readerReceiptSha256 === readerReceiptSha256
+    && databaseReceipt.status === "committed" && databaseReceipt.reviewSha256 === reviewSha256
+    && databaseReceipt.from === rollout.from && databaseReceipt.to === rollout.to && databaseReceipt.targetSha256 === rollout.database.targetSha256
+    && databaseReceipt.catalogSha256 === rollout.database.afterCatalogSha256 && databaseReceipt.immutableSha256 === rollout.database.immutableSha256
+    && databaseReceipt.writerEnabled === false && databaseReceipt.backwardCompatible === false
+    && databaseReceipt.databasePlanSha256 === marker.databasePlanSha256
+    && readerReceipt.reviewSha256 === reviewSha256 && readerReceipt.readerFloor === rollout.to && readerReceipt.backwardCompatible === false
+    && readerReceipt.schema === "homecook.prelaunch-protected-reader.v1" && readerReceipt.releaseSha === rollout.to
+    && readerReceipt.verifiedFlowsSha256 === rollout.readerFlowsSha256 && readerReceipt.databasePlanSha256 === marker.databasePlanSha256
+    && CLOSED_R2_SHA.test(marker.previousArtifactSha256 ?? "") && CLOSED_R2_SHA.test(marker.previousStateSha256 ?? "")
+    && state.previousCwd === marker.previousCwd && state.previousBuildId === marker.previousBuildId && state.previousPlistHash === marker.previousPlistSha256
+    && (marker.kind === "continuation" || (marker.from === rollout.from && marker.to === rollout.to
+      && marker.previousBuildId === rollout.predecessorBuildId && marker.previousPlistSha256 === rollout.predecessorPlistSha256
+      && readerReceipt.buildId === marker.buildId && readerReceipt.plistSha256 === marker.targetPlistSha256)),
+    "보호 DB/reader receipt와 실제 닫힘 marker/state 결속이 다릅니다.");
+  closedR2Require(marker.reviewSha256 === CLOSED_R2_REVIEW_PIN.sha256 && marker.pauseReceiptSha256 === closedReview.pause.sha256
+    && marker.controlSha256 === closedReview.controlSha256 && marker.consentGeneration === closedReview.consentGeneration
+    && marker.historicalReadinessSha256 === closedReview.historicalReadiness.sha256
+    && marker.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: rollout.database.after, applied: rollout.database.after }))
+    && state.ref === marker.to && state.checkout === marker.checkout && state.buildId === marker.buildId
+    && state.targetPlistHash === marker.targetPlistSha256 && live.ref === marker.to && live.cwd === marker.checkout
+    && live.buildId === marker.buildId && live.plistHash === marker.targetPlistSha256
+    && CLOSED_R2_FLAGS.every(key => live.plist.EnvironmentVariables[key] === "false"), "보호 승계는 원 R2 history와 정확한 실제 웹을 보존해야 합니다.");
 }
 
 export function assertClosedR2Review(review) {
@@ -388,12 +555,18 @@ export function assertFrontendScope(files, before, after) {
 }
 
 export function parsePrelaunchOptions(args) {
-  /** @type {{ref: string, refOption: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string, testScript?: string, alreadyAppliedDb?: boolean, skipAutomatedTests?: boolean, reviewedRepairReadiness?: boolean, reviewedBetaReadiness?: boolean, reviewedFeedbackReadiness?: boolean, reviewedAiNutritionReadiness?: boolean, reviewedIngredientSearchReadiness?: boolean, reviewedPieceUnitReadiness?: boolean, reviewedYoutubeTrialReadiness?: boolean, reviewedYoutubeResolutionReadiness?: boolean, reviewedNutritionRecoveryReadiness?: boolean, reviewedIntegratedMasterReadiness?: boolean, reviewedClosedR2Maintenance?: boolean}} */
+  /** @type {{ref: string, refOption: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string, testScript?: string, alreadyAppliedDb?: boolean, skipAutomatedTests?: boolean, reviewedRepairReadiness?: boolean, reviewedBetaReadiness?: boolean, reviewedFeedbackReadiness?: boolean, reviewedAiNutritionReadiness?: boolean, reviewedIngredientSearchReadiness?: boolean, reviewedPieceUnitReadiness?: boolean, reviewedYoutubeTrialReadiness?: boolean, reviewedYoutubeResolutionReadiness?: boolean, reviewedNutritionRecoveryReadiness?: boolean, reviewedIntegratedMasterReadiness?: boolean, reviewedClosedR2Maintenance?: boolean, reviewedProtectedRollout?: boolean, protectedPhase?: string}} */
   const options = { ref: "origin/master", refOption: "--ref" };
-  const names = { "--env-file": "envFile", "--db-config": "dbConfig", "--db-baseline": "dbBaseline", "--verify-script": "verifyScript", "--test-script": "testScript" };
+  const names = { "--env-file": "envFile", "--db-config": "dbConfig", "--db-baseline": "dbBaseline", "--verify-script": "verifyScript", "--test-script": "testScript", "--protected-phase": "protectedPhase" };
   const seen = new Set();
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
+    if (key === "--reviewed-protected-rollout") {
+      if (options.reviewedProtectedRollout) throw new DeploymentError("중복된 배포 옵션입니다.");
+      options.reviewedProtectedRollout = true;
+      index -= 1;
+      continue;
+    }
     if (key === "--reviewed-r2-closed-maintenance") {
       if (options.reviewedClosedR2Maintenance) throw new DeploymentError("중복된 배포 옵션입니다.");
       options.reviewedClosedR2Maintenance = true;
@@ -450,6 +623,14 @@ export function parsePrelaunchOptions(args) {
       throw new DeploymentError("닫힌 R2 유지 배포에는 읽기 전용 DB pair만 허용하며 다른 reviewed/검증 생략 옵션을 사용할 수 없습니다.");
     }
   }
+  if (options.reviewedProtectedRollout) {
+    if (options.refOption !== "--reviewed-ref" || !CLOSED_R2_REF.test(options.ref) || !options.dbConfig
+      || options.testScript !== "test:feedback-batch:web" || !["database", "database-retry", "reader", "reconcile", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry"].includes(options.protectedPhase)
+      || options.envFile || options.dbBaseline || options.dbCompatible || options.alreadyAppliedDb || options.skipAutomatedTests || options.verifyScript
+      || Object.entries(options).some(([key, value]) => key.startsWith("reviewed") && key !== "reviewedProtectedRollout" && value)) {
+      throw new DeploymentError("보호 전환에는 정확한 reviewed-ref/DB/기존 test/phase만 허용합니다. 환경·기존 reviewed·자동 DB 옵션은 사용할 수 없습니다.");
+    }
+  } else if (options.protectedPhase) throw new DeploymentError("보호 전환 phase는 전용 승인 경로에서만 사용할 수 있습니다.");
   return options;
 }
 
