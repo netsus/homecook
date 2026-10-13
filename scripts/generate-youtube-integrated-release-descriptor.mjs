@@ -34,9 +34,6 @@ const files = paths.map((path) => ({
   beforeSha256: sha256(bytesAt(YOUTUBE_INTEGRATED_LIVE_RELEASE, path)),
   afterSha256: path === YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR ? null : sha256(bytesAt(targetSha, path)),
 }));
-if (files.some((entry) => entry.path !== YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR && entry.afterSha256 === null)) {
-  throw new Error("Integrated release descriptor does not support deleted target files.");
-}
 const migration = files.find((entry) => entry.path === YOUTUBE_INTEGRATED_MIGRATION);
 if (!migration?.afterSha256) throw new Error("Integrated bridge migration is missing.");
 

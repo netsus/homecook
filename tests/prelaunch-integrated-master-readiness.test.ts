@@ -83,6 +83,29 @@ describe("prelaunch integrated master readiness", () => {
         ? Buffer.from("drift") : ref === "target" ? contents.get(path) ?? null : null,
       isAncestor: () => true,
     })).toThrow("target digest");
+
+    const deletedPath = "scripts/retired-helper.mjs";
+    const deletedBytes = Buffer.from("export {};\n");
+    const deletedDescriptorValue = {
+      ...descriptorValue,
+      files: [...descriptorValue.files, {
+        path: deletedPath,
+        beforeSha256: digest(deletedBytes),
+        afterSha256: null,
+      }].sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0),
+    };
+    const deletedDescriptor = parseIntegratedMasterDescriptor(
+      Buffer.from(JSON.stringify(deletedDescriptorValue)),
+    );
+    expect(assertIntegratedMasterDescriptor({
+      descriptor: deletedDescriptor,
+      liveSha: YOUTUBE_INTEGRATED_LIVE_RELEASE,
+      changedFiles: deletedDescriptor.files.map((entry: { path: string }) => entry.path),
+      readAt: (ref, path) => path === deletedPath
+        ? ref === YOUTUBE_INTEGRATED_LIVE_RELEASE ? deletedBytes : null
+        : ref === YOUTUBE_INTEGRATED_LIVE_RELEASE ? null : contents.get(path) ?? null,
+      isAncestor: () => true,
+    }).reviewedFiles.has(deletedPath)).toBe(true);
   });
 
   it("allows otherwise denied support only inside the exact reviewed set", () => {

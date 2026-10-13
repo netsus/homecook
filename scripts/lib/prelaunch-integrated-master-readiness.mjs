@@ -137,7 +137,8 @@ export function parseIntegratedMasterDescriptor(bytes) {
   for (const entry of descriptor.files) {
     const isSelf = entry.path === YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR;
     requireValue((entry.beforeSha256 === null || SHA256.test(entry.beforeSha256))
-      && (isSelf ? entry.afterSha256 === null : SHA256.test(entry.afterSha256 ?? "")),
+      && (entry.afterSha256 === null || SHA256.test(entry.afterSha256))
+      && (isSelf || entry.beforeSha256 !== null || entry.afterSha256 !== null),
     `file digest ${entry.path}`);
   }
   requireValue(paths.includes(YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR)
@@ -165,7 +166,7 @@ export function assertIntegratedMasterDescriptor({
     const after = readAt("target", entry.path);
     requireValue((before === null ? null : sha256(before)) === entry.beforeSha256,
       `predecessor digest ${entry.path}`);
-    requireValue(after !== null && sha256(after) === entry.afterSha256,
+    requireValue((after === null ? null : sha256(after)) === entry.afterSha256,
       `target digest ${entry.path}`);
   }
   const migration = descriptor.files.find((entry) => entry.path === YOUTUBE_INTEGRATED_MIGRATION);
