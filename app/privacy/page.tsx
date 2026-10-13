@@ -96,10 +96,9 @@ export default function PrivacyPage() {
           <div>
             <dt>Cloudflare, Inc.</dt>
             <dd>
-              사이트 전송, HTTPS 연결, DDoS·봇 방어, 접속 보안 분석과 Turnstile
-              사람 확인을 처리합니다. 사이트 전달 과정에서는 이용자가 전송하는
-              요청 내용도 Cloudflare 네트워크를 통과할 수 있습니다. 이와 별개로
-              Turnstile 보안 확인 기능은 이메일·설문 답변 같은 입력 내용을
+              일부 신청 화면의 Turnstile 사람 확인을 처리합니다. 일반 사이트
+              요청과 소셜 로그인 요청은 Cloudflare 프록시를 거치지 않고 운영
+              서버로 전달됩니다. Turnstile은 이메일·설문 답변 같은 입력 내용을
               읽거나 저장하지 않습니다.
             </dd>
           </div>
@@ -122,8 +121,8 @@ export default function PrivacyPage() {
             <dt>이전 국가</dt>
             <dd>
               미국, 유럽경제지역, 영국, 호주, 일본, 캐나다, 싱가포르,
-              아랍에미리트, 인도, 멕시코, 말레이시아와 스위스. 접속 경로와
-              사용하는 Cloudflare 기능에 따라 처리 위치가 달라질 수 있으며,
+              아랍에미리트, 인도, 멕시코, 말레이시아와 스위스. Turnstile 처리
+              위치는 달라질 수 있으며,
               현재 하위 처리자 위치는{" "}
               <a
                 href="https://www.cloudflare.com/gdpr/subprocessors/cloudflare-services/"
@@ -138,15 +137,14 @@ export default function PrivacyPage() {
           <div>
             <dt>이전 항목</dt>
             <dd>
-              IP 주소, 접속 일시, 요청 경로, 브라우저·기기 및 네트워크 정보,
-              HTTP 헤더와 쿠키, 보안 확인 정보 및 이용자가 전송하는 요청 내용
+              Turnstile 사용 화면의 IP 주소, 접속 시각, 브라우저·기기 및
+              네트워크 정보, 사이트 키·접속 출처와 보안 확인 정보
             </dd>
           </div>
           <div>
             <dt>이전 목적과 방법</dt>
             <dd>
-              사이트 전송과 보안 서비스 제공을 위해 접속 또는 보안 확인 시
-              네트워크를 통해 전송됩니다.
+              사람 확인을 위해 Turnstile 사용 시 네트워크를 통해 전송됩니다.
             </dd>
           </div>
           <div>
@@ -167,10 +165,9 @@ export default function PrivacyPage() {
           <div>
             <dt>이전 거부 방법과 영향</dt>
             <dd>
-              국외 처리를 원하지 않으면 서비스 이용을 중단하고 개인정보
-              처리정지를 요청할 수 있습니다. Cloudflare 처리는 공개 사이트
-              전송과 보안에 필수이므로 이를 거부하면 서비스를 이용할 수
-              없습니다.
+              국외 처리를 원하지 않으면 Turnstile을 사용하는 신청 기능을
+              이용하지 않고 개인정보 처리정지를 요청할 수 있습니다. 일반
+              사이트 조회와 소셜 로그인은 계속 이용할 수 있습니다.
             </dd>
           </div>
         </dl>
