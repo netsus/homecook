@@ -59,22 +59,25 @@ describe("recipe SEO metadata", () => {
     });
   });
 
-  it("falls back safely and prevents indexing when the recipe is missing", async () => {
+  it("keeps undisclosed recipe metadata neutral and non-indexable without an authenticated lookup", async () => {
     maybeSingle.mockResolvedValue({ data: null, error: null });
     const page = await import("@/app/recipe/[id]/page");
 
     expect(page.generateMetadata).toBeTypeOf("function");
     if (typeof page.generateMetadata !== "function") return;
 
-    await expect(
-      page.generateMetadata({
-        params: Promise.resolve({ id: "missing" }),
-        searchParams: Promise.resolve({}),
-      }),
-    ).resolves.toMatchObject({
-      robots: { follow: false, index: false },
-      title: "레시피를 찾을 수 없어요",
+    const metadata = await page.generateMetadata({
+      params: Promise.resolve({ id: "missing" }),
+      searchParams: Promise.resolve({}),
     });
+    expect(metadata).toEqual({
+      robots: { follow: false, index: false },
+      title: "레시피 상세",
+    });
+    expect(select).toHaveBeenCalledWith("title, description, thumbnail_url");
+    expect(eq).toHaveBeenCalledWith("id", "missing");
+    const server = await import("@/lib/supabase/server");
+    expect(server.createServerComponentClient).not.toHaveBeenCalled();
   });
 
   it("keeps a canonical fallback indexable during a temporary metadata lookup error", async () => {

@@ -1,9 +1,71 @@
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, lstatSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, lstatSync, rmSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { expect, it } from "vitest";
-import { installDevDeployLauncher } from "../scripts/lib/dev-deploy-launcher.mjs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { afterEach, expect, it } from "vitest";
+import { DEV_DEPLOY_SNAPSHOT_PATHS, installDevDeployLauncher, verifyDevDeployToolLoad } from "../scripts/lib/dev-deploy-launcher.mjs";
+import { prelaunchVerificationEnvironment } from "../scripts/lib/prelaunch-web-deploy.mjs";
+
+const snapshotRoots: string[] = [];
+afterEach(() => { for (const root of snapshotRoots.splice(0)) rmSync(root, { recursive: true, force: true }); });
+function snapshotRoot() {
+  const root = mkdtempSync(join(realpathSync(tmpdir()), "hc-snapshot-"));
+  snapshotRoots.push(root);
+  return root;
+}
+
+it("loads the committed deployment import graph from its exact git archive", () => {
+  const root = snapshotRoot(), repository = process.cwd();
+  const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...DEV_DEPLOY_SNAPSHOT_PATHS], { cwd: repository, maxBuffer: 128 * 1024 * 1024 });
+  execFileSync("/usr/bin/tar", ["-xf", "-", "-C", root], { input: archive });
+  expect(() => verifyDevDeployToolLoad({ entryPoint: join(root, "scripts/deploy-prelaunch-web.mjs"), repository, nodePath: process.execPath })).not.toThrow();
+});
+
+it("rejects the old archive that omits the required static JSON", () => {
+  const root = snapshotRoot(), repository = process.cwd();
+  const oldPaths = DEV_DEPLOY_SNAPSHOT_PATHS.filter(path => path !== "lib/server/youtube-extraction-worker-timing.json");
+  const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...oldPaths], { cwd: repository, maxBuffer: 128 * 1024 * 1024 });
+  execFileSync("/usr/bin/tar", ["-xf", "-", "-C", root], { input: archive });
+  expect(() => verifyDevDeployToolLoad({ entryPoint: join(root, "scripts/deploy-prelaunch-web.mjs"), repository, nodePath: process.execPath })).toThrow("load");
+});
+
+it("publishes a loadable archived tool through the real installer in an isolated home", () => {
+  const taskHome = snapshotRoot(), repository = process.cwd();
+  const env = { ...prelaunchVerificationEnvironment("test", process.env), HOME: taskHome };
+  const installed = spawnSync(process.execPath, ["--", join(repository, "scripts/install-dev-deploy.mjs"), "--ref", "HEAD"], { env, encoding: "utf8" });
+  expect(installed.status, installed.stderr).toBe(0);
+  const launcher = join(taskHome, ".local/bin/homecook-deploy");
+  const loaded = spawnSync(process.execPath, ["--", launcher, "--help"], { env, encoding: "utf8" });
+  expect(loaded.status, loaded.stderr).toBe(0);
+  expect(loaded.stdout).toContain("출시 전 웹/API/환경/추가형 DB 빠른 배포");
+});
+
+it("keeps an installed launcher intact when a candidate snapshot cannot load", () => {
+  const root = snapshotRoot(), repository = join(root, "repo"), taskHome = join(root, "fixture-home");
+  mkdirSync(repository);
+  const files: Record<string, string> = {
+    "scripts/install-dev-deploy.mjs": readFileSync(join(process.cwd(), "scripts/install-dev-deploy.mjs"), "utf8"),
+    "scripts/lib/dev-deploy-launcher.mjs": readFileSync(join(process.cwd(), "scripts/lib/dev-deploy-launcher.mjs"), "utf8"),
+    "scripts/deploy-prelaunch-web.mjs": 'import "./missing-module.mjs";\n',
+    "infra/fixture.txt": "fixture", ".env.example": "", "package.json": '{"type":"module"}', "supabase/config.toml": "",
+    "lib/server/youtube-extraction-worker-timing.json": "{}",
+  };
+  for (const [file, body] of Object.entries(files)) {
+    mkdirSync(join(repository, file, ".."), { recursive: true });
+    writeFileSync(join(repository, file), body);
+  }
+  const git = (args: string[]) => execFileSync("git", ["-C", repository, ...args], { stdio: "ignore" });
+  git(["init"]); git(["config", "user.name", "Snapshot Fixture"]); git(["config", "user.email", "snapshot-fixture@example.invalid"]);
+  git(["remote", "add", "origin", "https://github.com/netsus/homecook.git"]); git(["add", "."]); git(["commit", "-m", "Fixture snapshot"]);
+  const oldEntry = join(root, "old-entry.mjs"); writeFileSync(oldEntry, "process.exit(0);");
+  const launcher = installDevDeployLauncher({ binDirectory: join(taskHome, ".local/bin"), entryPoint: oldEntry, repository, nodePath: process.execPath });
+  const previous = readFileSync(launcher);
+  const result = spawnSync(process.execPath, ["--", join(repository, "scripts/install-dev-deploy.mjs")], {
+    env: { ...prelaunchVerificationEnvironment("test", process.env), HOME: taskHome }, encoding: "utf8",
+  });
+  expect(result.status).toBe(1);
+  expect(readFileSync(launcher)).toEqual(previous);
+});
 
 it("runs the installed tool from another directory without changing that checkout", () => {
   const root = mkdtempSync(join(tmpdir(), "hc-launcher-"));

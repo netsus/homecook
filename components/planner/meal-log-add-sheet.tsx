@@ -23,6 +23,8 @@ import { fetchFoodCatalogSearch, fetchFoodCatalogSource, type FoodCatalogSearchI
 import { fetchCookedBatches, type CookedBatchListData } from "@/lib/api/cooking";
 import { fetchMealLogRecent, isMealLogApiError } from "@/lib/api/meal-log";
 import { resolveRecipeImage } from "@/lib/recipe-image";
+import { buildReturnHref } from "@/lib/navigation/return-context";
+import { buildPlannerShellHref } from "@/lib/planner/planner-shell-navigation";
 import { formatProductUnit } from "@/lib/planner/product-planner-entry-presentation";
 import type { CookedBatchProjection } from "@/types/cooking";
 import type { MealLogColumn, MealLogRecentItem, MealLogSourceType } from "@/types/meal-log";
@@ -58,6 +60,7 @@ interface MealLogAddSheetProps {
   initialSelection?: MealLogSourceSelection;
   initialSuggestionConfirmed?: boolean;
   mutationEnabled?: boolean;
+  leftoversReturnTo?: string;
   onClose: () => void;
   returnFocusTarget?: () => HTMLElement | null;
   onSave: (selection: MealLogSourceSelection, columnId: string, date: string) => Promise<void>;
@@ -195,6 +198,7 @@ export function MealLogAddSheet({
   initialSelection,
   initialSuggestionConfirmed = true,
   mutationEnabled = true,
+  leftoversReturnTo,
   onClose,
   returnFocusTarget,
   onSave,
@@ -848,7 +852,10 @@ export function MealLogAddSheet({
                         </div>
                       )}
                       {weightEligible ? (
-                        <Link aria-label={`${batch.recipe_title} 완성 중량 입력`} className="mt-2 flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-sm font-medium" href="/leftovers">
+                        <Link aria-label={`${batch.recipe_title} 완성 중량 입력`} className="mt-2 flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-sm font-medium" href={buildReturnHref("/leftovers", {
+                          returnSurface: "planner.week",
+                          returnTo: leftoversReturnTo ?? buildPlannerShellHref(new URLSearchParams(), { date, segment: "log" }),
+                        })}>
                           완성 중량 입력
                         </Link>
                       ) : null}

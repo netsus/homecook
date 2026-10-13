@@ -149,10 +149,14 @@ describe("launch readiness legal and SEO routes", () => {
     expect(html).toContain("미국, 유럽경제지역, 영국, 호주, 일본, 캐나다, 싱가포르");
     expect(html).toContain("아랍에미리트, 인도, 멕시코, 말레이시아와 스위스");
     expect(html).toContain("https://www.cloudflare.com/gdpr/subprocessors/cloudflare-services/");
-    expect(html).toContain("이용자가 전송하는 요청 내용");
+    expect(html).toContain("일부 신청 화면의 Turnstile 사람 확인");
+    expect(html).toContain("사이트 키·접속 출처와 보안 확인 정보");
+    expect(html).not.toContain("이용자가 전송하는 요청 내용");
+    expect(html).not.toContain("사이트 전송, HTTPS 연결, DDoS");
 
     expect(html).toContain("이전 거부 방법과 영향");
-    expect(html).toContain("거부하면 서비스를 이용할 수 없습니다");
+    expect(html).toContain("일반 사이트 조회와 소셜 로그인은 계속 이용할 수 있습니다");
+    expect(html).not.toContain("거부하면 서비스를 이용할 수 없습니다");
     expect(html).toContain("최소 식별자와 비가역 해시 기록은 영구 보관");
     expect(html).toContain("직접 식별정보를 제거");
     expect(html).not.toContain("현재 만 14세 미만의 회원가입을 받지 않습니다");
