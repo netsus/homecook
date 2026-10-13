@@ -49,19 +49,23 @@ const credentialMetadata = {
 };
 
 describe("YouTube v71 controlled cutover", () => {
-  it("serializes invocations and holds enqueue closed through durable receipt finalization", () => {
+  it("serializes invocations and durably records zero-budget verification before activation", () => {
     const source = readFileSync(new URL(
       "../scripts/youtube-v71-controlled-cutover.mjs",
       import.meta.url,
     ), "utf8");
-    expect(source).toContain("openSync(INVOCATION_LOCK, \"wx\"");
+    expect(source).toContain("writePrivateCreateOnly(INVOCATION_LOCK");
+    expect(source).toContain("another controlled cutover invocation is active");
     expect(source).toContain("SELECT pg_advisory_lock(86120317)");
-    expect(source).toContain("if (policyCommitted && !finalized)");
-    expect(source).toContain("SET enabled=false");
     expect(source).toContain("fsyncPath(path)");
+    expect(source).toContain("durablePrivateJson(VERIFICATION_RECEIPT_PATH, receipt)");
     expect(source).toContain("durablePrivateJson(RECEIPT_PATH, receipt)");
-    expect(source.indexOf("const result = await finalize(readback)")).toBeLessThan(
-      source.indexOf("await session.close()", source.indexOf("const result = await finalize(readback)")),
+    const verificationIndex = source.indexOf(
+      "const verificationReceipt = await createVerificationReceipt(before)",
+    );
+    expect(verificationIndex).toBeGreaterThan(0);
+    expect(verificationIndex).toBeLessThan(
+      source.indexOf("SET enabled=true", verificationIndex),
     );
   });
 

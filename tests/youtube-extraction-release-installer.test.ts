@@ -438,6 +438,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     expect(readYoutubeExtractionWorkerCredential(metadataPath, {
       secretRoot: privateDir,
     })).toMatchObject({ generation: 2, token_file: tokenPath });
+    const metadataBeforeRepeat = readFileSync(metadataPath, "utf8");
 
     const repeated = spawnSync(process.execPath, [
       ...baseArgs,
@@ -445,6 +446,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     ], { cwd: process.cwd(), encoding: "utf8" });
     expect(repeated.status).toBe(1);
     expect(repeated.stderr).toMatch(/already exists|create-only/iu);
+    expect(readFileSync(metadataPath, "utf8")).toBe(metadataBeforeRepeat);
   });
 
   it("installs the worker LaunchAgent atomically only after an explicit local-production confirmation", () => {

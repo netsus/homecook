@@ -15,6 +15,7 @@ import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 import {
   ensureAbsolutePath,
   ensureRegularFile,
+  stableStringify,
 } from "./lib/youtube-extraction-worker-artifact.mjs";
 import {
   issueYoutubeExtractionCredentialManager,
@@ -22,8 +23,8 @@ import {
 } from "./lib/youtube-extraction-worker-local-credential.mjs";
 import {
   buildYoutubeExtractionWorkerCredentialState,
+  validateYoutubeExtractionWorkerSecretFile,
   validateYoutubeExtractionWorkerSecretRoot,
-  writeCredentialMetadata,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 
 const CONFIRMATION = "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL";
@@ -190,6 +191,7 @@ function main() {
     ttlSeconds: options.ttlSeconds,
   });
   let tokenCreated = false;
+  let metadataCreated = false;
   try {
     writeFileSync(tokenFile, `${issued.token}\n`, {
       encoding: "utf8",
@@ -208,7 +210,14 @@ function main() {
       allowedSnapshotDigest: issued.metadata.allowed_snapshot_digest,
       secretRoot,
     });
-    writeCredentialMetadata(metadataOutput, credential, { secretRoot });
+    writeFileSync(metadataOutput, `${stableStringify(credential)}\n`, {
+      encoding: "utf8",
+      flag: "wx",
+      mode: 0o600,
+    });
+    chmodSync(metadataOutput, 0o600);
+    validateYoutubeExtractionWorkerSecretFile(metadataOutput, { secretRoot });
+    metadataCreated = true;
     process.stdout.write(`${JSON.stringify({
       issued: true,
       generation: credential.generation,
@@ -221,7 +230,7 @@ function main() {
     }, null, 2)}\n`);
   } catch (error) {
     if (tokenCreated) rmSync(tokenFile, { force: true });
-    rmSync(metadataOutput, { force: true });
+    if (metadataCreated) rmSync(metadataOutput, { force: true });
     throw error;
   }
 }

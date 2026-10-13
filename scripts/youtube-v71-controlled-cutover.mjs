@@ -28,6 +28,7 @@ import {
   ensureRegularFile,
   readJsonFile,
   sha256File,
+  stableStringify,
   verifyYoutubeExtractionWorkerArtifact,
 } from "./lib/youtube-extraction-worker-artifact.mjs";
 import {
@@ -45,7 +46,6 @@ import {
   parseLaunchctlPrintStatus,
   validateYoutubeExtractionWorkerSecretFile,
   validateYoutubeExtractionWorkerSecretRoot,
-  writeCredentialMetadata,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import {
   createRestrictedPostgrestRpcClient,
@@ -69,6 +69,7 @@ import {
   assertV71CutoverPoststate,
   assertV71CutoverPrestate,
   assertV71ManagerClaims,
+  assertV71OperationalPoststate,
   assertV71WorkerCredential,
   buildV71DatabaseTransitionSql,
   decodeJwtClaims,
@@ -84,8 +85,14 @@ const SERVICE = `gui/${UID}/${LABEL}`;
 const SECRET_ROOT = join(HOME, ".homecook/youtube-extraction");
 const OPERATION_ROOT = join(HOME, ".homecook/operations/youtube-v71-20261013");
 const BACKUP_ROOT = join(OPERATION_ROOT, "cutover-backup");
+const BACKUP_PRESTATE_PATH = join(BACKUP_ROOT, "prestate.json");
+const BACKUP_PLIST_PATH = join(BACKUP_ROOT, "generation-46.plist");
 const PREPARE_PATH = join(OPERATION_ROOT, "cutover-prepare.json");
 const JOURNAL_PATH = join(OPERATION_ROOT, "cutover-journal.json");
+const VERIFICATION_RECEIPT_PATH = join(
+  OPERATION_ROOT,
+  "cutover-verification-receipt.json",
+);
 const RECEIPT_PATH = join(OPERATION_ROOT, "cutover-receipt.json");
 const INVOCATION_LOCK = join(OPERATION_ROOT, "cutover-invocation.lock");
 const DATABASE_CONFIG = join(HOME, ".homecook/config/full-local-production.env");
@@ -176,12 +183,53 @@ function durablePrivateJson(path, value, { replace = false } = {}) {
 
 async function withInvocationLock(callback) {
   privateDirectory(OPERATION_ROOT);
-  const descriptor = openSync(INVOCATION_LOCK, "wx", 0o600);
-  closeSync(descriptor);
+  const nonce = randomUUID();
+  const processStart = spawnSync(
+    "/bin/ps",
+    ["-p", String(process.pid), "-o", "lstart="],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+  ).stdout.trim();
+  check(processStart.length > 0, "cannot identify invocation process start");
+  const lock = {
+    schema: "homecook.youtube-v71-cutover-invocation-lock.v1",
+    pid: process.pid,
+    processStart,
+    nonce,
+    createdAt: new Date().toISOString(),
+  };
+  if (existsSync(INVOCATION_LOCK)) {
+    const existing = readJsonFile(INVOCATION_LOCK, "v71 invocation lock", { mode: 0o600 });
+    check(
+      existing?.schema === lock.schema
+      && Number.isSafeInteger(existing.pid)
+      && typeof existing.processStart === "string"
+      && typeof existing.nonce === "string",
+      "existing invocation lock is malformed",
+    );
+    const observed = spawnSync(
+      "/bin/ps",
+      ["-p", String(existing.pid), "-o", "lstart="],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+    const stillRunning = observed.status === 0
+      && observed.stdout.trim() === existing.processStart;
+    check(!stillRunning, "another controlled cutover invocation is active");
+    rmSync(INVOCATION_LOCK, { force: true });
+    fsyncPath(OPERATION_ROOT);
+  }
+  writePrivateCreateOnly(INVOCATION_LOCK, `${JSON.stringify(lock)}\n`);
   try {
     return await callback();
   } finally {
-    rmSync(INVOCATION_LOCK, { force: true });
+    try {
+      const current = readJsonFile(INVOCATION_LOCK, "v71 invocation lock", { mode: 0o600 });
+      if (current.nonce === nonce) {
+        rmSync(INVOCATION_LOCK, { force: true });
+        fsyncPath(OPERATION_ROOT);
+      }
+    } catch {
+      // Preserve a changed or unreadable lock for explicit operator inspection.
+    }
   }
 }
 
@@ -525,9 +573,10 @@ function issueCredentials() {
       allowedSnapshotDigest: worker.metadata.allowed_snapshot_digest,
       secretRoot: SECRET_ROOT,
     });
-    writeCredentialMetadata(TARGET_CREDENTIAL, metadata, { secretRoot: SECRET_ROOT });
-    fsyncPath(TARGET_CREDENTIAL);
-    fsyncPath(dirname(TARGET_CREDENTIAL));
+    writePrivateCreateOnly(TARGET_CREDENTIAL, `${stableStringify(metadata)}\n`);
+    validateYoutubeExtractionWorkerSecretFile(TARGET_CREDENTIAL, {
+      secretRoot: SECRET_ROOT,
+    });
     createdPaths.push(TARGET_CREDENTIAL);
     writePrivateCreateOnly(MANAGER_TOKEN, `${manager.token}\n`);
     createdPaths.push(MANAGER_TOKEN);
@@ -538,6 +587,24 @@ function issueCredentials() {
     for (const path of createdPaths.reverse()) rmSync(path, { force: true });
     throw error;
   }
+}
+
+function cleanupAbortedPrecommitArtifacts(database) {
+  check(database?.credential?.generation === 46, "precommit cleanup requires generation 46");
+  check(!existsSync(VERIFICATION_RECEIPT_PATH) && !existsSync(RECEIPT_PATH),
+    "precommit cleanup refuses completed evidence");
+  for (const path of [
+    TARGET_TOKEN,
+    TARGET_CREDENTIAL,
+    MANAGER_TOKEN,
+    JOURNAL_PATH,
+    BACKUP_PRESTATE_PATH,
+    BACKUP_PLIST_PATH,
+  ]) {
+    rmSync(path, { force: true });
+  }
+  fsyncPath(OPERATION_ROOT);
+  fsyncPath(BACKUP_ROOT);
 }
 
 function buildInstallPlan(preparation, metadata) {
@@ -593,10 +660,10 @@ LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
       plistSha256: preparation.predecessor.plistSha256,
       preparationSha256: sha256(readFileSync(PREPARE_PATH)),
     };
-    durablePrivateJson(join(BACKUP_ROOT, "prestate.json"), backup);
-    copyFileSync(PLIST, join(BACKUP_ROOT, "generation-46.plist"), COPYFILE_EXCL);
-    chmodSync(join(BACKUP_ROOT, "generation-46.plist"), 0o600);
-    fsyncPath(join(BACKUP_ROOT, "generation-46.plist"));
+    durablePrivateJson(BACKUP_PRESTATE_PATH, backup);
+    copyFileSync(PLIST, BACKUP_PLIST_PATH, COPYFILE_EXCL);
+    chmodSync(BACKUP_PLIST_PATH, 0o600);
+    fsyncPath(BACKUP_PLIST_PATH);
     fsyncPath(BACKUP_ROOT);
     const transition = buildV71DatabaseTransitionSql({ managerClaims, credentialMetadata: metadata });
     const post = lastJson(await session.query(`${transition}\n${OBSERVATION_SQL}`));
@@ -645,13 +712,12 @@ LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
   }
 }
 
-async function enablePolicyWhileEnqueueClosed(target, adapter, finalize) {
+async function enablePolicyAfterDurableVerification(target, adapter, createVerificationReceipt) {
   const session = openDedicatedAdminSession(
     target.postgresContainerId,
     `youtube-resolution-v71-enable-${randomUUID().slice(0, 8)}`,
   );
   let policyCommitted = false;
-  let finalized = false;
   try {
     await session.query(`SELECT pg_advisory_lock(86120317);
 BEGIN ISOLATION LEVEL SERIALIZABLE;
@@ -662,6 +728,7 @@ LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
     const before = lastJson(await session.query(OBSERVATION_SQL));
     assertV71CutoverPoststate(before, { enabled: false });
+    const verificationReceipt = await createVerificationReceipt(before);
     const after = lastJson(await session.query(`
 UPDATE private.youtube_extraction_current_policy
 SET enabled=true, updated_at=clock_timestamp()
@@ -670,36 +737,18 @@ ${OBSERVATION_SQL}`));
     assertV71CutoverPoststate(after, { enabled: true });
     await session.query("COMMIT;");
     policyCommitted = true;
-    const readback = await observeDatabase(adapter);
-    assertV71CutoverPoststate(readback, { enabled: true });
-    const result = await finalize(readback);
-    finalized = true;
     await session.close();
-    return result;
+    const readback = await observeDatabase(adapter);
+    assertV71OperationalPoststate(readback);
+    return { verificationReceipt, finalDatabase: readback };
   } catch (error) {
-    if (policyCommitted && !finalized) {
-      try {
-        await session.query(`BEGIN ISOLATION LEVEL SERIALIZABLE;
-SET LOCAL statement_timeout='30s';
-LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;
-UPDATE private.youtube_extraction_current_policy
-SET enabled=false, updated_at=clock_timestamp()
-WHERE policy_key='primary';
-COMMIT;`);
-        const disabled = await observeDatabase(adapter);
-        assertV71CutoverPoststate(disabled, { enabled: false });
-      } catch (disableError) {
-        session.stop();
-        throw new Error(
-          `${error instanceof Error ? error.message : "finalization failed"}; `
-          + `policy disable failed: ${disableError instanceof Error ? disableError.message : "unknown"}`,
-        );
-      }
-    }
     session.stop();
+    if (policyCommitted) {
+      throw new Error(
+        `${error instanceof Error ? error.message : "activation readback failed"}; `
+        + "durable verification receipt retained for activation reconciliation",
+      );
+    }
     throw error;
   }
 }
@@ -737,33 +786,79 @@ function localHealth() {
   return health;
 }
 
-function completeReceipt({ credentials, running, finalRunning, caller, health, finalDatabase }) {
+function createVerificationReceipt({ credentials, running, caller, health, disabledDatabase }) {
   const receipt = {
-    schema: "homecook.youtube-v71-controlled-cutover-receipt.v1",
-    status: "generation-47-v71-running-verified",
-    completedAt: new Date().toISOString(),
+    schema: "homecook.youtube-v71-controlled-cutover-verification-receipt.v1",
+    status: "generation-47-v71-verified-policy-disabled",
+    verifiedAt: new Date().toISOString(),
     releaseSha: YOUTUBE_V71_RELEASE_SHA,
     credentialGeneration: 47,
     credentialExpiresAt: credentials.metadata.expires_at,
     managerCredentialRemoved: !existsSync(MANAGER_TOKEN),
     generation48Issued: false,
     policySnapshotDigest: YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,
-    policyEnabled: true,
+    policyEnabled: false,
+    activationAuthorized: true,
     worker: {
-      pid: finalRunning.pid,
-      preEnablePid: running.pid,
-      stableObservations: finalRunning.observations,
+      pid: running.pid,
+      stableObservations: running.observations,
       authenticatedPreRequest: caller.authenticatedStatus === 200,
       emptyClaimDenied: caller.emptyClaimDenied === true,
       localHealth: health,
       plistSha256: sha256(readFileSync(PLIST)),
     },
-    database: finalDatabase,
+    database: disabledDatabase,
     verificationBudget: {
       extractionCalls: 0,
       modelCalls: 0,
       allowedChecks: ["auth", "health"],
     },
+  };
+  let receiptCreated = false;
+  try {
+    durablePrivateJson(VERIFICATION_RECEIPT_PATH, receipt);
+    receiptCreated = true;
+    durablePrivateJson(JOURNAL_PATH, {
+      schema: "homecook.youtube-v71-controlled-cutover-journal.v1",
+      state: "activation-intent-durable-policy-disabled",
+      verificationReceipt: {
+        path: VERIFICATION_RECEIPT_PATH,
+        sha256: sha256(readFileSync(VERIFICATION_RECEIPT_PATH)),
+      },
+      generation48Issued: false,
+      extractionCalls: 0,
+    }, { replace: true });
+  } catch (error) {
+    if (receiptCreated) {
+      rmSync(VERIFICATION_RECEIPT_PATH, { force: true });
+      fsyncPath(dirname(VERIFICATION_RECEIPT_PATH));
+    }
+    throw error;
+  }
+  return receipt;
+}
+
+function createActivationReceipt({ verificationReceipt, finalRunning, finalDatabase }) {
+  const receipt = {
+    schema: "homecook.youtube-v71-controlled-cutover-receipt.v1",
+    status: "generation-47-v71-running-active-verified",
+    completedAt: new Date().toISOString(),
+    releaseSha: YOUTUBE_V71_RELEASE_SHA,
+    credentialGeneration: 47,
+    policySnapshotDigest: YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,
+    policyEnabled: true,
+    verificationReceipt: {
+      path: VERIFICATION_RECEIPT_PATH,
+      sha256: sha256(readFileSync(VERIFICATION_RECEIPT_PATH)),
+      verifiedAt: verificationReceipt.verifiedAt,
+    },
+    worker: {
+      pid: finalRunning.pid,
+      stableObservations: finalRunning.observations,
+      plistSha256: sha256(readFileSync(PLIST)),
+    },
+    database: finalDatabase,
+    verificationBudget: verificationReceipt.verificationBudget,
   };
   let receiptCreated = false;
   try {
@@ -773,6 +868,7 @@ function completeReceipt({ credentials, running, finalRunning, caller, health, f
       schema: "homecook.youtube-v71-controlled-cutover-journal.v1",
       state: "completed",
       receipt: { path: RECEIPT_PATH, sha256: sha256(readFileSync(RECEIPT_PATH)) },
+      verificationReceipt: receipt.verificationReceipt,
       generation48Issued: false,
       extractionCalls: 0,
     }, { replace: true });
@@ -786,13 +882,51 @@ function completeReceipt({ credentials, running, finalRunning, caller, health, f
   return receipt;
 }
 
+function verificationReceiptProof() {
+  return existsSync(VERIFICATION_RECEIPT_PATH)
+    ? {
+        path: VERIFICATION_RECEIPT_PATH,
+        sha256: sha256(readFileSync(VERIFICATION_RECEIPT_PATH)),
+      }
+    : null;
+}
+
+function readVerificationReceipt(expectedProof) {
+  const proof = verificationReceiptProof();
+  check(
+    proof
+    && expectedProof?.path === proof.path
+    && expectedProof?.sha256 === proof.sha256,
+    "verification receipt proof mismatch",
+  );
+  const receipt = readJsonFile(
+    VERIFICATION_RECEIPT_PATH,
+    "v71 verification receipt",
+    { mode: 0o600 },
+  );
+  check(
+    receipt.schema === "homecook.youtube-v71-controlled-cutover-verification-receipt.v1"
+    && receipt.status === "generation-47-v71-verified-policy-disabled"
+    && receipt.releaseSha === YOUTUBE_V71_RELEASE_SHA
+    && receipt.credentialGeneration === 47
+    && receipt.policyEnabled === false
+    && receipt.activationAuthorized === true
+    && receipt.verificationBudget?.extractionCalls === 0
+    && receipt.verificationBudget?.modelCalls === 0,
+    "verification receipt is not exact",
+  );
+  return receipt;
+}
+
 async function execute(confirmation) {
   check(confirmation === YOUTUBE_V71_CUTOVER_CONFIRMATION, "exact confirmation required");
   check(!existsSync(RECEIPT_PATH), "cutover receipt already exists");
+  check(!existsSync(VERIFICATION_RECEIPT_PATH), "verification receipt already exists; use resume");
   const preparation = validatePreparation();
   const { adapter, target } = await adapterAndTarget();
   const before = await observeDatabase(adapter);
   assertV71CutoverPrestate(before);
+  cleanupAbortedPrecommitArtifacts(before);
   const credentials = issueCredentials();
   let registered = false;
   try {
@@ -815,39 +949,52 @@ async function execute(confirmation) {
     registered = true;
     rmSync(MANAGER_TOKEN, { force: true });
     installPlist(plan);
-    const running = await stableWorker();
+    await stableWorker();
     const caller = await verifyWorkerCaller(credentials.workerToken);
     const health = localHealth();
     const disabled = await observeDatabase(adapter);
     assertV71CutoverPoststate(disabled, { enabled: false });
-    return enablePolicyWhileEnqueueClosed(target, adapter, async (finalDatabase) => {
-      const finalRunning = await stableWorker();
-      return completeReceipt({
-        credentials,
-        running,
-        finalRunning,
-        caller,
-        health,
-        finalDatabase,
-      });
+    const activation = await enablePolicyAfterDurableVerification(
+      target,
+      adapter,
+      async (lockedDisabledDatabase) => {
+        const lockedRunning = await stableWorker();
+        return createVerificationReceipt({
+          credentials,
+          running: lockedRunning,
+          caller,
+          health,
+          disabledDatabase: lockedDisabledDatabase,
+        });
+      },
+    );
+    const finalRunning = await stableWorker();
+    return createActivationReceipt({
+      verificationReceipt: activation.verificationReceipt,
+      finalRunning,
+      finalDatabase: activation.finalDatabase,
     });
   } catch (error) {
     rmSync(MANAGER_TOKEN, { force: true });
     const readback = await observeDatabase(adapter).catch(() => null);
     if (!registered && readback?.credential?.generation === 46) {
-      rmSync(TARGET_TOKEN, { force: true });
-      rmSync(TARGET_CREDENTIAL, { force: true });
+      cleanupAbortedPrecommitArtifacts(readback);
       const status = readLaunchStatus();
       if (!status.loaded) {
         runLaunchctl(["bootstrap", `gui/${UID}`, PLIST]);
         runLaunchctl(["kickstart", "-k", SERVICE]);
       }
     } else {
+      const activationPending = readback?.credential?.generation === 47
+        && readback?.policy?.enabled === true;
       durablePrivateJson(JOURNAL_PATH, {
         schema: "homecook.youtube-v71-controlled-cutover-journal.v1",
-        state: "generation-47-kept-v71-repair-required",
+        state: activationPending
+          ? "generation-47-active-receipt-reconcile-required"
+          : "generation-47-kept-v71-repair-required",
         error: error instanceof Error ? error.message : "cutover failed",
         database: readback,
+        verificationReceipt: verificationReceiptProof(),
         managerCredentialRemoved: !existsSync(MANAGER_TOKEN),
         generation48Issued: false,
       }, { replace: existsSync(JOURNAL_PATH) });
@@ -862,9 +1009,12 @@ async function resume(confirmation) {
   check(existsSync(JOURNAL_PATH), "cutover journal is missing");
   const journal = readJsonFile(JOURNAL_PATH, "v71 cutover journal", { mode: 0o600 });
   check([
+    "commit-intent",
     "generation-47-committed-policy-disabled",
     "generation-47-committed-install-repair-required",
     "generation-47-kept-v71-repair-required",
+    "activation-intent-durable-policy-disabled",
+    "generation-47-active-receipt-reconcile-required",
   ].includes(journal.state), "journal does not authorize generation-47 repair");
   validatePreparation({ allowReplacedPlist: true });
   ensureMaterializedCandidate();
@@ -876,8 +1026,16 @@ async function resume(confirmation) {
   const credentials = { workerToken, metadata };
   const { adapter, target } = await adapterAndTarget();
   const database = await observeDatabase(adapter);
-  assertV71CutoverPoststate(database, { enabled: false });
-  const previousBytes = readFileSync(join(BACKUP_ROOT, "generation-46.plist"));
+  if (database.policy?.enabled === true) {
+    assertV71OperationalPoststate(database);
+    check(existsSync(VERIFICATION_RECEIPT_PATH),
+      "active policy requires a durable verification receipt");
+  } else {
+    assertV71CutoverPoststate(database, { enabled: false });
+  }
+  rmSync(MANAGER_TOKEN, { force: true });
+  fsyncPath(SECRET_ROOT);
+  const previousBytes = readFileSync(BACKUP_PLIST_PATH);
   const preparation = readJsonFile(PREPARE_PATH, "v71 cutover preparation", { mode: 0o600 });
   check(sha256(previousBytes) === preparation.predecessor.plistSha256,
     "generation-46 launcher backup changed");
@@ -887,27 +1045,53 @@ async function resume(confirmation) {
     const status = readLaunchStatus();
     if (status.loaded) runLaunchctl(["bootout", SERVICE]);
     installPlist(plan);
-    const running = await stableWorker();
+    await stableWorker();
     const caller = await verifyWorkerCaller(workerToken);
     const health = localHealth();
-    assertV71CutoverPoststate(await observeDatabase(adapter), { enabled: false });
-    return enablePolicyWhileEnqueueClosed(target, adapter, async (finalDatabase) => {
+    const current = await observeDatabase(adapter);
+    if (current.policy?.enabled === true) {
+      assertV71OperationalPoststate(current);
+      const verificationReceipt = readVerificationReceipt(journal.verificationReceipt);
       const finalRunning = await stableWorker();
-      return completeReceipt({
-        credentials,
-        running,
+      return createActivationReceipt({
+        verificationReceipt,
         finalRunning,
-        caller,
-        health,
-        finalDatabase,
+        finalDatabase: current,
       });
+    }
+    assertV71CutoverPoststate(current, { enabled: false });
+    const activation = await enablePolicyAfterDurableVerification(
+      target,
+      adapter,
+      async (lockedDisabledDatabase) => {
+        const lockedRunning = await stableWorker();
+        return existsSync(VERIFICATION_RECEIPT_PATH)
+          ? readVerificationReceipt(journal.verificationReceipt)
+          : createVerificationReceipt({
+              credentials,
+              running: lockedRunning,
+              caller,
+              health,
+              disabledDatabase: lockedDisabledDatabase,
+            });
+      },
+    );
+    const finalRunning = await stableWorker();
+    return createActivationReceipt({
+      verificationReceipt: activation.verificationReceipt,
+      finalRunning,
+      finalDatabase: activation.finalDatabase,
     });
   } catch (error) {
+    const failedDatabase = await observeDatabase(adapter).catch(() => null);
     durablePrivateJson(JOURNAL_PATH, {
       schema: "homecook.youtube-v71-controlled-cutover-journal.v1",
-      state: "generation-47-kept-v71-repair-required",
+      state: failedDatabase?.policy?.enabled === true
+        ? "generation-47-active-receipt-reconcile-required"
+        : "generation-47-kept-v71-repair-required",
       error: error instanceof Error ? error.message : "repair failed",
-      database: await observeDatabase(adapter).catch(() => null),
+      database: failedDatabase,
+      verificationReceipt: verificationReceiptProof(),
       managerCredentialRemoved: !existsSync(MANAGER_TOKEN),
       generation48Issued: false,
     }, { replace: true });

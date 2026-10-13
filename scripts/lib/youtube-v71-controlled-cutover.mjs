@@ -190,6 +190,16 @@ export function assertV71CutoverPoststate(observation, { enabled }) {
   return true;
 }
 
+export function assertV71OperationalPoststate(observation) {
+  const normalized = {
+    ...observation,
+    queued: 0,
+    processing: 0,
+    permitHeld: false,
+  };
+  return assertV71CutoverPoststate(normalized, { enabled: true });
+}
+
 export function buildV71DatabaseTransitionSql({ managerClaims, credentialMetadata }) {
   assertV71ManagerClaims(managerClaims);
   assertV71PolicyConstants();
