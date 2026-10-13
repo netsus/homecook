@@ -10,7 +10,7 @@
     "afterLedgerCount": 219,
     "migration": {
       "path": "supabase/migrations/20261012120000_youtube_saved_recipe_canonical_bridge.sql",
-      "sha256": "69af2c4fa8411e63cc7a5804ea3fb684d638567e44aaaa571f662229c603e46a"
+      "sha256": "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
     }
   },
   "worker": {
@@ -815,7 +815,7 @@
     {
       "path": "scripts/lib/prelaunch-integrated-master-readiness.mjs",
       "beforeSha256": null,
-      "afterSha256": "a72f81f8b459890be8a95bbc65e19ab99270b688c69bc5430ae9a793c8bcb2ba"
+      "afterSha256": "dff9894ad035526e2d4c8a1dc95d41a932753fb913df1bb3895a36869bfb4db5"
     },
     {
       "path": "scripts/lib/prelaunch-nutrition-recovery-readiness.mjs",
@@ -1030,7 +1030,7 @@
     {
       "path": "scripts/youtube-integrated-controlled-db.mjs",
       "beforeSha256": null,
-      "afterSha256": "5a1bafc74017797b4d79f3792293658c9317f74949ed7d23431a8ba78a2b5c61"
+      "afterSha256": "bd7623fe2bf45435f90689162f8ddd7f5273fad91582b0a8e46eab500723a0b1"
     },
     {
       "path": "scripts/youtube-resolution-controlled-db.mjs",
@@ -1055,7 +1055,7 @@
     {
       "path": "supabase/migrations/20261012120000_youtube_saved_recipe_canonical_bridge.sql",
       "beforeSha256": null,
-      "afterSha256": "69af2c4fa8411e63cc7a5804ea3fb684d638567e44aaaa571f662229c603e46a"
+      "afterSha256": "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
     },
     {
       "path": "tests/08b-pantry-match.backend.test.ts",
@@ -1275,7 +1275,7 @@
     {
       "path": "tests/prelaunch-integrated-master-readiness.test.ts",
       "beforeSha256": null,
-      "afterSha256": "7f8965e098babceac2249525f1994f6b13fa17c6280727ab22b1f2ed30d5b679"
+      "afterSha256": "1b72a1ccbddf78715ae5d9f7fb30a137c936958db587f98191f424284c1a1266"
     },
     {
       "path": "tests/prelaunch-nutrition-recovery-readiness.test.ts",
@@ -1440,7 +1440,7 @@
     {
       "path": "tests/sql/youtube-saved-recipe-results-verify.sql",
       "beforeSha256": "615530d6d42097b21fb38ef644c4ae746911ee60aad01bc0480d4437a3a9021c",
-      "afterSha256": "bde098d3ebbd8294ef55ce9dcb645e65bdfe1d36bfabf3590329f85ae647d806"
+      "afterSha256": "d183e366521b98acd440435972484d801f0ffb6487ea984b35bb3eacf3772db5"
     },
     {
       "path": "tests/user-achievement-awards.test.ts",
@@ -1535,7 +1535,7 @@
     {
       "path": "tests/youtube-saved-recipe-canonical-bridge-postgres.integration.test.ts",
       "beforeSha256": null,
-      "afterSha256": "3979e9efa184711baaaf93adc564fd0dba772fcc3740769ef734ca9b66ecb88a"
+      "afterSha256": "18af910ca83d5dc93c7d8562b7034f376f0291ff2f7a2f235f7b6a483f907b8e"
     },
     {
       "path": "tests/youtube-saved-recipes-api-client.test.ts",
