@@ -98,7 +98,7 @@ function makeTreeWritable(path: string) {
 
 function createCanonicalReadinessFixture(
   prefix: string,
-  pipelineIdentity = YOUTUBE_ASYNC_POLICY.pipelineIdentity,
+  pipelineIdentity: string = YOUTUBE_ASYNC_POLICY.pipelineIdentity,
 ) {
   const root = mkdtempSync(join(tmpdir(), prefix));
   const releaseSha = "1".repeat(40);

@@ -19,12 +19,17 @@ import { loadIngredientSearchReview, reviewedIngredientSearchReadiness, verifyIn
 import { assertYoutubeTrialSource, loadYoutubeTrialReview, reviewedYoutubeTrialReadiness, verifyYoutubeTrialAppliedDatabase, verifyYoutubeTrialSourceBackfill } from "./lib/prelaunch-youtube-trial-readiness.mjs";
 import { loadYoutubeResolutionReview, reviewedYoutubeResolutionReadiness, verifyYoutubeResolutionAppliedDatabase, youtubeResolutionAppliedDatabaseState, youtubeResolutionDatabaseStateFromReview, YOUTUBE_RESOLUTION_RELEASE_SHA, YOUTUBE_RESOLUTION_ROLLBACK_REASON } from "./lib/prelaunch-youtube-resolution-readiness.mjs";
 import {
+  assertIntegratedMasterDatabaseGuard,
   assertIntegratedMasterDescriptor,
+  assertIntegratedMasterWebFirstState,
   integratedMasterAppliedDatabaseState,
   parseIntegratedMasterDescriptor,
   reviewedIntegratedMasterReadiness,
   verifyIntegratedMasterDatabase,
+  YOUTUBE_INTEGRATED_DB_GUARD_SCHEMA,
   YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR,
+  YOUTUBE_INTEGRATED_ROLLBACK_REASON,
+  YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
 } from "./lib/prelaunch-integrated-master-readiness.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
@@ -36,6 +41,8 @@ const plistPath = join(homedir(), "Library/LaunchAgents/com.homecook.production.
 const statePath = join(root, "state.json");
 const recoveryPath = join(root, "recovery.json");
 const databaseStatePath = join(root, "database-state.json");
+const integratedDatabaseGuardPath = join(root, "youtube-integrated-database-guard.json");
+const integratedDatabaseOperationRoot = join(homedir(), ".homecook/operations/youtube-integrated-20261013");
 const domain = `gui/${process.getuid()}`;
 const service = `${domain}/com.homecook.production`;
 let logFd;
@@ -57,6 +64,22 @@ function atomicWrite(path, bytes) {
   writeFileSync(temp, bytes, { mode: 0o600 });
   chmodSync(temp, 0o600);
   renameSync(temp, path);
+}
+function loadIntegratedDatabaseGuard(expectedReleaseSha, migrationSha256, required = false) {
+  if (!existsSync(integratedDatabaseGuardPath)) {
+    if (required) throw new DeploymentError("DB219 rollback guard가 없어 적용 상태를 기록할 수 없습니다.");
+    return null;
+  }
+  try {
+    const guard = JSON.parse(readFileSync(integratedDatabaseGuardPath, "utf8"));
+    if (guard.schema !== YOUTUBE_INTEGRATED_DB_GUARD_SCHEMA) throw new Error();
+    const journal = JSON.parse(readFileSync(join(guard.operationDirectory, guard.journalFile), "utf8"));
+    return assertIntegratedMasterDatabaseGuard({ guard, journal,
+      releaseSha: expectedReleaseSha, migrationSha256, operationRoot: integratedDatabaseOperationRoot });
+  } catch (error) {
+    if (error instanceof DeploymentError) throw error;
+    throw new DeploymentError(`${YOUTUBE_INTEGRATED_ROLLBACK_REASON} rollback guard 검증에 실패했습니다.`);
+  }
 }
 function current() {
   const bytes = readFileSync(plistPath);
@@ -375,7 +398,15 @@ process.exit(result.status ?? 1);`;
       if (buildId !== buildOptions.env.HOMECOOK_RELEASE_BUILD_ID) throw new DeploymentError("새 웹의 고유 빌드 ID가 일치하지 않습니다.");
       atomicWrite(backup, live.bytes);
       const reviewedDatabase = nutritionRecoveryDatabase ?? pieceUnitDatabase ?? youtubeResolutionDatabase;
-      state = { backup, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistHash: hash(live.bytes), checkout, ref: selection.target, buildId, targetPlistHash: hash(nextBytes), environmentKeys: Object.keys(patch).sort(), automatedTests: options.skipAutomatedTests ? "skipped_by_explicit_request" : "default", primaryTestScript: options.testScript ?? null, verificationScripts: selection.verificationScripts, databaseVerification: databasePlan, ...(reviewedDatabase ? { database: reviewedDatabase } : {}) };
+      state = { backup, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistHash: hash(live.bytes), checkout, ref: selection.target, buildId, targetPlistHash: hash(nextBytes), environmentKeys: Object.keys(patch).sort(), automatedTests: options.skipAutomatedTests ? "skipped_by_explicit_request" : "default", primaryTestScript: options.testScript ?? null, verificationScripts: selection.verificationScripts, databaseVerification: databasePlan,
+        ...(options.reviewedIntegratedMasterReadiness ? { integratedMasterWebFirst: {
+          schema: YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
+          releaseSha: selection.target,
+          buildId,
+          databasePhase: "predecessor",
+          migrationSha256: selection.integratedReview.descriptor.database.migration.sha256,
+        } } : {}),
+        ...(reviewedDatabase ? { database: reviewedDatabase } : {}) };
       if (needsDatabase && !options.alreadyAppliedDb && !options.reviewedIntegratedMasterReadiness) {
         say("DB 변경 검사 및 격리된 데이터베이스 검증 중");
         const database = await prepareDatabaseDeployment({
@@ -430,6 +461,19 @@ async function rollback() {
   const record = recovering ? recoveryPath : statePath;
   if (!existsSync(record)) throw new DeploymentError("저장된 이전 웹 배포가 없습니다.");
   const state = JSON.parse(readFileSync(record, "utf8"));
+  if (existsSync(integratedDatabaseGuardPath)) {
+    let descriptor;
+    try {
+      descriptor = parseIntegratedMasterDescriptor(
+        readFileSync(join(state.checkout, YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR)),
+      );
+      loadIntegratedDatabaseGuard(state.ref, descriptor.database.migration.sha256, true);
+    } catch (error) {
+      if (error instanceof DeploymentError && error.message === YOUTUBE_INTEGRATED_ROLLBACK_REASON) throw error;
+      throw new DeploymentError(`${YOUTUBE_INTEGRATED_ROLLBACK_REASON} guard 또는 journal 검증이 필요합니다.`);
+    }
+    throw new DeploymentError(YOUTUBE_INTEGRATED_ROLLBACK_REASON);
+  }
   const recordedDatabase = existsSync(databaseStatePath) ? JSON.parse(readFileSync(databaseStatePath, "utf8")) : null;
   const database = assertDatabaseRollbackCompatible(state.database, recordedDatabase);
   const live = current();
@@ -488,11 +532,11 @@ async function recordIntegratedMasterDatabase(options) {
     throw new DeploymentError("통합 웹 선배포 상태가 없어 DB219 상태를 연결할 수 없습니다.");
   }
   const state = JSON.parse(readFileSync(statePath, "utf8"));
-  if (state.ref !== live.ref || state.checkout !== live.cwd) {
-    throw new DeploymentError("현재 통합 웹과 저장된 배포 상태가 일치하지 않습니다.");
-  }
+  assertIntegratedMasterWebFirstState({ state, live, releaseSha: live.ref, descriptor });
+  loadIntegratedDatabaseGuard(live.ref, descriptor.database.migration.sha256, true);
   atomicWrite(databaseStatePath, JSON.stringify(database));
   atomicWrite(statePath, JSON.stringify({ ...state, databaseVerification: databasePlan, database }));
+  unlinkSync(integratedDatabaseGuardPath);
   say(JSON.stringify({ recorded: true, database }, null, 2));
 }
 async function main() {
@@ -516,7 +560,7 @@ async function main() {
     const reviewedDatabase = ref === YOUTUBE_RESOLUTION_RELEASE_SHA
       ? youtubeResolutionDatabaseStateFromReview(await loadYoutubeResolutionReview()) : null;
     const database = currentDatabaseState({ currentRef: ref, reviewedReleaseSha: YOUTUBE_RESOLUTION_RELEASE_SHA, reviewedDatabase, recordedDatabase });
-    say(JSON.stringify({ cwd, ref, buildId, loaded, database, rollbackAvailable: existsSync(statePath) || existsSync(recoveryPath), recoveryPending: existsSync(recoveryPath) }, null, 2));
+    say(JSON.stringify({ cwd, ref, buildId, loaded, database, rollbackAvailable: (existsSync(statePath) || existsSync(recoveryPath)) && !existsSync(integratedDatabaseGuardPath), recoveryPending: existsSync(recoveryPath), integratedDatabaseGuardPresent: existsSync(integratedDatabaseGuardPath) }, null, 2));
     return;
   }
   if (action === "plan") {

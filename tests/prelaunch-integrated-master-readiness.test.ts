@@ -1,20 +1,26 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  assertIntegratedMasterDatabaseGuard,
   assertIntegratedMasterDescriptor,
   assertIntegratedMasterDatabaseObservation,
+  assertIntegratedMasterWebFirstState,
   integratedMasterAppliedDatabaseState,
   parseIntegratedMasterDescriptor,
   reviewedIntegratedMasterReadiness,
   unwrapIntegratedMigration,
   YOUTUBE_INTEGRATED_CLIENT_VERSION,
+  YOUTUBE_INTEGRATED_DB_GUARD_SCHEMA,
   YOUTUBE_INTEGRATED_LIVE_RELEASE,
   YOUTUBE_INTEGRATED_MIGRATION,
   YOUTUBE_INTEGRATED_PIPELINE_IDENTITY,
   YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR,
   YOUTUBE_INTEGRATED_SOURCE_COMMITS,
   YOUTUBE_INTEGRATED_VERIFIER_VERSION,
+  YOUTUBE_INTEGRATED_ROLLBACK_REASON,
+  YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
 } from "../scripts/lib/prelaunch-integrated-master-readiness.mjs";
 import {
   classifyPrelaunchScope,
@@ -22,6 +28,8 @@ import {
 } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const digest = (value: Buffer | string) => createHash("sha256").update(value).digest("hex");
+const controlledDbSource = readFileSync(new URL("../scripts/youtube-integrated-controlled-db.mjs", import.meta.url), "utf8");
+const deploySource = readFileSync(new URL("../scripts/deploy-prelaunch-web.mjs", import.meta.url), "utf8");
 const runtimePath = "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs";
 const policyPath = "lib/server/youtube-async-extraction.ts";
 const deniedPath = ".oxlintrc.json";
@@ -64,8 +72,8 @@ describe("prelaunch integrated master readiness", () => {
       descriptor,
       liveSha: YOUTUBE_INTEGRATED_LIVE_RELEASE,
       changedFiles: paths,
-      readAt: (ref, path) => ref === YOUTUBE_INTEGRATED_LIVE_RELEASE ? null : contents.get(path) ?? null,
-      isAncestor: (source) => YOUTUBE_INTEGRATED_SOURCE_COMMITS.includes(source),
+      readAt: (ref: string, path: string) => ref === YOUTUBE_INTEGRATED_LIVE_RELEASE ? null : contents.get(path) ?? null,
+      isAncestor: (source: string) => YOUTUBE_INTEGRATED_SOURCE_COMMITS.includes(source),
     });
     expect([...review.reviewedFiles]).toEqual(paths);
     expect(() => assertIntegratedMasterDescriptor({
@@ -79,7 +87,7 @@ describe("prelaunch integrated master readiness", () => {
       descriptor,
       liveSha: YOUTUBE_INTEGRATED_LIVE_RELEASE,
       changedFiles: paths,
-      readAt: (ref, path) => ref === "target" && path === deniedPath
+      readAt: (ref: string, path: string) => ref === "target" && path === deniedPath
         ? Buffer.from("drift") : ref === "target" ? contents.get(path) ?? null : null,
       isAncestor: () => true,
     })).toThrow("target digest");
@@ -101,7 +109,7 @@ describe("prelaunch integrated master readiness", () => {
       descriptor: deletedDescriptor,
       liveSha: YOUTUBE_INTEGRATED_LIVE_RELEASE,
       changedFiles: deletedDescriptor.files.map((entry: { path: string }) => entry.path),
-      readAt: (ref, path) => path === deletedPath
+      readAt: (ref: string, path: string) => path === deletedPath
         ? ref === YOUTUBE_INTEGRATED_LIVE_RELEASE ? deletedBytes : null
         : ref === YOUTUBE_INTEGRATED_LIVE_RELEASE ? null : contents.get(path) ?? null,
       isAncestor: () => true,
@@ -184,6 +192,77 @@ describe("prelaunch integrated master readiness", () => {
       .toThrow("private owner");
   });
 
+  it("binds DB219 apply to the exact serving web-first release and predecessor proof", () => {
+    const descriptor = parseIntegratedMasterDescriptor(Buffer.from(JSON.stringify(descriptorValue)));
+    const releaseSha = "b".repeat(40);
+    const live = { cwd: "/private/release", ref: releaseSha, buildId: "prelaunch-build" };
+    const state = {
+      ref: releaseSha,
+      checkout: live.cwd,
+      buildId: live.buildId,
+      databaseVerification: {
+        phase: "predecessor",
+        savedRows: 4,
+        pending: [{ sha256: descriptor.database.migration.sha256 }],
+      },
+      integratedMasterWebFirst: {
+        schema: YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
+        releaseSha,
+        buildId: live.buildId,
+        databasePhase: "predecessor",
+        migrationSha256: descriptor.database.migration.sha256,
+      },
+    };
+    expect(assertIntegratedMasterWebFirstState({ state, live, releaseSha, descriptor }))
+      .toEqual({ releaseSha, buildId: live.buildId, checkout: live.cwd });
+    expect(() => assertIntegratedMasterWebFirstState({
+      state: { ...state, buildId: "other-build" }, live, releaseSha, descriptor,
+    })).toThrow("live web");
+    expect(() => assertIntegratedMasterWebFirstState({
+      state: { ...state, integratedMasterWebFirst: undefined }, live, releaseSha, descriptor,
+    })).toThrow("web-first marker");
+  });
+
+  it("ties the fail-closed rollback guard to the exact operation journal", () => {
+    const releaseSha = "b".repeat(40);
+    const migrationSha256 = "c".repeat(64);
+    const operationId = "11111111-2222-4333-8444-555555555555";
+    const operationRoot = "/private/youtube-integrated";
+    const guard = {
+      schema: YOUTUBE_INTEGRATED_DB_GUARD_SCHEMA,
+      status: "commit_dispatch_guard",
+      operationId,
+      operationDirectory: `${operationRoot}/${operationId}`,
+      journalFile: "commit-intent.json",
+      releaseSha,
+      migrationSha256,
+      backwardCompatible: false,
+      reason: YOUTUBE_INTEGRATED_ROLLBACK_REASON,
+    };
+    const journal = { operationId, releaseSha, migration: { sha256: migrationSha256 } };
+    expect(assertIntegratedMasterDatabaseGuard({ guard, journal, releaseSha,
+      migrationSha256, operationRoot })).toMatchObject({ status: "commit_dispatch_guard" });
+    expect(() => assertIntegratedMasterDatabaseGuard({
+      guard: { ...guard, operationDirectory: "/private/other/11111111-2222-4333-8444-555555555555" },
+      journal, releaseSha, migrationSha256, operationRoot,
+    })).toThrow("rollback guard");
+    expect(() => assertIntegratedMasterDatabaseGuard({
+      guard, journal: { ...journal, releaseSha: "d".repeat(40) }, releaseSha,
+      migrationSha256, operationRoot,
+    })).toThrow("guard journal");
+  });
+
+  it("wires the shared deploy lock, queue locks, serving-web proof, and rollback guard into the operational lane", () => {
+    expect(controlledDbSource).toContain("mkdirSync(deploymentLockPath");
+    expect(controlledDbSource).toContain("LOCK TABLE public.youtube_extraction_jobs IN SHARE ROW EXCLUSIVE MODE");
+    expect(controlledDbSource).toContain("LOCK TABLE public.youtube_extractor_permits IN SHARE ROW EXCLUSIVE MODE");
+    expect(controlledDbSource).toContain("await verifyLiveWebFirst(options.releaseSha, descriptor)");
+    expect(controlledDbSource).toContain("status: \"commit_dispatch_guard\"");
+    expect(deploySource).toContain("integratedMasterWebFirst");
+    expect(deploySource).toContain("loadIntegratedDatabaseGuard(state.ref");
+    expect(deploySource).toContain("unlinkSync(integratedDatabaseGuardPath)");
+  });
+
   it("unwraps exactly one migration transaction for the controlled DB session", () => {
     expect(unwrapIntegratedMigration(Buffer.from("begin;\nselect 1;\ncommit;\n")))
       .toBe("select 1;");
@@ -193,4 +272,3 @@ describe("prelaunch integrated master readiness", () => {
       .toThrow("nested transaction");
   });
 });
-

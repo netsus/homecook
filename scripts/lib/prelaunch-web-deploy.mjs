@@ -11,6 +11,12 @@ export function prelaunchChangedFiles(git, from, to) {
   return git(["diff", "--name-only", "--no-renames", "-z", from, to]).split("\0").filter(Boolean);
 }
 
+/**
+ * @param {string[]} files
+ * @param {any} before
+ * @param {any} after
+ * @param {{reviewedYoutubeTrialSupport?: boolean, reviewedYoutubeResolutionSupport?: boolean, reviewedIntegratedFiles?: Set<string> | null}} [options]
+ */
 export function classifyPrelaunchScope(files, before, after, {
   reviewedYoutubeTrialSupport = false,
   reviewedYoutubeResolutionSupport = false,

@@ -122,9 +122,9 @@ accepted estimate 비덮기, localized resolver name 유지, 비재료 fail-clos
 `pnpm verify:anti-slop`, `pnpm typecheck`, `pnpm lint`, `pnpm build`도 종료값 0이다. lint/build에는
 이번 범위 이전부터 있던 React Hook/unused 경고가 남지만 오류나 신규 Anti Slop 위반은 없다.
 
-`pnpm verify:youtube-ingredient-resolution:isolated`는 disposable local Supabase에서 218개 migration
-(`d1b2a37a602359467015ddf10fcdc051c751dc3eabf6df61bfe61a220f844d14`)을 재생하고 실제 SQL
-resolver fence와 저장 postimage/concurrent ensure를 포함한 8개 integration test를 통과했다. 그중
+`pnpm verify:youtube-ingredient-resolution:isolated`는 disposable local Supabase에서 219개 migration
+(`54050f7754326e13b9207854f38233d62794fd7399c09b29b45759648589e080`)을 재생하고 실제 SQL
+resolver fence와 저장 postimage/concurrent ensure를 포함한 10개 integration test를 통과했다. 그중
 source-bound fixture는 실제 SQL resolver → JS finalizer → finalize RPC/저장 postimage를 연속해서
 지나며 단일 canonical 양파는 `1/2개`를 유지하고, `그릇 2개`와 다중 synonym 후보는
 `unknown/null/review-required`로 강등됨을 확인한다.

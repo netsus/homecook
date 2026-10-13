@@ -23,6 +23,12 @@ export const YOUTUBE_INTEGRATED_CLIENT_VERSION =
   "codex-vision-source-anchored-v71-word-range-hardening";
 export const YOUTUBE_INTEGRATED_VERIFIER_VERSION =
   "source-anchor-fidelity-v44-source-bound-review-hardening";
+export const YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA =
+  "homecook.youtube-integrated-web-first.v1";
+export const YOUTUBE_INTEGRATED_DB_GUARD_SCHEMA =
+  "homecook.youtube-integrated-database-guard.v1";
+export const YOUTUBE_INTEGRATED_ROLLBACK_REASON =
+  "DB219 적용이 시작되었거나 완료되어 이전 f970 웹으로 자동 rollback할 수 없습니다.";
 
 const COMMIT = /^[a-f0-9]{40}$/u;
 const SHA256 = /^[a-f0-9]{64}$/u;
@@ -31,6 +37,48 @@ const requireValue = (value, message) => {
   if (!value) throw new DeploymentError(`통합 master 배포 증명 불일치: ${message}`);
 };
 const ledgerSql = "SELECT coalesce(json_agg(t ORDER BY filename),'[]'::json) FROM (SELECT filename,sha256 FROM homecook_deploy.migrations) t;";
+
+export function assertIntegratedMasterWebFirstState({ state, live, releaseSha, descriptor }) {
+  const marker = state?.integratedMasterWebFirst;
+  requireValue(COMMIT.test(releaseSha ?? "")
+    && state?.ref === releaseSha
+    && state?.checkout === live?.cwd
+    && state?.buildId === live?.buildId
+    && live?.ref === releaseSha,
+  "live web release state");
+  requireValue(marker?.schema === YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA
+    && marker.releaseSha === releaseSha
+    && marker.buildId === live.buildId
+    && marker.databasePhase === "predecessor"
+    && marker.migrationSha256 === descriptor?.database?.migration?.sha256,
+  "web-first marker");
+  requireValue(state?.databaseVerification?.phase === "predecessor"
+    && state.databaseVerification.savedRows >= 0
+    && state.databaseVerification.pending?.length === 1
+    && state.databaseVerification.pending[0]?.sha256 === descriptor.database.migration.sha256,
+  "web-first predecessor database proof");
+  return Object.freeze({ releaseSha, buildId: live.buildId, checkout: live.cwd });
+}
+
+export function assertIntegratedMasterDatabaseGuard({ guard, journal, releaseSha, migrationSha256, operationRoot }) {
+  requireValue(guard?.schema === YOUTUBE_INTEGRATED_DB_GUARD_SCHEMA
+    && ["applying_precommit", "commit_dispatch_guard"].includes(guard.status)
+    && typeof guard.operationId === "string"
+    && /^[0-9a-f-]{36}$/u.test(guard.operationId)
+    && guard.releaseSha === releaseSha
+    && guard.migrationSha256 === migrationSha256
+    && typeof operationRoot === "string"
+    && guard.operationDirectory === join(operationRoot, guard.operationId)
+    && guard.journalFile === (guard.status === "commit_dispatch_guard" ? "commit-intent.json" : "prestate.json")
+    && guard.backwardCompatible === false
+    && guard.reason === YOUTUBE_INTEGRATED_ROLLBACK_REASON,
+  "database rollback guard");
+  requireValue(journal?.operationId === guard.operationId
+    && journal.releaseSha === releaseSha
+    && journal.migration?.sha256 === migrationSha256,
+  "database rollback guard journal");
+  return Object.freeze({ ...guard });
+}
 
 export function unwrapIntegratedMigration(bytes) {
   const source = Buffer.from(bytes).toString("utf8");

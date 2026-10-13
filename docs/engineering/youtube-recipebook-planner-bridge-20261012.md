@@ -52,8 +52,8 @@
 - 통합 후보는 master `7e466b170ba39795220ef64e67eac3fab4429420`에서 시작해 현재 운영 웹 `f970bc1d1f1e981d8947e852a9b51ada4a74570a`를 두 번째 부모로 연결한 `d7fb78ae4c459eed8555046f6480dbe61dc24b79` 위에 이 기능을 적용했다. 47개 충돌은 최신 master 후속 구현을 유지했고, 운영 이력 대응과 파일별 결정은 [재통합 기록](./master-live-reintegration-20261012.md)에 고정했다. 미완성 leftovers, 보류 `444fe1f6f`, P5 추출기·평가 이력과 별도 source-bound worker 후보는 포함하지 않는다.
 - 운영 DB 원장 218개에 이미 반영된 `20261011140000_retire_unused_ingredients.sql`, `20261011200000_household_spoon_measurement.sql`은 운영 영수증과 같은 checksum의 migration source closure로만 포함한다. 이 두 파일은 다시 실행하지 않는다.
 - migration source는 이번 bridge까지 219개다. 격리된 combined verifier에서 219개 schema와 bridge PostgreSQL 검사 10개가 모두 통과했다. 이는 운영 DB를 변경했다는 뜻이 아니다.
-- bridge SQL은 함수·트리거·기존 저장 결과 UPDATE를 포함해 일반 추가형 DB 경로에서 거부된다. `scripts/youtube-integrated-controlled-db.mjs`만 정확한 DB218 원장, 운영 대상, 저장 건수, queue/permit drain, migration checksum을 확인하고 복원 가능 dump를 만든 뒤 단일 transaction으로 migration과 DB219 영수증을 함께 반영한다.
-- `deploy:dev --reviewed-integrated-master-readiness --db-config ...`는 DB218과 전체 release descriptor를 읽기 전용으로 확인하고 웹만 먼저 전환한다. DB 적용 후 `record-integrated-master-database`가 private owner backfill과 DB219를 다시 확인해 rollback 금지 상태를 기록한다.
+- bridge SQL은 함수·트리거·기존 저장 결과 UPDATE를 포함해 일반 추가형 DB 경로에서 거부된다. `scripts/youtube-integrated-controlled-db.mjs`만 정확한 DB218 원장, 운영 대상, 저장 건수, migration checksum을 확인한다. apply는 웹 deploy/rollback과 같은 운영 lock을 점유하고, 검증된 새 웹의 release/build/선배포 상태와 실제 정적 asset 응답이 모두 일치해야 시작한다. jobs·permits·saved results·migration ledger를 transaction 동안 잠가 queue/permit 재유입을 막고, 복원 가능 dump 뒤 같은 transaction에서 migration과 DB219 영수증을 함께 반영한다.
+- `deploy:dev --reviewed-integrated-master-readiness --db-config ...`는 DB218과 전체 release descriptor를 읽기 전용으로 확인하고 웹만 먼저 전환한다. DB apply 시작 전부터 내구성 있는 rollback guard와 operation journal을 연결하고, COMMIT dispatch 전 guard를 다시 봉인한다. 따라서 결과가 불확실한 경우에도 이전 f970 웹 자동 rollback은 fail-closed다. DB 적용 후 `record-integrated-master-database`가 private owner backfill과 DB219를 다시 확인해 비호환 DB 상태를 기록한 다음 guard를 제거한다.
 
 ## 검증 계약
 
