@@ -26,8 +26,8 @@ const bytesAt = (ref, path) => existsAt(ref, path) ? git(["show", `${ref}:${path
 const sha256 = (bytes) => bytes === null ? null : createHash("sha256").update(bytes).digest("hex");
 
 const targetSha = git(["rev-parse", "--verify", `${target}^{commit}`]).trim();
-const changed = git(["diff", "--name-only", "--no-renames", YOUTUBE_INTEGRATED_LIVE_RELEASE, targetSha])
-  .split("\n").filter(Boolean);
+const changed = git(["diff", "--name-only", "--no-renames", "-z", YOUTUBE_INTEGRATED_LIVE_RELEASE, targetSha])
+  .split("\0").filter(Boolean);
 const paths = [...new Set([...changed, YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR])].sort();
 const files = paths.map((path) => ({
   path,
