@@ -182,14 +182,17 @@ describe("prelaunch integrated master readiness", () => {
     }];
     const target = { database: { systemIdentifier: "7669475895419854882", major: 17 } };
     expect(assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: prefix,
-      phase: "predecessor", target, saved: { savedRows: 4, bridgeFunctionAbsent: true } }))
+      phase: "predecessor", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 0, bridgeFunctionAbsent: true } }))
       .toMatchObject({ phase: "predecessor", savedRows: 4, pending: [source.at(-1)] });
     expect(assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: source,
-      phase: "applied", target, saved: { savedRows: 4, canonicalRows: 4, invalidRows: 0 } }))
+      phase: "applied", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 0, canonicalRows: 4, invalidRows: 0 } }))
       .toMatchObject({ phase: "applied", savedRows: 4, pending: [] });
     expect(() => assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: source,
-      phase: "applied", target, saved: { savedRows: 4, canonicalRows: 4, invalidRows: 1 } }))
+      phase: "applied", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 0, canonicalRows: 4, invalidRows: 1 } }))
       .toThrow("public owner-created");
+    expect(() => assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: prefix,
+      phase: "predecessor", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 1, bridgeFunctionAbsent: true } }))
+      .toThrow("explicit privacy choice");
   });
 
   it("binds DB219 apply to the exact serving web-first release and predecessor proof", () => {

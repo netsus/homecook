@@ -105,13 +105,15 @@ async function observe(adapter, descriptor, source, phase, target, query = (sql)
   const saved = phase === "predecessor"
     ? await readJson(`SELECT jsonb_build_object(
         'savedRows', count(*),
+        'explicitPrivacyChoiceRows', count(*) FILTER (WHERE saved.source_snapshot_json ?| ARRAY['visibility', 'privacy', 'is_public'] OR saved.editable_content_json ?| ARRAY['visibility', 'privacy', 'is_public']),
         'bridgeFunctionAbsent', to_regprocedure('public.read_public_youtube_saved_recipe_detail(uuid)') IS NULL,
         'queued', (SELECT count(*) FROM public.youtube_extraction_jobs WHERE status='queued'),
         'processing', (SELECT count(*) FROM public.youtube_extraction_jobs WHERE status='processing'),
         'permitHeld', EXISTS(SELECT 1 FROM public.youtube_extractor_permits WHERE permit_key='primary' AND owner_id IS NOT NULL AND expires_at > clock_timestamp())
-      ) FROM public.youtube_saved_recipe_results;`)
+      ) FROM public.youtube_saved_recipe_results AS saved;`)
     : await readJson(`SELECT jsonb_build_object(
         'savedRows', count(*),
+        'explicitPrivacyChoiceRows', count(*) FILTER (WHERE saved.source_snapshot_json ?| ARRAY['visibility', 'privacy', 'is_public'] OR saved.editable_content_json ?| ARRAY['visibility', 'privacy', 'is_public']),
         'canonicalRows', count(*) FILTER (WHERE saved.canonical_recipe_id IS NOT NULL),
         'invalidRows', count(*) FILTER (WHERE recipe.id IS NULL OR recipe.created_by IS DISTINCT FROM saved.owner_user_id OR recipe.visibility <> 'public')
       ) FROM public.youtube_saved_recipe_results AS saved
