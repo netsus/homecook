@@ -144,9 +144,11 @@ async function run(options) {
   const operationId = randomUUID();
   const operationDirectory = join(operationRoot, operationId);
   mkdirSync(operationDirectory, { mode: 0o700 });
+  const backupDirectory = join(operationDirectory, "backup");
+  mkdirSync(backupDirectory, { mode: 0o700 });
   const adapter = await createRecordingDockerAdapter({
     configPath: options.configPath,
-    backupDirectory: join(operationDirectory, "backup"),
+    backupDirectory,
   });
   const target = await adapter.inspect();
   const before = await observe(adapter, descriptor, source, "predecessor", target);
