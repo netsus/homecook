@@ -290,7 +290,7 @@ function HomeLocationObserver({ onLocationChange }: { onLocationChange: () => vo
   return null;
 }
 
-export function HomeScreen() {
+export function HomeScreen({ round2EntrypointsEnabled = true }: { round2EntrypointsEnabled?: boolean } = {}) {
   const confirmedViewCounts = useRecipeViewCountStore((state) => state.counts);
   const trackRecipeOpen = useRecipeViewCountStore((state) => state.track);
   const [query, setQuery] = useState("");
@@ -891,6 +891,7 @@ export function HomeScreen() {
       {shouldRenderWebView ? (
       <div className="hidden lg:block">
         <HomeWebScreen
+          round2EntrypointsEnabled={round2EntrypointsEnabled}
           appliedIngredientIds={appliedIngredientIds}
           clearIngredientFilters={clearIngredientFilters}
           clearSearch={clearSearch}
@@ -1020,6 +1021,7 @@ export function HomeScreen() {
 
             {!hasResultPriorityContext && themeState !== "loading" ? (
               <HomeDiscoveryRail
+                round2EntrypointsEnabled={round2EntrypointsEnabled}
                 activeThemeId={activeThemeId}
                 onSelectTheme={selectTheme}
                 themes={themeState === "ready" ? discoveryThemes : []}
@@ -1189,6 +1191,7 @@ export function HomeScreen() {
 }
 
 function HomeWebScreen({
+  round2EntrypointsEnabled,
   activeTagKey,
   appliedIngredientIds,
   clearIngredientFilters,
@@ -1227,6 +1230,7 @@ function HomeWebScreen({
   themes,
   totalRecipeCount,
 }: {
+  round2EntrypointsEnabled: boolean;
   activeTagKey: string | null;
   appliedIngredientIds: string[];
   clearIngredientFilters: () => void;
@@ -1332,7 +1336,7 @@ function HomeWebScreen({
             </div>
           </div>
           {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
-          <HomeDesktopLandingBanner />
+          {round2EntrypointsEnabled ? <HomeDesktopLandingBanner /> : null}
         </section>
 
         <div className="web-home-content-grid">
@@ -1900,10 +1904,12 @@ function HomeTagRail({
 }
 
 function HomeDiscoveryRail({
+  round2EntrypointsEnabled,
   activeThemeId,
   onSelectTheme,
   themes,
 }: {
+  round2EntrypointsEnabled: boolean;
   activeThemeId: string | null;
   onSelectTheme: (themeId: string) => void;
   themes: RecipeTheme[];
@@ -1928,9 +1934,9 @@ function HomeDiscoveryRail({
       <div
         className="home-mobile-theme-rail scrollbar-hide"
       >
-        {HOME_R2_BANNERS.map((banner) => (
+        {round2EntrypointsEnabled ? HOME_R2_BANNERS.map((banner) => (
           <HomeMobileR2Banner banner={banner} key={banner.key} />
-        ))}
+        )) : null}
         {themes.map((theme, index) => (
           <ThemeCarouselCard
             isActive={activeThemeId === theme.id}

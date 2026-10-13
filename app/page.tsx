@@ -44,7 +44,7 @@ export default function Home() {
       currentTab="home"
       headerMode="hidden"
     >
-      <HomeScreen />
+      <HomeScreen round2EntrypointsEnabled={process.env.MUMEOK_ROUND2_ENABLED !== "false"} />
     </AppShell>
   );
 }
