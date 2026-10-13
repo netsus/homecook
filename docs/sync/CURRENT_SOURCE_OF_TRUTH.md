@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-13 — 유튜브 레시피북·플래너와 v71 운영 전환 최종 확인
+
+유튜브 저장 결과는 신규·기존 4건 모두 `내가 추가한 레시피`의 public canonical recipe로 연결되고 owner 전용 편집 문서는 그대로 유지된다. Google Chrome 실계정에서 기존 유튜브 저장 레시피 재열기·무변경 수정 저장·플래너 추가·새로고침·취소/뒤로가기와 manual private fork 재열기·편집 진입·플래너 모달 취소를 확인했다. manual private 상세의 첫 Data 조회가 세션 refresh보다 빨라 false 404가 되던 회귀는 master `ca7faa8f00867fe5eaab620a45fa959bd6768483`, 운영 웹 `d22217ddc791df79e72c055516bd5cffd6bb69c0`에서 세션 확인을 선행하도록 수정했다. DB는 추가 변경 없이 ledger 219다. worker는 release `8e515a6482a1dfaa292d6f67ae6aa8a06f84d2d4`에 결속된 v71/gen47로 running이며 credential은 `2026-10-19T08:24:41Z` 만료다. manager 임시 credential은 제거됐고 gen48 발급·추출 호출·모델 호출은 모두 0이다. [최종 운영 상태·검증·남은 Low](../engineering/youtube-recipebook-planner-bridge-20261012.md#후속-최종-운영-확인-2026-10-13)를 따른다.
+
 ## 2026-10-13 — 유튜브 저장 레시피북·플래너 연결 운영 반영
 
 사용자 승인 범위에 따라 통합 웹 `8e515a6482a1dfaa292d6f67ae6aa8a06f84d2d4`를 먼저 배포한 뒤 full-local DB를 백업하고 migration 219를 한 transaction으로 적용했다. 기존 저장 결과 4건은 원본 편집 문서와 소유권을 유지한 채 public canonical recipe 4건에 1:1 연결됐고 invalid 0건, 명시적 비공개 선택 0건이다. 공개 검색·상세 projection은 정상이며 공개 응답에 owner/source snapshot/editable JSON/canonical 연결 메타데이터를 노출하지 않는다. 운영 worker는 c51d/gen46 그대로이며 v71/gen47 credential·policy·queue/launchd는 변경하지 않았다. Chrome 소유자 흐름 확인은 기존 브라우저 세션이 `ACCOUNT_SESSION_STALE`로 거절되어 재로그인 전까지 제한된다. [배포·백업·backfill·검증·세션 차단](../engineering/youtube-recipebook-planner-bridge-20261012.md#운영-반영-2026-10-13)을 따른다.

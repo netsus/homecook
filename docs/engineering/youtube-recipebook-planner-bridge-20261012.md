@@ -1,6 +1,15 @@
 # 유튜브 저장 레시피북·플래너 연결
 
-상태: 웹과 DB219 운영 반영 완료. worker는 기존 c51d/gen46을 유지한다.
+상태: 웹·DB219·v71/gen47 worker 운영 반영과 owner 실흐름 확인 완료.
+
+## 후속 최종 운영 확인 (2026-10-13)
+
+- 기능 코드는 PR #1661과 owner private manual 상세 회귀 PR #1667로 master `ca7faa8f00867fe5eaab620a45fa959bd6768483`에 병합됐다. 실행 웹은 기존 통합 웹을 부모로 하고 #1667의 API·테스트 두 파일만 적용한 `d22217ddc791df79e72c055516bd5cffd6bb69c0` (`prelaunch-d22217ddc791-3EwFuq`)다. master와 실행 웹의 기능 코드는 같고, master에만 웹 런타임과 무관한 v71 전환 도구 후속이 더 있다.
+- DB는 새 쓰기 없이 ledger 219와 canonical bridge migration checksum `e51b6a…d4993`을 유지한다. 기존 저장 4건의 canonical 연결과 owner/source 원본 보존 상태도 유지한다.
+- v71/gen47 worker는 launchd PID 29482에서 release `8e515a6482a1dfaa292d6f67ae6aa8a06f84d2d4`, policy digest `17577b8b…c6d7`, pipeline identity `85fbf487…6cd7`로 running이다. credential 만료는 `2026-10-19T08:24:41Z`다. manager 임시 credential은 제거됐고 gen48은 발급되지 않았다. 최종 receipt와 journal은 0600이며 검증 중 extraction/model call은 0/0이다.
+- Google Chrome 실계정에서 `내가 추가한 레시피` 11건, 기존 유튜브 저장 레시피 재열기·owner 편집·무변경 저장·플래너 추가·새로고침·취소/뒤로가기를 확인했다. 같은 레시피를 모달을 새로 열어 다시 제출하면 기존 다중 식사 계약대로 별도 meal이 생기며, 한 요청의 재시도 멱등성과 구분된다.
+- 회귀 확인 중 목록에는 있으나 `/recipe/{id}`에서 404가 나던 private manual fork를 발견했다. 일반 상세 API가 `getUser()`보다 Data 조회를 먼저 시작해 세션 refresh가 필요한 요청을 익명 공개 조회로 오판한 원인이었다. 첫 Data 조회 전에 owner 세션을 확인하도록 순서만 바꾸고 공개 읽기 gateway, `created_by` 확인, account-generation 검증은 유지했다. 관련 회귀 140개, 가시성·소유권 집중 626개, typecheck, 변경 파일 ESLint, production build와 독립 리뷰를 통과했다.
+- 배포 뒤 같은 manual recipe에서 본문·재료·7단계, owner 편집창, 플래너 모달 진입과 취소를 재확인했다. 운영 데이터 보호를 위해 manual 저장과 추가 플래너 제출은 실행하지 않았다. private recipe의 `<title>`은 public metadata reader가 행을 볼 수 없어 여전히 `레시피를 찾을 수 없어요`로 표시되지만 본문·편집·플래너 기능은 정상이며 Low 후속이다.
 
 ## 운영 반영 (2026-10-13)
 
