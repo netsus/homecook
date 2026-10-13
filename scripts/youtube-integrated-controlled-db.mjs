@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { createHash, randomUUID } from "node:crypto";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, rmdirSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  assertIntegratedMasterDatabaseGuard,
   assertIntegratedMasterWebFirstState,
   assertIntegratedMasterDatabaseObservation,
   integratedMasterMigrationLedger,
@@ -21,8 +22,11 @@ import {
   createRecordingDockerAdapter,
   durableJson,
 } from "./lib/marketing-round2-controlled-deploy.mjs";
+import { readPinnedLocalDockerTarget } from "./lib/local-supabase-isolated-runtime.mjs";
 
 export const YOUTUBE_INTEGRATED_DB_CONFIRMATION = "LOCAL_PRELAUNCH_YOUTUBE_INTEGRATED_DB219_APPLY";
+export const YOUTUBE_INTEGRATED_DB_RECONCILE_CONFIRMATION =
+  "LOCAL_PRELAUNCH_YOUTUBE_INTEGRATED_DB219_RECONCILE_NOT_APPLIED";
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const operationRoot = join(homedir(), ".homecook/operations/youtube-integrated-20261013");
 const deploymentRoot = join(homedir(), ".homecook/prelaunch-web");
@@ -79,7 +83,10 @@ async function verifyLiveWebFirst(releaseSha, descriptor) {
 
 function parseArgs(argv) {
   const [action, ...rest] = argv;
-  requireValue(["plan", "apply"].includes(action), "use plan or apply");
+  requireValue(
+    ["plan", "apply", "reconcile-not-applied"].includes(action),
+    "use plan, apply, or reconcile-not-applied",
+  );
   const values = {};
   for (let index = 0; index < rest.length; index += 2) {
     const key = rest[index];
@@ -93,10 +100,109 @@ function parseArgs(argv) {
   if (action === "apply") {
     requireValue(values["--confirmation"] === YOUTUBE_INTEGRATED_DB_CONFIRMATION,
       "exact apply confirmation is required");
+  } else if (action === "reconcile-not-applied") {
+    requireValue(
+      values["--confirmation"] === YOUTUBE_INTEGRATED_DB_RECONCILE_CONFIRMATION,
+      "exact reconcile confirmation is required",
+    );
   } else {
     requireValue(values["--confirmation"] === undefined, "plan does not accept confirmation");
   }
   return { action, configPath: values["--db-config"], releaseSha: values["--release"] };
+}
+
+export function openIntegratedAdminSession(containerId, applicationName) {
+  requireValue(
+    /^[a-f0-9]{64}$/u.test(containerId)
+      && /^youtube-integrated-[a-z0-9-]{1,80}$/u.test(applicationName),
+    "invalid dedicated admin identity",
+  );
+  const env = {
+    ...process.env,
+    DOCKER_HOST: readPinnedLocalDockerTarget().docker_host,
+  };
+  for (const key of ["DOCKER_CONTEXT", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY"]) {
+    delete env[key];
+  }
+  const child = spawn("docker", [
+    "exec",
+    "-i",
+    "-e",
+    `PGAPPNAME=${applicationName}`,
+    containerId,
+    "psql",
+    "-h",
+    "/var/run/postgresql",
+    "-p",
+    "5432",
+    "-U",
+    "supabase_admin",
+    "-d",
+    "postgres",
+    "-XAtq",
+    "-v",
+    "ON_ERROR_STOP=1",
+  ], { env, stdio: ["pipe", "pipe", "pipe"] });
+  let pending;
+  let buffer = "";
+  let exited = false;
+  const closed = new Promise((resolveClosed) => {
+    child.once("error", () => {
+      exited = true;
+      pending?.reject(new Error("DB219 admin session failed; output withheld"));
+      resolveClosed(null);
+    });
+    child.once("close", (code) => {
+      exited = true;
+      pending?.reject(new Error("DB219 admin session closed; outcome requires readback"));
+      resolveClosed(code);
+    });
+  });
+  child.stderr.on("data", () => {});
+  child.stdout.on("data", (bytes) => {
+    buffer += bytes.toString("utf8");
+    if (buffer.length > 4 * 1024 * 1024) {
+      child.kill();
+      pending?.reject(new Error("DB219 admin output limit"));
+      return;
+    }
+    if (pending && buffer.includes(`${pending.marker}\n`)) {
+      const index = buffer.indexOf(`${pending.marker}\n`);
+      const output = buffer.slice(0, index).trim();
+      buffer = buffer.slice(index + pending.marker.length + 1);
+      const task = pending;
+      pending = undefined;
+      task.resolve(output);
+    }
+  });
+  return {
+    async query(sql, timeout = 180_000) {
+      requireValue(!pending && !exited, "DB219 admin session unavailable");
+      const marker = `integrated_${randomUUID().replaceAll("-", "")}`;
+      let timer;
+      try {
+        return await new Promise((resolveQuery, reject) => {
+          pending = { marker, resolve: resolveQuery, reject };
+          timer = setTimeout(() => {
+            child.kill();
+            reject(new Error("DB219 admin session timeout"));
+          }, timeout);
+          child.stdin.write(`${sql}\nSELECT '${marker}';\n`, (error) => {
+            if (error) reject(new Error("DB219 admin dispatch outcome unknown"));
+          });
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+    async close() {
+      child.stdin.end();
+      return closed;
+    },
+    stop() {
+      child.kill();
+    },
+  };
 }
 
 async function observe(adapter, descriptor, source, phase, target, query = (sql) => adapter.query(sql)) {
@@ -166,7 +272,10 @@ async function run(options) {
     return;
   }
 
-  const session = adapter.session(`youtube-integrated-${operationId}`);
+  const session = openIntegratedAdminSession(
+    target.postgresContainerId,
+    `youtube-integrated-${operationId}`,
+  );
   let backup;
   let commitDispatched = false;
   let guardCreated = false;
@@ -262,13 +371,79 @@ async function run(options) {
   }
 }
 
+async function reconcileNotApplied(options) {
+  const head = execFileSync("git", ["-C", repository, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
+  requireValue(head === options.releaseSha, "repository HEAD differs from --release");
+  const descriptor = parseIntegratedMasterDescriptor(
+    readFileSync(join(repository, YOUTUBE_INTEGRATED_RELEASE_DESCRIPTOR)),
+  );
+  await verifyLiveWebFirst(options.releaseSha, descriptor);
+  requireValue(existsSync(databaseGuardPath), "DB219 guard is absent");
+  const guard = JSON.parse(readFileSync(databaseGuardPath, "utf8"));
+  const prestate = JSON.parse(readFileSync(join(guard.operationDirectory, "prestate.json"), "utf8"));
+  assertIntegratedMasterDatabaseGuard({
+    guard,
+    journal: prestate,
+    releaseSha: options.releaseSha,
+    migrationSha256: descriptor.database.migration.sha256,
+    operationRoot,
+  });
+  requireValue(guard.status === "applying_precommit", "guard passed commit dispatch");
+  const failurePath = join(guard.operationDirectory, "failure.json");
+  requireValue(existsSync(failurePath), "failure journal is absent");
+  const failure = JSON.parse(readFileSync(failurePath, "utf8"));
+  requireValue(
+    failure.status === "unknown_before_commit_dispatch"
+      && failure.operationId === guard.operationId
+      && failure.releaseSha === options.releaseSha
+      && failure.backup === null,
+    "failure journal is not safe to reconcile",
+  );
+  const source = integratedMasterMigrationLedger(repository);
+  const adapter = await createRecordingDockerAdapter({
+    configPath: options.configPath,
+    backupDirectory: join(guard.operationDirectory, "backup"),
+  });
+  const target = await adapter.inspect();
+  const observed = await observe(adapter, descriptor, source, "predecessor", target);
+  requireValue(
+    observed.plan.applied.length === descriptor.database.beforeLedgerCount
+      && observed.saved.savedRows === prestate.inventory.savedRows
+      && observed.saved.explicitPrivacyChoiceRows === 0
+      && observed.saved.bridgeFunctionAbsent === true,
+    "live DB is not the exact predecessor after failed apply",
+  );
+  const active = await adapter.query(
+    `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name = ${sqlLiteral(`youtube-integrated-${guard.operationId}`)});`,
+  );
+  requireValue(active === "f", "failed DB219 session is still active");
+  const reconciliation = {
+    status: "verified_not_applied",
+    operationId: guard.operationId,
+    releaseSha: options.releaseSha,
+    ledgerCount: observed.plan.applied.length,
+    savedRows: observed.saved.savedRows,
+    mutationPerformed: false,
+    guardRemoved: true,
+  };
+  await durableJson(join(guard.operationDirectory, "reconciliation.json"), reconciliation, true);
+  removeDurableFile(databaseGuardPath);
+  process.stdout.write(`${JSON.stringify(reconciliation, null, 2)}\n`);
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   requireValue(process.platform === "darwin", "must run on the local macOS production host");
   if (options.action === "plan") return run(options);
   try { mkdirSync(deploymentLockPath, { mode: 0o700 }); }
   catch { fail("another web deploy, rollback, or DB219 operation holds the deployment lock"); }
-  try { return await run(options); }
+  try {
+    return options.action === "reconcile-not-applied"
+      ? await reconcileNotApplied(options)
+      : await run(options);
+  }
   finally { rmdirSync(deploymentLockPath); }
 }
 

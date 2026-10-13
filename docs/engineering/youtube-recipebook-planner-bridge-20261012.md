@@ -1,6 +1,18 @@
 # 유튜브 저장 레시피북·플래너 연결
 
-상태: 통합 브랜치 구현·검증 중. 운영 DB·웹·worker 미반영이다.
+상태: 웹과 DB219 운영 반영 완료. worker는 기존 c51d/gen46을 유지한다.
+
+## 운영 반영 (2026-10-13)
+
+- 승인된 순서대로 웹 `8e515a6482a1dfaa292d6f67ae6aa8a06f84d2d4` (`prelaunch-8e515a6482a1-I0Aj7c`)를 먼저 올리고, 정적 asset과 실행 상태를 확인한 뒤 DB219를 적용했다.
+- 최초 DB apply 시도 `db8f816c-3e11-4e36-9e20-c4695db77195`는 공용 DB adapter가 `postgres` 역할로 migration ledger lock을 열어 권한 오류가 났다. backup·migration·commit dispatch 전에 실패했으며, fresh DB218/저장 4건/bridge 부재를 다시 확인한 `verified_not_applied` reconciliation은 `mutationPerformed=false`, `guardRemoved=true`로 끝났다.
+- 운영 드라이버는 통합 DB 세션만 고정 로컬 Docker의 `supabase_admin`으로 열도록 분리했다. 불확실한 pre-commit 실패는 실제 DB218, 저장 4건, privacy 0건, bridge 부재, 죽은 session을 모두 확인하는 정확한 `reconcile-not-applied` 경로 외에는 guard를 해제하지 않는다.
+- 재시도 operation `f7860129-ad3b-4244-9cc5-3378d1a35765`는 migration `20261012120000_youtube_saved_recipe_canonical_bridge.sql` (`e51b6a…d4993`)과 ledger 219를 같은 transaction으로 commit했다. 적용 전 queue/processing은 0, permit holder는 없었다.
+- 적용 직전 full archive는 `/Users/cwj/.homecook/operations/youtube-integrated-20261013/f7860129-ad3b-4244-9cc5-3378d1a35765/backup/postgres.dump`, SHA-256 `15c29821618e9cb7c70bbbe0df2cb2f0bd3246924352667bf8ce047400f48097`, 117,547,295 bytes다. roles SHA-256은 `33b16c…a84277`, snapshot은 `00000034-00006838-1`이며 full archive decode를 확인했다.
+- poststate는 saved 4, canonical 4, invalid 0, 명시적 privacy 선택 0이다. `record-integrated-master-database`가 release/ledger/checksum을 다시 확인한 뒤 rollback guard를 제거했고 현재 웹 status는 release `8e515a…`, ledger 219, guard 없음이다.
+- 익명 공개 `q` 검색은 `신김치 제육볶음` canonical ID `cef3198a-a846-4fd6-beb3-2868591e0f7f` 1건을 반환했다. 공개 상세는 재료 15개·단계 21개를 반환하면서 `source_snapshot_json`, `editable_content_json`, `owner_user_id`, `canonical_recipe_id`, raw transcript를 노출하지 않았다.
+- 사용자 Google Chrome에서 배포 홈의 YouTube canonical 카드와 theme를 실제 픽셀로 확인했다. 다만 저장돼 있던 계정 세션이 `HOMECOOK_HYBRID_AUTHORITY::ACCOUNT_SESSION_STALE::409`라 검색 UI와 마이페이지가 로그인 API 오류로 닫혔다. 세션을 우회·재발급하거나 운영 계정을 변경하지 않았으므로 owner의 레시피북→편집→플래너 모달 실흐름은 재로그인 뒤 최종 확인이 남는다. 익명 API 성공과 서버 로그를 대조해 DB219/공개 검색 실패가 아니라 stale browser session으로 구분했다.
+- 운영 worker는 release `c51d53871f31c7840fe24792b46b191ca963b11b`, credential generation 46 그대로다. v71 policy/credential, queue, launchd는 이 반영에서 변경하지 않았다.
 
 ## 첨부 화면에서 확인한 원인
 
@@ -31,12 +43,12 @@
 
 새 migration은 기존 저장 결과마다 owner-created public recipe 한 행과 recipe source 한 행을 만든다. 기존 4건에는 별도 `visibility`·`privacy`·`is_public` 선택값이 0건임을 읽기 전용으로 확인했고, 사용자 요청에 따라 신규 저장과 같은 공개 검색 계약을 적용한다. 별도로 비공개가 명시된 수동 레시피는 대상이 아니다. 저장 결과의 `editable_content_json`, `editable_content_hash`, revision, source snapshot은 바꾸지 않는다. 기존 멱등 응답에는 새 recipe ID만 보완한다.
 
-운영 적용 전 확인할 범위와 위험은 다음과 같다.
+운영 적용 전에 확인했고 승인받은 범위와 위험은 다음과 같다. 실제 결과는 위 운영 반영 절을 따른다.
 
 - 증가 행: 기존 저장 결과 수만큼 `recipes`와 `recipe_sources`가 각각 증가한다.
 - 잠금/시간: saved results 전체를 한 번 갱신해 trigger backfill을 실행하므로 운영 원장 크기와 적용 시간을 사전 조회해야 한다.
 - 되돌리기: 플래너 meal snapshot이 새 recipe ID를 참조한 뒤에는 단순 컬럼 제거가 아니라 참조 식사 보존 결정을 포함한 rollback이 필요하다.
-- 따라서 운영 DB 적용·기존 데이터 일괄 변경은 백업과 대상 건수 확인 후 별도 승인으로 수행한다.
+- 운영 DB 적용·기존 데이터 일괄 변경은 백업과 대상 건수 확인 후 받은 별도 승인 범위에서 수행했다.
 - 배포 순서는 **호환 웹 선배포 → DB219 백업·transaction·backfill → DB 상태 기록 → worker 전환**이다. DB를 먼저 적용하면 운영 f970 웹은 child row가 없는 새 canonical recipe의 내용을 빈 값으로 렌더링할 수 있다. 새 웹은 bridge RPC가 아직 없는 DB218에서도 기존 전용 저장 경로를 유지하므로 이 순서만 허용한다. DB219 뒤에는 f970 웹으로 자동 rollback하지 않는다.
 
 ## 변경하지 않는 범위

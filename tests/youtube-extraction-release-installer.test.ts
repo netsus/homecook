@@ -59,6 +59,7 @@ import {
   writeCredentialMetadata,
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 import {
+  issueYoutubeExtractionCredentialManager,
   issueYoutubeExtractionWorkerCredential,
 } from "../scripts/lib/youtube-extraction-worker-local-credential.mjs";
 import {
@@ -262,6 +263,94 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     })).toThrow(/7 days/iu);
   });
 
+  it("issues a separately scoped ES256 credential manager for at most five minutes", () => {
+    const { privateKey, publicKey } = generateKeyPairSync("ec", {
+      namedCurve: "P-256",
+    });
+    const privateJwk = privateKey.export({ format: "jwk" });
+    const issued = issueYoutubeExtractionCredentialManager({
+      jwtKeys: [{
+        ...privateJwk,
+        alg: "ES256",
+        kid: "local-manager-signing-key",
+        use: "sig",
+      }],
+      now: new Date("2026-10-13T12:00:00.000Z"),
+      ttlSeconds: 5 * 60,
+      jti: "manager-jti-test-value",
+    });
+    const [headerPart, claimsPart, signaturePart] = issued.token.split(".");
+    const claims = JSON.parse(Buffer.from(claimsPart, "base64url").toString("utf8"));
+
+    expect(claims).toEqual({
+      role: "youtube_extraction_credential_manager",
+      scope: "youtube-extraction-credential-manager",
+      iss: "https://worker.mumeok.kr",
+      aud: "youtube-extraction",
+      jti_hash: issued.jtiHash,
+      iat: 1791892800,
+      exp: 1791893100,
+    });
+    expect(verifySignature(
+      "SHA256",
+      Buffer.from(`${headerPart}.${claimsPart}`),
+      { key: publicKey, dsaEncoding: "ieee-p1363" },
+      Buffer.from(signaturePart, "base64url"),
+    )).toBe(true);
+    expect(() => issueYoutubeExtractionCredentialManager({
+      jwtKeys: [{ ...privateJwk, alg: "ES256", kid: "local-manager-signing-key" }],
+      ttlSeconds: 301,
+    })).toThrow(/5 minutes/iu);
+  });
+
+  it("materializes the credential-manager JWT create-only without printing it", () => {
+    const privateDir = createTempDir("yta-local-manager-");
+    const signingDir = createTempDir("yta-local-manager-signing-");
+    const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const jwtKeysPath = join(signingDir, "jwt_keys");
+    const tokenPath = join(privateDir, "manager.jwt");
+    writeModeFile(jwtKeysPath, JSON.stringify([{
+      ...privateKey.export({ format: "jwk" }),
+      alg: "ES256",
+      kid: "local-manager-signing-key",
+      use: "sig",
+    }]));
+    const credentialCliPath = join(
+      process.cwd(),
+      "scripts/youtube-extraction-worker-local-credential.mjs",
+    );
+    const args = [
+      credentialCliPath,
+      "issue-manager",
+      "--jwt-keys-file", jwtKeysPath,
+      "--secret-root", privateDir,
+      "--token-file", tokenPath,
+      "--ttl-seconds", "300",
+      "--confirm-production", "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL_MANAGER",
+    ];
+    const result = spawnSync(process.execPath, args, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(result.status, result.stderr).toBe(0);
+    const token = readFileSync(tokenPath, "utf8").trim();
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      issued: true,
+      role: "youtube_extraction_credential_manager",
+      scope: "youtube-extraction-credential-manager",
+      token_file: tokenPath,
+    });
+    expect(result.stdout).not.toContain(token);
+    expect(lstatSync(tokenPath).mode & 0o777).toBe(0o600);
+    const repeated = spawnSync(process.execPath, args, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(repeated.status).toBe(1);
+    expect(repeated.stderr).toMatch(/already exists|create-only/iu);
+    expect(readFileSync(tokenPath, "utf8").trim()).toBe(token);
+  });
+
   it("materializes a local worker credential as create-only mode-0600 files without printing the JWT", () => {
     const privateDir = createTempDir("yta-local-credential-");
     const signingDir = createTempDir("yta-local-signing-");
@@ -349,6 +438,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     expect(readYoutubeExtractionWorkerCredential(metadataPath, {
       secretRoot: privateDir,
     })).toMatchObject({ generation: 2, token_file: tokenPath });
+    const metadataBeforeRepeat = readFileSync(metadataPath, "utf8");
 
     const repeated = spawnSync(process.execPath, [
       ...baseArgs,
@@ -356,6 +446,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     ], { cwd: process.cwd(), encoding: "utf8" });
     expect(repeated.status).toBe(1);
     expect(repeated.stderr).toMatch(/already exists|create-only/iu);
+    expect(readFileSync(metadataPath, "utf8")).toBe(metadataBeforeRepeat);
   });
 
   it("installs the worker LaunchAgent atomically only after an explicit local-production confirmation", () => {
