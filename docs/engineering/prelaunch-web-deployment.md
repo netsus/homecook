@@ -90,13 +90,14 @@ R2 광고 설문의 repository root·release SHA·readiness가 현재 실행 che
 repository root와 readiness path를 새 checkout에 함께 연결한다. 관련 변경이나 DB 동시 배포는
 기존 증거로 진행하지 않고 새 R2 검증을 요구한다.
 
-### 검토 중: R2 수집을 닫은 F01 정정과 후속 웹 배포
+### 승인된 R2 수집 중지 상태의 F01 정정과 후속 웹 배포
 
-이 절은 로컬 구현 검토안이다. 기존 수집 중지 승인은 도구 설치나 웹 배포 승인이 아니다.
-`CLOSED_R2_REVIEW_PIN`의 경로·해시는 현재 비어 있어 첫 실행을 거부한다. 마지막 웹 배포 뒤
-실제 predecessor/candidate SHA와 전체 변경 파일 bytes, build/plist, 중지 receipt,
-control, 원 readiness/proof 9개, 읽기 전용 DB source/applied 목록을 고정하고 독립 리뷰와
-사용자 추가 승인을 받은 뒤에만 pin을 설정한다. CLI·환경 입력으로 pin을 바꿀 수 없다.
+2026-10-14 사용자가 PR #1672·#1677과 정확한 웹 `76ff4efe438f → 87cd04e11607`,
+두 수집 환경 설정의 false 전환을 승인했다. `CLOSED_R2_REVIEW_PIN`은 승인된 비공개 검토 파일의
+경로·SHA-256에 고정한다. 실제 predecessor/candidate SHA와 전체 변경 파일 bytes, build/plist,
+중지 receipt, control, 원 readiness/proof 9개, 읽기 전용 DB source/applied 목록이 모두 일치해야 한다.
+CLI·환경 입력으로 pin을 바꿀 수 없으며, 빈 pin은 운영 파일에 접근하기 전에 거부한다.
+이 승인은 수집 재개나 DB·worker 변경을 포함하지 않는다. 머지나 pin 설정 자체는 실제 배포 완료 증거가 아니다.
 
 최초 예외는 `app/privacy/page.tsx`, `app/page.tsx`, `components/home/home-screen.tsx` 세 제품 파일과
 지정한 테스트·설명 문서의 exact diff만 허용한다. 기존 7개 지정 경로에 위 홈 제품 2개와
@@ -116,7 +117,7 @@ MUMEOK_ROUND2_LEADS_ENABLED=false
 
 승인 후 사용할 기존 명령 형태는 다음과 같다. `--`는 pnpm이 Node에 전달하는 인수 경계이므로
 생략하지 않는다. 경로에는 Git 밖의 소유자 전용 파일을 지정하고 키 값을 인수에 넣지 않는다.
-아래 자리표시자는 실제 승인 자료가 아니며 현재 빈 pin으로 실행할 수 없다.
+아래 명령의 자리표시자에는 고정된 검토 파일과 일치하는 승인된 실제 값을 사용한다.
 
 ```bash
 pnpm deploy:dev:plan -- --reviewed-r2-closed-maintenance \

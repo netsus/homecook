@@ -3,14 +3,15 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createRound2FileStorage } from "@/lib/server/marketing-round2-storage";
 import { createMarketingRound2Handler, type Round2HandlerConfig } from "@/lib/server/marketing-round2";
 import { createPrelaunchDatabaseEngine } from "../scripts/lib/prelaunch-database.mjs";
 import {
   acquireClosedR2ControlLease, assertClosedR2CompensationTarget, assertClosedR2ContinuationOptions, assertClosedR2Database, assertClosedR2Environment, assertClosedR2LiveMarker, assertClosedR2LiveUnchanged, assertClosedR2MaintenanceFence, assertClosedR2PredecessorState,
   assertClosedR2Retry, assertClosedR2Review, assertClosedR2Rollback, assertRound2InheritanceBoundaries,
-  assertClosedR2Source, closedR2RollbackPlist, deployTransaction, loadClosedR2Review, parsePrelaunchOptions, prelaunchVerificationEnvironment, retargetPlist, verifyClosedR2Control,
+  assertClosedR2Source, closedR2RollbackPlist, deployTransaction, parsePrelaunchOptions, prelaunchVerificationEnvironment, retargetPlist, verifyClosedR2Control,
 } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const roots: string[] = [];
@@ -53,13 +54,30 @@ function fixture() {
 }
 
 describe("closed R2 F01 review boundary", () => {
-  it("keeps the actual production pin empty and unusable", () => {
-    expect(() => loadClosedR2Review(repository)).toThrow("검토 핀이 비어");
-    const run = spawnSync(process.execPath, ["scripts/deploy-prelaunch-web.mjs", "plan", "--", "--reviewed-r2-closed-maintenance", "--reviewed-ref", "b".repeat(40),
-      "--env-file", "/private/never-read.env", "--test-script", "test:product", "--already-applied-db", "--db-config", "/private/never-read-db.env"], { cwd: repository, encoding: "utf8", env: prelaunchVerificationEnvironment("test", process.env) });
+  it("rejects an empty pin before reading environment or production state", () => {
+    const root = fixture().root;
+    const libraryPath = join(root, "prelaunch-web-deploy.mjs");
+    const library = readFileSync(join(repository, "scripts/lib/prelaunch-web-deploy.mjs"), "utf8");
+    const pinPattern = /export const CLOSED_R2_REVIEW_PIN = Object\.freeze\(\{[\s\S]*?\}\);/u;
+    expect(library.match(pinPattern)?.length).toBe(1);
+    writeFileSync(libraryPath, library.replace(pinPattern,
+      "export const CLOSED_R2_REVIEW_PIN = Object.freeze({ path: null, sha256: null });"));
+    const cliPath = join(root, "deploy-prelaunch-web.mjs");
+    const cli = readFileSync(join(repository, "scripts/deploy-prelaunch-web.mjs"), "utf8");
+    writeFileSync(cliPath, cli.replace(/from "(\.\/lib\/[^"\n]+)"/gu, (_match, relativePath: string) => {
+      const target = relativePath === "./lib/prelaunch-web-deploy.mjs"
+        ? libraryPath : resolve(repository, "scripts", relativePath);
+      return `from "${pathToFileURL(target).href}"`;
+    }));
+    const run = spawnSync(process.execPath, [cliPath, "plan", "--", "--reviewed-r2-closed-maintenance", "--reviewed-ref", "b".repeat(40),
+      "--env-file", "/private/never-read.env", "--test-script", "test:product", "--already-applied-db", "--db-config", "/private/never-read-db.env"], {
+      cwd: repository, encoding: "utf8", env: { ...prelaunchVerificationEnvironment("test", process.env),
+        HOME: root, HOMECOOK_DEPLOY_REPOSITORY: repository },
+    });
     expect(run.status, run.stderr).toBe(1);
     expect(run.stdout).toBe("");
     expect(run.stderr).toContain("검토 핀이 비어");
+    expect(existsSync(join(root, ".homecook"))).toBe(false);
   });
   it("requires exact closed source/env/test and read-only DB arguments without other readiness modes", () => {
     const args = ["--reviewed-r2-closed-maintenance", "--reviewed-ref", "b".repeat(40), "--env-file", "/private/false-only.env", "--test-script", "test:product", "--already-applied-db", "--db-config", "/private/readonly.env"];

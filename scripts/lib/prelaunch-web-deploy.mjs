@@ -6,8 +6,11 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export class DeploymentError extends Error {}
 
-// No source/receipt is approved yet. CLI and environment cannot supply these pins.
-export const CLOSED_R2_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+// Human-approved F01 source and pause receipt. CLI and environment cannot override these pins.
+export const CLOSED_R2_REVIEW_PIN = Object.freeze({
+  path: "/Users/cwj/.homecook/operations/mumeok-beta-f01-closed-20261014-ifzuefgy/proposed-review.json",
+  sha256: "cefb74c46ef6b1d23b2e449aa3255d854da6ecd74c35c8701095df964b9d2c29",
+});
 const closedR2Hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const closedR2Require = (value, message) => { if (!value) throw new DeploymentError(`닫힌 R2 유지 배포: ${message}`); };
 const CLOSED_R2_SHA = /^[a-f0-9]{64}$/u;
