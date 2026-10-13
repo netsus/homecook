@@ -7,6 +7,7 @@ import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { RecipeCardItem } from "@/types/recipe";
 
 interface RecipeCardProps {
+  detailHref?: string;
   isSaved?: boolean;
   onOpen?: (recipe: RecipeCardItem) => void;
   onSave?: (recipe: RecipeCardItem) => void;
@@ -14,7 +15,7 @@ interface RecipeCardProps {
   recipe: RecipeCardItem;
 }
 
-export function RecipeCard({ isSaved = false, onOpen, onSave, priority = false, recipe }: RecipeCardProps) {
+export function RecipeCard({ detailHref, isSaved = false, onOpen, onSave, priority = false, recipe }: RecipeCardProps) {
   const imageSrc = resolveRecipeImage(recipe);
   const canOptimizeImage = imageSrc.startsWith("/")
     || imageSrc.startsWith("https://www.foodsafetykorea.go.kr/uploadimg/");
@@ -25,7 +26,7 @@ export function RecipeCard({ isSaved = false, onOpen, onSave, priority = false, 
     <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[0px_2px_8px_var(--shadow-color-soft)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_var(--shadow-color-medium)] active:-translate-y-0.5 active:shadow-[0px_4px_12px_var(--shadow-color-medium)]">
       <Link
         className="relative block overflow-hidden"
-        href={`/recipe/${recipe.id}`}
+        href={detailHref ?? `/recipe/${recipe.id}`}
         onClick={() => onOpen?.(recipe)}
         prefetch={false}
       >
@@ -85,7 +86,7 @@ export function RecipeCard({ isSaved = false, onOpen, onSave, priority = false, 
         <BookmarkIcon filled={isSaved} />
       </button>
       <div className="flex flex-1 flex-col gap-2 px-4 py-4">
-        <Link href={`/recipe/${recipe.id}`} onClick={() => onOpen?.(recipe)} prefetch={false}>
+        <Link href={detailHref ?? `/recipe/${recipe.id}`} onClick={() => onOpen?.(recipe)} prefetch={false}>
           <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[var(--foreground)]">
             {recipe.title}
           </h3>

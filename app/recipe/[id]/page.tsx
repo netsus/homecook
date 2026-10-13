@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: RecipePageProps): Promise<Met
     if (!result.data) {
       return {
         robots: { follow: false, index: false },
-        title: "레시피를 찾을 수 없어요",
+        title: "레시피 상세",
       };
     }
 

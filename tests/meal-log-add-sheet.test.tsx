@@ -292,7 +292,7 @@ describe("MEAL_LOG add sheet", () => {
     await openBreakfast(user);
     expect(screen.queryByText(/g 식사 기록 저장 불가|완성 무게 확인 불가|이전 기록이라 중량/)).toBeNull();
     expect((await screen.findByRole("link", { name: /된장찌개 완성 중량 입력/u })).getAttribute("href"))
-      .toBe("/leftovers");
+      .toBe("/leftovers?returnTo=%2Fplanner%3Fsegment%3Dlog%26date%3D2026-08-10&returnSurface=planner.week");
     await user.click(screen.getByRole("tab", { name: "최근" }));
     const unmatched = await screen.findByRole("button", { name: /예전 카레/u });
     expect((unmatched as HTMLButtonElement).disabled).toBe(true);
