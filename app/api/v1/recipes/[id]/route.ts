@@ -249,6 +249,10 @@ export async function GET(request: Request, context: RouteContext) {
     const routeClient = await createRouteHandlerClient({
       anonymousPublicReadScope: "recipe-detail",
     });
+    // Resolve (and, when needed, refresh) the browser session before the first
+    // local Data request. Otherwise an owner opening a private recipe can be
+    // evaluated through the anonymous public-read path and receive a false 404.
+    const authResult = await routeClient.auth.getUser();
     const recipeResult = await routeClient
       .from("recipes")
       .select(
@@ -298,7 +302,6 @@ export async function GET(request: Request, context: RouteContext) {
         })
       : Promise.resolve(legacyThumbnailUrl);
 
-    const authResult = await routeClient.auth.getUser();
     const ingredientColumns = authResult.data.user
       ? "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name), food_product_id, food_product_nutrition_version_id"
       : "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)";
