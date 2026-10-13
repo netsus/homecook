@@ -153,3 +153,17 @@
 2. 구현 → 관련 테스트·타입·lint → 독립 리뷰 → draft PR → 확인 후 merge → 필요한 구성요소 배포 → 실제 운영 확인 순서.
 3. 운영 배포는 총괄 하나만 실행한다. 다음 미검증 묶음을 현재 배포에 섞지 않는다.
 4. 실패 시 정확 명령/대상/guard 사유를 기록한다. 보호 우회·자동 파괴적 rollback 금지.
+
+
+## 요리·알림 운영 확인 완료 — 2026-10-13
+
+- PR #1671과 준비 검사 보완 #1673/#1674 병합 후 release `13d52fe55c21fe473e002596e0880e37f2859390`, build `prelaunch-13d52fe55c21-qir8Bl`을 기존 `deploy:dev --reviewed-ref ... --already-applied-db --test-script test:feedback-batch:web`로 반영했다. 최종 회귀 1,308통과·131선택제외, build·preview·운영 GET 통과, loaded=true/recoveryPending=false. DB219는 읽기 검증만 했고 worker·DB migration·키·운영 환경은 변경하지 않았다.
+- 실제 운영 Chrome: 기존 두부찌개 선택2→3인분으로 독립 snapshot 요리를 시작했다. 재료 두부450g/물600ml, 조리문 물400ml·2스푼 그대로, 지정 안내문을 확인했다. 모바일375/320 실측 viewport에서 가로넘침0, 데스크톱1440에서 화면1392px 및 가로넘침0을 확인했다. 새로고침 후 같은3인분·문구·재료를 유지했고 취소됨 상태→돌아가기→기존 상세 복귀를 확인했다. 팬트리 소진·요리 완료·식사 기록 저장은 실행하지 않았다.
+- 실제 지난 알림은 기존 유튜브 결과14개 다음에 활동 알림을 표시했다. 지난 알림 탭에서 Tab 이동 시 첫 유튜브 결과 버튼에 초점이 갔다. 새 알림·로딩·지난 알림·닫기를 확인했으며 재추출/재시도 버튼을 실행하지 않았다. 신규 추출·AI·P5 호출0. 변경하지 않은 실패/만료 결과 자체를 성공으로 간주하지 않는다.
+- R2 control 재조회: collection_enabled=false, lead_enabled=false, consent_generation=1. 승인된 임시 중지를 유지한다. 앞선 두 준비 실패는 운영 교체 전에 중단됐으며 위 최종 배포와 구분한다.
+
+## T6 네이버 서비스명 — 승인된 이름만 반영
+
+- 사용자가 `서비스명만 무먹으로 저장`을 승인했다. 네이버 개발자센터의 HomeCook 앱이 운영 custom:naver provider와 같은 client ID인지 운영 DB READ ONLY boolean 비교로 확인했다(credential 조회/출력0).
+- API 설정의 애플리케이션 이름만 HomeCook→무먹으로 변경했다. 저장 전 미리보기, 설정 완료 표시, reload 후 이름 무먹 유지와 service/callback URL·동의 checkbox 값 동일을 확인했다. 키·제공 정보·URL·로고·검수 상태는 변경하지 않았다.
+- 현재 개발 중으로 등록 멤버만 이용할 수 있다는 관리자 표시를 확인했다. 검수 신청·일반 회원 신규 OAuth·원래 액션 복귀는 미실행이며 T6 전체 완료는 아니다. 기존 이름으로 되돌릴 때도 같은 이름 항목만 변경하는 방법이다.
