@@ -192,7 +192,7 @@ describe("weight participation independent optional UI",()=>{
       consent_document_version:PARTICIPATION_DOCUMENT.version,consent_document_hash:PARTICIPATION_DOCUMENT.hash,...policy});
     const user=userEvent.setup();view();
     await user.click(await screen.findByRole("button",{name:"기존 참여 철회"}));
-    await user.click(screen.getByRole("button",{name:"참여 철회",exact:true}));
+    await user.click(screen.getByRole("button",{name:/^참여 철회$/}));
     await screen.findByText("철회됨");
     expect(mutateWeightImprovementParticipation).toHaveBeenCalledWith({action:"withdraw",expected_subject:participationStatus().subject,expected_revision:3,surface:"settings_desktop"},expect.any(String));
     expect(screen.getByText(/개선용 자료 정리 상태는 아직 확인 중/)).toBeTruthy();
@@ -204,7 +204,7 @@ describe("weight participation independent optional UI",()=>{
       consent_document_version:"old-document",consent_document_hash:"b".repeat(64)});
     const user=userEvent.setup();view();
     await user.click(await screen.findByRole("button",{name:"기존 참여 철회"}));
-    await user.click(screen.getByRole("button",{name:"참여 철회",exact:true}));
+    await user.click(screen.getByRole("button",{name:/^참여 철회$/}));
     await screen.findByText("철회됨");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(vi.mocked(mutateWeightImprovementParticipation).mock.calls.map(([input])=>input.action)).toEqual(["withdraw"]);
@@ -214,14 +214,14 @@ describe("weight participation independent optional UI",()=>{
       consent_document_version:PARTICIPATION_DOCUMENT.version,consent_document_hash:PARTICIPATION_DOCUMENT.hash});
     const user=userEvent.setup();view();await user.click(await screen.findByRole("switch"));
     vi.mocked(mutateWeightImprovementParticipation).mockRejectedValueOnce(Object.assign(new Error("다시 로그인한 뒤 참여 상태를 확인해 주세요."),{status:401,code:"UNAUTHORIZED"}));
-    await user.click(screen.getByRole("button",{name:"참여 철회",exact:true}));
+    await user.click(screen.getByRole("button",{name:/^참여 철회$/}));
     await screen.findByRole("alert");
     expect(screen.queryByRole("switch")).toBeNull();expect(screen.queryByText(/참여 선택:/)).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();expect(screen.queryByText("철회됨")).toBeNull();
     expect(current.decision).toBe("opted_in");
     await user.click(screen.getByRole("button",{name:"참여 정보 다시 확인"}));
     expect((await screen.findByRole("switch")).getAttribute("aria-checked")).toBe("true");
-    await user.click(screen.getByRole("switch"));await user.click(screen.getByRole("button",{name:"참여 철회",exact:true}));
+    await user.click(screen.getByRole("switch"));await user.click(screen.getByRole("button",{name:/^참여 철회$/}));
     await screen.findByText("철회됨");
     const calls=vi.mocked(mutateWeightImprovementParticipation).mock.calls;expect(calls[1][1]).not.toBe(calls[0][1]);
   });
@@ -230,7 +230,7 @@ describe("weight participation independent optional UI",()=>{
       consent_document_version:PARTICIPATION_DOCUMENT.version,consent_document_hash:PARTICIPATION_DOCUMENT.hash});
     let rejectOld!:(reason:Error)=>void;
     vi.mocked(mutateWeightImprovementParticipation).mockImplementationOnce(()=>new Promise((_resolve,reject)=>{rejectOld=reject;}));
-    const user=userEvent.setup();view();await user.click(await screen.findByRole("switch"));await user.click(screen.getByRole("button",{name:"참여 철회",exact:true}));
+    const user=userEvent.setup();view();await user.click(await screen.findByRole("switch"));await user.click(screen.getByRole("button",{name:/^참여 철회$/}));
     current=participationStatus({subject:{owner_uuid:PARTICIPATION_OTHER_OWNER,account_generation:4}});
     fireEvent(window,new Event("focus"));await waitFor(()=>expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false"));
     await act(async()=>rejectOld(Object.assign(new Error("이전 계정 인증 만료"),{status:401,code:"UNAUTHORIZED"})));
@@ -241,12 +241,12 @@ describe("weight participation independent optional UI",()=>{
     const original=participationStatus({decision:"opted_in",revision:3,notice_seen_at:"2026-10-13T02:00:00Z",opted_in_at:"2026-10-13T02:00:00Z",
       consent_document_version:PARTICIPATION_DOCUMENT.version,consent_document_hash:PARTICIPATION_DOCUMENT.hash});
     current=original;const user=userEvent.setup();view();await user.click(await screen.findByRole("switch"));
-    expect(screen.getByRole("button",{name:"참여 철회",exact:true})).toBeTruthy();
+    expect(screen.getByRole("button",{name:/^참여 철회$/})).toBeTruthy();
     current=participationStatus({subject:{owner_uuid:PARTICIPATION_OTHER_OWNER,account_generation:4}});
-    fireEvent(window,new Event("focus"));await waitFor(()=>expect(screen.queryByRole("button",{name:"참여 철회",exact:true})).toBeNull());
+    fireEvent(window,new Event("focus"));await waitFor(()=>expect(screen.queryByRole("button",{name:/^참여 철회$/})).toBeNull());
     current=original;fireEvent(window,new Event("focus"));
     await waitFor(()=>expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true"));
-    expect(screen.queryByRole("button",{name:"참여 철회",exact:true})).toBeNull();expect(mutateWeightImprovementParticipation).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button",{name:/^참여 철회$/})).toBeNull();expect(mutateWeightImprovementParticipation).not.toHaveBeenCalled();
   });
   it("does not rebind consent waiting for notice acknowledgement to a newly loaded account",async()=>{
     let resolveSeen!:(value:WeightImprovementParticipation)=>void;

@@ -91,7 +91,7 @@ describe("weight participation account/API contract", () => {
     const authClient = await createRouteHandlerClient();
     const auth = await authClient.auth.getUser();
     if (!auth.data.user) throw new Error("fixture user missing");
-    vi.spyOn(authClient.auth, "getUser").mockResolvedValue({ ...auth, data: { user: { ...auth.data.user, id: PARTICIPATION_OTHER_OWNER } } });
+    vi.spyOn(authClient.auth, "getUser").mockResolvedValue({ error: null, data: { user: { ...auth.data.user, id: PARTICIPATION_OTHER_OWNER } } });
     const verified = await readVerifiedAccountGenerationSession(authClient);
     if (!verified.ok) throw new Error("fixture verified session missing");
     vi.mocked(readVerifiedAccountGenerationSession).mockResolvedValue({ ...verified, sessionAuthority: { ...verified.sessionAuthority, ownerUuid: PARTICIPATION_OTHER_OWNER } });

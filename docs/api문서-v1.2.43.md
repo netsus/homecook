@@ -5810,3 +5810,10 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 ### 2026-10-09 식사기록 양 초과 오류 구분 (운영 반영: PR #1600)
 
 식사기록 mutation RPC에서 SQLSTATE22003와 CONFLICT가 함께 반환되면 HTTP409/codeCONFLICT를 유지하고 `fields: [{field: "quantity.amount", reason: "exceeds_available_amount"}]`를 제공한다. 이 경우 UI는 양을 줄이라는 안내를 표시하며 ‘다른 변경의 최신 기록 반영’으로 바꾸지 않는다. 실제 revision 충돌과 계정 권한·세대 검사는 유지한다. SQL/DB 변경 없음.
+
+
+## 2026-10-14 추가 계약 — C05 선택 참여 비활성 준비
+
+`GET /api/v1/users/me/weight-improvement-participation`는 검증된 계정의 선택 상태를 반환한다. PATCH는 UUID Idempotency-Key, action(notice_seen/decline/opt_in/withdraw), 필수 expected_subject(owner_uuid/account_generation), expected_revision, surface를 받는다. opt_in은 consent_checked:true와 document_version/hash가 필요하다. 표시 주체는 권한이 아닌 전제조건이며 불일치는 쓰기 전 409 PARTICIPATION_SUBJECT_CHANGED다. 기존 응답/오류 래퍼를 유지하고 철회는 신규 참여 OFF·문서 없음에도 허용한다.
+
+현재는 로컬 QA 준비이며 운영 UI/참여/수집은 OFF, 문서·기간은 미정이다. 운영 DB 적용과 수집·삭제/복원·모델 처리는 별도 구현/승인 대상이다. [검증과 후속 경계](engineering/mumeok-beta-participation-preparation-20261014.md)를 따른다.
