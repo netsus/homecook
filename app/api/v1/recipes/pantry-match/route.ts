@@ -3,6 +3,8 @@ import { NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { getQaFixtureRecipeDetail, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
+import { recipeIngredientSourceId } from "@/lib/recipe-ingredient-source";
+import { readRecipeProductLabels, recipeProductLabel } from "@/lib/server/recipe-product-labels";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
@@ -21,9 +23,20 @@ interface PantryItemRow {
   ingredient_id: string;
 }
 
-interface RecipeIngredientRow {
+interface SourceRow {
+  ingredient_id: string | null;
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+}
+interface RecipeIngredientRow extends SourceRow {
+  id?: string;
   recipe_id: string;
-  ingredient_id: string;
+  display_text?: string | null;
+  food_product_name?: string | null;
+  food_product_brand?: string | null;
+}
+interface PantrySourcesQuery extends ArrayResult<SourceRow> {
+  eq(column: string, value: string): PantrySourcesQuery;
 }
 
 interface RecipeRow {
@@ -71,6 +84,7 @@ interface IngredientsTable {
 
 interface PantryMatchDbClient {
   from(table: "recipe_ingredients"): RecipeIngredientsTable;
+  from(table: "pantry_items"): { select(columns: string): PantrySourcesQuery };
   from(table: "recipes"): RecipesTable;
   from(table: "ingredients"): IngredientsTable;
   rpc(
@@ -113,7 +127,7 @@ function createFixtureItems() {
   const detail = getQaFixtureRecipeDetail();
   const totalIngredients = detail.ingredients.length;
   const missing = detail.ingredients.slice(-1).map((ingredient) => ({
-    id: ingredient.ingredient_id,
+    id: recipeIngredientSourceId(ingredient),
     standard_name: ingredient.standard_name,
   }));
 
@@ -130,6 +144,12 @@ function createFixtureItems() {
   ] satisfies PantryMatchRecipeItem[];
 }
 
+function sourceKey(row: SourceRow) {
+  return row.food_product_id && row.food_product_nutrition_version_id
+    ? JSON.stringify(["food_product", row.food_product_id, row.food_product_nutrition_version_id])
+    : row.ingredient_id ? JSON.stringify(["ingredient", row.ingredient_id]) : null;
+}
+
 function collectRecipeIngredientSets(rows: RecipeIngredientRow[]) {
   const map = new Map<string, Set<string>>();
 
@@ -138,7 +158,8 @@ function collectRecipeIngredientSets(rows: RecipeIngredientRow[]) {
       map.set(row.recipe_id, new Set<string>());
     }
 
-    map.get(row.recipe_id)?.add(row.ingredient_id);
+    const key = sourceKey(row);
+    if (key) map.get(row.recipe_id)?.add(key);
   });
 
   return map;
@@ -205,63 +226,59 @@ export async function GET(request: NextRequest) {
     return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
   }
 
-  const pantryIngredientIds = [...new Set(pantryItemsResult.data.map((item) => item.ingredient_id))];
-
-  if (pantryIngredientIds.length === 0) {
-    return ok({ items: [] } satisfies PantryMatchListData);
-  }
-
-  const matchedIngredientsResult = await dbClient
-    .from("recipe_ingredients")
-    .select("recipe_id, ingredient_id")
-    .in("ingredient_id", pantryIngredientIds);
-
-  if (matchedIngredientsResult.error || !matchedIngredientsResult.data) {
+  const pantrySourcesResult = await dbClient.from("pantry_items")
+    .select("ingredient_id, food_product_id, food_product_nutrition_version_id")
+    .eq("user_id", user.id);
+  if (pantrySourcesResult.error || !pantrySourcesResult.data) {
     return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
   }
+  const pantryIngredientIds = [...new Set(pantryItemsResult.data.map((item) => item.ingredient_id))];
+  const pantryProducts = pantrySourcesResult.data.filter((item) => item.food_product_id && item.food_product_nutrition_version_id);
+  const pantryKeys = new Set([
+    ...pantryIngredientIds.map((id) => JSON.stringify(["ingredient", id])),
+    ...pantryProducts.flatMap((item) => { const key = sourceKey(item); return key ? [key] : []; }),
+  ]);
+  if (pantryKeys.size === 0) return ok({ items: [] } satisfies PantryMatchListData);
 
-  if (matchedIngredientsResult.data.length === 0) {
-    return ok({ items: [] } satisfies PantryMatchListData);
+  const columns = "id, recipe_id, ingredient_id, food_product_id, food_product_nutrition_version_id, display_text";
+  const matchedRows: RecipeIngredientRow[] = [];
+  if (pantryIngredientIds.length) {
+    const result = await dbClient.from("recipe_ingredients").select(columns).in("ingredient_id", pantryIngredientIds);
+    if (result.error || !result.data) return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
+    matchedRows.push(...result.data);
   }
-
-  const matchedByRecipe = collectRecipeIngredientSets(matchedIngredientsResult.data);
+  if (pantryProducts.length) {
+    const result = await dbClient.from("recipe_ingredients").select(columns)
+      .in("food_product_id", [...new Set(pantryProducts.flatMap((row) => row.food_product_id ? [row.food_product_id] : []))]);
+    if (result.error || !result.data) return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
+    matchedRows.push(...result.data);
+  }
+  const matchedByRecipe = collectRecipeIngredientSets(matchedRows.filter((row) => {
+    const key = sourceKey(row); return key !== null && pantryKeys.has(key);
+  }));
   const candidateRecipeIds = [...matchedByRecipe.keys()];
-
-  const recipeIngredientsResult = await dbClient
-    .from("recipe_ingredients")
-    .select("recipe_id, ingredient_id")
-    .in("recipe_id", candidateRecipeIds);
-
+  if (!candidateRecipeIds.length) return ok({ items: [] } satisfies PantryMatchListData);
+  const recipeIngredientsResult = await dbClient.from("recipe_ingredients").select(columns).in("recipe_id", candidateRecipeIds);
   if (recipeIngredientsResult.error || !recipeIngredientsResult.data) {
     return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
   }
-
-  const totalByRecipe = collectRecipeIngredientSets(recipeIngredientsResult.data);
-
-  const missingIngredientIds = new Set<string>();
-  totalByRecipe.forEach((ingredientIds) => {
-    ingredientIds.forEach((ingredientId) => {
-      if (!pantryIngredientIds.includes(ingredientId)) {
-        missingIngredientIds.add(ingredientId);
-      }
-    });
-  });
-
+  let sourceRows: RecipeIngredientRow[];
+  try {
+    sourceRows = await readRecipeProductLabels(routeClient, recipeIngredientsResult.data);
+  } catch {
+    return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
+  }
+  const totalByRecipe = collectRecipeIngredientSets(sourceRows);
+  const byKey = new Map(sourceRows.flatMap((row) => { const key = sourceKey(row); return key ? [[key, row] as const] : []; }));
+  const missingIngredientIds = [...new Set(sourceRows.flatMap((row) => {
+    const key = sourceKey(row);
+    return key && !pantryKeys.has(key) && !row.food_product_id && row.ingredient_id ? [row.ingredient_id] : [];
+  }))];
   const ingredientNameById = new Map<string, string>();
-
-  if (missingIngredientIds.size > 0) {
-    const ingredientsResult = await dbClient
-      .from("ingredients")
-      .select("id, standard_name")
-      .in("id", [...missingIngredientIds]);
-
-    if (ingredientsResult.error || !ingredientsResult.data) {
-      return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
-    }
-
-    ingredientsResult.data.forEach((ingredient) => {
-      ingredientNameById.set(ingredient.id, ingredient.standard_name);
-    });
+  if (missingIngredientIds.length) {
+    const result = await dbClient.from("ingredients").select("id, standard_name").in("id", missingIngredientIds);
+    if (result.error || !result.data) return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
+    result.data.forEach((row) => ingredientNameById.set(row.id, row.standard_name));
   }
 
   const recipesResult = await dbClient
@@ -273,18 +290,26 @@ export async function GET(request: NextRequest) {
     return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);
   }
 
-  const pantryIngredientSet = new Set(pantryIngredientIds);
   const items = recipesResult.data
     .map((recipe) => {
       const matchedIngredientIds = matchedByRecipe.get(recipe.id) ?? new Set<string>();
       const totalIngredientIds = totalByRecipe.get(recipe.id) ?? new Set<string>();
       const missingIngredients: PantryMatchRecipeItem["missing_ingredients"] = [];
-      for (const ingredientId of totalIngredientIds) {
-        if (!pantryIngredientSet.has(ingredientId)) {
-          missingIngredients.push({
-            id: ingredientId,
-            standard_name: ingredientNameById.get(ingredientId) ?? "",
-          });
+      for (const key of totalIngredientIds) {
+        if (!pantryKeys.has(key)) {
+          const row = byKey.get(key);
+          if (!row) throw new Error("RECIPE_SOURCE_ROW_MISSING");
+          const missing: PantryMatchRecipeItem["missing_ingredients"][number] = {
+            id: recipeIngredientSourceId(row),
+            standard_name: recipeProductLabel(row) ?? (row.ingredient_id ? ingredientNameById.get(row.ingredient_id) : null) ?? row.display_text ?? "제품",
+          };
+          if (row.food_product_id) {
+            missing.source_kind = "food_product";
+            missing.food_product_id = row.food_product_id;
+            missing.food_product_nutrition_version_id = row.food_product_nutrition_version_id ?? null;
+            missing.row_key = row.id;
+          }
+          missingIngredients.push(missing);
         }
       }
       const totalIngredients = totalIngredientIds.size;

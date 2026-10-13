@@ -9884,7 +9884,7 @@ function normalizeIngredient(row: Record<string, unknown>): YoutubeRecipeRegiste
   };
 }
 
-function normalizeIngredientsUsed(value: unknown): ManualRecipeStepInput["ingredients_used"] {
+function normalizeIngredientsUsed(value: unknown): YoutubeRecipeRegisterStepInput["ingredients_used"] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -10311,7 +10311,7 @@ async function findMissingIds(
 }
 
 function buildMissingIngredientFields(
-  ingredients: ManualRecipeIngredientInput[],
+  ingredients: Array<ManualRecipeIngredientInput & { ingredient_id: string }>,
   missingIds: string[],
 ) {
   const missingIdSet = new Set(missingIds);

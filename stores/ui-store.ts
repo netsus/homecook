@@ -17,14 +17,15 @@ export function showActionConfirmation(message: string) {
 import type {
   PendingRecipeAction,
   PendingRecipeActionType,
+  RecipeEditorPantryResume,
 } from "@/lib/auth/pending-action";
 import type { RecipeEditContext } from "@/types/recipe";
 
 type AuthGateOpenPayload =
   | { recipeId: string; type: Exclude<PendingRecipeActionType, "recipe-edit-save" | "recipe-save-as-new" | "recipe-fork" | "planner"> }
   | { recipeId: string; type: "planner"; plannedServings?: number }
-  | { editContext?: RecipeEditContext; sourceOwnerUuid?: string | null; recipeId: string; type: "recipe-fork" }
-  | { editContext: RecipeEditContext; sourceOwnerUuid: string | null; recipeId: string; type: "recipe-edit-save" | "recipe-save-as-new" };
+  | { editContext?: RecipeEditContext; sourceOwnerUuid?: string | null; sourceAccountGeneration?: number; resumeEditor?: RecipeEditorPantryResume; recipeId: string; type: "recipe-fork" }
+  | { editContext: RecipeEditContext; sourceOwnerUuid: string | null; sourceAccountGeneration?: number; recipeId: string; type: "recipe-edit-save" | "recipe-save-as-new" };
 
 interface AuthGateState {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export const useAuthGateStore = create<AuthGateState>((set) => ({
   open: (payload) => {
     const common: Pick<
       PendingRecipeAction,
-      "recipeId" | "redirectTo" | "createdAt" | "sourceOwnerUuid"
+      "recipeId" | "redirectTo" | "createdAt" | "sourceOwnerUuid" | "sourceAccountGeneration"
     > = {
       recipeId: payload.recipeId,
       redirectTo: `/recipe/${payload.recipeId}`,
@@ -49,13 +50,14 @@ export const useAuthGateStore = create<AuthGateState>((set) => ({
     if ("sourceOwnerUuid" in payload) {
       common.sourceOwnerUuid = payload.sourceOwnerUuid;
     }
+    if ("sourceAccountGeneration" in payload) common.sourceAccountGeneration = payload.sourceAccountGeneration;
 
     const action: PendingRecipeAction = (
       payload.type === "recipe-edit-save" || payload.type === "recipe-save-as-new"
     )
       ? { ...common, type: payload.type, editContext: payload.editContext }
       : payload.type === "recipe-fork"
-        ? { ...common, type: payload.type, editContext: payload.editContext }
+        ? { ...common, type: payload.type, editContext: payload.editContext, resumeEditor: payload.resumeEditor }
         : payload.type === "planner"
           ? { ...common, type: payload.type, plannedServings: payload.plannedServings }
           : { ...common, type: payload.type };

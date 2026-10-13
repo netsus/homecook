@@ -84,8 +84,10 @@ export async function fetchFoodCatalogSearch({
   return requestFoodCatalog(params, signal);
 }
 
-export async function fetchFoodCatalogSource(type: FoodCatalogSearchType, id: string, signal?: AbortSignal) {
-  const result = await requestFoodCatalog(new URLSearchParams({ source_type: type, source_id: id }), signal);
+export async function fetchFoodCatalogSource(type: FoodCatalogSearchType, id: string, signal?: AbortSignal, options?: { pantryItemId?: string }) {
+  const params = new URLSearchParams({ source_type: type, source_id: id });
+  if (options?.pantryItemId) params.set("pantry_item_id", options.pantryItemId);
+  const result = await requestFoodCatalog(params, signal);
   return result.items.find((item) => item.type === type && item.id === id) ?? null;
 }
 
