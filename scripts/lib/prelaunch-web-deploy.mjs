@@ -19,6 +19,7 @@ const CLOSED_R2_FILES = new Set([
   "app/privacy/page.tsx", "tests/launch-readiness-legal-seo.test.tsx", "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
   "docs/요구사항기준선-v1.7.36.md", "docs/화면정의서-v1.5.40.md",
   "docs/engineering/gabia-direct-domain-20261012.md", "docs/engineering/mumeok-beta-f01-privacy-reconciliation-20261013.md",
+  "docs/engineering/mumeok-beta-v9-progress-20261013.md", "docs/유저flow맵-v1.3.38.md",
 ]);
 
 function closedR2PrivateDirectory(directory, repositoryRoot) {

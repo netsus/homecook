@@ -79,11 +79,11 @@ describe("closed R2 F01 review boundary", () => {
     expect(() => assertClosedR2Source({ ...input, files: [...input.files, "app/privacy/other.tsx"] })).toThrow("파일");
     expect(() => assertClosedR2Review({ ...review, files: { ...review.files, "lib/server/marketing-round2.ts": [hash("old"), hash("new")] } })).toThrow("F01");
   });
-  it("limits initial F01 to the ten exact reviewed paths and requires all three existing product byte pairs", () => {
+  it("limits initial F01 to the twelve exact reviewed paths and requires all three existing product byte pairs", () => {
     const { review } = fixture();
     const paths = ["app/privacy/page.tsx", "app/page.tsx", "components/home/home-screen.tsx", "tests/home-screen.test.tsx", "tests/launch-readiness-legal-seo.test.tsx",
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md", "docs/요구사항기준선-v1.7.36.md", "docs/화면정의서-v1.5.40.md", "docs/engineering/gabia-direct-domain-20261012.md",
-      "docs/engineering/mumeok-beta-f01-privacy-reconciliation-20261013.md"];
+      "docs/engineering/mumeok-beta-f01-privacy-reconciliation-20261013.md", "docs/engineering/mumeok-beta-v9-progress-20261013.md", "docs/유저flow맵-v1.3.38.md"];
     const files = Object.fromEntries(paths.map(path => [path, [hash(`before ${path}`), hash(`reviewed ${path}`)]]));
     expect(() => assertClosedR2Review({ ...review, files })).not.toThrow();
     for (const path of ["app/privacy/page.tsx", "app/page.tsx", "components/home/home-screen.tsx"]) {
@@ -91,7 +91,8 @@ describe("closed R2 F01 review boundary", () => {
       expect(() => assertClosedR2Review({ ...review, files: missing })).toThrow("F01");
       expect(() => assertClosedR2Review({ ...review, files: { ...files, [path]: [files[path][0], null] } })).toThrow("삭제");
     }
-    for (const path of ["app/privacy/other.tsx", "components/home/home-shell.tsx", "tests/home-banner.test.tsx", "app/layout.tsx", "components/marketing/recording-landing.tsx"]) {
+    for (const path of ["app/privacy/other.tsx", "components/home/home-shell.tsx", "tests/home-banner.test.tsx", "app/layout.tsx", "components/marketing/recording-landing.tsx",
+      "docs/engineering/unreviewed.md", "docs/유저flow맵-v1.3.39.md"]) {
       expect(() => assertClosedR2Review({ ...review, files: { ...files, [path]: [hash("old"), hash("new")] } })).toThrow("F01");
     }
   });

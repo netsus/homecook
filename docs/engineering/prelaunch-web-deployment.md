@@ -100,7 +100,8 @@ control, 원 readiness/proof 9개, 읽기 전용 DB source/applied 목록을 고
 
 최초 예외는 `app/privacy/page.tsx`, `app/page.tsx`, `components/home/home-screen.tsx` 세 제품 파일과
 지정한 테스트·설명 문서의 exact diff만 허용한다. 기존 7개 지정 경로에 위 홈 제품 2개와
-`tests/home-screen.test.tsx`만 더해 총 10개 경로로 제한하며 세 제품 파일은 검토한 기존 파일의
+`tests/home-screen.test.tsx`, 이미 반영된 운영 증거 `docs/engineering/mumeok-beta-v9-progress-20261013.md`와
+`docs/유저flow맵-v1.3.38.md`만 더해 총 12개 경로로 제한하며 세 제품 파일은 검토한 기존 파일의
 before/after bytes가 모두 필요하다. 새 제품 파일이나 기존 보호 파일 전체에 예외를 주지 않는다.
 홈 수정은 서버의 명시 `MUMEOK_ROUND2_ENABLED=false` 때만 모바일 R2 진입 두 개와 데스크톱
 R2 배너를 숨겨 recording404로 가는 깨진 링크를 없앤다. unset/true의 기존 표시와 collector/API/
