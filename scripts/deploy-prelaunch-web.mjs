@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
+import { isDeepStrictEqual } from "node:util";
 import { classifyPrelaunchScope, assertRollbackTarget, assertDatabaseRollbackCompatible, currentDatabaseState, parsePrelaunchArgs, parsePrelaunchOptions, prelaunchVerificationScripts, prelaunchVerificationEnvironment, runPrelaunchVerification, prepareDatabaseDeployment, shouldRequireDatabaseRecovery, prelaunchSourceAncestry, restartLaunchAgent, createCancellation, prelaunchBuildEnvironment, DeploymentError, deployTransaction, productionEnvironment, retargetPlist, retargetRound2Release, inheritRound2Readiness, fetchPrelaunchLanding, prelaunchChangedFiles } from "./lib/prelaunch-web-deploy.mjs";
 
 import { reviewedRepairReadiness } from "./lib/prelaunch-repair-readiness.mjs";
@@ -35,6 +36,11 @@ import {
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
 import { durableJson } from "./lib/marketing-round2-controlled-deploy.mjs";
+import {
+  CLOSED_R2_REVIEW_PIN, acquireClosedR2ControlLease, assertClosedR2CompensationTarget, assertClosedR2ContinuationOptions, assertClosedR2Database, assertClosedR2Environment,
+  assertClosedR2LiveMarker, assertClosedR2LiveUnchanged, assertClosedR2MaintenanceFence, assertClosedR2PredecessorState, assertClosedR2Retry, assertClosedR2Rollback, assertRound2InheritanceBoundaries,
+  assertClosedR2Source, closedR2RollbackPlist, loadClosedR2Review, readClosedR2PrivateBytes, verifyClosedR2Control, verifyClosedR2HistoricalProofs,
+} from "./lib/prelaunch-web-deploy.mjs";
 
 const repository = realpathSync(resolve(process.env.HOMECOOK_DEPLOY_REPOSITORY || resolve(dirname(fileURLToPath(import.meta.url)), "..")));
 const root = join(homedir(), ".homecook/prelaunch-web");
@@ -157,7 +163,23 @@ async function logged(bin, args, options) {
   } finally { await owned.stop(); owned.forget(); }
 }
 
-async function stageRound2Readiness(plist, release, live, selection, databaseDeployment, options, databasePlan) {
+async function stageRound2Readiness(plist, release, live, selection, databaseDeployment, options, databasePlan, closedContext) {
+  if (options.reviewedClosedR2Maintenance || closedContext) {
+    const review = loadClosedR2Review(repository);
+    const patch = readEnvironmentPatch(options.envFile, repository);
+    if (options.reviewedClosedR2Maintenance) {
+      validateClosedR2Candidate(review, live, selection, patch, options, closedContext);
+      assertClosedR2Environment({ review, previous: live.plist, next: plist, patch,
+        envPatchSha256: hash(readClosedR2PrivateBytes(options.envFile, repository)) });
+    } else {
+      assertClosedR2ContinuationOptions(options);
+      assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment });
+      if (!isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
+    }
+    assertClosedR2Database(review, databasePlan);
+    verifyClosedR2Control(review, repository);
+    return plist; // No active readiness copy, new release binding or provider proof.
+  }
   const configured = [live.plist, plist].some(value => {
     const env = value.EnvironmentVariables;
     return env?.MUMEOK_ROUND2_ENABLED === "true" || env?.MUMEOK_ROUND2_RELEASE_SHA || env?.MUMEOK_ROUND2_READINESS_PATH || env?.MUMEOK_ROUND2_REPOSITORY_ROOT;
@@ -241,6 +263,98 @@ async function freePort() {
   return port;
 }
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const closedR2ArtifactName = "round2-closed-maintenance.json";
+function validateClosedR2Candidate(review, live, selection, patch, options, closedContext) {
+  const digests = Object.fromEntries(Object.keys(review.files).map(file => [file, [live.ref, selection.target].map(sha =>
+    git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`],
+      { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null)]));
+  let predecessorBytes = live.bytes;
+  if (closedContext) {
+    predecessorBytes = readClosedR2PrivateBytes(closedContext.state.backup, repository);
+    assertClosedR2Retry({ state: closedContext.state, live: { ...live, plistHash: hash(live.bytes) }, review, originalBytes: predecessorBytes });
+  }
+  assertClosedR2Source({ review, liveSha: live.ref, releaseSha: selection.target, files: selection.files, digests, predecessorPlistSha256: hash(predecessorBytes), predecessorBuildId: live.buildId });
+  if (options.testScript !== review.testScript || selection.scope.database.length || !options.alreadyAppliedDb) {
+    throw new DeploymentError("닫힌 R2 유지 배포의 검토한 test/source 범위가 다릅니다.");
+  }
+  assertClosedR2Environment({ review, previous: live.plist, next: closedR2RollbackPlist(live.plist), patch,
+    envPatchSha256: hash(readClosedR2PrivateBytes(options.envFile, repository)) });
+}
+function requireClosedR2Mode(options, live = current(), rollback = false) {
+  const records = [];
+  for (const path of [recoveryPath, statePath]) {
+    if (!existsSync(path)) continue;
+    const state = JSON.parse(readFileSync(path, "utf8"));
+    assertClosedR2MaintenanceFence(state, options);
+    records.push({ state, recovering: path === recoveryPath });
+  }
+  const path = join(dirname(live.cwd), closedR2ArtifactName);
+  if (!existsSync(path)) {
+    if (!rollback && records.some(({ state }) => Object.hasOwn(state, "closedR2"))) throw new DeploymentError("닫힌 R2 state의 실제 릴리스 marker가 없습니다.");
+    return null;
+  }
+  const bytes = readClosedR2PrivateBytes(path, repository);
+  const recorded = records.find(({ state }) => state.closedR2?.artifactSha256 === hash(bytes));
+  if (!recorded) throw new DeploymentError("실제 닫힌 R2 릴리스 marker에 맞는 state/recovery가 없습니다.");
+  assertClosedR2MaintenanceFence(recorded.state, options);
+  const review = loadClosedR2Review(repository);
+  const marker = JSON.parse(bytes);
+  assertClosedR2LiveMarker({ ...recorded, marker, markerSha256: hash(bytes), live: { ...live, plistHash: hash(live.bytes) }, review, reviewSha256: CLOSED_R2_REVIEW_PIN.sha256 });
+  if (!isDeepStrictEqual(marker.historicalProofs, verifyClosedR2HistoricalProofs(review, repository))) throw new DeploymentError("닫힌 R2 marker의 원 proof 기록이 다릅니다.");
+  if (!rollback && !options.reviewedClosedR2Maintenance) {
+    assertClosedR2ContinuationOptions(options);
+    git(["merge-base", "--is-ancestor", review.to, live.ref]); // Continuation starts from the reviewed F01 lineage, never a bootstrap predecessor.
+  }
+  return { ...recorded, marker, markerPath: path, review };
+}
+async function verifyClosedR2Web(port) {
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/marketing/round2`, { method: "POST", redirect: "error", signal: AbortSignal.timeout(2500),
+    headers: { host: "app.mumeok.kr", origin: "https://app.mumeok.kr", "content-type": "application/json" }, body: "{}" });
+  if (response.status !== 503 || (await response.json()).error?.code !== "ROUND2_DISABLED") throw new DeploymentError("R2 닫힘 응답을 확인하지 못했습니다.");
+  for (const path of ["/", "/login", "/privacy"]) {
+    const page = await fetch(`http://127.0.0.1:${port}${path}`, { redirect: "error", signal: AbortSignal.timeout(2500) });
+    if (!page.ok) throw new DeploymentError("닫힌 R2 웹의 공개 핵심 화면을 확인하지 못했습니다.");
+  }
+  const recording = await fetch(`http://127.0.0.1:${port}/beta/r2/recording`, { redirect: "error", signal: AbortSignal.timeout(2500) });
+  if (recording.status !== 404) throw new DeploymentError("닫힌 recording 화면이 404가 아닙니다.");
+  const homeflow = await fetch(`http://127.0.0.1:${port}/beta/r2/homeflow`, { redirect: "error", signal: AbortSignal.timeout(2500) });
+  if (!homeflow.ok || !(await homeflow.text()).includes("미리 둘러보기 · 입력은 저장되지 않아요")) throw new DeploymentError("homeflow의 저장 없는 공개 화면을 확인하지 못했습니다.");
+}
+function verifyClosedR2State(state, review) {
+  const path = join(dirname(state.checkout), closedR2ArtifactName);
+  const bytes = readClosedR2PrivateBytes(path, repository);
+  const recorded = { ...state.closedR2 };
+  delete recorded.rolledBack;
+  delete recorded.artifactSha256;
+  if (hash(bytes) !== state.closedR2.artifactSha256 || !isDeepStrictEqual(JSON.parse(bytes), recorded)
+    || recorded.reviewSha256 !== CLOSED_R2_REVIEW_PIN.sha256 || recorded.pauseReceiptSha256 !== review.pause.sha256) {
+    throw new DeploymentError("닫힌 R2 복구 artifact 결속이 바뀌었습니다.");
+  }
+  return bytes;
+}
+async function preserveClosedR2PredecessorMarker(state, review) {
+  if (state.closedR2.previousStateSha256) {
+    previousClosedR2State(state, review);
+    const path = join(dirname(state.previousCwd), closedR2ArtifactName);
+    if (hash(readClosedR2PrivateBytes(path, repository)) !== state.closedR2.previousArtifactSha256) throw new DeploymentError("직전 닫힘 릴리스 marker가 바뀌었습니다.");
+    return;
+  }
+  const bytes = verifyClosedR2State(state, review);
+  const path = join(dirname(state.previousCwd), closedR2ArtifactName);
+  if (!existsSync(path)) await durableJson(path, JSON.parse(bytes), true);
+  if (!readClosedR2PrivateBytes(path, repository).equals(bytes)) throw new DeploymentError("이전 릴리스의 닫힌 R2 marker가 다릅니다.");
+}
+function previousClosedR2State(state, review) {
+  const bytes = readClosedR2PrivateBytes(join(dirname(state.checkout), "previous-closed-state.json"), repository, 524288);
+  const path = join(dirname(state.previousCwd), closedR2ArtifactName);
+  const markerBytes = readClosedR2PrivateBytes(path, repository);
+  const plistBytes = readClosedR2PrivateBytes(state.closedR2.kind === "f01-retry" ? join(dirname(state.checkout), "closed-rollback.plist") : state.backup, repository);
+  return assertClosedR2PredecessorState({ state, previousBytes: bytes, markerBytes, plist: parsePlist(plistBytes), plistSha256: hash(plistBytes),
+    review, reviewSha256: CLOSED_R2_REVIEW_PIN.sha256 });
+}
+function closedR2RestoredState(state, review) {
+  return state.closedR2.previousStateSha256 ? previousClosedR2State(state, review) : { ...state, closedR2: { ...state.closedR2, rolledBack: true } };
+}
 async function smoke(port, cwd, buildId, recovering = false) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/u.test(buildId)) throw new DeploymentError("잘못된 Next.js 빌드 ID");
   const manifestPath = `/_next/static/${buildId}/_buildManifest.js`;
@@ -263,14 +377,14 @@ async function smoke(port, cwd, buildId, recovering = false) {
   }
   throw new DeploymentError("웹 GET 확인 실패 (/beta·빌드 ID·정적 파일)");
 }
-async function preview(plist, checkout, buildId) {
+async function preview(plist, checkout, buildId, closedR2 = false) {
   const port = await freePort();
   cancellation.check();
   const child = spawn(plist.ProgramArguments[0], [join(checkout, "scripts/start-production.mjs"), "-H", "127.0.0.1", "-p", String(port)], {
     cwd: checkout, env: productionEnvironment(plist), detached: true, stdio: ["ignore", logFd, logFd],
   });
   const owned = ownChild(child);
-  try { await smoke(port, checkout, buildId); } finally { await owned.stop(); owned.forget(); }
+  try { await smoke(port, checkout, buildId); if (closedR2) await verifyClosedR2Web(port); } finally { await owned.stop(); owned.forget(); }
 
 }
 async function switchWeb(bytes) {
@@ -311,6 +425,9 @@ async function verifyAppliedDatabase(options, checkout) {
 }
 
 async function deploy(options) {
+  const live = current();
+  const closedContext = requireClosedR2Mode(options, live);
+  const closedReview = options.reviewedClosedR2Maintenance ? loadClosedR2Review(repository) : closedContext?.review;
   const nutritionRecoveryReview = options.reviewedNutritionRecoveryReadiness ? await loadNutritionRecoveryReview() : null;
   if (options.reviewedPieceUnitReadiness) await loadPieceUnitReview();
   if (options.reviewedIngredientSearchReadiness) await loadIngredientSearchReview();
@@ -320,9 +437,13 @@ async function deploy(options) {
   if (options.reviewedAiNutritionReadiness) await loadAiNutritionReview();
   if (options.reviewedFeedbackReadiness) await loadFeedbackReview();
   if (existsSync(recoveryPath)) throw new DeploymentError("이전 배포 복구가 남아 있습니다. status와 rollback을 먼저 실행하세요.");
-  const live = current();
   const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness);
   const patch = readEnvironmentPatch(options.envFile, repository);
+  if (options.reviewedClosedR2Maintenance) {
+    validateClosedR2Candidate(closedReview, live, selection, patch, options, closedContext);
+    verifyClosedR2Control(closedReview, repository);
+  }
+  if (closedReview && selection.scope.database.length) throw new DeploymentError("닫힘 유지/승계에 SQL source 변경은 허용하지 않습니다.");
   const needsDatabase = selection.scope.database.length > 0 || Boolean(options.dbConfig);
   if (needsDatabase && !options.dbConfig) throw new DeploymentError("DB 변경이 포함되어 있습니다. --db-config <비공개 full-local 설정 파일>을 지정하세요. 웹은 변경하지 않았습니다.");
   if (needsDatabase && !options.alreadyAppliedDb && !options.dbCompatible
@@ -332,6 +453,10 @@ async function deploy(options) {
   const release = mkdtempSync(join(root, "releases/", `${selection.target.slice(0, 12)}-`));
   const checkout = join(release, "checkout");
   const backup = join(release, "previous.plist");
+  const closedRollbackPath = join(release, "closed-rollback.plist");
+  const originalBackupBytes = options.reviewedClosedR2Maintenance && closedContext ? readClosedR2PrivateBytes(closedContext.state.backup, repository) : live.bytes;
+  const closedRollbackBytes = closedReview ? closedContext ? live.bytes : plistBytes(closedR2RollbackPlist(live.plist)) : null;
+  let closedLease;
   let buildId;
   let state;
   let nextPlist;
@@ -340,7 +465,7 @@ async function deploy(options) {
   let pieceUnitDatabase;
   let youtubeResolutionDatabase;
   say(`웹 준비: ${selection.from.slice(0, 12)} → ${selection.target.slice(0, 12)}`);
-  await deployTransaction({
+  try { await deployTransaction({
     prepare: async () => {
       await logged("git", ["-C", repository, "worktree", "add", "--detach", checkout, selection.target], {});
       copyEnvironment(live.cwd, checkout);
@@ -353,7 +478,7 @@ async function deploy(options) {
         : options.alreadyAppliedDb ? await verifyAppliedDatabase(options, checkout) : null;
       nextPlist = await stageRound2Readiness(nextPlist, release, live, selection,
         needsDatabase && !options.alreadyAppliedDb && !options.reviewedIntegratedMasterReadiness,
-        options, databasePlan);
+        options, databasePlan, closedContext);
       nextBytes = plistBytes(nextPlist);
       if (nutritionRecoveryReview) {
         const priorDatabase = existsSync(databaseStatePath) ? JSON.parse(readFileSync(databaseStatePath, "utf8")) : null;
@@ -402,9 +527,10 @@ process.exit(result.status ?? 1);`;
       await logged(live.plist.ProgramArguments[0], ["--input-type=module", "-e", buildScript], buildOptions);
       buildId = readFileSync(join(checkout, ".next/BUILD_ID"), "utf8").trim();
       if (buildId !== buildOptions.env.HOMECOOK_RELEASE_BUILD_ID) throw new DeploymentError("새 웹의 고유 빌드 ID가 일치하지 않습니다.");
-      atomicWrite(backup, live.bytes);
+      atomicWrite(backup, originalBackupBytes);
+      if (closedReview) atomicWrite(closedRollbackPath, closedRollbackBytes);
       const reviewedDatabase = nutritionRecoveryDatabase ?? pieceUnitDatabase ?? youtubeResolutionDatabase;
-      state = { backup, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistHash: hash(live.bytes), checkout, ref: selection.target, buildId, targetPlistHash: hash(nextBytes), environmentKeys: Object.keys(patch).sort(), automatedTests: options.skipAutomatedTests ? "skipped_by_explicit_request" : "default", primaryTestScript: options.testScript ?? null, verificationScripts: selection.verificationScripts, databaseVerification: databasePlan,
+      state = { backup, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistHash: hash(originalBackupBytes), checkout, ref: selection.target, buildId, targetPlistHash: hash(nextBytes), environmentKeys: Object.keys(patch).sort(), automatedTests: options.skipAutomatedTests ? "skipped_by_explicit_request" : "default", primaryTestScript: options.testScript ?? null, verificationScripts: selection.verificationScripts, databaseVerification: databasePlan,
         ...(options.reviewedIntegratedMasterReadiness ? { integratedMasterWebFirst: {
           schema: YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
           releaseSha: selection.target,
@@ -413,6 +539,26 @@ process.exit(result.status ?? 1);`;
           migrationSha256: selection.integratedReview.descriptor.database.migration.sha256,
         } } : {}),
         ...(reviewedDatabase ? { database: reviewedDatabase } : {}) };
+      if (closedReview) {
+        let previousStateSha256;
+        if (closedContext) {
+          const previousStatePath = join(release, "previous-closed-state.json");
+          await durableJson(previousStatePath, closedContext.state, true);
+          previousStateSha256 = hash(readClosedR2PrivateBytes(previousStatePath, repository, 524288));
+        }
+        const closedR2 = { schema: "homecook.prelaunch-closed-r2-state.v1", activationAuthorized: false,
+          kind: options.reviewedClosedR2Maintenance ? closedContext ? "f01-retry" : "f01" : "continuation",
+          from: live.ref, to: selection.target, buildId, reviewSha256: CLOSED_R2_REVIEW_PIN.sha256,
+          checkout, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistSha256: hash(originalBackupBytes), targetPlistSha256: hash(nextBytes),
+          ...(closedContext ? { previousStateSha256, previousArtifactSha256: closedContext.state.closedR2.artifactSha256 } : {}),
+          pauseReceiptSha256: closedReview.pause.sha256, controlSha256: closedReview.controlSha256,
+          databasePlanSha256: closedReview.databasePlanSha256,
+          historicalReadinessSha256: closedReview.historicalReadiness.sha256, historicalProofs: verifyClosedR2HistoricalProofs(closedReview, repository),
+          consentGeneration: closedReview.consentGeneration, rollbackPlistSha256: hash(closedRollbackBytes) };
+        const artifactPath = join(release, closedR2ArtifactName);
+        await durableJson(artifactPath, closedR2, true);
+        state.closedR2 = { ...closedR2, artifactSha256: hash(readClosedR2PrivateBytes(artifactPath, repository)) };
+      }
       if (needsDatabase && !options.alreadyAppliedDb && !options.reviewedIntegratedMasterReadiness) {
         say("DB 변경 검사 및 격리된 데이터베이스 검증 중");
         const database = await prepareDatabaseDeployment({
@@ -429,11 +575,12 @@ process.exit(result.status ?? 1);`;
         atomicWrite(recoveryPath, JSON.stringify(state));
       }
       say("별도 로컬 포트에서 새 웹 확인 중");
-      await preview(nextPlist, checkout, buildId);
+      await preview(nextPlist, checkout, buildId, Boolean(closedReview));
       cancellation.check();
       if (options.alreadyAppliedDb) {
         const finalPlan = await verifyAppliedDatabase(options, checkout);
         if (JSON.stringify(finalPlan) !== JSON.stringify(databasePlan)) throw new DeploymentError("준비 중 DB 이력이 바뀌었습니다.");
+        if (closedReview) assertClosedR2Database(closedReview, finalPlan);
       }
       if (options.reviewedIntegratedMasterReadiness) {
         const finalPlan = await verifyIntegratedMasterDatabase({ repositoryRoot: checkout,
@@ -447,20 +594,42 @@ process.exit(result.status ?? 1);`;
       else if (options.reviewedNutritionRecoveryReadiness || options.reviewedRepairReadiness || options.reviewedBetaReadiness || options.reviewedFeedbackReadiness || options.reviewedAiNutritionReadiness || options.reviewedIngredientSearchReadiness || options.reviewedPieceUnitReadiness) await stageRound2Readiness(readinessPlist, release, live, selection, false, options, databasePlan);
       assertClean(live.cwd);
       if (!readFileSync(plistPath).equals(live.bytes)) throw new DeploymentError("준비 중 웹 설정이 바뀌었습니다.");
+      if (closedReview) {
+        const actualLive = current();
+        assertClosedR2LiveUnchanged(live, actualLive);
+        requireClosedR2Mode(options, actualLive);
+        if (options.reviewedClosedR2Maintenance) validateClosedR2Candidate(closedReview, live, selection, patch, options, closedContext);
+        else await stageRound2Readiness(nextPlist, release, live, selection, false, options, databasePlan, closedContext);
+        closedLease = await acquireClosedR2ControlLease(closedReview, repository);
+        closedLease.verify();
+      }
       atomicWrite(recoveryPath, JSON.stringify(state));
     },
     restoreProhibitedReason: options.reviewedPieceUnitReadiness ? PIECE_UNIT_RECOVERY_MESSAGE
       : options.reviewedYoutubeResolutionReadiness ? YOUTUBE_RESOLUTION_ROLLBACK_REASON : undefined,
-    activate: async () => { say("웹 프로세스 교체 중"); await switchWeb(nextBytes); },
-    verify: () => smoke(3100, checkout, buildId),
-    restore: async () => { await switchWeb(live.bytes); },
-    verifyRestored: async () => { await smoke(3100, live.cwd, live.buildId, true); unlinkSync(recoveryPath); },
+    activate: async () => { if (closedLease) { closedLease.verify(); assertClosedR2LiveUnchanged(live, current()); } say("웹 프로세스 교체 중"); await switchWeb(nextBytes); },
+    verify: async () => { await smoke(3100, checkout, buildId); if (closedLease) { await verifyClosedR2Web(3100); closedLease.verify(); } },
+    restore: async () => {
+      if (closedLease) {
+        closedLease.verify();
+        assertClosedR2CompensationTarget({ actual: current(), before: live,
+          target: { ref: state.ref, cwd: state.checkout, buildId: state.buildId, plistSha256: state.targetPlistHash }, closedPreviousPlistSha256: hash(closedRollbackBytes) });
+        await preserveClosedR2PredecessorMarker(state, closedReview);
+      }
+      await switchWeb(closedRollbackBytes ?? live.bytes);
+    },
+    verifyRestored: async () => {
+      await smoke(3100, live.cwd, live.buildId, true);
+      if (closedLease) { await verifyClosedR2Web(3100); closedLease.verify(); atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview))); }
+      unlinkSync(recoveryPath);
+    },
   });
   atomicWrite(statePath, JSON.stringify(state));
   if (options.reviewedNutritionRecoveryReadiness || options.reviewedPieceUnitReadiness || options.reviewedYoutubeResolutionReadiness) atomicWrite(databaseStatePath, JSON.stringify(state.database));
   unlinkSync(recoveryPath);
   say(`웹 배포 완료: ${selection.target}\n빌드 ID: ${buildId}`);
   if (state.database) say("DB 변경 기록과 백업은 비공개 배포 폴더에 보관했습니다. 웹 rollback은 DB를 되돌리지 않습니다.");
+  } finally { if (closedLease) await closedLease.release(); }
 }
 async function rollback() {
   const recovering = existsSync(recoveryPath);
@@ -483,26 +652,68 @@ async function rollback() {
   const recordedDatabase = existsSync(databaseStatePath) ? JSON.parse(readFileSync(databaseStatePath, "utf8")) : null;
   const database = assertDatabaseRollbackCompatible(state.database, recordedDatabase);
   const live = current();
-  assertRollbackTarget({ ...live, plistHash: hash(live.bytes) }, state, recovering);
-  const previous = readFileSync(state.backup);
+  requireClosedR2Mode({ reviewedClosedR2Maintenance: true }, live, true);
+  const closedReview = state.closedR2 ? loadClosedR2Review(repository) : null;
+  const original = closedReview ? readClosedR2PrivateBytes(state.backup, repository) : null;
+  const previous = closedReview ? readClosedR2PrivateBytes(join(dirname(state.checkout), "closed-rollback.plist"), repository) : readFileSync(state.backup);
   const plist = parsePlist(previous);
+  if (closedReview) {
+    if (state.closedR2.rolledBack) throw new DeploymentError("닫힌 predecessor로 이미 복구한 기록입니다.");
+    verifyClosedR2State(state, closedReview);
+    const predecessor = parsePlist(original);
+    assertClean(predecessor.WorkingDirectory);
+    if (git(["rev-parse", "HEAD"], predecessor.WorkingDirectory) !== state.closedR2.from
+      || readFileSync(join(predecessor.WorkingDirectory, ".next/BUILD_ID"), "utf8").trim() !== state.previousBuildId) {
+      throw new DeploymentError("복구 predecessor source/build가 바뀌었습니다.");
+    }
+    assertClosedR2Rollback({ state, live: { ...live, plistHash: hash(live.bytes) }, originalBytes: original, rollbackBytes: previous,
+      originalPlist: parsePlist(original), rollbackPlist: plist, review: closedReview, recovering });
+    if (state.closedR2.previousStateSha256) previousClosedR2State(state, closedReview);
+  } else assertRollbackTarget({ ...live, plistHash: hash(live.bytes) }, state, recovering);
   retargetPlist(plist, plist.WorkingDirectory);
-  await deployTransaction({
+  let closedLease;
+  try { await deployTransaction({
     prepare: async () => {
-      await preview(plist, plist.WorkingDirectory, state.previousBuildId);
+      await preview(plist, plist.WorkingDirectory, state.previousBuildId, Boolean(closedReview));
       cancellation.check();
       if (!readFileSync(plistPath).equals(live.bytes)) throw new DeploymentError("확인 중 웹 설정이 바뀌었습니다.");
+      if (closedReview) {
+        const actualLive = current();
+        assertClosedR2LiveUnchanged(live, actualLive);
+        requireClosedR2Mode({ reviewedClosedR2Maintenance: true }, actualLive, true);
+        closedLease = await acquireClosedR2ControlLease(closedReview, repository);
+      }
     },
-    activate: async () => { await switchWeb(previous); },
-    verify: () => smoke(3100, plist.WorkingDirectory, state.previousBuildId),
-    restore: async () => { await switchWeb(live.bytes); },
-    verifyRestored: () => smoke(3100, live.cwd, live.buildId, true),
+    activate: async () => {
+      if (closedLease) { closedLease.verify(); assertClosedR2LiveUnchanged(live, current()); await preserveClosedR2PredecessorMarker(state, closedReview); }
+      await switchWeb(previous);
+    },
+    verify: async () => { await smoke(3100, plist.WorkingDirectory, state.previousBuildId); if (closedLease) { await verifyClosedR2Web(3100); closedLease.verify(); } },
+    restore: async () => {
+      if (closedLease) {
+        closedLease.verify();
+        assertClosedR2CompensationTarget({ actual: current(), before: live,
+          target: { ref: state.closedR2.from, cwd: state.previousCwd, buildId: state.previousBuildId, plistSha256: hash(previous) },
+          closedPreviousPlistSha256: hash(plistBytes(closedR2RollbackPlist(live.plist))) });
+        if (live.ref === state.closedR2.from) await preserveClosedR2PredecessorMarker(state, closedReview);
+      }
+      await switchWeb(closedReview ? plistBytes(closedR2RollbackPlist(live.plist)) : live.bytes);
+    },
+    verifyRestored: async () => {
+      await smoke(3100, live.cwd, live.buildId, true);
+      if (closedLease) {
+        await verifyClosedR2Web(3100); closedLease.verify();
+        if (live.ref === state.closedR2.from) atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview)));
+      }
+    },
   });
-  unlinkSync(record);
+  if (closedReview) atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview)));
+  if (record !== statePath || !closedReview) unlinkSync(record);
   // A recovery may supersede an older successful record; do not offer it as current rollback.
-  if (recovering && existsSync(statePath)) unlinkSync(statePath);
+  if (recovering && existsSync(statePath) && !closedReview) unlinkSync(statePath);
   say(`이전 웹 복구 완료: ${git(["rev-parse", "HEAD"], plist.WorkingDirectory)}`);
   if (database) say("DB 구조와 데이터는 유지했습니다. 웹만 이전 버전으로 복구했습니다.");
+  } finally { if (closedLease) await closedLease.release(); }
 }
 async function recordYoutubeResolutionDatabase(options) {
   if (existsSync(recoveryPath)) throw new DeploymentError("복구가 진행 중일 때 DB 상태 메타데이터를 갱신할 수 없습니다.");
@@ -548,6 +759,7 @@ async function recordIntegratedMasterDatabase(options) {
 async function main() {
   const { action, args } = parsePrelaunchArgs(process.argv.slice(2));
   if (action === "help" || action === "--help") {
+    say("--reviewed-r2-closed-maintenance: exact F01·중지 receipt·두 false flag·closed rollback 검토 경로. 고정된 검토 핀과 정확히 일치해야 실행할 수 있습니다.");
     say("추가 옵션: --reviewed-integrated-master-readiness (검토한 운영 f970→origin/master 전체 파일·DB218 선행 상태·R2 승계 웹 선배포), --reviewed-nutrition-recovery-readiness (검토한 영양 복구·215→216 DB·기존 worker와 R2 보존), --skip-automated-tests (명시적 테스트 생략), --already-applied-db (checksum 이력만 대조), --reviewed-repair-readiness (20260918 복구본의 한정된 R2 재검증), --reviewed-beta-readiness (20260922 베타 후보의 한정된 R2 재검증), --reviewed-feedback-readiness (검토한 exact 피드백 후보·고정 DB 이력·R2 경계 재검증), --reviewed-ai-nutrition-readiness (검토한 AI 후보·204→207개 DB 이력·비활성 worker·R2 경계 재검증), --reviewed-ingredient-search-readiness (검토한 재료 검색 후보·211→212개 DB 이력·익명/worker 권한 보존), --reviewed-piece-unit-readiness (검토한 개수 단위 후보·212→213개 DB 이력·기존 권한·과거 영양 보존), --reviewed-youtube-resolution-readiness (검토한 YouTube 재료 연결 후보·213→215 DB·동일 v63 runtime)\n출시 전 웹/API/환경/추가형 DB 빠른 배포\nplan | deploy [--ref <커밋, 기본 origin/master>] [--env-file <비공개 dotenv>] [--db-config <비공개 full-local 설정>] [--db-baseline <비공개 JSON>] [--db-compatible] [--test-script <package.json test 명령>] [--verify-script <추가 검증 명령>]\nstatus | record-youtube-resolution-database --db-config <비공개 full-local 설정> | record-integrated-master-database --db-config <비공개 full-local 설정> | rollback\nplan은 변경 파일과 환경 키 이름만 표시합니다. deploy는 설치·빌드·확인 후 웹을 교체합니다.\nrecord-youtube-resolution-database와 record-integrated-master-database는 해당 DB 상태를 읽기 전용으로 검증하고 로컬 배포 상태 메타데이터만 갱신합니다.\n환경 파일은 Git 저장소 밖 0600 권한이어야 합니다. 키 값은 명령 인수에 넣지 마세요.\nAPI 변경은 기본 test:product를 실행하며 --test-script로 관련 test 명령을 선택하고 --verify-script로 추가 검증을 지정할 수 있습니다.\nDB 변경은 격리 검증·백업·트랜잭션으로 반영하며, 웹 rollback으로 DB를 되돌리지 않습니다. 통합 배포는 새 웹을 먼저 올린 뒤 DB219를 별도 통제 경로로 적용하고 상태를 기록합니다.\n검토한 긴급 수정은 --ref 대신 --reviewed-ref <현재 웹 후속 커밋 40자리 SHA>를 사용합니다.");
     return;
   }
@@ -557,6 +769,7 @@ async function main() {
     || (["record-youtube-resolution-database", "record-integrated-master-database"].includes(action)
       && (args.length !== 2 || args[0] !== "--db-config"))) throw new DeploymentError("잘못된 명령입니다. --help를 확인하세요.");
   const options = parsePrelaunchOptions(args);
+  if (options.reviewedClosedR2Maintenance) loadClosedR2Review(repository); // Fail before live/env access while the pin is empty.
   if (git(["rev-parse", "--show-toplevel"]) !== repository || !/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)netsus\/homecook(?:\.git)?$/u.test(git(["remote", "get-url", "origin"]))) throw new DeploymentError("배포 저장소는 netsus/homecook Git 저장소여야 합니다.");
   if (action === "status") {
     const { cwd, ref, buildId } = current();
@@ -566,16 +779,27 @@ async function main() {
     const reviewedDatabase = ref === YOUTUBE_RESOLUTION_RELEASE_SHA
       ? youtubeResolutionDatabaseStateFromReview(await loadYoutubeResolutionReview()) : null;
     const database = currentDatabaseState({ currentRef: ref, reviewedReleaseSha: YOUTUBE_RESOLUTION_RELEASE_SHA, reviewedDatabase, recordedDatabase });
-    say(JSON.stringify({ cwd, ref, buildId, loaded, database, rollbackAvailable: (existsSync(statePath) || existsSync(recoveryPath)) && !existsSync(integratedDatabaseGuardPath), recoveryPending: existsSync(recoveryPath), integratedDatabaseGuardPresent: existsSync(integratedDatabaseGuardPath) }, null, 2));
+    const closedState = existsSync(record) ? JSON.parse(readFileSync(record, "utf8")).closedR2 : null;
+    say(JSON.stringify({ cwd, ref, buildId, loaded, database, rollbackAvailable: (existsSync(statePath) || existsSync(recoveryPath)) && !existsSync(integratedDatabaseGuardPath) && !closedState?.rolledBack,
+      closedR2Maintenance: Boolean(closedState), recoveryPending: existsSync(recoveryPath), integratedDatabaseGuardPresent: existsSync(integratedDatabaseGuardPath) }, null, 2));
     return;
   }
   if (action === "plan") {
+    const live = current(), closedContext = requireClosedR2Mode(options, live);
     if (options.reviewedNutritionRecoveryReadiness) await loadNutritionRecoveryReview();
     const youtubeTrialReview = options.reviewedYoutubeTrialReadiness ? await loadYoutubeTrialReview() : null;
     if (youtubeTrialReview) await verifyYoutubeTrialSourceBackfill({ review: youtubeTrialReview, repositoryRoot: repository });
     const youtubeResolutionReview = options.reviewedYoutubeResolutionReadiness ? await loadYoutubeResolutionReview() : null;
-    const selection = plan(options.ref, current(), options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness);
+    const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness);
     const environmentKeys = Object.keys(readEnvironmentPatch(options.envFile, repository)).sort();
+    if (options.reviewedClosedR2Maintenance) {
+      const review = loadClosedR2Review(repository), patch = readEnvironmentPatch(options.envFile, repository);
+      validateClosedR2Candidate(review, live, selection, patch, options, closedContext);
+      verifyClosedR2Control(review, repository);
+    } else if (closedContext) {
+      assertRound2InheritanceBoundaries({ previous: live.plist, next: live.plist, files: selection.files, databaseDeployment: selection.scope.database.length > 0 });
+      verifyClosedR2Control(closedContext.review, repository);
+    }
     say(JSON.stringify({ ...selection, environmentKeys, database: { required: selection.scope.database.length > 0 || Boolean(options.dbConfig), configProvided: Boolean(options.dbConfig), readOnly: Boolean(options.alreadyAppliedDb || options.reviewedIntegratedMasterReadiness), requiresCompatibilityConfirmation: (selection.scope.database.length > 0 || Boolean(options.dbConfig)) && !options.dbCompatible && !options.alreadyAppliedDb && !options.reviewedIntegratedMasterReadiness, note: options.reviewedIntegratedMasterReadiness ? "DB218 선행 상태를 읽기 전용으로 고정하고 웹만 먼저 배포합니다." : "DB 이력·현재 스키마·추가형 변경 여부는 배포 시 대상 커밋에서 검사합니다." } }, null, 2));
     return;
   }
