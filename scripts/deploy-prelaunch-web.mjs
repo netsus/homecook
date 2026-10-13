@@ -39,7 +39,7 @@ import { durableJson } from "./lib/marketing-round2-controlled-deploy.mjs";
 import {
   CLOSED_R2_REVIEW_PIN, acquireClosedR2ControlLease, assertClosedR2CompensationTarget, assertClosedR2ContinuationOptions, assertClosedR2Database, assertClosedR2Environment,
   assertClosedR2LiveMarker, assertClosedR2LiveUnchanged, assertClosedR2MaintenanceFence, assertClosedR2PredecessorState, assertClosedR2Retry, assertClosedR2Rollback, assertRound2InheritanceBoundaries,
-  assertClosedR2Source, closedR2RollbackPlist, loadClosedR2Review, readClosedR2PrivateBytes, verifyClosedR2Control, verifyClosedR2HistoricalProofs,
+  assertClosedR2Source, closedR2RollbackPlist, loadClosedR2Review, verifyClosedR2Collector, readClosedR2PrivateBytes, verifyClosedR2Control, verifyClosedR2HistoricalProofs,
 } from "./lib/prelaunch-web-deploy.mjs";
 
 const repository = realpathSync(resolve(process.env.HOMECOOK_DEPLOY_REPOSITORY || resolve(dirname(fileURLToPath(import.meta.url)), "..")));
@@ -308,9 +308,7 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
   return { ...recorded, marker, markerPath: path, review };
 }
 async function verifyClosedR2Web(port) {
-  const response = await fetch(`http://127.0.0.1:${port}/api/v1/marketing/round2`, { method: "POST", redirect: "error", signal: AbortSignal.timeout(2500),
-    headers: { host: "app.mumeok.kr", origin: "https://app.mumeok.kr", "content-type": "application/json" }, body: "{}" });
-  if (response.status !== 503 || (await response.json()).error?.code !== "ROUND2_DISABLED") throw new DeploymentError("R2 닫힘 응답을 확인하지 못했습니다.");
+  await verifyClosedR2Collector(port);
   for (const path of ["/", "/login", "/privacy"]) {
     const page = await fetch(`http://127.0.0.1:${port}${path}`, { redirect: "error", signal: AbortSignal.timeout(2500) });
     if (!page.ok) throw new DeploymentError("닫힌 R2 웹의 공개 핵심 화면을 확인하지 못했습니다.");

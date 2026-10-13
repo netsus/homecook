@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { request as httpRequest } from "node:http";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { constants, closeSync, existsSync, fstatSync, lstatSync, openSync, readSync, realpathSync, statfsSync } from "node:fs";
 import * as fs from "node:fs/promises";
@@ -266,6 +267,27 @@ export function assertClosedR2Rollback({ state, live, originalBytes, rollbackByt
   const expectedLive = previous && live.plistHash === state.previousPlistHash ? originalPlist : retargetPlist(closedR2RollbackPlist(originalPlist), live.cwd);
   closedR2Require(isDeepStrictEqual(live.plist, expectedLive), "실제 웹 plist가 검토한 닫힘 대상과 다릅니다.");
   closedR2Require(rollbackPlist.EnvironmentVariables.MUMEOK_ROUND2_CONTROL_PATH === review.controlPath, "복구 control 경로가 다릅니다.");
+}
+
+export async function verifyClosedR2Collector(port) {
+  closedR2Require(Number.isInteger(port) && port > 0 && port <= 65535, "로컬 검사 포트가 올바르지 않습니다.");
+  // Node fetch replaces Host with the loopback authority; keep the real endpoint's strict origin boundary.
+  await new Promise((resolve, reject) => {
+    const request = httpRequest({ hostname: "127.0.0.1", port, path: "/api/v1/marketing/round2", method: "POST",
+      signal: AbortSignal.timeout(2500), headers: { host: "app.mumeok.kr", origin: "https://app.mumeok.kr", "content-type": "application/json" } }, async response => {
+      try {
+        let body = "";
+        for await (const chunk of response) {
+          body += chunk.toString("utf8");
+          if (Buffer.byteLength(body) > 8192) throw new DeploymentError("R2 검사 응답이 너무 큽니다.");
+        }
+        if (response.statusCode !== 503 || JSON.parse(body).error?.code !== "ROUND2_DISABLED") throw new DeploymentError("R2 닫힘 응답을 확인하지 못했습니다.");
+        resolve();
+      } catch (error) { reject(error); }
+    });
+    request.on("error", reject);
+    request.end("{}");
+  });
 }
 
 export function fetchPrelaunchLanding(origin) {
