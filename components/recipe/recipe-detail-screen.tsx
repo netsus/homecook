@@ -235,8 +235,15 @@ export function RecipeDetailScreen({
   const currentRecipeIdRef = React.useRef(recipeId);
   const snapshotStartLatchRef = React.useRef(false);
   const personalEditorOpenerRef = React.useRef<HTMLElement | null>(null);
+  const plannerOpenerRef = React.useRef<HTMLElement | null>(null);
+  const plannerRequestSequenceRef = React.useRef(0);
   const deleteKeyRef = React.useRef<string | null>(null);
   currentRecipeIdRef.current = recipeId;
+
+  useEffect(() => () => {
+    plannerOpenerRef.current = null;
+    plannerRequestSequenceRef.current += 1;
+  }, [recipeId]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -328,6 +335,22 @@ export function RecipeDetailScreen({
   useEffect(() => {
     void loadRecipe();
   }, [loadRecipe, recipeId]);
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    const pageTitle = detailState === "ready" && recipe?.id === recipeId
+      ? recipe.title
+      : detailState === "error" && detailErrorKind === "not-found"
+        ? "레시피를 찾을 수 없어요"
+        : "레시피 상세";
+    const browserTitle = `${pageTitle} | 무엇을 먹든`;
+    document.title = browserTitle;
+
+    return () => {
+      // Let a destination's Next metadata keep ownership after navigation.
+      if (document.title === browserTitle) document.title = previousTitle;
+    };
+  }, [detailErrorKind, detailState, recipe?.id, recipe?.title, recipeId]);
 
   useEffect(() => {
     if (!recipe?.id || !recipe.base_servings) {
@@ -541,10 +564,12 @@ export function RecipeDetailScreen({
   }, [selectableDates]);
 
   const openPlannerAddSheet = useCallback(
-    async ({ source, servings = selectedServings }: {
+    async ({ source, servings = selectedServings, opener }: {
       source: "manual" | "return-to-action";
       servings?: number;
+      opener?: HTMLElement;
     }) => {
+      plannerOpenerRef.current = source === "manual" ? opener ?? null : null;
       if (!isAuthenticated) {
         openAuthGate({ recipeId, type: "planner", plannedServings: servings });
         return;
@@ -586,6 +611,8 @@ export function RecipeDetailScreen({
 
     setPlannerAddSheetState("submitting");
     setPlannerAddError(null);
+    const requestSequence = ++plannerRequestSequenceRef.current;
+    const requestPath = window.location.pathname;
 
     try {
       await createMeal({
@@ -594,6 +621,8 @@ export function RecipeDetailScreen({
         column_id: selectedPlanColumnId,
         planned_servings: plannerServings,
       });
+
+      if (requestSequence !== plannerRequestSequenceRef.current || currentRecipeIdRef.current !== recipe.id || window.location.pathname !== requestPath) return;
 
       setIsPlannerAddSheetOpen(false);
       setPlannerAddSheetState("ready");
@@ -609,12 +638,13 @@ export function RecipeDetailScreen({
       const dateLabel = `${planM}월 ${planD}일`;
       const columnName =
         plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ?? "선택한 끼니";
-      showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`);
+      showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`, plannerOpenerRef.current ? plannerOpenerRef : undefined);
       emitAppActionNotification({
         message: `${dateLabel} ${columnName}에 추가됐어요`,
         title: "요리계획",
       });
     } catch (error) {
+      if (requestSequence !== plannerRequestSequenceRef.current || currentRecipeIdRef.current !== recipe.id || window.location.pathname !== requestPath) return;
       const message =
         isMealApiError(error) && error.status === 403
           ? "내 플래너 슬롯에만 추가할 수 있어요."
@@ -909,7 +939,7 @@ export function RecipeDetailScreen({
     ],
   );
 
-  const handleProtectedAction = (type: "like" | "save" | "planner") => {
+  const handleProtectedAction = (type: "like" | "save" | "planner", opener?: HTMLElement) => {
     if (type === "like") {
       void handleLikeToggle({ source: "manual" });
       return;
@@ -920,7 +950,7 @@ export function RecipeDetailScreen({
       return;
     }
 
-    void openPlannerAddSheet({ source: "manual" });
+    void openPlannerAddSheet({ source: "manual", opener });
   };
 
   const openPersonalEditor = useCallback(() => {
@@ -1789,7 +1819,7 @@ export function RecipeDetailScreen({
               <div className="space-y-3 py-4">
                 <ActionButton
                   label="플래너에 추가"
-                  onClick={() => handleProtectedAction("planner")}
+                  onClick={(event) => handleProtectedAction("planner", event.currentTarget)}
                   tone="olive"
                 />
                 <ActionButton
@@ -2190,7 +2220,7 @@ export function RecipeDetailScreen({
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <ActionButton
             label="플래너에 추가"
-            onClick={() => handleProtectedAction("planner")}
+            onClick={(event) => handleProtectedAction("planner", event.currentTarget)}
             tone="olive"
           />
           <ActionButton
@@ -2207,7 +2237,7 @@ export function RecipeDetailScreen({
         <div className="flex gap-2">
           <button
             className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand-primary-accessible)] px-3 text-[15px] font-bold [color:var(--text-inverse)]"
-            onClick={() => handleProtectedAction("planner")}
+            onClick={(event) => handleProtectedAction("planner", event.currentTarget)}
             type="button"
           >
             플래너에 추가
@@ -2403,7 +2433,7 @@ function RecipeDetailWebView({
   personalRecipeAccessState: "unknown" | "public" | "owner-private";
   onPublished: () => void;
   personalRecipeCapabilityEnabled: boolean;
-  onProtectedAction: (type: "like" | "save" | "planner") => void;
+  onProtectedAction: (type: "like" | "save" | "planner", opener?: HTMLElement) => void;
   onRetryNutrition: () => void;
   onSelectedServingsChange: (value: number | ((current: number) => number)) => void;
   onShare: () => void;
@@ -2711,7 +2741,7 @@ function RecipeDetailWebView({
                   <p>재료 {recipe.ingredients.length}개 · 단계 {recipe.steps.length}개</p>
                 </div>
                 <div className="web-recipe-rail-actions">
-                  <WebButton fullWidth onClick={() => onProtectedAction("planner")}>
+                  <WebButton fullWidth onClick={(event) => onProtectedAction("planner", event.currentTarget)}>
                     <CalendarIcon />
                     플래너에 추가
                   </WebButton>
@@ -2731,7 +2761,7 @@ function RecipeDetailWebView({
       </div>
 
       <WebCTA className="web-recipe-bottom-cta">
-        <WebButton onClick={() => onProtectedAction("planner")}>
+        <WebButton onClick={(event) => onProtectedAction("planner", event.currentTarget)}>
           플래너에 추가
         </WebButton>
         <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
@@ -3152,7 +3182,7 @@ function ActionButton({
   ariaPressed?: boolean;
   disabled?: boolean;
   label: string;
-  onClick: () => void;
+  onClick: React.MouseEventHandler<HTMLButtonElement>;
   tone: "brand" | "olive" | "neutral";
 }) {
   return (

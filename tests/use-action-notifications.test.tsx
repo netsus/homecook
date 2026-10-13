@@ -155,9 +155,10 @@ describe("persistent activity notification feed", () => {
   });
   it("splits a failed multi-page read retry into at most 50 IDs per request", async () => {
     let visibilityChanged!: IntersectionObserverCallback;
+    let observed: Element[] = [];
     vi.stubGlobal("IntersectionObserver", class {
-      constructor(callback: IntersectionObserverCallback) { visibilityChanged = callback; }
-      observe() {}
+      constructor(callback: IntersectionObserverCallback) { visibilityChanged = callback; observed = []; }
+      observe(node: Element) { observed.push(node); }
       disconnect() {}
     });
     const rows = Array.from({ length: 60 }, (_, i) => ({ ...item, id: `${String(i + 1).padStart(8, "0")}-1111-4111-8111-111111111111`, title: `완료 ${i + 1}` }));
@@ -169,7 +170,9 @@ describe("persistent activity notification feed", () => {
     expect(await screen.findByText("완료 1")).toBeTruthy();
     fireEvent.click(screen.getByText("더 보기"));
     expect(await screen.findByText("완료 60")).toBeTruthy();
-    act(() => visibilityChanged([...document.querySelectorAll("[data-app-action-notification-id]")].map(target => ({ target, isIntersecting: true } as IntersectionObserverEntry)), {} as IntersectionObserver));
+    // DOM rows can appear before the observer effect registers the appended page.
+    await waitFor(() => expect(observed.map(node => node.getAttribute("data-app-action-notification-id"))).toEqual(rows.map(row => row.id)));
+    act(() => visibilityChanged(observed.map(target => ({ target, isIntersecting: true } as IntersectionObserverEntry)), {} as IntersectionObserver));
     fireEvent.click(await screen.findByText("읽음 재시도"));
     await waitFor(() => expect(screen.getAllByText("읽음")).toHaveLength(60));
     expect(api.markActionNotificationsSeen).toHaveBeenCalledTimes(3);

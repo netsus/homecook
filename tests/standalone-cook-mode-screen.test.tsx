@@ -11,6 +11,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Responsive Playwright tests verify CSS; Vitest exercises the view behavior.
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
+
 import type {
   CookingModeIngredient,
   CookingModeStep,

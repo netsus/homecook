@@ -1,17 +1,29 @@
 "use client";
 
 import { create } from "zustand";
+import type { RefObject } from "react";
 
 export const useActionConfirmationStore = create<{
   message: string | null;
+  fallbackFocusRef: RefObject<HTMLElement | null> | null;
+  confirmationId: number;
+  returnFocusPath: string | null;
   dismiss: () => void;
 }>((set) => ({
   message: null,
-  dismiss: () => set({ message: null }),
+  fallbackFocusRef: null,
+  confirmationId: 0,
+  returnFocusPath: null,
+  dismiss: () => set({ message: null, fallbackFocusRef: null, returnFocusPath: null }),
 }));
 
-export function showActionConfirmation(message: string) {
-  useActionConfirmationStore.setState({ message });
+export function showActionConfirmation(message: string, fallbackFocusRef?: RefObject<HTMLElement | null>) {
+  useActionConfirmationStore.setState((state) => ({
+    message,
+    fallbackFocusRef: fallbackFocusRef ?? null,
+    confirmationId: state.confirmationId + 1,
+    returnFocusPath: fallbackFocusRef && typeof window !== "undefined" ? window.location.pathname : null,
+  }));
 }
 
 import type {

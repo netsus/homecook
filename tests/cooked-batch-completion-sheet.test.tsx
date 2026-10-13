@@ -3,6 +3,10 @@ import React from "react";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Responsive Playwright tests verify CSS; Vitest exercises the view behavior.
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
+
 import { CookedBatchCompletionSheet } from "@/components/cooking/cooked-batch-completion-sheet";
 import type { SnapshotV2PantryCandidate } from "@/types/cooking";
 

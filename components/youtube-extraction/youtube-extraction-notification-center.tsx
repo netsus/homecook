@@ -1028,6 +1028,16 @@ function YoutubeExtractionNotificationRuntime({
                   }
                 });
               }} type="button">확인 상태 다시 저장</button></div> : null}
+              {loading ? <p aria-live="polite" className="py-8 text-center text-sm text-[var(--muted)]">알림을 불러오는 중이에요…</p> : null}
+              {activeJobsError ? <p className="py-3 text-sm text-[var(--danger)]" role="status">{activeJobsError}</p> : null}
+              {loadError ? <div className="py-8 text-center"><p role="status">{loadError}</p><button className="mt-3 min-h-11 rounded-full border px-4 font-bold" onClick={() => refresh(view)} type="button">다시 불러오기</button></div> : null}
+              {!loading && !loadError && view === "unseen-completed" ? activeJobs.map((job) => <ActiveJobRow job={job} key={job.job_id} />) : null}
+              {!loading && !loadError ? displayedItems.map((item) => <NotificationRow item={item} key={item.job_id} onRetry={handleRetry} />) : null}
+              {!loading && !loadError && displayedNextCursor ? (
+                <button className="my-4 min-h-11 w-full rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold text-[var(--foreground)]" disabled={loadingMore} onClick={handleLoadMore} type="button">
+                  {loadingMore ? "불러오는 중…" : "알림 더 보기"}
+                </button>
+              ) : null}
               {growthLoading ? <p aria-live="polite" className="py-4 text-center text-sm text-[var(--muted)]">성장 알림을 불러오는 중이에요…</p> : null}
               {growthLoadError ? <p className="py-3 text-center text-sm text-[var(--muted)]" role="status">성장 알림을 잠시 불러오지 못했어요.</p> : null}
               {!growthLoading && displayedGrowthItems.length > 0 ? (
@@ -1049,20 +1059,10 @@ function YoutubeExtractionNotificationRuntime({
                   {actionFeed.hasMore ? <button className="my-3 min-h-11 w-full rounded-full border px-4 font-bold" disabled={actionFeed.loading} onClick={() => void actionFeed.loadMore()} type="button">활동 알림 더 보기</button> : null}
                 </section>
               ) : null}
-              {loading ? <p aria-live="polite" className="py-8 text-center text-sm text-[var(--muted)]">알림을 불러오는 중이에요…</p> : null}
-              {activeJobsError ? <p className="py-3 text-sm text-[var(--danger)]" role="status">{activeJobsError}</p> : null}
-              {loadError ? <div className="py-8 text-center"><p role="status">{loadError}</p><button className="mt-3 min-h-11 rounded-full border px-4 font-bold" onClick={() => refresh(view)} type="button">다시 불러오기</button></div> : null}
-              {!loading && !loadError && view === "unseen-completed" ? activeJobs.map((job) => <ActiveJobRow job={job} key={job.job_id} />) : null}
               {!actionFeed.loading && !actionFeed.error && !growthLoading && !loading && !loadError && !activeJobsError && displayedGrowthItems.length === 0 && displayedAppActionItems.length === 0 && displayedItems.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
                 <p className="py-12 text-center text-sm text-[var(--muted)]">
                   {view === "archive" ? "지난 알림이 없어요." : "표시할 알림이 없어요."}
                 </p>
-              ) : null}
-              {!loading && !loadError ? displayedItems.map((item) => <NotificationRow item={item} key={item.job_id} onRetry={handleRetry} />) : null}
-              {!loading && !loadError && displayedNextCursor ? (
-                <button className="my-4 min-h-11 w-full rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold text-[var(--foreground)]" disabled={loadingMore} onClick={handleLoadMore} type="button">
-                  {loadingMore ? "불러오는 중…" : "알림 더 보기"}
-                </button>
               ) : null}
             </div>
           </section>

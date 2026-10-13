@@ -322,6 +322,102 @@ describe("recipe detail screen", () => {
     hasSupabasePublicEnv.mockReturnValue(true);
   });
 
+  describe("browser tab title", () => {
+    let previousTitle: string;
+
+    beforeEach(() => {
+      previousTitle = document.title;
+      document.title = "레시피 상세 | 무엇을 먹든";
+    });
+
+    afterEach(() => {
+      cleanup();
+      document.title = previousTitle;
+    });
+
+    it("uses the authorized private detail title without changing social metadata and restores it after unmount", async () => {
+      const privateRecipe = buildRecipeDetail({ title: "나만 보는 저녁", visibility: "private" });
+      fetchJson.mockResolvedValue(privateRecipe);
+      const socialTitle = document.createElement("meta");
+      socialTitle.setAttribute("property", "og:title");
+      socialTitle.setAttribute("content", "무엇을 먹든");
+      document.head.append(socialTitle);
+
+      try {
+        const view = render(<RecipeDetailScreen initialAuthenticated recipeId={privateRecipe.id} />);
+        await waitFor(() => expect(document.title).toBe("나만 보는 저녁 | 무엇을 먹든"));
+        expect(socialTitle.getAttribute("content")).toBe("무엇을 먹든");
+        view.unmount();
+        expect(document.title).toBe("레시피 상세 | 무엇을 먹든");
+
+        render(<RecipeDetailScreen initialAuthenticated recipeId={privateRecipe.id} />);
+        await waitFor(() => expect(document.title).toBe("나만 보는 저녁 | 무엇을 먹든"));
+      } finally {
+        socialTitle.remove();
+      }
+    });
+
+    it("clears the prior title while a new recipe loads and updates it again on back navigation", async () => {
+      const first = buildRecipeDetail({ id: "title-first", title: "먼저 열었던 레시피" });
+      const second = buildRecipeDetail({ id: "title-second", title: "다음 레시피" });
+      let finishSecond!: (recipe: RecipeDetail) => void;
+      const secondRequest = new Promise<RecipeDetail>((resolve) => { finishSecond = resolve; });
+      fetchJson.mockResolvedValueOnce(first).mockReturnValueOnce(secondRequest);
+      const view = render(<RecipeDetailScreen recipeId={first.id} />);
+      await waitFor(() => expect(document.title).toBe("먼저 열었던 레시피 | 무엇을 먹든"));
+
+      view.rerender(<RecipeDetailScreen recipeId={second.id} />);
+      expect(document.title).toBe("레시피 상세 | 무엇을 먹든");
+      await act(async () => finishSecond(second));
+      await waitFor(() => expect(document.title).toBe("다음 레시피 | 무엇을 먹든"));
+
+      fetchJson.mockResolvedValue(first);
+      view.rerender(<RecipeDetailScreen recipeId={first.id} />);
+      await waitFor(() => expect(document.title).toBe("먼저 열었던 레시피 | 무엇을 먹든"));
+    });
+
+    it("ignores an older recipe response after the current route succeeds", async () => {
+      let finishOlder!: (recipe: RecipeDetail) => void;
+      const olderRequest = new Promise<RecipeDetail>((resolve) => { finishOlder = resolve; });
+      const current = buildRecipeDetail({ id: "title-current", title: "현재 레시피" });
+      fetchJson.mockReturnValueOnce(olderRequest).mockResolvedValue(current);
+      const view = render(<RecipeDetailScreen recipeId="title-older" />);
+      view.rerender(<RecipeDetailScreen recipeId={current.id} />);
+      await waitFor(() => expect(document.title).toBe("현재 레시피 | 무엇을 먹든"));
+
+      await act(async () => finishOlder(buildRecipeDetail({ id: "title-older", title: "옛 비공개 레시피" })));
+      expect(document.title).toBe("현재 레시피 | 무엇을 먹든");
+    });
+
+    it("does not overwrite a destination title or publish a late response after unmount", async () => {
+      fetchJson.mockResolvedValue(buildRecipeDetail({ title: "나만 보는 저녁" }));
+      const view = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      await waitFor(() => expect(document.title).toBe("나만 보는 저녁 | 무엇을 먹든"));
+      document.title = "요리 계획 | 무엇을 먹든";
+      view.unmount();
+      expect(document.title).toBe("요리 계획 | 무엇을 먹든");
+
+      let finishLate!: (recipe: RecipeDetail) => void;
+      fetchJson.mockReturnValue(new Promise<RecipeDetail>((resolve) => { finishLate = resolve; }));
+      const pending = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      pending.unmount();
+      document.title = "요리 계획 | 무엇을 먹든";
+      await act(async () => finishLate(buildRecipeDetail({ title: "늦은 비공개 제목" })));
+      expect(document.title).toBe("요리 계획 | 무엇을 먹든");
+    });
+
+    it.each([
+      { status: 404, heading: "이 레시피를 찾을 수 없어요", title: "레시피를 찾을 수 없어요" },
+      { status: 403, heading: "레시피 상세를 불러오지 못했어요", title: "레시피 상세" },
+      { status: 500, heading: "레시피 상세를 불러오지 못했어요", title: "레시피 상세" },
+    ])("keeps $status detail failures distinct from a private success", async ({ status, heading, title }) => {
+      fetchJson.mockRejectedValue(Object.assign(new Error("detail failed"), { status }));
+      render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
+      await waitFor(() => expect(document.title).toBe(`${title} | 무엇을 먹든`));
+    });
+  });
+
   it("publishes the server-confirmed view count for a recipe opened from discovery", async () => {
     useRecipeViewCountStore.getState().track(MOCK_RECIPE_DETAIL.id);
     fetchJson.mockResolvedValue(buildRecipeDetail({ view_count: 41 }));

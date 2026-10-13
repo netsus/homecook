@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import styles from "./cook-mode-layout.module.css";
 
 import {
   formatIngredientAmountOnly,
@@ -48,6 +49,9 @@ export function CookModeWholeBoard({
         className="cook-whole-panel cook-whole-step-panel"
       >
         <h2>전체 조리순서</h2>
+        <p className={styles.servingsNote} data-testid="cook-mode-servings-note">
+          재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다
+        </p>
         <StepList recipe={recipe} />
       </section>
     </div>

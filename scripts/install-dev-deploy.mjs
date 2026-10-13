@@ -4,7 +4,7 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { installDevDeployLauncher } from "./lib/dev-deploy-launcher.mjs";
+import { DEV_DEPLOY_SNAPSHOT_PATHS, installDevDeployLauncher, verifyDevDeployToolLoad } from "./lib/dev-deploy-launcher.mjs";
 
 const repository = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 const git = (...args) => execFileSync("git", ["-C", repository, ...args], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }).trim();
@@ -16,7 +16,7 @@ if (args[0] === "--help") {
     if (args.length && (args.length !== 2 || args[0] !== "--ref")) throw new Error("Unknown install arguments");
     if (!/^(?:https:\/\/github\.com\/netsus\/homecook(?:\.git)?|git@github\.com:netsus\/homecook(?:\.git)?)$/u.test(git("remote", "get-url", "origin"))) throw new Error("Expected netsus/homecook repository");
     const ref = git("rev-parse", "--verify", "--end-of-options", `${args[1] ?? "HEAD"}^{commit}`);
-    const paths = ["scripts", "infra", ".env.example", "package.json", "supabase/config.toml"];
+    const paths = DEV_DEPLOY_SNAPSHOT_PATHS;
     const tree = git("ls-tree", "-r", ref, "--", ...paths);
     if (tree.split("\n").some((line) => line.startsWith("120000 ") || line.startsWith("160000 "))) throw new Error("Tool snapshot cannot contain symlinks or submodules");
     git("cat-file", "-e", `${ref}:scripts/deploy-prelaunch-web.mjs`);
@@ -29,7 +29,9 @@ if (args[0] === "--help") {
     const entryPoint = join(snapshot, "scripts/deploy-prelaunch-web.mjs");
     const common = resolve(repository, git("rev-parse", "--git-common-dir"));
     const originalRepository = dirname(common);
-    const command = installDevDeployLauncher({ binDirectory: join(homedir(), ".local/bin"), entryPoint, repository: originalRepository, nodePath: realpathSync(process.execPath) });
+    const nodePath = realpathSync(process.execPath);
+    verifyDevDeployToolLoad({ entryPoint, repository: originalRepository, nodePath });
+    const command = installDevDeployLauncher({ binDirectory: join(homedir(), ".local/bin"), entryPoint, repository: originalRepository, nodePath });
     writeFileSync(join(snapshot, "installation.json"), JSON.stringify({ ref, repository: originalRepository, command }), { mode: 0o600 });
     process.stdout.write(`설치 완료: ${command}\n버전: ${ref}\n어느 폴더에서든 homecook-deploy status / plan / deploy를 사용할 수 있습니다.\n`);
   } catch {

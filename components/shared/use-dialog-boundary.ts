@@ -88,6 +88,7 @@ export function useDialogBoundary({
   fallbackFocusRef,
   initialFocusRef,
   onClose,
+  restoreFocusWhen,
 }: {
   active?: boolean;
   priority?: number;
@@ -96,6 +97,7 @@ export function useDialogBoundary({
   fallbackFocusRef?: RefObject<HTMLElement | null>;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
+  restoreFocusWhen?: () => boolean;
 }) {
   const closeRef = useRef(onClose);
   const closeOnEscapeRef = useRef(closeOnEscape);
@@ -177,6 +179,7 @@ export function useDialogBoundary({
       const index = activeDialogs.indexOf(dialog);
       if (index >= 0) activeDialogs.splice(index, 1);
       updateDialogIsolation(wasTop ? () => {
+        if (restoreFocusWhen && !restoreFocusWhen()) return null;
         const requested = typeof requestedReturnFocusRef.current === "function"
           ? requestedReturnFocusRef.current()
           : requestedReturnFocusRef.current;
@@ -188,6 +191,10 @@ export function useDialogBoundary({
           : requestedReturnFocusRef.current;
         const returnTarget = invokerFocusRef.current;
         if (wasTop && !dialog.isConnected) {
+          if (restoreFocusWhen && !restoreFocusWhen()) {
+            invokerFocusRef.current = null;
+            return;
+          }
           const target = requestedTarget?.isConnected
             ? requestedTarget
             : returnTarget?.isConnected ? returnTarget : fallbackFocusTarget;
@@ -205,7 +212,7 @@ export function useDialogBoundary({
         }
       });
     };
-  }, [active, dialogRef, fallbackFocusRef, initialFocusRef, priority]);
+  }, [active, dialogRef, fallbackFocusRef, initialFocusRef, priority, restoreFocusWhen]);
 
   return { setReturnFocusTarget };
 }

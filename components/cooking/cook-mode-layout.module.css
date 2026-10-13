@@ -1,0 +1,86 @@
+/* These classes are attached only to cooking views; no standalone global rules. */
+.servingsNote {
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+@media (min-width: 1024px) {
+  .desktopShell :global(.web-container-wide) {
+    max-width: 1504px;
+  }
+
+  .snapshotScreen {
+    display: flex;
+    width: calc(100% - 48px);
+    max-width: 1440px;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .snapshotScreen > header {
+    padding: 24px;
+  }
+
+  .snapshotScreen > main {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding-inline: 24px;
+  }
+
+  .snapshotScreen :global(.cook-whole-board) {
+    grid-template-columns: minmax(280px, 0.36fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+  }
+
+  .snapshotScreen :global(.cook-whole-panel) {
+    padding: 18px;
+  }
+
+  .snapshotScreen :global(.cook-whole-ingredient-panel) {
+    position: sticky;
+    top: 0;
+    max-height: calc(100dvh - 220px);
+    overflow-y: auto;
+  }
+
+  .snapshotScreen :global(.cook-whole-ingredients) {
+    display: grid;
+  }
+
+  .snapshotScreen :global(.cook-whole-ingredients) > li:not(:global(.cook-whole-section-label)) {
+    display: block;
+  }
+
+  .snapshotScreen :global(.cook-whole-ingredient) {
+    display: grid;
+    width: 100%;
+    border-radius: 13px;
+    padding: 12px;
+  }
+
+  .snapshotScreen :global(.cook-whole-ingredient-name) {
+    max-width: none;
+  }
+
+  .snapshotScreen :global(.cook-whole-step-copy) p {
+    max-width: 68ch;
+    font-size: 20px;
+    line-height: 1.5;
+  }
+
+  .snapshotScreen > footer {
+    justify-content: flex-end;
+    padding-inline: 24px;
+  }
+
+  .snapshotScreen > footer button {
+    max-width: 220px;
+  }
+}
