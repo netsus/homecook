@@ -1,7 +1,23 @@
 import { chmodSync, lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const MARKER = "// homecook-dev-deploy-launcher";
+
+export const DEV_DEPLOY_SNAPSHOT_PATHS = Object.freeze([
+  "scripts", "infra", ".env.example", "package.json", "supabase/config.toml",
+  // Static data imported by the deployment tool's worker artifact validator.
+  "lib/server/youtube-extraction-worker-timing.json",
+]);
+
+export function verifyDevDeployToolLoad({ entryPoint, repository, nodePath }) {
+  if (![entryPoint, repository, nodePath].every(isAbsolute)) throw new Error("Tool load paths must be absolute");
+  const result = spawnSync(nodePath, ["--", entryPoint, "--help"], {
+    cwd: repository, env: { ...process.env, HOMECOOK_DEPLOY_REPOSITORY: repository },
+    timeout: 5000, maxBuffer: 32768, stdio: ["ignore", "ignore", "pipe"],
+  });
+  if (result.status !== 0) throw new Error("Deployment snapshot could not load");
+}
 
 export function installDevDeployLauncher({ binDirectory, entryPoint, repository, nodePath }) {
   if (![binDirectory, entryPoint, repository, nodePath].every(isAbsolute)) throw new Error("Launcher paths must be absolute");
