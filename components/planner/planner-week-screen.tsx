@@ -684,6 +684,10 @@ export function PlannerWeekScreen({
   }, [activeSegment, authState, canAddMeal, columns, dateKeys, searchParams]);
 
   const loginControl = <button className="min-h-11 rounded-xl px-3 text-sm font-medium text-[var(--brand-contrast)]" onClick={() => setLoginNextPath(buildPlannerShellHref(new URLSearchParams(searchParams.toString()), { date: selectedDate, segment: activeSegment }))} type="button">로그인</button>;
+  const leftoversHref = buildReturnHref("/leftovers", {
+    returnSurface: "planner.week",
+    returnTo: buildPlannerShellHref(new URLSearchParams(), { date: selectedDate, segment: "log" }),
+  });
 
   return (
     <div
@@ -719,7 +723,7 @@ export function PlannerWeekScreen({
           dateBarRef={stickyHeaderRef}
           dateAnchorRef={dateAnchorRef}
           actions={<div className="ml-auto flex items-center gap-1">
-            {activeSegment === "plan" ? <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-medium text-[var(--ui-sky-700)] hover:bg-[var(--ui-slate-50)]" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link> : <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-medium text-[var(--text-2)] hover:bg-[var(--ui-white)]" href="/leftovers">남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>}
+            {activeSegment === "plan" ? <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-medium text-[var(--ui-sky-700)] hover:bg-[var(--ui-slate-50)]" href="/shopping/flow">장보기 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link> : <Link className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-[var(--ui-slate-300)] bg-[var(--ui-white)] shadow-sm px-2 text-[11px] sm:px-3 sm:text-xs font-medium text-[var(--text-2)] hover:bg-[var(--ui-white)]" href={leftoversHref}>남은요리 <span aria-hidden="true" className="hidden sm:inline">↗</span></Link>}
           </div>}
         />
 

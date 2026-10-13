@@ -328,6 +328,22 @@ export function RecipeDetailScreen({
   }, [loadRecipe, recipeId]);
 
   useEffect(() => {
+    const previousTitle = document.title;
+    const pageTitle = detailState === "ready" && recipe?.id === recipeId
+      ? recipe.title
+      : detailState === "error" && detailErrorKind === "not-found"
+        ? "레시피를 찾을 수 없어요"
+        : "레시피 상세";
+    const browserTitle = `${pageTitle} | 무엇을 먹든`;
+    document.title = browserTitle;
+
+    return () => {
+      // Let a destination's Next metadata keep ownership after navigation.
+      if (document.title === browserTitle) document.title = previousTitle;
+    };
+  }, [detailErrorKind, detailState, recipe?.id, recipe?.title, recipeId]);
+
+  useEffect(() => {
     if (!recipe?.id || !recipe.base_servings) {
       return;
     }

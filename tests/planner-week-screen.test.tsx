@@ -517,6 +517,19 @@ describe("planner week screen Stage 4", () => {
     expect(navigationMocks.push).toHaveBeenCalledWith("/planner?date=2026-03-24", { scroll: false });
   });
 
+  it.each(["2026-03-24", "2026-03-18"])("keeps the meal-log date %s in the leftovers return link", async (date) => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ segment: "log", date }));
+    render(<PlannerWeekScreen />);
+
+    const link = await screen.findByRole("link", { name: /남은요리/ });
+    const target = new URL(link.getAttribute("href")!, "http://homecook.local");
+    expect(target.pathname).toBe("/leftovers");
+    const returnTo = new URL(target.searchParams.get("returnTo")!, "http://homecook.local");
+    expect(returnTo.pathname).toBe("/planner");
+    expect(returnTo.searchParams.get("date")).toBe(date);
+    expect(returnTo.searchParams.get("segment")).toBe("log");
+  });
+
   it.each([1, 3, 5])(
     "keeps %i configured meal columns associated with their empty slots",
     async (columnCount) => {
