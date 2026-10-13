@@ -565,6 +565,18 @@ describe("home screen", () => {
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
   });
 
+  it.each([false, true])("keeps core discovery without paused R2 links (desktop=%s)", async (desktop) => {
+    installMatchMedia(desktop);
+    render(<HomeScreen round2EntrypointsEnabled={false} />);
+
+    await screen.findByRole("heading", { level: 2, name: "모든 레시피" });
+    expect(screen.getByRole("textbox", { name: "제목·재료 검색" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /식단 짜기/ }).getAttribute("href")).toBe("/planner");
+    expect(screen.queryByRole("link", { name: "집밥 기록 유형 테스트 바로가기" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "무먹 R2 광고 체험" })).toBeNull();
+  });
+
   it("rotates the two desktop R2 banners and keeps both direct landing links", async () => {
     vi.useFakeTimers();
     installMatchMedia(true);
