@@ -18,7 +18,9 @@ import {
   createRestrictedPostgrestRpcClient,
   createStandaloneYoutubeI031Extractor,
   createYoutubeExtractionWorkerRuntime,
+  finalizeResolvedSourceBoundQuantities,
   normalizeYoutubeExtractionRuntimeError,
+  prepareSourceBoundQuantitiesForResolution,
   resolveYoutubeExtractionTempRoot,
   runSyntheticYoutubeExtractionWorkerJob,
   runYoutubeExtractionWorkerPollLoop,
@@ -40,6 +42,54 @@ afterEach(async () => {
 });
 
 describe("YTASYNC-WORKER standalone runner", () => {
+  it("lets only independently resolved source-bound quantities cross the persistence boundary", () => {
+    const runtimeResult = {
+      identity: {},
+      recipe: {
+        title: "카탈로그 경계",
+        ingredients: [
+          { name: "통삼겹살", amount: "500", unit: "g", quantityState: "explicit", amountBasis: "source-bound-stated", evidenceRefs: [{ source_method: "comment", source_provider: "youtube", snippet: "통삼겹살 500g" }] },
+          { name: "그릇", amount: "2", unit: "개", quantityState: "explicit", amountBasis: "source-bound-stated", evidenceRefs: [{ source_method: "comment", source_provider: "youtube", snippet: "그릇 2개" }] },
+          { name: "간장", amount: "1", unit: "큰술", quantityState: "explicit", amountBasis: "stated", evidenceRefs: [{ source_method: "description", source_provider: "youtube", snippet: "간장 1큰술" }] },
+        ],
+        steps: ["조리한다."],
+      },
+      meta: {},
+    };
+    const prepared = prepareSourceBoundQuantitiesForResolution(runtimeResult);
+    const result = finalizeResolvedSourceBoundQuantities({
+      applied: true,
+      draft: {
+        ingredients: [
+          { standard_name: "돼지고기 통삼겹살", amount: 500, unit: "g", resolution_status: "resolved", amount_basis: "stated", quantity_state: "explicit" },
+          { standard_name: "그릇", amount: 2, unit: "개", resolution_status: "unresolved", amount_basis: "stated", quantity_state: "explicit", quantity_evidence_refs: runtimeResult.recipe.ingredients[1].evidenceRefs },
+          { standard_name: "간장", amount: 1, unit: "큰술", resolution_status: "resolved", amount_basis: "stated", quantity_state: "explicit" },
+        ],
+      },
+    }, prepared.ingredientIndexes);
+
+    expect(prepared.runtimeResult.recipe.ingredients).toEqual([
+      expect.objectContaining({ name: "통삼겹살", amount: "500", unit: "g", quantityState: "explicit", amountBasis: "stated" }),
+      expect.objectContaining({ name: "그릇", amount: "2", unit: "개", quantityState: "explicit", amountBasis: "stated" }),
+      expect.objectContaining({ name: "간장", amount: "1", unit: "큰술", quantityState: "explicit", amountBasis: "stated" }),
+    ]);
+    expect(prepared.ingredientIndexes).toEqual([0, 1]);
+    expect(result.draft.ingredients).toEqual([
+      expect.objectContaining({ standard_name: "돼지고기 통삼겹살", amount: 500, unit: "g", quantity_state: "explicit", amount_basis: "stated" }),
+      expect.objectContaining({ standard_name: "그릇", amount: null, unit: null, quantity_state: "unknown", amount_basis: null, quantity_source: "unknown", quantity_review_required: true }),
+      expect.objectContaining({ standard_name: "간장", amount: 1, unit: "큰술", quantity_state: "explicit", amount_basis: "stated" }),
+    ]);
+    expect(result.draft.ingredients[1].quantity_evidence_refs).toEqual(runtimeResult.recipe.ingredients[1].evidenceRefs);
+    expect(runtimeResult.recipe.ingredients[0].amountBasis).toBe("source-bound-stated");
+  });
+
+  it("fails source-bound quantities closed when the authoritative draft is unavailable", () => {
+    expect(() => finalizeResolvedSourceBoundQuantities({ draft: { ingredients: [] } }, [0]))
+      .toThrow("source-bound ingredient resolution is unavailable");
+    expect(() => finalizeResolvedSourceBoundQuantities({ draft: { ingredients: [null] } }, [0]))
+      .toThrow("source-bound ingredient resolution is invalid");
+  });
+
   it("runs one synthetic job through the actual fenced runtime and poll loop", async () => {
     const rpc = async (name: string) => ({ data: ({
       claim_youtube_extraction_job: { job_id: "22222222-2222-4222-8222-222222222222", youtube_video_id: "synthetic01", lease_generation: 1, policy_snapshot_digest: "a".repeat(64), result_affecting_options: { rehearsal: true } },
@@ -363,8 +413,8 @@ describe("YTASYNC-WORKER standalone runner", () => {
         start_youtube_extraction_attempt: { started: true, attempt_count: 1 },
         read_youtube_extraction_worker_catalog: {
           applied: true,
-          ingredients: [],
-          ingredient_synonyms: [],
+          ingredients: [{ id: "pork", standard_name: "돼지고기 통삼겹살" }],
+          ingredient_synonyms: [{ ingredient_id: "pork", synonym: "통삼겹살" }],
           cooking_methods: [],
         },
         access_youtube_extraction_worker_cache: { applied: true, cache: null },
@@ -374,7 +424,26 @@ describe("YTASYNC-WORKER standalone runner", () => {
         update_youtube_extraction_job_title: { applied: true, updated: true },
         heartbeat_youtube_extraction_job: { updated: true },
         heartbeat_youtube_extractor_permit: { updated: true },
-        resolve_youtube_extraction_job_draft: { title: "김치찌개" },
+        resolve_youtube_extraction_job_draft: {
+          title: "김치찌개",
+          draft: {
+            ingredients: [{
+              standard_name: "돼지고기 통삼겹살",
+              amount: 500,
+              unit: "g",
+              resolution_status: "resolved",
+              amount_basis: "stated",
+              quantity_state: "explicit",
+            }, {
+              standard_name: "그릇",
+              amount: 2,
+              unit: "개",
+              resolution_status: "unresolved",
+              amount_basis: "stated",
+              quantity_state: "explicit",
+            }],
+          },
+        },
         finalize_youtube_extraction_job: { finalized: true },
         release_youtube_extractor_permit: { released: true },
       };
@@ -383,7 +452,22 @@ describe("YTASYNC-WORKER standalone runner", () => {
     const extractor = { extract: vi.fn(async () => ({
       identity: { pipeline: "i031" },
       videoTitle: "백종원의 원본 영상 제목",
-      recipe: { title: "김치찌개" },
+      recipe: {
+        title: "김치찌개",
+        ingredients: [{
+          name: "통삼겹살",
+          amount: "500",
+          unit: "g",
+          quantityState: "explicit",
+          amountBasis: "source-bound-stated",
+        }, {
+          name: "그릇",
+          amount: "2",
+          unit: "개",
+          quantityState: "explicit",
+          amountBasis: "source-bound-stated",
+        }],
+      },
       meta: { modelCallCount: 2 },
       persistence: {
         cache_operations: [
@@ -433,8 +517,51 @@ describe("YTASYNC-WORKER standalone runner", () => {
     ]);
     expect(calls.at(-2)?.args.finalized_draft_json).toMatchObject({
       title: "김치찌개",
+      draft: {
+        ingredients: [
+          expect.objectContaining({
+            standard_name: "돼지고기 통삼겹살",
+            amount: 500,
+            unit: "g",
+            resolution_status: "resolved",
+            amount_basis: "stated",
+            quantity_state: "explicit",
+          }),
+          expect.objectContaining({
+            standard_name: "그릇",
+            amount: null,
+            unit: null,
+            resolution_status: "unresolved",
+            amount_basis: null,
+            quantity_state: "unknown",
+            quantity_source: "unknown",
+            quantity_review_required: true,
+          }),
+        ],
+      },
       worker_permit_generation: 9,
     });
+    expect(calls.find(({ name }) => name === "resolve_youtube_extraction_job_draft")?.args.runtime_result)
+      .toMatchObject({
+        recipe: {
+          ingredients: [
+            expect.objectContaining({
+              name: "통삼겹살",
+              amount: "500",
+              unit: "g",
+              quantityState: "explicit",
+              amountBasis: "stated",
+            }),
+            expect.objectContaining({
+              name: "그릇",
+              amount: "2",
+              unit: "개",
+              quantityState: "explicit",
+              amountBasis: "stated",
+            }),
+          ],
+        },
+      });
     for (const { name, args } of calls.filter(({ name }) => [
       "heartbeat_youtube_extraction_job",
       "heartbeat_youtube_extractor_permit",

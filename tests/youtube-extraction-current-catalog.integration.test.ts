@@ -3,6 +3,11 @@ import { readFileSync } from "node:fs";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
+import {
+  finalizeResolvedSourceBoundQuantities,
+  prepareSourceBoundQuantitiesForResolution,
+} from "../scripts/lib/youtube-extraction-worker-runtime.mjs";
+
 const databaseUrl = process.env.HOMECOOK_ISOLATED_RUNTIME_DATABASE_URL?.trim();
 const projectId = process.env.HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID?.trim();
 const enabled = Boolean(databaseUrl || projectId);
@@ -39,6 +44,10 @@ function psqlFile(file: string, variables: Record<string, string> = {}, prefix =
 function lastJson(output: string) {
   const lines = output.split("\n").map((line) => line.trim()).filter(Boolean);
   return JSON.parse(lines.at(-1)!);
+}
+
+function sqlJson(value: unknown) {
+  return `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
 }
 
 function psqlFileAsync(file: string, variables: Record<string, string>) {
@@ -219,7 +228,7 @@ describe.skipIf(!enabled)("YouTube catalog after all current migrations", () => 
     `)).toBe(expectedSchema.catalog_fingerprint);
   });
 
-  it("preserves Luna quantity metadata through the real worker resolver fence", () => {
+  it("carries source-bound quantities through the real resolver, finalizer, and persistence fence", () => {
     const workerId = "trial-quantity-worker";
     const jobId = "13000000-0000-4000-8000-000000000001";
     const ownerId = "13000000-0000-4000-8000-000000000002";
@@ -258,6 +267,92 @@ describe.skipIf(!enabled)("YouTube catalog after all current migrations", () => 
       job_id: jobId, worker_id: workerId, lease_generation: String(claim.lease_generation),
       permit_generation: String(permit.permit_generation), youtube_video_id: "trialbridge",
     }, `select set_config('request.jwt.claims','${claims}',false);\n`)).status).toBe("PASS");
+
+    const sourceBound = prepareSourceBoundQuantitiesForResolution({
+      identity: { provider: "codex-vision-keyframes", model: "gpt-5.6-luna" },
+      recipe: {
+        title: "원천 결속 저장 경계",
+        ingredients: [{
+          name: "양파", originalName: "Onion", amount: "1/2", unit: "개",
+          quantityState: "explicit", amountBasis: "source-bound-stated", optional: false, groupLabel: null,
+          evidenceRefs: [{ evidence_id: "S1", source_method: "description", source_provider: "youtube",
+            line_index: 1, snippet: "1/2 Onion" }],
+        }, {
+          name: "그릇", originalName: "Bowl", amount: "2", unit: "개",
+          quantityState: "explicit", amountBasis: "source-bound-stated", optional: false, groupLabel: null,
+          evidenceRefs: [{ evidence_id: "S2", source_method: "description", source_provider: "youtube",
+            line_index: 2, snippet: "2 Bowls" }],
+        }, {
+          name: "저장 링크 모호", originalName: "저장 링크 모호", amount: "1", unit: "큰술",
+          quantityState: "explicit", amountBasis: "source-bound-stated", optional: false, groupLabel: null,
+          evidenceRefs: [{ evidence_id: "S3", source_method: "description", source_provider: "youtube",
+            line_index: 3, snippet: "저장 링크 모호 1큰술" }],
+        }],
+        steps: ["재료를 준비한다."],
+      },
+      meta: { sourceAvailability: { description: true, authorComment: false, transcript: true, onscreen: false } },
+    });
+    expect(sourceBound.ingredientIndexes).toEqual([0, 1, 2]);
+    expect(sourceBound.runtimeResult.recipe.ingredients).toEqual(expect.arrayContaining([
+      expect.objectContaining({ amountBasis: "stated" }),
+    ]));
+
+    const resolved = lastJson(psql(`
+      begin;
+      set local session_replication_role = replica;
+      insert into public.ingredients(id, standard_name, category, default_unit) values
+        ('64000000-0000-4000-8000-000000000021', '저장 경계 후보 A', '테스트', null),
+        ('64000000-0000-4000-8000-000000000022', '저장 경계 후보 B', '테스트', null);
+      insert into public.ingredient_synonyms(id, ingredient_id, synonym) values
+        ('64000000-0000-4000-8000-000000000031', '64000000-0000-4000-8000-000000000021', '저장 링크 모호'),
+        ('64000000-0000-4000-8000-000000000032', '64000000-0000-4000-8000-000000000022', '저장 링크 모호');
+      set local session_replication_role = origin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims='${claims}';
+      select public.resolve_youtube_extraction_job_draft(
+        '${jobId}'::uuid,
+        '${workerId}',
+        ${claim.lease_generation},
+        ${permit.permit_generation},
+        'trialbridge',
+        ${sqlJson(sourceBound.runtimeResult)}
+      )::text;
+      rollback;
+    `));
+    const finalizedDraft = finalizeResolvedSourceBoundQuantities(resolved, sourceBound.ingredientIndexes);
+    expect(finalizedDraft.draft.ingredients).toEqual([
+      expect.objectContaining({ standard_name: "양파", resolution_status: "resolved",
+        amount: 0.5, unit: "개", quantity_state: "explicit" }),
+      expect.objectContaining({ standard_name: "그릇", resolution_status: "unresolved",
+        amount: null, unit: null, quantity_state: "unknown", quantity_review_required: true }),
+      expect.objectContaining({ standard_name: "저장 링크 모호", resolution_status: "needs_review",
+        amount: null, unit: null, quantity_state: "unknown", quantity_review_required: true }),
+    ]);
+
+    const persisted = lastJson(psql(`
+      begin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims='${claims}';
+      select public.finalize_youtube_extraction_job(
+        '${jobId}'::uuid,
+        '${workerId}',
+        ${claim.lease_generation},
+        ${sqlJson({ ...finalizedDraft, worker_permit_generation: permit.permit_generation })}
+      )::text;
+      commit;
+    `));
+    expect(persisted).toMatchObject({ applied: true, finalized: true });
+    const postimage = lastJson(psql(`
+      select jsonb_build_object(
+        'status', job.status,
+        'ingredients', session.draft_json -> 'ingredients'
+      )::text
+      from public.youtube_extraction_jobs job
+      join public.youtube_extraction_sessions session on session.id = job.extraction_session_id
+      where job.id = '${jobId}'::uuid;
+    `));
+    expect(postimage.status).toBe("succeeded");
+    expect(postimage.ingredients).toEqual(finalizedDraft.draft.ingredients);
   });
 
   it("atomically rotates the reviewed policy and credential under real manager authority and rolls back", () => {

@@ -73,6 +73,21 @@ describe("Luna trial quantity bridge", () => {
     });
   });
 
+  it("marks a source-bound recovery for independent ingredient resolution", () => {
+    const parsed = buildI031ParsedRecipe(extraction([
+      { name: "통삼겹살", amount: "500", unit: "g", optional: false, groupLabel: null,
+        quantityState: "explicit", amountBasis: "source-bound-stated", originalName: "통삼겹살",
+        evidenceRefs: [{ source_method: "comment", source_provider: "youtube", snippet: "🥩 통삼겹살 500g" }] },
+    ]));
+
+    expect(parsed.ingredients[0]).toMatchObject({
+      amount: 500,
+      unit: "g",
+      quantitySource: "text_explicit",
+      quantityRequiresResolvedIngredient: true,
+    });
+  });
+
   it("keeps estimated numbers visible as approximate and review-required", () => {
     const parsed = buildI031ParsedRecipe(extraction([
       { name: "참기름", amount: "1", unit: "큰술", optional: false, groupLabel: null,
