@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -49,6 +51,19 @@ const credentialMetadata = {
 };
 
 describe("YouTube v71 controlled cutover", () => {
+  it("loads with the pinned Node ESM runtime before command validation", () => {
+    const script = fileURLToPath(new URL(
+      "../scripts/youtube-v71-controlled-cutover.mjs",
+      import.meta.url,
+    ));
+    const result = spawnSync(process.execPath, [script, "--invalid"], {
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("usage: youtube-v71-controlled-cutover.mjs");
+    expect(result.stderr).not.toContain("SyntaxError");
+  });
+
   it("serializes invocations and durably records zero-budget verification before activation", () => {
     const source = readFileSync(new URL(
       "../scripts/youtube-v71-controlled-cutover.mjs",

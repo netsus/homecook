@@ -3,9 +3,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
-  COPYFILE_EXCL,
   chmodSync,
   closeSync,
+  constants,
   copyFileSync,
   cpSync,
   existsSync,
@@ -122,6 +122,7 @@ const TARGET_CREDENTIAL = join(
 const MANAGER_TOKEN = join(SECRET_ROOT, "manager-v47-youtube-integrated-20261013.jwt");
 const PLIST = join(HOME, `Library/LaunchAgents/${LABEL}.plist`);
 const NODE_BIN = join(HOME, ".nvm/versions/node/v22.19.0/bin/node");
+const { COPYFILE_EXCL } = constants;
 
 function check(condition, message) {
   if (!condition) throw new Error(`v71 controlled cutover: ${message}`);
