@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -34,6 +34,7 @@ import {
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { createPrelaunchDatabase } from "./lib/prelaunch-database.mjs";
+import { durableJson } from "./lib/marketing-round2-controlled-deploy.mjs";
 
 const repository = realpathSync(resolve(process.env.HOMECOOK_DEPLOY_REPOSITORY || resolve(dirname(fileURLToPath(import.meta.url)), "..")));
 const root = join(homedir(), ".homecook/prelaunch-web");
@@ -64,6 +65,11 @@ function atomicWrite(path, bytes) {
   writeFileSync(temp, bytes, { mode: 0o600 });
   chmodSync(temp, 0o600);
   renameSync(temp, path);
+}
+function durableUnlink(path) {
+  unlinkSync(path);
+  const parent = openSync(dirname(path), "r");
+  try { fsyncSync(parent); } finally { closeSync(parent); }
 }
 function loadIntegratedDatabaseGuard(expectedReleaseSha, migrationSha256, required = false) {
   if (!existsSync(integratedDatabaseGuardPath)) {
@@ -534,9 +540,9 @@ async function recordIntegratedMasterDatabase(options) {
   const state = JSON.parse(readFileSync(statePath, "utf8"));
   assertIntegratedMasterWebFirstState({ state, live, releaseSha: live.ref, descriptor });
   loadIntegratedDatabaseGuard(live.ref, descriptor.database.migration.sha256, true);
-  atomicWrite(databaseStatePath, JSON.stringify(database));
-  atomicWrite(statePath, JSON.stringify({ ...state, databaseVerification: databasePlan, database }));
-  unlinkSync(integratedDatabaseGuardPath);
+  await durableJson(databaseStatePath, database);
+  await durableJson(statePath, { ...state, databaseVerification: databasePlan, database });
+  durableUnlink(integratedDatabaseGuardPath);
   say(JSON.stringify({ recorded: true, database }, null, 2));
 }
 async function main() {

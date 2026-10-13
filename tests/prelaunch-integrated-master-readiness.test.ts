@@ -261,7 +261,9 @@ describe("prelaunch integrated master readiness", () => {
     expect(controlledDbSource).toContain("status: \"commit_dispatch_guard\"");
     expect(deploySource).toContain("integratedMasterWebFirst");
     expect(deploySource).toContain("loadIntegratedDatabaseGuard(state.ref");
-    expect(deploySource).toContain("unlinkSync(integratedDatabaseGuardPath)");
+    expect(deploySource).toContain("await durableJson(databaseStatePath, database)");
+    expect(deploySource).toContain("await durableJson(statePath");
+    expect(deploySource).toContain("durableUnlink(integratedDatabaseGuardPath)");
   });
 
   it("unwraps exactly one migration transaction for the controlled DB session", () => {
