@@ -8,6 +8,8 @@ import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredien
 import { formatIngredientAmountOnly } from "@/components/cooking/cook-mode-step-model";
 import type { CookingModeIngredient, CookingModeRecipe, CookingModeStep } from "@/types/cooking";
 
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
+
 const ROW_A = "550e8400-e29b-41d4-a716-446655440081";
 const ROW_B = "550e8400-e29b-41d4-a716-446655440082";
 const PRODUCT_A = "550e8400-e29b-41d4-a716-446655440091";

@@ -3580,3 +3580,10 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 공식 표본의 품종·색·크기·재배/등급 차이는 검토한 일반 대표기준으로 사용할 수 있다. 연결별 decision_reason에 `user_approved_representative:`와 적용 범위를 기록하고 공개 definition에도 기본 참고조건을 명시한다. `manual_source` 승인 경로를 재사용하며 실제 제품 등급/원산지·배합을 확정한 것으로 표시하지 않는다. 공유 source_item의 기존 provenance를 고쳐 쓰지 않고 관계별 사유와 운영 감사에 승인 근거를 남긴다.
 
 동일 식품·가식부·생건조·지방 정선·농축 조건은 보존하며 단위/부피/개당 무게를 자동 상속하지 않는다. 제품표가 필요한 항목과 원자료 미확보를 별도 기록하며, 결측/미량을0으로 채우지 않는다. 이번 후속은 데이터만 변경하고 스키마/ledger/기존 ID와 기록은 유지한다. 상세 화면·별도음식제품검색·중복동의어통합은 이번 영양 우선 작업 범위 밖이다. [기준·43개 보완·남은18개](engineering/ingredient-nutrition-representatives-20261008.md)를 따른다.
+
+
+## 2026-10-14 추가 계약 — C03 공공제품 독립 재료(운영 미적용)
+
+미적용 20261013190000_recipe_product_only_identity.sql은 recipe_ingredients의 출처 CHECK·nullable 일반 재료 ID·기본 OFF private 제어와 세 개의 좁은 public reader를 준비한다. amount numeric typemod 제거로 소수 사용량을 보존하되 유한 양수/기존 최대값을 유지한다. 공개 공공제품(public_dataset/public)의 같은 레시피/물리 행/정확 제품쌍인 기존 non-null 연결만 대표 연결 해제 뒤 무관 편집에서도 보존한다. 새 행/다른 조합 및 수동/private 제품의 기존 대표 검사는 유지한다. ON 전 모든 새 marker/명시 row 참조 저장을 막고, OFF의 안전한 기존 입력은 옛 저장 형태를 유지한다. row 수를 보고 old reader 복구를 허용하지 않으며 신규 기록 후 쓰기 OFF와 새 reader 유지가 기본 복구다.
+
+구현·검증과 좁은 공개 권한 및 기존 잔존 위험은 [C03 계약](engineering/mumeok-beta-product-contract-20261014.md)을 따른다. 운영 DB/권한/새 형식 쓰기는 정확 SQL·대상·백업·복구를 확인한 별도 승인 전 적용하지 않는다.
