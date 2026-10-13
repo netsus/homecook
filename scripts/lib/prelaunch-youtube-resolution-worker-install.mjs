@@ -201,7 +201,7 @@ export function assertYoutubeResolutionLauncherPreserved(previous, next) {
   return true;
 }
 
-function preserveLauncherEnvironment(previous, plistPreview) {
+export function preserveYoutubeResolutionLauncherEnvironment(previous, plistPreview) {
   const previousEnv = previous.ProgramArguments.slice(2).filter((value) => /^[A-Z_][A-Z0-9_]*=/u.test(value));
   let preview = plistPreview;
   const next = parsePlist(Buffer.from(preview));
@@ -270,7 +270,13 @@ export async function prepareYoutubeResolutionWorkerInstall(manifest, adapters =
   check(hash(previousBytes) === manifest.previous.sha256, "previous plist bytes changed");
   check(plan.plist_path === manifest.previous.path, "install plan targets a different plist");
   const parse = adapters.parsePlist ?? parsePlist;
-  plan = { ...plan, plist_preview: preserveLauncherEnvironment(parse(previousBytes), plan.plist_preview) };
+  plan = {
+    ...plan,
+    plist_preview: preserveYoutubeResolutionLauncherEnvironment(
+      parse(previousBytes),
+      plan.plist_preview,
+    ),
+  };
   assertYoutubeResolutionLauncherPreserved(parse(previousBytes), parse(Buffer.from(plan.plist_preview)));
   const previousStatus = await (adapters.readStatus ?? (() => {
     const result = spawnSync("/bin/launchctl", ["print", plan.service_target], { encoding: "utf8" });

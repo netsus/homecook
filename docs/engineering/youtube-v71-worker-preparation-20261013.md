@@ -71,3 +71,19 @@ gen47 등록 transaction이 commit되는 순간 gen46은 논리적으로 즉시 
 - policy 변경과 credential CAS의 transaction/commit 불확실성을 다루는 운영 manifest 및 root authority
 - gen47 등록 후 설치 실패 시 v71 수리 지속 또는 gen48 predecessor 복구 중 어느 경로를 승인할지 결정
 
+## 승인된 gen47 전환 도구 (2026-10-13)
+
+사용자는 gen47 worker credential을 정확히 6일로 발급하고, 별도 manager credential은 최대 5분으로 제한해 v71 policy 등록·gen46 정지·v71 기동을 한 번에 수행하도록 승인했다. gen48 발급, 권한 확장, 모델·추출 호출은 승인 범위가 아니다. DB·launchd·credential·policy를 변경하는 실제 실행은 `scripts/youtube-v71-controlled-cutover.mjs`의 정확한 confirmation을 요구한다.
+
+전환 도구는 먼저 release `8e515a…` artifact·descriptor·schema·policy를 저장소 밖의 고정 경로에 create-only로 materialize하고, DB ledger 219·queue 0·processing 0·permit 미점유·active enqueue 0·c51d/gen46 결속·현재 launchd와 기존 credential의 authenticated pre-request를 읽기 전용으로 확인한다. 실행 시에는 다음 순서를 강제한다.
+
+1. ES256 gen47 worker JWT를 518,400초로, manager JWT를 최대 300초로 각각 create-only 0600 파일에 발급한다. manager JWT는 별도 role/scope로 PostgREST pre-request를 통과해야 하며 DB 등록 직후 제거한다.
+2. i031 도구·ChatGPT 로그인 preflight와 새 artifact install plan을 mutation 전에 완료하고, 마지막 queue/permit/enqueue 상태를 다시 확인한 뒤 gen46 launchd를 내린다.
+3. 단일 serializable transaction에서 enqueue advisory lock과 policy·credential·jobs·permits table lock을 잡고 prestate를 재확인한다. v71 policy를 일시적으로 disabled로 등록한 다음 `expected_generation=46`, `new_generation=47` CAS RPC를 manager claims 아래 실행한다.
+4. DB commit 뒤에는 gen46을 자동 재기동하지 않고 gen47을 유지한다. 설치 실패 시 `--resume`은 봉인된 v71 artifact와 gen47만 수리·재시도하며 gen48을 발급하지 않는다.
+5. 새 plist는 기존 PATH·TMPDIR·NVM Node binding을 그대로 보존한다. 두 번 연속 같은 PID의 running 상태, gen47 authenticated pre-request, empty-claim 거절, local health를 확인하는 동안 DB policy를 disabled로 유지해 모델·추출 호출을 0으로 고정한다. 검증이 끝난 뒤 같은 quiescence lock 아래 policy만 enabled로 바꾼다.
+
+실행 전 `--prepare`가 만드는 private receipt와 전환 중 row/plist backup·journal·최종 receipt는 `~/.homecook/operations/youtube-v71-20261013`에 0700/0600으로 남긴다. JWT 원문은 영수증이나 stdout에 기록하지 않는다. DB commit 전 실패만 gen46이 여전히 current인 것을 readback으로 확인한 뒤 기존 plist를 다시 기동하고 미사용 gen47 파일을 제거할 수 있다.
+
+전환 도구와 credential issuer 회귀는 `tests/youtube-v71-controlled-cutover.test.ts`, `tests/youtube-v71-worker-preparation.test.ts`, `tests/youtube-extraction-release-installer.test.ts` 48/48을 통과했다. typecheck와 변경 파일 lint도 통과했다. 독립 리뷰에서 발견된 동시 실행 race, 비내구성 journal, policy enable 뒤 복구 불가, enable 뒤 검증 중 enqueue 가능성, signing key 검증 누락은 각각 create-only invocation lock, 파일·부모 directory fsync, 실패 시 disabled 복원, receipt까지 유지하는 session advisory lock, exact realpath·0600·owner 검증으로 수정했다.
+

@@ -13,6 +13,7 @@ import {
 } from "./youtube-extraction-worker-artifact.mjs";
 
 const MAX_WORKER_CREDENTIAL_TTL_SECONDS = 7 * 24 * 60 * 60;
+const MAX_CREDENTIAL_MANAGER_TTL_SECONDS = 5 * 60;
 
 function ensureInteger(value, label, minimum = 1) {
   if (!Number.isSafeInteger(value) || value < minimum) {
@@ -126,5 +127,58 @@ export function issueYoutubeExtractionWorkerCredential({
       schema_identity: normalizedSchemaIdentity,
       allowed_snapshot_digest: normalizedDigest,
     }),
+  });
+}
+
+/**
+ * Issues the short-lived credential-manager JWT used only to rotate the
+ * worker singleton. The raw JTI is discarded exactly like the worker token.
+ *
+ * @param {{
+ *   jwtKeys: Array<Record<string, unknown>>,
+ *   now?: Date,
+ *   ttlSeconds?: number,
+ *   jti?: string,
+ * }} options
+ */
+export function issueYoutubeExtractionCredentialManager({
+  jwtKeys,
+  now = new Date(),
+  ttlSeconds = MAX_CREDENTIAL_MANAGER_TTL_SECONDS,
+  jti = randomUUID(),
+} = {}) {
+  const normalizedTtl = ensureInteger(ttlSeconds, "ttlSeconds");
+  if (normalizedTtl > MAX_CREDENTIAL_MANAGER_TTL_SECONDS) {
+    throw new Error("credential manager lifetime must not exceed 5 minutes");
+  }
+  const nowMs = now instanceof Date ? now.getTime() : Number.NaN;
+  if (!Number.isFinite(nowMs)) throw new Error("now must be a valid Date");
+  const normalizedJti = ensureNonEmptyString(jti, "jti");
+  const jtiHash = ensureJtiHash(
+    createHash("sha256").update(normalizedJti, "utf8").digest("hex"),
+  );
+  const issuedAt = Math.floor(nowMs / 1_000);
+  const expiresAtSeconds = issuedAt + normalizedTtl;
+  const key = selectLocalEs256SigningKey(jwtKeys);
+  const header = { alg: "ES256", kid: key.kid, typ: "JWT" };
+  const claims = {
+    role: "youtube_extraction_credential_manager",
+    scope: "youtube-extraction-credential-manager",
+    iss: "https://worker.mumeok.kr",
+    aud: "youtube-extraction",
+    jti_hash: jtiHash,
+    iat: issuedAt,
+    exp: expiresAtSeconds,
+  };
+  const signingInput = `${encodedJson(header)}.${encodedJson(claims)}`;
+  const signature = sign("SHA256", Buffer.from(signingInput, "utf8"), {
+    dsaEncoding: "ieee-p1363",
+    key: createPrivateKey({ format: "jwk", key }),
+  }).toString("base64url");
+  return Object.freeze({
+    token: `${signingInput}.${signature}`,
+    claims: Object.freeze(claims),
+    jtiHash,
+    expiresAt: new Date(expiresAtSeconds * 1_000).toISOString(),
   });
 }

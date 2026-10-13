@@ -17,6 +17,7 @@ import {
   ensureRegularFile,
 } from "./lib/youtube-extraction-worker-artifact.mjs";
 import {
+  issueYoutubeExtractionCredentialManager,
   issueYoutubeExtractionWorkerCredential,
 } from "./lib/youtube-extraction-worker-local-credential.mjs";
 import {
@@ -26,6 +27,7 @@ import {
 } from "./lib/youtube-extraction-worker-ops.mjs";
 
 const CONFIRMATION = "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL";
+const MANAGER_CONFIRMATION = "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL_MANAGER";
 const REPOSITORY_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
 function parseArgs(argv) {
@@ -117,13 +119,16 @@ function assertNoSymlinkInLexicalPath(candidatePath, label) {
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
-  if (options.command !== "issue") {
+  if (!new Set(["issue", "issue-manager"]).has(options.command)) {
     throw new Error(
-      "Usage: node scripts/youtube-extraction-worker-local-credential.mjs issue --jwt-keys-file <0600 local file> --secret-root <0700 dir> --token-file <new file> --metadata-output <new file> --generation <n> --release-sha <sha> --schema-identity <id> --allowed-snapshot-digest <digest> --ttl-seconds <seconds> --confirm-production LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL",
+      "Usage: node scripts/youtube-extraction-worker-local-credential.mjs issue|issue-manager ...",
     );
   }
-  if (options.confirmation !== CONFIRMATION) {
-    throw new Error(`credential issue requires confirmation ${CONFIRMATION}`);
+  const expectedConfirmation = options.command === "issue"
+    ? CONFIRMATION
+    : MANAGER_CONFIRMATION;
+  if (options.confirmation !== expectedConfirmation) {
+    throw new Error(`credential issue requires confirmation ${expectedConfirmation}`);
   }
   const secretRoot = validateYoutubeExtractionWorkerSecretRoot(options.secretRoot);
   assertNoSymlinkInLexicalPath(options.jwtKeysFile, "local jwt_keys");
@@ -142,6 +147,34 @@ function main() {
     secretRoot,
     "token file",
   );
+  if (options.command === "issue-manager") {
+    const jwtKeys = JSON.parse(readFileSync(jwtKeysFile, "utf8"));
+    const issued = issueYoutubeExtractionCredentialManager({
+      jwtKeys,
+      ttlSeconds: options.ttlSeconds,
+    });
+    let tokenCreated = false;
+    try {
+      writeFileSync(tokenFile, `${issued.token}\n`, {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600,
+      });
+      chmodSync(tokenFile, 0o600);
+      tokenCreated = true;
+      process.stdout.write(`${JSON.stringify({
+        issued: true,
+        role: issued.claims.role,
+        scope: issued.claims.scope,
+        expires_at: issued.expiresAt,
+        token_file: tokenFile,
+      }, null, 2)}\n`);
+    } catch (error) {
+      if (tokenCreated) rmSync(tokenFile, { force: true });
+      throw error;
+    }
+    return;
+  }
   const metadataOutput = createOnlySecretPath(
     options.metadataOutput,
     secretRoot,
