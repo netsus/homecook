@@ -73,7 +73,7 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
           'youtube_url', 'https://www.youtube.com/watch?v=bridge-test',
           'youtube_video_id', 'bridge-test',
           'thumbnail_url', 'https://example.invalid/thumb.jpg',
-          'extraction_methods', jsonb_build_array('description'),
+          'extraction_methods', jsonb_build_array('description', 'private_evidence'),
           'extraction_meta_json', jsonb_build_object('provider', 'isolated-test'),
           'draft_json', jsonb_build_object('ingredients', jsonb_build_array(
             jsonb_build_object(
@@ -95,7 +95,7 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
         jsonb_build_object(
           'title', '브리지 레시피',
           'base_servings', 2,
-          'tags', jsonb_build_array('간단요리'),
+          'tags', jsonb_build_array('간단요리', '검토대기태그'),
           'ingredients', jsonb_build_array(
             jsonb_build_object(
               'row_id', '${resolvedRowId}',
@@ -158,6 +158,8 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
           or v_recipe.visibility <> 'public'
           or v_recipe.source_type <> 'youtube'
           or v_recipe.title <> '브리지 레시피'
+          or v_recipe.tags <> array['간단요리']::text[]
+          or v_source.extraction_methods <> array['description']::text[]
           or v_source.extraction_meta_json <> '{"youtube_saved_canonical_bridge":true}'::jsonb
           or v_source.extraction_meta_json ? 'youtube_saved_draft_id' then
           raise exception 'CANONICAL_BRIDGE_MISMATCH';
@@ -170,6 +172,19 @@ describe.skipIf(!enabled)("YouTube saved recipe canonical bridge in PostgreSQL",
             and tag.normalized_key = '간단요리'
             and recipe_tag.visibility = 'public'
             and recipe_tag.review_status = 'approved'
+        ) or not exists (
+          select 1
+          from public.recipe_tags as recipe_tag
+          join public.tags as tag on tag.id = recipe_tag.tag_id
+          where recipe_tag.recipe_id = v_recipe.id
+            and tag.normalized_key = '검토대기태그'
+            and recipe_tag.visibility = 'private'
+            and recipe_tag.review_status = 'pending'
+        ) or exists (
+          select 1
+          from public.recipes as leaked
+          where leaked.id = v_recipe.id
+            and '검토대기태그' = any(leaked.tags)
         ) or not exists (
           select 1
           from public.find_recipe_ids_by_public_tags('간단요리', null) as found

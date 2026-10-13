@@ -104,13 +104,15 @@ begin
       new.source_snapshot_json ->> 'youtube_video_id',
       coalesce(
         array(
-          select jsonb_array_elements_text(
+          select method.value
+          from jsonb_array_elements_text(
             case
               when jsonb_typeof(new.source_snapshot_json -> 'extraction_methods') = 'array'
                 then new.source_snapshot_json -> 'extraction_methods'
               else '[]'::jsonb
             end
-          )
+          ) as method(value)
+          where method.value = any (array['description', 'comment', 'caption']::text[])
         ),
         '{}'::text[]
       ),
@@ -119,7 +121,7 @@ begin
 
     -- Keep public discovery aligned with the established reviewed-tag model.
     -- Known system tags become searchable; unknown labels remain pending and
-    -- private in recipe_tags. The saved display labels stay intact on recipes.
+    -- private in recipe_tags and therefore never enter the public projection.
     perform public.set_recipe_tags(
       new.canonical_recipe_id,
       public.build_recipe_tag_payload(v_tags, 'system_suggested'),
@@ -127,8 +129,7 @@ begin
       'system_suggested'
     );
     update public.recipes
-    set tags = v_tags,
-        revision = new.revision,
+    set revision = new.revision,
         updated_at = new.updated_at
     where id = new.canonical_recipe_id;
 
@@ -166,13 +167,15 @@ begin
       youtube_video_id = new.source_snapshot_json ->> 'youtube_video_id',
       extraction_methods = coalesce(
         array(
-          select jsonb_array_elements_text(
+          select method.value
+          from jsonb_array_elements_text(
             case
               when jsonb_typeof(new.source_snapshot_json -> 'extraction_methods') = 'array'
                 then new.source_snapshot_json -> 'extraction_methods'
               else '[]'::jsonb
             end
-          )
+          ) as method(value)
+          where method.value = any (array['description', 'comment', 'caption']::text[])
         ),
         '{}'::text[]
       ),
@@ -186,8 +189,7 @@ begin
     'system_suggested'
   );
   update public.recipes
-  set tags = v_tags,
-      revision = new.revision,
+  set revision = new.revision,
       updated_at = new.updated_at
   where id = new.canonical_recipe_id;
 

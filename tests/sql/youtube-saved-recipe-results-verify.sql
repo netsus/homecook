@@ -211,7 +211,7 @@ select jsonb_build_object(
     'quantity_modes_and_raw_preserved','spoofed_evidence_rejected',
     'source_only_ensure','ensure_latest_after_expiry','stable_server_row_ids',
     'confirmed_empty_quant_stays_unknown','explicit_to_taste_preserved','legacy_unknown_to_taste_stays_unknown',
-    'stubbed_authority_boundary_only','owner_created_private_canonical_recipe'
+    'stubbed_authority_boundary_only','owner_created_public_canonical_recipe'
   ]
 );
 
