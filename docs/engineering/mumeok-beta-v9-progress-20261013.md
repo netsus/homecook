@@ -49,7 +49,7 @@
 - 과거 식단·완성배치·제품영양버전·snapshot 자동재계산/일괄변경 금지.
 - C05의 과거 ‘C01-W5 전체 통계’ 표현은 작업표 기준 W6를 의미한다. W5는 검증 단계다.
 
-## 단위 1: 계획 입력 — 구현·독립 리뷰 확인, 미배포
+## 단위 1: 계획 입력 — 운영 반영, 성공 확인창 초점 후속 남음
 
 - 운영 재현: 두부찌개 상세3인분/669kcal/두부450g/물600ml → 추가창2인분. 실제 잘못된 저장은 새로 만들지 않음.
 - 운영 재현: 추가창 닫기에서 Shift+Tab → `/terms` 링크; Escape 이후 dialog1개 유지.
@@ -89,6 +89,21 @@
 - docs/engineering/gabia-direct-domain-20261012.md: 미추적 운영 기록. 과거 사실과 현재 재검증을 구분해 검토한다.
 - .diagnostics/youtube-description-quantity-20261012/diagnosis.json: 진단 자료로 별도 보존, DNS/개인정보 PR에 포함하지 않는다. 실행·평가 없음.
 - 작성자 미확정. 원본 dirty 상태는 유지하며 전체 add/reset/삭제 금지. 채택 이유·최종 PR/SHA·잔존 상태는 후속 기록한다.
+
+## 첫 운영 반영 결과 — 2026-10-13 KST
+
+- PR #1669 merged: master `f80de7589041e6d8217f917f5284fdf2d51d6624`.
+- 웹만 기존 reviewed-ref 배포: `16bf11f73293b35a2f49f4a19974b87ebb1dba2b`, build `prelaunch-16bf11f73293-XqRqSV`. 최종 기능경로/SQL/package/lockfile은 merge한 master와 byte차이0. CSoT 과거문단 충돌만 배포 소스 기존 이력에 새 문단을 추가해 해결했다.
+- 배포 plan·최종 빌드·선택 회귀·별도포트·웹교체·운영 GET 성공. status loaded=true/recoveryPending=false. DB219는 READ ONLY 대조만 했고 worker/gen47 변경0.
+- 운영 Chrome1440: 두부찌개 상세2→3, 추가창3, Shift+Tab 내부 마지막버튼·Escape 닫기, 재열기3. 10/26 저녁 추가를 double click해 식사 카드1건만 저장됐다. 상세 재조회·새로고침 후3인분/669kcal를 확인하고 고정 계획 레시피에서 두부450g/물600ml를 확인했다. 테스트 계획1건은 보존하며 기존 기록은 삭제하지 않았다.
+- 운영375/320: 같은3인분 유지, 초기 close 포커스·Shift+Tab 내부순환·Escape/취소 후 실제 추가버튼 복귀, 페이지320px 가로넘침0 확인. 320운영 스크린샷을 실제 픽셀로 확인했다.
+- 추가 관찰: 저장 성공 ActionConfirmation의 확인을 닫은 후 초점이 BODY에 남는다. 일반 취소/Escape 복귀와 구분해 후속 조사 중이며 T2 전체 합격으로 처리하지 않는다.
+- 실계정 OAuth 재로그인 왕복·실기기 Safari·실제 스크린리더는 미실행. 이 단위의 로컬 로그인 복귀 검사는 통과했지만 실제 OAuth 합격으로 확대하지 않는다.
+- 단계 요약 Discord 기존 원준 목적지 HTTP204 확인(초기 조사·첫 운영 반영 각1회).
+
+## C06 다음 배포 준비
+
+사진 대신 등록업체 배지와 원문 확인을 제공하는 코드가 별도 branch에 준비됐다. master 첫 묶음을 통합한 뒤 관련99검사(97+검색복구2)와 typecheck를 다시 통과했다. 독립99검사·320/375/1360화면·원문/ID/버전 보존 근거는 [C06 기록](mumeok-beta-company-20261013.md)을 따른다. C06 운영 반영은 아직 하지 않았다.
 
 ## 재개 규칙
 
