@@ -250,11 +250,8 @@ function mapRecipeBookItem({
     && !Array.isArray(extractionMeta)
     && (extractionMeta as Record<string, unknown>).youtube_saved_canonical_bridge === true;
 
-  return {
+  const item = {
     recipe_id: recipeId,
-    ...(isSavedCanonicalBridge && recipe?.created_by === viewerUserId
-      ? { detail_href: `/recipes/youtube/saved/${recipeId}` }
-      : {}),
     title: recipe?.title ?? "",
     thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     tags: recipe?.tags ?? [],
@@ -264,6 +261,11 @@ function mapRecipeBookItem({
     base_servings: recipe?.base_servings ?? 1,
     added_at: addedAt,
   };
+
+  if (isSavedCanonicalBridge && recipe?.created_by === viewerUserId) {
+    return { ...item, detail_href: `/recipes/youtube/saved/${recipeId}` };
+  }
+  return item;
 }
 
 function normalizeSourceRows(rows: Array<{ id: string; recipe_id: string; added_at?: string; created_at?: string }>) {
