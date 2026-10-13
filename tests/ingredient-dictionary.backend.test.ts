@@ -117,6 +117,51 @@ function buildIngredient(
 }
 
 describe("21 ingredient dictionary backend", () => {
+  it("publishes a source-bound quantity only after one independent ingredient match", async () => {
+    const input = {
+      name: "통삼겹살",
+      amount: 500,
+      unit: "g",
+      ingredientType: "QUANT" as const,
+      displayText: "통삼겹살 500g",
+      sortOrder: 1,
+      scalable: true,
+      confidence: 0.9,
+      rawText: "🥩 통삼겹살 500g",
+      quantitySourceOverride: "text_explicit" as const,
+      quantityRawTextOverride: "🥩 통삼겹살 500g",
+      quantityEvidenceRefsOverride: [{ source_method: "comment" as const, source_provider: "youtube",
+        line_index: 1, start_ms: null, end_ms: null, snippet: "🥩 통삼겹살 500g" }],
+      quantityReviewRequiredOverride: false,
+      quantityRequiresResolvedIngredient: true,
+    };
+    const unresolved = buildExtractedIngredient({ matchesByName: new Map(), ...input });
+    expect(unresolved).toMatchObject({
+      amount: null,
+      unit: null,
+      resolution_status: "unresolved",
+      quantity_source: "unknown",
+      quantity_review_required: true,
+      quantity_raw_text: "🥩 통삼겹살 500g",
+      scalable: false,
+    });
+
+    const pork = { id: "00000000-0000-4000-8000-000000000903", standard_name: "통삼겹살" };
+    const { dbClient } = createIngredientDb({ ingredients: [pork] });
+    const lookup = await findIngredientIds(dbClient, [input.name]);
+    const resolved = buildExtractedIngredient({ matchesByName: lookup.matchesByName, ...input });
+    expect(resolved).toMatchObject({
+      amount: 500,
+      unit: "g",
+      ingredient_id: pork.id,
+      standard_name: pork.standard_name,
+      resolution_status: "resolved",
+      quantity_source: "text_explicit",
+      quantity_review_required: false,
+      scalable: true,
+    });
+  });
+
   it("folds an old standard name and its synonyms to one representative", async () => {
     const old = { id: "00000000-0000-4000-8000-000000000901", standard_name: "슈가파우더" };
     const canonical = { id: "00000000-0000-4000-8000-000000000902", standard_name: "가루 설탕" };

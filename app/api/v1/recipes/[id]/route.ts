@@ -47,6 +47,9 @@ import {
   type FuturePropagationRpcClient,
   type RecipeDraftNutritionClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
+import {
+  parseYoutubeSavedPublicRecipeProjection,
+} from "@/lib/server/youtube-saved-public-recipe";
 import { readRecipeSnapshotEntrypointContext } from
   "@/lib/server/recipe-snapshot-entrypoint";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
@@ -88,6 +91,11 @@ function normalizePositiveNumber(value: unknown) {
   }
 
   return numberValue;
+}
+
+function hasYoutubeSavedCanonicalBridgeMarker(value: unknown) {
+  return isRecord(value)
+    && value.youtube_saved_canonical_bridge === true;
 }
 
 function readExpectedStorageOrigin() {
@@ -336,7 +344,11 @@ export async function GET(request: Request, context: RouteContext) {
       };
     }
 
-    if (ingredientsResult.error || stepsResult.error) {
+    if (
+      ingredientsResult.error
+      || stepsResult.error
+      || (recipeResult.data.source_type === "youtube" && sourceResult.error)
+    ) {
       return fail(
         "INTERNAL_ERROR",
         "레시피 상세를 불러오지 못했어요.",
@@ -418,10 +430,35 @@ export async function GET(request: Request, context: RouteContext) {
     const ingredientRows = (ingredientsResult.data ?? []) as unknown as NonNullable<
       Parameters<typeof normalizeRecipeIngredients>[0]
     >;
-    const ingredients = normalizeRecipeIngredients(user
+    let ingredients = normalizeRecipeIngredients(user
       ? await readRecipeProductLabels(dbClient, ingredientRows)
       : ingredientRows);
-    const steps = normalizeRecipeSteps(stepsResult.data);
+    let steps = normalizeRecipeSteps(stepsResult.data);
+
+    if (
+      recipeResult.data.source_type === "youtube"
+      && hasYoutubeSavedCanonicalBridgeMarker(sourceResult.data?.extraction_meta_json)
+    ) {
+      const internalClient = createRecipeFuturePropagationInternalClient();
+      if (!internalClient) {
+        return fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요.", 500);
+      }
+
+      const projectionResult = await internalClient.rpc(
+        "read_public_youtube_saved_recipe_detail",
+        { p_actor_id: user?.id ?? null, p_recipe_id: id },
+      );
+      const projection = projectionResult.error
+        ? null
+        : parseYoutubeSavedPublicRecipeProjection(projectionResult.data);
+
+      if (!projection) {
+        return fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요.", 500);
+      }
+
+      ingredients = projection.ingredients;
+      steps = projection.steps;
+    }
     let viewCount = recipeResult.data.view_count;
     let planCount = recipeResult.data.plan_count;
 

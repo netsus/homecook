@@ -46,7 +46,6 @@ import {
   type PlannerAddSheetState,
 } from "@/components/recipe/planner-add-sheet";
 import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
-import { YoutubeSavedRecipesLink } from "@/components/recipe/youtube-saved-recipes-link";
 import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-screen";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
@@ -3489,7 +3488,6 @@ function RecipeBookTabContent({
 
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
-      <YoutubeSavedRecipesLink />
       <div
         className="web-recipebooks-header"
         data-testid="web-recipebooks-header"

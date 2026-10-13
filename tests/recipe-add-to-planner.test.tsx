@@ -9,9 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
+import { ActionConfirmation } from "@/components/shared/action-confirmation";
 import { MOCK_RECIPE_DETAIL, MOCK_RECIPE_ID } from "@/lib/mock/recipes";
-import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
-import { useAuthGateStore } from "@/stores/ui-store";
+import { PENDING_ACTION_KEY, savePendingAction } from "@/lib/auth/pending-action";
+import { useActionConfirmationStore, useAuthGateStore } from "@/stores/ui-store";
 import type { PlannerData } from "@/types/planner";
 import type { MealCreateData } from "@/types/meal";
 
@@ -124,6 +125,13 @@ function buildSelectedDateLabel(date: Date) {
   return `${weekday} ${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
+function buildLocalDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function installMatchMedia(matchesDesktop: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -159,8 +167,10 @@ describe("planner add flow", () => {
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
+    useActionConfirmationStore.getState().dismiss();
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
+    window.sessionStorage.clear();
 
     fetchJson.mockResolvedValue(MOCK_RECIPE_DETAIL);
     getSession.mockResolvedValue({ data: { session: null } });
@@ -220,16 +230,21 @@ describe("planner add flow", () => {
     resolveColumns(buildPlannerData());
   });
 
-  // accept-happy-path: authenticated user submits → meal created → success toast
+  // accept-happy-path: authenticated user submits → meal created → confirmation dialog
   it("creates a meal and shows success feedback on submit", async () => {
     fetchPlanner.mockResolvedValue(buildPlannerData());
-    createMeal.mockResolvedValue(buildMealCreateData());
+    const createdMeal = buildMealCreateData();
+    createMeal.mockResolvedValue(createdMeal);
+    const expectedPlanDate = buildLocalDateKey(new Date());
 
     render(
-      <RecipeDetailScreen
-        initialAuthenticated
-        recipeId={MOCK_RECIPE_DETAIL.id}
-      />,
+      <>
+        <RecipeDetailScreen
+          initialAuthenticated
+          recipeId={MOCK_RECIPE_DETAIL.id}
+        />
+        <ActionConfirmation />
+      </>,
     );
 
     await userEvent.click(
@@ -256,30 +271,32 @@ describe("planner add flow", () => {
       within(dialog).getByRole("button", { name: "플래너에 추가" }),
     );
 
-    // Sheet closes, success toast appears
+    // Sheet closes, the returned meal is reflected in the recipe summary, and
+    // the root-level confirmation dialog presents the exact selected target.
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeNull();
     });
-    // Toast: exact contract format "N월 D일 끼니에 추가됐어요" (D3, no trailing period)
-    // Date is today's selectableDates[0], built locale-independently the same way the component does
-    const today = new Date();
-    const m = today.getMonth() + 1;
-    const d = today.getDate();
-    const expectedToast = `${m}월 ${d}일 저녁에 추가됐어요`;
-    await waitFor(() => {
-      const statusElements = screen.getAllByRole("status");
-      const toast = statusElements.find((el) => el.textContent === expectedToast);
-      expect(toast).toBeTruthy();
+    expect(createMeal).toHaveBeenCalledTimes(1);
+    const createBody = createMeal.mock.calls[0]?.[0] as {
+      recipe_id: string;
+      plan_date: string;
+      column_id: string;
+      planned_servings: number;
+    };
+    expect(createBody).toEqual({
+      recipe_id: MOCK_RECIPE_DETAIL.id,
+      plan_date: expectedPlanDate,
+      column_id: "col-dinner",
+      planned_servings: MOCK_RECIPE_DETAIL.base_servings,
     });
+    expect(await createMeal.mock.results[0]?.value).toEqual(createdMeal);
+    expect(await screen.findByText("플래너등록 53")).toBeTruthy();
 
-    // Verify createMeal was called with correct args
-    expect(createMeal).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recipe_id: MOCK_RECIPE_DETAIL.id,
-        column_id: "col-dinner",
-        planned_servings: expect.any(Number),
-      }),
-    );
+    const [, month, day] = expectedPlanDate.split("-").map(Number);
+    const expectedConfirmation = `${month}월 ${day}일 저녁에 추가됐어요`;
+    expect(
+      await screen.findByRole("dialog", { name: expectedConfirmation }),
+    ).toBeTruthy();
   });
 
   it("uses a lighter sheet heading and keeps the selected date as chip state only", async () => {
@@ -467,15 +484,19 @@ describe("planner add flow", () => {
     );
   });
 
-  it("auto-dismisses the planner add success toast after a short delay", async () => {
+  it("keeps the planner confirmation open until the user acknowledges it", async () => {
     fetchPlanner.mockResolvedValue(buildPlannerData());
     createMeal.mockResolvedValue(buildMealCreateData());
+    const expectedPlanDate = buildLocalDateKey(new Date());
 
     render(
-      <RecipeDetailScreen
-        initialAuthenticated
-        recipeId={MOCK_RECIPE_DETAIL.id}
-      />,
+      <>
+        <RecipeDetailScreen
+          initialAuthenticated
+          recipeId={MOCK_RECIPE_DETAIL.id}
+        />
+        <ActionConfirmation />
+      </>,
     );
 
     await userEvent.click(
@@ -487,18 +508,34 @@ describe("planner add flow", () => {
       within(dialog).getByRole("button", { name: "플래너에 추가" }),
     );
 
-    const today = new Date();
-    const expectedToast = `${today.getMonth() + 1}월 ${today.getDate()}일 저녁에 추가됐어요`;
-
-    await waitFor(() => {
-      expect(screen.getByText(expectedToast)).toBeTruthy();
+    expect(createMeal).toHaveBeenCalledWith(
+      expect.objectContaining({ plan_date: expectedPlanDate }),
+    );
+    const [, month, day] = expectedPlanDate.split("-").map(Number);
+    const expectedConfirmation = `${month}월 ${day}일 저녁에 추가됐어요`;
+    const confirmationDialog = await screen.findByRole("dialog", {
+      name: expectedConfirmation,
     });
 
+    expect(useActionConfirmationStore.getState().message).toBe(expectedConfirmation);
     await act(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 4100));
     });
+    expect(
+      screen.getByRole("dialog", { name: expectedConfirmation }),
+    ).toBeTruthy();
+    expect(useActionConfirmationStore.getState().message).toBe(expectedConfirmation);
 
-    expect(screen.queryByText(expectedToast)).toBeNull();
+    await userEvent.click(
+      within(confirmationDialog).getByRole("button", { name: "확인" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: expectedConfirmation }),
+      ).toBeNull();
+    });
+    expect(useActionConfirmationStore.getState().message).toBeNull();
   }, 10000);
 
   // accept-idempotency: submit button is disabled while submitting (no double-submit)
@@ -571,6 +608,34 @@ describe("planner add flow", () => {
   it("auto-opens planner add sheet when returning from login gate with pending planner action", async () => {
     fetchPlanner.mockResolvedValue(buildPlannerData());
 
+    expect(savePendingAction({
+      type: "planner",
+      recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      createdAt: Date.now(),
+    })).toBe(true);
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).not.toBeNull();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    // Wait for recipe to load then sheet should open automatically
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeTruthy();
+    });
+
+    // The login return feedback should be shown
+    expect(screen.getByText(/로그인 완료.*플래너/)).toBeTruthy();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
+
+  it("does not resume a planner action copied through cross-tab local storage", async () => {
+    fetchPlanner.mockResolvedValue(buildPlannerData());
     window.localStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
@@ -588,12 +653,12 @@ describe("planner add flow", () => {
       />,
     );
 
-    // Wait for recipe to load then sheet should open automatically
+    expect(await screen.findByRole("button", { name: "플래너에 추가" })).toBeTruthy();
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeTruthy();
+      expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
     });
-
-    // The login return feedback should be shown
-    expect(screen.getByText(/로그인 완료.*플래너/)).toBeTruthy();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeNull();
+    expect(screen.queryByText(/로그인 완료.*플래너/)).toBeNull();
   });
 });

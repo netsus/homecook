@@ -9,6 +9,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
+import {
+  PlannerAddSheet,
+  type PlannerAddSheetState,
+} from "@/components/recipe/planner-add-sheet";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { Button } from "@/components/ui/button";
 import { trackYoutubeExtractionJob } from "@/lib/youtube-extraction-client-state";
@@ -43,6 +47,9 @@ import {
   fetchYoutubeSavedRecipe,
   updateYoutubeSavedRecipe,
 } from "@/lib/api/youtube-saved-recipes";
+import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { fetchPlanner } from "@/lib/api/planner";
+import { fetchRecipeBooks as fetchMypageRecipeBooks } from "@/lib/api/mypage";
 import type {
   BulkRegistrationRowResult,
 } from "@/lib/api/youtube-import";
@@ -76,6 +83,7 @@ import type {
 import type {
   YoutubeExtractionJobData,
 } from "@/types/youtube-extraction";
+import type { PlannerColumnData } from "@/types/planner";
 import type { YoutubeSavedRecipeEditableContent, YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -189,15 +197,6 @@ function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
   return `${ingredient.standard_name} ${amount}${unit}`;
 }
 
-function getIngredientUnitOptions(unit: string | null) {
-  const currentUnit = unit?.trim();
-  const baseOptions = [...COOKING_UNIT_OPTIONS];
-
-  return currentUnit && !baseOptions.includes(currentUnit as (typeof COOKING_UNIT_OPTIONS)[number])
-    ? [...baseOptions, currentUnit]
-    : baseOptions;
-}
-
 function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
   const amount = typeof ingredient.amount === "number" ? ingredient.amount : null;
   const unit = ingredient.unit?.trim() || null;
@@ -263,6 +262,22 @@ function applyIngredientQuantityPatch(
     };
   }
 
+  if ("unit" in patch) {
+    const unit = typeof next.unit === "string" ? next.unit : null;
+    const displayUnit = unit?.trim() || null;
+
+    return {
+      ...next,
+      ingredient_type: "QUANT",
+      unit,
+      display_text: formatIngredientDisplayText({
+        ...next,
+        ingredient_type: "QUANT",
+        unit: displayUnit,
+      }),
+    };
+  }
+
   return normalizeIngredient(next);
 }
 
@@ -313,9 +328,16 @@ function getIngredientName(ingredient: TempIngredient) {
 }
 
 function getQuantitySourceLabel(ingredient: TempIngredient) {
-  return ingredient.quantity_source
-    ? QUANTITY_SOURCE_LABELS[ingredient.quantity_source]
-    : null;
+  if (
+    !ingredient.quantity_source
+    || ingredient.quantity_source === "user_entered"
+    || ingredient.quantity_source === "unknown"
+    || ingredient.quantity_source === "recipe_inferred"
+  ) {
+    return null;
+  }
+
+  return QUANTITY_SOURCE_LABELS[ingredient.quantity_source];
 }
 
 function getQuantityEvidenceSnippet(ingredient: TempIngredient) {
@@ -923,7 +945,7 @@ function ReviewIngredientRow({
       typeof ingredient.unit === "string" &&
       ingredient.unit.trim().length > 0
     );
-  const unitOptions = getIngredientUnitOptions(ingredient.unit);
+  const unitListId = `youtube-unit-options-${ingredient.tempId.replace(/[^a-z0-9_-]/giu, "-")}`;
 
   return (
     <div
@@ -932,8 +954,8 @@ function ReviewIngredientRow({
         showDivider ? "border-t border-[var(--line)]" : "",
       ].join(" ")}
     >
-      <div className="grid grid-cols-[minmax(3.5rem,1fr)_4.25rem_auto_2.5rem] items-center gap-1.5">
-        <div className="min-w-0">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
           <input
             aria-label={`${ingredientName} 재료명`}
             className="h-9 w-full min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
@@ -941,7 +963,7 @@ function ReviewIngredientRow({
             type="text"
             value={ingredient.standard_name}
           />
-          {quantitySourceLabel || ingredient.quantity_review_required || ingredient.quantity_user_confirmed ? (
+          {quantitySourceLabel || needsQuantityReview ? (
             <span className="mt-1 flex flex-wrap gap-1.5">
               {quantitySourceLabel ? (
                 <span
@@ -951,19 +973,14 @@ function ReviewIngredientRow({
                   {quantitySourceLabel}
                 </span>
               ) : null}
-              {ingredient.quantity_review_required ? (
+              {needsQuantityReview ? (
                 <span className="rounded-full bg-[var(--warning-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--warning)]">
-                  확인 필요
-                </span>
-              ) : null}
-              {ingredient.quantity_user_confirmed ? (
-                <span className="rounded-full bg-[var(--success-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--success)]">
-                  확인됨
+                  분량 확인 필요
                 </span>
               ) : null}
             </span>
           ) : null}
-          {quantityEvidenceSnippet ? (
+          {quantityEvidenceSnippet && !needsQuantityReview ? (
             <span className="mt-1 block truncate text-[12px] text-[var(--text-3)]">
               근거: {quantityEvidenceSnippet}
             </span>
@@ -974,6 +991,17 @@ function ReviewIngredientRow({
             </span>
           ) : null}
         </div>
+        <button
+          aria-label={`${ingredientName} 삭제`}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-[var(--text-3)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]"
+          onClick={() => onRemoveIngredient(ingredient.tempId)}
+          type="button"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="mt-2 grid min-w-0 grid-cols-[minmax(5rem,0.8fr)_minmax(7rem,1.2fr)] items-start gap-2">
         <div className="flex min-w-0 flex-col items-stretch gap-1">
           <DecimalInput
             aria-label={`${ingredientName} 수량`}
@@ -1001,57 +1029,27 @@ function ReviewIngredientRow({
             </span>
           ) : null}
         </div>
-        <div
-          aria-label={`${ingredientName} 단위`}
-          className="flex w-20 shrink-0 flex-wrap gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
-          role="group"
-        >
-          {unitOptions.map((option) => (
-            <button
-              aria-label={`${ingredientName} ${option}`}
-              aria-pressed={ingredient.unit === option}
-              className={[
-                "h-9 min-w-9 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
-                ingredient.unit === option
-                  ? "bg-[var(--brand)] text-[var(--text-inverse)]"
-                  : "text-[var(--text-2)] hover:bg-[var(--surface)]",
-              ].join(" ")}
-              key={option}
-              onClick={() =>
-                onUpdateIngredient(ingredient.tempId, {
-                  amount: ingredient.amount,
-                  ingredient_type: "QUANT",
-                  scalable: true,
-                  unit: option,
-                  ...getQuantityEditPatch(ingredient),
-                })
-              }
-              type="button"
-            >
-              {option}
-            </button>
-          ))}
+        <div className="min-w-0">
           <input
             aria-label={`${ingredientName} 단위 직접 입력`}
-            className="h-8 w-full min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface)] px-2 text-sm"
+            className="h-9 w-full min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+            list={unitListId}
             maxLength={20}
             onChange={(event) => onUpdateIngredient(ingredient.tempId, {
               ingredient_type: "QUANT",
+              scalable: true,
               unit: event.target.value || null,
               ...getQuantityEditPatch(ingredient),
             })}
-            placeholder="단위"
+            placeholder="단위 입력 또는 선택"
             value={ingredient.unit ?? ""}
           />
+          <datalist id={unitListId}>
+            {COOKING_UNIT_OPTIONS.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
         </div>
-        <button
-          aria-label={`${ingredientName} 삭제`}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-[var(--text-3)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]"
-          onClick={() => onRemoveIngredient(ingredient.tempId)}
-          type="button"
-        >
-          ×
-        </button>
       </div>
 
       {needsQuantityReview ? (
@@ -2493,7 +2491,10 @@ function ActiveYoutubeImportScreen({
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [savedDraftId, setSavedDraftId] = useState(initialSavedDraftId);
+  const [savedRecipeId, setSavedRecipeId] = useState("");
   const [savedDraftRevision, setSavedDraftRevision] = useState<number | null>(null);
+  const [isOpeningRecipeBook, setIsOpeningRecipeBook] = useState(false);
+  const [recipeBookNavigationError, setRecipeBookNavigationError] = useState<string | null>(null);
   const savedRowIdsRef = useRef(new Map<string, string>());
   const originalIngredientNamesRef = useRef(new Map<string, string>());
   const saveAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
@@ -2501,15 +2502,41 @@ function ActiveYoutubeImportScreen({
   const ensureInFlightRef = useRef<string | null>(null);
   const ensureRequestTokenRef = useRef(0);
   const [ensureError, setEnsureError] = useState<{ message: string; unauthorized: boolean } | null>(null);
+  const [isPlannerAddSheetOpen, setIsPlannerAddSheetOpen] = useState(false);
+  const [plannerAddSheetState, setPlannerAddSheetState] =
+    useState<PlannerAddSheetState>("loading-columns");
+  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
+  const [selectedPlanDate, setSelectedPlanDate] = useState("");
+  const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
+  const [plannerServings, setPlannerServings] = useState(1);
+  const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
 
   // API data
   const [cookingMethods, setCookingMethods] = useState<CookingMethodItem[]>([]);
+
+  const selectablePlannerDates = useMemo(() => {
+    const dates: string[] = [];
+    const today = new Date();
+
+    for (let index = 0; index < 14; index += 1) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + index);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      dates.push(`${year}-${month}-${day}`);
+    }
+
+    return dates;
+  }, []);
 
   const applySavedResult = useCallback((saved: YoutubeSavedRecipeResult) => {
     originalIngredientNamesRef.current.clear();
     savedRowIdsRef.current.clear();
     setSavedDraftId(saved.draft_id);
+    setSavedRecipeId(saved.recipe_id ?? "");
     setSavedDraftRevision(saved.revision);
+    setRecipeBookNavigationError(null);
     setEditingSection(null);
     setHasUnsavedChanges(false);
     setExtractionId(saved.source.extraction_id);
@@ -3063,6 +3090,7 @@ function ActiveYoutubeImportScreen({
     setSelectedCandidateId(result.data.candidate_id);
     setRecipeCandidates([]);
     setSavedDraftId("");
+    setSavedRecipeId("");
     setSavedDraftRevision(null);
     applyExtractDataToReview(result.data.draft);
     setCurrentStep("saving-result");
@@ -3370,7 +3398,7 @@ function ActiveYoutubeImportScreen({
                 ? "quantity"
                 : "unknown",
         amount: ing.amount,
-        unit: ing.unit,
+        unit: ing.unit?.trim() || null,
         display_text: ing.display_text,
         component_label: ing.component_label ?? null,
       })),
@@ -3408,8 +3436,10 @@ function ActiveYoutubeImportScreen({
     }
 
     setSavedDraftId(result.data.draft_id);
+    setSavedRecipeId(result.data.recipe_id ?? "");
     setSavedDraftRevision(result.data.revision);
     setHasUnsavedChanges(false);
+    setRecipeBookNavigationError(null);
     saveAttemptRef.current = null;
     showActionConfirmation("변경사항을 저장했어요.");
     router.replace(`/recipes/youtube/saved/${result.data.draft_id}`);
@@ -3423,6 +3453,145 @@ function ActiveYoutubeImportScreen({
     savedDraftId,
     savedDraftRevision,
     router,
+  ]);
+
+  const openMyAddedRecipeBook = useCallback(async () => {
+    if (
+      !savedRecipeId
+      || hasUnsavedChanges
+      || isRegistering
+      || isOpeningRecipeBook
+    ) {
+      return;
+    }
+
+    setIsOpeningRecipeBook(true);
+    setRecipeBookNavigationError(null);
+    try {
+      const result = await fetchMypageRecipeBooks();
+      const book = result.books.find((candidate) => candidate.book_type === "my_added");
+      if (!book) {
+        setRecipeBookNavigationError("‘내가 추가한 레시피’를 불러오지 못했어요.");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        type: book.book_type,
+        name: book.name,
+        readerMode: "book",
+        readerRecipe: savedRecipeId,
+      });
+      router.push(
+        `/mypage/recipe-books/${encodeURIComponent(book.id)}?${params.toString()}`
+        + `#recipebook-recipe-${encodeURIComponent(savedRecipeId)}`,
+      );
+    } catch (error) {
+      setRecipeBookNavigationError(
+        error instanceof Error
+          ? error.message
+          : "‘내가 추가한 레시피’를 불러오지 못했어요.",
+      );
+    } finally {
+      setIsOpeningRecipeBook(false);
+    }
+  }, [
+    hasUnsavedChanges,
+    isOpeningRecipeBook,
+    isRegistering,
+    router,
+    savedRecipeId,
+  ]);
+
+  const loadPlannerColumns = useCallback(async () => {
+    setPlannerAddSheetState("loading-columns");
+    setPlannerAddError(null);
+
+    try {
+      const today = selectablePlannerDates[0] ?? "";
+      const data = await fetchPlanner(today, today);
+      setPlannerColumns(data.columns);
+      setSelectedPlanColumnId((current) => {
+        if (current && data.columns.some((column) => column.id === current)) {
+          return current;
+        }
+
+        return data.columns.find((column) => column.name === "저녁")?.id
+          ?? data.columns[0]?.id
+          ?? "";
+      });
+      setPlannerAddSheetState("ready");
+    } catch {
+      setPlannerAddSheetState("error");
+      setPlannerAddError("플래너 슬롯을 불러오지 못했어요.");
+    }
+  }, [selectablePlannerDates]);
+
+  const openPlannerAddSheet = useCallback(async () => {
+    if (!savedRecipeId || hasUnsavedChanges || isRegistering) return;
+
+    setIsPlannerAddSheetOpen(true);
+    setSelectedPlanDate(selectablePlannerDates[0] ?? "");
+    setPlannerServings(baseServings);
+    await loadPlannerColumns();
+  }, [
+    baseServings,
+    hasUnsavedChanges,
+    isRegistering,
+    loadPlannerColumns,
+    savedRecipeId,
+    selectablePlannerDates,
+  ]);
+
+  const closePlannerAddSheet = useCallback(() => {
+    if (plannerAddSheetState === "submitting") return;
+    setIsPlannerAddSheetOpen(false);
+    setPlannerAddError(null);
+  }, [plannerAddSheetState]);
+
+  const handlePlannerAddSubmit = useCallback(async () => {
+    if (
+      !savedRecipeId
+      || !selectedPlanDate
+      || !selectedPlanColumnId
+      || plannerAddSheetState !== "ready"
+    ) {
+      return;
+    }
+
+    setPlannerAddSheetState("submitting");
+    setPlannerAddError(null);
+
+    try {
+      await createMeal({
+        recipe_id: savedRecipeId,
+        plan_date: selectedPlanDate,
+        column_id: selectedPlanColumnId,
+        planned_servings: plannerServings,
+      });
+      setIsPlannerAddSheetOpen(false);
+      setPlannerAddSheetState("ready");
+      const [, month, day] = selectedPlanDate.split("-").map(Number);
+      const columnName = plannerColumns.find(
+        (column) => column.id === selectedPlanColumnId,
+      )?.name ?? "선택한 끼니";
+      showActionConfirmation(`${month}월 ${day}일 ${columnName}에 추가됐어요`);
+    } catch (error) {
+      setPlannerAddError(
+        isMealApiError(error) && error.status === 403
+          ? "내 플래너 슬롯에만 추가할 수 있어요."
+          : error instanceof Error
+            ? error.message
+            : "플래너 추가에 실패했어요.",
+      );
+      setPlannerAddSheetState("ready");
+    }
+  }, [
+    plannerAddSheetState,
+    plannerColumns,
+    plannerServings,
+    savedRecipeId,
+    selectedPlanColumnId,
+    selectedPlanDate,
   ]);
 
   // ─── Back handling ─────────────────────────────────────────────────
@@ -3775,14 +3944,66 @@ function ActiveYoutubeImportScreen({
               setModalMode("step-edit");
             }}
           />
+          {savedRecipeId && !hasUnsavedChanges ? (
+            <div data-testid="youtube-saved-planner-action">
+              <div className="web-yt-actions">
+                <WebButton
+                  disabled={isRegistering || isOpeningRecipeBook}
+                  onClick={() => void openMyAddedRecipeBook()}
+                >
+                  {isOpeningRecipeBook ? "이동 중..." : "내가 추가한 레시피에서 보기"}
+                </WebButton>
+                <WebButton
+                  disabled={isRegistering || isOpeningRecipeBook}
+                  onClick={() => void openPlannerAddSheet()}
+                  variant="secondary"
+                >
+                  플래너에 추가
+                </WebButton>
+              </div>
+              {recipeBookNavigationError ? (
+                <p className="mt-2 text-sm text-[var(--danger)]" role="alert">
+                  {recipeBookNavigationError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
     </DesktopImportFrame>
   );
 
+  const plannerAddSheet = (
+    <PlannerAddSheet
+      columns={plannerColumns}
+      errorMessage={plannerAddError}
+      isOpen={isPlannerAddSheetOpen}
+      onChangeServings={setPlannerServings}
+      onClose={closePlannerAddSheet}
+      onRetryLoad={() => void loadPlannerColumns()}
+      onSelectColumn={setSelectedPlanColumnId}
+      onSelectDate={setSelectedPlanDate}
+      onSubmit={() => void handlePlannerAddSubmit()}
+      recipePreview={{
+        background: "var(--wave1-surface-fill)",
+        emoji: "🍳",
+        imageUrl: draftThumbnailUrl ?? undefined,
+        meta: `${baseServings}인분`,
+        title,
+      }}
+      selectableDates={selectablePlannerDates}
+      selectedColumnId={selectedPlanColumnId}
+      selectedDate={selectedPlanDate}
+      servings={plannerServings}
+      sheetState={plannerAddSheetState}
+      variant="recipe-detail"
+    />
+  );
+
   const desktopModals = (
     <>
+      {plannerAddSheet}
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
           emptyActionLabel={canRegisterReplacingIngredient ? "새 재료로 등록" : undefined}
@@ -4085,6 +4306,30 @@ function ActiveYoutubeImportScreen({
             }}
           />
         )}
+        {currentStep === "review" && savedRecipeId && !hasUnsavedChanges ? (
+          <div className="space-y-2 px-4 pb-4" data-testid="youtube-saved-planner-action">
+            <Button
+              disabled={isRegistering || isOpeningRecipeBook}
+              fullWidth
+              onClick={() => void openMyAddedRecipeBook()}
+            >
+              {isOpeningRecipeBook ? "이동 중..." : "내가 추가한 레시피에서 보기"}
+            </Button>
+            <Button
+              disabled={isRegistering || isOpeningRecipeBook}
+              fullWidth
+              onClick={() => void openPlannerAddSheet()}
+              variant="neutral"
+            >
+              플래너에 추가
+            </Button>
+            {recipeBookNavigationError ? (
+              <p className="text-sm text-[var(--danger)]" role="alert">
+                {recipeBookNavigationError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
       </div>
 
@@ -4159,6 +4404,7 @@ function ActiveYoutubeImportScreen({
           onCancel={() => setModalMode("none")}
         />
       )}
+      {plannerAddSheet}
     </div>
   );
 }

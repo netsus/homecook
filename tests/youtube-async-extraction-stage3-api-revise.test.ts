@@ -27,6 +27,7 @@ import {
 } from "@/lib/server/youtube-async-extraction-routes";
 import {
   buildYoutubeExtractionAppDescriptor,
+  buildYoutubeExtractionWorkerPolicySnapshotDigest,
   materializeYoutubeExtractionWorkerArtifact,
   sha256File,
   sha256Text,
@@ -95,10 +96,18 @@ function makeTreeWritable(path: string) {
   }
 }
 
-function createCanonicalReadinessFixture(prefix: string) {
+function createCanonicalReadinessFixture(
+  prefix: string,
+  pipelineIdentity: string = YOUTUBE_ASYNC_POLICY.pipelineIdentity,
+) {
   const root = mkdtempSync(join(tmpdir(), prefix));
   const releaseSha = "1".repeat(40);
-  const digest = YOUTUBE_ASYNC_POLICY.snapshotDigest;
+  const digest = buildYoutubeExtractionWorkerPolicySnapshotDigest({
+    extractorMode: YOUTUBE_ASYNC_POLICY.extractorMode,
+    pipelineIdentity,
+    policyVersion: YOUTUBE_ASYNC_POLICY.policyVersion,
+    resultAffectingOptions: YOUTUBE_ASYNC_POLICY.resultAffectingOptions,
+  });
   const schemaIdentity = YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY;
   const artifactDir = join(root, "artifact");
   const materialized = materializeYoutubeExtractionWorkerArtifact({
@@ -108,7 +117,7 @@ function createCanonicalReadinessFixture(prefix: string) {
     schemaIdentity,
     allowedSnapshotDigest: digest,
     policyVersion: YOUTUBE_ASYNC_POLICY.policyVersion,
-    pipelineIdentity: YOUTUBE_ASYNC_POLICY.pipelineIdentity,
+    pipelineIdentity,
   });
   makeTreeWritable(artifactDir);
   const expectedSchemaPath = join(
@@ -209,6 +218,7 @@ describe("YTASYNC Stage 3 API revise RED", () => {
         currentFingerprintKeyVersion: "2",
         previousFingerprintKeyVersion: "1",
         previousFingerprintValidUntil: "2026-08-14T00:00:00.000Z",
+        fingerprintPipelineIdentity: YOUTUBE_ASYNC_POLICY.pipelineIdentity,
       });
       const rotatedPolicyRpc = vi.fn(async () => ({
         data: {
@@ -277,6 +287,28 @@ describe("YTASYNC Stage 3 API revise RED", () => {
     } finally {
       makeTreeWritable(root);
       rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("keeps enqueue compatible with the sealed predecessor worker during web-first rollout", async () => {
+    const predecessorPipelineIdentity = "1c9c47074da3bf1c55ed83f1ba5131d9d48ad486503919c554a5530d7972d935";
+    const fixture = createCanonicalReadinessFixture(
+      "homecook-yta-predecessor-gate-",
+      predecessorPipelineIdentity,
+    );
+    try {
+      const rpc = vi.fn(async () => ({ data: fixture.row, error: null }));
+      expect(await loadYoutubeExtractionEnqueueReadiness(
+        rpc,
+        fixture.env,
+        new Date("2026-08-13T00:00:00.000Z"),
+      )).toMatchObject({
+        expectedPolicySnapshotDigest: fixture.digest,
+        fingerprintPipelineIdentity: predecessorPipelineIdentity,
+      });
+    } finally {
+      makeTreeWritable(fixture.root);
+      rmSync(fixture.root, { force: true, recursive: true });
     }
   });
 

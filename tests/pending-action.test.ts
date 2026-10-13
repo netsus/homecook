@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PENDING_ACTION_KEY,
@@ -12,7 +12,13 @@ import {
 
 describe("pending action", () => {
   beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(123);
     window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("uses a stable storage key", () => {
@@ -33,6 +39,8 @@ describe("pending action", () => {
       redirectTo: "/recipe/recipe-1",
       createdAt: 123,
     });
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).not.toBeNull();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("clears saved pending action", () => {
@@ -49,14 +57,14 @@ describe("pending action", () => {
   });
 
   it("returns null and removes invalid JSON", () => {
-    window.localStorage.setItem(PENDING_ACTION_KEY, "{invalid");
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, "{invalid");
 
     expect(readPendingAction()).toBeNull();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("rejects invalid payload shape", () => {
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       PENDING_ACTION_KEY,
       JSON.stringify({
         type: "unknown",
@@ -73,6 +81,20 @@ describe("pending action", () => {
       redirectTo: "/recipe/id",
       createdAt: 1,
     });
+  });
+
+  it("does not resume a legacy action shared through local storage", () => {
+    const legacyCrossTabAction = JSON.stringify({
+      type: "planner",
+      recipeId: "recipe-1",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: Date.now(),
+    });
+    window.localStorage.setItem(PENDING_ACTION_KEY, legacyCrossTabAction);
+
+    expect(readPendingAction()).toBeNull();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
   it("keeps recipe pending actions recipe-scoped until later web slices generalize protected actions", () => {
@@ -164,7 +186,7 @@ describe("pending action", () => {
   });
 
   it("rejects a malformed owner edit return context", () => {
-    window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
       type: "recipe-edit-save",
       recipeId: "recipe-1",
       redirectTo: "/recipe/recipe-1",
@@ -184,6 +206,6 @@ describe("pending action", () => {
     }));
 
     expect(readPendingAction()).toBeNull();
-    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 });

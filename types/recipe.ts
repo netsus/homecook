@@ -599,6 +599,7 @@ export interface RecipeBookDeleteData {
 
 export interface RecipeBookRecipeItem {
   recipe_id: string;
+  detail_href?: string;
   title: string;
   thumbnail_url: string | null;
   tags: string[];

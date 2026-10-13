@@ -18,8 +18,8 @@ export const I031_EXACT_IDENTITY = Object.freeze({
   sourcePromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
   selectorPromptVersion: "deterministic-evidence-v3-ingredient-event-preserving-largest-gap",
   finalPromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
-  clientVersion: "codex-vision-source-anchored-v63-cited-conflict-guard",
-  executionConfigSignature: "bec9d13ac2b89d5e37e5838b",
+  clientVersion: "codex-vision-source-anchored-v71-word-range-hardening",
+  executionConfigSignature: "c9f578ce47bc4bf8573142e0",
   frameExtractorVersion: "extract-video-frames-v7-adaptive-screen-ocr",
   frameMode: "hybrid",
   interval: 4,
@@ -403,11 +403,11 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
     const textSource = (reference: YoutubeI031EvidenceRef) => reference.source_method !== "visual"
       || reference.source_provider === "macos-vision-ocr";
     if (quantityState === "explicit") {
-      const allowedBasis = new Set(["stated", "spoken", "onscreen"]);
+      const allowedBasis = new Set(["stated", "source-bound-stated", "spoken", "onscreen"]);
       if (amountBasis === undefined || amountBasis === null || !allowedBasis.has(amountBasis)) {
         throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 explicit amount basis is invalid: ${index}`);
       }
-      const compatible = evidenceRefs?.some((reference) => amountBasis === "stated"
+      const compatible = evidenceRefs?.some((reference) => amountBasis === "stated" || amountBasis === "source-bound-stated"
         ? ["description", "comment"].includes(reference.source_method)
         : amountBasis === "spoken"
           ? reference.source_method === "caption"

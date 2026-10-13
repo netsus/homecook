@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -22,10 +23,12 @@ const repositoryRoot = process.cwd();
 const pnpmEntrypoint = process.env.npm_execpath?.endsWith(".cjs")
   ? process.env.npm_execpath
   : null;
-const pnpmCommand = pnpmEntrypoint ? process.execPath : "pnpm";
+const corepackCommand = path.join(path.dirname(process.execPath), "corepack");
+const pnpmCommand = pnpmEntrypoint ? process.execPath
+  : existsSync(corepackCommand) ? corepackCommand : "pnpm";
 const pnpmArgs = (commandArgs) => pnpmEntrypoint
   ? [pnpmEntrypoint, ...commandArgs]
-  : commandArgs;
+  : pnpmCommand === corepackCommand ? ["pnpm", ...commandArgs] : commandArgs;
 const args = process.argv.slice(2);
 if (args.some((arg) => !["--beta-flow-gaps", "--food-catalog-search", "--ingredient-resolution"].includes(arg)) || args.length > 1) {
   throw new Error("Supported options: --beta-flow-gaps, --food-catalog-search or --ingredient-resolution");
@@ -42,6 +45,8 @@ const adminMigrations = new Set([
   "20260922021000_recipe_product_nutrition.sql",
   "20261009090000_ingredient_canonical_search.sql",
   "20261009200000_youtube_ingredient_resolution.sql",
+  "20261010120000_ingredient_exclusion_recovery_selection.sql",
+  "20261011140000_retire_unused_ingredients.sql",
 ]);
 const pieceUnitMigration = "20261009130000_ingredient_piece_unit_evidence.sql";
 // The long-lived 212-migration database renamed this exact predecessor while
@@ -191,6 +196,9 @@ commit;`,
   }
   run(pnpmCommand, pnpmArgs([
     "exec", "vitest", "run", "tests/youtube-extraction-current-catalog.integration.test.ts",
+    ...(verifyIngredientResolution ? [
+      "tests/youtube-saved-recipe-canonical-bridge-postgres.integration.test.ts",
+    ] : []),
     ...(verifyBetaFlowGaps ? [
       "tests/recipe-product-selection-postgres.integration.test.ts",
       "tests/recipe-product-nutrition.integration.test.ts",

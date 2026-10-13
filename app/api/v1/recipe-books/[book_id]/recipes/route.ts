@@ -52,6 +52,10 @@ interface RecipeRow {
   tags: string[] | null;
   view_count: number | null;
   base_servings: number | null;
+  recipe_sources?:
+    | { extraction_meta_json?: unknown }
+    | Array<{ extraction_meta_json?: unknown }>
+    | null;
 }
 
 interface UserRecipeRow extends RecipeRow {
@@ -228,15 +232,25 @@ function mapRecipeBookItem({
   recipe,
   addedAt,
   durationSeconds,
+  viewerUserId,
 }: {
   recipeId: string;
   recipe: RecipeRow | undefined;
   addedAt: string;
   durationSeconds: number | null | undefined;
+  viewerUserId: string;
 }) {
   const totalDurationSeconds = durationSeconds ?? null;
+  const source = Array.isArray(recipe?.recipe_sources)
+    ? recipe.recipe_sources[0]
+    : recipe?.recipe_sources;
+  const extractionMeta = source?.extraction_meta_json;
+  const isSavedCanonicalBridge = extractionMeta
+    && typeof extractionMeta === "object"
+    && !Array.isArray(extractionMeta)
+    && (extractionMeta as Record<string, unknown>).youtube_saved_canonical_bridge === true;
 
-  return {
+  const item = {
     recipe_id: recipeId,
     title: recipe?.title ?? "",
     thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
@@ -247,6 +261,11 @@ function mapRecipeBookItem({
     base_servings: recipe?.base_servings ?? 1,
     added_at: addedAt,
   };
+
+  if (isSavedCanonicalBridge && recipe?.created_by === viewerUserId) {
+    return { ...item, detail_href: `/recipes/youtube/saved/${recipeId}` };
+  }
+  return item;
 }
 
 function normalizeSourceRows(rows: Array<{ id: string; recipe_id: string; added_at?: string; created_at?: string }>) {
@@ -317,7 +336,7 @@ async function readBookSourceRows({
   if (book.book_type === "my_added") {
     let recipesQuery = recipeReaderClient
       .from("recipes")
-      .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings, created_at")
+      .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings, created_at, recipe_sources(extraction_meta_json)")
       .eq("created_by", userId)
       .in("source_type", ["youtube", "manual"])
       .order("created_at", { ascending: false })
@@ -360,6 +379,7 @@ async function mapUserRecipeRows(
   rows: UserRecipeRow[],
   cursor: string | null,
   limit: number,
+  viewerUserId: string,
 ) {
   const sourceRows = rows.map((row) => ({
     id: row.id,
@@ -380,6 +400,7 @@ async function mapUserRecipeRows(
         recipe: recipeMap.get(row.recipe_id),
         addedAt: row.added_at,
         durationSeconds: durationMap.get(row.recipe_id),
+        viewerUserId,
       }),
     ),
     next_cursor: nextCursor,
@@ -499,6 +520,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         await hydrateRecipeImages(itemsResult.data as UserRecipeRow[]),
         cursor,
         limit,
+        user.id,
       ));
     } catch {
       return fail("INTERNAL_ERROR", "레시피북 이미지를 불러오지 못했어요.", 500);
@@ -518,7 +540,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const recipeIds = [...new Set(pagedRows.map((row) => row.recipe_id))];
   const recipesResult = await recipeReaderClient
     .from("recipes")
-    .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings")
+    .select("id, title, thumbnail_url, created_by, tags, view_count, base_servings, recipe_sources(extraction_meta_json)")
     .in("id", recipeIds);
 
   if (recipesResult.error || !recipesResult.data) {
@@ -543,6 +565,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         recipe: recipeMap.get(row.recipe_id),
         addedAt: row.added_at,
         durationSeconds: durationMap.get(row.recipe_id),
+        viewerUserId: user.id,
       }),
     ),
     next_cursor: nextCursor,

@@ -1,5 +1,13 @@
 # Current Source of Truth
 
+## 2026-10-12 — YouTube 설명란·작성자 댓글 원천 결속 수량 복구 (로컬, 미배포)
+
+설명란과 각 작성자 댓글의 닫힌 재료 행에서 서버가 재료명·literal primary/reference 수량·정규화 좌표를 request-local로 결속한다. v70/v44/source-binding-v7은 기존 v65 경계에 더해, 최종 `unknown/null`로 거절된 raw estimate를 독립된 exact owner가 있을 때만 복구하고, `1/2 Onion`은 별도 caption이 같은 재료의 절반 개수를 좁게 증명할 때만 `1/2개`로 해석한다. source/caption 수량 모순, 조건·대체·부정 축약·범위·근사, unitless 무게, compound green onion, 공유 caption 소비는 차단한다. 복구값은 기존 재료 사전/SQL resolver가 localized lookup name을 단일 canonical/synonym으로 해결해야만 최종 explicit으로 공개되며 미해결·다중 후보·`그릇 2개` 같은 비재료는 unknown/review-required로 남는다. 저장된 3건의 immutable source/raw proposal을 모델·네트워크 호출0회로 재생해 기존 `통삼겹살 500g`, 두 번째 `소금 1티스푼`, `돼지고기 앞다리살 400g`을 유지하고, eJ의 `양파 1/2개`, `올리브 오일 2 Tablespoons`(reference30ml), `발사믹 식초 1 Tablespoon`(reference15ml)을 추가 복구해 verified7/rejected0을 확인했다. Garlic의 원문/caption 충돌은 유지한다. disposable local DB에서 218개 migration과 실제 SQL resolver→JS finalizer→finalize RPC/저장 postimage를 포함한 경계8검사를 통과했다. 저장 raw verifier 재생과 DB 경계 fixture는 별도 증거다. 앞선 정확3건 평가 budget은3/3 소비됐고 새 후보에 재사용하지 않는다. prompt/DB schema·SQL allowlist/API/UI·운영은 변경하지 않았다. [구현 계약·저장 결과 replay·hash·검증 한계](../engineering/youtube-source-bound-quantity-recovery-20261012.md)를 따른다.
+
+## 2026-10-12 — 유튜브 저장 레시피를 내가 추가한 레시피·플래너에 연결 (로컬 구현, 미배포)
+
+유튜브 자동 저장 결과의 원본 보존형 문서는 유지하면서 같은 소유자의 공개 canonical recipe ID를 1:1로 연결한다. 신규·기존 저장 결과가 `내가 추가한 레시피`와 공개 제목 검색에 나타나며 기존 승인 시스템 태그는 태그 검색·테마에도 연결된다. owner는 기존 편집 상세로 다시 열고 다른 사용자는 원본 근거·private 연결 정보가 제거된 재료·단계 projection만 읽는다. 공개 snapshot은 owner-neutral이라 기존 레시피북 상세·저장·플래너·요리 흐름을 재사용한다. 편집 화면은 미확인 분량 경고를 하나로 줄이고 단위를 한 칸에서 직접 입력/선택하며, 저장 후 `내가 추가한 레시피에서 보기`를 제공한다. P5 추출 모델·평가 데이터·worker와 구형 save fallback은 변경하지 않는다. 기존 데이터 backfill은 저장 결과 수만큼 public recipe/source 행을 추가하므로 운영 DB 적용 전 대상 건수·백업·rollback 범위를 별도 승인받는다. 구현은 master 기준선과 현재 운영 웹 이력을 함께 조상으로 연결한 통합 후보에서 진행하며 [재통합 근거](../engineering/master-live-reintegration-20261012.md)와 [데이터 계약·backfill 위험·검증 범위](../engineering/youtube-recipebook-planner-bridge-20261012.md)를 따른다. 정식 promotion은 현재 unconditional fail-closed와 발급 불가능한 GitHub attestation 때문에 차단되어 있으며 Actions를 끈 채 지원하려면 새 offline signing authority가 필요하다. 이는 아직 구현·승인하지 않았고 [읽기 전용 배포 준비 진단](../engineering/local-mac-production-actions-disabled-readiness-20261012.md)을 따른다.
+
 ## 2026-10-11 — 원문 확인 밥숟가락 중량 운영 반영
 
 스푼·숟가락11종의 실제27행을 검토해 7종 추정중량을 4레시피16행에 반영했다. 화면은 `밥숟가락` 수량을 표시하고 계산에만 승인된 g을 쓴다. 수북한 담음·분량충돌11행과 기존15ml 별칭은 유지한다. 새영양/내용저장본 각4개, 다른47레시피·과거기록 보존, 운영51레시피 계산일치를 검증했다. 원장218·웹f970bc1d1f1e이며 worker·AI비활성은 유지한다. [처리·근거·검증·남은 범위](../engineering/household-spoon-review-20261011.md)를 따른다.

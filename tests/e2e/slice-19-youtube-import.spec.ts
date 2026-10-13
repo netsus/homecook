@@ -356,10 +356,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.getByText("김치", { exact: true })).toBeVisible();
     await expect(page.getByText("돼지고기", { exact: true })).toBeVisible();
     await expect(page.getByLabel("김치 수량")).toHaveValue("200");
-    await expect(page.getByRole("button", { name: "김치 g" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(page.getByLabel("김치 단위 직접 입력")).toHaveValue("g");
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
     await expect(page.locator("text=만들기 (3단계)")).toBeVisible();
 

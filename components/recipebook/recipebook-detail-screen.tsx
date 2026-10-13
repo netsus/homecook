@@ -226,8 +226,9 @@ export function RecipeBookDetailScreen({
   }, []);
 
   const buildRecipeDetailReturnHref = useCallback(
-    (recipeId: string, readerMode = desktopReaderMode) =>
-      buildReturnHref(`/recipe/${recipeId}`, {
+    (recipeId: string, readerMode = desktopReaderMode) => {
+      const item = items.find((candidate) => candidate.recipe_id === recipeId);
+      return buildReturnHref(item?.detail_href ?? `/recipe/${recipeId}`, {
         restore: "recipebook-tab",
         returnSurface: "mypage.recipebooks",
         returnTo: buildRecipeBookDetailHref({
@@ -237,8 +238,9 @@ export function RecipeBookDetailScreen({
           readerRecipeId: recipeId,
           readerMode,
         }),
-      }),
-    [bookId, bookType, currentBookName, desktopReaderMode],
+      });
+    },
+    [bookId, bookType, currentBookName, desktopReaderMode, items],
   );
   const buildRecipeCookHref = useCallback(
     (item: RecipeBookRecipeItem, readerDetailState?: ReaderDetailState) =>

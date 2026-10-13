@@ -7,6 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
+import * as mealApi from "@/lib/api/meal";
+import * as mypageApi from "@/lib/api/mypage";
+import * as plannerApi from "@/lib/api/planner";
 import * as extractionApi from "@/lib/api/youtube-extraction-jobs";
 import * as youtubeApi from "@/lib/api/youtube-import";
 import * as savedRecipeApi from "@/lib/api/youtube-saved-recipes";
@@ -14,13 +17,19 @@ import type { YoutubeRecipeExtractData } from "@/types/recipe";
 import type { YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
 
 const routerReplace = vi.fn();
+const routerPush = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: routerReplace }),
+  useRouter: () => ({ push: routerPush, replace: routerReplace }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/menu/add/youtube",
 }));
 vi.mock("@/lib/api/cooking-methods", () => ({ fetchCookingMethods: vi.fn() }));
-vi.mock("@/lib/api/meal", () => ({ createMealSafe: vi.fn() }));
+vi.mock("@/lib/api/meal", () => ({
+  createMeal: vi.fn(),
+  isMealApiError: (error: unknown) => error instanceof Error && "status" in error,
+}));
+vi.mock("@/lib/api/mypage", () => ({ fetchRecipeBooks: vi.fn() }));
+vi.mock("@/lib/api/planner", () => ({ fetchPlanner: vi.fn() }));
 vi.mock("@/lib/api/youtube-import", () => ({
   validateYoutubeUrl: vi.fn(),
   extractYoutubeRecipe: vi.fn(),
@@ -138,9 +147,13 @@ describe("YouTube result-first UI", () => {
     vi.stubEnv("NEXT_PUBLIC_PRELAUNCH_UI", "false");
     window.history.replaceState({}, "", "/menu/add/youtube");
     routerReplace.mockReset();
+    routerPush.mockReset();
     vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockReset();
     vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockReset();
     vi.mocked(savedRecipeApi.updateYoutubeSavedRecipe).mockReset();
+    vi.mocked(mealApi.createMeal).mockReset();
+    vi.mocked(mypageApi.fetchRecipeBooks).mockReset();
+    vi.mocked(plannerApi.fetchPlanner).mockReset();
     vi.mocked(youtubeApi.createYoutubeCandidateDraft).mockReset();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -151,6 +164,21 @@ describe("YouTube result-first UI", () => {
       }),
     });
     vi.mocked(fetchCookingMethods).mockResolvedValue({ success: true, data: { methods: [] }, error: null });
+    vi.mocked(plannerApi.fetchPlanner).mockResolvedValue({
+      columns: [{ id: "column-dinner", name: "저녁", sort_order: 0 }],
+      meals: [],
+      product_entries: [],
+    });
+    vi.mocked(mealApi.createMeal).mockResolvedValue({ id: "meal-1" } as Awaited<ReturnType<typeof mealApi.createMeal>>);
+    vi.mocked(mypageApi.fetchRecipeBooks).mockResolvedValue({
+      books: [{
+        id: "book-my-added",
+        name: "내가 추가한 레시피",
+        book_type: "my_added",
+        recipe_count: 1,
+        sort_order: 0,
+      }],
+    });
     vi.mocked(savedRecipeApi.ensureYoutubeSavedRecipe).mockResolvedValue({
       success: true,
       data: {
@@ -282,10 +310,11 @@ describe("YouTube result-first UI", () => {
     await user.type(rawNameInput, "집된장");
     await user.click(screen.getByRole("button", { name: "+ 재료 추가" }));
     await user.type(screen.getByLabelText("확인할 재료 재료명"), "다진 마늘");
-    expect(screen.getByRole("button", { name: "다진 마늘 g" }).getAttribute("aria-pressed")).toBe("false");
     await user.type(screen.getByLabelText("다진 마늘 수량"), "2");
-    expect((screen.getByLabelText("다진 마늘 단위 직접 입력") as HTMLInputElement).value).toBe("");
-    await user.type(screen.getByLabelText("다진 마늘 단위 직접 입력"), "큰술");
+    const unitInput = screen.getByLabelText("다진 마늘 단위 직접 입력") as HTMLInputElement;
+    expect(unitInput.value).toBe("");
+    expect(unitInput.getAttribute("list")).toContain("youtube-unit-options-");
+    await user.type(unitInput, "아주 긴 사용자 단위");
     await user.clear(amountInput);
     await user.type(amountInput, "250");
     await user.click(screen.getByRole("button", { name: "수정 완료" }));
@@ -293,6 +322,8 @@ describe("YouTube result-first UI", () => {
     expect(screen.queryByLabelText("두부 수량")).toBeNull();
     expect(screen.getByText("250g")).toBeTruthy();
     expect(screen.getAllByText("분량 확인 필요")).toHaveLength(1);
+    expect(screen.queryByText("확인됨")).toBeNull();
+    expect(screen.queryByText("직접 입력")).toBeNull();
     expect(youtubeApi.registerYoutubeRecipe).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "만들기 수정" }));
@@ -317,7 +348,7 @@ describe("YouTube result-first UI", () => {
       source_draft_ingredient_id: null,
       quantity_mode: "quantity",
       amount: 2,
-      unit: "큰술",
+      unit: "아주 긴 사용자 단위",
     });
     expect(savedContent.ingredients[0].quantity_mode).toBe("quantity");
     expect(savedContent.steps[0].instruction).toBe("두부를 넣고 한소끔 끓인다.");
@@ -683,6 +714,112 @@ describe("YouTube result-first UI", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "엄마표 된장찌개" })).toBeTruthy();
+  });
+
+  it("adds an already saved YouTube recipe to the planner with its canonical recipe id", async () => {
+    const draftId = "11111111-1111-4111-8111-111111111111";
+    const recipeId = "77777777-7777-4777-8777-777777777777";
+    vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        draft_id: draftId,
+        recipe_id: recipeId,
+        revision: 1,
+        created_at: "2026-10-12T08:00:00.000Z",
+        updated_at: "2026-10-12T08:00:00.000Z",
+        content: {
+          title: "유튜브 된장찌개",
+          base_servings: 2,
+          tags: ["찌개"],
+          ingredients: [],
+          steps: [],
+        },
+        source: {
+          extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          youtube_url: "https://www.youtube.com/watch?v=abcdefghijk",
+          youtube_video_id: "abcdefghijk",
+          thumbnail_url: null,
+        },
+      },
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(
+      <YoutubeImportScreen
+        columnId=""
+        entryContext="standalone"
+        initialSavedDraftId={draftId}
+        planDate=""
+        slotName=""
+      />,
+    );
+
+    const plannerAction = await screen.findByTestId("youtube-saved-planner-action");
+    await user.click(within(plannerAction).getByRole("button", { name: "플래너에 추가" }));
+    await waitFor(() => expect(plannerApi.fetchPlanner).toHaveBeenCalledTimes(1));
+    const plannerConfirm = screen.getAllByRole("button", { name: "플래너에 추가" })
+      .find((button) => button.getAttribute("aria-label") === "플래너에 추가");
+    expect(plannerConfirm).toBeTruthy();
+    await user.click(plannerConfirm!);
+
+    await waitFor(() => {
+      expect(mealApi.createMeal).toHaveBeenCalledWith(expect.objectContaining({
+        recipe_id: recipeId,
+        column_id: "column-dinner",
+        planned_servings: 2,
+      }));
+    });
+  });
+
+  it("opens the saved recipe inside the existing my-added recipe book", async () => {
+    const draftId = "11111111-1111-4111-8111-111111111111";
+    const recipeId = "77777777-7777-4777-8777-777777777777";
+    vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        draft_id: draftId,
+        recipe_id: recipeId,
+        revision: 1,
+        created_at: "2026-10-12T08:00:00.000Z",
+        updated_at: "2026-10-12T08:00:00.000Z",
+        content: {
+          title: "유튜브 된장찌개",
+          base_servings: 2,
+          tags: ["찌개"],
+          ingredients: [],
+          steps: [],
+        },
+        source: {
+          extraction_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          youtube_url: "https://www.youtube.com/watch?v=abcdefghijk",
+          youtube_video_id: "abcdefghijk",
+          thumbnail_url: null,
+        },
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(
+      <YoutubeImportScreen
+        columnId=""
+        entryContext="standalone"
+        initialSavedDraftId={draftId}
+        planDate=""
+        slotName=""
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", {
+      name: "내가 추가한 레시피에서 보기",
+    }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledTimes(1));
+    const destination = new URL(routerPush.mock.calls[0][0], "http://localhost");
+    expect(destination.pathname).toBe("/mypage/recipe-books/book-my-added");
+    expect(destination.searchParams.get("type")).toBe("my_added");
+    expect(destination.searchParams.get("name")).toBe("내가 추가한 레시피");
+    expect(destination.searchParams.get("readerRecipe")).toBe(recipeId);
   });
 
   it("deduplicates candidate input, retries promotion, and only saves the promoted child", async () => {
