@@ -73,6 +73,27 @@ describe("prepared food planner safe auth return context", () => {
     });
   });
 
+  it("preserves an original fraction and its selected version after a display-unit change", () => {
+    const context = { version: 1 as const, kind: "picker" as const, planDate: "2026-10-14", columnId: "column-1", slotName: "아침",
+      query: "제품", source: "all" as const, productId: "c8000000-0000-4000-8000-000000000800", quantityAmount: "40", quantityUnit: "g" as const,
+      quantityInput: { schema_version: "quantity-v4" as const, raw_value: "1/3", raw_unit: "package",
+        expected_product_nutrition_version_id: "c8000000-0000-4000-8000-000000000801" } };
+    saveProductPlannerReturnContext(context);
+    expect(readProductPlannerReturnContext()).toEqual(context);
+    for (const quantityInput of [
+      { ...context.quantityInput, raw_value: "1/0" },
+      { ...context.quantityInput, raw_unit: "통" },
+      { ...context.quantityInput, expected_product_nutrition_version_id: "wrong-version" },
+      { ...context.quantityInput, expected_batch_revision: 1 },
+      { schema_version: "quantity-v4", raw_value: "1/3", raw_unit: "package" },
+      { ...context.quantityInput, source_versions: ["untrusted"] },
+    ]) {
+      window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({ ...context, quantityInput }));
+      expect(readProductPlannerReturnContext()).toBeNull();
+      expect(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)).toBeNull();
+    }
+  });
+
   it("rejects injected provider rows, secrets, and unknown fields fail-closed", () => {
     window.sessionStorage.setItem(
       PRODUCT_PLANNER_RETURN_CONTEXT_KEY,

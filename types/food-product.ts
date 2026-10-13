@@ -95,6 +95,7 @@ export interface FoodProductData {
 }
 
 export interface FoodProductListData {
+  quantity_policy?: "quantity-v4";
   items: FoodProductData[];
   next_cursor: string | null;
   has_next: boolean;

@@ -1,3 +1,5 @@
+import type { QuantityInputDraft, QuantityInputSnapshot } from "@/types/quantity-input";
+
 export type MealLogSourceType = "cooked_batch" | "food_product" | "ingredient";
 export type MealLogNutritionStatus = "complete" | "partial" | "unavailable";
 
@@ -19,6 +21,7 @@ export interface MealLogMutationInput {
   source: MealLogSourceInput;
   quantity: MealLogQuantityInput;
   expectedRevision: number | null;
+  quantityInput?: QuantityInputDraft;
 }
 
 export interface MealLogNutritionEvidence {
@@ -42,6 +45,7 @@ export interface MealLogEntry {
   slot_name_snapshot: string;
   source: { type: MealLogSourceType; id: string };
   quantity: { amount: number; unit: string };
+  quantity_input?: QuantityInputSnapshot;
   display_name: string;
   display_brand: string | null;
   nutrition: MealLogNutritionEvidence;
@@ -80,6 +84,7 @@ export interface MealLogMutationData {
 }
 
 export interface MealLogDayData {
+  quantity_policy?: "quantity-v4";
   date: string;
   active_columns: MealLogColumn[];
   active_sections: MealLogActiveSection[];
@@ -89,6 +94,8 @@ export interface MealLogDayData {
 }
 
 export interface MealLogRecentItem {
+  source_version?: string;
+  quantity_input?: QuantityInputSnapshot;
   source: { type: MealLogSourceType; id: string };
   display_name: string;
   display_brand: string | null;

@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   PlannerColumnDeleteData,
@@ -51,7 +52,8 @@ async function requestPlanner<T>(
   input: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, withE2EAuthOverrideHeaders(init));
+  const headers = new Headers(init?.headers); headers.set(QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION);
+  const response = await fetch(input, withE2EAuthOverrideHeaders({ ...init, headers }));
 
   if (response.status === 204) {
     return null as T;

@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import { pieceUnitFamily, pieceWeightMatchesIngredient } from "./ingredient-piece-units.mjs";
+import { resolveIngredientQuantity, type IngredientUnitContext } from "./ingredient-quantity";
 
 export const RECIPE_NUTRITION_CALCULATION_VERSION = "recipe-nutrition-v3";
+export const RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION = "recipe-nutrition-v4";
 export const RECIPE_NUTRITION_ROUNDING_POLICY_VERSION = "display-v1";
 
 export const CORE_NUTRIENT_CODES = [
@@ -47,6 +49,8 @@ export interface RecipeNutritionIngredientInput {
   scalable: boolean;
   preparation_state: string | null;
   size_code?: string | null;
+  /** Explicit v4 only. Server-hydrated reviewed unit evidence, not draft input. */
+  unit_context?: IngredientUnitContext;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
   product_basis_relations?: Array<{
@@ -328,6 +332,7 @@ type UnitResolution = {
   quality: "direct" | "estimated";
   warning: string | null;
   measurementSource: RecipeNutritionSourceAttribution | null;
+  measurementSources?: RecipeNutritionSourceAttribution[];
 };
 
 function approvedAttributionSource(source: {
@@ -412,7 +417,7 @@ export function calculateRecipeIngredientWeightGrams(
     : null;
 }
 
-function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution | null {
+function resolveUnit(ingredient: RecipeNutritionIngredientInput, calculationVersion?: string): UnitResolution | null {
   const nutrition = ingredient.nutrition;
   const amount = ingredient.amount;
   if (!nutrition || amount === null || !Number.isFinite(amount) || amount <= 0) {
@@ -420,6 +425,16 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
   }
 
   const profile = nutrition.profile;
+  if (calculationVersion === RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION
+    && !ingredient.food_product_id && !ingredient.food_product_nutrition_version_id) {
+    if (profile.basis_unit !== "g" && profile.basis_unit !== "ml") return null;
+    const quantity = resolveIngredientQuantity(ingredient, profile.basis_unit);
+    return quantity.status === "resolved" ? {
+      factor: quantity.amount / profile.basis_amount, quality: quantity.quality,
+      warning: quantity.quality === "estimated" ? "UNIT_MEASUREMENT_ESTIMATE_USED" : null,
+      measurementSource: null, measurementSources: quantity.sources,
+    } : null;
+  }
   // A product pin must never borrow its representative ingredient's density or
   // piece weight. Only the immutable label's own basis relations are evidence.
   if (ingredient.food_product_id || ingredient.food_product_nutrition_version_id) {
@@ -518,7 +533,14 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
   return null;
 }
 
-function warningForMissingUnit(ingredient: RecipeNutritionIngredientInput) {
+function warningForMissingUnit(ingredient: RecipeNutritionIngredientInput, calculationVersion?: string) {
+  const basis = ingredient.nutrition?.profile.basis_unit;
+  if (calculationVersion === RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION
+    && !ingredient.food_product_id && !ingredient.food_product_nutrition_version_id
+    && (basis === "g" || basis === "ml")) {
+    const quantity = resolveIngredientQuantity(ingredient, basis);
+    if (quantity.status === "unavailable") return quantity.reason;
+  }
   if (ingredient.amount === null || !Number.isFinite(ingredient.amount) || ingredient.amount <= 0) {
     return "INVALID_QUANTITY";
   }
@@ -670,11 +692,11 @@ export function calculateRecipeNutrition(
 
     targetIngredientCount += 1;
     const approved = isApprovedNutrition(ingredient);
-    const unitResolution = approved ? resolveUnit(ingredient) : null;
+    const unitResolution = approved ? resolveUnit(ingredient, input.calculation_version) : null;
     if (!approved || !unitResolution) {
       const warning = ingredient.nutrition
         ? approved
-          ? warningForMissingUnit(ingredient)
+          ? warningForMissingUnit(ingredient, input.calculation_version)
           : "PREDECESSOR_NOT_APPROVED"
         : "NUTRITION_PROFILE_MISSING";
       warnings.push(warning);
@@ -729,6 +751,13 @@ export function calculateRecipeNutrition(
         source_url: ingredient.nutrition!.source.source_url,
       };
       sources.set(canonicalStringify(sourceTuple(attribution)), attribution);
+      for (const source of unitResolution.measurementSources ?? []) {
+        const measurementAttribution: RecipeNutritionSourceAttribution = {
+          provider: source.provider, dataset: source.dataset, source_version: source.source_version,
+          data_basis_date: source.data_basis_date, license: source.license, source_url: source.source_url,
+        };
+        sources.set(canonicalStringify(sourceTuple(measurementAttribution)), measurementAttribution);
+      }
       if (unitResolution.measurementSource) {
         const measurementAttribution: RecipeNutritionSourceAttribution = {
           provider: unitResolution.measurementSource.provider,

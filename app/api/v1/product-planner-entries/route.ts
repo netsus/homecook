@@ -7,6 +7,7 @@ import {
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
+import { quantityInputContractRequested, quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 
 interface RpcError {
   code?: string;
@@ -59,6 +60,7 @@ function databaseFailure(error: RpcError | null) {
   if (/NUTRITION_BASIS_MISMATCH/i.test(detail)) {
     return fail("NUTRITION_BASIS_MISMATCH", "이 수량 단위로 영양을 계산할 수 없어요.", 422);
   }
+  if (/UNIT_POLICY_INACTIVE/i.test(detail)) return fail("UNIT_POLICY_INACTIVE", "새 단위 입력은 아직 사용할 수 없어요. 입력한 양은 그대로 유지했어요.", 409);
   if (/FORBIDDEN/i.test(detail)) {
     return fail("FORBIDDEN", "이 항목을 추가할 수 없어요.", 403);
   }
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
     ]);
   }
 
-  const parsed = parseProductPlannerEntryCreateBody(body);
+  const parsed = parseProductPlannerEntryCreateBody(body, quantityInputWriteEnabled(request));
   if (!parsed.ok) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
@@ -136,7 +138,7 @@ export async function POST(request: Request) {
     return fail("NUTRITION_VERSION_CONFLICT", "영양 정보가 준비되지 않았어요.", 409);
   }
 
-  const result = await db.rpc("create_product_planner_entry", {
+  const args: Record<string, unknown> = {
     p_user_id: user.id,
     p_product_id: parsed.value.product_id,
     p_plan_date: parsed.value.plan_date,
@@ -144,8 +146,12 @@ export async function POST(request: Request) {
     p_quantity_amount: parsed.value.quantity.amount,
     p_quantity_unit: parsed.value.quantity.unit,
     p_expected_current_version_id: product.current_nutrition_version_id,
-  });
+  };
+  if (parsed.value.quantity_input) args.p_quantity_input = parsed.value.quantity_input;
+  const result = await db.rpc("create_product_planner_entry", args);
   if (result.error || !result.data) return databaseFailure(result.error);
 
-  return ok({ entry: result.data as ProductPlannerEntryData }, { status: 201 });
+  const entry = { ...(result.data as ProductPlannerEntryData) };
+  if (!quantityInputContractRequested(request) || entry.quantity_input === null) delete entry.quantity_input;
+  return ok({ entry }, { status: 201 });
 }

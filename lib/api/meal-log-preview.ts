@@ -1,11 +1,20 @@
 import { ApiFetchError, fetchJson } from "@/lib/api/fetch-json";
 import type { MealLogNutritionPreview, MealLogNutritionPreviewInput } from "@/types/meal-log-preview";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 export type { MealLogNutritionPreview, MealLogNutritionPreviewInput } from "@/types/meal-log-preview";
 
 export async function fetchMealLogNutritionPreview(input: MealLogNutritionPreviewInput, signal?: AbortSignal): Promise<MealLogNutritionPreview> {
   const query = new URLSearchParams({ source_type: input.source.type, source_id: input.source.id,
     amount: String(input.quantity.amount), unit: input.quantity.unit });
-  const data = await fetchJson<MealLogNutritionPreview>(`/api/v1/meal-log/nutrition-preview?${query}`, { signal, cache: "no-store" });
+  if (input.quantityInput) {
+    query.set("raw_value", input.quantityInput.raw_value);
+    query.set("raw_unit", input.quantityInput.raw_unit);
+    if (input.quantityInput.expected_batch_revision !== undefined) query.set("expected_batch_revision", String(input.quantityInput.expected_batch_revision));
+    if (input.quantityInput.expected_product_nutrition_version_id) query.set("expected_product_nutrition_version_id", input.quantityInput.expected_product_nutrition_version_id);
+  }
+  const data = await fetchJson<MealLogNutritionPreview>(`/api/v1/meal-log/nutrition-preview?${query}`, {
+    signal, cache: "no-store", headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION },
+  });
   const values = ["calories_kcal", "carbohydrate_g", "protein_g", "fat_g", "sodium_mg"] as const;
   if (data?.source?.type !== input.source.type || data.source.id !== input.source.id.toLowerCase()
     || data.quantity?.amount !== input.quantity.amount || data.quantity.unit !== input.quantity.unit.trim()

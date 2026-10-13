@@ -12,7 +12,7 @@ import { DecimalInput } from "@/components/shared/decimal-input";
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useDialogViewport } from "@/components/shared/use-dialog-viewport";
@@ -22,9 +22,14 @@ import { fetchFoodCatalogSearch, fetchFoodCatalogSource, type FoodCatalogSearchI
 import { fetchCookedBatches, type CookedBatchListData } from "@/lib/api/cooking";
 import { fetchMealLogRecent, isMealLogApiError } from "@/lib/api/meal-log";
 import { resolveRecipeImage } from "@/lib/recipe-image";
-import { formatProductUnit } from "@/lib/planner/product-planner-entry-presentation";
+import { buildCompatibleFoodProductUnits, formatProductUnit } from "@/lib/planner/product-planner-entry-presentation";
 import type { CookedBatchProjection } from "@/types/cooking";
 import type { MealLogColumn, MealLogRecentItem, MealLogSourceType } from "@/types/meal-log";
+import type { MealLogNutritionPreviewInput } from "@/types/meal-log-preview";
+import { convertIngredientInputAmount, ingredientInputDefaultUnit, ingredientInputUnits } from "@/lib/planner/food-quantity-input";
+import { formatQuantityAmount, isQuantityInputSnapshot, parseQuantityInput } from "@/lib/quantity-input";
+import { QUANTITY_INPUT_VERSION, type IngredientQuantityOptions, type QuantityInputDraft } from "@/types/quantity-input";
+import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
 
 type SourceTab = "recent" | "cooked" | "catalog";
 
@@ -39,15 +44,21 @@ export interface MealLogSourceSelection {
   id: string;
   name: string;
   brand: string | null;
-  amount: number;
+  amount: number | null;
   maxAmount?: number;
   unit: string;
   unitOptions?: string[];
   basisUnit?: string;
+  productNutritionVersionId?: string;
   basisRelations?: Array<{
     from: { amount: number; unit: string };
     to: { amount: number; unit: string };
   }>;
+  quantityInput?: QuantityInputDraft;
+  ingredientOptions?: IngredientQuantityOptions;
+  quantityUnavailableReason?: string;
+  batchBasis?: { revision: number; cooking_servings: number; finished_weight_g: number; remaining_weight_g: number; weight_source: string | null };
+  supportsQuantityV4?: boolean;
 }
 
 interface MealLogAddSheetProps {
@@ -57,9 +68,10 @@ interface MealLogAddSheetProps {
   initialSelection?: MealLogSourceSelection;
   initialSuggestionConfirmed?: boolean;
   mutationEnabled?: boolean;
+  quantityV4Enabled?: boolean;
   onClose: () => void;
   returnFocusTarget?: () => HTMLElement | null;
-  onSave: (selection: MealLogSourceSelection, columnId: string, date: string) => Promise<void>;
+  onSave: (selection: MealLogSourceSelection & { amount: number }, columnId: string, date: string) => Promise<void>;
   onUnauthorized: (selection: MealLogSourceSelection | null, columnId: string, date?: string) => void;
 }
 
@@ -95,16 +107,18 @@ function quantityUnitLabel(unit: string) {
     : unit;
 }
 
-function sourceUnit(item: FoodCatalogSearchItem) {
+function sourceUnit(item: FoodCatalogSearchItem, quantityV4 = false) {
   if (item.type === "ingredient") {
-    return "g";
+    if (quantityV4 && !item.quantity_options && ["ml", "mL", "l", "L"].includes(item.default_unit)) return "mL";
+    return ingredientInputDefaultUnit(item.quantity_options);
   }
   return item.nutrition.basis.unit;
 }
 
-function sourceUnitOptions(item: FoodCatalogSearchItem) {
-  if (item.type === "ingredient") return ["g", "kg"];
-  return [...new Set([
+function sourceUnitOptions(item: FoodCatalogSearchItem, quantityV4 = false) {
+  if (item.type === "ingredient") return quantityV4 && !item.quantity_options ? [sourceUnit(item, true)] : ingredientInputUnits(item.quantity_options);
+  if (quantityV4) return buildCompatibleFoodProductUnits(item, true);
+  const candidates = [...new Set([
     item.nutrition.basis.unit,
     ...item.basis_relations
       .filter((relation) => relation.from.amount > 0 && relation.to.amount > 0
@@ -112,29 +126,21 @@ function sourceUnitOptions(item: FoodCatalogSearchItem) {
         && (relation.from.unit === item.nutrition.basis.unit || relation.to.unit === item.nutrition.basis.unit))
       .flatMap((relation) => [relation.from.unit, relation.to.unit]),
   ])];
+  return candidates.filter(unit => convertProductQuantity(1, unit, item.nutrition.basis.unit, item.basis_relations) !== null);
 }
 
 function convertSelectionAmount(selection: MealLogSourceSelection, nextUnit: string) {
+  if (selection.amount === null) return null;
+  if (selection.type === "ingredient") return convertIngredientInputAmount(selection.amount, selection.unit, nextUnit, selection.ingredientOptions);
+  if (selection.type === "cooked_batch" && selection.batchBasis) {
+    const gPerServing = selection.batchBasis.finished_weight_g / selection.batchBasis.cooking_servings;
+    if (selection.unit === "g" && nextUnit === "인분") return selection.amount / gPerServing;
+    if (selection.unit === "인분" && nextUnit === "g") return selection.amount * gPerServing;
+  }
   if (selection.unit === nextUnit) return selection.amount;
   if (selection.unit === "g" && nextUnit === "kg") return selection.amount / 1_000;
   if (selection.unit === "kg" && nextUnit === "g") return selection.amount * 1_000;
-  const basisUnit = selection.basisUnit;
-  if (!basisUnit) return null;
-  const factorToBasis = (unit: string) => {
-    if (unit === basisUnit) return 1;
-    const relation = selection.basisRelations?.find((candidate) =>
-      (candidate.from.unit === unit && candidate.to.unit === basisUnit)
-      || (candidate.to.unit === unit && candidate.from.unit === basisUnit));
-    if (!relation) return null;
-    return relation.from.unit === unit
-      ? relation.to.amount / relation.from.amount
-      : relation.from.amount / relation.to.amount;
-  };
-  const currentFactor = factorToBasis(selection.unit);
-  const nextFactor = factorToBasis(nextUnit);
-  return currentFactor === null || nextFactor === null
-    ? null
-    : selection.amount * currentFactor / nextFactor;
+  return selection.type === "food_product" ? convertProductQuantity(selection.amount, selection.unit, nextUnit, selection.basisRelations ?? []) : null;
 }
 
 function recentSourceLabel(type: MealLogSourceType) {
@@ -194,6 +200,7 @@ export function MealLogAddSheet({
   initialSelection,
   initialSuggestionConfirmed = true,
   mutationEnabled = true,
+  quantityV4Enabled = false,
   onClose,
   returnFocusTarget,
   onSave,
@@ -226,6 +233,7 @@ export function MealLogAddSheet({
   const catalogRequestRef = useRef(0);
   const catalogAbortRef = useRef<AbortController | null>(null);
   const [selection, setSelection] = useState<MealLogSourceSelection | null>(initialSelection ?? null);
+  const selectionQuantityV4 = quantityV4Enabled && selection?.supportsQuantityV4 !== false;
   const [amountStep, setAmountStep] = useState(Boolean(initialSelection));
   const [discardConfirm, setDiscardConfirm] = useState(false);
   const sourceScrollRef = useRef<HTMLDivElement>(null);
@@ -241,7 +249,32 @@ export function MealLogAddSheet({
     else scroll.scrollTop = sourceScrollTop.current;
   }, [amountStep]);
   const [amount, setAmount] = useState<number | null>(initialSelection?.amount ?? null);
-  useLayoutEffect(() => setAmount(selection?.amount ?? null), [selection?.id, selection?.type, selection?.unit, selection?.amount]);
+  const [rawValue, setRawValue] = useState(initialSelection?.quantityInput?.raw_value ?? (initialSelection?.amount === null || initialSelection?.amount === undefined ? "" : String(initialSelection.amount)));
+  const originalInputRef = useRef<QuantityInputDraft | undefined>(initialSelection?.quantityInput);
+  const originalSourceRef = useRef(initialSelection ? `${initialSelection.type}:${initialSelection.id}` : "");
+  const [unitChangeReason, setUnitChangeReason] = useState<string | null>(null);
+  const selectionSourceKey = selection ? `${selection.type}:${selection.id}` : "";
+  const selectionQuantityInput = selection?.quantityInput;
+  const selectionAmount = selection?.amount;
+  const selectedRawText = selectionQuantityInput?.raw_unit === selection?.unit ? selectionQuantityInput?.raw_value ?? ""
+    : selectionAmount === null || selectionAmount === undefined ? "" : selectionAmount.toLocaleString("en-US", { useGrouping: false, maximumSignificantDigits: 17 });
+  useLayoutEffect(() => {
+    if (originalSourceRef.current !== selectionSourceKey) {
+      originalSourceRef.current = selectionSourceKey; originalInputRef.current = selectionQuantityInput;
+    }
+    setAmount(selectionAmount ?? null);
+    setRawValue(selectedRawText);
+    setUnitChangeReason(null);
+  }, [selectionAmount, selectionQuantityInput, selectionSourceKey, selectedRawText]);
+
+  const quantityDraft = useCallback((): QuantityInputDraft | undefined => {
+    if (!selectionQuantityV4 || !selection) return undefined;
+    const original = originalInputRef.current ?? { schema_version: QUANTITY_INPUT_VERSION, raw_value: rawValue, raw_unit: selection.unit };
+    const draft = { ...original };
+    if ((selection.unit === "인분" || original.raw_unit === "인분") && selection.batchBasis) draft.expected_batch_revision = selection.batchBasis.revision;
+    if (selection.productNutritionVersionId) draft.expected_product_nutrition_version_id = selection.productNutritionVersionId;
+    return draft;
+  }, [rawValue, selection, selectionQuantityV4]);
   const [preview, setPreview] = useState<MealLogNutritionEvidence | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
@@ -252,21 +285,24 @@ export function MealLogAddSheet({
   useEffect(() => {
     setPreview(null);
     setPreviewError(false);
-    if (!amountStep || !previewSourceType || !previewSourceId || !previewUnit || amount === null || !Number.isFinite(amount) || amount < 0.01) {
+    if (!amountStep || !previewSourceType || !previewSourceId || !previewUnit || amount === null || !Number.isFinite(amount) || amount <= 0 || (!selectionQuantityV4 && amount < 0.01)
+      || selection?.quantityUnavailableReason) {
       setPreviewLoading(false);
       return;
     }
     const controller = new AbortController();
     setPreviewLoading(true);
     const timer = window.setTimeout(() => {
-      void fetchMealLogNutritionPreview({ source: { type: previewSourceType, id: previewSourceId }, quantity: { amount, unit: previewUnit } }, controller.signal)
+      const input: MealLogNutritionPreviewInput = { source: { type: previewSourceType, id: previewSourceId }, quantity: { amount, unit: previewUnit } };
+      if (selectionQuantityV4) input.quantityInput = quantityDraft();
+      void fetchMealLogNutritionPreview(input, controller.signal)
         .then(result => { if (!controller.signal.aborted) setPreview(result.nutrition); })
         .catch(() => { if (!controller.signal.aborted) setPreviewError(true); })
         .finally(() => { if (!controller.signal.aborted) setPreviewLoading(false); });
     }, 250);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [amount, amountStep, previewSourceId, previewSourceType, previewUnit, previewRetry]);
-  const amountInvalid = amount === null || !Number.isFinite(amount) || amount < 0.01;
+  }, [amount, amountStep, previewSourceId, previewSourceType, previewUnit, previewRetry, selectionQuantityV4, quantityDraft, selection?.quantityUnavailableReason]);
+  const amountInvalid = amount === null || !Number.isFinite(amount) || amount <= 0 || (!selectionQuantityV4 && amount < 0.01);
   const [restoredSourcePending, setRestoredSourcePending] = useState(Boolean(initialSelection));
   const [suggestionConfirmed, setSuggestionConfirmed] = useState(initialSuggestionConfirmed);
   const [loading, setLoading] = useState(true);
@@ -352,27 +388,40 @@ export function MealLogAddSheet({
           setSelection((current) => {
             if (current?.type !== "cooked_batch" || current.id !== restoredCookedBatchId) return current;
             if (!batch || !isAvailableCookedBatch(batch)) return null;
-            return {
+            if ((current.unit === "인분" || current.quantityInput?.raw_unit === "인분") && current.quantityInput?.expected_batch_revision !== batch.revision) {
+              return { ...current, quantityUnavailableReason: "조리한 음식의 상태가 달라졌어요. 입력한 인분은 보존했어요. 현재 남은 양을 확인한 뒤 다시 선택해 주세요." };
+            }
+            const restored: MealLogSourceSelection = {
               ...current,
               brand: null,
               maxAmount: batch.remaining_weight_g ?? undefined,
               name: batch.recipe_title,
-              unit: "g",
+              unit: current.unit,
+              supportsQuantityV4: batch.weight_status === "known" && batch.batch_status === "available",
             };
+            if (batch.cooking_servings && batch.finished_weight_g && batch.revision && batch.remaining_weight_g !== null) restored.batchBasis = {
+              revision: batch.revision, cooking_servings: batch.cooking_servings, finished_weight_g: batch.finished_weight_g,
+              remaining_weight_g: batch.remaining_weight_g, weight_source: batch.weight_source ?? null,
+            };
+            return restored;
           });
         } else if (initialSelection && initialSelection.type !== "cooked_batch") {
           const source = await fetchFoodCatalogSource(
             initialSelection.type, initialSelection.id,
           );
           if (!isCurrent() || restorationRequest !== selectionRequestRef.current) return;
-          if (!source || !sourceUnitOptions(source).includes(initialSelection.unit)) {
-            setSelection(null);
-            setError("이 음식의 현재 정보나 단위를 확인할 수 없어요. 제품·재료 검색에서 다시 선택해 주세요.");
+          if (!source || !sourceUnitOptions(source, quantityV4Enabled).includes(initialSelection.unit)
+            || (quantityV4Enabled && source.type === "ingredient" && !source.quantity_options)
+            || (source.type === "food_product" && initialSelection.quantityInput?.expected_product_nutrition_version_id
+              && source.nutrition_version_id !== initialSelection.quantityInput.expected_product_nutrition_version_id)) {
+            setSelection(current => current ? { ...current, quantityUnavailableReason: "이 음식의 현재 정보나 단위를 확인할 수 없어요. 입력한 양은 보존했어요. 음식을 다시 선택해 주세요." } : current);
           } else {
             setSelection((current) => current?.id === initialSelection.id && current.type === initialSelection.type
-              ? { ...current, name: sourceName(source), brand: sourceBrand(source), unitOptions: sourceUnitOptions(source),
+              ? { ...current, name: sourceName(source), brand: sourceBrand(source), unitOptions: sourceUnitOptions(source, quantityV4Enabled),
                   basisRelations: source.type === "food_product" ? source.basis_relations : undefined,
-                  basisUnit: source.type === "food_product" ? source.nutrition.basis.unit : undefined }
+                  basisUnit: source.type === "food_product" ? source.nutrition.basis.unit : undefined,
+                  productNutritionVersionId: source.type === "food_product" ? source.nutrition_version_id : undefined,
+                  ingredientOptions: source.type === "ingredient" ? source.quantity_options : undefined }
               : current);
           }
         }
@@ -398,7 +447,7 @@ export function MealLogAddSheet({
     return () => {
       active = false;
     };
-  }, [batchRefresh, columnId, initialSelection, onUnauthorized, restoredCookedBatchId]);
+  }, [batchRefresh, columnId, initialSelection, onUnauthorized, quantityV4Enabled, restoredCookedBatchId]);
 
   const selectedColumn = useMemo(
     () => columns.find((column) => column.id === columnId),
@@ -545,22 +594,30 @@ export function MealLogAddSheet({
           setError("이 음식의 현재 정보를 확인할 수 없어요. 제품·재료 검색에서 다시 찾아 주세요.");
           return;
         }
-        const unitOptions = sourceUnitOptions(source);
-        if (!unitOptions.includes(item.last_quantity.unit)) {
-          setError("이전 기록의 단위는 현재 사용할 수 없어요. 제품·재료 검색에서 음식을 골라 먹은 양을 다시 입력해 주세요.");
-          return;
-        }
-        setSelection({
+        const unitOptions = sourceUnitOptions(source, quantityV4Enabled);
+        const available = unitOptions.includes(item.last_quantity.unit);
+        const currentVersion = source.type === "food_product" ? source.nutrition_version_id : source.quantity_options?.profile_id;
+        const changedVersion = item.source_version !== undefined && currentVersion !== undefined && item.source_version !== currentVersion;
+        const nextSelection: MealLogSourceSelection = {
           amount: item.last_quantity.amount,
           brand: sourceBrand(source),
           id: source.id,
           name: sourceName(source),
           type: source.type,
           unit: item.last_quantity.unit,
-          unitOptions,
+          unitOptions: [...new Set([item.last_quantity.unit, ...unitOptions])],
+          ingredientOptions: source.type === "ingredient" ? source.quantity_options : undefined,
           basisRelations: source.type === "food_product" ? source.basis_relations : undefined,
           basisUnit: source.type === "food_product" ? source.nutrition.basis.unit : undefined,
-        });
+          productNutritionVersionId: source.type === "food_product" ? source.nutrition_version_id : undefined,
+        };
+        if (quantityV4Enabled && isQuantityInputSnapshot(item.quantity_input, item.last_quantity)) nextSelection.quantityInput = {
+          schema_version: QUANTITY_INPUT_VERSION, raw_value: item.quantity_input.raw_value, raw_unit: item.quantity_input.raw_unit,
+        };
+        if (!available) nextSelection.quantityUnavailableReason = "이전 단위의 환산 근거를 확인할 수 없어요. 원래 양과 단위는 보존했어요. 음식을 다시 선택해 주세요.";
+        if (changedVersion) nextSelection.quantityUnavailableReason = "이전 기록 이후 음식의 형태나 제품 규격이 달라졌어요. 원래 양은 보존했어요. 현재 정보를 확인한 뒤 다시 선택해 주세요.";
+        if (quantityV4Enabled && source.type === "ingredient" && !source.quantity_options) nextSelection.quantityUnavailableReason = "이 음식의 검토된 단위·영양 근거를 아직 확인하지 못했어요. 원래 양과 단위는 보존했어요.";
+        setSelection(nextSelection);
         setSuggestionConfirmed(false);
       } catch (reason) {
         if (requestId !== selectionRequestRef.current) return;
@@ -606,7 +663,7 @@ export function MealLogAddSheet({
         return;
       }
     }
-    setSelection({
+    const recentSelection: MealLogSourceSelection = {
       amount: item.last_quantity.amount,
       brand: item.display_brand,
       id: item.source.id,
@@ -615,24 +672,31 @@ export function MealLogAddSheet({
       type: item.source.type,
       unit: item.last_quantity.unit,
       unitOptions: [item.last_quantity.unit],
-    });
+      supportsQuantityV4: matchingBatch?.weight_status === "known" && matchingBatch.batch_status === "available",
+    };
+    if (quantityV4Enabled && recentSelection.supportsQuantityV4 === false) recentSelection.quantityUnavailableReason = "이전 요리의 중량 기준을 확인할 수 없어요. 원래 양과 단위는 보존했어요. 남은 요리에서 상태를 확인해 주세요.";
+    setSelection(recentSelection);
     setSuggestionConfirmed(false);
   }
 
   function chooseCatalog(item: FoodCatalogSearchItem) {
     setAmountStep(true);
     cancelPendingSelection();
-    setSelection({
-      amount: item.type === "food_product" ? item.nutrition.basis.amount : 1,
+    const nextSelection: MealLogSourceSelection = {
+      amount: quantityV4Enabled ? null : item.type === "food_product" ? item.nutrition.basis.amount : 1,
       brand: sourceBrand(item),
       id: item.id,
       name: sourceName(item),
       type: item.type,
-      unit: sourceUnit(item),
-      unitOptions: sourceUnitOptions(item),
+      unit: sourceUnit(item, quantityV4Enabled),
+      unitOptions: sourceUnitOptions(item, quantityV4Enabled),
       basisRelations: item.type === "food_product" ? item.basis_relations : undefined,
       basisUnit: item.type === "food_product" ? item.nutrition.basis.unit : undefined,
-    });
+      productNutritionVersionId: item.type === "food_product" ? item.nutrition_version_id : undefined,
+      ingredientOptions: item.type === "ingredient" ? item.quantity_options : undefined,
+    };
+    if (quantityV4Enabled && item.type === "ingredient" && !item.quantity_options) nextSelection.quantityUnavailableReason = "이 음식의 검토된 단위·영양 근거를 아직 확인하지 못했어요. 원래 양과 단위는 보존했어요.";
+    setSelection(nextSelection);
     setSuggestionConfirmed(true);
   }
 
@@ -645,21 +709,24 @@ export function MealLogAddSheet({
       || !columnId
       || restoredSelectionPending
       || amountInvalid
+      || selection.quantityUnavailableReason
       || !suggestionConfirmed
       || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount)
       || !selection.unit.trim()) return;
     savingRef.current = true;
     setSaving(true);
     setError(null);
+    const savedSelection = { ...selection, amount };
+    if (selectionQuantityV4) savedSelection.quantityInput = quantityDraft();
     try {
       await onSave(
-        { ...selection, amount },
+        savedSelection,
         columnId,
         date,
       );
     } catch (reason) {
       if (isMealLogApiError(reason) && reason.status === 401) {
-        onUnauthorized({ ...selection, amount }, columnId, date);
+        onUnauthorized(savedSelection, columnId, date);
         return;
       }
       setError(reason instanceof Error ? reason.message : "식사 기록을 저장하지 못했어요.");
@@ -807,7 +874,7 @@ export function MealLogAddSheet({
                   const selectable = batch.weight_status === "known"
                     && batch.batch_status === "available"
                     && (batch.remaining_weight_g ?? 0) > 0;
-                  const legacySelectable = batch.status !== "eaten" && batch.weight_status === null && batch.batch_status === null;
+                  const legacySelectable = !quantityV4Enabled && batch.status !== "eaten" && batch.weight_status === null && batch.batch_status === null;
                   const weightEligible = batch.weight_status === "missing"
                     && batch.batch_status === "available"
                     && batch.revision !== null;
@@ -819,16 +886,22 @@ export function MealLogAddSheet({
                           onClick={() => {
                             cancelPendingSelection();
                             setAmountStep(true);
-                            setSelection({
-                              amount: Math.min(100, batch.remaining_weight_g ?? 100),
+                            const selected: MealLogSourceSelection = {
+                              amount: quantityV4Enabled && selectable ? null : Math.min(100, batch.remaining_weight_g ?? 100),
                               brand: null,
                               id: batch.id,
                               maxAmount: batch.remaining_weight_g ?? undefined,
                               name: batch.recipe_title,
                               type: "cooked_batch",
                               unit: "g",
-                              unitOptions: ["g"],
-                            });
+                              supportsQuantityV4: selectable,
+                              unitOptions: quantityV4Enabled && batch.cooking_servings && batch.finished_weight_g && batch.revision ? ["g", "인분"] : ["g"],
+                            };
+                            if (batch.cooking_servings && batch.finished_weight_g && batch.revision && batch.remaining_weight_g !== null) selected.batchBasis = {
+                              revision: batch.revision, cooking_servings: batch.cooking_servings, finished_weight_g: batch.finished_weight_g,
+                              remaining_weight_g: batch.remaining_weight_g, weight_source: batch.weight_source ?? null,
+                            };
+                            setSelection(selected);
                             setSuggestionConfirmed(true);
                           }}
                           type="button"
@@ -879,7 +952,7 @@ export function MealLogAddSheet({
                       <li key={`${item.type}-${item.id}`}>
                         <button className="min-h-11 w-full px-3 py-3 text-left" onClick={() => chooseCatalog(item)} type="button">
                           <span className="block truncate font-medium" title={sourceName(item)}>{sourceName(item)}</span>
-                          <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{catalogSourceLabel(item)}{item.type === "ingredient" ? ` · 기본 단위 ${sourceUnit(item)}` : ""}</span>
+                          <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{catalogSourceLabel(item)}{item.type === "ingredient" ? ` · 기본 단위 ${sourceUnit(item, quantityV4Enabled)}` : ""}</span>
                         </button>
                       </li>
                     ))}
@@ -901,33 +974,55 @@ export function MealLogAddSheet({
             <p className="truncate font-medium" title={selection.name}>{selection.name}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-sm font-medium">먹은 양
-                <DecimalInput onKeyDown={(event) => {
+                <DecimalInput allowFractions={selectionQuantityV4} rawValue={selectionQuantityV4 ? rawValue : undefined} onRawValueChange={selectionQuantityV4 ? value => {
+                  setRawValue(value); originalInputRef.current = { schema_version: QUANTITY_INPUT_VERSION, raw_value: value, raw_unit: selection.unit };
+                } : undefined} onKeyDown={(event) => {
                   if (event.key !== "Enter" || event.repeat || event.nativeEvent.isComposing || event.keyCode === 229) return;
                   event.preventDefault();
                   void submit();
-                }} key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0.01" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setInputEdited(true); setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
+                }} key={`${selection.type}:${selection.id}:${selection.unit}`} disabled={saving} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" max={selection.maxAmount} min="0" onBlur={() => setSuggestionConfirmed(true)} onValueChange={(value) => { setInputEdited(true); setAmount(value); setSuggestionConfirmed(true); }} step="any" value={amount} />
               </label>
               <label className="text-sm font-medium">단위
                 {(selection.unitOptions?.length ?? 0) > 1 ? (
-                  <select disabled={saving || amountInvalid} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => { if (amount === null) return; setInputEdited(true); const unit = event.target.value; const nextAmount = convertSelectionAmount({ ...selection, amount }, unit); if (nextAmount === null || !Number.isFinite(nextAmount)) { setError("이 단위로 바꿀 수 있는 환산 정보가 없어요."); return; } setSelection({ ...selection, amount: nextAmount, unit }); setSuggestionConfirmed(true); }} value={selection.unit}>
-                    {selection.unitOptions?.map((unit) => <option key={unit} value={unit}>{quantityUnitLabel(unit)}</option>)}
+                  <select disabled={saving || Boolean(selection.quantityUnavailableReason)} className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 font-normal" onChange={(event) => {
+                    setInputEdited(true); const unit = event.target.value;
+                    const maxAmount = selection.batchBasis ? unit === "인분" ? selection.batchBasis.remaining_weight_g * selection.batchBasis.cooking_servings / selection.batchBasis.finished_weight_g : selection.batchBasis.remaining_weight_g : selection.maxAmount;
+                    if (amount === null && rawValue === "") { setSelection({ ...selection, amount: null, unit, maxAmount }); return; }
+                    const nextAmount = convertSelectionAmount({ ...selection, amount }, unit);
+                    if (nextAmount === null || !Number.isFinite(nextAmount)) { setUnitChangeReason("이 단위로 바꿀 환산 근거가 없어요. 원래 양과 단위를 유지했어요."); return; }
+                    const nextRaw = nextAmount.toLocaleString("en-US", { useGrouping: false, maximumSignificantDigits: 17 });
+                    setSelection({ ...selection, amount: nextAmount, unit, maxAmount, quantityInput: quantityDraft() }); setRawValue(nextRaw); setSuggestionConfirmed(true);
+                  }} value={selection.unit}>
+                    {selection.unitOptions?.slice(0, 4).map((unit) => <option key={unit} value={unit}>{quantityUnitLabel(unit)}</option>)}
+                    {(selection.unitOptions?.length ?? 0) > 4 ? <optgroup label="다른 단위">{selection.unitOptions?.slice(4).map(unit => <option key={unit} value={unit}>{quantityUnitLabel(unit)}</option>)}</optgroup> : null}
                   </select>
                 ) : (
                   <input className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-muted)] px-3 font-normal" readOnly value={quantityUnitLabel(selection.unit)} />
                 )}
               </label>
             </div>
+            {unitChangeReason ? <p className="mt-2 text-sm text-[var(--text-2)]" role="status" aria-live="polite">{unitChangeReason}</p> : null}
+            {selectionQuantityV4 ? <div aria-label="분수 입력" className="mt-2 flex gap-2">{["1/2", "1/3", "1/4", "3/4"].map(fraction => <button type="button" key={fraction} disabled={saving} className="min-h-11 flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] text-sm" onClick={() => { setRawValue(fraction); setAmount(parseQuantityInput(fraction)!.amount); originalInputRef.current = { schema_version: QUANTITY_INPUT_VERSION, raw_value: fraction, raw_unit: selection.unit }; setInputEdited(true); setSuggestionConfirmed(true); }}>{fraction}</button>)}</div> : null}
+            {selection.quantityUnavailableReason ? <p className="mt-2 text-sm text-[var(--text-2)]" role="status">{selection.quantityUnavailableReason}</p> : null}
+            {selection.ingredientOptions?.recommendation_reason ? <p className="mt-2 text-sm text-[var(--text-2)]">현재 크기·상태의 생활단위 근거를 확인하지 못했어요. g으로 입력해 주세요.</p> : null}
+            {selection.ingredientOptions?.choices.find(choice => choice.unit === selection.unit)?.quality === "unavailable" ? <p className="mt-2 text-sm text-[var(--text-2)]">이 단위로 입력한 양은 보존해요. 영양을 계산할 환산 근거는 아직 없어요.</p> : null}
+            {selection.ingredientOptions?.choices.find(choice => choice.unit === selection.unit)?.quality === "estimated" || selection.batchBasis?.weight_source === "estimated" ? <p className="mt-2 text-sm text-[var(--text-2)]">약 환산값이에요. 실제 무게에 따라 달라질 수 있어요.</p> : null}
+            {selection.unit === "인분" && selection.batchBasis ? <p className="mt-2 text-sm text-[var(--text-2)]">조리 당시 {selection.batchBasis.cooking_servings}인분 · 전체 {formatQuantityAmount(selection.batchBasis.finished_weight_g)}g 기준이에요.</p> : null}
             {previewLoading ? <div aria-label="영양 미리보기 불러오는 중" className="mt-5 space-y-3" role="status"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4" /></div> : null}
             {preview ? <section aria-label="입력한 양의 영양 미리보기" className="my-5 space-y-3"><div className="flex items-center justify-between text-sm"><span>{amount}{quantityUnitLabel(selection.unit)} 기준</span><span className="text-xl">{formatMealLogEnergy(preview)}</span></div><MealLogMacroBar nutrition={preview} thin /><dl className="flex justify-between gap-3 text-sm">{MEAL_LOG_MACROS.map(macro => <div key={macro.key} className="flex gap-1"><dt aria-label={macro.label}>{macro.short}</dt><dd>{formatMealLogNumber(preview[macro.key])}{preview[macro.key] !== null ? "g" : ""}</dd></div>)}</dl></section> : null}
             {previewError ? <div className="mt-4 flex items-center justify-between gap-2 text-sm"><span>영양 미리보기를 불러오지 못했어요.</span><button className="min-h-11 shrink-0 text-[var(--brand)]" onClick={() => setPreviewRetry(current => current + 1)} type="button">다시 확인</button></div> : null}
-            {selection.maxAmount !== undefined && !amountInvalid && (amount ?? 0) <= selection.maxAmount ? <div className="mt-4 flex items-center justify-between text-sm"><span>기록 후 남을 양</span><span>{Math.round(selection.maxAmount - (amount ?? 0)).toLocaleString("ko-KR")}g</span></div> : null}
-            {selection.maxAmount !== undefined ? <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)]" disabled={saving} onClick={() => { setInputEdited(true); setAmount(selection.maxAmount!); setSuggestionConfirmed(true); }} type="button">남은 양 전부</button> : null}
+            {selection.maxAmount !== undefined && !amountInvalid && (amount ?? 0) <= selection.maxAmount ? <div className="mt-4 flex items-center justify-between text-sm"><span>기록 후 남을 양</span><span>{formatQuantityAmount(selection.maxAmount - (amount ?? 0))}{quantityUnitLabel(selection.unit)}</span></div> : null}
+            {selection.maxAmount !== undefined ? <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)]" disabled={saving} onClick={() => { setInputEdited(true); setAmount(selection.maxAmount!); setRawValue(String(selection.maxAmount)); originalInputRef.current = { schema_version: QUANTITY_INPUT_VERSION, raw_value: String(selection.maxAmount), raw_unit: selection.unit }; setSuggestionConfirmed(true); }} type="button">남은 양 전부</button> : null}
             {!suggestionConfirmed ? <p className="mt-2 text-sm font-medium">제안된 양을 확인해 주세요.</p> : null}
             {selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount ? (
-              <p className="mt-2 text-sm font-medium text-[var(--danger-strong)]" role="alert">남은 양 {selection.maxAmount}g 이하로 입력해 주세요.</p>
+              <p className="mt-2 text-sm font-medium text-[var(--danger-strong)]" role="alert">남은 양 {formatQuantityAmount(selection.maxAmount)}{quantityUnitLabel(selection.unit)} 이하로 입력해 주세요.</p>
             ) : null}
             <div className="mt-3 grid gap-2 min-[360px]:grid-cols-2">
-              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || restoredSelectionPending || !suggestionConfirmed || amountInvalid || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount) || !selection.unit.trim() || (selection.type === "cooked_batch" && (!date || !columnId))} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
+              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-medium text-[var(--text-inverse)] disabled:opacity-50"
+                disabled={!mutationEnabled || saving || restoredSelectionPending || !suggestionConfirmed || amountInvalid
+                  || Boolean(selection.quantityUnavailableReason) || (selection.maxAmount !== undefined && (amount ?? 0) > selection.maxAmount)
+                  || !selection.unit.trim() || (selection.type === "cooked_batch" && (!date || !columnId))}
+                onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
               <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-medium" disabled={saving} onClick={requestClose} type="button">취소</button>
             </div>
           </section>

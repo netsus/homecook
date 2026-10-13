@@ -1,3 +1,5 @@
+import { isQuantityInputDraft, parseQuantityInput } from "@/lib/quantity-input";
+import type { QuantityInputDraft } from "@/types/quantity-input";
 import {
   FOOD_PRODUCT_BASIS_UNITS,
   FOOD_PRODUCT_CORE_NUTRIENTS,
@@ -40,6 +42,7 @@ export interface ProductPickerReturnContext extends BaseReturnContext {
   productId: string | null;
   quantityAmount: string;
   quantityUnit: FoodProductBasisUnit | null;
+  quantityInput?: QuantityInputDraft;
 }
 
 export interface ProductCreateReturnContext extends BaseReturnContext {
@@ -135,10 +138,12 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
     const modernKeys = [
       "version", "kind", "planDate", "columnId", "slotName", "query", "source",
       "productId", "quantityAmount", "quantityUnit",
+      ...("quantityInput" in value ? ["quantityInput"] : []),
     ];
     const legacyKeys = [
       "version", "kind", "planDate", "columnId", "slotName", "query",
       "productId", "quantityAmount", "quantityUnit",
+      ...("quantityInput" in value ? ["quantityInput"] : []),
     ];
     if (!hasExactKeys(value, modernKeys) && !hasExactKeys(value, legacyKeys)) return null;
     if (
@@ -148,6 +153,12 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
       !isSafeText(value.quantityAmount, 40) ||
       (value.quantityUnit !== null && !isUnit(value.quantityUnit))
     ) return null;
+    if ("quantityInput" in value && (!isUnit(value.quantityUnit)
+      || !isQuantityInputDraft(value.quantityInput, { amount: parseQuantityInput(value.quantityAmount as string)?.amount ?? 0, unit: value.quantityUnit })
+      || !isUnit(value.quantityInput.raw_unit)
+      || value.productId === null
+      || !value.quantityInput.expected_product_nutrition_version_id
+      || "expected_batch_revision" in value.quantityInput)) return null;
     return {
       ...value,
       source: isSource(value.source) ? value.source : "all",

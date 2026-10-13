@@ -1,3 +1,4 @@
+import { isQuantityInputDraft, isQuantityInputSnapshot } from "@/lib/quantity-input";
 import type {
   MealLogActiveSection,
   MealLogColumn,
@@ -114,9 +115,10 @@ export function parseMealLogRecentQuery(params: URLSearchParams): ParseResult<{ 
   return fields.length > 0 ? { ok: false, fields } : { ok: true, value: { limit, cursor } };
 }
 
-export function parseMealLogMutationRequest(value: unknown, mode: "create" | "patch"): ParseResult<MealLogMutationInput> {
+export function parseMealLogMutationRequest(value: unknown, mode: "create" | "patch", quantityV4 = false): ParseResult<MealLogMutationInput> {
   if (!isRecord(value)) return { ok: false, fields: [{ field: "body", reason: "invalid_json" }] };
   const allowed = ["consumed_local_date", "timezone_name_snapshot", "consumed_at", "meal_plan_column_id", "source", "quantity"];
+  if (quantityV4) allowed.push("quantity_input");
   if (mode === "patch") allowed.push("expected_revision");
   const fields: FieldError[] = [];
   if (!hasOnlyKeys(value, allowed)) fields.push({ field: "body", reason: "unknown_field" });
@@ -138,6 +140,14 @@ export function parseMealLogMutationRequest(value: unknown, mode: "create" | "pa
     || typeof value.quantity.unit !== "string"
     || value.quantity.unit.trim().length === 0
     || value.quantity.unit.length > 24) fields.push({ field: "quantity", reason: "invalid_quantity" });
+  if (quantityV4 && "quantity_input" in value && (!isRecord(value.quantity)
+    || !isQuantityInputDraft(value.quantity_input, value.quantity as { amount: number; unit: string })
+    || (isRecord(value.quantity_input) && "expected_batch_revision" in value.quantity_input
+      && (!isRecord(value.source) || value.source.type !== "cooked_batch"))
+    || (isRecord(value.quantity_input) && "expected_product_nutrition_version_id" in value.quantity_input
+      && (!isRecord(value.source) || value.source.type !== "food_product")))) {
+    fields.push({ field: "quantity_input", reason: "invalid_raw_quantity" });
+  }
   const expectedRevision = mode === "patch" ? value.expected_revision : null;
   if (mode === "patch" && (!Number.isSafeInteger(expectedRevision) || Number(expectedRevision) < 1)) {
     fields.push({ field: "expected_revision", reason: "invalid_integer" });
@@ -151,9 +161,7 @@ export function parseMealLogMutationRequest(value: unknown, mode: "create" | "pa
   if (fields.length > 0) return { ok: false, fields };
   const source = value.source as { type: MealLogSourceType; id: string };
   const quantity = value.quantity as { amount: number; unit: string };
-  return {
-    ok: true,
-    value: {
+  const input: MealLogMutationInput = {
       consumedLocalDate: value.consumed_local_date as string,
       timezoneNameSnapshot: value.timezone_name_snapshot as string,
       consumedAt: typeof value.consumed_at === "string"
@@ -163,8 +171,9 @@ export function parseMealLogMutationRequest(value: unknown, mode: "create" | "pa
       source: { type: source.type, id: source.id.toLowerCase() },
       quantity: { amount: quantity.amount, unit: quantity.unit.trim() },
       expectedRevision: expectedRevision as number | null,
-    },
   };
+  if (quantityV4 && "quantity_input" in value) input.quantityInput = value.quantity_input as NonNullable<MealLogMutationInput["quantityInput"]>;
+  return { ok: true, value: input };
 }
 
 export function parseMealLogDeleteRequest(value: unknown): ParseResult<{ expectedRevision: number }> {
@@ -176,7 +185,7 @@ export function parseMealLogDeleteRequest(value: unknown): ParseResult<{ expecte
 }
 
 export function toMealLogRpcPayload(value: MealLogMutationInput) {
-  const payload = {
+  const payload: Record<string, unknown> = {
     consumed_local_date: value.consumedLocalDate,
     timezone_name_snapshot: value.timezoneNameSnapshot,
     consumed_at: value.consumedAt,
@@ -184,6 +193,7 @@ export function toMealLogRpcPayload(value: MealLogMutationInput) {
     source: value.source,
     quantity: value.quantity,
   };
+  if (value.quantityInput) payload.quantity_input = value.quantityInput;
   return value.expectedRevision === null
     ? payload
     : { ...payload, expected_revision: value.expectedRevision };
@@ -200,6 +210,8 @@ const RPC_ERRORS = {
   ACCOUNT_LIFECYCLE_MAINTENANCE: [503, "계정 정비 작업 중이에요."],
   CONSUMED_DATE_TIMEZONE_MISMATCH: [422, "날짜와 시간대를 확인해 주세요."],
   UNIT_CONVERSION_MISSING: [422, "정확한 단위 환산 정보를 찾지 못했어요."],
+  UNIT_POLICY_INACTIVE: [409, "새 단위 입력은 아직 사용할 수 없어요. 입력한 양은 그대로 두고 다시 확인해 주세요."],
+  NUTRITION_VERSION_CONFLICT: [409, "제품의 영양 규격이 달라졌어요. 입력한 양은 보존했어요. 제품 정보를 다시 확인해 주세요."],
   WEIGHT_UNRECOVERABLE: [409, "원래 완성 중량을 확인할 수 없는 요리예요."],
   IDEMPOTENCY_KEY_REUSED: [409, "이미 다른 요청에 사용된 요청 키예요."],
   RESOURCE_NOT_FOUND: [404, "요청한 항목을 찾을 수 없어요."],
@@ -284,8 +296,8 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function projectMealLogEntry(value: unknown): MealLogEntry | null {
-  if (!isRecord(value) || !hasExactKeys(value, ENTRY_KEYS)
+function projectMealLogEntry(value: unknown, quantityV4 = false): MealLogEntry | null {
+  if (!isRecord(value) || !hasExactKeys(value, [...ENTRY_KEYS, ...("quantity_input" in value ? ["quantity_input"] : [])])
     || !isUuid(value.id)
     || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1
     || (value.consumed_at !== null && !isTimestamp(value.consumed_at))
@@ -301,9 +313,11 @@ function projectMealLogEntry(value: unknown): MealLogEntry | null {
     || !isNonEmptyString(value.display_name)
     || (value.display_brand !== null && typeof value.display_brand !== "string")
     || !isTimestamp(value.created_at) || !isTimestamp(value.updated_at)) return null;
+  if (value.quantity_input !== undefined && value.quantity_input !== null
+    && !isQuantityInputSnapshot(value.quantity_input, { amount: value.quantity.amount, unit: value.quantity.unit })) return null;
   const nutrition = projectMealLogNutrition(value.nutrition);
   if (!nutrition) return null;
-  return {
+  const entry: MealLogEntry = {
     id: value.id,
     revision: value.revision as number,
     consumed_at: value.consumed_at as string | null,
@@ -319,6 +333,8 @@ function projectMealLogEntry(value: unknown): MealLogEntry | null {
     created_at: value.created_at,
     updated_at: value.updated_at,
   };
+  if (quantityV4 && isQuantityInputSnapshot(value.quantity_input)) entry.quantity_input = value.quantity_input;
+  return entry;
 }
 
 function projectMealLogColumn(value: unknown): MealLogColumn | null {
@@ -328,9 +344,9 @@ function projectMealLogColumn(value: unknown): MealLogColumn | null {
   return { id: value.id, name: value.name, sort_order: value.sort_order as number };
 }
 
-function projectMealLogEntries(value: unknown): MealLogEntry[] | null {
+function projectMealLogEntries(value: unknown, quantityV4 = false): MealLogEntry[] | null {
   if (!Array.isArray(value)) return null;
-  const entries = value.map(projectMealLogEntry);
+  const entries = value.map(entry => projectMealLogEntry(entry, quantityV4));
   return entries.some((entry) => entry === null) ? null : entries as MealLogEntry[];
 }
 
@@ -345,13 +361,13 @@ function projectMealLogDayTotal(value: unknown): MealLogDayTotal | null {
   return projected ? { ...projected, incomplete_count: value.incomplete_count as number } : null;
 }
 
-function projectMealLogActiveSection(value: unknown): MealLogActiveSection | null {
+function projectMealLogActiveSection(value: unknown, quantityV4 = false): MealLogActiveSection | null {
   if (!isRecord(value) || !hasExactKeys(value, [
     "meal_plan_column_id", "slot_name_snapshot", "sort_order", "entries", "subtotal", "incomplete_count",
   ]) || !isUuid(value.meal_plan_column_id) || !isNonEmptyString(value.slot_name_snapshot)
     || !Number.isSafeInteger(value.sort_order) || !Number.isSafeInteger(value.incomplete_count)
     || Number(value.incomplete_count) < 0) return null;
-  const entries = projectMealLogEntries(value.entries);
+  const entries = projectMealLogEntries(value.entries, quantityV4);
   const subtotal = projectMealLogNutrition(value.subtotal);
   return entries && subtotal ? {
     meal_plan_column_id: value.meal_plan_column_id,
@@ -363,12 +379,12 @@ function projectMealLogActiveSection(value: unknown): MealLogActiveSection | nul
   } : null;
 }
 
-function projectMealLogDeletedSection(value: unknown): MealLogDeletedColumnSection | null {
+function projectMealLogDeletedSection(value: unknown, quantityV4 = false): MealLogDeletedColumnSection | null {
   if (!isRecord(value) || !hasExactKeys(value, [
     "slot_name_snapshot", "entries", "subtotal", "incomplete_count",
   ]) || !isNonEmptyString(value.slot_name_snapshot)
     || !Number.isSafeInteger(value.incomplete_count) || Number(value.incomplete_count) < 0) return null;
-  const entries = projectMealLogEntries(value.entries);
+  const entries = projectMealLogEntries(value.entries, quantityV4);
   const subtotal = projectMealLogNutrition(value.subtotal);
   return entries && subtotal ? {
     slot_name_snapshot: value.slot_name_snapshot,
@@ -384,38 +400,44 @@ function projectArray<T>(value: unknown, project: (item: unknown) => T | null): 
   return projected.some((item) => item === null) ? null : projected as T[];
 }
 
-export function projectMealLogData(value: unknown): MealLogMutationData | MealLogDayData | null {
+export function projectMealLogData(value: unknown, quantityV4 = false): MealLogMutationData | MealLogDayData | null {
   if (!isRecord(value)) return null;
   if ("entry" in value) {
     if (!hasExactKeys(value, ["entry"])) return null;
-    const entry = projectMealLogEntry(value.entry);
+    const entry = projectMealLogEntry(value.entry, quantityV4);
     return entry ? { entry } : null;
   }
   if (!hasExactKeys(value, [
     "date", "active_columns", "active_sections", "deleted_column_sections", "entries", "day_total",
+    ...("quantity_policy" in value ? ["quantity_policy"] : []),
   ]) || !isDate(value.date)) return null;
+  if (value.quantity_policy !== undefined && value.quantity_policy !== null && value.quantity_policy !== "quantity-v4") return null;
   const activeColumns = projectArray(value.active_columns, projectMealLogColumn);
-  const activeSections = projectArray(value.active_sections, projectMealLogActiveSection);
-  const deletedSections = projectArray(value.deleted_column_sections, projectMealLogDeletedSection);
-  const entries = projectMealLogEntries(value.entries);
+  const activeSections = projectArray(value.active_sections, entry => projectMealLogActiveSection(entry, quantityV4));
+  const deletedSections = projectArray(value.deleted_column_sections, entry => projectMealLogDeletedSection(entry, quantityV4));
+  const entries = projectMealLogEntries(value.entries, quantityV4);
   const dayTotal = projectMealLogDayTotal(value.day_total);
-  return activeColumns && activeSections && deletedSections && entries && dayTotal ? {
+  if (!activeColumns || !activeSections || !deletedSections || !entries || !dayTotal) return null;
+  const day: MealLogDayData = {
     date: value.date,
     active_columns: activeColumns,
     active_sections: activeSections,
     deleted_column_sections: deletedSections,
     entries,
     day_total: dayTotal,
-  } : null;
+  };
+  if (quantityV4 && value.quantity_policy === "quantity-v4") day.quantity_policy = "quantity-v4";
+  return day;
 }
 
-export function projectMealLogRecentData(value: unknown): MealLogRecentData | null {
+export function projectMealLogRecentData(value: unknown, quantityV4 = false): MealLogRecentData | null {
   if (!isRecord(value) || !hasExactKeys(value, ["items", "has_next"])
     || !Array.isArray(value.items) || typeof value.has_next !== "boolean") return null;
   const projected = value.items.map((item) => {
     if (!isRecord(item) || !hasExactKeys(item, [
       "source_type", "source_id", "display_name", "display_brand", "last_amount", "last_unit",
       "last_date", "last_id", "frequency",
+      ...("quantity_input" in item ? ["quantity_input"] : []), ...("source_version" in item ? ["source_version"] : []),
     ]) || !SOURCE_TYPES.includes(item.source_type as MealLogSourceType)
       || !isUuid(item.source_id) || typeof item.display_name !== "string"
       || (item.display_brand !== null && typeof item.display_brand !== "string")
@@ -423,14 +445,19 @@ export function projectMealLogRecentData(value: unknown): MealLogRecentData | nu
       || !isNonEmptyString(item.last_unit)
       || !Number.isSafeInteger(item.frequency) || Number(item.frequency) < 1
       || typeof item.last_date !== "string" || !isDate(item.last_date) || !isUuid(item.last_id)) return null;
-    return {
-      publicItem: {
+    if ((item.quantity_input !== undefined && item.quantity_input !== null && !isQuantityInputSnapshot(item.quantity_input, { amount: item.last_amount, unit: item.last_unit }))
+      || (item.source_version !== undefined && item.source_version !== null && !isUuid(item.source_version))) return null;
+    const publicItem: MealLogRecentItem = {
         source: { type: item.source_type as MealLogSourceType, id: item.source_id },
         display_name: item.display_name,
         display_brand: typeof item.display_brand === "string" ? item.display_brand : null,
         last_quantity: { amount: item.last_amount, unit: item.last_unit },
         frequency: item.frequency as number,
-      } satisfies MealLogRecentItem,
+    };
+    if (quantityV4 && isUuid(item.source_version)) publicItem.source_version = item.source_version;
+    if (quantityV4 && isQuantityInputSnapshot(item.quantity_input)) publicItem.quantity_input = item.quantity_input;
+    return {
+      publicItem,
       date: item.last_date,
       id: item.last_id,
     };

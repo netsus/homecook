@@ -1,6 +1,8 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type { FoodProductData } from "@/types/food-product";
+import type { IngredientQuantityOptions } from "@/types/quantity-input";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 
 export type FoodCatalogSearchType = "ingredient" | "food_product";
 export type FoodCatalogSearchSource = "public" | "community" | "mine";
@@ -11,6 +13,7 @@ export interface FoodCatalogIngredientData {
   standard_name: string;
   category: string;
   default_unit: string;
+  quantity_options?: IngredientQuantityOptions;
 }
 
 export type FoodCatalogProductData = FoodProductData & {
@@ -92,7 +95,7 @@ export async function fetchFoodCatalogSource(type: FoodCatalogSearchType, id: st
 async function requestFoodCatalog(params: URLSearchParams, signal?: AbortSignal) {
   const response = await fetch(
     `/api/v1/food-catalog/search?${params.toString()}`,
-    withE2EAuthOverrideHeaders({ signal }),
+    withE2EAuthOverrideHeaders({ signal, headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION } }),
   );
   let payload: ApiResponse<FoodCatalogSearchData> | null = null;
   try {

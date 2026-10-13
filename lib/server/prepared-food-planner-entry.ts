@@ -1,3 +1,4 @@
+import { isQuantityInputDraft, isQuantityInputSnapshot } from "@/lib/quantity-input";
 import {
   FOOD_PRODUCT_BASIS_UNITS,
   type FoodProductBasisUnit,
@@ -169,7 +170,7 @@ function parseProductNutrition(value: unknown): ProductNutrition | null {
   return nutrition;
 }
 
-function parseProductPlannerEntry(value: unknown): ProductPlannerEntryData | null {
+function parseProductPlannerEntry(value: unknown, quantityV4 = false): ProductPlannerEntryData | null {
   if (
     !isRecord(value)
     || value.entry_type !== "product"
@@ -189,6 +190,7 @@ function parseProductPlannerEntry(value: unknown): ProductPlannerEntryData | nul
   const quantity = parseReadBasis(value.quantity);
   const nutrition = parseProductNutrition(value.nutrition);
   if (!quantity || !nutrition) return null;
+  if (value.quantity_input !== undefined && value.quantity_input !== null && !isQuantityInputSnapshot(value.quantity_input, quantity)) return null;
 
   const basisRelations: FoodProductData["basis_relations"] = [];
   for (const relation of value.basis_relations) {
@@ -199,7 +201,7 @@ function parseProductPlannerEntry(value: unknown): ProductPlannerEntryData | nul
     basisRelations.push({ from, to });
   }
 
-  return {
+  const entry: ProductPlannerEntryData = {
     entry_type: value.entry_type,
     id: value.id,
     product_id: value.product_id,
@@ -213,13 +215,15 @@ function parseProductPlannerEntry(value: unknown): ProductPlannerEntryData | nul
     basis_relations: basisRelations,
     nutrition,
   };
+  if (quantityV4 && isQuantityInputSnapshot(value.quantity_input)) entry.quantity_input = value.quantity_input;
+  return entry;
 }
 
-export function parseProductPlannerEntries(value: unknown): ProductPlannerEntryData[] | null {
+export function parseProductPlannerEntries(value: unknown, quantityV4 = false): ProductPlannerEntryData[] | null {
   if (!Array.isArray(value)) return null;
   const entries: ProductPlannerEntryData[] = [];
   for (const entry of value) {
-    const parsedEntry = parseProductPlannerEntry(entry);
+    const parsedEntry = parseProductPlannerEntry(entry, quantityV4);
     if (!parsedEntry) return null;
     entries.push(parsedEntry);
   }
@@ -239,7 +243,7 @@ function isValidDate(value: string) {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-function parseQuantity(value: unknown):
+function parseQuantity(value: unknown, quantityV4 = false):
   | { ok: true; value: ProductPlannerEntryQuantity }
   | ValidationFailure {
   if (!isRecord(value)) {
@@ -258,7 +262,7 @@ function parseQuantity(value: unknown):
     || value.amount <= 0
   ) {
     fields.push({ field: "quantity.amount", reason: "positive_number_required" });
-  } else if (Math.round(value.amount * 10_000) <= 0) {
+  } else if (!quantityV4 && Math.round(value.amount * 10_000) <= 0) {
     fields.push({ field: "quantity.amount", reason: "numeric_precision" });
   } else if (value.amount >= DATABASE_NUMERIC_MAX_EXCLUSIVE) {
     fields.push({ field: "quantity.amount", reason: "numeric_range" });
@@ -277,7 +281,7 @@ function parseQuantity(value: unknown):
   };
 }
 
-export function parseProductPlannerEntryCreateBody(body: unknown):
+export function parseProductPlannerEntryCreateBody(body: unknown, quantityV4 = false):
   | { ok: true; value: ProductPlannerEntryCreateBody }
   | ValidationFailure {
   if (!isRecord(body)) {
@@ -290,7 +294,7 @@ export function parseProductPlannerEntryCreateBody(body: unknown):
 
   const fields = unexpectedFields(
     body,
-    new Set(["product_id", "plan_date", "column_id", "quantity"]),
+    new Set(["product_id", "plan_date", "column_id", "quantity", ...(quantityV4 ? ["quantity_input"] : [])]),
   );
   const productId = typeof body.product_id === "string" ? body.product_id.trim() : "";
   const planDate = typeof body.plan_date === "string" ? body.plan_date.trim() : "";
@@ -298,23 +302,19 @@ export function parseProductPlannerEntryCreateBody(body: unknown):
   if (!UUID_PATTERN.test(productId)) fields.push({ field: "product_id", reason: "invalid_uuid" });
   if (!isValidDate(planDate)) fields.push({ field: "plan_date", reason: "invalid_date" });
   if (!UUID_PATTERN.test(columnId)) fields.push({ field: "column_id", reason: "invalid_uuid" });
-  const quantity = parseQuantity(body.quantity);
+  const quantity = parseQuantity(body.quantity, quantityV4 && "quantity_input" in body);
   if (!quantity.ok) fields.push(...quantity.fields);
+  if ("quantity_input" in body && quantity.ok && (!isQuantityInputDraft(body.quantity_input, quantity.value)
+    || "expected_batch_revision" in body.quantity_input)) fields.push({ field: "quantity_input", reason: "invalid_raw_quantity" });
   if (fields.length > 0 || !quantity.ok) {
     return { ok: false, code: "VALIDATION_ERROR", fields };
   }
-  return {
-    ok: true,
-    value: {
-      product_id: productId,
-      plan_date: planDate,
-      column_id: columnId,
-      quantity: quantity.value,
-    },
-  };
+  const value: ProductPlannerEntryCreateBody = { product_id: productId, plan_date: planDate, column_id: columnId, quantity: quantity.value };
+  if (quantityV4 && isQuantityInputDraft(body.quantity_input, quantity.value)) value.quantity_input = body.quantity_input;
+  return { ok: true, value };
 }
 
-export function parseProductPlannerEntryPatchBody(body: unknown):
+export function parseProductPlannerEntryPatchBody(body: unknown, quantityV4 = false):
   | { ok: true; value: ProductPlannerEntryPatchBody }
   | ValidationFailure {
   if (!isRecord(body)) {
@@ -324,13 +324,17 @@ export function parseProductPlannerEntryPatchBody(body: unknown):
       fields: [{ field: "body", reason: "invalid_json" }],
     };
   }
-  const fields = unexpectedFields(body, new Set(["quantity"]));
-  const quantity = parseQuantity(body.quantity);
+  const fields = unexpectedFields(body, new Set(["quantity", ...(quantityV4 ? ["quantity_input"] : [])]));
+  const quantity = parseQuantity(body.quantity, quantityV4 && "quantity_input" in body);
   if (!quantity.ok) fields.push(...quantity.fields);
+  if ("quantity_input" in body && quantity.ok && (!isQuantityInputDraft(body.quantity_input, quantity.value)
+    || "expected_batch_revision" in body.quantity_input)) fields.push({ field: "quantity_input", reason: "invalid_raw_quantity" });
   if (fields.length > 0 || !quantity.ok) {
     return { ok: false, code: "VALIDATION_ERROR", fields };
   }
-  return { ok: true, value: { quantity: quantity.value } };
+  const value: ProductPlannerEntryPatchBody = { quantity: quantity.value };
+  if (quantityV4 && isQuantityInputDraft(body.quantity_input, quantity.value)) value.quantity_input = body.quantity_input;
+  return { ok: true, value };
 }
 
 type BasisRelation = FoodProductData["basis_relations"][number];
