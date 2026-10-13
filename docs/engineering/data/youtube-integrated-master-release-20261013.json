@@ -510,7 +510,7 @@
     {
       "path": "docs/engineering/youtube-recipebook-planner-bridge-20261012.md",
       "beforeSha256": null,
-      "afterSha256": "e887ccf1c46bd43546f4351318c57281fbd5a7d60fbe8dacbd92ea77af5254e4"
+      "afterSha256": "ec6785f83742efdb2dda4e92aedfb3d2ca018401cfe15c8d6156ae5efd71cb48"
     },
     {
       "path": "docs/engineering/youtube-resolution-release-20261010.md",
@@ -525,7 +525,7 @@
     {
       "path": "docs/engineering/youtube-source-bound-quantity-recovery-20261012.md",
       "beforeSha256": null,
-      "afterSha256": "2939db333cab5fa9be7cec088dc8409aaa42fa7ce6eac34a40fde2de9d01759e"
+      "afterSha256": "7f56944cf35cbcd5f85a794d381e8087cb083d2931f6d66491d02659e404ca99"
     },
     {
       "path": "docs/engineering/youtube-user-trial-release-20261009.md",
@@ -745,7 +745,7 @@
     {
       "path": "scripts/deploy-prelaunch-web.mjs",
       "beforeSha256": "b659b5ffb7e7079143730b2352215f82de11dd76aca19909b4d521fbb57bde56",
-      "afterSha256": "530d5e0fcff1992fd923003c2a0f557a809e8acad59e51c460d7aeef54b6f850"
+      "afterSha256": "a71f26f30f5e83d9f31afb5bb938a54f820cbd355cfb14f8d7a4f61b1aadb219"
     },
     {
       "path": "scripts/diagnose-prelaunch-response-time.mjs",
@@ -815,7 +815,7 @@
     {
       "path": "scripts/lib/prelaunch-integrated-master-readiness.mjs",
       "beforeSha256": null,
-      "afterSha256": "e2afe5a1acfe781e5c26ac279ad3be4cc27e320ae42b8656e4624460081184c9"
+      "afterSha256": "a6960f0d6b38ce23f46b0e1e7f646e6fdeb33b6ff5bf1aacaf7a678443f73d84"
     },
     {
       "path": "scripts/lib/prelaunch-nutrition-recovery-readiness.mjs",
@@ -830,7 +830,7 @@
     {
       "path": "scripts/lib/prelaunch-web-deploy.mjs",
       "beforeSha256": "c5efcdfdb58b16c72ae4d6c9ddb1faeb5c35281d34f772ebaa8cef51ae0cec51",
-      "afterSha256": "3b1c63d6ae343c607969e61acb88f6e1868989b45c22525de6a2d7693abfef11"
+      "afterSha256": "4322bee9166b734a3a2ca3649f8a7bf88582fb346314279d04b949c347bbe7df"
     },
     {
       "path": "scripts/lib/prelaunch-youtube-resolution-contract.mjs",
@@ -1030,7 +1030,7 @@
     {
       "path": "scripts/youtube-integrated-controlled-db.mjs",
       "beforeSha256": null,
-      "afterSha256": "7a3505e6a466fea4e722802958cb13087022d75f8e916ee073f523f64f8ab911"
+      "afterSha256": "6667a029bc76c8b15aa81857076b303b5495d3a348a2d0ccce509be9e0e9e512"
     },
     {
       "path": "scripts/youtube-resolution-controlled-db.mjs",
@@ -1275,7 +1275,7 @@
     {
       "path": "tests/prelaunch-integrated-master-readiness.test.ts",
       "beforeSha256": null,
-      "afterSha256": "2e47ed778d5f6e3a9187b0ff2e62c38665c22cb31ca7d285b93978952a15e28c"
+      "afterSha256": "bf4b350d3284a5283eb1a93736aae88b45aae07890ad70ac9de92fdde565a1d3"
     },
     {
       "path": "tests/prelaunch-nutrition-recovery-readiness.test.ts",
@@ -1470,7 +1470,7 @@
     {
       "path": "tests/youtube-async-extraction-stage3-api-revise.test.ts",
       "beforeSha256": "a0b844ff4eb07d5592e53352e19bcdf3960675a61cf62e4ae929d2edeb69270f",
-      "afterSha256": "a58e9b5135eef3a083f1bd53037964149cae4489f0eedc6303d3da6f6075c919"
+      "afterSha256": "8266b955ce14e505600df0d5a509adeb608984f17023e5ed646a1a5172c877c3"
     },
     {
       "path": "tests/youtube-background-extraction-contract.test.ts",
