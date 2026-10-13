@@ -74,6 +74,8 @@ describe("YouTube v71 controlled cutover", () => {
     expect(source).toContain("SELECT pg_advisory_lock(86120317)");
     expect(source).toContain("fsyncPath(path)");
     expect(source).toContain("linkSync(staging, path)");
+    expect(source).toContain("buildYoutubeExtractionWorkerPolicySnapshotDigest({");
+    expect(source).not.toContain("private.youtube_extraction_policy_snapshot_digest(");
     expect(source).toContain("durablePrivateJson(VERIFICATION_RECEIPT_PATH, receipt)");
     expect(source).toContain("durablePrivateJson(RECEIPT_PATH, receipt)");
     expect(source).toContain("reconcileActivationReceipt(verificationReceipt)");

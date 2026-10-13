@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 
 import { createRecordingDockerAdapter } from "./lib/marketing-round2-controlled-deploy.mjs";
 import {
+  buildYoutubeExtractionWorkerPolicySnapshotDigest,
   ensureRegularFile,
   readJsonFile,
   sha256File,
@@ -346,14 +347,28 @@ SELECT jsonb_build_object(
       'fingerprintKeyVersion', fingerprint_key_version,
       'previousFingerprintKeyVersion', previous_fingerprint_key_version,
       'previousFingerprintValidUntil', previous_fingerprint_valid_until,
-      'enabled', enabled,
-      'snapshotDigest', private.youtube_extraction_policy_snapshot_digest(
-        extractor_mode, pipeline_identity, result_affecting_options, policy_version
-      )
+      'enabled', enabled
     ) FROM private.youtube_extraction_current_policy WHERE policy_key='primary'
   )
 )::text;
 `;
+
+function normalizeDatabaseObservation(observation) {
+  const policy = observation?.policy;
+  check(policy && typeof policy === "object", "database policy observation");
+  return {
+    ...observation,
+    policy: {
+      ...policy,
+      snapshotDigest: buildYoutubeExtractionWorkerPolicySnapshotDigest({
+        extractorMode: policy.extractorMode,
+        pipelineIdentity: policy.pipelineIdentity,
+        policyVersion: policy.version,
+        resultAffectingOptions: policy.resultAffectingOptions,
+      }),
+    },
+  };
+}
 
 async function adapterAndTarget() {
   privateDirectory(OPERATION_ROOT);
@@ -369,7 +384,7 @@ async function adapterAndTarget() {
 }
 
 async function observeDatabase(adapter) {
-  return lastJson(await adapter.query(OBSERVATION_SQL));
+  return normalizeDatabaseObservation(lastJson(await adapter.query(OBSERVATION_SQL)));
 }
 
 async function workerI031Preflight() {
@@ -669,7 +684,7 @@ LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
-    const locked = lastJson(await session.query(OBSERVATION_SQL));
+    const locked = normalizeDatabaseObservation(lastJson(await session.query(OBSERVATION_SQL)));
     assertV71CutoverPrestate(locked);
     check(readLaunchStatus().loaded === false, "generation 46 reloaded during DB transition");
     privateDirectory(BACKUP_ROOT);
@@ -686,7 +701,9 @@ LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
     fsyncPath(BACKUP_PLIST_PATH);
     fsyncPath(BACKUP_ROOT);
     const transition = buildV71DatabaseTransitionSql({ managerClaims, credentialMetadata: metadata });
-    const post = lastJson(await session.query(`${transition}\n${OBSERVATION_SQL}`));
+    const post = normalizeDatabaseObservation(lastJson(
+      await session.query(`${transition}\n${OBSERVATION_SQL}`),
+    ));
     assertV71CutoverPoststate(post, { enabled: false });
     durablePrivateJson(JOURNAL_PATH, {
       schema: "homecook.youtube-v71-controlled-cutover-journal.v1",
@@ -746,14 +763,14 @@ LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
-    const before = lastJson(await session.query(OBSERVATION_SQL));
+    const before = normalizeDatabaseObservation(lastJson(await session.query(OBSERVATION_SQL)));
     assertV71CutoverPoststate(before, { enabled: false });
     const verificationReceipt = await createVerificationReceipt(before);
-    const after = lastJson(await session.query(`
+    const after = normalizeDatabaseObservation(lastJson(await session.query(`
 UPDATE private.youtube_extraction_current_policy
 SET enabled=true, updated_at=clock_timestamp()
 WHERE policy_key='primary';
-${OBSERVATION_SQL}`));
+${OBSERVATION_SQL}`)));
     assertV71CutoverPoststate(after, { enabled: true });
     await session.query("COMMIT;");
     policyCommitted = true;
@@ -787,13 +804,13 @@ LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
-    const before = lastJson(await session.query(OBSERVATION_SQL));
+    const before = normalizeDatabaseObservation(lastJson(await session.query(OBSERVATION_SQL)));
     assertV71CutoverPoststate(before, { enabled: true });
-    const after = lastJson(await session.query(`
+    const after = normalizeDatabaseObservation(lastJson(await session.query(`
 UPDATE private.youtube_extraction_current_policy
 SET enabled=false, updated_at=clock_timestamp()
 WHERE policy_key='primary';
-${OBSERVATION_SQL}`));
+${OBSERVATION_SQL}`)));
     assertV71CutoverPoststate(after, { enabled: false });
     commitDispatched = true;
     await session.query("COMMIT;");
@@ -1030,7 +1047,7 @@ LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
 LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
-    const database = lastJson(await session.query(OBSERVATION_SQL));
+    const database = normalizeDatabaseObservation(lastJson(await session.query(OBSERVATION_SQL)));
     assertV71CutoverPoststate(database, { enabled: false });
     for (const path of [RECEIPT_PATH, VERIFICATION_RECEIPT_PATH]) {
       rmSync(path, { force: true });
