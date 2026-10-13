@@ -234,6 +234,7 @@ function IngredientOnlyAddModal({
         <WebDialog
           aria-labelledby="ingredient-picker-title"
           className="web-ingredient-picker-dialog ingredient-search-panel"
+          manageFocus={false}
           ref={dialogRef}
           tabIndex={-1}
           size="narrow"

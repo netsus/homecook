@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -825,6 +825,25 @@ describe("SettingsScreen", () => {
     await waitFor(() => expect(document.activeElement).toBe(deleteTrigger));
     expect(document.body.style.overflow).toBe("");
     expect(document.querySelector("main")?.getAttribute("aria-hidden")).toBeNull();
+  });
+
+  it("keeps desktop account confirmation open while deletion is in progress", async () => {
+    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
+    mockDeleteAccount.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<SettingsScreen initialAuthenticated={true} />);
+
+    await user.click(await screen.findByRole("button", { name: "계정 삭제하기" }));
+    const dialog = screen.getByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "탈퇴하기" }));
+    await screen.findByRole("button", { name: "탈퇴 처리 중..." });
+    await user.keyboard("{Escape}");
+    const backdrop = dialog.closest(".web-modal-backdrop");
+    if (!backdrop) throw new Error("Desktop account confirmation backdrop was not rendered");
+    fireEvent.click(backdrop);
+
+    expect(screen.getByRole("alertdialog")).toBe(dialog);
+    expect(mockDeleteAccount).toHaveBeenCalledOnce();
   });
 
   it("deletes account, calls logout for cleanup, and navigates home", async () => {

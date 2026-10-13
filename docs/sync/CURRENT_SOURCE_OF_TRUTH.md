@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-13 — 베타 v9 계획 입력 묶음 (구현 중)
+
+사용자 승인으로 최신 v9의 미완료 항목을 작은 배포 단위로 구현한다. 첫 묶음은 상세 선택 인분의 플래너 추가·로그인 복귀 보존과 기존 dialog 경계를 재사용하는 키보드 순환·Escape·포커스 복귀다. 저장 중 보호를 유지하고 DB·worker·인증 권한 정책은 변경하지 않는다. 아직 미배포이며 [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md)에 검사·리뷰·PR·배포·운영 확인을 구분한다. 제품·단위·무게·선택 참여의 운영DB/권한/개인정보 정책은 구체 승인 전 보류한다. 새 추출·P5·외부 AI 호출은 금지한다.
+
 ## 2026-10-13 — 유튜브 레시피북·플래너와 v71 운영 전환 최종 확인
 
 유튜브 저장 결과는 신규·기존 4건 모두 `내가 추가한 레시피`의 public canonical recipe로 연결되고 owner 전용 편집 문서는 그대로 유지된다. Google Chrome 실계정에서 기존 유튜브 저장 레시피 재열기·무변경 수정 저장·플래너 추가·새로고침·취소/뒤로가기와 manual private fork 재열기·편집 진입·플래너 모달 취소를 확인했다. manual private 상세의 첫 Data 조회가 세션 refresh보다 빨라 false 404가 되던 회귀는 master `ca7faa8f00867fe5eaab620a45fa959bd6768483`, 운영 웹 `d22217ddc791df79e72c055516bd5cffd6bb69c0`에서 세션 확인을 선행하도록 수정했다. DB는 추가 변경 없이 ledger 219다. worker는 release `8e515a6482a1dfaa292d6f67ae6aa8a06f84d2d4`에 결속된 v71/gen47로 running이며 credential은 `2026-10-19T08:24:41Z` 만료다. manager 임시 credential은 제거됐고 gen48 발급·추출 호출·모델 호출은 모두 0이다. [최종 운영 상태·검증·남은 Low](../engineering/youtube-recipebook-planner-bridge-20261012.md#후속-최종-운영-확인-2026-10-13)를 따른다.

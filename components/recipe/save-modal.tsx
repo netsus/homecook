@@ -257,7 +257,7 @@ export function SaveModal({
     ) : null}
     {shouldRenderWebView ? (
     <div className="hidden lg:block">
-      <WebModal onBackdropClick={onClose}>
+      <WebModal closeDisabled={isSavingRecipe || isCreatingBook} onBackdropClick={onClose}>
         <WebDialog
           aria-labelledby="save-modal-title-desktop"
           size="default"

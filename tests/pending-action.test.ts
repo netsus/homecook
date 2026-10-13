@@ -56,6 +56,35 @@ describe("pending action", () => {
     expect(readPendingAction()).toBeNull();
   });
 
+  it("preserves selected planner servings in the same-tab login intent", () => {
+    const action = {
+      type: "planner" as const,
+      recipeId: "recipe-1",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: 123,
+      plannedServings: 3,
+    };
+
+    expect(savePendingAction(action)).toBe(true);
+    expect(readPendingAction()).toEqual(action);
+  });
+
+  it.each([0, -1, 1.5, "3", null, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects invalid planner servings %s before resuming the action",
+    (plannedServings) => {
+      window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
+        type: "planner",
+        recipeId: "recipe-1",
+        redirectTo: "/recipe/recipe-1",
+        createdAt: 123,
+        plannedServings,
+      }));
+
+      expect(readPendingAction()).toBeNull();
+      expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    },
+  );
+
   it("returns null and removes invalid JSON", () => {
     window.sessionStorage.setItem(PENDING_ACTION_KEY, "{invalid");
 

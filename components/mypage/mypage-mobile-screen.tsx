@@ -89,7 +89,7 @@ interface MypageMobileScreenProps {
   onCreateNameChange: (value: string) => void;
   onDismissTutorialQuest: (questKey: string) => void;
   onMenuClose: () => void;
-  onMenuOpen: (id: string) => void;
+  onMenuOpen: (id: string, trigger: HTMLButtonElement) => void;
   onOpenNicknameSheet: () => void;
   onRenameStart: (book: RecipeBookSummary) => void;
   onRenameValueChange: (value: string) => void;
@@ -835,7 +835,7 @@ function MobileRecipebookSurface({
   onCreateBook: () => void;
   onCreateNameChange: (value: string) => void;
   onMenuClose: () => void;
-  onMenuOpen: (id: string) => void;
+  onMenuOpen: (id: string, trigger: HTMLButtonElement) => void;
   onRenameStart: (book: RecipeBookSummary) => void;
   onRenameValueChange: (value: string) => void;
   onRequestDelete: (book: RecipeBookSummary) => void;
@@ -961,7 +961,7 @@ function MobileRecipebookSurface({
               onChangeCoverImage={() => onChangeCoverImage(book)}
               onConfirmRename={onConfirmRename}
               onMenuClose={onMenuClose}
-              onMenuOpen={() => onMenuOpen(book.id)}
+              onMenuOpen={(trigger) => onMenuOpen(book.id, trigger)}
               onRenameStart={() => onRenameStart(book)}
               onRenameValueChange={onRenameValueChange}
               onRequestDelete={() => onRequestDelete(book)}
@@ -1061,7 +1061,7 @@ interface MobileCustomBookCardProps {
   onChangeCoverImage: () => void;
   onConfirmRename: () => void;
   onMenuClose: () => void;
-  onMenuOpen: () => void;
+  onMenuOpen: (trigger: HTMLButtonElement) => void;
   onRenameStart: () => void;
   onRenameValueChange: (value: string) => void;
   onRequestDelete: () => void;
@@ -1151,7 +1151,7 @@ function MobileCustomBookCard({
           className="mobile-recipebook-menu-button absolute right-2 top-2 z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
           onClick={(event) => {
             event.preventDefault();
-            onMenuOpen();
+            onMenuOpen(event.currentTarget);
           }}
           type="button"
         >
