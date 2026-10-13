@@ -198,7 +198,7 @@ export async function GET(request: Request, context: RouteContext) {
       }
       const projectionResult = await internalClient.rpc(
         "read_public_youtube_saved_recipe_detail",
-        { p_actor_id: user?.id ?? null, p_recipe_id: recipeId },
+        { p_recipe_id: recipeId },
       );
       if (projectionResult.error) {
         return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);

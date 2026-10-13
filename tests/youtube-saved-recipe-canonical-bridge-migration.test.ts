@@ -7,11 +7,11 @@ const migrationPath =
 const sql = readFileSync(migrationPath, "utf8");
 
 describe("YouTube saved recipe canonical bridge migration", () => {
-  it("creates an owner-created private one-to-one canonical recipe bridge", () => {
+  it("creates an owner-created public one-to-one canonical recipe bridge", () => {
     expect(sql).toContain("add column canonical_recipe_id uuid");
     expect(sql).toContain("youtube_saved_recipe_results_canonical_recipe_idx");
     expect(sql).toMatch(/created_by,\s*visibility,\s*revision/iu);
-    expect(sql).toMatch(/new\.owner_user_id,\s*'private'/u);
+    expect(sql).toMatch(/new\.owner_user_id,\s*'public'/u);
     expect(sql).toContain("youtube_saved_canonical_bridge");
     expect(sql).not.toContain("youtube_saved_draft_id");
     expect(sql).toMatch(/where canonical_recipe_id = p_result_id/iu);
@@ -38,21 +38,22 @@ describe("YouTube saved recipe canonical bridge migration", () => {
     expect(sql).toMatch(/exit when not exists \(\s*select 1 from public\.ingredients/iu);
     expect(sql).toContain("catalog_resolution_status");
     expect(sql).toContain("return query");
-    expect(sql).toContain("owner_user_id := v_result.owner_user_id");
+    expect(sql).toContain("owner_user_id := null");
   });
 
-  it("projects only display data through an exact service scope and actor check", () => {
+  it("projects only public display data through an exact service scope", () => {
     expect(sql).toContain("read_public_youtube_saved_recipe_detail");
     expect(sql).toContain("recipe_visibility_guard.is_owner_publicly_visible");
-    expect(sql).toContain("recipe.created_by = p_actor_id");
+    expect(sql).toContain("recipe.visibility = 'public'");
+    expect(sql).not.toContain("p_actor_id");
     expect(sql).toMatch(/- 'catalog_resolution_status'/u);
     expect(sql).toMatch(/- 'food_product_id'/u);
     expect(sql).toContain("'/rpc/read_public_youtube_saved_recipe_detail'");
     expect(sql).toMatch(
-      /grant execute on function public\.read_public_youtube_saved_recipe_detail\(uuid, uuid\)\s+to service_role/iu,
+      /grant execute on function public\.read_public_youtube_saved_recipe_detail\(uuid\)\s+to service_role/iu,
     );
     expect(sql).toMatch(
-      /revoke all on function public\.read_public_youtube_saved_recipe_detail\(uuid, uuid\)\s+from public, anon, authenticated/iu,
+      /revoke all on function public\.read_public_youtube_saved_recipe_detail\(uuid\)\s+from public, anon, authenticated/iu,
     );
   });
 

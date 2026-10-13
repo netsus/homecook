@@ -170,7 +170,7 @@ describe("prelaunch integrated master readiness", () => {
       databaseDeployment: true, review: { descriptor } }).readiness.release_sha).toBe("b".repeat(40));
   });
 
-  it("accepts only DB218 before web activation and private owner rows after DB219", () => {
+  it("accepts only DB218 before web activation and public owner-created rows after DB219", () => {
     const descriptor = parseIntegratedMasterDescriptor(Buffer.from(JSON.stringify(descriptorValue)));
     const prefix = Array.from({ length: 218 }, (_, index) => ({
       filename: `${String(index).padStart(14, "0")}_prior.sql`,
@@ -189,7 +189,7 @@ describe("prelaunch integrated master readiness", () => {
       .toMatchObject({ phase: "applied", savedRows: 4, pending: [] });
     expect(() => assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: source,
       phase: "applied", target, saved: { savedRows: 4, canonicalRows: 4, invalidRows: 1 } }))
-      .toThrow("private owner");
+      .toThrow("public owner-created");
   });
 
   it("binds DB219 apply to the exact serving web-first release and predecessor proof", () => {

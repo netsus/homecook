@@ -436,7 +436,8 @@ export async function GET(request: Request, context: RouteContext) {
     let steps = normalizeRecipeSteps(stepsResult.data);
 
     if (
-      recipeResult.data.source_type === "youtube"
+      recipeResult.data.visibility === "public"
+      && recipeResult.data.source_type === "youtube"
       && hasYoutubeSavedCanonicalBridgeMarker(sourceResult.data?.extraction_meta_json)
     ) {
       const internalClient = createRecipeFuturePropagationInternalClient();
@@ -446,7 +447,7 @@ export async function GET(request: Request, context: RouteContext) {
 
       const projectionResult = await internalClient.rpc(
         "read_public_youtube_saved_recipe_detail",
-        { p_actor_id: user?.id ?? null, p_recipe_id: id },
+        { p_recipe_id: id },
       );
       const projection = projectionResult.error
         ? null

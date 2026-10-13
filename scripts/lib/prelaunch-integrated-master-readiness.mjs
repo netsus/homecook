@@ -113,7 +113,7 @@ export function assertIntegratedMasterDatabaseObservation({ descriptor, source, 
     requireValue(saved.bridgeFunctionAbsent === true, "predecessor bridge function absence");
   } else {
     requireValue(saved.canonicalRows === saved.savedRows && saved.invalidRows === 0,
-      "private owner canonical backfill");
+      "public owner-created canonical backfill");
   }
   return Object.freeze({
     baselineRequired: false,
@@ -146,12 +146,12 @@ export async function verifyIntegratedMasterDatabase({
     phase === "predecessor"
       ? adapter.query(`SELECT jsonb_build_object(
           'savedRows', count(*),
-          'bridgeFunctionAbsent', to_regprocedure('public.read_public_youtube_saved_recipe_detail(uuid,uuid)') IS NULL
+          'bridgeFunctionAbsent', to_regprocedure('public.read_public_youtube_saved_recipe_detail(uuid)') IS NULL
         ) FROM public.youtube_saved_recipe_results;`).then(JSON.parse)
       : adapter.query(`SELECT jsonb_build_object(
           'savedRows', count(*),
           'canonicalRows', count(*) FILTER (WHERE saved.canonical_recipe_id IS NOT NULL),
-          'invalidRows', count(*) FILTER (WHERE recipe.id IS NULL OR recipe.created_by IS DISTINCT FROM saved.owner_user_id OR recipe.visibility <> 'private')
+          'invalidRows', count(*) FILTER (WHERE recipe.id IS NULL OR recipe.created_by IS DISTINCT FROM saved.owner_user_id OR recipe.visibility <> 'public')
         ) FROM public.youtube_saved_recipe_results AS saved
         LEFT JOIN public.recipes AS recipe ON recipe.id = saved.canonical_recipe_id;`).then(JSON.parse),
   ]);

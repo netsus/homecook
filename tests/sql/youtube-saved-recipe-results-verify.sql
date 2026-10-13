@@ -95,7 +95,7 @@ begin
     from public.recipes recipe
     where recipe.id = (v_first #>> '{data,recipe_id}')::uuid
       and recipe.created_by = '10000000-0000-4000-8000-000000000001'
-      and recipe.visibility = 'private'
+      and recipe.visibility = 'public'
       and recipe.source_type = 'youtube'
   ) then
     raise exception 'saved result canonical recipe authority mismatch';
