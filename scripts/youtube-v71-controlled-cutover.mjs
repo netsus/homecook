@@ -315,6 +315,15 @@ async function stableWorker() {
   throw new Error("worker did not reach two stable running observations");
 }
 
+async function stoppedWorker() {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const status = readLaunchStatus();
+    if (!status.loaded && status.state === "unloaded") return status;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 250));
+  }
+  throw new Error("generation 46 did not reach unloaded state");
+}
+
 const OBSERVATION_SQL = `
 SELECT jsonb_build_object(
   'ledgerCount', (SELECT count(*) FROM homecook_deploy.migrations),
@@ -1094,8 +1103,7 @@ async function execute(confirmation) {
     const immediate = await observeDatabase(adapter);
     assertV71CutoverPrestate(immediate);
     runLaunchctl(["bootout", SERVICE]);
-    const stopped = readLaunchStatus();
-    check(!stopped.loaded && stopped.state === "unloaded", "generation 46 did not stop");
+    await stoppedWorker();
     await transitionDatabase(
       target,
       decodeJwtClaims(credentials.managerToken),
