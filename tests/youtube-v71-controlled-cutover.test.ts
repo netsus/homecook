@@ -60,6 +60,7 @@ describe("YouTube v71 controlled cutover", () => {
     expect(source).toContain("fsyncPath(path)");
     expect(source).toContain("durablePrivateJson(VERIFICATION_RECEIPT_PATH, receipt)");
     expect(source).toContain("durablePrivateJson(RECEIPT_PATH, receipt)");
+    expect(source).toContain("reconcileActivationReceipt(verificationReceipt)");
     const verificationIndex = source.indexOf(
       "const verificationReceipt = await createVerificationReceipt(before)",
     );
@@ -67,6 +68,33 @@ describe("YouTube v71 controlled cutover", () => {
     expect(verificationIndex).toBeLessThan(
       source.indexOf("SET enabled=true", verificationIndex),
     );
+    const receiptResetIndex = source.indexOf(
+      "async function resetDisabledCutoverReceipts(target)",
+    );
+    expect(receiptResetIndex).toBeGreaterThan(0);
+    expect(source.indexOf(
+      "assertV71CutoverPoststate(database, { enabled: false })",
+      receiptResetIndex,
+    )).toBeLessThan(source.indexOf(
+      "for (const path of [RECEIPT_PATH, VERIFICATION_RECEIPT_PATH])",
+      receiptResetIndex,
+    ));
+    const resumeIndex = source.indexOf("async function resume(confirmation)");
+    const activeVerifyIndex = source.indexOf(
+      "active = await verifyActiveWorker",
+      resumeIndex,
+    );
+    const repairDisableIndex = source.indexOf(
+      "database = await disablePolicyForRepair",
+      activeVerifyIndex,
+    );
+    const repairBootoutIndex = source.indexOf(
+      "if (status.loaded) runLaunchctl([\"bootout\", SERVICE])",
+      repairDisableIndex,
+    );
+    expect(activeVerifyIndex).toBeGreaterThan(resumeIndex);
+    expect(repairDisableIndex).toBeGreaterThan(activeVerifyIndex);
+    expect(repairBootoutIndex).toBeGreaterThan(repairDisableIndex);
   });
 
   it("accepts only the exact manager scope and a maximum five-minute lifetime", () => {

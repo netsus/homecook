@@ -161,8 +161,8 @@ function main() {
         flag: "wx",
         mode: 0o600,
       });
-      chmodSync(tokenFile, 0o600);
       tokenCreated = true;
+      chmodSync(tokenFile, 0o600);
       process.stdout.write(`${JSON.stringify({
         issued: true,
         role: issued.claims.role,
@@ -198,8 +198,8 @@ function main() {
       flag: "wx",
       mode: 0o600,
     });
-    chmodSync(tokenFile, 0o600);
     tokenCreated = true;
+    chmodSync(tokenFile, 0o600);
     const credential = buildYoutubeExtractionWorkerCredentialState({
       tokenFile,
       generation: issued.metadata.generation,
@@ -215,9 +215,9 @@ function main() {
       flag: "wx",
       mode: 0o600,
     });
+    metadataCreated = true;
     chmodSync(metadataOutput, 0o600);
     validateYoutubeExtractionWorkerSecretFile(metadataOutput, { secretRoot });
-    metadataCreated = true;
     process.stdout.write(`${JSON.stringify({
       issued: true,
       generation: credential.generation,

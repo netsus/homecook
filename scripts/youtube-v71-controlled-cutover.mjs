@@ -148,10 +148,20 @@ function privateDirectory(path) {
 }
 
 function writePrivateCreateOnly(path, contents) {
-  writeFileSync(path, contents, { flag: "wx", mode: 0o600 });
-  chmodSync(path, 0o600);
-  fsyncPath(path);
-  fsyncPath(dirname(path));
+  let created = false;
+  try {
+    writeFileSync(path, contents, { flag: "wx", mode: 0o600 });
+    created = true;
+    chmodSync(path, 0o600);
+    fsyncPath(path);
+    fsyncPath(dirname(path));
+  } catch (error) {
+    if (created) {
+      rmSync(path, { force: true });
+      fsyncPath(dirname(path));
+    }
+    throw error;
+  }
 }
 
 function fsyncPath(path) {
@@ -753,6 +763,51 @@ ${OBSERVATION_SQL}`));
   }
 }
 
+async function disablePolicyForRepair(target, adapter) {
+  const session = openDedicatedAdminSession(
+    target.postgresContainerId,
+    `youtube-resolution-v71-disable-${randomUUID().slice(0, 8)}`,
+  );
+  let commitDispatched = false;
+  try {
+    await session.query(`SELECT pg_advisory_lock(86120317);
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+SET LOCAL statement_timeout='30s';
+LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
+    const before = lastJson(await session.query(OBSERVATION_SQL));
+    assertV71CutoverPoststate(before, { enabled: true });
+    const after = lastJson(await session.query(`
+UPDATE private.youtube_extraction_current_policy
+SET enabled=false, updated_at=clock_timestamp()
+WHERE policy_key='primary';
+${OBSERVATION_SQL}`));
+    assertV71CutoverPoststate(after, { enabled: false });
+    commitDispatched = true;
+    await session.query("COMMIT;");
+    await session.close();
+    const readback = await observeDatabase(adapter);
+    assertV71CutoverPoststate(readback, { enabled: false });
+    return readback;
+  } catch (error) {
+    session.stop();
+    if (commitDispatched) {
+      const readback = await observeDatabase(adapter).catch(() => null);
+      if (readback?.policy?.enabled === false) {
+        assertV71CutoverPoststate(readback, { enabled: false });
+        return readback;
+      }
+      throw new Error(
+        `${error instanceof Error ? error.message : "repair disable readback failed"}; `
+        + "policy disable outcome is not confirmed",
+      );
+    }
+    throw error;
+  }
+}
+
 function installPlist(plan) {
   const staging = `${PLIST}.v71-${randomUUID()}`;
   try {
@@ -882,6 +937,40 @@ function createActivationReceipt({ verificationReceipt, finalRunning, finalDatab
   return receipt;
 }
 
+function reconcileActivationReceipt(verificationReceipt) {
+  const receipt = readJsonFile(
+    RECEIPT_PATH,
+    "v71 activation receipt",
+    { mode: 0o600 },
+  );
+  const verificationProof = verificationReceiptProof();
+  check(
+    receipt.schema === "homecook.youtube-v71-controlled-cutover-receipt.v1"
+    && receipt.status === "generation-47-v71-running-active-verified"
+    && receipt.releaseSha === YOUTUBE_V71_RELEASE_SHA
+    && receipt.credentialGeneration === 47
+    && receipt.policySnapshotDigest === YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST
+    && receipt.policyEnabled === true
+    && receipt.verificationReceipt?.path === verificationProof?.path
+    && receipt.verificationReceipt?.sha256 === verificationProof?.sha256
+    && receipt.verificationReceipt?.verifiedAt === verificationReceipt.verifiedAt
+    && receipt.worker?.plistSha256 === sha256(readFileSync(PLIST))
+    && receipt.verificationBudget?.extractionCalls === 0
+    && receipt.verificationBudget?.modelCalls === 0,
+    "activation receipt is not exact",
+  );
+  assertV71OperationalPoststate(receipt.database);
+  durablePrivateJson(JOURNAL_PATH, {
+    schema: "homecook.youtube-v71-controlled-cutover-journal.v1",
+    state: "completed",
+    receipt: { path: RECEIPT_PATH, sha256: sha256(readFileSync(RECEIPT_PATH)) },
+    verificationReceipt: receipt.verificationReceipt,
+    generation48Issued: false,
+    extractionCalls: 0,
+  }, { replace: true });
+  return receipt;
+}
+
 function verificationReceiptProof() {
   return existsSync(VERIFICATION_RECEIPT_PATH)
     ? {
@@ -916,6 +1005,47 @@ function readVerificationReceipt(expectedProof) {
     "verification receipt is not exact",
   );
   return receipt;
+}
+
+async function resetDisabledCutoverReceipts(target) {
+  const session = openDedicatedAdminSession(
+    target.postgresContainerId,
+    `youtube-resolution-v71-receipt-reset-${randomUUID().slice(0, 8)}`,
+  );
+  try {
+    await session.query(`SELECT pg_advisory_lock(86120317);
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+SET LOCAL statement_timeout='30s';
+LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
+    const database = lastJson(await session.query(OBSERVATION_SQL));
+    assertV71CutoverPoststate(database, { enabled: false });
+    for (const path of [RECEIPT_PATH, VERIFICATION_RECEIPT_PATH]) {
+      rmSync(path, { force: true });
+    }
+    fsyncPath(OPERATION_ROOT);
+    await session.query("COMMIT;");
+    await session.close();
+    return database;
+  } catch (error) {
+    session.stop();
+    throw error;
+  }
+}
+
+async function verifyActiveWorker(verificationReceipt, workerToken, adapter) {
+  check(
+    sha256(readFileSync(PLIST)) === verificationReceipt.worker?.plistSha256,
+    "active launcher differs from the durable verification receipt",
+  );
+  const running = await stableWorker();
+  await verifyWorkerCaller(workerToken);
+  localHealth();
+  const database = await observeDatabase(adapter);
+  assertV71OperationalPoststate(database);
+  return { running, database };
 }
 
 async function execute(confirmation) {
@@ -1005,7 +1135,6 @@ async function execute(confirmation) {
 
 async function resume(confirmation) {
   check(confirmation === YOUTUBE_V71_CUTOVER_CONFIRMATION, "exact confirmation required");
-  check(!existsSync(RECEIPT_PATH), "cutover receipt already exists");
   check(existsSync(JOURNAL_PATH), "cutover journal is missing");
   const journal = readJsonFile(JOURNAL_PATH, "v71 cutover journal", { mode: 0o600 });
   check([
@@ -1025,23 +1154,57 @@ async function resume(confirmation) {
   assertV71WorkerCredential({ claims: decodeJwtClaims(workerToken), metadata });
   const credentials = { workerToken, metadata };
   const { adapter, target } = await adapterAndTarget();
-  const database = await observeDatabase(adapter);
+  let database = await observeDatabase(adapter);
+  let verificationReceipt = null;
   if (database.policy?.enabled === true) {
     assertV71OperationalPoststate(database);
     check(existsSync(VERIFICATION_RECEIPT_PATH),
       "active policy requires a durable verification receipt");
+    verificationReceipt = readVerificationReceipt(journal.verificationReceipt);
   } else {
-    assertV71CutoverPoststate(database, { enabled: false });
+    database = await resetDisabledCutoverReceipts(target);
   }
   rmSync(MANAGER_TOKEN, { force: true });
   fsyncPath(SECRET_ROOT);
-  const previousBytes = readFileSync(BACKUP_PLIST_PATH);
-  const preparation = readJsonFile(PREPARE_PATH, "v71 cutover preparation", { mode: 0o600 });
-  check(sha256(previousBytes) === preparation.predecessor.plistSha256,
-    "generation-46 launcher backup changed");
-  const i031 = await workerI031Preflight();
-  const plan = await renderInstallPlan(previousBytes, i031);
   try {
+    if (database.policy?.enabled === true) {
+      let active = null;
+      try {
+        active = await verifyActiveWorker(verificationReceipt, workerToken, adapter);
+      } catch (activeWorkerError) {
+        database = await disablePolicyForRepair(target, adapter);
+        database = await resetDisabledCutoverReceipts(target);
+        verificationReceipt = null;
+        durablePrivateJson(JOURNAL_PATH, {
+          schema: "homecook.youtube-v71-controlled-cutover-journal.v1",
+          state: "generation-47-kept-v71-repair-required",
+          originalError: activeWorkerError instanceof Error
+            ? activeWorkerError.message
+            : "active worker verification failed",
+          database,
+          verificationReceipt: verificationReceiptProof(),
+          managerCredentialRemoved: true,
+          generation48Issued: false,
+          extractionCalls: 0,
+        }, { replace: true });
+      }
+      if (active) {
+        return existsSync(RECEIPT_PATH)
+          ? reconcileActivationReceipt(verificationReceipt)
+          : createActivationReceipt({
+              verificationReceipt,
+              finalRunning: active.running,
+              finalDatabase: active.database,
+            });
+      }
+    }
+
+    const previousBytes = readFileSync(BACKUP_PLIST_PATH);
+    const preparation = readJsonFile(PREPARE_PATH, "v71 cutover preparation", { mode: 0o600 });
+    check(sha256(previousBytes) === preparation.predecessor.plistSha256,
+      "generation-46 launcher backup changed");
+    const i031 = await workerI031Preflight();
+    const plan = await renderInstallPlan(previousBytes, i031);
     const status = readLaunchStatus();
     if (status.loaded) runLaunchctl(["bootout", SERVICE]);
     installPlist(plan);
@@ -1049,24 +1212,14 @@ async function resume(confirmation) {
     const caller = await verifyWorkerCaller(workerToken);
     const health = localHealth();
     const current = await observeDatabase(adapter);
-    if (current.policy?.enabled === true) {
-      assertV71OperationalPoststate(current);
-      const verificationReceipt = readVerificationReceipt(journal.verificationReceipt);
-      const finalRunning = await stableWorker();
-      return createActivationReceipt({
-        verificationReceipt,
-        finalRunning,
-        finalDatabase: current,
-      });
-    }
     assertV71CutoverPoststate(current, { enabled: false });
     const activation = await enablePolicyAfterDurableVerification(
       target,
       adapter,
       async (lockedDisabledDatabase) => {
         const lockedRunning = await stableWorker();
-        return existsSync(VERIFICATION_RECEIPT_PATH)
-          ? readVerificationReceipt(journal.verificationReceipt)
+        return verificationReceipt
+          ? verificationReceipt
           : createVerificationReceipt({
               credentials,
               running: lockedRunning,
