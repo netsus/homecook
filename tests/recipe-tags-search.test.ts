@@ -162,6 +162,10 @@ describe("36c recipe tag search route", () => {
     const recipeQueries = [titleQuery, tagRecipeQuery];
     const dbClient = {
       rpc: vi.fn(async (functionName: string, args: Record<string, unknown>) => {
+        if (functionName === "find_public_recipe_ids_by_product_name") {
+          expect(args).toEqual({ p_q: "디저트" });
+          return { data: [], error: null };
+        }
         expect(functionName).toBe("find_recipe_ids_by_public_tags");
         expect(args).toEqual({
           p_q: "디저트",
@@ -198,6 +202,7 @@ describe("36c recipe tag search route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(dbClient.rpc).toHaveBeenCalledWith("find_public_recipe_ids_by_product_name", { p_q: "디저트" });
     expect(titleQuery.ilike).toHaveBeenCalledWith("title", "%디저트%");
     expect(tagRecipeQuery.in).toHaveBeenCalledWith("id", [recipeTagId]);
     expect(titleQuery.or).not.toHaveBeenCalled();
