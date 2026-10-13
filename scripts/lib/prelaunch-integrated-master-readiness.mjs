@@ -109,11 +109,13 @@ export function assertIntegratedMasterDatabaseObservation({ descriptor, source, 
   const expected = phase === "predecessor" ? source.slice(0, descriptor.database.beforeLedgerCount) : source;
   requireValue(isDeepStrictEqual(ledger, expected), `${phase} live migration ledger`);
   requireValue(Number.isInteger(saved?.savedRows) && saved.savedRows >= 0, "saved result inventory");
+  requireValue(saved.explicitPrivacyChoiceRows === 0,
+    "explicit privacy choice must remain absent before public YouTube bridge apply");
   if (phase === "predecessor") {
     requireValue(saved.bridgeFunctionAbsent === true, "predecessor bridge function absence");
   } else {
     requireValue(saved.canonicalRows === saved.savedRows && saved.invalidRows === 0,
-      "private owner canonical backfill");
+      "public owner-created canonical backfill");
   }
   return Object.freeze({
     baselineRequired: false,
@@ -146,12 +148,14 @@ export async function verifyIntegratedMasterDatabase({
     phase === "predecessor"
       ? adapter.query(`SELECT jsonb_build_object(
           'savedRows', count(*),
-          'bridgeFunctionAbsent', to_regprocedure('public.read_public_youtube_saved_recipe_detail(uuid,uuid)') IS NULL
-        ) FROM public.youtube_saved_recipe_results;`).then(JSON.parse)
+          'explicitPrivacyChoiceRows', count(*) FILTER (WHERE saved.source_snapshot_json ?| ARRAY['visibility', 'privacy', 'is_public'] OR saved.editable_content_json ?| ARRAY['visibility', 'privacy', 'is_public']),
+          'bridgeFunctionAbsent', to_regprocedure('public.read_public_youtube_saved_recipe_detail(uuid)') IS NULL
+        ) FROM public.youtube_saved_recipe_results AS saved;`).then(JSON.parse)
       : adapter.query(`SELECT jsonb_build_object(
           'savedRows', count(*),
+          'explicitPrivacyChoiceRows', count(*) FILTER (WHERE saved.source_snapshot_json ?| ARRAY['visibility', 'privacy', 'is_public'] OR saved.editable_content_json ?| ARRAY['visibility', 'privacy', 'is_public']),
           'canonicalRows', count(*) FILTER (WHERE saved.canonical_recipe_id IS NOT NULL),
-          'invalidRows', count(*) FILTER (WHERE recipe.id IS NULL OR recipe.created_by IS DISTINCT FROM saved.owner_user_id OR recipe.visibility <> 'private')
+          'invalidRows', count(*) FILTER (WHERE recipe.id IS NULL OR recipe.created_by IS DISTINCT FROM saved.owner_user_id OR recipe.visibility <> 'public')
         ) FROM public.youtube_saved_recipe_results AS saved
         LEFT JOIN public.recipes AS recipe ON recipe.id = saved.canonical_recipe_id;`).then(JSON.parse),
   ]);

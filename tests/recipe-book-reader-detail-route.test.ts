@@ -571,7 +571,7 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
     expect(handleGetYoutubeSavedRecipe).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledWith(
       "read_public_youtube_saved_recipe_detail",
-      { p_actor_id: "user-1", p_recipe_id: recipeId },
+      { p_recipe_id: recipeId },
     );
     expect(recipeIngredientsTable.select).not.toHaveBeenCalled();
     expect(recipeStepsTable.select).not.toHaveBeenCalled();

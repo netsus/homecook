@@ -170,7 +170,7 @@ describe("prelaunch integrated master readiness", () => {
       databaseDeployment: true, review: { descriptor } }).readiness.release_sha).toBe("b".repeat(40));
   });
 
-  it("accepts only DB218 before web activation and private owner rows after DB219", () => {
+  it("accepts only DB218 before web activation and public owner-created rows after DB219", () => {
     const descriptor = parseIntegratedMasterDescriptor(Buffer.from(JSON.stringify(descriptorValue)));
     const prefix = Array.from({ length: 218 }, (_, index) => ({
       filename: `${String(index).padStart(14, "0")}_prior.sql`,
@@ -182,14 +182,17 @@ describe("prelaunch integrated master readiness", () => {
     }];
     const target = { database: { systemIdentifier: "7669475895419854882", major: 17 } };
     expect(assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: prefix,
-      phase: "predecessor", target, saved: { savedRows: 4, bridgeFunctionAbsent: true } }))
+      phase: "predecessor", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 0, bridgeFunctionAbsent: true } }))
       .toMatchObject({ phase: "predecessor", savedRows: 4, pending: [source.at(-1)] });
     expect(assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: source,
-      phase: "applied", target, saved: { savedRows: 4, canonicalRows: 4, invalidRows: 0 } }))
+      phase: "applied", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 0, canonicalRows: 4, invalidRows: 0 } }))
       .toMatchObject({ phase: "applied", savedRows: 4, pending: [] });
     expect(() => assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: source,
-      phase: "applied", target, saved: { savedRows: 4, canonicalRows: 4, invalidRows: 1 } }))
-      .toThrow("private owner");
+      phase: "applied", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 0, canonicalRows: 4, invalidRows: 1 } }))
+      .toThrow("public owner-created");
+    expect(() => assertIntegratedMasterDatabaseObservation({ descriptor, source, ledger: prefix,
+      phase: "predecessor", target, saved: { savedRows: 4, explicitPrivacyChoiceRows: 1, bridgeFunctionAbsent: true } }))
+      .toThrow("explicit privacy choice");
   });
 
   it("binds DB219 apply to the exact serving web-first release and predecessor proof", () => {

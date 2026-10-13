@@ -10,7 +10,7 @@
     "afterLedgerCount": 219,
     "migration": {
       "path": "supabase/migrations/20261012120000_youtube_saved_recipe_canonical_bridge.sql",
-      "sha256": "7210bc44781b67d63b017515d133159f5d443a171e9bb0d8d1c206095fd8b7f8"
+      "sha256": "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
     }
   },
   "worker": {
@@ -95,7 +95,7 @@
     {
       "path": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
       "beforeSha256": "ff15c049de0e8744406f5096dfd24eb43d3765a82220ee720b8f1cf2487960f8",
-      "afterSha256": "ca5bd21f1d7cb58c3942f0391c72650b4820953c52200e153e554ea2a100d2b7"
+      "afterSha256": "9ab0261c42fc8709fc5c4d37092b5c64a36bc074f6cb08acdfd1d128a857c9aa"
     },
     {
       "path": "app/api/v1/recipe-books/[book_id]/recipes/route.ts",
@@ -105,12 +105,12 @@
     {
       "path": "app/api/v1/recipes/[id]/cook-mode/route.ts",
       "beforeSha256": "0e01f7a60b017b399bd1e691739fa71c9494029c7d90e58e77e71d397e70eb55",
-      "afterSha256": "b3980e4072423111c06edce4c2834e595307b1c1c898c123006988876481a7f7"
+      "afterSha256": "9250095eb6dc9244cc66fb0b954a69333ec9e85e9df117fcad722b5aa226b304"
     },
     {
       "path": "app/api/v1/recipes/[id]/route.ts",
       "beforeSha256": "9f3c2477fc52b796ab1414fb8f619a6e8600fc06540bcff8c7722cefc9c23577",
-      "afterSha256": "1e462b3772e3ba2b811b3dd524c7922a024b7ba4c97f4c98a1bcae035909e191"
+      "afterSha256": "805d77ec299217d8e33eb99aec7ae8a9ce0c87835ef527ecf105a82293b0f196"
     },
     {
       "path": "app/api/v1/recipes/pantry-match/route.ts",
@@ -510,7 +510,7 @@
     {
       "path": "docs/engineering/youtube-recipebook-planner-bridge-20261012.md",
       "beforeSha256": null,
-      "afterSha256": "ec6785f83742efdb2dda4e92aedfb3d2ca018401cfe15c8d6156ae5efd71cb48"
+      "afterSha256": "e64bff7bfa0e3f49c38a7792f519a3fdb4a786bdcda8a7c213987b2dc716e02d"
     },
     {
       "path": "docs/engineering/youtube-resolution-release-20261010.md",
@@ -535,7 +535,7 @@
     {
       "path": "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
       "beforeSha256": "1727ccaa4e055942f8c91be3b5e6544ac4f9b4d01d3406d69f4d78e0afe85fee",
-      "afterSha256": "8cbca1759e9c2db77d0707e530a1f70f503d39f5ee5d022cf554deab424d20d0"
+      "afterSha256": "38576e7672d7840de174db65619bd5fc6c43f3d1942e4828b5c0a28e8eb44dca"
     },
     {
       "path": "eslint.config.mjs",
@@ -815,7 +815,7 @@
     {
       "path": "scripts/lib/prelaunch-integrated-master-readiness.mjs",
       "beforeSha256": null,
-      "afterSha256": "a6960f0d6b38ce23f46b0e1e7f646e6fdeb33b6ff5bf1aacaf7a678443f73d84"
+      "afterSha256": "dff9894ad035526e2d4c8a1dc95d41a932753fb913df1bb3895a36869bfb4db5"
     },
     {
       "path": "scripts/lib/prelaunch-nutrition-recovery-readiness.mjs",
@@ -1030,7 +1030,7 @@
     {
       "path": "scripts/youtube-integrated-controlled-db.mjs",
       "beforeSha256": null,
-      "afterSha256": "9eac35db2d04dd92cb7e0f29b0c9aee94275399082dcf9d8ac17609bc457a87b"
+      "afterSha256": "bd7623fe2bf45435f90689162f8ddd7f5273fad91582b0a8e46eab500723a0b1"
     },
     {
       "path": "scripts/youtube-resolution-controlled-db.mjs",
@@ -1055,7 +1055,7 @@
     {
       "path": "supabase/migrations/20261012120000_youtube_saved_recipe_canonical_bridge.sql",
       "beforeSha256": null,
-      "afterSha256": "7210bc44781b67d63b017515d133159f5d443a171e9bb0d8d1c206095fd8b7f8"
+      "afterSha256": "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
     },
     {
       "path": "tests/08b-pantry-match.backend.test.ts",
@@ -1080,7 +1080,7 @@
     {
       "path": "tests/cook-standalone-complete.backend.test.ts",
       "beforeSha256": "fb32b68b3cd347be269e9fe713d774c850af0bb0e4ee186cc3731f97b846cc41",
-      "afterSha256": "181ce728cf8e39ed0a5a1b40639c593fe942017c991b727dc0ea8ff9bb46f984"
+      "afterSha256": "a02d8b3c57e34517640857906fa0b0292e885b76feb2dfaf8141b0c20a0b62d2"
     },
     {
       "path": "tests/cooked-batch-compatibility.test.ts",
@@ -1275,7 +1275,7 @@
     {
       "path": "tests/prelaunch-integrated-master-readiness.test.ts",
       "beforeSha256": null,
-      "afterSha256": "33713ea67a0b1ef9d23a412da7a8bed77777e67c17edef3aa6f9d689cb083eb9"
+      "afterSha256": "1b72a1ccbddf78715ae5d9f7fb30a137c936958db587f98191f424284c1a1266"
     },
     {
       "path": "tests/prelaunch-nutrition-recovery-readiness.test.ts",
@@ -1355,7 +1355,7 @@
     {
       "path": "tests/recipe-book-reader-detail-route.test.ts",
       "beforeSha256": "3168417e2e0ba72016d021023d7a0d27800536308b49ceab45e0f64322482f7e",
-      "afterSha256": "bf0a1fae9f4b0fd5f61a10557314240e3d4ab7fd875a2dfff3f40faba7458cfc"
+      "afterSha256": "f27ee7c3b7222cf78b3a489376dcb469669ba26b345f9d17cc14f372ccb64b68"
     },
     {
       "path": "tests/recipe-food-catalog-picker.test.tsx",
@@ -1440,7 +1440,7 @@
     {
       "path": "tests/sql/youtube-saved-recipe-results-verify.sql",
       "beforeSha256": "615530d6d42097b21fb38ef644c4ae746911ee60aad01bc0480d4437a3a9021c",
-      "afterSha256": "f4f07b927090e6e94dd22f0a487d8e9c8d175bfdec36e0480719db2fcdc48b23"
+      "afterSha256": "d183e366521b98acd440435972484d801f0ffb6487ea984b35bb3eacf3772db5"
     },
     {
       "path": "tests/user-achievement-awards.test.ts",
@@ -1530,12 +1530,12 @@
     {
       "path": "tests/youtube-saved-recipe-canonical-bridge-migration.test.ts",
       "beforeSha256": null,
-      "afterSha256": "081e4f4a747abd7bea01f270cadf09fac69cf4e769201b8f197d70487c058f58"
+      "afterSha256": "90c9c4ffd7675234c64f0492c220ce57220710337b52c1e948edf4e4d435b0e3"
     },
     {
       "path": "tests/youtube-saved-recipe-canonical-bridge-postgres.integration.test.ts",
       "beforeSha256": null,
-      "afterSha256": "e7b45df095f8b3b0f0f9483f14fd46a793588ed37ad3c538a798c198386f7c62"
+      "afterSha256": "18af910ca83d5dc93c7d8562b7034f376f0291ff2f7a2f235f7b6a483f907b8e"
     },
     {
       "path": "tests/youtube-saved-recipes-api-client.test.ts",

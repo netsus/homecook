@@ -10,26 +10,26 @@
 
 ## 사용자 흐름
 
-유튜브 추출 결과의 원본 보존형 편집 문서는 그대로 유지한다. 자동 저장이 완료되면 같은 소유자의 private canonical recipe ID를 1:1로 연결한다. 이 ID 때문에 저장 결과는 `내가 추가한 레시피`의 기존 목록·개수 계약에 포함되지만 공개 검색·다른 사용자의 레시피북에는 노출되지 않는다. 저장 태그는 기존 태그 동기화 계약을 재사용하되 private parent 때문에 공개 태그 검색·테마에는 참여하지 않는다. 카드에서 다시 열면 기존 유튜브 편집 화면으로 돌아가며, 저장 후에는 `내가 추가한 레시피에서 보기`로 기존 레시피북 reader에 진입한다. reader의 플래너·요리 동작과 편집 화면의 플래너 추가를 재사용한다.
+유튜브 추출 결과의 원본 보존형 편집 문서는 그대로 유지한다. 자동 저장이 완료되면 같은 소유자가 만든 public canonical recipe ID를 1:1로 연결한다. 이 ID 때문에 저장 결과는 `내가 추가한 레시피`의 기존 목록·개수 계약과 공개 검색에 함께 포함되고, 다른 사용자도 자신의 레시피북·플래너·요리 흐름에서 재사용할 수 있다. 저장 태그는 기존 검토 태그 동기화 계약을 재사용해 승인된 시스템 태그만 공개 태그 검색·테마에 참여한다. 카드에서 다시 열면 owner만 기존 유튜브 편집 화면으로 돌아가며, 저장 후에는 `내가 추가한 레시피에서 보기`로 기존 레시피북 reader에 진입한다.
 
 마이페이지의 별도 `유튜브에서 가져온 레시피` 진입 배너는 제거한다. 기존 `/recipes/youtube/saved` 목록과 상세 URL은 북마크·뒤로가기 호환을 위해 유지한다.
 
 ## 데이터·권한 계약
 
 - `youtube_saved_recipe_results.canonical_recipe_id`는 `recipes.id`와 1:1이며 최초 배정 후 바뀌지 않는다.
-- 연결 recipe는 `created_by=owner_user_id`, `visibility='private'`, `source_type='youtube'`다. 원본 저장 결과와 canonical recipe의 읽기·편집·플래너 권한은 owner에게만 있다.
+- 연결 recipe는 `created_by=owner_user_id`, `visibility='public'`, `source_type='youtube'`다. 공개 canonical recipe의 읽기·저장·플래너 사용은 다른 사용자에게도 열리지만 원본 저장 문서와 수정 권한은 owner에게만 있다.
 - 제목·썸네일·인분·태그·revision만 canonical recipe에 동기화한다. 원본 근거와 편집 JSON, ingredient link projection이 저장 내용의 권위다.
 - 미해결 재료는 공용 catalog ID를 꾸며내지 않는다. 플래너의 불변 content snapshot 안에서만 recipe ID와 row ID로 결정적 synthetic UUID를 만들고, 실제 catalog ID와 충돌하지 않음을 확인한 뒤 원문 이름·표시 문자열·미해결 상태를 함께 고정한다. 장보기의 catalog 집계는 실제 연결 ID가 없는 행을 catalog 재료로 승격하지 않는다.
-- owner 상세·독립 요리모드는 저장 문서에서 표시용 재료와 단계만 투영한다. owner ID, 저장 draft ID, 원본 evidence, source snapshot, ingredient link 상태와 mutation metadata는 응답에 넣지 않는다. 미확인 분량은 그대로 표시하되 영양 계산에는 포함하지 않는다. 투영 서비스가 없으면 빈 성공을 반환하지 않고 500으로 닫는다.
+- 공개 상세·독립 요리모드는 저장 문서에서 표시용 재료와 단계만 투영한다. owner ID, 저장 draft ID, 원본 evidence, source snapshot, ingredient link 상태와 mutation metadata는 응답에 넣지 않는다. 미확인 분량은 그대로 표시하되 영양 계산에는 포함하지 않는다. 투영 서비스가 없으면 빈 성공을 반환하지 않고 500으로 닫는다.
 - `recipe_sources.extraction_meta_json`에는 저장 draft ID나 원본 extraction metadata를 복사하지 않고, 민감 정보가 없는 boolean bridge 표식만 둔다. owner 편집 URL은 canonical recipe ID를 owner-scoped 저장 RPC가 다시 해석한다.
-- recipe snapshot은 `owner_user_id`를 유지해 다른 사용자 데이터와 섞이지 않는다.
-- 레시피북 상세는 owner 검증과 `my_added` membership 검증 뒤 기존 owner-scoped 저장 RPC를 통해 내용을 읽는다.
-- canonical recipe가 삭제되면 연결 저장 결과도 함께 삭제된다. private recipe는 기존 owner RLS를 우회하지 않는다.
-- 계정 삭제는 기존 private recipe 계약대로 bridge recipe, 그 소유자의 meal, owner snapshot과 저장 문서를 함께 제거한다. 공개 tombstone이나 다른 사용자 참조는 만들지 않는다.
+- public recipe snapshot은 `owner_user_id=null`로 고정해 다른 사용자가 자신의 플래너에서 같은 불변 내용을 안전하게 재사용한다.
+- 레시피북 상세는 공개 canonical recipe의 표시 projection을 사용한다. owner의 편집 재진입만 기존 owner-scoped 저장 RPC를 사용한다.
+- canonical recipe가 삭제되면 연결 저장 결과도 함께 삭제된다. 공개 읽기가 private 저장 문서나 owner mutation 권한을 노출하지 않는다.
+- 계정 삭제는 private 저장 문서를 제거하고 bridge recipe를 공개 검색에서 soft-retire한다. 다른 사용자가 이미 만든 meal과 owner-neutral snapshot은 과거 기록으로 보존한다.
 
 ## 기존 데이터 backfill
 
-새 migration은 기존 저장 결과마다 owner-created private recipe 한 행과 recipe source 한 행을 만든다. 기존 4건의 저장 JSON과 source snapshot에는 공개 전환 의사가 없음을 읽기 전용 집계로 확인했으므로 기존 소유 범위를 넓히지 않는다. 저장 결과의 `editable_content_json`, `editable_content_hash`, revision, source snapshot은 바꾸지 않는다. 기존 멱등 응답에는 새 recipe ID만 보완한다.
+새 migration은 기존 저장 결과마다 owner-created public recipe 한 행과 recipe source 한 행을 만든다. 기존 4건에는 별도 `visibility`·`privacy`·`is_public` 선택값이 0건임을 읽기 전용으로 확인했고, 사용자 요청에 따라 신규 저장과 같은 공개 검색 계약을 적용한다. 별도로 비공개가 명시된 수동 레시피는 대상이 아니다. 저장 결과의 `editable_content_json`, `editable_content_hash`, revision, source snapshot은 바꾸지 않는다. 기존 멱등 응답에는 새 recipe ID만 보완한다.
 
 운영 적용 전 확인할 범위와 위험은 다음과 같다.
 
@@ -49,11 +49,11 @@
 
 ## master·운영 웹 통합 후보와 DB 검증 경계
 
-- 통합 후보는 master `7e466b170ba39795220ef64e67eac3fab4429420`에서 시작해 현재 운영 웹 `f970bc1d1f1e981d8947e852a9b51ada4a74570a`를 두 번째 부모로 연결한 `d7fb78ae4c459eed8555046f6480dbe61dc24b79` 위에 이 기능을 적용했다. 47개 충돌은 최신 master 후속 구현을 유지했고, 운영 이력 대응과 파일별 결정은 [재통합 기록](./master-live-reintegration-20261012.md)에 고정했다. 미완성 leftovers, 보류 `444fe1f6f`, P5 추출기·평가 이력과 별도 source-bound worker 후보는 포함하지 않는다.
+- 통합 후보는 master `7e466b170ba39795220ef64e67eac3fab4429420`에서 시작해 현재 운영 웹 `f970bc1d1f1e981d8947e852a9b51ada4a74570a`를 두 번째 부모로 연결한 `d7fb78ae4c459eed8555046f6480dbe61dc24b79` 위에 이 기능을 적용했다. 47개 충돌은 최신 master 후속 구현을 유지했고, 운영 이력 대응과 파일별 결정은 [재통합 기록](./master-live-reintegration-20261012.md)에 고정했다. 승인된 source-bound 후보 `4c39d0b81`은 조상으로 포함하며, 후속 half-word-range fail-closed 보강으로 client v71·verifier v44·source binding v8이 최종 상태다. 미완성 leftovers, 보류 `444fe1f6f`, 별도 P5 모델·평가 데이터는 포함하지 않는다.
 - 운영 DB 원장 218개에 이미 반영된 `20261011140000_retire_unused_ingredients.sql`, `20261011200000_household_spoon_measurement.sql`은 운영 영수증과 같은 checksum의 migration source closure로만 포함한다. 이 두 파일은 다시 실행하지 않는다.
 - migration source는 이번 bridge까지 219개다. 격리된 combined verifier에서 219개 schema와 bridge PostgreSQL 검사 10개가 모두 통과했다. 이는 운영 DB를 변경했다는 뜻이 아니다.
 - bridge SQL은 함수·트리거·기존 저장 결과 UPDATE를 포함해 일반 추가형 DB 경로에서 거부된다. `scripts/youtube-integrated-controlled-db.mjs`만 정확한 DB218 원장, 운영 대상, 저장 건수, migration checksum을 확인한다. apply는 웹 deploy/rollback과 같은 운영 lock을 점유하고, 검증된 새 웹의 release/build/선배포 상태와 실제 정적 asset 응답이 모두 일치해야 시작한다. jobs·permits·saved results·migration ledger를 transaction 동안 잠가 queue/permit 재유입을 막고, 복원 가능 dump 뒤 같은 transaction에서 migration과 DB219 영수증을 함께 반영한다.
-- `deploy:dev --reviewed-integrated-master-readiness --db-config ...`는 DB218과 전체 release descriptor를 읽기 전용으로 확인하고 웹만 먼저 전환한다. DB apply 시작 전부터 내구성 있는 rollback guard와 operation journal을 연결하고, COMMIT dispatch 전 guard를 다시 봉인한다. 따라서 결과가 불확실한 경우에도 이전 f970 웹 자동 rollback은 fail-closed다. DB 적용 후 `record-integrated-master-database`가 private owner backfill과 DB219를 다시 확인해 비호환 DB 상태를 기록한 다음 guard를 제거한다.
+- `deploy:dev --reviewed-integrated-master-readiness --db-config ...`는 DB218과 전체 release descriptor를 읽기 전용으로 확인하고 웹만 먼저 전환한다. DB apply 시작 전부터 내구성 있는 rollback guard와 operation journal을 연결하고, COMMIT dispatch 전 guard를 다시 봉인한다. 따라서 결과가 불확실한 경우에도 이전 f970 웹 자동 rollback은 fail-closed다. DB 적용 후 `record-integrated-master-database`가 public owner-created backfill과 DB219를 다시 확인해 비호환 DB 상태를 기록한 다음 guard를 제거한다.
 
 ## 검증 계약
 
@@ -61,14 +61,14 @@
 - 기존 저장분 backfill과 멱등 응답 replay
 - 반복 클릭, 새로고침, 취소/뒤로가기에서 중복 canonical recipe 및 편집 덮어쓰기 없음
 - manual recipe 목록·reader·플래너 회귀 없음
-- owner-only 상세·편집·RPC·플래너 추가와 다른 사용자의 비노출을 각각 검증
+- 공개 검색·타 사용자 상세/레시피북/플래너/요리 재사용과 owner-only 편집을 각각 검증
 - 미확인 분량은 경고 1개만 보이고, 확인/직접 입력 후 중복 상태 배지가 남지 않으며 영양 계산 제외 계약 유지
 - 좁은 모바일 폭, 긴 단위, 키보드 입력에서 단위 입력이 행 밖으로 넘치지 않음
 
 ## 로컬 검증 결과
 
 - YouTube 가져오기·worker·재료 연결 회귀는 28개 파일 414개, source-bound 오프라인·권한 회귀는 5개 파일 198개, 레시피북·재진입·플래너·요리모드·배포 회귀는 12개 파일 295개가 통과했다.
-- 219개 migration 전체 재생과 PostgreSQL 검사 10개가 통과했다. owner private projection, 타 사용자 비노출, owner 플래너 snapshot, owner-scoped update, canonical ID 불변성, 기존 4행 backfill, source row 비밀정보 비복사, private 계정 삭제 정리를 확인했다. 격리 컨테이너는 검사 후 제거했고 운영 데이터는 변경하지 않았다.
+- 219개 migration 전체 재생과 PostgreSQL 검사에서 public projection, 공개 태그 검색, 타 사용자 레시피북·플래너 snapshot, owner-scoped update, canonical ID 불변성, 기존 4행 public backfill, source row 비밀정보 비복사, 계정 삭제 뒤 공개 retire와 타 사용자 과거 planner 보존을 확인한다. 격리 컨테이너는 검사 후 제거하며 운영 데이터는 변경하지 않는다.
 - `pnpm typecheck`와 `pnpm build`가 통과했다. build는 93개 정적 페이지를 만들었다. `pnpm lint`는 오류 0개, 기준 master에도 있는 경고 9개로 통과했다.
 - Playwright Chromium에서 `desktop-chrome`, Pixel 7 기반 `mobile-chrome`, iPhone SE 크기의 `mobile-ios-small` 3개 프로젝트가 최종 코드로 모두 통과했다. 독립 포트 3118에서 저장 결과 재진입, 편집·저장, 새로고침, `내가 추가한 레시피` 이동, 반복 클릭 중복 방지와 좁은 화면 overflow를 확인했다. 포트 3100은 다른 세션의 프로세스가 사용 중이어서 종료하지 않았다. 이는 사용자의 기존 대화형 Google Chrome이 아니라 저장소가 관리하는 Chromium 검사다.
 - 배포 도구 단위 회귀를 포함한 집중 검사 333개가 통과했다. 운영 f970부터 정확한 `origin/master`까지의 전체 파일·checksum·두 source commit ancestry를 release descriptor로 고정하며, 이 검토 lane 밖의 파일은 계속 거부한다.

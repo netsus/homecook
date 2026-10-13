@@ -330,7 +330,6 @@ describe("15b cook standalone complete backend", () => {
 
     expect(response.status).toBe(200);
     expect(rpc).toHaveBeenCalledWith("read_public_youtube_saved_recipe_detail", {
-      p_actor_id: "user-1",
       p_recipe_id: recipeId,
     });
     expect(await response.json()).toMatchObject({
