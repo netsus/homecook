@@ -178,3 +178,23 @@
 - 실제 기존 비공개 레시피 소유자: 본문과 정상 탭 제목 일치·reload 유지. 인증 없는 HTTP200은 레시피 상세 중립제목/noindex,nofollow/OG·Twitter 중립제목이며 소유자 브라우저 OG·Twitter도 중립이다. 실제 비소유자 계정 OAuth는 미실행.
 - 실제 데스크톱1440 성공 확인 클릭과 모바일375 성공 확인 Escape 모두 실제 플래너 추가 버튼으로 복귀; body lock 해제/inert0. 10월25일 저녁 double-click와10월24일 저녁 저장은 각각1개·3인분·등록 상태로 확인했고 reload 후 유지했다. 허용된 테스트 기록2개는 삭제하지 않았다. 저장 대기 UI의 버튼 비활성도 확인했다.
 - 실제 신규 OAuth·다른 사용자 계정·Safari·스크린리더·늦은 서버 metadata 강제경합은 미실행. fixture 통과를 이 범위의 운영 합격으로 확대하지 않는다. 새 추출/외부AI/P5 실행0. 요리·알림 및 이번 단계 요약은 기존 원준 Discord 목적지에 전송했으며 각각 HTTP204를 확인했다.
+
+
+## F01 승인과 준비 검사 중단 — 2026-10-14
+
+- 사용자 `검증한 범위로 적용` 승인: PR #1672/#1677, 정확 웹 `76ff4efe438f → 87cd04e11607`, 수집 env 두 flag false, 닫힘을 유지하는 실패 보상. 수집 재개·DB migration·worker·키 변경은 미승인/미실행이다. 앞선 R2 control 중지·네이버 이름 저장은 반복하지 않았다.
+- 앱 #1672는 `9a004e7559e6d85c224068d638f8ed5207290217`, 배포 도구 #1677은 `171dd3600c6e2105ea7187f7b7c9e09adf10748a`로 병합했다. 도구 commit `8d62f868db43493ae3c30cea5eaf8ab3605a7d0c`를 기존 installer로 설치했다. 앱 후보의 제품/SQL/package는 병합 앱과 byte 차이0이다.
+- PIN delta 독립178검사·typecheck·targeted lint·정확12파일 plan 통과. 최초 명령은 `pnpm deploy:dev -- --reviewed-r2-closed-maintenance --reviewed-ref 87cd04e11607b85cda720e7fe60ac06b42356e7a --env-file <승인된 private false-only dotenv> --test-script test:feedback-batch:web --already-applied-db --db-config <private full-local config>`.
+- 첫 배포 준비 로그 `1791908147221`: 회귀1,330통과·131선택제외, production build exit0. 빌드 내 ESLint의 react-hooks plugin 로딩은 실패했으며 별도 수행한 관련 lint 통과와 구분한다. 운영 교체 전 별도 포트의 R2 응답 검사 실패로 전체 deploy exit1. status는 기존 `76ff4efe438f`, loaded=true/recoveryPending=false, DB219로 확인했다. 실패 단계 요약 Discord HTTP204.
+- 원인은 Node fetch가 명시 Host를 loopback authority로 바꾸는 검사 전송 결함이다. 소유 loopback HTTP 서버와 동일 실패 build의 별도 프로세스에서 재현했다. 기존 fetch는403/ORIGIN_NOT_ALLOWED, node:http의 정확 Host·Origin 요청은503/ROUND2_DISABLED. 각 요청은 빈 JSON이며 collection/control/IP/provider/DB 이전의 disabled 경로다. 자기 프로세스를 종료했고 운영 전환0.
+- 기존 endpoint의 origin 보호를 바꾸지 않고 배포 검사만 node:http로 수정 중이다. exact 503+ROUND2_DISABLED·loopback 대상·timeout·응답크기 제한·redirect 거부를 유지한다. 실제 전송 회귀 red1→green 및 관련4묶음184검사·typecheck·targeted lint 통과. 독립 리뷰와 후속 PR/같은 승인 후보 재배포는 아직 진행 중이다.
+
+## F01 웹 운영 확인 — 2026-10-14
+
+- Host 전송 검사만 고친 PR #1678은 `7dd1bf36dac6da83a542cb1a876bea0b1effdce1`로 병합했다. 독립184검사와 oversized response/timeout/invalid port 검사를 통과했다. 도구 `ad8e7451d5b6028a8e745e5000d2bcc1fd79ebdf`를 기존 installer로 설치하고 같은 승인 후보를 재시도했다. 제품·origin 검증·승인 PIN·DB 경계 변경0.
+- 재시도 로그1791908861413, 회귀1,330통과·131선택제외·실패0. production build·별도 포트·교체 후 closed smoke 통과. 웹 `87cd04e11607b85cda720e7fe60ac06b42356e7a`, build `prelaunch-87cd04e11607-Hl2nrc`, loaded=true/closedR2Maintenance=true/recoveryPending=false. 두 수집 env false/false, 기존 control false/false·generation1 및 원중지 receipt/proof9 bytes 동일. DB219 읽기 검증만 수행, worker·키·스키마·보유기간 변경0.
+- 실제 Chrome1440·375·320에서 R2 홈 링크0·가로넘침0 및 기존 레시피/테마/메뉴를 확인했다. 두부 검색9개·새로고침·상세2→3인분(450g/600ml/669kcal)·추가창3인분·취소·뒤로 검색 복귀를 확인했다. 새 식사/팬트리 기록은 만들지 않았으며 상세의 기존 조회수 집계는 발생할 수 있다.
+- 실제 개인정보 페이지를 reload하여 직접 연결 안내·Turnstile 한정 항목/목적·일반 사이트와 소셜 로그인 이용 가능 안내를 확인했다. 인증 없는 공개 HTTP도 홈/login/privacy200·같은 정정 본문, recording404, homeflow200·저장 없는 안내, collector503/ROUND2_DISABLED를 확인했다.
+- 실제 homeflow는 테스트용4응답→정적 레시피/계획/장보기/요리/식사 예시→신청 화면까지 확인했다. 모든 단계에 저장 없는 안내가 보이고 마지막 동의·신청은disabled, Turnstile iframe/script0이었다. 이메일 입력·제출·외부 영상 클릭·실제 추출0. reload는 첫 화면으로 돌아왔다. 이 예시는 실제 레시피 추출/식사 기록 저장의 검증이 아니다.
+- 화면 증거: `/tmp/mumeok-f01-production-ui`의 home320/375/1440과 homeflow-disabled375. 비공개 승인 operation에도0600 사본/해시·HTTP/UI 검증을 보존했다. 원준 Discord 단계 요약 HTTP204. 실제 OAuth·Safari·스크린리더·운영 장애 강제복구는 미실행이다. build 내부 ESLint plugin 해결 실패는 별도 candidate build/관련 lint 통과와 구분한다.
+- 추가 발견: 설치형 `homecook-deploy status`는 snapshot에 `lib/server/youtube-extraction-worker-timing.json`이 빠져 ERR_MODULE_NOT_FOUND. 저장소의 기존 `pnpm deploy:dev:status`는 위 운영 상태를 정상 확인했다. 웹 배포 실패가 아니며 설치 포장만 별도 최소 수정·실제 archive module load 검사로 보완 중이다. 일반 DB219 수동 rollback 제한을 우회하지 않는다.
