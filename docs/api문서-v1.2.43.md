@@ -5810,3 +5810,8 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 ### 2026-10-09 식사기록 양 초과 오류 구분 (운영 반영: PR #1600)
 
 식사기록 mutation RPC에서 SQLSTATE22003와 CONFLICT가 함께 반환되면 HTTP409/codeCONFLICT를 유지하고 `fields: [{field: "quantity.amount", reason: "exceeds_available_amount"}]`를 제공한다. 이 경우 UI는 양을 줄이라는 안내를 표시하며 ‘다른 변경의 최신 기록 반영’으로 바꾸지 않는다. 실제 revision 충돌과 계정 권한·세대 검사는 유지한다. SQL/DB 변경 없음.
+
+
+## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
+
+공개 endpoint와 `{success,data,error}`는 유지한다. 완료/무게 `set_finished_weight`에만 선택 `weight_input_source=reported_measured`를 허용하고 client 예측/source ID/owner 주입은 거절한다. 정확 `X-Homecook-Cooked-Weight-Contract: evidence-v1`일 때만 additive weight summary/9키 식사 weight_basis·선택 weight_assumption_codes를 반환한다. 헤더 없음·미지원 판본은 기존 DTO, 새 client는 구 DTO를 읽는다. 헤더는 display opt-in이며 동의/권한/receipt 입력이 아니다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.

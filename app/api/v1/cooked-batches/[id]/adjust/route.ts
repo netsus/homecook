@@ -1,3 +1,4 @@
+import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { callCookedBatchRpc, isUuid, parseBatchAdjustmentRequest, projectCookedBatchMutationData } from "@/lib/server/cooked-batches";
 import { authorizeCookedBatchRequest, readJson } from "@/lib/server/cooked-batch-route";
@@ -14,6 +15,6 @@ export async function POST(request: Request, context: RouteContext) {
     p_delta_g: parsed.value.deltaG, p_reason: parsed.value.reason,
     p_expected_revision: parsed.value.expectedRevision,
   });
-  if (!result.ok) return result.response; const data = projectCookedBatchMutationData(result.data);
+  if (!result.ok) return result.response; const data = projectCookedBatchMutationData(result.data, wantsCookedWeightEvidence(request));
   return data ? ok(data) : fail("INTERNAL_ERROR", "보정 결과를 확인하지 못했어요.", 500);
 }

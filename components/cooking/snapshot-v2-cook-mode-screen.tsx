@@ -163,6 +163,8 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
       {completionOpen ? (
         <CookedBatchCompletionSheet
           candidates={data.pantry_candidates}
+          weightEvidenceEnabled={data.weight_evidence_enabled === true}
+          weightPrediction={data.weight_prediction}
           onClose={() => {
             if (!completionSubmitting) setCompletionOpen(false);
           }}

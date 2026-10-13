@@ -3580,3 +3580,8 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 공식 표본의 품종·색·크기·재배/등급 차이는 검토한 일반 대표기준으로 사용할 수 있다. 연결별 decision_reason에 `user_approved_representative:`와 적용 범위를 기록하고 공개 definition에도 기본 참고조건을 명시한다. `manual_source` 승인 경로를 재사용하며 실제 제품 등급/원산지·배합을 확정한 것으로 표시하지 않는다. 공유 source_item의 기존 provenance를 고쳐 쓰지 않고 관계별 사유와 운영 감사에 승인 근거를 남긴다.
 
 동일 식품·가식부·생건조·지방 정선·농축 조건은 보존하며 단위/부피/개당 무게를 자동 상속하지 않는다. 제품표가 필요한 항목과 원자료 미확보를 별도 기록하며, 결측/미량을0으로 채우지 않는다. 이번 후속은 데이터만 변경하고 스키마/ledger/기존 ID와 기록은 유지한다. 상세 화면·별도음식제품검색·중복동의어통합은 이번 영양 우선 작업 범위 밖이다. [기준·43개 보완·남은18개](engineering/ingredient-nutrition-representatives-20261008.md)를 따른다.
+
+
+## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
+
+20261013233000_cooked_batch_weight_evidence는 로컬 draft이며 private 제어표 enabled=false·개인 append-only 예측/관찰 표를 준비한다. 기존 완료/weight fresh branch와 meal nutrition_evidence_json의9키 weight_basis·선택 가정은 기존 owner/revision/no-events/receipt 보호 안에서 원자 저장한다. 신규2개 service-role wrapper와 exact scope predecessor chain·검토 postimage 등록이 필요하다. 과거batch/meal/snapshot UPDATE0·quantity event에 evidence 추가0·학습 수집0이다. DB OFF가 새 쓰기 중지 기준이며 이력 reader는 보존한다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.

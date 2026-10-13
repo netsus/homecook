@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-14 — 베타 v9 C01 무게 근거·선택 실측 (운영 기본 OFF, 로컬 준비)
+
+고정 레시피 입력의 조건별 예측·unknown 사유·가정과 명시 전체무게 관찰을 분리하고, 새 식사의 당시 분모·출처·모델/관찰 참조를 기존 원장 transaction에 고정하는 로컬 구현을 준비했다. structured MIX와 근거 있는 모든 g의 좁은 가정 합을 지원하지만 국·볶음·쌀·이미익힘은 근거 부족 시 null이며 정확도 개선 완료가 아니다. 추가 필수0·선택 숫자1칸·예측 prefill0·과거UPDATE0·새0.75 fallback0·전체학습/외부AI0을 유지한다. 구 client DTO는 정확 응답 capability opt-in으로 보호한다. 공식5문서의 dated addendum와 [구현·검사·남은 경계](../engineering/cooked-weight-evidence-integration-20261014.md)를 따르며 C03 최종 통합·보안 postimage·타입/빌드·독립 리뷰·운영 승인은 대기다.
+
 ## 2026-10-13 — 베타 v9 조리 원문 안내·데스크톱 폭·알림 순서 (운영 반영 전)
 
 조리법 원문 수량을 유지하면서 선택 인분으로 환산되는 재료표와 구분하는 지정 안내를 제공한다. 원본 인분을 추정하지 않고, 요리 전용 CSS Module로 데스크톱 화면 폭만 활용한다. 유튜브 결과 알림은 성장·활동 영역 앞에 배치하되 내부 처리와 저장 계약은 유지한다. [구현·검증](../engineering/mumeok-beta-cooking-notifications-20261013.md)을 따른다. DB/worker/모델 호출 변경 없음.
