@@ -21,7 +21,8 @@ import type {
 import type { RecipeEditContext } from "@/types/recipe";
 
 type AuthGateOpenPayload =
-  | { recipeId: string; type: Exclude<PendingRecipeActionType, "recipe-edit-save" | "recipe-save-as-new" | "recipe-fork"> }
+  | { recipeId: string; type: Exclude<PendingRecipeActionType, "recipe-edit-save" | "recipe-save-as-new" | "recipe-fork" | "planner"> }
+  | { recipeId: string; type: "planner"; plannedServings?: number }
   | { editContext?: RecipeEditContext; sourceOwnerUuid?: string | null; recipeId: string; type: "recipe-fork" }
   | { editContext: RecipeEditContext; sourceOwnerUuid: string | null; recipeId: string; type: "recipe-edit-save" | "recipe-save-as-new" };
 
@@ -55,7 +56,9 @@ export const useAuthGateStore = create<AuthGateState>((set) => ({
       ? { ...common, type: payload.type, editContext: payload.editContext }
       : payload.type === "recipe-fork"
         ? { ...common, type: payload.type, editContext: payload.editContext }
-        : { ...common, type: payload.type };
+        : payload.type === "planner"
+          ? { ...common, type: payload.type, plannedServings: payload.plannedServings }
+          : { ...common, type: payload.type };
     set({ isOpen: true, action });
   },
   close: () =>

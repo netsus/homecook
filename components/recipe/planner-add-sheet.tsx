@@ -411,7 +411,7 @@ export function PlannerAddSheet({
           </AppBottomSheet>
         ) : null}
         {isDesktopViewport ? (
-          <WebModal onBackdropClick={onClose}>
+          <WebModal closeDisabled={isSubmitting} onBackdropClick={onClose}>
             <WebDialog aria-labelledby="planner-add-sheet-title-desktop" size="wide">
               <WebDialogHeader>
                 <div>

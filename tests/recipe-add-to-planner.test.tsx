@@ -71,6 +71,7 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => `/recipe/${MOCK_RECIPE_ID}`,
   useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));
@@ -297,6 +298,89 @@ describe("planner add flow", () => {
     expect(
       await screen.findByRole("dialog", { name: expectedConfirmation }),
     ).toBeTruthy();
+  });
+
+  it.each([
+    { viewport: "mobile", desktop: false },
+    { viewport: "desktop", desktop: true },
+  ])("keeps detail servings through planner cancellation and submission on $viewport", async ({ desktop }) => {
+    installMatchMedia(desktop);
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    createMeal.mockResolvedValue({ ...buildMealCreateData(), planned_servings: 3 });
+
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "인분 늘리기" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "플래너에 추가" })[0]!);
+
+    let dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    expect(within(dialog).getByText(/선택 3인분/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "인분 늘리기" }));
+    expect(within(dialog).getByText(/선택 4인분/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
+
+    await userEvent.click(screen.getAllByRole("button", { name: "플래너에 추가" })[0]!);
+    dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    expect(within(dialog).getByText(/선택 3인분/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", {
+      name: desktop ? /저녁에 추가$/ : "플래너에 추가",
+    }));
+
+    await waitFor(() => expect(createMeal).toHaveBeenCalledTimes(1));
+    expect(createMeal).toHaveBeenCalledWith(expect.objectContaining({
+      recipe_id: MOCK_RECIPE_DETAIL.id,
+      planned_servings: 3,
+    }));
+  });
+
+  it("keeps the minimum serving at one in detail and planner submission", async () => {
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    createMeal.mockResolvedValue({ ...buildMealCreateData(), planned_servings: 1 });
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "인분 줄이기" }));
+    const detailDecrement = screen.getByRole("button", { name: "인분 줄이기" });
+    expect(detailDecrement.hasAttribute("disabled")).toBe(true);
+    await userEvent.click(detailDecrement);
+    await userEvent.click(screen.getByRole("button", { name: "플래너에 추가" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    const plannerDecrement = within(dialog).getByRole("button", { name: "인분 줄이기" });
+    expect(plannerDecrement.hasAttribute("disabled")).toBe(true);
+    await userEvent.click(plannerDecrement);
+    await userEvent.click(within(dialog).getByRole("button", { name: "플래너에 추가" }));
+
+    await waitFor(() => expect(createMeal).toHaveBeenCalledTimes(1));
+    expect(createMeal).toHaveBeenCalledWith(expect.objectContaining({ planned_servings: 1 }));
+  });
+
+  it("restores selected servings after the guest login action remounts detail", async () => {
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    createMeal.mockResolvedValue({ ...buildMealCreateData(), planned_servings: 3 });
+    const guest = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "인분 늘리기" }));
+    await userEvent.click(screen.getByRole("button", { name: "플래너에 추가" }));
+    const pendingAction = useAuthGateStore.getState().action;
+    expect(pendingAction).toEqual(expect.objectContaining({ type: "planner", plannedServings: 3 }));
+    if (!pendingAction) throw new Error("Missing guest planner intent");
+    expect(savePendingAction(pendingAction)).toBe(true);
+    guest.unmount();
+    useAuthGateStore.getState().close();
+
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} />);
+    let dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    expect(within(dialog).getByText(/선택 3인분/)).toBeTruthy();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    await userEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
+    expect(screen.getByText("3인분")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "플래너에 추가" }));
+    dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    expect(within(dialog).getByText(/선택 3인분/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "플래너에 추가" }));
+
+    await waitFor(() => expect(createMeal).toHaveBeenCalledTimes(1));
+    expect(createMeal).toHaveBeenCalledWith(expect.objectContaining({ planned_servings: 3 }));
   });
 
   it("uses a lighter sheet heading and keeps the selected date as chip state only", async () => {
@@ -631,6 +715,8 @@ describe("planner add flow", () => {
 
     // The login return feedback should be shown
     expect(screen.getByText(/로그인 완료.*플래너/)).toBeTruthy();
+    const dialog = screen.getByRole("dialog", { name: "플래너에 추가" });
+    expect(within(dialog).getByText(/선택 2인분/)).toBeTruthy();
     expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 

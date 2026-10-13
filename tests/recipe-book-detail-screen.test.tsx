@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -692,6 +692,29 @@ describe("RecipeBookDetailScreen", () => {
     expect(screen.getByRole("heading", { name: "주말 모임" })).toBeTruthy();
   });
 
+  it.each(["이름 변경", "삭제"])("restores the book menu trigger after cancelling %s with Escape", async (action) => {
+    const user = userEvent.setup();
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-custom"
+        bookName="주말 파티"
+        bookType="custom"
+        initialAuthenticated
+      />,
+    );
+    await screen.findByTestId("recipe-item-recipe-1");
+    const menuTrigger = screen.getByRole("button", { name: "주말 파티 옵션 메뉴" });
+    await user.click(menuTrigger);
+    await user.click(screen.getByRole("menuitem", { name: action }));
+    if (action === "이름 변경") {
+      expect(document.activeElement).toBe(screen.getByLabelText("새 이름"));
+    }
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(menuTrigger));
+  });
+
   it("deletes a custom book from the book-level menu and returns to mypage", async () => {
     render(
       <RecipeBookDetailScreen
@@ -717,6 +740,32 @@ describe("RecipeBookDetailScreen", () => {
       expect(mockDeleteRecipeBook).toHaveBeenCalledWith("book-custom");
       expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
     });
+  });
+
+  it("keeps book detail deletion confirmation open while deletion is in progress", async () => {
+    mockDeleteRecipeBook.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-custom"
+        bookName="주말 파티"
+        bookType="custom"
+        initialAuthenticated
+      />,
+    );
+    await screen.findByTestId("recipe-item-recipe-1");
+    await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
+    await user.click(screen.getByRole("menuitem", { name: "삭제" }));
+    const dialog = screen.getByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "삭제" }));
+    await screen.findByRole("button", { name: "삭제 중..." });
+    await user.keyboard("{Escape}");
+    const backdrop = dialog.closest(".web-modal-backdrop");
+    if (!backdrop) throw new Error("Book detail confirmation backdrop was not rendered");
+    fireEvent.click(backdrop);
+
+    expect(screen.getByRole("alertdialog")).toBe(dialog);
+    expect(mockDeleteRecipeBook).toHaveBeenCalledOnce();
   });
 
   it("links recipe cook actions to standalone cook mode and returns through recipe detail", async () => {
