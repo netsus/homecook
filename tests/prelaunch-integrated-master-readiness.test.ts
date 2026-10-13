@@ -262,6 +262,11 @@ describe("prelaunch integrated master readiness", () => {
     expect(controlledDbSource).toContain("LOCK TABLE public.youtube_extraction_jobs IN SHARE ROW EXCLUSIVE MODE");
     expect(controlledDbSource).toContain("LOCK TABLE public.youtube_extractor_permits IN SHARE ROW EXCLUSIVE MODE");
     expect(controlledDbSource).toContain("await verifyLiveWebFirst(options.releaseSha, descriptor)");
+    expect(controlledDbSource).toContain("openIntegratedAdminSession(");
+    expect(controlledDbSource).toContain("assertIntegratedMasterDatabaseGuard,");
+    expect(controlledDbSource).toContain('"-U",\n    "supabase_admin"');
+    expect(controlledDbSource).toContain('failure.status === "unknown_before_commit_dispatch"');
+    expect(controlledDbSource).toContain('status: "verified_not_applied"');
     expect(controlledDbSource).toContain("status: \"commit_dispatch_guard\"");
     expect(deploySource).toContain("integratedMasterWebFirst");
     expect(deploySource).toContain("loadIntegratedDatabaseGuard(state.ref");
