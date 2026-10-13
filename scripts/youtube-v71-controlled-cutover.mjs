@@ -873,7 +873,7 @@ function localHealth() {
   ], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   check(result.status === 0, "local worker health failed");
   const health = JSON.parse(result.stdout);
-  check(health.healthy === true, "local worker health is not healthy");
+  check(health.ok === true && health.ready === true, "local worker health is not ready");
   return health;
 }
 
