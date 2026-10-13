@@ -31,7 +31,8 @@ export function projectMealRecipeSnapshot(row: MealRecipeSnapshotRow, ownerId: s
     meal_id: row.id, recipe_id: row.recipe_id, snapshot_id: snapshot.id,
     title: snapshot.title, planned_servings: row.planned_servings,
     ingredients: [...snapshot.ingredients_json].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((ingredient) => toCookingModeIngredient({
-      row: { ...ingredient, scalable: ingredient.scalable ?? true, ingredients: { standard_name: ingredient.standard_name || names.get(ingredient.ingredient_id) || "재료" } },
+      row: { ...ingredient, scalable: ingredient.scalable ?? true, ingredients: { standard_name: ingredient.standard_name
+        || (ingredient.ingredient_id ? names.get(ingredient.ingredient_id) : null) || "재료" } },
       baseServings: snapshot.base_servings, cookingServings: row.planned_servings,
     })),
     steps: [...snapshot.steps_json].sort((a, b) => a.step_number - b.step_number).map(toCookingModeStep),

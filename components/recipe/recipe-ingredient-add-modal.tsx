@@ -24,7 +24,8 @@ import {
   WebSkeleton,
   WebIconButton,
 } from "@/components/web";
-import { RecipeFoodCatalogPicker } from "@/components/recipe/recipe-food-catalog-picker";
+import { RecipeFoodCatalogPicker, type RecipeProductSelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
+import type { RecipeIngredientIdentity } from "@/lib/recipe-ingredient-source";
 import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   ALL_INGREDIENT_CATEGORY,
@@ -41,9 +42,15 @@ type IngredientListState = "loading" | "ready" | "empty" | "error";
 interface RecipeIngredientAddModalProps {
   enableProducts?: boolean;
   excludedIngredientIds?: string[];
+  excludedIngredients?: readonly (RecipeIngredientIdentity & { component_label?: string | null })[];
+  componentLabel?: string | null;
+  replacementIngredient?: RecipeIngredientIdentity;
+  replacementProduct?: RecipeProductSelectionContexts[string];
+  initialSource?: "catalog" | "pantry";
+  onRequireLogin?: () => void | string;
   single?: boolean;
   onClose: () => void;
-  onAdd: (ingredients: ManualRecipeIngredientInput[]) => void;
+  onAdd: (ingredients: ManualRecipeIngredientInput[], products?: RecipeProductSelectionContexts) => void;
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
   presentation?: "auto" | "web" | "app";
@@ -106,7 +113,8 @@ function buildIngredientInput(
 }
 
 export function RecipeIngredientAddModal(props: RecipeIngredientAddModalProps) {
-  return props.enableProducts ? <RecipeFoodCatalogPicker onAdd={props.onAdd} onClose={props.onClose} single={props.single} excludedIngredientIds={props.excludedIngredientIds} /> : <IngredientOnlyAddModal {...props} />;
+  return props.enableProducts ? <RecipeFoodCatalogPicker onAdd={props.onAdd} onClose={props.onClose} single={props.single} excludedIngredientIds={props.excludedIngredientIds} excludedIngredients={props.excludedIngredients} componentLabel={props.componentLabel}
+    replacementIngredient={props.replacementIngredient} replacementProduct={props.replacementProduct} initialSource={props.initialSource} onRequireLogin={props.onRequireLogin} /> : <IngredientOnlyAddModal {...props} />;
 }
 
 function IngredientOnlyAddModal({

@@ -163,6 +163,19 @@ describe("pending action", () => {
 
     expect(readPendingAction()).toEqual(action);
   });
+  it("preserves a generation-bound editor-only pantry return without a save intent", () => {
+    const action = { type: "recipe-fork" as const, recipeId: "recipe-1", redirectTo: "/recipe/recipe-1", createdAt: 123,
+      sourceOwnerUuid: "550e8400-e29b-41d4-a716-446655440071", sourceAccountGeneration: 3,
+      resumeEditor: { mode: "edit" as const, rowKey: null },
+      editContext: { base_recipe_revision: 12, draft: { title: "보관할 초안", description: null, base_servings: 2, ingredients: [], steps: [] }, image_object_id: null } };
+    savePendingAction(action);
+    expect(readPendingAction()).toEqual(action);
+    for (const change of [
+      { sourceOwnerUuid: null }, { sourceAccountGeneration: undefined }, { sourceAccountGeneration: 0 }, { sourceAccountGeneration: 1.5 },
+      { resumeEditor: { mode: "save", rowKey: null } }, { resumeEditor: { mode: "edit", rowKey: "550e8400-e29b-41d4-a716-446655440081" } },
+      { resumeEditor: { mode: "edit", rowKey: null, autoSave: true } },
+    ]) expect(parsePendingAction(JSON.stringify({ ...action, ...change }), 123)).toBeNull();
+  });
 
   it("preserves an exact owner edit draft for the existing recipe return-to-action flow", () => {
     const editContext = {
@@ -187,6 +200,26 @@ describe("pending action", () => {
     savePendingAction(action);
 
     expect(readPendingAction()).toEqual(action);
+  });
+
+  it("preserves a nullable product row, fixed version and original unit through login return", () => {
+    const product = {
+      ingredient_id: null, row_key: "79000000-0000-4000-8000-000000000003", source_kind: "food_product" as const,
+      food_product_id: "79000000-0000-4000-8000-000000000001", food_product_nutrition_version_id: "79000000-0000-4000-8000-000000000002",
+      amount: 0.5, unit: "package", ingredient_type: "QUANT" as const, display_text: "0.5팩", component_label: null, scalable: true,
+    };
+    const action = { type: "recipe-edit-save" as const, recipeId: "recipe-1", redirectTo: "/recipe/recipe-1", createdAt: 123,
+      editContext: { base_recipe_revision: 1, image_object_id: null, draft: { title: "제품 원문", description: null, base_servings: 2, ingredients: [product], steps: [] } } };
+    savePendingAction(action);
+    expect(readPendingAction()).toEqual(action);
+    for (const invalid of [
+      { ...product, source_kind: "ingredient" }, { ...product, food_product_nutrition_version_id: null },
+      { ...product, row_key: "not-uuid" }, { ...product, owner_uuid: "client-authority" },
+      { ...product, transient_basis: { amount: 200, unit: "g" } },
+    ]) {
+      expect(parsePendingAction(JSON.stringify({ ...action, editContext: { ...action.editContext,
+        draft: { ...action.editContext.draft, ingredients: [invalid] } } }))).toBeNull();
+    }
   });
 
   it("preserves an exact owner draft for the derived save-as-new return flow", () => {
