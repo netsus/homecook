@@ -255,6 +255,7 @@ describe("prelaunch integrated master readiness", () => {
   it("wires the shared deploy lock, queue locks, serving-web proof, and rollback guard into the operational lane", () => {
     expect(controlledDbSource).toContain("mkdirSync(deploymentLockPath");
     expect(controlledDbSource).toContain("mkdirSync(backupDirectory, { mode: 0o700 })");
+    expect(controlledDbSource).toContain("JSON.parse((await query(sql)).trim())");
     expect(controlledDbSource).toContain("LOCK TABLE public.youtube_extraction_jobs IN SHARE ROW EXCLUSIVE MODE");
     expect(controlledDbSource).toContain("LOCK TABLE public.youtube_extractor_permits IN SHARE ROW EXCLUSIVE MODE");
     expect(controlledDbSource).toContain("await verifyLiveWebFirst(options.releaseSha, descriptor)");
