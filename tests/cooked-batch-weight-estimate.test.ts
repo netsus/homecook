@@ -48,6 +48,19 @@ describe("finished cooking weight estimate", () => {
     expect(db.query.eq).toHaveBeenCalledWith("user_id", "owner");
     expect(weightClient.from).not.toHaveBeenCalled();
   });
+  it("uses a nullable product's pinned relation for weight without querying generic ingredients or the current version", async () => {
+    const product = ingredient({ ingredient_id: null, food_product_id: "product", food_product_nutrition_version_id: "old-version", amount: 0.5, unit: "package" });
+    const db = { ...client({ ...session, recipe_content_snapshots: { ...snapshot, ingredients_json: [product] } }), rpc: vi.fn(async (): Promise<{ data: unknown[]; error: null }> => ({ data: [{
+      id: "product:0", product_predecessor: { nutrition: { source_kind: "food_product", profile: { basis_amount: 100, basis_unit: "g" } },
+        basis_relations: [{ from: { amount: 1, unit: "package" }, to: { amount: 200, unit: "g" } }] },
+    }], error: null })) };
+    const weightClient = { from: vi.fn(() => { throw new Error("generic lookup is not product evidence"); }) };
+    expect(await readCookedWeightEstimate({ client: db, weightClient, ownerId: "owner", sessionId: "session" })).toBe(150);
+    expect(db.rpc).toHaveBeenCalledWith("read_recipe_product_nutrition_predecessors", expect.objectContaining({ p_ingredients: [expect.objectContaining({ ingredient_id: null, food_product_nutrition_version_id: "old-version" })] }));
+    expect(weightClient.from).not.toHaveBeenCalled();
+    db.rpc.mockResolvedValueOnce({ data: [{ id: "product:0", product_predecessor: null }], error: null });
+    expect(await readCookedWeightEstimate({ client: db, weightClient, ownerId: "owner", sessionId: "session" })).toBeNull();
+  });
   it.each([{ user_id: "other" }, { recipe_content_snapshot_id: "different" }, { recipe_content_snapshots: { ...snapshot, owner_user_id: "other" } }])("refuses a mismatched owner or snapshot before conversion lookup", async (change) => {
     const weightClient = { from: vi.fn() };
     expect(await readCookedWeightEstimate({ client: client({ ...session, ...change }), weightClient, ownerId: "owner", sessionId: "session" })).toBeNull();

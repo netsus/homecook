@@ -60,7 +60,13 @@ export interface CookingMethodSummary {
 }
 
 export interface CookingModeIngredient {
-  ingredient_id: string;
+  row_key?: string;
+  source_kind?: "ingredient" | "food_product";
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+  food_product_name?: string | null;
+  food_product_brand?: string | null;
+  ingredient_id: string | null;
   standard_name: string;
   amount: number | null;
   unit: string | null;
@@ -119,8 +125,10 @@ export interface SnapshotV2CookModeData {
 }
 
 export interface SnapshotV2PantryCandidate {
+  row_key?: string;
+  source_kind?: "ingredient" | "food_product";
   pantry_item_id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   item_type: "ingredient" | "food_product";
   standard_name: string;
   food_product_id: string | null;

@@ -3582,6 +3582,12 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 동일 식품·가식부·생건조·지방 정선·농축 조건은 보존하며 단위/부피/개당 무게를 자동 상속하지 않는다. 제품표가 필요한 항목과 원자료 미확보를 별도 기록하며, 결측/미량을0으로 채우지 않는다. 이번 후속은 데이터만 변경하고 스키마/ledger/기존 ID와 기록은 유지한다. 상세 화면·별도음식제품검색·중복동의어통합은 이번 영양 우선 작업 범위 밖이다. [기준·43개 보완·남은18개](engineering/ingredient-nutrition-representatives-20261008.md)를 따른다.
 
 
+## 2026-10-14 추가 계약 — C03 공공제품 독립 재료(운영 미적용)
+
+미적용 20261013190000_recipe_product_only_identity.sql은 recipe_ingredients의 출처 CHECK·nullable 일반 재료 ID·기본 OFF private 제어와 세 개의 좁은 public reader를 준비한다. amount numeric typemod 제거로 소수 사용량을 보존하되 유한 양수/기존 최대값을 유지한다. 공개 공공제품(public_dataset/public)의 같은 레시피/물리 행/정확 제품쌍인 기존 non-null 연결만 대표 연결 해제 뒤 무관 편집에서도 보존한다. 새 행/다른 조합 및 수동/private 제품의 기존 대표 검사는 유지한다. ON 전 모든 새 marker/명시 row 참조 저장을 막고, OFF의 안전한 기존 입력은 옛 저장 형태를 유지한다. row 수를 보고 old reader 복구를 허용하지 않으며 신규 기록 후 쓰기 OFF와 새 reader 유지가 기본 복구다.
+
+구현·검증과 좁은 공개 권한 및 기존 잔존 위험은 [C03 계약](engineering/mumeok-beta-product-contract-20261014.md)을 따른다. 운영 DB/권한/새 형식 쓰기는 정확 SQL·대상·백업·복구를 확인한 별도 승인 전 적용하지 않는다.
+
 ## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
 
 20261013233000_cooked_batch_weight_evidence는 로컬 draft이며 private 제어표 enabled=false·개인 append-only 예측/관찰 표를 준비한다. 기존 완료/weight fresh branch와 meal nutrition_evidence_json의9키 weight_basis·선택 가정은 기존 owner/revision/no-events/receipt 보호 안에서 원자 저장한다. 신규2개 service-role wrapper와 exact scope predecessor chain·검토 postimage 등록이 필요하다. 과거batch/meal/snapshot UPDATE0·quantity event에 evidence 추가0·학습 수집0이다. DB OFF가 새 쓰기 중지 기준이며 이력 reader는 보존한다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.

@@ -4,6 +4,9 @@
 
 고정 레시피 입력의 조건별 예측·unknown 사유·가정과 명시 전체무게 관찰을 분리하고, 새 식사의 당시 분모·출처·모델/관찰 참조를 기존 원장 transaction에 고정하는 로컬 구현을 준비했다. structured MIX와 근거 있는 모든 g의 좁은 가정 합을 지원하지만 국·볶음·쌀·이미익힘은 근거 부족 시 null이며 정확도 개선 완료가 아니다. 추가 필수0·선택 숫자1칸·예측 prefill0·과거UPDATE0·새0.75 fallback0·전체학습/외부AI0을 유지한다. 구 client DTO는 정확 응답 capability opt-in으로 보호한다. 공식5문서의 dated addendum와 [구현·검사·남은 경계](../engineering/cooked-weight-evidence-integration-20261014.md)를 따르며 C03 최종 통합·보안 postimage·타입/빌드·독립 리뷰·운영 승인은 대기다.
 
+## 2026-10-14 — C03 공공제품 독립 재료 로컬 후보
+
+대표 연결 없는 공공제품도 정확한 제품/영양 버전으로 레시피에 사용할 수 있도록 준비했다. 보유 제품 버전·원량·단계 참조·과거 snapshot을 보존하고 새 형식을 모르는 저장 요청은 원자 거절한다. 신규 DB/control은 미적용이며 writer 기본 OFF·reader 선행·별도 ON 승인과 안전 OFF 복구를 따른다. [구현 계약](../engineering/mumeok-beta-product-contract-20261014.md)에 화면/API/DB·검증·잔존 위험을 구분한다.
 
 ## 2026-10-14 — F01 직접 접속 안내·R2 수집 중지 운영 확인
 

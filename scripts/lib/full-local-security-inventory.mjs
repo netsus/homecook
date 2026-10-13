@@ -21,6 +21,10 @@ const RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
 );
+const RECIPE_PRODUCT_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/recipe-product-source-function-postimages.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -582,6 +586,93 @@ const RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT =
   recipeFuturePropagationManifest.functions.map(
     (entry) => parseFunction(entry, recipeFuturePropagationMigration),
   );
+
+// Explicitly reviewed schema-only 219 -> C03 postimages. The old source and
+// metadata contracts remain checked; unrelated baseline drift is not adopted.
+function recipeProductPostimages() {
+  const postimages = JSON.parse(readFileSync(RECIPE_PRODUCT_POSTIMAGES_PATH, "utf8"));
+  const migration = readFileSync(join(REPOSITORY_ROOT, postimages.migration));
+  if (postimages.schema_version !== 1
+    || postimages.migration !== "supabase/migrations/20261013190000_recipe_product_only_identity.sql"
+    || createHash("sha256").update(migration).digest("hex") !== postimages.migration_sha256
+    || postimages.schema_archive_sha256 !== "15c29821618e9cb7c70bbbe0df2cb2f0bd3246924352667bf8ce047400f48097"
+    || postimages.predecessor_219_sha256 !== "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
+    || postimages.application_rows_restored !== 0 || postimages.functions.length !== 24) {
+    throw new Error("recipe product postimage provenance drift");
+  }
+  const publicReaders = new Set(["read_public_recipe_product_sources", "find_public_recipe_ids_by_product_name", "read_recipe_product_ingredient_classification"]);
+  for (const { postimage, preimage } of postimages.functions) {
+    if (!preimage && (postimage.owner !== "postgres" || postimage.allowedAcl !==
+      (publicReaders.has(postimage.name) ? "anon:EXECUTE:false,authenticated:EXECUTE:false" : ""))) {
+      throw new Error("recipe product new function privilege drift");
+    }
+    if (preimage) for (const field of ["securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]) {
+      if (preimage[field] !== postimage[field]) throw new Error(`recipe product metadata changed: ${field}`);
+    }
+  }
+  return postimages;
+}
+
+function withRecipeProductContracts(contracts) {
+  const postimages = recipeProductPostimages();
+  const result = [...contracts];
+  for (const { postimage, preimage, checkedInInventoryPreimageMd5 } of postimages.functions) {
+    if (!/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || !["public", "private"].includes(postimage.schema)
+      || !postimage.searchPath.startsWith("pg_catalog,")
+      || !postimage.searchPath.endsWith("pg_temp")) throw new Error("invalid recipe product postimage");
+    if (preimage) {
+      for (const field of ["securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]) {
+        if (preimage[field] !== postimage[field]) throw new Error(`recipe product metadata changed: ${field}`);
+      }
+    }
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index >= 0) {
+      if (checkedInInventoryPreimageMd5 !== result[index].sourceHash) {
+        throw new Error("recipe product checked-in preimage drift");
+      }
+      // Replace only the body expectation. Do not silently replace owner,
+      // privileges or search_path when the existing 219 baseline is stale.
+      result[index] = { ...result[index], sourceHash: postimage.sourceHash };
+    } else result.push(postimage);
+  }
+  return result;
+}
+
+export function buildRecipeProductSourceFunctionInventorySql() {
+  const functions = recipeProductPostimages().functions.map((entry) => entry.postimage);
+  const rows = functions.map((entry) => [entry.lookupSignature, entry.sourceHash,
+    entry.owner, String(entry.securityDefiner), `search_path=${entry.searchPath}`, entry.allowedAcl, entry.volatility]);
+  return `with expected(signature, body_md5, owner_name, security_definer, search_path, allowed_acl, volatility) as (
+    values ${valuesSql(rows)}
+  ), actual as (
+    select expected.*, p.oid, md5(btrim(p.prosrc,chr(10))) as actual_body,
+      pg_get_userbyid(p.proowner) as actual_owner, p.prosecdef as actual_security, p.provolatile::text as actual_volatility,
+      replace(coalesce((select c from unnest(p.proconfig) c where c like 'search_path=%'),''),' ','') as actual_path,
+      coalesce((select string_agg((case when a.grantee=0 then 'public' else r.rolname end)||':'||a.privilege_type||':'||a.is_grantable::text,','
+        order by (case when a.grantee=0 then 'public' else r.rolname end),a.privilege_type,a.is_grantable)
+        from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a left join pg_roles r on r.oid=a.grantee
+        where a.grantee is distinct from p.proowner),'') as actual_acl
+    from expected left join pg_proc p on p.oid=to_regprocedure(expected.signature)
+  ) select jsonb_build_object('required_functions',count(*),
+    'missing',count(*) filter(where oid is null),
+    'body',count(*) filter(where actual_body is distinct from body_md5),
+    'owner',count(*) filter(where actual_owner is distinct from owner_name),
+    'security',count(*) filter(where actual_security is distinct from security_definer::boolean),
+    'search_path',count(*) filter(where actual_path is distinct from search_path),
+    'acl',count(*) filter(where actual_acl is distinct from allowed_acl),
+    'volatility',count(*) filter(where actual_volatility is distinct from volatility)) from actual;`;
+}
+
+export function assertRecipeProductSourceFunctionInventoryResult(result) {
+  const keys = ["required_functions", "missing", "body", "owner", "security", "search_path", "acl", "volatility"];
+  if (!result || Object.keys(result).length !== keys.length
+    || result.required_functions !== 24 || keys.slice(1).some((key) => result[key] !== 0)) {
+    throw new Error("recipe product source inventory failed closed");
+  }
+  return result;
+}
 const CORE_POLICY_CONTRACT = CORE_POLICY_SOURCES.map(([migration, name]) =>
   parsePolicy(migration, name)
 );
@@ -621,6 +712,7 @@ function buildSecurityInventoryExpression({
   includeSnapshotTables,
   includePersonalRecipeFunctions,
   includeRecipeFuturePropagationFunctions,
+  includeRecipeProductFunctions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
@@ -628,12 +720,18 @@ function buildSecurityInventoryExpression({
   const functionsWithPersonalRecipe = includePersonalRecipeFunctions
     ? [...baseFunctions, ...PERSONAL_RECIPE_FUNCTION_CONTRACT]
     : baseFunctions;
-  const functions = includeRecipeFuturePropagationFunctions
+  const legacyFunctions = includeRecipeFuturePropagationFunctions
     ? [
         ...functionsWithPersonalRecipe,
         ...RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT,
       ]
     : functionsWithPersonalRecipe;
+  if (includeRecipeProductFunctions && !(includeSnapshotTables
+    && includePersonalRecipeFunctions && includeRecipeFuturePropagationFunctions)) {
+    throw new Error("recipe product inventory requires all predecessor contracts");
+  }
+  const functions = includeRecipeProductFunctions
+    ? withRecipeProductContracts(legacyFunctions) : legacyFunctions;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -1009,12 +1107,14 @@ export function buildFullLocalSecurityInventoryExpression({
   includeSnapshotTables = false,
   includePersonalRecipeFunctions = false,
   includeRecipeFuturePropagationFunctions = false,
+  includeRecipeProductFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeCookedBatchPolicyCutover,
     includeSnapshotTables,
     includePersonalRecipeFunctions,
     includeRecipeFuturePropagationFunctions,
+    includeRecipeProductFunctions,
   });
 }
 
@@ -1031,6 +1131,7 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     includeSnapshotTables = false,
     includePersonalRecipeFunctions = false,
     includeRecipeFuturePropagationFunctions = false,
+    includeRecipeProductFunctions = false,
   } = {},
 ) {
   const baseFunctionCount = includeSnapshotTables
@@ -1040,7 +1141,8 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0)
     + (includeRecipeFuturePropagationFunctions
       ? RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT.length
-      : 0);
+      : 0)
+    + (includeRecipeProductFunctions ? 19 : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;

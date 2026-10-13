@@ -1,3 +1,5 @@
+import { buildCompatibleFoodProductUnits } from "@/lib/planner/product-planner-entry-presentation";
+import type { FoodProductData } from "@/types/food-product";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 
 // These unit families are already understood by recipe-nutrition-calculator.
@@ -15,8 +17,14 @@ const supportedUnits = new Set<string>([
 export function getRecipeIngredientUnitOptions(ingredient: {
   unit: string | null;
   food_product_id?: string | null;
-}) {
-  if (ingredient.food_product_id) return ingredient.unit ? [ingredient.unit] : [];
+}, product?: Pick<FoodProductData, "basis_relations" | "nutrition">) {
+  if (ingredient.food_product_id) {
+    const units: string[] = product ? buildCompatibleFoodProductUnits(product) : [];
+    if (units.includes("g")) units.push("kg");
+    if (units.includes("ml")) units.push("l");
+    if (ingredient.unit && !units.includes(ingredient.unit)) units.unshift(ingredient.unit);
+    return units;
+  }
   const options: string[] = [...RECIPE_INGREDIENT_UNIT_OPTIONS];
   if (ingredient.unit && !options.includes(ingredient.unit)) options.push(ingredient.unit);
   return options;
@@ -30,4 +38,9 @@ export function isRecipeIngredientUnitAllowed(
 ) {
   return typeof unit === "string" && unit.trim().length > 0
     && (supportedUnits.has(unit) || trustedSourceUnits.includes(unit));
+}
+
+// The SQL writer checks the actual pinned relation; this is only the request unit vocabulary.
+export function isRecipeProductUnitAllowed(unit: unknown) {
+  return typeof unit === "string" && ["g", "kg", "ml", "mL", "l", "L", "serving", "package"].includes(unit);
 }

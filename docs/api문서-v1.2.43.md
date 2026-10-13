@@ -5812,6 +5812,12 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 식사기록 mutation RPC에서 SQLSTATE22003와 CONFLICT가 함께 반환되면 HTTP409/codeCONFLICT를 유지하고 `fields: [{field: "quantity.amount", reason: "exceeds_available_amount"}]`를 제공한다. 이 경우 UI는 양을 줄이라는 안내를 표시하며 ‘다른 변경의 최신 기록 반영’으로 바꾸지 않는다. 실제 revision 충돌과 계정 권한·세대 검사는 유지한다. SQL/DB 변경 없음.
 
 
+## 2026-10-14 추가 계약 — C03 공공제품 독립 재료(운영 미적용)
+
+기존 ingredient_id 필수 계약은 정확한 public_dataset 제품+영양 버전을 가진 food_product 행에 한해 nullable로 확장한다. source_kind(ingredient/food_product)와 UUID row_key를 재료/단계 참조에 추가하며 일반 재료 null은 허용하지 않는다. 옛 편집기의 새 출처/명시 참조 손실은 409 RECIPE_SOURCE_CONTRACT_REQUIRED다. GET /food-catalog/search의 pantry_item_id는 실제 own pantry와 요청 product를 함께 검증하며 과거 공공제품 버전을 기존 RPC로 읽는다. GET /users/me의 선택적 account_generation은 기존 검증 세션에서만 구하고 검증 실패 시 생략한다. 기존 응답·오류 래퍼와 소유권/409 보호를 유지한다.
+
+구현·검증과 좁은 공개 권한 및 기존 잔존 위험은 [C03 계약](engineering/mumeok-beta-product-contract-20261014.md)을 따른다. 운영 DB/권한/새 형식 쓰기는 정확 SQL·대상·백업·복구를 확인한 별도 승인 전 적용하지 않는다.
+
 ## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
 
 공개 endpoint와 `{success,data,error}`는 유지한다. 완료/무게 `set_finished_weight`에만 선택 `weight_input_source=reported_measured`를 허용하고 client 예측/source ID/owner 주입은 거절한다. 정확 `X-Homecook-Cooked-Weight-Contract: evidence-v1`일 때만 additive weight summary/9키 식사 weight_basis·선택 weight_assumption_codes를 반환한다. 헤더 없음·미지원 판본은 기존 DTO, 새 client는 구 DTO를 읽는다. 헤더는 display opt-in이며 동의/권한/receipt 입력이 아니다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.

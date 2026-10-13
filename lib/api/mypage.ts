@@ -17,6 +17,7 @@ import type {
 } from "@/types/user";
 
 export interface UserProfileData {
+  account_generation?: number;
   id: string;
   nickname: string;
   email: string | null;

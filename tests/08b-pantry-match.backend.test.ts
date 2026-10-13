@@ -111,7 +111,7 @@ describe("08b pantry match backend", () => {
       },
       rpc: vi.fn(() => pantryItemsTable.select()),
       from: vi.fn((table: string) => {
-        if (table === "pantry_items") return pantryItemsTable;
+        if (table === "pantry_items") return createSimpleSelectTable([{data: [], error: null}]);
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -203,7 +203,7 @@ describe("08b pantry match backend", () => {
       },
       rpc: vi.fn(() => pantryItemsTable.select()),
       from: vi.fn((table: string) => {
-        if (table === "pantry_items") return pantryItemsTable;
+        if (table === "pantry_items") return createSimpleSelectTable([{data: [], error: null}]);
         if (table === "recipe_ingredients") return recipeIngredientsTable;
         if (table === "ingredients") return ingredientsTable;
         if (table === "recipes") return recipesTable;
@@ -347,7 +347,7 @@ describe("08b pantry match backend", () => {
       },
       rpc: vi.fn(() => pantryItemsTable.select()),
       from: vi.fn((table: string) => {
-        if (table === "pantry_items") return pantryItemsTable;
+        if (table === "pantry_items") return createSimpleSelectTable([{data: [], error: null}]);
         if (table === "recipe_ingredients") return recipeIngredientsTable;
         if (table === "ingredients") return ingredientsTable;
         if (table === "recipes") return recipesTable;
