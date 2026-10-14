@@ -75,7 +75,20 @@ const QUANTITY_V4_WHOLE_DATA_TABLES = Object.freeze([
   "public.meals", "public.meal_plan_columns", "public.cooking_sessions", "public.cooking_session_meals", "public.cooking_session_meal_claims", "public.leftover_dishes", "public.cooked_batch_quantity_events", "public.recipe_content_snapshots", "public.recipe_nutrition_snapshots", "private.cooked_batch_weight_evidence", "public.mutation_idempotency_keys", "private.youtube_saved_recipe_result_mutations",
   "public.pantry_items", "public.shopping_lists", "public.shopping_list_recipes", "public.shopping_list_items", "public.shopping_meal_snapshot_clone_tokens",
 ]);
-const quantityRowDigest = source => `(SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text,'UTF8')),'hex') FROM ${source} t)`;
+// Hash the same canonical rows before sorting, retaining every duplicate. A chunk
+// aggregates at most 16384 fixed 32-byte hashes, rather than the table's full JSON.
+const quantityRowDigest = source => `(WITH row_hashes AS MATERIALIZED (
+ SELECT sha256(convert_to(to_jsonb(t)::text,'UTF8')) AS row_hash FROM ${source} t
+), numbered AS (
+ SELECT row_hash,row_number() OVER (ORDER BY row_hash) AS row_number FROM row_hashes
+), chunks AS (
+ SELECT (row_number-1)/16384 AS chunk_index,count(*) AS row_count,
+ encode(sha256(string_agg(row_hash,''::bytea ORDER BY row_number)),'hex') AS chunk_sha256
+ FROM numbered GROUP BY (row_number-1)/16384
+)
+SELECT encode(sha256(convert_to(jsonb_build_array('quantity-v4-row-sha256-chunks-v1',
+ coalesce(sum(row_count),0)::bigint,coalesce(jsonb_agg(jsonb_build_array(chunk_index,row_count,chunk_sha256)
+ ORDER BY chunk_index),'[]'::jsonb))::text,'UTF8')),'hex') FROM chunks)`;
 export const QUANTITY_V4_NORMAL_DATA_SQL = catalogDigest(`jsonb_build_array(${[
   ...QUANTITY_V4_NORMAL_COLUMNS.map(row => `jsonb_build_array(${literal(row.table)},${quantityRowDigest(`(SELECT ${row.columns} FROM ${row.table})`)})`),
   ...QUANTITY_V4_WHOLE_DATA_TABLES.map(table => `jsonb_build_array(${literal(table)},${quantityRowDigest(table)})`),
@@ -162,7 +175,19 @@ export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-
         const quantity = exists ? (await query(QUANTITY_V4_WRITER_SQL)).trim() : "false";
         const weight = (await query(COOKED_WEIGHT_WRITER_SQL)).trim();
         if (!["true", "false"].includes(quantity) || !["true", "false"].includes(weight)) throw new Error("C04/C01 control singleton differs");
-        const normalDataSha256 = (await query(QUANTITY_V4_NORMAL_DATA_SQL)).trim();
+        let normalData;
+        if (sessionQuery) normalData = await sessionQuery(QUANTITY_V4_NORMAL_DATA_SQL);
+        else {
+          if (typeof base.session !== "function") throw new Error("C04 normal-data read session required");
+          const session = base.session("protected-c04-normal-data");
+          try {
+            await session.query("BEGIN READ ONLY; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s';", 5000);
+            normalData = await session.query(QUANTITY_V4_NORMAL_DATA_SQL, 33000);
+            await session.query("COMMIT;", 5000);
+            await session.close();
+          } finally { session.stop(); }
+        }
+        const normalDataSha256 = normalData.trim();
         if (!SHA.test(normalDataSha256)) throw new Error("C04 normal historical-column projection invalid");
         const columns = assertQuantityV4Columns(JSON.parse((await query(QUANTITY_V4_COLUMNS_SQL)).trim()), result.ledger.length);
         let metadataNull = true;

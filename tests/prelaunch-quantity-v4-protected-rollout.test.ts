@@ -845,3 +845,71 @@ describe("C04 read-only before reconciliation keeps admission separate", () => {
     expect(f.adapter.reloadSchema).not.toHaveBeenCalled();expect(f.getAttempt()?.status).toBe("rolled_back_before_commit");
   });
 });
+
+describe("C04 normal projection read session", () => {
+  it.each(["outside", "locked", "timeout"])("keeps the fixed read budget and session boundary (%s)", async mode => {
+    const directory = realpathSync(mkdtempSync(join(realpathSync("/tmp"), "c04-normal-read-")));
+    try {
+      const protection = { normalProjectionSha256: hash(QUANTITY_V4_NORMAL_DATA_SQL), postimageRegistrySha256: sha("e") };
+      const webPath = join(directory, "web.mjs"), databasePath = join(directory, "database.mjs");
+      writeFileSync(webPath, fixtureStateRoot(webFixtureSource(readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8"), {
+        QUANTITY_V4_PROTECTION: `Object.freeze(${JSON.stringify(protection)})`,
+      }), join(directory, "state")), { mode: 0o600 });
+      writeFileSync(databasePath, databaseFixtureSource(readFileSync("scripts/lib/prelaunch-database.mjs", "utf8"), webPath), { mode: 0o600 });
+      const database = await import(pathToFileURL(databasePath).href), f = fixture();
+      Object.assign(f.review.database, protection);
+      const fixedMetadata = QUANTITY_V4_COLUMN_METADATA as readonly (readonly [string, [string, string, boolean, string | null][]])[];
+      const columns = fixedMetadata.map(([table, values]) => ({
+        table, columns: values.map(([name, type, not_null, value]) => ({ name, type, not_null, default: value })),
+      }));
+      const observeQuery = vi.fn(async (sql: string) => {
+        if (sql === database.QUANTITY_V4_NORMAL_DATA_SQL) {
+          if (mode !== "locked") throw new Error("normal projection must not use generic 5s reads");
+          return f.observation.normalDataSha256;
+        }
+        if (sql === database.QUANTITY_V4_COLUMNS_SQL) return JSON.stringify(columns);
+        if (sql === database.COOKED_WEIGHT_SCOPE_SQL) return JSON.stringify(f.observation.scope);
+        if (sql === database.QUANTITY_V4_WORKER_STATE_SQL) return JSON.stringify(f.observation.worker);
+        if (sql.includes("SELECT filename,sha256 FROM homecook_deploy.migrations")) return JSON.stringify(f.review.database.before);
+        if (sql.includes("to_regclass(") || sql.includes("has_table_privilege(")) return "t";
+        if (sql.includes("pg_stat_activity")) return "f";
+        if (sql.endsWith("FROM private.quantity_input_v4_policy;")) return "false";
+        if (sql.endsWith("FROM private.recipe_product_only_write_control;") || sql.endsWith("FROM private.cooked_batch_weight_evidence_control;")) return "true";
+        return sha("d");
+      });
+      const session = {
+        query: vi.fn(async (sql: string, timeout: number) => {
+          expect(timeout).toBe(sql === database.QUANTITY_V4_NORMAL_DATA_SQL ? 33000 : 5000);
+          if (sql !== database.QUANTITY_V4_NORMAL_DATA_SQL) return "";
+          if (mode === "timeout") throw new Error("owned normal read timeout");
+          return f.observation.normalDataSha256;
+        }), close: vi.fn(async () => {}), stop: vi.fn(),
+      };
+      const base = { inspect: vi.fn(async () => f.observation.target), query: observeQuery, session: vi.fn(() => session) };
+      const adapter = database.createProtectedPrelaunchAdapter(base, deploy.QUANTITY_V4_FEATURE, f.review);
+      if (mode === "timeout") {
+        await expect(adapter.observe(undefined, "owned-normal-read")).rejects.toThrow("owned normal read timeout");
+        expect(session.query.mock.calls.map(([sql]) => sql)).toEqual([
+          "BEGIN READ ONLY; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s';", database.QUANTITY_V4_NORMAL_DATA_SQL,
+        ]);
+        expect(session.close).not.toHaveBeenCalled(); expect(session.stop).toHaveBeenCalledOnce();
+      } else {
+        await expect(adapter.observe(mode === "locked" ? observeQuery : undefined, "owned-normal-read"))
+          .resolves.toMatchObject({ normalDataSha256: f.observation.normalDataSha256 });
+        if (mode === "locked") {
+          expect(base.session).not.toHaveBeenCalled();
+          expect(observeQuery.mock.calls.filter(([sql]) => sql === database.QUANTITY_V4_NORMAL_DATA_SQL)).toHaveLength(1);
+          expect(observeQuery.mock.calls.some(([sql]) => /BEGIN|SET LOCAL|COMMIT/u.test(sql))).toBe(false);
+        } else {
+          expect(base.session).toHaveBeenCalledExactlyOnceWith("protected-c04-normal-data");
+          expect(session.query.mock.calls).toEqual([
+            ["BEGIN READ ONLY; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s';", 5000],
+            [database.QUANTITY_V4_NORMAL_DATA_SQL, 33000], ["COMMIT;", 5000],
+          ]);
+          expect(session.close).toHaveBeenCalledOnce(); expect(session.stop).toHaveBeenCalledOnce();
+        }
+      }
+      expect(base.inspect).toHaveBeenCalledOnce();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});
