@@ -514,7 +514,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         commitDispatched = true;
         await session.query("COMMIT;");
         await session.close();
-        await adapter.reloadSchema();
+        await adapter.reloadSchema(operationId);
         await assertBoundary();
         assertProtectedPrelaunchObservation(review, await adapter.observe(undefined, applicationName), "after");
         const result = receipt(backup, preservedRowsSha256);
@@ -548,6 +548,11 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         || !same(attempt.backup.target, attempt.target))) throw new Error("Protected committed outcome has no bound full backup");
       if (outcome === "committed" && (!attempt.commitDispatched && attempt.status !== "commit_dispatch_guard" || !SHA.test(attempt.preservedRowsSha256))) {
         throw new Error("Protected committed reconcile lacks the verified commit intent/row preservation binding");
+      }
+      if (outcome === "committed") {
+        await adapter.reloadSchema(operationId);
+        await assertBoundary();
+        assertProtectedPrelaunchObservation(review, await adapter.observe(undefined, applicationName), "after");
       }
       const result = outcome === "committed" ? receipt(attempt.backup, attempt.preservedRowsSha256) : { ...binding(), status: "not_applied", targetSha256: review.database.targetSha256,
         backup: attempt.backup ?? null, automaticRetryAllowed: false };

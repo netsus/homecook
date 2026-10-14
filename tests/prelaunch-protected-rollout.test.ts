@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 import { mkdtempSync, existsSync, readFileSync, writeFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -345,6 +347,96 @@ describe("protected DB atomic kernel with isolated adapter", () => {
       migrations: [{ filename: changed.filename, rawSha256: changed.sha256, payloadSha256: hash(payload) }] } };
     expect(planProtectedPrelaunchMigrations(proposed, [existing, changed]).pending[0].payload).toBe(payload);
   });
+  it("passes the reviewed attempt UUID through the real adapter reload and committed-reconcile contracts", async () => {
+    const directory = mkdtempSync(join(realpathSync(tmpdir()), "protected-reload-"));
+    const sql: string[] = [], spawned = vi.fn();
+    let reloadFailure = false;
+    vi.doMock("../scripts/lib/local-supabase-isolated-runtime.mjs", () => ({ readPinnedLocalDockerTarget: () => ({ docker_host: "unix:///fixture-only.sock" }) }));
+    vi.doMock("../scripts/lib/full-local-production-resources.mjs", async importOriginal => ({
+      ...await importOriginal<typeof import("../scripts/lib/full-local-production-resources.mjs")>(),
+      selectFullLocalProductionResources: () => ({ postgresContainerId: "owned-unit", postgresImage: "fixture-image", postgresVolumeName: "homecook-full-local-postgres" }),
+    }));
+    vi.doMock("node:child_process", async importOriginal => ({
+      ...await importOriginal<typeof import("node:child_process")>(),
+      spawnSync: (command: string, args: string[]) => {
+        if (command !== "docker") throw new Error("Fixture rejects non-Docker dispatch");
+        const output = args[0] === "ps" ? "owned-unit" : args[0] === "inspect"
+          ? [{ Id: "owned-unit", Image: "fixture-image-id", Mounts: [{ Destination: "/var/lib/postgresql/data", Type: "volume", Name: "homecook-full-local-postgres", RW: true }] }]
+          : args[0] === "volume" ? [{ Name: "homecook-full-local-postgres", Labels: {} }]
+          : args[0] === "image" ? [{ Id: "fixture-image-id" }] : args[0] === "exec" ? { systemIdentifier: "fixture-only" } : null;
+        if (output === null) throw new Error("Fixture rejects unexpected Docker operation");
+        return { status: 0, stdout: typeof output === "string" ? output : JSON.stringify(output) };
+      },
+      spawn: (command: string, args: string[]) => {
+        spawned(command, args);
+        const child = new EventEmitter(), stdout = new PassThrough(), stderr = new PassThrough();
+        return Object.assign(child, { stdout, stderr, kill: () => child.emit("close", 0), stdin: {
+          write(input: string, callback?: (error?: Error) => void) {
+            sql.push(input);
+            const marker = /SELECT '(r2_[a-f0-9]+)';/u.exec(input)?.[1];
+            if (!marker) throw new Error("Fixture query marker missing");
+            queueMicrotask(() => { if (reloadFailure) child.emit("close", 1); else stdout.write(`${marker}\n`); }); callback?.();
+          },
+          end() { queueMicrotask(() => child.emit("close", 0)); },
+        } });
+      },
+    }));
+    vi.resetModules();
+    try {
+      const configPath = join(directory, "config.env");
+      writeFileSync(configPath, "FULL_LOCAL_COMPOSE_PROJECT_NAME=homecook-full-local-isolated\nFULL_LOCAL_POSTGRES_VOLUME_NAME=homecook-full-local-postgres\n", { mode: 0o600 });
+      const { createRecordingDockerAdapter } = await import("../scripts/lib/marketing-round2-controlled-deploy.mjs");
+      const actual = await createRecordingDockerAdapter({ configPath, backupDirectory: directory });
+      await actual.inspect();
+      await expect(actual.reloadSchema(undefined)).rejects.toThrow("Invalid reload operation");
+      expect(spawned).not.toHaveBeenCalled();
+      const input = fixture(), reload = vi.spyOn(actual, "reloadSchema");
+      const engineFor = (value: ReturnType<typeof fixture>) => createProtectedPrelaunchDatabaseEngine({ review: value.review, reviewSha256: value.reviewSha256,
+        operationId: value.operationId, readMigrations: value.readMigrations, adapter: { ...value.adapter, reloadSchema: actual.reloadSchema },
+        journal: value.journal, assertBoundary: value.assertBoundary });
+      const unapplied = fixture(), unappliedEngine = engineFor(unapplied);
+      unapplied.adapter.backup.mockRejectedValueOnce(new Error("fixture backup unavailable"));
+      await expect(unappliedEngine.apply()).rejects.toThrow("fixture backup unavailable");
+      expect(await unappliedEngine.reconcile()).toMatchObject({ status: "not_applied" });
+      expect(reload).not.toHaveBeenCalled(); expect(sql).toHaveLength(0);
+      const engine = engineFor(input);
+      expect(await engine.apply()).toMatchObject({ status: "committed" });
+      expect(reload).toHaveBeenCalledWith(input.operationId);
+      expect(spawned).toHaveBeenCalledWith("docker", expect.arrayContaining([`PGAPPNAME=r2-reload-${input.operationId}`, "owned-unit"]));
+      expect(sql).toHaveLength(1);
+      expect(sql[0]).toContain("NOTIFY pgrst, 'reload schema'; COMMIT;");
+      const recovery = fixture();
+      const recoveringEngine = engineFor(recovery);
+      reload.mockClear(); reloadFailure = true;
+      await expect(recoveringEngine.apply()).rejects.toThrow("Committed DB retained; schema reload requires verification");
+      const unknown = structuredClone(recovery.getAttempt());
+      expect(unknown?.status).toBe("unknown");
+      const observe = recovery.adapter.observe.getMockImplementation()!;
+      for (const change of [{ active: true }, { target: { ...recovery.target, postgresContainerId: "foreign-fixture" } },
+        { ledger: recovery.review.database.before }, { catalogSha256: sha("f") }]) {
+        recovery.adapter.observe.mockResolvedValue({ ...recovery.observation(), ...change });
+        await expect(recoveringEngine.reconcile()).rejects.toThrow("remains unknown");
+        expect(reload).toHaveBeenCalledTimes(1); expect(recovery.getAttempt()).toEqual(unknown);
+      }
+      recovery.adapter.observe.mockImplementation(observe);
+      await expect(recoveringEngine.reconcile()).rejects.toThrow("Committed DB retained; schema reload requires verification");
+      expect(recovery.getAttempt()).toEqual(unknown);
+      reloadFailure = false;
+      expect(await recoveringEngine.reconcile()).toMatchObject({ status: "committed", writerEnabled: false, readerReady: false });
+      expect(reload.mock.calls).toEqual([[recovery.operationId], [recovery.operationId], [recovery.operationId]]);
+      expect(recovery.calls.filter(call => call === recovery.payload)).toHaveLength(1);
+      expect(recovery.calls.filter(call => call.startsWith("INSERT INTO homecook_deploy"))).toHaveLength(1);
+      expect(recovery.calls.filter(call => call === "COMMIT;")).toHaveLength(1);
+      expect(recovery.adapter.backup).toHaveBeenCalledTimes(1);
+      expect(sql).toHaveLength(4); // All NOTIFY requests use only the mocked transport.
+
+    } finally {
+      vi.doUnmock("node:child_process");
+      vi.doUnmock("../scripts/lib/local-supabase-isolated-runtime.mjs");
+      vi.doUnmock("../scripts/lib/full-local-production-resources.mjs");
+      vi.resetModules(); rmSync(directory, { recursive: true, force: true });
+    }
+  });
   it("plans without backup/writes and applies SQL+ledger atomically after the full snapshot", async () => {
     const { engine, adapter, calls, payload, journal, review } = fixture();
     expect(await engine.plan()).toMatchObject({ mutationPerformed: false, pending: [review.database.migrations[0].filename] });
@@ -397,6 +489,7 @@ describe("protected DB atomic kernel with isolated adapter", () => {
     adapter.observe.mockResolvedValue({ ...observation(), catalogSha256: sha("f") });
     await expect(engine.reconcile()).rejects.toThrow("remains unknown");
     expect(getAttempt()).toEqual(before);
+    expect(adapter.reloadSchema).not.toHaveBeenCalled();
   });
   it("does not learn a postimage from the mutated caller review or observed live catalog", async () => {
     const { engine, review, session, observation } = fixture();
@@ -428,12 +521,14 @@ describe("protected DB atomic kernel with isolated adapter", () => {
     const observations = adapter.observe.mock.calls.length;
     await expect(engine.reconcile()).rejects.toThrow("binding");
     expect(adapter.observe.mock.calls.length).toBe(observations);
+    expect(adapter.reloadSchema).not.toHaveBeenCalled();
   });
   it("classifies a confirmed unapplied image without allowing an automatic retry", async () => {
     const { engine, adapter } = fixture();
     adapter.backup.mockRejectedValueOnce(new Error("backup failed"));
     await expect(engine.apply()).rejects.toThrow();
     expect(await engine.reconcile()).toMatchObject({ status: "not_applied", automaticRetryAllowed: false });
+    expect(adapter.reloadSchema).not.toHaveBeenCalled();
     await expect(engine.apply()).rejects.toThrow("retry");
   });
   it("does not adopt nullable-only OFF evidence or guess an approval for writer ON", () => {

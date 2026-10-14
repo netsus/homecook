@@ -191,7 +191,7 @@ DB baseline/compatible/already-applied, 검증 생략은 이 경로에서 허용
 | 단계 | 조건과 결과 |
 | --- | --- |
 | `database` | 실제 from/build/plist/closed artifact·전체 source diff·새 migration만 정확히 비교한다. config bytes와 별도의 실제 DB identity pin, 기존 인증된 platform/USB/restore readiness와 승인된 inventory bytes를 확인한다. 기존 controlled session의 serializable/advisory/ledger lock·exported snapshot·full archive decode/roles 백업 뒤 exact payload와 ledger를 같은 transaction에서 실행한다. writer는 OFF다. |
-| `reconcile` | unknown에서 SQL/apply/backup를 다시 실행하지 않는다. 자기 session 비활성·target/ledger/승인된 catalog/불변 권한을 관찰해 committed 또는 not-applied로 결속한다. mixed/active/foreign는 unknown을 유지한다. |
+| `reconcile` | unknown에서 migration SQL/apply/backup를 다시 실행하지 않는다. 자기 session 비활성·target/ledger/승인된 catalog/불변 권한을 관찰해 committed 또는 not-applied로 결속한다. mixed/active/foreign는 unknown을 유지한다. committed일 때만 같은 attempt의 schema 갱신 요청을 완료한 뒤 terminal receipt를 기록하며 실패하면 unknown guard를 보존한다; 이 요청 완료는 실제 reader API의 cache 전파 완료를 보증하지 않는다. |
 | `database-retry` | 같은 승인·source pair의 정확한 not-applied receipt 뒤에만 새 attempt를 명시 생성한다. 직전 guard와 receipt를 보존하며 미확정/committed/변조/다른 후보에서 재시도하지 않는다. |
 | `reader` | 새 DB commit receipt와 모든 신형 marker/rowref OFF의 legacy 호환 격리 증거가 필요하다. 기존 설치·test·build·preview·swap·실제 smoke/R2 검사 경로를 사용한다. 실제 reader 건강 확인 뒤 source/build/plist/DB/업무 흐름 receipt와 floor를 게시한다. metadata 완료만 중단됐으면 같은 actual target을 다시 검사해 서비스 교체 없는 forward 복구를 한다. |
 | `writer-on` | 첫 DB/reader 승인과 다른 writer 승인 파일을 읽는다. 실제 ready receipt↔live marker↔승인된 source/build/plist, DB after·reader 흐름·floor를 확인하고 기존 private boolean singleton에 고정 UPDATE만 실행한다. 자동 ON은 없다. |
