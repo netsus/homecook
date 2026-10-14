@@ -1,4 +1,6 @@
-import type { WeightImprovementCleanupProof, WeightImprovementSampleCandidate, WeightImprovementSamplePolicy } from "../../types/weight-improvement-sample";
+import type { WeightImprovementCleanupProof, WeightImprovementSampleCandidate, WeightImprovementSamplePolicy,
+  WeightImprovementSampleSourceBinding, WeightImprovementSampleSourceLineage } from "../../types/weight-improvement-sample";
+import { WEIGHT_IMPROVEMENT_PURPOSE } from "../../types/weight-improvement-participation";
 import { PARTICIPATION_DOCUMENT, PARTICIPATION_OWNER, participationStatus } from "./weight-improvement-participation";
 
 // These are fictitious future confirmations. Current C01 cannot produce this complete candidate.
@@ -35,4 +37,18 @@ export function cleanupProof(overrides: Partial<WeightImprovementCleanupProof> =
     affected_caches_invalidated: true, queued_jobs_cancelled: true, account_generation_links_resolved: true,
     backup_strategy: "excluded", backup_restore_verified: true, evidence_retention_rule: "fixture-only: delete at test end",
     retry_error: false, ...overrides };
+}
+
+/** Synthetic addresses only; none of these IDs identify an actual C01 record. */
+export function sampleSourceBinding(overrides: Partial<WeightImprovementSampleSourceBinding> = {}): WeightImprovementSampleSourceBinding {
+  return { sample_id: "550e8400-e29b-41d4-a716-446655440043", subject: { owner_uuid: PARTICIPATION_OWNER, account_generation: 3 },
+    purpose: WEIGHT_IMPROVEMENT_PURPOSE, consent_revision: 4, consent_document_version: PARTICIPATION_DOCUMENT.version,
+    consent_document_hash: PARTICIPATION_DOCUMENT.hash, source_batch_id: "550e8400-e29b-41d4-a716-446655440041",
+    source_evidence_id: "550e8400-e29b-41d4-a716-446655440042", original_revision: 2, ...overrides };
+}
+export function sampleSourceLineage(overrides: Partial<WeightImprovementSampleSourceLineage> = {}): WeightImprovementSampleSourceLineage {
+  const binding = sampleSourceBinding();
+  return { subject: { owner_uuid: binding.subject.owner_uuid, account_generation: binding.subject.account_generation },
+    purpose: binding.purpose, source_batch_id: binding.source_batch_id, source_evidence_id: binding.source_evidence_id,
+    original_revision: binding.original_revision, ...overrides };
 }

@@ -1,8 +1,10 @@
 import { hasCurrentWeightImprovementConsent } from "@/lib/weight-improvement-participation";
-import type { WeightImprovementParticipation } from "@/types/weight-improvement-participation";
+import { WEIGHT_IMPROVEMENT_PURPOSE, type WeightImprovementParticipation } from "@/types/weight-improvement-participation";
 import type {
   WeightImprovementCleanupProof, WeightImprovementSampleCandidate, WeightImprovementSampleFeatures,
   WeightImprovementSamplePolicy, WeightImprovementSampleReason,
+  WeightImprovementSampleSourceAddress, WeightImprovementSampleSourceBinding, WeightImprovementSampleSourceLineage,
+  WeightImprovementSampleStorageDraft, WeightImprovementSampleInvalidationReason, WeightImprovementSampleInvalidationAddress,
 } from "@/types/weight-improvement-sample";
 
 /** No environment switch, collector, RPC or model writer consumes this local draft. */
@@ -107,4 +109,92 @@ export function assessWeightImprovementCleanup(proof: WeightImprovementCleanupPr
     && proof.queued_jobs_cancelled === true && proof.account_generation_links_resolved === true
     && proof.backup_strategy !== null && proof.backup_restore_verified === true && text(proof.evidence_retention_rule);
   return { checks_complete: checksComplete, completion_write_allowed: false, model_release_allowed: false };
+}
+
+// The future reader uses PostgreSQL's canonical lower-case UUIDs, not caller aliases.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+function validSubject(subject: WeightImprovementParticipation["subject"]) {
+  return subject !== null && typeof subject === "object" && typeof subject.owner_uuid === "string"
+    && UUID.test(subject.owner_uuid) && Number.isSafeInteger(subject.account_generation) && subject.account_generation > 0;
+}
+function validLineage(source: WeightImprovementSampleSourceLineage) {
+  return source !== null && typeof source === "object" && validSubject(source.subject)
+    && source.purpose === WEIGHT_IMPROVEMENT_PURPOSE && typeof source.source_batch_id === "string" && UUID.test(source.source_batch_id)
+    && typeof source.source_evidence_id === "string" && UUID.test(source.source_evidence_id)
+    && Number.isSafeInteger(source.original_revision) && source.original_revision >= 0;
+}
+function validBinding(binding: WeightImprovementSampleSourceBinding) {
+  return validLineage(binding) && typeof binding.sample_id === "string" && UUID.test(binding.sample_id)
+    && Number.isSafeInteger(binding.consent_revision) && binding.consent_revision >= 0
+    && typeof binding.consent_document_version === "string" && text(binding.consent_document_version)
+    && typeof binding.consent_document_hash === "string" && /^[a-f0-9]{64}$/i.test(binding.consent_document_hash);
+}
+function sameSubject(left: WeightImprovementParticipation["subject"], right: WeightImprovementParticipation["subject"]) {
+  return left.owner_uuid === right.owner_uuid && left.account_generation === right.account_generation;
+}
+function projectBinding(binding: WeightImprovementSampleSourceBinding): WeightImprovementSampleSourceBinding {
+  return { sample_id: binding.sample_id, subject: { owner_uuid: binding.subject.owner_uuid, account_generation: binding.subject.account_generation },
+    purpose: binding.purpose, consent_revision: binding.consent_revision, consent_document_version: binding.consent_document_version,
+    consent_document_hash: binding.consent_document_hash, source_batch_id: binding.source_batch_id,
+    source_evidence_id: binding.source_evidence_id, original_revision: binding.original_revision };
+}
+
+/** Private, batch-level address only; not an independence count or storage receipt. */
+export function weightImprovementSampleSourceAddress(source: WeightImprovementSampleSourceLineage): WeightImprovementSampleSourceAddress | null {
+  return validLineage(source) ? { subject: { owner_uuid: source.subject.owner_uuid, account_generation: source.subject.account_generation },
+    purpose: source.purpose, source_batch_id: source.source_batch_id } : null;
+}
+
+/** All source/selected inputs are prospective facts. Even a valid fixture cannot authorize storage. */
+export function buildWeightImprovementSampleStorageDraft({ participation, candidate, binding, source_lineage,
+  selected_bindings = [], policy = WEIGHT_IMPROVEMENT_SAMPLE_POLICY, now }: {
+  participation: WeightImprovementParticipation; candidate: WeightImprovementSampleCandidate;
+  binding: WeightImprovementSampleSourceBinding; source_lineage: WeightImprovementSampleSourceLineage;
+  selected_bindings?: readonly WeightImprovementSampleSourceBinding[]; policy?: Readonly<WeightImprovementSamplePolicy>; now: string;
+}): { reasons: WeightImprovementSampleReason[]; draft: WeightImprovementSampleStorageDraft | null; collection_allowed: false; storage_write_allowed: false } {
+  const assessed = assessWeightImprovementSample({ participation, candidate, policy, now });
+  const reasons = new Set(assessed.reasons);
+  if (!validBinding(binding) || !validLineage(source_lineage) || !Array.isArray(selected_bindings) || !selected_bindings.every(validBinding)) {
+    reasons.add("source_binding_invalid");
+  } else {
+    if (!sameSubject(binding.subject, participation.subject) || !sameSubject(binding.subject, candidate.subject)
+      || !sameSubject(binding.subject, source_lineage.subject) || participation.purpose !== binding.purpose
+      || binding.purpose !== source_lineage.purpose || binding.consent_revision !== participation.revision
+      || binding.consent_revision !== candidate.consent_revision || binding.consent_document_version !== participation.consent_document_version
+      || binding.consent_document_hash !== participation.consent_document_hash || binding.consent_document_version !== policy.document_version
+      || binding.consent_document_hash !== policy.document_hash || binding.source_batch_id !== source_lineage.source_batch_id
+      || binding.source_evidence_id !== source_lineage.source_evidence_id || binding.original_revision !== source_lineage.original_revision
+      || binding.original_revision !== candidate.original_revision || binding.original_revision !== candidate.current_evidence_original_revision) reasons.add("source_binding_mismatch");
+    if (selected_bindings.some(selected => sameSubject(selected.subject, binding.subject)
+      && selected.purpose === binding.purpose && selected.source_batch_id === binding.source_batch_id)) reasons.add("duplicate_source");
+    if (selected_bindings.some(selected => (selected.source_batch_id === binding.source_batch_id
+      || selected.source_evidence_id === binding.source_evidence_id || selected.sample_id === binding.sample_id)
+      && (!sameSubject(selected.subject, binding.subject) || selected.purpose !== binding.purpose
+        || selected.source_batch_id !== binding.source_batch_id
+        || (selected.sample_id === binding.sample_id && (selected.source_evidence_id !== binding.source_evidence_id
+          || selected.original_revision !== binding.original_revision))))) reasons.add("source_binding_mismatch");
+    if (assessed.features) {
+      const privateValues = [candidate.cooked_at, candidate.observed_at, candidate.expires_at, participation.opted_in_at,
+        ...candidate.rows.map(row => row.row_key)];
+      for (const link of [binding, ...selected_bindings]) privateValues.push(link.sample_id, link.subject.owner_uuid, link.source_batch_id, link.source_evidence_id);
+      const features = JSON.stringify(assessed.features).toLowerCase();
+      if (privateValues.some(value => value !== null && features.includes(value.toLowerCase()))) reasons.add("private_feature_value");
+    }
+  }
+  return { reasons: [...reasons], draft: reasons.size === 0 && assessed.features
+    ? { features: assessed.features, private_binding: projectBinding(binding) } : null,
+    collection_allowed: false, storage_write_allowed: false };
+}
+
+/** Target an old private link before source deletion; never mark cleanup or model release complete. */
+export function buildWeightImprovementSampleInvalidationAddress({ binding, source_lineage, reason }: {
+  binding: WeightImprovementSampleSourceBinding; source_lineage: WeightImprovementSampleSourceLineage;
+  reason: WeightImprovementSampleInvalidationReason;
+}): WeightImprovementSampleInvalidationAddress | null {
+  if (!validBinding(binding) || !validLineage(source_lineage) || !sameSubject(binding.subject, source_lineage.subject)
+    || binding.purpose !== source_lineage.purpose || binding.source_batch_id !== source_lineage.source_batch_id
+    || binding.source_evidence_id !== source_lineage.source_evidence_id || binding.original_revision !== source_lineage.original_revision
+    || !["withdrawal", "source_invalidated", "source_deleted", "account_deleted"].includes(reason)) return null;
+  const source_address = weightImprovementSampleSourceAddress(binding);
+  return source_address ? { reason, source_address, private_binding: projectBinding(binding), completion_write_allowed: false, model_release_allowed: false } : null;
 }

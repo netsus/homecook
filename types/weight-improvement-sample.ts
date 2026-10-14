@@ -1,4 +1,4 @@
-import type { WeightImprovementParticipation } from "@/types/weight-improvement-participation";
+import type { WEIGHT_IMPROVEMENT_PURPOSE, WeightImprovementParticipation } from "@/types/weight-improvement-participation";
 
 /** Draft server projection. Missing C01 facts stay null; they are not inferred from UI copy. */
 export interface WeightImprovementSampleCandidate {
@@ -83,7 +83,45 @@ export type WeightImprovementSampleReason =
   | "source_not_current" | "duplicate_source" | "not_reported_measurement" | "invalid_time"
   | "cook_before_consent" | "qa_or_unknown" | "measurement_boundary_unconfirmed"
   | "invalid_weight" | "metadata_pending" | "planned_or_unknown_input" | "quantity_unconfirmed"
-  | "conditions_unconfirmed" | "retention_pending_or_expired";
+  | "conditions_unconfirmed" | "retention_pending_or_expired"
+  | "source_binding_invalid" | "source_binding_mismatch" | "private_feature_value";
+
+/** Prospective reader input only; this type does not assert actual source authority. */
+export interface WeightImprovementSampleSourceLineage {
+  subject: WeightImprovementParticipation["subject"];
+  purpose: typeof WEIGHT_IMPROVEMENT_PURPOSE;
+  source_batch_id: string;
+  source_evidence_id: string;
+  original_revision: number;
+}
+
+/** Private deletion/trace link. Never pass this object to model features. */
+export interface WeightImprovementSampleSourceBinding extends WeightImprovementSampleSourceLineage {
+  sample_id: string;
+  consent_revision: number;
+  consent_document_version: string;
+  consent_document_hash: string;
+}
+
+/** Evidence, consent revision and sample ID cannot create another independent batch. */
+export type WeightImprovementSampleSourceAddress = Pick<WeightImprovementSampleSourceLineage,
+  "subject" | "purpose" | "source_batch_id">;
+
+export interface WeightImprovementSampleStorageDraft {
+  features: WeightImprovementSampleFeatures;
+  private_binding: WeightImprovementSampleSourceBinding;
+}
+
+export type WeightImprovementSampleInvalidationReason =
+  | "withdrawal" | "source_invalidated" | "source_deleted" | "account_deleted";
+
+export interface WeightImprovementSampleInvalidationAddress {
+  reason: WeightImprovementSampleInvalidationReason;
+  source_address: WeightImprovementSampleSourceAddress;
+  private_binding: WeightImprovementSampleSourceBinding;
+  completion_write_allowed: false;
+  model_release_allowed: false;
+}
 
 export interface WeightImprovementCleanupProof {
   requested_revision: number;

@@ -2,15 +2,140 @@ import { describe, expect, it } from "vitest";
 import {
   assessWeightImprovementCleanup, assessWeightImprovementSample, CURRENT_C01_MEASUREMENT_CONFIRMATIONS,
   WEIGHT_IMPROVEMENT_SAMPLE_POLICY,
+  buildWeightImprovementSampleStorageDraft, buildWeightImprovementSampleInvalidationAddress, weightImprovementSampleSourceAddress,
 } from "@/lib/server/weight-improvement-sample-gate";
 import type { WeightImprovementCleanupProof, WeightImprovementSampleCandidate } from "@/types/weight-improvement-sample";
 import { PARTICIPATION_OTHER_OWNER, participationStatus } from "./fixtures/weight-improvement-participation";
-import { cleanupProof, sampleCandidate, sampleParticipation, SAMPLE_FIXTURE_POLICY } from "./fixtures/weight-improvement-sample";
+import { cleanupProof, sampleCandidate, sampleParticipation, SAMPLE_FIXTURE_POLICY, sampleSourceBinding, sampleSourceLineage } from "./fixtures/weight-improvement-sample";
+import type { WeightImprovementSampleSourceBinding, WeightImprovementSampleSourceLineage } from "@/types/weight-improvement-sample";
 
 const NOW = "2026-10-14T02:00:00Z";
 function assess(candidate = sampleCandidate(), participation = sampleParticipation()) {
   return assessWeightImprovementSample({ candidate, participation, policy: SAMPLE_FIXTURE_POLICY, now: NOW });
 }
+
+function storage(binding = sampleSourceBinding(), source_lineage = sampleSourceLineage(), candidate = sampleCandidate(),
+  selected_bindings: readonly WeightImprovementSampleSourceBinding[] = [], participation = sampleParticipation()) {
+  return buildWeightImprovementSampleStorageDraft({ binding, source_lineage, candidate, selected_bindings, participation, policy: SAMPLE_FIXTURE_POLICY, now: NOW });
+}
+
+describe("D3a inactive source binding draft", () => {
+  it("keeps actual policy and current C01 facts ineligible and never authorizes storage", () => {
+    const result = buildWeightImprovementSampleStorageDraft({ binding: sampleSourceBinding(), source_lineage: sampleSourceLineage(),
+      candidate: sampleCandidate(), participation: sampleParticipation(), now: NOW });
+    expect(result).toMatchObject({ draft: null, collection_allowed: false, storage_write_allowed: false });
+    expect(result.reasons).toContain("policy_pending");
+    const current = sampleCandidate({ ...CURRENT_C01_MEASUREMENT_CONFIRMATIONS });
+    current.rows = current.rows.map(row => ({ ...row, quantity_origin: "planned" }));
+    expect(storage(sampleSourceBinding(), sampleSourceLineage(), current).draft).toBeNull();
+    expect(Object.values(WEIGHT_IMPROVEMENT_SAMPLE_POLICY).every(value => value === null)).toBe(true);
+  });
+  it("projects exact separate feature/link shapes without copying private content or changing inputs", () => {
+    const binding = Object.assign(sampleSourceBinding(), { exact_cooked_at: sampleCandidate().cooked_at, recipe_text: "private text" });
+    const candidate = Object.assign(sampleCandidate(), { recipe_name: "private title", health_note: "private health", body_weight: 65 });
+    const original = structuredClone({ binding, candidate });
+    const result = storage(binding, sampleSourceLineage(), candidate);
+    expect(result.reasons).toEqual([]);
+    expect(result.collection_allowed).toBe(false);
+    expect(result.storage_write_allowed).toBe(false);
+    expect(result.draft?.private_binding).toEqual(sampleSourceBinding());
+    expect(Object.keys(result.draft ?? {})).toEqual(["features", "private_binding"]);
+    expect(result.draft?.features).toEqual(assess(candidate).features);
+    const features = JSON.stringify(result.draft?.features);
+    for (const value of [binding.sample_id, binding.subject.owner_uuid, binding.source_batch_id, binding.source_evidence_id,
+      candidate.rows[0].row_key, candidate.cooked_at, candidate.observed_at, "consent_revision", "consent_document", "private", "body_weight"]) expect(features).not.toContain(value);
+    expect({ binding, candidate }).toEqual(original);
+  });
+  it.each([
+    { subject: { owner_uuid: PARTICIPATION_OTHER_OWNER, account_generation: 3 } },
+    { subject: { owner_uuid: sampleSourceBinding().subject.owner_uuid, account_generation: 4 } },
+    { consent_revision: 3 }, { consent_document_version: "other-document" }, { consent_document_hash: "b".repeat(64) },
+    { source_batch_id: "550e8400-e29b-41d4-a716-446655440051" },
+    { source_evidence_id: "550e8400-e29b-41d4-a716-446655440052" }, { original_revision: 3 },
+  ] satisfies Partial<WeightImprovementSampleSourceBinding>[])("rejects source/subject/consent/document mismatch %j", changes => {
+    const result = storage(sampleSourceBinding(changes));
+    expect(result.draft).toBeNull();
+    expect(result.reasons).toContain("source_binding_mismatch");
+  });
+  it.each([
+    { sample_id: "not-a-uuid" }, { source_batch_id: "" }, { source_evidence_id: "bad" },
+    { original_revision: -1 }, { consent_revision: 1.5 }, { consent_document_hash: "not-a-hash" },
+  ] satisfies Partial<WeightImprovementSampleSourceBinding>[])("rejects invalid private binding shape %j", changes => {
+    expect(storage(sampleSourceBinding(changes)).reasons).toContain("source_binding_invalid");
+  });
+  it("rejects another purpose and a lineage from another owner/generation", () => {
+    expect(storage(Object.assign(sampleSourceBinding(), { purpose: "advertising" })).draft).toBeNull();
+    for (const subject of [{ owner_uuid: PARTICIPATION_OTHER_OWNER, account_generation: 3 },
+      { owner_uuid: sampleSourceBinding().subject.owner_uuid, account_generation: 4 }]) {
+      expect(storage(sampleSourceBinding(), sampleSourceLineage({ subject })).reasons).toContain("source_binding_mismatch");
+    }
+  });
+  it("rejects noncanonical UUID aliases and malformed selected-source snapshots", () => {
+    const binding = sampleSourceBinding({ source_batch_id: sampleSourceBinding().source_batch_id.toUpperCase() });
+    expect(storage(binding, sampleSourceLineage({ source_batch_id: binding.source_batch_id })).reasons).toContain("source_binding_invalid");
+    expect(weightImprovementSampleSourceAddress(binding)).toBeNull();
+    // Simulate a malformed future JSON reader without making an external API decoder here.
+    const notAnArray = Object.assign({}, [sampleSourceBinding()]);
+    expect(storage(sampleSourceBinding(), sampleSourceLineage(), sampleCandidate(), notAnArray).reasons).toContain("source_binding_invalid");
+  });
+  it("does not turn new sample/evidence IDs or consent revisions into another independent batch", () => {
+    const previous = sampleSourceBinding();
+    const corrected = sampleSourceBinding({ sample_id: "550e8400-e29b-41d4-a716-446655440053", source_evidence_id: "550e8400-e29b-41d4-a716-446655440054", original_revision: 3, consent_revision: 5 });
+    const participation = { ...sampleParticipation(), revision: 5 };
+    const candidate = sampleCandidate({ original_revision: 3, current_evidence_original_revision: 3, consent_revision: 5 });
+    const lineage = sampleSourceLineage({ source_evidence_id: corrected.source_evidence_id, original_revision: 3 });
+    expect(weightImprovementSampleSourceAddress(corrected)).toEqual(weightImprovementSampleSourceAddress(previous));
+    expect(storage(corrected, lineage, candidate, [previous], participation)).toMatchObject({ draft: null, reasons: ["duplicate_source"] });
+    const other = sampleSourceBinding({ source_batch_id: "550e8400-e29b-41d4-a716-446655440055",
+      source_evidence_id: "550e8400-e29b-41d4-a716-446655440056", sample_id: "550e8400-e29b-41d4-a716-446655440057" });
+    expect(storage(previous, sampleSourceLineage(), sampleCandidate(), [other]).draft).not.toBeNull();
+  });
+  it("rejects a known sample/evidence/batch identity rebound to another source or account generation", () => {
+    const current = sampleSourceBinding();
+    const other = sampleSourceBinding({ source_batch_id: "550e8400-e29b-41d4-a716-446655440055",
+      source_evidence_id: "550e8400-e29b-41d4-a716-446655440056", sample_id: "550e8400-e29b-41d4-a716-446655440057" });
+    for (const previous of [{ ...other, sample_id: current.sample_id }, { ...other, source_evidence_id: current.source_evidence_id },
+      sampleSourceBinding({ subject: { ...current.subject, account_generation: 2 } })]) {
+      expect(storage(current, sampleSourceLineage(), sampleCandidate(), [previous]).draft).toBeNull();
+      expect(storage(current, sampleSourceLineage(), sampleCandidate(), [previous]).reasons).toContain("source_binding_mismatch");
+    }
+  });
+  it("keeps withdrawal, old generation, stale/deleted evidence and old cooking ineligible", () => {
+    expect(storage(sampleSourceBinding(), sampleSourceLineage(), sampleCandidate(), [], { ...sampleParticipation(), decision: "withdrawn", revision: 5 }).draft).toBeNull();
+    expect(storage(sampleSourceBinding(), sampleSourceLineage(), sampleCandidate(), [], { ...sampleParticipation(), subject: { ...sampleParticipation().subject, account_generation: 4 } }).draft).toBeNull();
+    expect(storage(sampleSourceBinding(), sampleSourceLineage(), sampleCandidate({ source_current: false })).draft).toBeNull();
+    expect(storage(sampleSourceBinding(), sampleSourceLineage(), sampleCandidate(), [], { ...sampleParticipation(), opted_in_at: "2026-10-14T01:30:00Z" }).draft).toBeNull();
+  });
+  it.each(["sample_id", "source_batch_id", "source_evidence_id"] as const)("rejects private %s relabelled as a catalog feature", key => {
+    const binding = sampleSourceBinding();
+    const candidate = sampleCandidate();
+    candidate.rows = [{ ...candidate.rows[0], source_id: binding[key] }];
+    expect(storage(binding, sampleSourceLineage(), candidate).reasons).toContain("private_feature_value");
+    expect(storage(binding, sampleSourceLineage(), candidate).draft).toBeNull();
+  });
+  it("rejects owner, row ID and exact timestamp relabelled into allowed model fields", () => {
+    for (const value of [sampleSourceBinding().subject.owner_uuid, sampleCandidate().rows[0].row_key, sampleCandidate().cooked_at]) {
+      expect(storage(sampleSourceBinding(), sampleSourceLineage(), sampleCandidate({ model_version: value })).reasons).toContain("private_feature_value");
+    }
+    expect(storage(sampleSourceBinding(), sampleSourceLineage(), sampleCandidate({ model_version: sampleSourceBinding().subject.owner_uuid.toUpperCase() })).reasons).toContain("private_feature_value");
+  });
+  it.each(["withdrawal", "source_invalidated", "source_deleted", "account_deleted"] as const)("addresses %s without deletion/model authority or source changes", reason => {
+    const binding = sampleSourceBinding(), lineage = sampleSourceLineage();
+    const original = structuredClone({ binding, lineage });
+    expect(buildWeightImprovementSampleInvalidationAddress({ binding, source_lineage: lineage, reason })).toEqual({ reason,
+      source_address: weightImprovementSampleSourceAddress(binding), private_binding: sampleSourceBinding(), completion_write_allowed: false, model_release_allowed: false });
+    expect({ binding, lineage }).toEqual(original);
+    expect(assessWeightImprovementCleanup(cleanupProof())).toMatchObject({ completion_write_allowed: false, model_release_allowed: false });
+  });
+  it.each([
+    { subject: { owner_uuid: PARTICIPATION_OTHER_OWNER, account_generation: 3 } },
+    { subject: { owner_uuid: sampleSourceBinding().subject.owner_uuid, account_generation: 4 } },
+    { source_batch_id: "550e8400-e29b-41d4-a716-446655440061" },
+    { source_evidence_id: "550e8400-e29b-41d4-a716-446655440062" }, { original_revision: 3 },
+  ] satisfies Partial<WeightImprovementSampleSourceLineage>[])("never points a correction/deletion at another source %j", changes => {
+    expect(buildWeightImprovementSampleInvalidationAddress({ binding: sampleSourceBinding(), source_lineage: sampleSourceLineage(changes), reason: "source_invalidated" })).toBeNull();
+  });
+});
 
 describe("C05 inactive sample boundary", () => {
   it("keeps actual policy/retention null and collection locked even for a complete candidate", () => {

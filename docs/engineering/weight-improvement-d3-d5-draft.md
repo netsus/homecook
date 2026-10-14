@@ -48,6 +48,18 @@ C01 담당이 인계한 `SnapshotWeightPrediction`은 `cooked-weight-evidence-v1
 
 이 초안은 D3~D5 구현 완료를 뜻하지 않는다. 로컬 fixture 검사 외 수집·모델 훈련·삭제·운영 DB 적용·동의문 공개·배포는 0이다.
 
+## 2026-10-14 · D3a 비활성 저장 계약과 합성 source binding
+
+`buildWeightImprovementSampleStorageDraft`는 기존 pure gate를 그대로 호출하고 `{features, private_binding}`을 명시적으로 분리한다. features는 기존 허용 특징만 재사용하며, private binding에는 sample ID와 owner/generation/purpose, consent revision·문서 version/hash, batch/evidence ID·original revision만 둔다. 원기록 내용·정확한 시각·연락처·사진·건강 정보를 복제하지 않는다. 새 private ID나 정확한 시각을 허용 특징 슬롯에 다시 넣은 알려진 값의 충돌도 거절한다. 이는 임의 개인정보를 익명화하는 일반 도구가 아니다. 실제 source reader는 catalog 식별자·버전의 적격성과 고정 metadata를 별도로 확인해야 하며 아직 연결되지 않았다.
+
+독립 배치 주소는 **owner/generation/고정 purpose/batch**다. consent revision, evidence ID, sample ID를 바꿔도 주소는 같고 이미 선택한 관계가 있으면 초안을 거절한다. 정정 대상은 이전 evidence/original revision에 결속된 `source_invalidated` 주소로 나타낸다. 기존 대상을 메모리에서 지우거나 주소를 만들었다고 정정 적용·삭제 완료·새 표본 저장을 선언하지 않는다. 실제 transaction·UNIQUE/index·현재 선택 조회와 경합 규칙은 후속 writer 범위다.
+
+`buildWeightImprovementSampleInvalidationAddress`는 withdrawal/source_invalidated/source_deleted/account_deleted만 받으며, 같은 owner/generation/purpose/batch/evidence/original revision의 사설 연결만 가리킨다. 과거 동의의 문서·revision도 연결 안에 그대로 보존하므로 철회 후 현재 동의가 없어졌다는 이유로 삭제 대상을 잃지 않는다. 정정 후 새 evidence를 이전 표본 삭제 주소에 대신 넣지 않는다. 실제 원본 삭제 전 hook·tombstone·모델 영향 조회는 미구현이다.
+
+모든 정상 합성 초안도 `collection_allowed=false`, `storage_write_allowed=false`다. 무효화 주소와 기존 cleanup 판정은 `completion_write_allowed=false`, `model_release_allowed=false`를 유지한다. 정책/기간은 NULL, 실제 C01 투입·측정 확인 facts는 기존대로 미확인·planned이며 실제 적격 표본은 0이다. 실제 source 권위, 저장/삭제/복원, queue/worker, 모델 학습/활성화, 운영 변경은 수행하지 않았다.
+
+검증 범위는 가짜 fixture의 주체·목적·문서·원본 revision 결속, malformed private ID/hash, 동일 배치 중복·정정 주소, 철회/재참여의 옛 요리·옛 세대 거절, 허용외 정보 분리와 원기록 불변이다. 완료 표현은 **D3a 비활성 저장 계약·합성 fixture 검증 완료**까지이며 D3 실수집 완료가 아니다.
+
 
 ## 2026-10-14 · 표시 주체와 현재 인증 주체의 경합 방지
 
