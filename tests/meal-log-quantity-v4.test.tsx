@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MealLogAddSheet } from "@/components/planner/meal-log-add-sheet";
@@ -40,6 +40,121 @@ describe("explicit quantity v4 meal input", () => {
     api.preview.mockResolvedValue({ nutrition: { calculation_status: "unavailable", calories_kcal: null, carbohydrate_g: null, protein_g: null, fat_g: null, sodium_mg: null } });
   });
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
+  it("preserves initial source failure and retry after a successful catalog search", async () => {
+    api.cooked.mockRejectedValueOnce(Object.assign(new Error("목록 읽기 실패"), { status: 409 }));
+    const user = userEvent.setup(); const save = open();
+    await screen.findByRole("button", { name: "음식 목록 다시 불러오기" });
+    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.type(screen.getByPlaceholderText("제품·재료 이름을 입력해 주세요"), "우유");
+    await screen.findByRole("button", { name: /일반 우유/ });
+    await user.click(screen.getByRole("tab", { name: "최근" }));
+    expect(api.cooked).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("최근 기록한 음식이 없어요.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "음식 목록 다시 불러오기" })).not.toBeNull();
+    expect(screen.getByRole("alert").textContent).toBe("목록 읽기 실패");
+    await user.click(screen.getByRole("button", { name: "음식 목록 다시 불러오기" }));
+    await screen.findByText("최근 기록한 음식이 없어요.");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("button", { name: "음식 목록 다시 불러오기" })).toBeNull();
+    expect(api.cooked).toHaveBeenCalledTimes(2); expect(save).not.toHaveBeenCalled();
+  });
+  it("clears only source failure after its retry succeeds while preserving a separate catalog error", async () => {
+    api.cooked.mockRejectedValueOnce(new Error("목록 읽기 실패"));
+    api.catalog.mockRejectedValueOnce(new Error("제품 검색 실패"));
+    const user = userEvent.setup(); open();
+    await screen.findByRole("button", { name: "음식 목록 다시 불러오기" });
+    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    await user.type(screen.getByPlaceholderText("제품·재료 이름을 입력해 주세요"), "우유");
+    await screen.findByText("제품 검색 실패");
+    expect(screen.getByText("목록 읽기 실패")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "음식 목록 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByText("목록 읽기 실패")).toBeNull());
+    expect(screen.getByRole("alert").textContent).toBe("제품 검색 실패");
+    expect(screen.queryByRole("button", { name: "음식 목록 다시 불러오기" })).toBeNull();
+  });
+  it("distinguishes an initial stale read from empty lists and retries only on an explicit click", async () => {
+    api.cooked.mockRejectedValueOnce(Object.assign(new Error("세션을 다시 확인해 주세요."), { status: 409 }));
+    const user = userEvent.setup(); const save = open();
+    await screen.findByRole("alert");
+    expect(screen.queryByText("최근 기록한 음식이 없어요.")).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "요리한 음식" }));
+    expect(screen.queryByText("표시할 요리한 음식이 없어요.")).toBeNull();
+    expect(api.cooked).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "음식 목록 다시 불러오기" }));
+    await screen.findByText("표시할 요리한 음식이 없어요.");
+    expect(api.cooked).toHaveBeenCalledTimes(2); expect(api.recent).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull(); expect(save).not.toHaveBeenCalled();
+  });
+  it("keeps the original401 login callback instead of offering a read retry", async () => {
+    api.cooked.mockRejectedValueOnce(Object.assign(new Error("로그인이 필요해요."), { status: 401 }));
+    const unauthorized = vi.fn(); const save = vi.fn();
+    render(<MealLogAddSheet columns={[{ id: column, name: "아침", sort_order: 0 }]} date="2026-10-14" initialColumnId={column}
+      quantityV4Enabled onClose={vi.fn()} onSave={save} onUnauthorized={unauthorized} />);
+    await waitFor(() => expect(unauthorized).toHaveBeenCalledWith(null, column));
+    expect(screen.queryByRole("button", { name: "음식 목록 다시 불러오기" })).toBeNull();
+    expect(screen.queryByText("최근 기록한 음식이 없어요.")).toBeNull();
+    expect(save).not.toHaveBeenCalled();
+  });
+  it.each(["success", "401"])("disables repeated read retry and ignores its late %s after unmount", async response => {
+    let resolve!: (value: { items: never[]; has_next: boolean; next_cursor: null }) => void;
+    let reject!: (reason: Error) => void;
+    api.cooked.mockRejectedValueOnce(new Error("음식 목록 실패"))
+      .mockImplementationOnce(() => new Promise((done, fail) => { resolve = done; reject = fail; }));
+    const user = userEvent.setup(); const unauthorized = vi.fn();
+    const { unmount } = render(<MealLogAddSheet columns={[{ id: column, name: "아침", sort_order: 0 }]} date="2026-10-14" initialColumnId={column}
+      quantityV4Enabled onClose={vi.fn()} onSave={vi.fn()} onUnauthorized={unauthorized} />);
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("button", { name: "음식 목록 다시 불러오기" }));
+    await screen.findByRole("status", { name: "음식 목록 불러오는 중" });
+    const retry = screen.getByRole<HTMLButtonElement>("button", { name: "음식 목록 다시 불러오기" });
+    expect(retry.disabled).toBe(true); await user.click(retry);
+    expect(api.cooked).toHaveBeenCalledTimes(2);
+    unmount();
+    await act(async () => {
+      if (response === "401") reject(Object.assign(new Error("로그인이 필요해요."), { status: 401 }));
+      else resolve({ items: [], has_next: false, next_cursor: null });
+    });
+    expect(screen.queryByRole("dialog", { name: "먹은 음식 추가" })).toBeNull();
+    expect(unauthorized).not.toHaveBeenCalled();
+  });
+  it("formats preview quantity without rounding the input, request or saved fraction", async () => {
+    const user = userEvent.setup(); const save = open(); await selectMilk(user);
+    await user.selectOptions(screen.getByRole("combobox", { name: "단위" }), "L");
+    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "먹은 양" });
+    await user.type(amount, "1/3");
+    await user.selectOptions(screen.getByRole("combobox", { name: "단위" }), "mL");
+    const converted = (1 / 3) * 1_000;
+    await waitFor(() => expect(api.preview.mock.calls.at(-1)?.[0].quantity.amount).toBe(converted));
+    expect(screen.getByRole<HTMLInputElement>("textbox", { name: "먹은 양" }).value).toBe(String(converted));
+    const preview = screen.getByRole("region", { name: "입력한 양의 영양 미리보기" });
+    expect(within(preview).getByText("333.333mL 기준")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "기록 저장" }));
+    expect(save.mock.calls[0][0]).toMatchObject({ amount: converted, unit: "mL", quantityInput: { raw_value: "1/3", raw_unit: "L" } });
+  });
+  it("keeps a positive tiny preview distinct from zero without changing its input", async () => {
+    const user = userEvent.setup(); open(); const amount = await selectMilk(user);
+    await user.type(amount, "0.000001"); await user.tab();
+    const preview = await screen.findByRole("region", { name: "입력한 양의 영양 미리보기" });
+    expect(within(preview).getByText("<0.001mL 기준")).toBeTruthy();
+    expect(amount.value).toBe("0.000001");
+    expect(api.preview.mock.calls.at(-1)?.[0].quantity.amount).toBe(0.000001);
+  });
+  it.each([true, false])("formats recent quantity while preserving exact selection and raw metadata (raw=%s)", async hasRaw => {
+    const converted = (1 / 3) * 1_000;
+    const raw = { schema_version: "quantity-v4", raw_value: "1/3", raw_unit: "L", numerator: "1", denominator: "3",
+      display_quantity: { amount: converted, unit: "mL" }, normalized: null, quality: "unavailable", reason: "DENSITY_REQUIRED", evidence_ids: [], source_versions: [], batch_basis: null };
+    api.recent.mockResolvedValue({ items: [{ source: { type: "ingredient", id: ingredient }, source_version: "milk-v1", display_name: "일반 우유", display_brand: null,
+      last_quantity: { amount: converted, unit: "mL" }, frequency: 1, ...(hasRaw ? { quantity_input: raw } : {}) }], has_next: false, next_cursor: null });
+    const user = userEvent.setup(); const save = open();
+    const recent = await screen.findByRole("button", { name: /일반 우유/ });
+    expect(within(recent).getByText(`재료 · 최근 ${hasRaw ? "1/3L" : "333.333mL"} · 1회 기록`)).toBeTruthy();
+    await user.click(recent);
+    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "먹은 양" });
+    expect(amount.value).toBe(String(converted));
+    await user.click(amount); await user.tab(); await user.click(screen.getByRole("button", { name: "기록 저장" }));
+    expect(save.mock.calls[0][0]).toMatchObject({ amount: converted, unit: "mL" });
+    if (hasRaw) expect(save.mock.calls[0][0].quantityInput).toMatchObject({ raw_value: "1/3", raw_unit: "L" });
+  });
   it("starts verified milk at mL with blank amount, then sends exact fraction raw input", async () => {
     const user = userEvent.setup(); const save = open(); const amount = await selectMilk(user);
     expect(amount.value).toBe("");
