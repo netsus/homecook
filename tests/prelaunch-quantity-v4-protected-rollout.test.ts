@@ -4,12 +4,66 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { describe, expect, it, vi } from "vitest";
-import * as deploy from "../scripts/lib/prelaunch-web-deploy.mjs";
-import { assertProtectedPrelaunchObservation, assertQuantityV4ProtectionPrepared, classifyProtectedPrelaunchOutcome,
+import { afterAll, describe, expect, it, vi } from "vitest";
+
+// Only these nine C04 declarations are authority inputs in the disposable graph.
+const WEB_AUTHORITY_DEFAULTS = {
+  QUANTITY_V4_RELEASE_SHA: "null", QUANTITY_V4_PROTECTION: "null",
+  QUANTITY_V4_CONSUMERS_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WRITER_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_BEFORE_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_AFTER_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_OPERATION_ROOT: "null",
+};
+function webFixtureSource(source: string, overrides: Partial<Record<keyof typeof WEB_AUTHORITY_DEFAULTS, string>> = {}) {
+  for (const name of Object.keys(overrides)) if (!Object.hasOwn(WEB_AUTHORITY_DEFAULTS, name)) throw new Error("Unknown fixture authority");
+  for (const [name, value] of Object.entries(WEB_AUTHORITY_DEFAULTS)) {
+    const declaration = new RegExp(`^export const ${name} = [^\\r\\n]*;$`, "gmu");
+    if ([...source.matchAll(declaration)].length !== 1) throw new Error(`Expected exactly one fixture declaration: ${name}`);
+    source = source.replace(declaration, () => `export const ${name} = ${value};`);
+  }
+  for (const [name, value] of Object.entries(overrides)) {
+    const declaration = new RegExp(`^export const ${name} = [^\\r\\n]*;$`, "gmu");
+    source = source.replace(declaration, () => `export const ${name} = ${value};`);
+  }
+  for (const [name, value] of Object.entries({ ...WEB_AUTHORITY_DEFAULTS, ...overrides })) {
+    const declarations = source.match(new RegExp(`^export const ${name} = [^\\r\\n]*;$`, "gmu"));
+    if (declarations?.length !== 1 || declarations[0] !== `export const ${name} = ${value};`) throw new Error("Fixture authority was not isolated");
+  }
+  return source;
+}
+function fixtureStateRoot(source: string, stateRoot: string) {
+  const original = 'function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }';
+  if (source.split(original).length !== 2) throw new Error("Fixture state-root declaration changed");
+  return source.replace(original, () => `function prelaunchStateRoot() { return ${JSON.stringify(stateRoot)}; }`);
+}
+function databaseFixtureSource(source: string, webPath: string) {
+  let webImports = 0;
+  const result = source.replace(/from "(\.\/[^"\n]+)"/gu, (_, name: string) => {
+    if (name === "./prelaunch-web-deploy.mjs") webImports++;
+    return `from "${pathToFileURL(name === "./prelaunch-web-deploy.mjs" ? webPath : join(process.cwd(), "scripts/lib", name)).href}"`;
+  });
+  if (webImports !== 2 || result.includes('from "./prelaunch-web-deploy.mjs"')) throw new Error("Fixture DB authority imports changed");
+  return result;
+}
+const nullGraphDirectory = mkdtempSync(join(realpathSync("/tmp"), "c04-null-authority-"));
+afterAll(() => rmSync(nullGraphDirectory, { recursive: true, force: true }));
+async function nullWebModules() {
+  try {
+    const webPath = join(nullGraphDirectory, "web.mjs"), databasePath = join(nullGraphDirectory, "database.mjs");
+    writeFileSync(webPath, fixtureStateRoot(webFixtureSource(readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8")), join(nullGraphDirectory, "state")), { mode: 0o600 });
+    writeFileSync(databasePath, databaseFixtureSource(readFileSync("scripts/lib/prelaunch-database.mjs", "utf8"), webPath), { mode: 0o600 });
+    return { web: await import(pathToFileURL(webPath).href), database: await import(pathToFileURL(databasePath).href) };
+  } catch (error) { rmSync(nullGraphDirectory, { recursive: true, force: true }); throw error; }
+}
+const isolated = await nullWebModules();
+const deploy: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") = isolated.web;
+const { assertProtectedPrelaunchObservation, assertQuantityV4ProtectionPrepared, classifyProtectedPrelaunchOutcome,
   createProtectedPrelaunchAdapter, createProtectedPrelaunchDatabaseEngine, createProtectedPrelaunchJournal, createProtectedPrelaunchWriter,
   openProtectedPrelaunchTarget, planProtectedPrelaunchMigrations, QUANTITY_V4_NORMAL_DATA_SQL, QUANTITY_V4_NORMAL_COLUMNS, assertQuantityV4Columns,
-  QUANTITY_V4_COLUMN_METADATA, QUANTITY_V4_COLUMNS_BEFORE_SHA256, QUANTITY_V4_COLUMNS_AFTER_SHA256 } from "../scripts/lib/prelaunch-database.mjs";
+  QUANTITY_V4_COLUMN_METADATA, QUANTITY_V4_COLUMNS_BEFORE_SHA256, QUANTITY_V4_COLUMNS_AFTER_SHA256 }: typeof import("../scripts/lib/prelaunch-database.mjs") = isolated.database;
 
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const sha = (c: string) => c.repeat(64), ref = (c: string) => c.repeat(40);
@@ -184,6 +238,25 @@ function policyRepairFixture(directory: string, reconciled = false) {
   return { review: f.review, previous, later, repair, controlPointer, files, bytes };
 }
 
+it("isolates all nine authority initializers even when the source is already bound", () => {
+  const original = readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8");
+  const marker = "/synthetic-unreadable-c04-authority/never-open";
+  const bound = original.replace(/^export const (QUANTITY_V4_[A-Z_]+) = [^\r\n]*;$/gmu, (line, name: string) => {
+    if (!Object.hasOwn(WEB_AUTHORITY_DEFAULTS, name)) return line;
+    const value = name === "QUANTITY_V4_RELEASE_SHA" ? JSON.stringify(ref("d"))
+      : name === "QUANTITY_V4_PROTECTION" ? JSON.stringify({ normalProjectionSha256: sha("7"), postimageRegistrySha256: sha("8") })
+      : name === "QUANTITY_V4_WORKER_OPERATION_ROOT" ? JSON.stringify(`${marker}/operations`)
+      : `Object.freeze(${JSON.stringify({ path: `${marker}/review.json`, sha256: sha("7") })})`;
+    return `export const ${name} = ${value};`;
+  });
+  expect(bound).toContain(marker);
+  const isolated = webFixtureSource(bound);
+  expect(isolated).toBe(webFixtureSource(original)); expect(isolated).not.toContain(marker);
+  expect(() => webFixtureSource(bound.replace(/^export const QUANTITY_V4_RELEASE_SHA = .*;$/mu, ""))).toThrow("exactly one");
+  expect(() => webFixtureSource(`${bound}\nexport const QUANTITY_V4_RELEASE_SHA = null;`)).toThrow("exactly one");
+  expect(() => webFixtureSource(bound.replace(/^export const QUANTITY_V4_RELEASE_SHA = .*;$/mu, "export const QUANTITY_V4_RELEASE_SHA =\n null;"))).toThrow("exactly one");
+});
+
 describe("C04 unbound authority and exact5+1 source projection", () => {
   it("denies unbound C04 pins before any private path/target access", async () => {
     for (const pin of [deploy.QUANTITY_V4_CONSUMERS_REVIEW_PIN, deploy.QUANTITY_V4_WORKER_REVIEW_PIN, deploy.QUANTITY_V4_WRITER_REVIEW_PIN,
@@ -251,7 +324,7 @@ describe("the existing global deploy lock shared by two CLI callers", () => {
     const directory = mkdtempSync(join(realpathSync("/tmp"), "c04-shared-lock-unit-")), stateRoot = join(directory, "state"), modulePath = join(directory, "deploy.mjs");
     mkdirSync(stateRoot, { mode: 0o700 });
     const original = readFileSync(join(process.cwd(), "scripts/lib/prelaunch-web-deploy.mjs"), "utf8");
-    writeFileSync(modulePath, original.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }', `function prelaunchStateRoot() { return ${JSON.stringify(stateRoot)}; }`));
+    writeFileSync(modulePath, fixtureStateRoot(webFixtureSource(original), stateRoot));
     const url = pathToFileURL(modulePath).href;
     const first = spawn(process.execPath, ["--input-type=module", "-e", `import {acquirePrelaunchDeployLock} from ${JSON.stringify(url)}; const lock=acquirePrelaunchDeployLock(); process.stdout.write('held\\n'); for await(const input of process.stdin){break;} lock.release();`], { stdio: ["pipe", "pipe", "pipe"] });
     try {
@@ -451,20 +524,20 @@ describe("C04 worker checkpoints never replace fresh state or final227 reader", 
       // Like the existing pin tests: bind only this disposable module, never repository authority.
       const webSource = readFileSync(join(process.cwd(), "scripts/lib/prelaunch-web-deploy.mjs"), "utf8");
       const webPath = join(directory, "web.mjs"), databasePath = join(directory, "database.mjs"), terminalSha = sha("9");
-      writeFileSync(webPath, webSource.replace(/export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze\(\{[^}]*\}\);/u,
-        `export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze(${JSON.stringify({ path: "/fixture/original-worker-review.json", sha256: sha("1") })});`)
-        .replace("export const QUANTITY_V4_WORKER_OPERATION_ROOT = null;", 'export const QUANTITY_V4_WORKER_OPERATION_ROOT = "/fixture/c04-operations";'));
-      const databaseSource = readFileSync(join(process.cwd(), "scripts/lib/prelaunch-database.mjs"), "utf8")
-        .replace(/from "(\.\/[^"\n]+)"/gu, (_, name: string) => `from "${pathToFileURL(name === "./prelaunch-web-deploy.mjs" ? webPath : join(process.cwd(), "scripts/lib", name)).href}"`);
-      writeFileSync(databasePath, databaseSource);
+      const operationRoot = join(directory, "operations");
+      writeFileSync(webPath, fixtureStateRoot(webFixtureSource(webSource, {
+        QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN: `Object.freeze(${JSON.stringify({ path: join(directory, "original-worker-review.json"), sha256: sha("1") })})`,
+        QUANTITY_V4_WORKER_OPERATION_ROOT: JSON.stringify(operationRoot),
+      }), join(directory, "state")));
+      writeFileSync(databasePath, databaseFixtureSource(readFileSync("scripts/lib/prelaunch-database.mjs", "utf8"), webPath));
       const boundWeb = await import(pathToFileURL(webPath).href), boundDatabase = await import(pathToFileURL(databasePath).href);
       const f = engineFixture("worker"), databaseReceipt = await f.engine.apply();
       const workerAfter = { ...f.checkpoint, schema: "homecook.prelaunch-quantity-worker-after.v1", ledgerCount: 227,
         catalogFingerprint: deploy.QUANTITY_V4_WORKER_CATALOG_AFTER, serviceState: "running", pid: 12345,
         credentialGeneration: 48, credentialRowSha256: sha("a"), workerReleaseSha: f.review.to, workerDatabaseReceiptSha256: hash(JSON.stringify(databaseReceipt)) };
-      const operationDirectory = `/fixture/c04-operations/${operationId}`;
+      const operationDirectory = join(operationRoot, operationId);
       const control = { schema: "homecook.youtube-c04-controlled-cutover-review.v1", releaseSha: f.review.to, targetSha256: f.review.database.targetSha256,
-        operationId, operationRoot: "/fixture/c04-operations", generationBefore: 47, generationAfter: 48, ledgerBefore: 226, ledgerAfter: 227,
+        operationId, operationRoot, generationBefore: 47, generationAfter: 48, ledgerBefore: 226, ledgerAfter: 227,
         catalogBefore: deploy.QUANTITY_V4_WORKER_CATALOG_BEFORE, catalogAfter: deploy.QUANTITY_V4_WORKER_CATALOG_AFTER,
         migrationSha256: deploy.QUANTITY_V4_MIGRATIONS[5].sha256, schemaIdentity: workerAfter.schemaIdentity, artifactSha256: workerAfter.artifactSha256,
         descriptorSha256: workerAfter.descriptorSha256, expectedSchemaSha256: sha("b"), snapshotDigest: workerAfter.snapshotDigest,
@@ -575,9 +648,10 @@ describe("C04 policy pause repair consumes exact immutable lineage", () => {
       const f = policyRepairFixture(directory, reconciled);
       for (const [path, value] of f.files) { mkdirSync(join(path, ".."), { recursive: true, mode: 0o700 }); writeFileSync(path, f.bytes(value), { mode: 0o600 }); }
       const modulePath = join(directory, "web.mjs"), source = readFileSync(join(process.cwd(), "scripts/lib/prelaunch-web-deploy.mjs"), "utf8");
-      writeFileSync(modulePath, source.replace(/export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze\(\{[^}]*\}\);/u,
-        `export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze(${JSON.stringify(f.controlPointer)});`)
-        .replace("export const QUANTITY_V4_WORKER_OPERATION_ROOT = null;", `export const QUANTITY_V4_WORKER_OPERATION_ROOT = ${JSON.stringify(directory)};`));
+      writeFileSync(modulePath, fixtureStateRoot(webFixtureSource(source, {
+        QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN: `Object.freeze(${JSON.stringify(f.controlPointer)})`,
+        QUANTITY_V4_WORKER_OPERATION_ROOT: JSON.stringify(directory),
+      }), join(directory, "state")));
       const bound = await import(pathToFileURL(modulePath).href);
       const evidence = bound.loadQuantityV4WorkerCheckpointEvidence(f.review, process.cwd(), "after");
       expect(evidence.record).toEqual(f.later); expect(evidence.origin.record).toEqual(f.repair.laterOrigin);
@@ -598,9 +672,8 @@ describe("C04 policy pause repair consumes exact immutable lineage", () => {
       expect(() => bound.loadQuantityV4WorkerCheckpointEvidence(f.review, process.cwd(), "after", true, p3Pointer)).toThrow("publication links");
       writeFileSync(p3OriginPath, f.bytes(p3Origin));
 
-      const databasePath = join(directory, "database.mjs"), databaseSource = readFileSync(join(process.cwd(), "scripts/lib/prelaunch-database.mjs"), "utf8")
-        .replace(/from "(\.\/[^"\n]+)"/gu, (_, name: string) => `from "${pathToFileURL(name === "./prelaunch-web-deploy.mjs" ? modulePath : join(process.cwd(), "scripts/lib", name)).href}"`);
-      writeFileSync(databasePath, databaseSource);
+      const databasePath = join(directory, "database.mjs");
+      writeFileSync(databasePath, databaseFixtureSource(readFileSync("scripts/lib/prelaunch-database.mjs", "utf8"), modulePath));
       const boundDatabase = await import(pathToFileURL(databasePath).href), engine = engineFixture("worker", f.controlPointer.sha256), receipt = await engine.engine.apply();
       const reader = bound.protectedRolloutReaderReceipt({ review: f.review, reviewSha256: hash(JSON.stringify(f.review)), databaseReceipt: receipt,
         databaseReceiptSha256: f.previous.workerDatabaseReceiptSha256, workerReceiptSha256: f.repair.previous.pointer.sha256,
@@ -698,14 +771,14 @@ describe("C04 real durable producer and strict loader roundtrip", () => {
       // The engine and journal bound the same hash of each exact review before publication.
       // fixture engine defaults hash compact JSON, so publish compact review bytes for the code pin.
       for(const f of [consumers,worker]){const compact=JSON.stringify(f.review);writeFileSync(f.reviewPath,compact,{mode:0o600});f.reviewSha256=hash(compact);}
-      let moduleSource=readFileSync(join(process.cwd(),"scripts/lib/prelaunch-web-deploy.mjs"),"utf8");
-      moduleSource=moduleSource.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',`function prelaunchStateRoot() { return ${JSON.stringify(stateRoot)}; }`)
-        .replace('export const QUANTITY_V4_RELEASE_SHA = null;',`export const QUANTITY_V4_RELEASE_SHA = ${JSON.stringify(worker.review.to)};`)
-        .replace('export const QUANTITY_V4_PROTECTION = null;',`export const QUANTITY_V4_PROTECTION = ${JSON.stringify({normalProjectionSha256:hash(QUANTITY_V4_NORMAL_DATA_SQL),postimageRegistrySha256:sha("0")})};`)
-        .replace('export const QUANTITY_V4_CONSUMERS_REVIEW_PIN = Object.freeze({ path: null, sha256: null });',`export const QUANTITY_V4_CONSUMERS_REVIEW_PIN = Object.freeze(${JSON.stringify({path:consumers.reviewPath,sha256:consumers.reviewSha256})});`)
-        .replace('export const QUANTITY_V4_WORKER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });',`export const QUANTITY_V4_WORKER_REVIEW_PIN = Object.freeze(${JSON.stringify({path:worker.reviewPath,sha256:worker.reviewSha256})});`)
-        .replace('export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze({ path: null, sha256: null });',`export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze(${JSON.stringify({path:join(directory,"original-worker-review.json"),sha256:sha("1")})});`)
-        .replace('export const QUANTITY_V4_WORKER_OPERATION_ROOT = null;',`export const QUANTITY_V4_WORKER_OPERATION_ROOT = ${JSON.stringify(join(directory,"worker-operations"))};`);
+      const moduleSource = fixtureStateRoot(webFixtureSource(readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8"), {
+        QUANTITY_V4_RELEASE_SHA: JSON.stringify(worker.review.to),
+        QUANTITY_V4_PROTECTION: JSON.stringify({normalProjectionSha256:hash(QUANTITY_V4_NORMAL_DATA_SQL),postimageRegistrySha256:sha("0")}),
+        QUANTITY_V4_CONSUMERS_REVIEW_PIN: `Object.freeze(${JSON.stringify({path:consumers.reviewPath,sha256:consumers.reviewSha256})})`,
+        QUANTITY_V4_WORKER_REVIEW_PIN: `Object.freeze(${JSON.stringify({path:worker.reviewPath,sha256:worker.reviewSha256})})`,
+        QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN: `Object.freeze(${JSON.stringify({path:join(directory,"original-worker-review.json"),sha256:sha("1")})})`,
+        QUANTITY_V4_WORKER_OPERATION_ROOT: JSON.stringify(join(directory,"worker-operations")),
+      }), stateRoot);
       const modulePath=join(directory,"bound-review-copy.mjs");writeFileSync(modulePath,moduleSource,{mode:0o600});
       const loader=await import(pathToFileURL(modulePath).href);
       expect(loader.loadQuantityV4DatabaseReceipt(process.cwd(),"consumers").pointer).toEqual(consumers.pointer);

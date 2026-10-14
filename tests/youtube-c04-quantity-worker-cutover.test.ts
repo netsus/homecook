@@ -2,19 +2,95 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
+import { pathToFileURL } from "node:url";
 
-import {
+import { DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS, DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE, buildYoutubeExtractionCurrentPolicy } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
+
+import { createYoutubeExtractionWorkerRuntime } from "../scripts/lib/youtube-extraction-worker-runtime.mjs";
+
+const WEB_AUTHORITY_DEFAULTS = {
+  QUANTITY_V4_RELEASE_SHA: "null", QUANTITY_V4_PROTECTION: "null",
+  QUANTITY_V4_CONSUMERS_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WRITER_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_BEFORE_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_AFTER_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  QUANTITY_V4_WORKER_OPERATION_ROOT: "null",
+};
+
+const WORKER_AUTHORITY_DEFAULTS = {
+  YOUTUBE_C04_CUTOVER_REVIEW_PIN: "Object.freeze({ path: null, sha256: null })",
+  YOUTUBE_C04_RELEASE_SHA: "null", YOUTUBE_C04_ARTIFACT_SHA256: "null", YOUTUBE_C04_OPERATION_ROOT: "null",
+};
+function nullC04Source(source: string, kind: "web" | "worker") {
+  const declarations = kind === "web" ? WEB_AUTHORITY_DEFAULTS : WORKER_AUTHORITY_DEFAULTS;
+  for (const [name, value] of Object.entries(declarations)) {
+    const pattern = new RegExp(`^export const ${name} = [^\\r\\n]*;$`, "gmu");
+    if ([...source.matchAll(pattern)].length !== 1) throw new Error(`Expected exactly one fixture declaration: ${name}`);
+    source = source.replace(pattern, () => `export const ${name} = ${value};`);
+    const checked = source.match(pattern);
+    if (checked?.length !== 1 || checked[0] !== `export const ${name} = ${value};`) throw new Error("Fixture authority was not isolated");
+  }
+  return source;
+}
+function workerFixtureGraph(directory: string, inputs = {
+  web: readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8"),
+  worker: readFileSync("scripts/lib/youtube-v71-controlled-cutover.mjs", "utf8"),
+}) {
+  const repository = resolve("."), webPath = join(directory, "web.mjs"), databasePath = join(directory, "database.mjs"),
+    workerPath = join(directory, "worker.mjs"), cliPath = join(directory, "cli.mjs");
+  const stateDeclaration = 'function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }';
+  let web = nullC04Source(inputs.web, "web");
+  if (web.split(stateDeclaration).length !== 2) throw new Error("Fixture state-root declaration changed");
+  web = web.replace(stateDeclaration, () => `function prelaunchStateRoot() { return ${JSON.stringify(join(directory, "state"))}; }`);
+  const worker = nullC04Source(inputs.worker, "worker").replace(/from "(\.\/[^"\n]+)"/gu,
+    (_, name: string) => `from "${pathToFileURL(join(repository, "scripts/lib", name)).href}"`);
+  let dbImports = 0;
+  const database = readFileSync("scripts/lib/prelaunch-database.mjs", "utf8").replace(/from "(\.\/[^"\n]+)"/gu, (_, name: string) => {
+    if (name === "./prelaunch-web-deploy.mjs") dbImports++;
+    return `from "${pathToFileURL(name === "./prelaunch-web-deploy.mjs" ? webPath : join(repository, "scripts/lib", name)).href}"`;
+  });
+  if (dbImports !== 2) throw new Error("Fixture DB authority imports changed");
+  const targets = new Map([
+    ["./lib/youtube-v71-controlled-cutover.mjs", { path: workerPath, expected: 2, count: 0 }],
+    ["./lib/prelaunch-web-deploy.mjs", { path: webPath, expected: 1, count: 0 }],
+    ["./lib/prelaunch-database.mjs", { path: databasePath, expected: 1, count: 0 }],
+  ]);
+  let cli = readFileSync("scripts/youtube-v71-controlled-cutover.mjs", "utf8").replace(/from "(\.\/[^"\n]+)"/gu, (_, name: string) => {
+    const target = targets.get(name); if (target) target.count++;
+    return `from "${pathToFileURL(target?.path ?? join(repository, "scripts", name)).href}"`;
+  });
+  for (const [name, target] of targets) {
+    if (target.count !== target.expected || cli.includes(`from "${name}"`)
+      || cli.split(`from "${pathToFileURL(target.path).href}"`).length !== target.expected + 1) throw new Error("Fixture CLI authority imports changed");
+  }
+  for (const [old, replacement] of [
+    ['const ROOT = realpathSync(resolve(HERE, ".."));', `const ROOT = ${JSON.stringify(repository)};`],
+    ["const HOME = homedir();", `const HOME = ${JSON.stringify(directory)};`],
+  ]) {
+    if (cli.split(old).length !== 2) throw new Error("Fixture CLI root declaration changed");
+    cli = cli.replace(old, () => replacement);
+  }
+  // No module is imported or spawned until every authority and graph edge is checked.
+  for (const [path, source] of [[webPath, web], [databasePath, database], [workerPath, worker], [cliPath, cli]]) writeFileSync(path, source, { mode: 0o600 });
+  return { webPath, databasePath, workerPath, cliPath, cliSource: cli };
+}
+const nullGraphDirectory = mkdtempSync(join(tmpdir(), "c04-worker-null-graph-"));
+afterAll(() => rmSync(nullGraphDirectory, { recursive: true, force: true }));
+async function nullWorkerGraph() {
+  try { const graph = workerFixtureGraph(nullGraphDirectory); return { graph, module: await import(pathToFileURL(graph.workerPath).href) }; }
+  catch (error) { rmSync(nullGraphDirectory, { recursive: true, force: true }); throw error; }
+}
+const isolated = await nullWorkerGraph();
+const {
   assertC04QuantityCheckpoint, assertC04QuantityCheckpointOrigin, assertC04QuantityControlReview,
   buildC04QuantityCredentialTransitionSql, createC04QuantityWorkerCutover, parseC04QuantityCutoverArguments,
   YOUTUBE_C04_ACTIVATE_CONFIRMATION, YOUTUBE_C04_REPAIR_CONFIRMATION, YOUTUBE_C04_ARTIFACT_SHA256, YOUTUBE_C04_CATALOG_AFTER, YOUTUBE_C04_CATALOG_BEFORE,
   YOUTUBE_C04_CUTOVER_CONFIRMATION, YOUTUBE_C04_CUTOVER_REVIEW_PIN, YOUTUBE_C04_EXPECTED_SCHEMA_SHA256,
   YOUTUBE_C04_OPERATION_ROOT, YOUTUBE_C04_QUIESCE_CONFIRMATION, YOUTUBE_C04_RELEASE_SHA,
-} from "../scripts/lib/youtube-v71-controlled-cutover.mjs";
-
-import { DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS, DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE, buildYoutubeExtractionCurrentPolicy } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
-
-import { createYoutubeExtractionWorkerRuntime } from "../scripts/lib/youtube-extraction-worker-runtime.mjs";
+}: typeof import("../scripts/lib/youtube-v71-controlled-cutover.mjs") = isolated.module;
 
 const sha = (n: string) => n.repeat(64);
 const now = new Date("2026-10-14T00:00:00Z");
@@ -47,6 +123,35 @@ function fixture() {
   return { review, record, journal };
 }
 
+it("neutralizes already-bound web and worker authority before importing or spawning the fixture graph", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "c04-bound-input-graph-"));
+  try {
+    const marker = "/synthetic-unreadable-c04-authority/never-open";
+    const bound = (source: string, kind: "web" | "worker") => source.replace(/^export const ([A-Z0-9_]+) = [^\r\n]*;$/gmu, (line, name: string) => {
+      if (!Object.hasOwn(kind === "web" ? WEB_AUTHORITY_DEFAULTS : WORKER_AUTHORITY_DEFAULTS, name)) return line;
+      const value = name.endsWith("_RELEASE_SHA") ? JSON.stringify("d".repeat(40))
+        : name === "YOUTUBE_C04_ARTIFACT_SHA256" ? JSON.stringify(sha("7"))
+        : name === "QUANTITY_V4_PROTECTION" ? JSON.stringify({ normalProjectionSha256: sha("7"), postimageRegistrySha256: sha("8") })
+        : name.endsWith("_OPERATION_ROOT") ? JSON.stringify(`${marker}/operations`)
+        : `Object.freeze(${JSON.stringify({ path: `${marker}/review.json`, sha256: sha("7") })})`;
+      return `export const ${name} = ${value};`;
+    });
+    const inputs = { web: bound(readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8"), "web"),
+      worker: bound(readFileSync("scripts/lib/youtube-v71-controlled-cutover.mjs", "utf8"), "worker") };
+    expect(inputs.web).toContain(marker); expect(inputs.worker).toContain(marker);
+    const graph = workerFixtureGraph(directory, inputs);
+    for (const path of [graph.webPath, graph.databasePath, graph.workerPath, graph.cliPath]) expect(readFileSync(path, "utf8")).not.toContain(marker);
+    const web = await import(pathToFileURL(graph.webPath).href), worker = await import(pathToFileURL(graph.workerPath).href);
+    expect(web.QUANTITY_V4_WORKER_OPERATION_ROOT).toBeNull(); expect(web.QUANTITY_V4_PROTECTION).toBeNull();
+    expect(worker.YOUTUBE_C04_CUTOVER_REVIEW_PIN).toEqual({ path: null, sha256: null });
+    const denied = spawnSync(process.execPath, [graph.cliPath, "--profile", "c04-quantity-v4", "--prepare"], { encoding: "utf8" });
+    expect(denied.status).toBe(1); expect(denied.stderr).toContain("unbound C04");
+    expect(() => nullC04Source(inputs.worker.replace(/^export const YOUTUBE_C04_OPERATION_ROOT = .*;$/mu, ""), "worker")).toThrow("exactly one");
+    expect(() => nullC04Source(`${inputs.worker}\nexport const YOUTUBE_C04_OPERATION_ROOT = null;`, "worker")).toThrow("exactly one");
+    expect(() => nullC04Source(inputs.worker.replace(/^export const YOUTUBE_C04_OPERATION_ROOT = .*;$/mu, "export const YOUTUBE_C04_OPERATION_ROOT =\n null;"), "worker")).toThrow("exactly one");
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 describe("fixed C04 worker cutover boundaries", () => {
   it("denies an unbound source/artifact/review before private operational I/O", () => {
     expect(YOUTUBE_C04_CUTOVER_REVIEW_PIN).toEqual({ path: null, sha256: null });
@@ -54,10 +159,10 @@ describe("fixed C04 worker cutover boundaries", () => {
     expect(() => assertC04QuantityControlReview(fixture().review, { releaseSha: null, artifactSha256: null, operationRoot: null })).toThrow("unbound");
     for (const tail of [["--prepare"], ["--quiesce", YOUTUBE_C04_QUIESCE_CONFIRMATION], ["--execute", YOUTUBE_C04_CUTOVER_CONFIRMATION],
       ["--resume", YOUTUBE_C04_CUTOVER_CONFIRMATION], ["--activate", YOUTUBE_C04_ACTIVATE_CONFIRMATION], ["--pause-for-repair", YOUTUBE_C04_REPAIR_CONFIRMATION]]) {
-      const result = spawnSync(process.execPath, ["scripts/youtube-v71-controlled-cutover.mjs", "--profile", "c04-quantity-v4", ...tail], { encoding: "utf8" });
+      const result = spawnSync(process.execPath, [isolated.graph.cliPath, "--profile", "c04-quantity-v4", ...tail], { encoding: "utf8" });
       expect(result.status).toBe(1); expect(result.stderr).toContain("unbound C04");
     }
-    const invalid = spawnSync(process.execPath, ["scripts/youtube-v71-controlled-cutover.mjs", "--profile", "c04-quantity-v4", "--execute", YOUTUBE_C04_CUTOVER_CONFIRMATION, "--generation", "49"], { encoding: "utf8" });
+    const invalid = spawnSync(process.execPath, [isolated.graph.cliPath, "--profile", "c04-quantity-v4", "--execute", YOUTUBE_C04_CUTOVER_CONFIRMATION, "--generation", "49"], { encoding: "utf8" });
     expect(invalid.status).toBe(1); expect(invalid.stderr).toContain("exact phase/confirmation"); expect(invalid.stderr).not.toContain("unbound C04");
   });
 
@@ -350,15 +455,11 @@ describe("C04 simulated controlled phases", () => {
 it("uses the actual CLI persistence adapters to preserve immutable origins and publish repair pointers last", () => {
   const directory = mkdtempSync(join(tmpdir(), "c04-cutover-owned-"));
   try {
-    const repository = resolve("."), sourcePath = join(repository, "scripts/youtube-v71-controlled-cutover.mjs");
-    const source = readFileSync(sourcePath, "utf8");
-    // Only import location/HOME and the entrypoint are changed in this owned copy.
-    // No operational adapter is invoked: just the exact create-only publisher/reader.
-    const fixtureSource = source.slice(0, source.indexOf("const [command, confirmation] = process.argv.slice(2);"))
-      .replaceAll('"./', `"${repository}/scripts/`)
-      .replace('const ROOT = realpathSync(resolve(HERE, ".."));', `const ROOT = ${JSON.stringify(repository)};`)
-      .replace("const HOME = homedir();", `const HOME = ${JSON.stringify(directory)};`)
-      + "\nexport { createC04Adapters };\n";
+    const graph = workerFixtureGraph(directory);
+    const entrypoint = "const [command, confirmation] = process.argv.slice(2);";
+    if (graph.cliSource.split(entrypoint).length !== 2) throw new Error("Fixture CLI entrypoint changed");
+    // Preserve exact persistence methods; no operational adapter is invoked.
+    const fixtureSource = graph.cliSource.slice(0, graph.cliSource.indexOf(entrypoint)) + "\nexport { createC04Adapters };\n";
     const modulePath = join(directory, "controlled-copy.mjs"); writeFileSync(modulePath, fixtureSource, { mode: 0o600 });
     const { review, record } = fixture(); review.operationRoot = join(directory, "operations");
     const operationDirectory = join(review.operationRoot, review.operationId); mkdirSync(operationDirectory, { recursive: true, mode: 0o700 });
