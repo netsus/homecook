@@ -41,7 +41,8 @@ import {
   CLOSED_R2_REVIEW_PIN, acquireClosedR2ControlLease, assertClosedR2CompensationTarget, assertClosedR2ContinuationOptions, assertClosedR2Database, assertClosedR2Environment,
   assertClosedR2LiveMarker, assertClosedR2LiveUnchanged, assertClosedR2MaintenanceFence, assertClosedR2PredecessorState, assertClosedR2Retry, assertClosedR2Rollback, assertRound2InheritanceBoundaries,
   assertClosedR2Source, closedR2RollbackPlist, loadClosedR2Review, loadProtectedRolloutReview, loadProtectedWriterReview, verifyClosedR2Collector, readClosedR2PrivateBytes, verifyClosedR2Control, verifyClosedR2HistoricalProofs,
-  PROTECTED_ROLLOUT_REVIEW_PIN, PROTECTED_WRITER_REVIEW_PIN, assertProtectedClosedR2Marker, assertProtectedReaderRollback, assertProtectedReaderCompensation,
+  PROTECTED_WRITER_REVIEW_PIN, COOKED_WEIGHT_FEATURE,
+  protectedRolloutPins, protectedRolloutPaths, protectedImmutableSha256, protectedReaderFenceSql, protectedReaderPlist, verifyCookedWeightPredecessor, assertCookedWeightProductOff, assertCookedWeightFirstReader, assertProtectedClosedR2Marker, assertProtectedReaderRollback, assertProtectedReaderCompensation,
   assertProtectedRolloutSource, assertProtectedRolloutEnvironment, protectedRolloutReaderReceipt, protectedRolloutStatus, verifyProtectedRolloutEvidence,
 } from "./lib/prelaunch-web-deploy.mjs";
 
@@ -53,8 +54,6 @@ const recoveryPath = join(root, "recovery.json");
 const databaseStatePath = join(root, "database-state.json");
 const integratedDatabaseGuardPath = join(root, "youtube-integrated-database-guard.json");
 const protectedDatabaseGuardPath = join(root, "protected-database-guard.json");
-const protectedReaderReceiptPath = join(root, "protected-reader-ready.json");
-const protectedOperationRoot = join(root, "protected-operations");
 const integratedDatabaseOperationRoot = join(homedir(), ".homecook/operations/youtube-integrated-20261013");
 const domain = `gui/${process.getuid()}`;
 const service = `${domain}/com.homecook.production`;
@@ -176,10 +175,11 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
     const review = loadClosedR2Review(repository);
     const patch = readEnvironmentPatch(options.envFile, repository);
     if (options.reviewedProtectedRollout) {
-      const rollout = loadProtectedRolloutReview(repository);
+      const rollout = loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase });
       validateProtectedCandidate(rollout, live, selection, closedContext);
       assertProtectedRolloutEnvironment({ review: rollout, before: live.plist, after: plist,
-        currentControlSha256: review.controlSha256, currentProofsSha256: hash(JSON.stringify(verifyClosedR2HistoricalProofs(review, repository))), currentGeneration: review.consentGeneration });
+        currentControlSha256: review.controlSha256, currentProofsSha256: hash(JSON.stringify(verifyClosedR2HistoricalProofs(review, repository))), currentGeneration: review.consentGeneration,
+        readerActivation: options.protectedPhase === "reader" });
       await verifyProtectedBaseline(rollout, databasePlan, options);
     } else if (options.reviewedClosedR2Maintenance) {
       validateClosedR2Candidate(review, live, selection, patch, options, closedContext);
@@ -289,22 +289,33 @@ function protectedMigrationsAt(review) {
     return { filename: row.filename, sha256: hash(bytes), bytes };
   });
 }
-function currentProtectedPhase(live = current()) {
-  if (!existsSync(protectedDatabaseGuardPath)) return null;
-  const review = loadProtectedRolloutReview(repository), guard = JSON.parse(readClosedR2PrivateBytes(protectedDatabaseGuardPath, repository, 524288));
-  if (guard.operationDirectory !== join(protectedOperationRoot, guard.operationId)) throw new DeploymentError("보호 DB phase 작업 경로가 다릅니다.");
+function recordedProtectedPhase(review, live) {
+  const paths = protectedRolloutPaths(root, review), pins = protectedRolloutPins(review);
+  if (!existsSync(paths.databaseGuardPath)) return null;
+  const guard = JSON.parse(readClosedR2PrivateBytes(paths.databaseGuardPath, repository, 524288));
+  if (guard.operationDirectory !== join(paths.operationRoot, guard.operationId)) throw new DeploymentError("보호 DB phase 작업 경로가 다릅니다.");
   if (guard.status === "committed") loadProtectedDatabaseReceipt(review);
-  const reader = existsSync(protectedReaderReceiptPath) ? JSON.parse(readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288)) : null;
+  const reader = existsSync(paths.readerReceiptPath) ? JSON.parse(readClosedR2PrivateBytes(paths.readerReceiptPath, repository, 524288)) : null;
   let writer = null;
-  if (PROTECTED_WRITER_REVIEW_PIN.sha256) {
-    for (const action of ["writer-on", "writer-off"]) {
-      const path = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-${action}.json`);
-      if (existsSync(path) && (!writer || ["committed", "not_applied", "closed_after_unknown"].includes(writer.status))) writer = JSON.parse(readClosedR2PrivateBytes(path, repository, 524288));
-    }
+  if (pins.writer.sha256) for (const action of ["writer-on", "writer-off"]) {
+    const path = join(root, `${paths.writerPrefix}-${pins.writer.sha256}-${action}.json`);
+    if (existsSync(path) && (!writer || ["committed", "not_applied", "closed_after_unknown"].includes(writer.status))) writer = JSON.parse(readClosedR2PrivateBytes(path, repository, 524288));
   }
-  return protectedRolloutStatus({ review, reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256, guard, reader, writer,
+  return protectedRolloutStatus({ review, reviewSha256: pins.rollout.sha256, guard, reader, writer,
     readerCompatible: spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", review.to, live.ref]).status === 0 });
 }
+function currentProtectedPhase(live = current()) {
+  if (!existsSync(protectedDatabaseGuardPath)) return null;
+  const product = recordedProtectedPhase(loadProtectedRolloutReview(repository), live);
+  if (!existsSync(join(root, "protected-cooked-weight-database-guard.json"))) return product;
+  const review = loadProtectedRolloutReview(repository, { feature: COOKED_WEIGHT_FEATURE });
+  const weight = recordedProtectedPhase(review, live);
+  if (weight.phase === "not_applied") return { ...product, cookedWeightAttempt: "not_applied" };
+  return { ...weight, feature: COOKED_WEIGHT_FEATURE, predecessorReaderFloor: review.predecessorProtected.readerFloor,
+    recordedProductWriterEnabled: product.recordedWriterEnabled,
+    normalDeploymentAllowed: weight.normalDeploymentAllowed && product.normalDeploymentAllowed };
+}
+
 function verifyProtectedBoundary(review, captured) {
   const actual = current();
   assertClosedR2LiveUnchanged(captured, actual);
@@ -318,6 +329,10 @@ function validateProtectedCandidate(review, live, selection, context) {
   if (!context || selection.target !== review.to) throw new DeploymentError("보호 전환은 실제 닫힘 predecessor에서만 시작합니다.");
   const digests = Object.fromEntries(Object.keys(review.files).map(file => [file, [review.from, review.to].map(sha =>
     git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`], { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null)]));
+  if (review.feature === COOKED_WEIGHT_FEATURE) {
+    git(["merge-base", "--is-ancestor", review.predecessorProtected.readerFloor, live.ref]);
+    git(["merge-base", "--is-ancestor", live.ref, selection.target]);
+  }
   assertProtectedRolloutSource({ review, live, releaseSha: selection.target, files: selection.files, digests, closedArtifactSha256: context.state.closedR2.artifactSha256 });
   const sqlPaths = Object.keys(review.files).filter(file => file.startsWith("supabase/"));
   const expected = review.database.migrations.map(row => `supabase/migrations/${row.filename}`);
@@ -329,15 +344,20 @@ function validateProtectedCandidate(review, live, selection, context) {
   verifyProtectedBoundary(review, live);
 }
 function loadProtectedDatabaseReceipt(review) {
+  const { databaseGuardPath: protectedDatabaseGuardPath, operationRoot: protectedOperationRoot } = protectedRolloutPaths(root, review);
   const guardBytes = readClosedR2PrivateBytes(protectedDatabaseGuardPath, repository, 524288);
   const record = JSON.parse(guardBytes);
   if (record.schema !== "homecook.prelaunch-protected-db-attempt.v1" || record.status !== "committed"
-    || record.reviewSha256 !== PROTECTED_ROLLOUT_REVIEW_PIN.sha256 || record.from !== review.from || record.to !== review.to
+    || record.reviewSha256 !== protectedRolloutPins(review).rollout.sha256 || record.from !== review.from || record.to !== review.to
     || record.operationDirectory !== join(protectedOperationRoot, record.operationId)
     || record.databasePlanSha256 !== hash(JSON.stringify({ source: review.database.after, applied: review.database.after }))
     || record.targetSha256 !== review.database.targetSha256 || record.catalogSha256 !== review.database.afterCatalogSha256
-    || record.immutableSha256 !== review.database.immutableSha256 || record.writerEnabled !== false || record.backwardCompatible !== false) {
+    || record.immutableSha256 !== protectedImmutableSha256(review) || record.writerEnabled !== false || record.backwardCompatible !== false) {
     throw new DeploymentError("승인된 보호 DB commit receipt가 필요합니다.");
+  }
+  if (review.feature === COOKED_WEIGHT_FEATURE && (record.feature !== COOKED_WEIGHT_FEATURE || record.productWriterEnabled !== true
+    || record.stableImmutableSha256 !== review.database.stableImmutableSha256 || !isDeepStrictEqual(record.predecessorProtected, review.predecessorProtected))) {
+    throw new DeploymentError("C01 DB receipt must retain the original C03 authority unchanged");
   }
   const path = join(record.operationDirectory, "receipt.json"), bytes = readClosedR2PrivateBytes(path, repository, 524288);
   if (!bytes.equals(guardBytes)) throw new DeploymentError("보호 DB guard와 immutable receipt가 다릅니다.");
@@ -345,14 +365,24 @@ function loadProtectedDatabaseReceipt(review) {
 }
 function protectedMarkerAuthority(marker, review) {
   const authority = marker.protectedRollout;
-  if (!authority || authority.reviewSha256 !== PROTECTED_ROLLOUT_REVIEW_PIN.sha256) throw new DeploymentError("보호 승계의 승인 출처가 다릅니다.");
+  if (!authority || authority.reviewSha256 !== protectedRolloutPins(review).rollout.sha256) throw new DeploymentError("보호 승계의 승인 출처가 다릅니다.");
   const database = loadProtectedDatabaseReceipt(review);
   const readerBytes = readClosedR2PrivateBytes(authority.readerReceipt.path, repository, 524288);
   if (!isDeepStrictEqual(authority.databaseReceipt, database.pointer) || authority.databaseReceiptSha256 !== database.pointer.sha256
     || authority.readerReceipt.sha256 !== hash(readerBytes) || authority.readerReceiptSha256 !== hash(readerBytes)) throw new DeploymentError("보호 승계 receipt bytes가 다릅니다.");
   return { databaseReceipt: database.record, databaseReceiptSha256: database.pointer.sha256, readerReceipt: JSON.parse(readerBytes), readerReceiptSha256: hash(readerBytes) };
 }
+function cookedWeightProductOffReceipt(review) {
+  if (review.feature !== COOKED_WEIGHT_FEATURE) return null;
+  const path = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-writer-off.json`);
+  if (!existsSync(path)) return null;
+  const record = JSON.parse(readClosedR2PrivateBytes(path, repository, 524288));
+  if (!["committed", "not_applied", "closed_after_unknown"].includes(record.status)) throw new DeploymentError("C03 safe OFF is unresolved; keep both feature guards");
+  if (record.status !== "committed") return null;
+  return assertCookedWeightProductOff(record, review, protectedRolloutPins(review).rollout.sha256);
+}
 async function verifyProtectedBaseline(review, plan, options) {
+  const { readerReceiptPath: protectedReaderReceiptPath, writerPrefix } = protectedRolloutPaths(root, review);
   if (plan.baselineRequired || plan.pending.length || !isDeepStrictEqual(plan.source, review.database.after) || !isDeepStrictEqual(plan.applied, review.database.after)) {
     throw new DeploymentError("현재 승인된 보호 DB source/applied 이력이 다릅니다.");
   }
@@ -360,11 +390,15 @@ async function verifyProtectedBaseline(review, plan, options) {
   if (options.reviewedProtectedRollout && (options.dbConfig !== review.database.configPath
     || hash(readClosedR2PrivateBytes(options.dbConfig, repository, 65536)) !== review.database.configSha256)) throw new DeploymentError("보호 reader의 승인된 config bytes가 다릅니다.");
   const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
-  const observed = await createProtectedPrelaunchAdapter(base).observe(undefined, "protected-baseline-readback");
-  assertProtectedPrelaunchObservation(review, { ...observed, writerEnabled: false }, "after");
-  if (PROTECTED_WRITER_REVIEW_PIN.sha256) {
+  const observed = await createProtectedPrelaunchAdapter(base, review.feature).observe(undefined, "protected-baseline-readback");
+  const productOffReceipt = cookedWeightProductOffReceipt(review);
+  if (options.reviewedProtectedRollout && options.protectedPhase === "reader") assertCookedWeightFirstReader(review, productOffReceipt, protectedRolloutPins(review).rollout.sha256);
+  assertProtectedPrelaunchObservation(review, { ...observed, writerEnabled: false }, "after", {
+    productOffReceipt, reviewSha256: protectedRolloutPins(review).rollout.sha256 });
+  if (review.feature === COOKED_WEIGHT_FEATURE) verifyCookedWeightPredecessor(review, repository);
+  if (protectedRolloutPins(review).writer.sha256) {
     for (const action of ["writer-on", "writer-off"]) {
-      const path = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-${action}.json`);
+      const path = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-${action}.json`);
       if (existsSync(path)) {
         const attempt = JSON.parse(readClosedR2PrivateBytes(path, repository, 524288));
         if (!["committed", "not_applied", "closed_after_unknown"].includes(attempt.status)) throw new DeploymentError("신형 쓰기 전환 결과가 미확정입니다. 읽기 전용 reconcile이 필요합니다.");
@@ -373,16 +407,17 @@ async function verifyProtectedBaseline(review, plan, options) {
   }
   if (observed.writerEnabled) {
     const approval = loadProtectedWriterReview(repository, review);
-    const path = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-writer-on.json`);
+    const path = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-writer-on.json`);
     const writer = JSON.parse(readClosedR2PrivateBytes(path, repository, 524288));
-    const offPath = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-writer-off.json`);
+    const offPath = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-writer-off.json`);
     if (existsSync(offPath) && JSON.parse(readClosedR2PrivateBytes(offPath, repository, 524288)).status === "committed") throw new DeploymentError("safe OFF 이후 승인 없는 재활성화를 거부합니다.");
-    if (writer.status !== "committed" || writer.approvalSha256 !== PROTECTED_WRITER_REVIEW_PIN.sha256 || writer.readerFloor !== review.to
+    if (writer.status !== "committed" || writer.approvalSha256 !== protectedRolloutPins(review).writer.sha256 || writer.readerFloor !== review.to
       || (approval.readerReceiptSha256 !== null && writer.readerReceiptSha256 !== approval.readerReceiptSha256)
       || writer.readerReceiptSha256 !== hash(readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288)) || writer.writerEnabled !== true) throw new DeploymentError("신형 쓰기 ON의 승인/commit/floor가 없습니다.");
   }
 }
 async function runProtectedDatabasePhase(options, action, review) {
+  const { databaseGuardPath: protectedDatabaseGuardPath, operationRoot: protectedOperationRoot } = protectedRolloutPaths(root, review);
   const live = current(), context = requireClosedR2Mode(options, live);
   plan(options.ref, live, options.refOption, undefined, false, options.testScript, null, null, false, { review, context });
   if (action === "plan") {
@@ -400,7 +435,7 @@ async function runProtectedDatabasePhase(options, action, review) {
   } else {
     if (options.protectedPhase === "database-retry") {
       const bytes = readClosedR2PrivateBytes(protectedDatabaseGuardPath, repository, 524288), previous = JSON.parse(bytes);
-      if (previous.status !== "not_applied" || previous.reviewSha256 !== PROTECTED_ROLLOUT_REVIEW_PIN.sha256
+      if (previous.status !== "not_applied" || previous.reviewSha256 !== protectedRolloutPins(review).rollout.sha256
         || previous.from !== review.from || previous.to !== review.to || previous.targetSha256 !== review.database.targetSha256) throw new DeploymentError("정확한 not-applied reconcile 뒤의 명시 재시도만 허용합니다.");
       previousNotAppliedSha256 = hash(bytes);
     }
@@ -408,7 +443,7 @@ async function runProtectedDatabasePhase(options, action, review) {
     mkdirSync(protectedOperationRoot, { recursive: true, mode: 0o700 }); mkdirSync(operationDirectory, { mode: 0o700 }); mkdirSync(join(operationDirectory, "backup"), { mode: 0o700 });
   }
   const engine = await createProtectedPrelaunchDatabase({ repositoryRoot: repository, configPath: options.dbConfig, operationDirectory, operationId,
-    guardPath: protectedDatabaseGuardPath, review, reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256,
+    guardPath: protectedDatabaseGuardPath, review, reviewSha256: protectedRolloutPins(review).rollout.sha256,
     readMigrations: async () => protectedMigrationsAt(review), previousNotAppliedSha256,
     assertBoundary: async () => { lease.verify(); verifyProtectedBoundary(review, live); }, checkCancelled: () => cancellation.check() });
   const lease = await acquireClosedR2ControlLease(loadClosedR2Review(repository), repository);
@@ -416,19 +451,33 @@ async function runProtectedDatabasePhase(options, action, review) {
   try { receipt = options.protectedPhase === "reconcile" ? await engine.reconcile() : await engine.apply(); }
   finally { await lease.release(); }
   if (receipt.status === "committed") await durableJson(databaseStatePath, { changed: true, outcome: "committed", backwardCompatible: false,
-    protectedRollout: { reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256, receiptSha256: hash(readClosedR2PrivateBytes(join(operationDirectory, "receipt.json"), repository, 524288)) } });
+    protectedRollout: { reviewSha256: protectedRolloutPins(review).rollout.sha256, receiptSha256: hash(readClosedR2PrivateBytes(join(operationDirectory, "receipt.json"), repository, 524288)) } });
   say(JSON.stringify({ status: receipt.status, phase: options.protectedPhase, readerReady: false, writerEnabled: false, automaticRetryAllowed: false }, null, 2));
 }
 async function runProtectedWriterPhase(options, action, review) {
+  const { readerReceiptPath: protectedReaderReceiptPath, operationRoot: protectedOperationRoot, writerPrefix } = protectedRolloutPaths(root, review);
   const approval = loadProtectedWriterReview(repository, review);
   const live = current(), context = requireClosedR2Mode(options, live);
+  let baselineReview = context?.rollout?.feature === COOKED_WEIGHT_FEATURE ? context.rollout : review;
+  if (review.feature === "recipe-product-source" && existsSync(join(root, "protected-cooked-weight-database-guard.json"))) {
+    const successor = loadProtectedRolloutReview(repository, { feature: COOKED_WEIGHT_FEATURE });
+    loadProtectedDatabaseReceipt(successor); // A committed C01 baseline is required even while its reader is pending.
+    baselineReview = successor;
+  }
+  const productCloseOnWeightBaseline = review.feature === "recipe-product-source" && baselineReview.feature === COOKED_WEIGHT_FEATURE;
+  if (productCloseOnWeightBaseline && !options.protectedPhase.startsWith("writer-off")) throw new DeploymentError("C03 on C01 successor supports only its original safe OFF, never renewed ON");
+  if (productCloseOnWeightBaseline) {
+    verifyCookedWeightPredecessor(baselineReview, repository);
+    loadProtectedDatabaseReceipt(baselineReview);
+    verifyProtectedRolloutEvidence(baselineReview, repository);
+  }
   const readerBytes = readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288), reader = JSON.parse(readerBytes);
   const writerAction = options.protectedPhase.includes("off") ? "writer-off" : "writer-on";
   const exactReader = live.ref === review.to && reader.releaseSha === live.ref && reader.buildId === live.buildId && reader.plistSha256 === hash(live.bytes);
   const safeOffReader = writerAction === "writer-off" && reader.readerFloor === review.to
     && spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", review.to, live.ref]).status === 0;
   if (!context?.marker.protectedRollout || !(exactReader || safeOffReader) || reader.verifiedFlowsSha256 !== approval.readerFlowsSha256
-    || hash(readerBytes) !== context.marker.protectedRollout.readerReceiptSha256
+    || hash(readerBytes) !== (productCloseOnWeightBaseline ? baselineReview.predecessorProtected.readerReceipt.sha256 : context.marker.protectedRollout.readerReceiptSha256)
     || (approval.readerReceiptSha256 !== null && hash(readerBytes) !== approval.readerReceiptSha256)) {
     throw new DeploymentError("신형 쓰기는 승인된 실제 reader ready/source/build/plist/floor에서만 전환합니다.");
   }
@@ -437,14 +486,16 @@ async function runProtectedWriterPhase(options, action, review) {
   // Emergency closing remains possible after normal UI descendants or a newer backup.
   // It cannot change target/catalog/authority or lower the reader floor. Migration/ON retain the full platform verifier.
   const adapter = writerAction === "writer-off"
-    ? createProtectedPrelaunchAdapter(await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root }))
+    ? createProtectedPrelaunchAdapter(await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root }), baselineReview.feature)
     : await openProtectedPrelaunchTarget({ repositoryRoot: repository, configPath: options.dbConfig, backupDirectory: root, review });
   if (action === "plan") {
     const observed = await adapter.observe(undefined, "protected-writer-plan");
-    assertProtectedPrelaunchObservation(review, { ...observed, writerEnabled: false }, "after");
-    say(JSON.stringify({ ready: true, mutationPerformed: false, phase: options.protectedPhase, readerFloor: reader.readerFloor, writerEnabled: observed.writerEnabled }, null, 2)); return;
+    assertProtectedPrelaunchObservation(baselineReview, { ...observed, writerEnabled: false,
+      ...(productCloseOnWeightBaseline ? { productWriterEnabled: true } : {}) }, "after", {
+      productOffReceipt: productCloseOnWeightBaseline ? null : cookedWeightProductOffReceipt(review), reviewSha256: protectedRolloutPins(baselineReview).rollout.sha256 });
+    say(JSON.stringify({ ready: true, mutationPerformed: false, phase: options.protectedPhase, readerFloor: reader.readerFloor, feature: review.feature, writerEnabled: productCloseOnWeightBaseline ? observed.productWriterEnabled : observed.writerEnabled }, null, 2)); return;
   }
-  const guardPath = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-${writerAction}.json`);
+  const guardPath = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-${writerAction}.json`);
   let operationId, operationDirectory, previousNotAppliedSha256;
   if (options.protectedPhase.endsWith("-reconcile")) {
     const attempt = JSON.parse(readClosedR2PrivateBytes(guardPath, repository, 524288));
@@ -453,9 +504,9 @@ async function runProtectedWriterPhase(options, action, review) {
   } else {
     if (options.protectedPhase.endsWith("-retry")) {
       const bytes = readClosedR2PrivateBytes(guardPath, repository, 524288), previous = JSON.parse(bytes);
-      if (previous.status !== "not_applied" || previous.action !== writerAction || previous.approvalSha256 !== PROTECTED_WRITER_REVIEW_PIN.sha256
+      if (previous.status !== "not_applied" || previous.action !== writerAction || previous.approvalSha256 !== protectedRolloutPins(review).writer.sha256
         || previous.readerReceiptSha256 !== hash(readerBytes)) throw new DeploymentError("같은 승인/control/reader의 not-applied 뒤에만 명시 재시도할 수 있습니다.");
-      const offPath = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-writer-off.json`);
+      const offPath = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-writer-off.json`);
       if (writerAction === "writer-on" && existsSync(offPath) && JSON.parse(readClosedR2PrivateBytes(offPath, repository, 524288)).status === "committed") {
         throw new DeploymentError("safe OFF를 새 ON 재시도로 되돌릴 수 없습니다.");
       }
@@ -468,12 +519,13 @@ async function runProtectedWriterPhase(options, action, review) {
   const lease = await acquireClosedR2ControlLease(loadClosedR2Review(repository), repository);
   let receipt;
   try {
-    const engine = createProtectedPrelaunchWriter({ review, reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256, approval,
-      approvalSha256: PROTECTED_WRITER_REVIEW_PIN.sha256, readerReceipt: reader, readerReceiptSha256: hash(readerBytes), operationId,
-      action: writerAction, adapter, journal, assertBoundary: async () => { lease.verify(); verifyProtectedBoundary(review, live); } });
+    const engine = createProtectedPrelaunchWriter({ review, reviewSha256: protectedRolloutPins(review).rollout.sha256, approval,
+      approvalSha256: protectedRolloutPins(review).writer.sha256, readerReceipt: reader, readerReceiptSha256: hash(readerBytes), operationId,
+      action: writerAction, adapter, journal, baselineReview, baselineReviewSha256: protectedRolloutPins(baselineReview).rollout.sha256,
+      productOffReceipt: productCloseOnWeightBaseline ? null : cookedWeightProductOffReceipt(review), assertBoundary: async () => { lease.verify(); verifyProtectedBoundary(review, live); } });
     let safeOffReceipt;
     if (options.protectedPhase === "writer-on-reconcile") {
-      const offPath = join(root, `protected-writer-${PROTECTED_WRITER_REVIEW_PIN.sha256}-writer-off.json`);
+      const offPath = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-writer-off.json`);
       if (existsSync(offPath)) safeOffReceipt = JSON.parse(readClosedR2PrivateBytes(offPath, repository, 524288));
     }
     receipt = options.protectedPhase.endsWith("-reconcile") ? await engine.reconcile({ safeOffReceipt }) : await engine.apply();
@@ -482,6 +534,7 @@ async function runProtectedWriterPhase(options, action, review) {
   say(JSON.stringify({ status: receipt.status, writerEnabled: receipt.writerEnabled, readerFloor: receipt.readerFloor, automaticReactivation: false }, null, 2));
 }
 async function completeProtectedReaderRecovery(options, review) {
+  const { readerReceiptPath: protectedReaderReceiptPath } = protectedRolloutPaths(root, review);
   const state = JSON.parse(readClosedR2PrivateBytes(recoveryPath, repository, 524288)), live = current();
   if (state.ref !== review.to || live.ref !== review.to || !state.closedR2?.protectedRollout) throw new DeploymentError("같은 보호 reader의 forward 복구 기록이 필요합니다.");
   requireClosedR2Mode(options, live);
@@ -490,7 +543,7 @@ async function completeProtectedReaderRecovery(options, review) {
   if (hash(live.bytes) !== state.targetPlistHash) throw new DeploymentError("보호 reader 복구 plist가 다릅니다.");
   await verifyProtectedBaseline(review, state.databaseVerification, options);
   const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
-  const observed = await createProtectedPrelaunchAdapter(base).observe(undefined, "protected-reader-recovery");
+  const observed = await createProtectedPrelaunchAdapter(base, review.feature).observe(undefined, "protected-reader-recovery");
   assertProtectedPrelaunchObservation(review, observed, "after"); // OFF required throughout first-reader recovery.
   const closed = loadClosedR2Review(repository), lease = await acquireClosedR2ControlLease(closed, repository);
   try {
@@ -525,7 +578,7 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
     throw new DeploymentError("보호 DB 전환이 미확정이거나 새 reader가 준비되지 않았습니다. 기존 DB219 승계를 사용할 수 없습니다.");
   }
   let fenceOptions = options;
-  if (options.reviewedProtectedRollout) { loadProtectedRolloutReview(repository); fenceOptions = { reviewedClosedR2Maintenance: true }; }
+  if (options.reviewedProtectedRollout) { loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase }); fenceOptions = { reviewedClosedR2Maintenance: true }; }
   const records = [];
   for (const path of [recoveryPath, statePath]) {
     if (!existsSync(path)) continue;
@@ -546,11 +599,12 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
   const marker = JSON.parse(bytes);
   let rollout;
   if (marker.protectedRollout) {
-    rollout = loadProtectedRolloutReview(repository);
+    rollout = loadProtectedRolloutReview(repository, { reviewSha256: marker.protectedRollout.reviewSha256 });
     assertProtectedClosedR2Marker({ ...recorded, marker, markerSha256: hash(bytes), live: { ...live, plistHash: hash(live.bytes) },
-      closedReview: review, rollout, reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256, ...protectedMarkerAuthority(marker, rollout) });
+      closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout) });
     git(["merge-base", "--is-ancestor", rollout.to, live.ref]);
     if (!options.reviewedProtectedRollout && !rollback) {
+      const protectedReaderReceiptPath = protectedRolloutPaths(root, rollout).readerReceiptPath;
       const reader = JSON.parse(readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288));
       if (hash(readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288)) !== marker.protectedRollout.readerReceiptSha256
         || reader.readerFloor !== rollout.to) throw new DeploymentError("실제 보호 reader가 아직 ready로 기록되지 않았습니다.");
@@ -608,9 +662,9 @@ function previousClosedR2State(state, review) {
     if (hash(bytes) !== state.closedR2.previousStateSha256 || hash(markerBytes) !== state.closedR2.previousArtifactSha256
       || previous.ref !== state.closedR2.from || previous.checkout !== state.previousCwd || previous.buildId !== state.previousBuildId
       || previous.targetPlistHash !== hash(plistBytes)) throw new DeploymentError("직전 보호 reader state/marker/plist가 다릅니다.");
-    const rollout = loadProtectedRolloutReview(repository);
+    const rollout = loadProtectedRolloutReview(repository, { reviewSha256: marker.protectedRollout.reviewSha256 });
     assertProtectedClosedR2Marker({ state: previous, marker, markerSha256: hash(markerBytes), live: { ref: previous.ref, cwd: previous.checkout, buildId: previous.buildId,
-      plistHash: hash(plistBytes), plist: parsePlist(plistBytes) }, closedReview: review, rollout, reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256, ...protectedMarkerAuthority(marker, rollout) });
+      plistHash: hash(plistBytes), plist: parsePlist(plistBytes) }, closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout) });
     return previous;
   }
   return assertClosedR2PredecessorState({ state, previousBytes: bytes, markerBytes, plist: parsePlist(plistBytes), plistSha256: hash(plistBytes),
@@ -692,7 +746,8 @@ async function deploy(options) {
   const live = current();
   const closedContext = requireClosedR2Mode(options, live);
   const protectedReader = options.reviewedProtectedRollout === true && options.protectedPhase === "reader";
-  const rollout = protectedReader ? loadProtectedRolloutReview(repository) : closedContext?.rollout;
+  const rollout = protectedReader ? loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase }) : closedContext?.rollout;
+  const protectedReaderReceiptPath = rollout ? protectedRolloutPaths(root, rollout).readerReceiptPath : join(root, "protected-reader-ready.json");
   const readOnlyDatabase = options.alreadyAppliedDb || protectedReader;
   const closedReview = options.reviewedClosedR2Maintenance ? loadClosedR2Review(repository) : closedContext?.review;
   const nutritionRecoveryReview = options.reviewedNutritionRecoveryReadiness ? await loadNutritionRecoveryReview() : null;
@@ -739,7 +794,8 @@ async function deploy(options) {
     prepare: async () => {
       await logged("git", ["-C", repository, "worktree", "add", "--detach", checkout, selection.target], {});
       copyEnvironment(live.cwd, checkout);
-      nextPlist = retargetPlist(applyEnvironmentPatch(checkout, live.plist, patch), checkout);
+      nextPlist = protectedReader ? protectedReaderPlist(rollout, live.plist, checkout)
+        : retargetPlist(applyEnvironmentPatch(checkout, live.plist, patch), checkout);
       const readinessPlist = nextPlist;
       const databasePlan = options.reviewedIntegratedMasterReadiness
         ? await verifyIntegratedMasterDatabase({ repositoryRoot: checkout, configPath: options.dbConfig,
@@ -800,7 +856,7 @@ process.exit(result.status ?? 1);`;
       atomicWrite(backup, originalBackupBytes);
       if (closedReview) atomicWrite(closedRollbackPath, closedRollbackBytes);
       const reviewedDatabase = nutritionRecoveryDatabase ?? pieceUnitDatabase ?? youtubeResolutionDatabase
-        ?? (rollout ? { changed: true, outcome: "committed", backwardCompatible: false, protectedRollout: { reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256 } } : undefined);
+        ?? (rollout ? { changed: true, outcome: "committed", backwardCompatible: false, protectedRollout: { reviewSha256: protectedRolloutPins(rollout).rollout.sha256 } } : undefined);
       state = { backup, previousCwd: live.cwd, previousBuildId: live.buildId, previousPlistHash: hash(originalBackupBytes), checkout, ref: selection.target, buildId, targetPlistHash: hash(nextBytes), environmentKeys: Object.keys(patch).sort(), automatedTests: options.skipAutomatedTests ? "skipped_by_explicit_request" : "default", primaryTestScript: options.testScript ?? null, verificationScripts: selection.verificationScripts, databaseVerification: databasePlan,
         ...(options.reviewedIntegratedMasterReadiness ? { integratedMasterWebFirst: {
           schema: YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
@@ -828,13 +884,14 @@ process.exit(result.status ?? 1);`;
           consentGeneration: closedReview.consentGeneration, rollbackPlistSha256: hash(closedRollbackBytes) };
         if (protectedReader) {
           const database = loadProtectedDatabaseReceipt(rollout);
-          readerReceipt = protectedRolloutReaderReceipt({ review: rollout, reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256,
+          readerReceipt = protectedRolloutReaderReceipt({ review: rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256,
             databaseReceipt: database.record, live: { ref: selection.target, buildId, bytes: Buffer.from(nextBytes) }, verifiedFlowsSha256: rollout.readerFlowsSha256 });
           const path = join(release, "protected-reader-ready.json");
           await durableJson(path, readerReceipt, true);
           const readerPointer = { path, sha256: hash(readClosedR2PrivateBytes(path, repository, 524288)) };
-          closedR2.protectedRollout = { reviewSha256: PROTECTED_ROLLOUT_REVIEW_PIN.sha256, databaseReceipt: database.pointer,
+          closedR2.protectedRollout = { reviewSha256: protectedRolloutPins(rollout).rollout.sha256, databaseReceipt: database.pointer,
             databaseReceiptSha256: database.pointer.sha256, readerReceipt: readerPointer, readerReceiptSha256: readerPointer.sha256 };
+          if (rollout.feature === COOKED_WEIGHT_FEATURE) closedR2.protectedRollout.predecessorProtected = rollout.predecessorProtected;
         } else if (closedContext?.marker.protectedRollout) closedR2.protectedRollout = closedContext.marker.protectedRollout;
         const artifactPath = join(release, closedR2ArtifactName);
         await durableJson(artifactPath, closedR2, true);
@@ -892,8 +949,8 @@ process.exit(result.status ?? 1);`;
             throw new DeploymentError("reader 잠금 대상이 승인된 운영 DB와 다릅니다.");
           }
           readerFence = base.session(`protected-reader-${randomUUID()}`);
-          await readerFence.query("BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL idle_in_transaction_session_timeout='120s'; LOCK TABLE private.recipe_product_only_write_control IN SHARE MODE;");
-          if ((await readerFence.query("SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.recipe_product_only_write_control;")).trim() !== "t") {
+          await readerFence.query(protectedReaderFenceSql(rollout).begin);
+          if ((await readerFence.query(protectedReaderFenceSql(rollout).check)).trim() !== "t") {
             throw new DeploymentError("구 predecessor 보상은 모든 신형 쓰기 OFF가 잠긴 동안만 허용합니다.");
           }
         }
@@ -904,7 +961,7 @@ process.exit(result.status ?? 1);`;
       : options.reviewedYoutubeResolutionReadiness ? YOUTUBE_RESOLUTION_ROLLBACK_REASON : undefined,
     activate: async () => {
       if (closedLease) { closedLease.verify(); assertClosedR2LiveUnchanged(live, current()); }
-      if (readerFence && (await readerFence.query("SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.recipe_product_only_write_control;")).trim() !== "t") throw new DeploymentError("새 reader 활성화 직전 OFF fence가 바뀌었습니다.");
+      if (readerFence && (await readerFence.query(protectedReaderFenceSql(rollout).check)).trim() !== "t") throw new DeploymentError("새 reader 활성화 직전 OFF fence가 바뀌었습니다.");
       say("웹 프로세스 교체 중"); await switchWeb(nextBytes);
     },
     verify: async () => {
@@ -919,7 +976,7 @@ process.exit(result.status ?? 1);`;
     restore: async () => {
       if (protectedReader) {
         const floorPublished = existsSync(protectedReaderReceiptPath) && hash(readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288)) === state.closedR2.protectedRollout.readerReceiptSha256;
-        const offLocked = Boolean(readerFence) && (await readerFence.query("SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.recipe_product_only_write_control;")).trim() === "t";
+        const offLocked = Boolean(readerFence) && (await readerFence.query(protectedReaderFenceSql(rollout).check)).trim() === "t";
         assertProtectedReaderCompensation({ floorPublished, offLocked, actual: current(), before: live,
           target: { ref: state.ref, cwd: state.checkout, buildId: state.buildId, plistSha256: state.targetPlistHash }, closedPreviousPlistSha256: hash(closedRollbackBytes) });
       }
@@ -960,6 +1017,8 @@ async function rollback() {
     const guard = JSON.parse(readClosedR2PrivateBytes(protectedDatabaseGuardPath, repository, 524288));
     if (guard.status !== "not_applied") throw new DeploymentError("보호 DB 전환 guard/reader floor가 있어 수동 구 웹 rollback을 거부합니다. DB를 자동 복구하지 않습니다.");
   }
+  const weightGuard = join(root, "protected-cooked-weight-database-guard.json");
+  if (existsSync(weightGuard) && JSON.parse(readClosedR2PrivateBytes(weightGuard, repository, 524288)).status !== "not_applied") throw new DeploymentError("C01 DB/reader floor prevents old-reader rollback; no automatic DB restore");
   if (existsSync(integratedDatabaseGuardPath)) {
     let descriptor;
     try {
@@ -1096,7 +1155,7 @@ async function main() {
   const options = parsePrelaunchOptions(args);
   let protectedReview;
   if (options.reviewedProtectedRollout) {
-    protectedReview = loadProtectedRolloutReview(repository); // Deny before live/env/private-state access. No CLI or env pin override.
+    protectedReview = loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase }); // Deny before live/env/private-state access. No CLI or env pin override.
     if (options.protectedPhase.startsWith("writer-")) loadProtectedWriterReview(repository, protectedReview);
   }
   if (options.reviewedClosedR2Maintenance) loadClosedR2Review(repository); // Fail before live/env access while the pin is empty.
