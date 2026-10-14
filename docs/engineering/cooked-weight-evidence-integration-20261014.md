@@ -115,3 +115,12 @@ C03 뒤 C01의 새 SQL SHA는 `0c92fa9d4a83cfefa5313e7b8a13c610ac108555248d1db75
 정확401·ACCOUNT_SESSION_STALE/ACCOUNT_GENERATION_STALE409만 안내를 다시 열고 일반500/네트워크 실패는 오류로 유지한다. 취소/invalid/expired/다른 recipe·보관 실패·늦은 응답/화면 전환·반복 클릭을 검증한다. DB SQL·C01 예상구조·RLS/인증/권한·worker/모델/키 변경은0이다. 실제 OAuth/운영 계정 흐름은 로컬 fixture 결과와 구분한다. 다른 quantity-resume 묶음의 동일 pending/modal/detail 파일은 root가 후속 3-way 통합으로 보존한다.
 
 관련 Vitest3파일163검사·직접 TypeScript·변경 TS7파일 ESLint·기존 anti-slop3단계(신규 지적0)를 통과했다. 실제 Next의320/375/1440px local fixture3검사/6PNG에서 guest 요청0·로그인 복귀 자동 요청0·현재 revision13/선택3인분 명시 시작1을 확인했다. server는 소유 loopback fake Supabase의 공개 metadata/UI-mode만 응답했고 browser API는 전부 fixture·외부 origin 차단이다. 실제 OAuth/운영 DB/완료 저장 검증이 아니며, 최종 production build는 C01 SQL 호환 보완과 통합한 후보에서 root가 수행한다. 최초 화면 실행은 background gamification fixture 누락으로 실패했으며 기존 fixture 연결 뒤 같은3검사를 통과했다.
+
+
+## C01 DB 선행 적용의 기존 영양 미리보기 호환 · 2026-10-14
+
+운영 전 독립 리뷰에서 이전 SQL `0c92fa9d...`의 9인자 `preview_meal_log_nutrition`이 제어 OFF에서도 `weight_basis`를 추가해, 운영 전임 웹 `1c676f43`의 엄격한 영양 응답 검사와 맞지 않는 문제를 확인했다. 실제 전임 validator/projector와 격리 DB의 OFF 응답으로 재현했으며 운영에 이 SQL을 적용하지 않았다. 이전 SQL에 대한 전체 OFF/구 reader 호환 주장은 이 미리보기 경로를 포함하지 못했다. 이전 검사 자료를 보존하고 새 배포 후보 근거로 대신 사용하지 않는다.
+
+미적용 migration의 해당 미리보기에서만 제어 ON일 때 새 무게 근거/가정을 추가하도록 제한했다. OFF에서는 기존 영양값·키 형태를 유지한다. 저장된 식사 근거, 과거 무게 이력과 기존 읽기 함수는 유지하며 과거 데이터를 수정하지 않는다. 새 SQL SHA는 `60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0`, 해당 preview 본문 MD5는 `dfe22488455c4ba9d70f55adf76dd31e`다. source manifest의 raw SQL과 한 함수 본문만 갱신했다. 별도 source-derived native 비교에서 나머지14함수 및 해당 함수 owner/ACL/전체 설정/속성은 정확히 같다.
+
+root 작성 회귀는 원 SQL에서 새 미리보기 검사1실패(다른18개 선택 skip)를 확인한 뒤, 수정 SQL의 fresh schema219→C03→C01에서19개 모두 통과했다. OFF 기존 미리보기, ON 새 근거, 재OFF 시 기존 응답과 저장된 근거 불변을 포함한다. 관련 단위5파일39개·타입 검사를 통과했고 source postimage 갱신 전의 예상 실패1개도 별도 보존했다. 자기 network-none 컨테이너는 제거했다. 운영 DB/설정/실제 계정 변경0이며 새 예상 catalog·배포 도구 fullengine 재결속·독립 리뷰·최종 웹 후보 검증은 별도다.
