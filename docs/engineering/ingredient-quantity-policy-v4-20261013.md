@@ -11,12 +11,15 @@
 - 원입력은 사용자가 새 기록/양을 명시 수정할 때만 생긴다. `quantity_input NULL` 과거 행·기존 revision·성공 receipt와 같은 양의 날짜/끼니 이동은 보존한다. OFF 후에도 이미 저장된 v4 원문/분모를 읽고, 영양 미상을0으로 바꾸거나 과거 기록을 재계산하지 않는다.
 - 과거 ingredient 행의 개/통 같은 단위에 저장된 v4 근거가 없으면 기존 숫자 편집·원단위를 유지하고 이유를 안내한다. 이 legacy 경로에는 새 분수 계약/quantity_input을 억지로 붙이지 않으며 기존 revision·멱등 쓰기를 그대로 사용한다.
 - 로그인 복귀 때 새 입력 capability가 OFF이거나 원단위의 제품 관계가 사라졌으면 원입력·선택 version을 보존하고 편집/저장을 중지한다. 새 draft를 v3 fallback으로 조용히 저장하지 않는다. 사용자의 명시 제품 재선택은 해당 pending을 지우며, 새 필드가 없는 구 pending 동작은 유지한다.
+- 로그인 복귀의 원입력 version과 최신 제품 version이 다르면 명시 새로고침 뒤에도 충돌 안내를 유지하고 수량·단위·분수 선택·저장을 막는다. 반복 새로고침·닫기는 이전 version의 원문을 보존한다. 목록에서 최신 제품을 실제로 다시 선택해야 새 수량 빈칸을 열고 새 version에 결속된 입력을 저장할 수 있다. 이전 팩 규격의 원입력을 최신 version으로 바꿔 해석하지 않는다.
 - 새 제품 옵션·100g/100mL 비교·선택 영양 표시는 C03의 같은 converter로 판단한다. 유일한 두 관계 환산은 허용하고 직접/우회 경로가 동시에 있으면 모호한 단위를 빈 양에서도 열지 않는다. 환산 실패 때 기준 영양값을 입력량의 값처럼 표시하지 않는다. default v3의 기존 direct 옵션/표시는 그대로다.
 - 새 입력 흐름에서 중량 미확인 legacy batch를 최초100g으로 만드는 경로는 열지 않는다. 최근 기록의 기존 g 양은 보존하되 중량 기준 미확인 이유와 상태 확인을 안내하고 새 쓰기는 막는다. OFF/구 클라이언트의 기존 batch 동작과 과거 원장은 유지한다.
 
 ### 요청·응답과 활성화
 
 새 클라이언트의 별도 `X-Homecook-Quantity-Contract: quantity-v4` header로 metadata 응답을 협상한다. C01 무게 header만 보내는 구 클라이언트에는 새 키를 보내지 않는다. 새 쓰기/단위 옵션에는 `MUMEOK_QUANTITY_V4_ENABLED=true`와 이 header, `private.quantity_input_v4_policy.enabled=true`, 실제 C03 converter가 모두 필요하다. migration은 DB policy를 false로 만든다. 환경·header만으로 활성화되지 않는다. 운영 활성화/근거 등록/DB 적용 승인은 이번 로컬 준비에 포함되지 않는다.
+
+web env가 OFF이면 새 v4 쓰기 요청은422로 거절하며 이미 저장된 metadata 읽기는 허용한다. 기존 DB의 동일 성공 receipt 재생은 DB policy가 OFF인 fixture에서도 보존된다. 이 DB 재생 검증이 web env OFF에서 새 v4 요청을 허용한다는 뜻은 아니다.
 
 draft는 `schema_version`, `raw_value`, `raw_unit`과 목적에 맞는 `expected_batch_revision` 또는 `expected_product_nutrition_version_id`만 허용한다. client는 approved/evidence/source metadata를 주장할 수 없다. preview GET도 표시 `amount/unit`과 원문 `raw_value/raw_unit`을 구분해 보내고 writer와 같은 실제 DB resolver로 검증한다. 서버는 기존 actor/session·소유권·가시성·삭제·고정 제품 버전·배치 상태 검사를 보존한다. 기존 RPC에 jsonb 마지막 인수를 가진 overload만 더하며 기존 공개 권한을 확대하지 않는다.
 

@@ -21,8 +21,9 @@ const product: FoodProductData = { id: productId, name: "고정 규격 제품", 
     calculation_status: "complete", calculation_quality: "direct", warnings: [], sources: [] } };
 function open() {
   const complete = vi.fn();
-  const view = render(<FoodProductPicker columnId="column-1" planDate="2026-10-14" slotName="아침" onClose={vi.fn()} onComplete={complete} />);
-  return { complete, ...view };
+  const close = vi.fn();
+  const view = render(<FoodProductPicker columnId="column-1" planDate="2026-10-14" slotName="아침" onClose={close} onComplete={complete} />);
+  return { close, complete, ...view };
 }
 const raw = { schema_version: "quantity-v4", raw_value: "1/3", raw_unit: "package", expected_product_nutrition_version_id: version };
 describe("explicit product planner quantity v4", () => {
@@ -108,6 +109,50 @@ describe("explicit product planner quantity v4", () => {
     await user.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
     expect((await screen.findByRole("alert")).textContent).toBe("선택했던 영양 버전이 달라졌어요.");
     expect(api.create.mock.calls[0][0].quantity_input).toEqual(raw); expect(amount.value).toBe("40"); expect(complete).not.toHaveBeenCalled();
+  });
+  it("keeps a refreshed different version blocked through repeated refresh and cancel without retargeting the auth draft", async () => {
+    window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({ version: 1, kind: "picker", planDate: "2026-10-14", columnId: "column-1", slotName: "아침",
+      query: "", source: "all", productId, quantityAmount: "40", quantityUnit: "g", quantityInput: raw }));
+    api.list.mockResolvedValue({ items: [{ ...product, nutrition_version_id: "c8000000-0000-4000-8000-000000000802",
+      basis_relations: [{ from: { amount: 1, unit: "package" }, to: { amount: 150, unit: "g" } }] }], quantity_policy: "quantity-v4", next_cursor: null, has_next: false });
+    const user = userEvent.setup(); const view = open();
+    const refresh = await screen.findByRole("button", { name: "최신 영양정보로 새로고침" });
+    await user.click(refresh);
+    await screen.findByText("제품의 규격이 달라졌어요. 입력한 양은 보존했어요. 목록에서 제품을 다시 선택하고 수량을 새로 입력해 주세요.");
+    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "완제품 수량" });
+    const unit = screen.getByRole<HTMLSelectElement>("combobox", { name: "완제품 수량 단위" });
+    expect(amount.value).toBe("40"); expect(amount.disabled).toBe(true);
+    expect(unit.value).toBe("g"); expect(unit.disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "1/3" }).disabled).toBe(true);
+    const save = screen.getByRole<HTMLButtonElement>("button", { name: "아침에 완제품 추가" });
+    expect(save.disabled).toBe(true); await user.click(save);
+    await user.click(refresh); await waitFor(() => expect(api.list).toHaveBeenCalledTimes(3));
+    expect(save.disabled).toBe(true); expect(api.create).not.toHaveBeenCalled();
+    expect(readProductPlannerReturnContext()).toMatchObject({ quantityAmount: "40", quantityUnit: "g", quantityInput: raw });
+    await user.click(screen.getByRole("button", { name: "완제품 선택 닫기" }));
+    expect(view.close).toHaveBeenCalledTimes(1); view.unmount();
+    expect(readProductPlannerReturnContext()).toMatchObject({ quantityInput: raw });
+  });
+  it("requires a real selection and fresh amount before saving the refreshed version", async () => {
+    const latestVersion = "c8000000-0000-4000-8000-000000000802";
+    window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({ version: 1, kind: "picker", planDate: "2026-10-14", columnId: "column-1", slotName: "아침",
+      query: "", source: "all", productId, quantityAmount: "40", quantityUnit: "g", quantityInput: raw }));
+    api.list.mockResolvedValue({ items: [{ ...product, nutrition_version_id: latestVersion,
+      basis_relations: [{ from: { amount: 1, unit: "package" }, to: { amount: 150, unit: "g" } }] }], quantity_policy: "quantity-v4", next_cursor: null, has_next: false });
+    const user = userEvent.setup(); open();
+    await user.click(await screen.findByRole("button", { name: "최신 영양정보로 새로고침" }));
+    await screen.findByText("제품의 규격이 달라졌어요. 입력한 양은 보존했어요. 목록에서 제품을 다시 선택하고 수량을 새로 입력해 주세요.");
+    await user.click(screen.getByRole("button", { name: "고정 규격 제품 선택" }));
+    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "완제품 수량" });
+    const save = screen.getByRole<HTMLButtonElement>("button", { name: "아침에 완제품 추가" });
+    expect(amount.value).toBe(""); expect(amount.disabled).toBe(false); expect(save.disabled).toBe(true);
+    expect(readProductPlannerReturnContext()).toBeNull(); expect(api.create).not.toHaveBeenCalled();
+    const unit = screen.getByRole("combobox", { name: "완제품 수량 단위" });
+    await user.selectOptions(unit, "package"); await user.click(screen.getByRole("button", { name: "1/3" }));
+    await user.selectOptions(unit, "g"); expect(amount.value).toBe("50");
+    await user.click(save);
+    expect(api.create).toHaveBeenCalledExactlyOnceWith({ product_id: productId, plan_date: "2026-10-14", column_id: "column-1",
+      quantity: { amount: 50, unit: "g" }, quantity_input: { ...raw, expected_product_nutrition_version_id: latestVersion } });
   });
   it("preserves a v4 auth draft when capability becomes OFF instead of saving through the legacy fallback", async () => {
     const oldRaw = { ...raw, raw_value: "5/6" };
