@@ -9,7 +9,7 @@ import { formatQuantityAmount, isQuantityInputDraft } from "@/lib/quantity-input
 import { QUANTITY_INPUT_VERSION, type QuantityInputDraft } from "@/types/quantity-input";
 
 import Image from "next/image";
-import { showActionConfirmation } from "@/stores/ui-store";
+import { showActionConfirmation, useActionConfirmationStore } from "@/stores/ui-store";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MealLogAddSheet, type MealLogSourceSelection } from "@/components/planner/meal-log-add-sheet";
@@ -53,7 +53,7 @@ type DialogState =
   | { type: "add"; columnId: string; restoredInvoker?: boolean; selection?: MealLogSourceSelection; backgroundEntry?: MealLogEntry }
   | { type: "edit"; entry: MealLogEntry; restoredInvoker?: boolean; draft?: { amount: number; columnId: string; unit: string; quantityInput?: QuantityInputDraft } }
   | { type: "delete"; entry: MealLogEntry; restoredInvoker?: boolean }
-  | { type: "detail"; entry: MealLogEntry; guestPreview?: boolean }
+  | { type: "detail"; entry: MealLogEntry; guestPreview?: boolean; restoreAddFocus?: boolean }
   | null;
 
 const MEAL_LOG_RETURN_CONTEXT_KEY = "homecook.meal-log-return-context.v1";
@@ -349,6 +349,7 @@ function EntryDialog({
   mutationEnabled,
   onUnauthorized,
   returnFocusTarget,
+  addFocusRef,
   inactive = false,
   onRemoved,
   onEntryUpdated,
@@ -363,6 +364,7 @@ function EntryDialog({
   mutationEnabled: boolean;
   onUnauthorized: (context: MealLogReturnContext) => void;
   returnFocusTarget: () => HTMLElement | null;
+  addFocusRef: React.RefObject<HTMLButtonElement | null>;
   inactive?: boolean;
   onRemoved?: () => void;
   onEntryUpdated: (entry: MealLogEntry) => void;
@@ -371,6 +373,7 @@ function EntryDialog({
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   const selectorRef = useRef<HTMLSelectElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
+  const restoreAddFocusRef = useRef(state.type === "detail" && Boolean(state.restoreAddFocus));
   const [authorityEntry, setAuthorityEntry] = useState(state.entry);
   const entry = authorityEntry;
   const entryTitle = `${Number(entry.consumed_local_date.slice(5, 7))}월 ${Number(entry.consumed_local_date.slice(8, 10))}일 ${entry.slot_name_snapshot}`;
@@ -404,7 +407,7 @@ function EntryDialog({
     closeOnEscape: !pending,
     dialogRef: panelRef,
     fallbackFocusRef,
-    initialFocusRef: requiresColumnSelection ? selectorRef : cancelRef,
+    initialFocusRef: requiresColumnSelection ? selectorRef : restoreAddFocusRef.current ? addFocusRef : cancelRef,
     onClose,
   });
   useEffect(() => {
@@ -533,7 +536,7 @@ function EntryDialog({
   return <>
     <div aria-label="식사 기록 상세" aria-modal={action === null && !inactive ? true : undefined} className="fixed inset-0 z-[60] overflow-y-auto bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] outline-none" ref={panelRef} role="dialog" tabIndex={-1}>
       <div className="mx-auto max-w-3xl px-5 py-4">
-        <header className="flex items-center gap-3"><AppBackButton ariaLabel="식사 기록으로 돌아가기" disabled={pending} onClick={onClose} ref={cancelRef} /><h2 className="flex-1 text-xl font-semibold">{entryTitle}</h2>{authorityColumnActive ? <button aria-label={`${entry.slot_name_snapshot}에 먹은 음식 추가`} className="h-11 w-11 rounded-xl border border-[var(--brand-primary-border)] text-2xl text-[var(--brand-primary-text)]" disabled={pending} onClick={() => onAdd(entry.meal_plan_column_id!)} type="button">+</button> : null}</header>
+        <header className="flex items-center gap-3"><AppBackButton ariaLabel="식사 기록으로 돌아가기" disabled={pending} onClick={onClose} ref={cancelRef} /><h2 className="flex-1 text-xl font-semibold">{entryTitle}</h2>{authorityColumnActive ? <button aria-label={`${entry.slot_name_snapshot}에 먹은 음식 추가`} className="h-11 w-11 rounded-xl border border-[var(--brand-primary-border)] text-2xl text-[var(--brand-primary-text)]" disabled={pending} onClick={() => onAdd(entry.meal_plan_column_id!)} ref={addFocusRef} type="button">+</button> : null}</header>
         <h3 className="mt-6 break-words text-2xl font-medium">{entry.display_name}</h3>
         {entry.display_brand ? <p className="mt-2 text-sm text-[var(--text-2)]">{entry.display_brand}</p> : null}
         <div className="my-6 flex justify-between rounded-xl bg-[var(--surface-fill)] p-4"><span className="font-medium">먹은 양</span><span>{entryQuantity(entry)}</span></div>
@@ -546,8 +549,8 @@ function EntryDialog({
           {entry.nutrition.weight_assumption_codes?.length ? <p>{COOKED_MIX_ASSUMPTION_TEXT}</p> : null}
         </section> : null}
         {entry.nutrition.sodium_mg !== null && Number.isFinite(entry.nutrition.sodium_mg) ? <div className="my-6 flex justify-between"><span>나트륨</span><span>{number(entry.nutrition.sodium_mg, "mg")}</span></div> : null}
-        <button aria-label="식사 기록 수정" className="mt-4 min-h-12 w-full rounded-xl bg-[var(--brand-primary-accessible)] px-4 font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => setAction("edit")} type="button">먹은 양 수정</button>
-        <button className="mt-3 min-h-12 w-full rounded-xl border border-[var(--danger-border)] px-4 font-medium text-[var(--danger-strong)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => setAction("delete")} type="button">기록 삭제</button>
+        <button aria-label="식사 기록 수정" className="mt-4 min-h-12 w-full rounded-xl bg-[var(--brand-primary-accessible)] px-4 font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => { restoreAddFocusRef.current = false; setAction("edit"); }} type="button">먹은 양 수정</button>
+        <button className="mt-3 min-h-12 w-full rounded-xl border border-[var(--danger-border)] px-4 font-medium text-[var(--danger-strong)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => { restoreAddFocusRef.current = false; setAction("delete"); }} type="button">기록 삭제</button>
       </div>
     </div>
     {action ? <PlannerTaskSheet ariaLabelledBy="meal-log-entry-action-title" title={entryTitle} backdropLayerClassName="z-[70]" onClose={closeAction} closeDisabled={pending} bodyClassName="space-y-5 pb-6">
@@ -585,6 +588,11 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
   const [error, setError] = useState<string | null>(null);
   const [failedDates, setFailedDates] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<DialogState>(null);
+  const dialogStateRef = useRef(dialog);
+  dialogStateRef.current = dialog;
+  const currentDateRef = useRef(date);
+  currentDateRef.current = date;
+  const detailAddFocusRef = useRef<HTMLButtonElement | null>(null);
   const [dialogDate, setDialogDate] = useState(date);
   const [nutritionDate, setNutritionDate] = useState<string | null>(null);
   const todayKey = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(new Date());
@@ -629,9 +637,9 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
   }
 
   function closeAdd() {
-    if (dialog?.type !== "add") return;
+    if (dialog?.type !== "add" || dialogStateRef.current !== dialog) return;
     if (dialog.backgroundEntry) {
-      setDialog({ type: "detail", entry: dialog.backgroundEntry, guestPreview: false });
+      setDialog({ type: "detail", entry: dialog.backgroundEntry, guestPreview: false, restoreAddFocus: true });
       return;
     }
     const id = sectionAddActionId(dialog.columnId, dialogDate);
@@ -639,8 +647,8 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
     requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
   }
 
-  function showSuccess(message: string) {
-    showActionConfirmation(message);
+  function showSuccess(message: string, fallbackFocusRef?: React.RefObject<HTMLElement | null>) {
+    showActionConfirmation(message, fallbackFocusRef);
     emitAppActionNotification({ message, title: "식사 기록" });
   }
 
@@ -754,6 +762,12 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
   async function add(selection: MealLogSourceSelection, columnId: string, targetDate: string) {
     if (guestRef.current) return;
     if (selection.amount === null) return;
+    const owner = dialogStateRef.current;
+    if (owner?.type !== "add") return;
+    const request = requestRef.current;
+    const viewDate = currentDateRef.current;
+    const pathname = window.location.pathname;
+    const confirmationId = useActionConfirmationStore.getState().confirmationId;
     const input: Omit<MealLogMutationInput, "expectedRevision"> = {
       consumedAt: null,
       consumedLocalDate: targetDate,
@@ -768,11 +782,23 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
     mutationKeys.current.set(fingerprint, key);
     await createMealLogEntry(input, key);
     mutationKeys.current.delete(fingerprint);
-    setDialog(null);
-    showSuccess("식사기록에 추가했어요.");
+    if (guestRef.current || request !== requestRef.current || owner !== dialogStateRef.current
+      || viewDate !== currentDateRef.current || pathname !== window.location.pathname
+      || confirmationId !== useActionConfirmationStore.getState().confirmationId) return;
+    const restoredDetail = owner.backgroundEntry ? { type: "detail" as const, entry: owner.backgroundEntry, guestPreview: false, restoreAddFocus: true } : null;
+    setDialog(restoredDetail);
+    if (restoredDetail) {
+      // The confirmation boundary must capture the newly mounted detail button.
+      requestAnimationFrame(() => {
+        if (dialogStateRef.current !== restoredDetail || request !== requestRef.current
+          || viewDate !== currentDateRef.current || pathname !== window.location.pathname
+          || confirmationId !== useActionConfirmationStore.getState().confirmationId) return;
+        showSuccess("식사기록에 추가했어요.", detailAddFocusRef);
+      });
+    } else showSuccess("식사기록에 추가했어요.");
     await reloadSelected(targetDate);
     if (!dates.includes(targetDate)) onDateChange(targetDate);
-    requestAnimationFrame(() => document.getElementById(sectionAddActionId(columnId, targetDate))?.focus({ preventScroll: true }));
+    if (!owner.backgroundEntry) requestAnimationFrame(() => document.getElementById(sectionAddActionId(columnId, targetDate))?.focus({ preventScroll: true }));
   }
 
   useEffect(() => {
@@ -864,9 +890,9 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
       </div>
 
       {nutritionDate && displayDays[nutritionDate] ? <MealLogDayNutritionDetail active={!dialog} day={displayDays[nutritionDate]} onClose={() => setNutritionDate(null)} onEntry={entry => openDialog({ type: "detail", entry }, nutritionDate)} /> : null}
-      {!guest && dialog?.type === "add" && dialog.backgroundEntry && dialogDay ? <EntryDialog inactive day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={false} state={{ type: "detail", entry: dialog.backgroundEntry, guestPreview: false }} onClose={() => {}} onAdd={() => {}} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => null} /> : null}
-      {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed returnFocusTarget={() => dialog.backgroundEntry ? null : document.getElementById(sectionAddActionId(dialog.columnId, dialogDate))} mutationEnabled={dialogMutationEnabled} quantityV4Enabled={dialogDay.quantity_policy === "quantity-v4"} onClose={closeAdd} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
-      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onRemoved={() => { setDialog(null); setNutritionDate(null); }} onAdd={columnId => openDialog({ type: "add", columnId, backgroundEntry: dialog.entry }, dialogDate)} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => (nutritionDate ? document.querySelector<HTMLElement>(`[data-meal-log-contributor="${dialog.entry.id}"]`) : null) ?? document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, "edit")}"]`)} state={dialog} /> : null}
+      {!guest && dialog?.type === "add" && dialog.backgroundEntry && dialogDay ? <EntryDialog inactive addFocusRef={detailAddFocusRef} day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={false} state={{ type: "detail", entry: dialog.backgroundEntry, guestPreview: false }} onClose={() => {}} onAdd={() => {}} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => null} /> : null}
+      {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed returnFocusTarget={() => dialog.backgroundEntry ? dialogStateRef.current?.type === "detail" && dialogStateRef.current.restoreAddFocus && dialogStateRef.current.entry.id === dialog.backgroundEntry.id ? detailAddFocusRef.current : null : document.getElementById(sectionAddActionId(dialog.columnId, dialogDate))} mutationEnabled={dialogMutationEnabled} quantityV4Enabled={dialogDay.quantity_policy === "quantity-v4"} onClose={closeAdd} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
+      {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog addFocusRef={detailAddFocusRef} day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onRemoved={() => { setDialog(null); setNutritionDate(null); }} onAdd={columnId => openDialog({ type: "add", columnId, backgroundEntry: dialog.entry }, dialogDate)} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => (nutritionDate ? document.querySelector<HTMLElement>(`[data-meal-log-contributor="${dialog.entry.id}"]`) : null) ?? document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, "edit")}"]`)} state={dialog} /> : null}
     </main>
     </>
   );
