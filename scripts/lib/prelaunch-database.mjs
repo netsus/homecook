@@ -477,6 +477,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
     },
     async apply() {
       if (await journal.read()) throw new Error("Protected database attempt already exists; automatic retry is prohibited");
+      if (typeof adapter.migrationSession !== "function") throw new Error("Protected migration session required; generic postgres fallback prohibited");
       const { plan, observation } = await prepare();
       checkCancelled();
       let session;
@@ -487,8 +488,10 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
       try {
         await journal.write({ ...binding(), status: "applying_precommit", target: observation.target }, true);
         guardCreated = true;
-        session = adapter.session(applicationName);
-        await session.query("BEGIN ISOLATION LEVEL SERIALIZABLE; SET LOCAL lock_timeout='10s'; SET LOCAL statement_timeout='180s'; SET LOCAL idle_in_transaction_session_timeout='180s'; SET LOCAL standard_conforming_strings=on; SELECT pg_advisory_xact_lock(104230921,77101); LOCK TABLE homecook_deploy.migrations IN SHARE ROW EXCLUSIVE MODE;");
+        session = adapter.migrationSession(applicationName);
+        const { searchPath, timeZone } = session.postgresContext ?? {};
+        if (typeof searchPath !== "string" || typeof timeZone !== "string") throw new Error("Protected migration postgres context unavailable");
+        await session.query(`BEGIN ISOLATION LEVEL SERIALIZABLE; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='180s'; SET LOCAL idle_in_transaction_session_timeout='180s'; SET LOCAL standard_conforming_strings=on; SELECT pg_advisory_xact_lock(104230921,77101); LOCK TABLE homecook_deploy.migrations IN SHARE ROW EXCLUSIVE MODE; SET LOCAL ROLE postgres; SELECT set_config('search_path',${literal(searchPath)},true),set_config('TimeZone',${literal(timeZone)},true);`);
         const query = sql => session.query(sql);
         const locked = assertProtectedPrelaunchObservation(review, await adapter.observe(query, applicationName), "before");
         preservedRowsSha256 = locked.preservedRowsSha256;
@@ -501,10 +504,10 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         if (backedUp.preservedRowsSha256 !== preservedRowsSha256) throw new Error("Protected rows changed in the locked backup snapshot");
         await assertBoundary();
         checkCancelled();
-        // Both exact payloads and the checksum ledger execute in this one existing admin session.
+        // Payload/catalog work remains postgres; only ledger writes use its existing owner.
         for (const row of plan.pending) {
           await session.query(row.payload);
-          await session.query(`INSERT INTO homecook_deploy.migrations(filename,sha256) VALUES (${literal(row.filename)},${literal(row.sha256)});`);
+          await session.query(`SET LOCAL ROLE supabase_admin; INSERT INTO homecook_deploy.migrations(filename,sha256) VALUES (${literal(row.filename)},${literal(row.sha256)}); SET LOCAL ROLE postgres;`);
         }
         const post = assertProtectedPrelaunchObservation(review, await adapter.observe(query, applicationName), "after");
         if (post.preservedRowsSha256 !== preservedRowsSha256) throw new Error("Protected rows changed inside SQL/ledger transaction");
