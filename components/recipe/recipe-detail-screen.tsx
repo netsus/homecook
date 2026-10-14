@@ -1801,6 +1801,9 @@ export function RecipeDetailScreen({
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand)]">
             만들기
           </p>
+          <p className="mb-3 text-sm leading-6 text-[var(--text-2)]">
+            재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다
+          </p>
           <ol className="space-y-3">
             {recipe.steps.map((step, idx) => {
               const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
@@ -1874,7 +1877,7 @@ export function RecipeDetailScreen({
                   Action
                 </p>
                 <h2 className="mt-2 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                  {selectedServings}인분 기준
+                  선택한 {selectedServings}인분 기준
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-[var(--text-2)]">
                   재료 {recipe.ingredients.length}개 · 만들기 {recipe.steps.length}단계
@@ -2196,6 +2199,9 @@ export function RecipeDetailScreen({
 
         {activeTab === "steps" ? (
           <section className="bg-[var(--surface-fill)] px-4 py-5">
+            <p className="mb-3 text-sm leading-6 text-[var(--text-2)]">
+              재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다
+            </p>
             <ol className="space-y-3">
               {recipe.steps.map((step, idx) => {
                 const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
@@ -2728,6 +2734,9 @@ function RecipeDetailWebView({
 
               <section className="web-reading-section web-reading-section-grid">
                 <h2 className="web-reading-title">만들기</h2>
+                <p className="mb-3 text-sm leading-6 text-[var(--text-2)]">
+                  재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다
+                </p>
                 <ol className="web-step-list">
                   {recipe.steps.map((step, idx) => {
                     const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
@@ -2805,7 +2814,7 @@ function RecipeDetailWebView({
             <WebCard>
               <WebCardBody className="web-recipe-rail-body">
                 <div className="web-recipe-rail-head">
-                  <h2>{selectedServings}인분 기준</h2>
+                  <h2>선택한 {selectedServings}인분 기준</h2>
                   <p>재료 {recipe.ingredients.length}개 · 단계 {recipe.steps.length}개</p>
                 </div>
                 <div className="web-recipe-rail-actions">
