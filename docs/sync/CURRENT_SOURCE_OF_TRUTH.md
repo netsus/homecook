@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-10-15 — 선택 개인 무게 확인 운영 반영·원기록 보존
+
+앱 #1704·도구 #1705·plist 결속 보완 #1706으로 DB228·웹 `af88126b44cf5abb6fa06f7c08f9eee23ca7de99`·build `prelaunch-af88126b44cf-f3IycH`·개인 확인 writer ON을 확인했다. 개인 writer OFF로 DB 반영→새 reader→개인 writer ON 순서를 지켰으며 C03/C01/C04 writer·worker48 ON과 원 기록을 유지했다. 운영 QA의 선택160g/확인1건·30g 식사1건·130g 잔량, 철회 revision2 뒤 원g/evidence·식사 행 지문 보존,375/320/1440의 취소·재열기·reload·반복 클릭과 guest 표본을 확인했다. 사용자 보고 QA를 물리 검증·정확도 개선·학습 적격으로 승격하지 않는다.
+
+초기 source 경로 인코딩/잘못된 준비 plist 지문은 guard가 거절했고 원본 bytes로 교정한 #1706 이후 진행했다. 배포1,418 PASS·선택 범위 밖133 skipped와 한계는 [최신 진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#선택-개인-무게-확인-운영-반영원기록-보존--2026-10-15), [개인 확인 계약](../engineering/cooked-weight-user-attestation-20261015.md)을 따른다. 아래 개인 후보·e00d/DB227 문단은 이전 기록이다. C05 draft #1707·소스 `da65a96a2611918096295d7d42f7d4e0b27f1e5c`는 운영 미적용·수집 OFF·기간 미정이며 W0/W2·실제 개인 보정·정확도·삭제/복원·모델 생명주기·T9 미확인 범위는 남았다. 새 실제 추출·모델/P5 평가·외부 AI0이며 전체 v9 완료가 아니다.
+
 ## 2026-10-15 — 선택 개인 무게 확인 후보·운영 미적용
 
 완료/나중 실측에 기본 미선택 확인을 추가하고, 원 실측값의 개인 조회·철회를 분리하는 후보를 준비했다. 새 `224500` SQL의 두 private 표와 독립 기본OFF 제어는 원 C01·과거 식사 기록을 보존한다. 자기보고를 물리 검증이나 C05 참여·학습 적격으로 승격하지 않는다. UI·격리 DB 검증과 독립 리뷰를 진행했으며, DB228 배포 도구·최종 후보 빌드·운영 확인은 아직 남았다. **현재 운영은 아래 e00d·DB227·worker48 ON 그대로다.** 공식 5종의 같은 날짜 개인 확인 addendum과 [단위 계약](../engineering/cooked-weight-user-attestation-20261015.md), [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md)를 따른다.
