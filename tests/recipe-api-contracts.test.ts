@@ -76,9 +76,15 @@ vi.mock("@/lib/server/recipe-image-read", () => ({
   validateManagedRecipeImageReadTarget: vi.fn(),
 }));
 
-vi.mock("@/lib/server/recipe-snapshot-entrypoint", () => ({
-  readRecipeSnapshotEntrypointContext,
-}));
+vi.mock("@/lib/server/recipe-snapshot-entrypoint", async (importOriginal) => {
+  const { RecipeQuantityModeError } = await importOriginal<typeof import("@/lib/server/recipe-snapshot-entrypoint")>();
+  return {
+    readRecipeSnapshotEntrypointContext,
+    // These contract fixtures contain no quantity-v4 snapshot.
+    readRecipeQuantityMode: vi.fn(async () => false),
+    RecipeQuantityModeError,
+  };
+});
 
 vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
   readAccountGenerationCapability,
