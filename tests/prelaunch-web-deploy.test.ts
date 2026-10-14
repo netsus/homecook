@@ -31,6 +31,26 @@ import {
 } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const basePackage = { scripts: { build: "next build" }, dependencies: { next: "15.0.0" } };
+describe("reviewed ESLint plugin resolution scope", () => {
+  const before = "516f348fb17cd091ba8bb033aea2de9230672cf910d02171833419058930f43d";
+  const after = "632dfa7702050ae3c0b21a3b578922eed714a883954ee97864410c9152a9c32a";
+  it("admits only the exact reviewed before/after bytes as a web build change", () => {
+    expect(classifyPrelaunchScope(["eslint.config.mjs"], basePackage, basePackage,
+      { eslintConfigDigests: [before, after] })).toEqual({ web: ["eslint.config.mjs"], database: [], support: [], api: [] });
+  });
+  it.each([null, [null, after], [before, null], [after, before], [before, before], ["0".repeat(64), after], [before, "0".repeat(64)], [before, after, after]].map(eslintConfigDigests => ({ eslintConfigDigests })))(
+    "rejects missing, reversed, deleted or unreviewed configuration bytes: $eslintConfigDigests", ({ eslintConfigDigests }) => {
+      expect(() => classifyPrelaunchScope(["eslint.config.mjs"], basePackage, basePackage,
+        { eslintConfigDigests })).toThrow("허용하지 않는 서버 구성");
+    },
+  );
+  it("does not admit other config or worker files with the same proof", () => {
+    for (const file of ["eslint.config.js", ".eslintrc.json", "scripts/worker-start.mjs"]) {
+      expect(() => classifyPrelaunchScope([file], basePackage, basePackage,
+        { eslintConfigDigests: [before, after] })).toThrow("허용하지 않는 서버 구성");
+    }
+  });
+});
 const plist = {
   Label: "com.homecook.production",
   WorkingDirectory: "/old",

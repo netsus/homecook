@@ -622,15 +622,21 @@ export function prelaunchChangedFiles(git, from, to) {
  * @param {string[]} files
  * @param {any} before
  * @param {any} after
- * @param {{reviewedYoutubeTrialSupport?: boolean, reviewedYoutubeResolutionSupport?: boolean, reviewedIntegratedFiles?: Set<string> | null, reviewedProtectedInventorySupport?: boolean}} [options]
+ * @param {{reviewedYoutubeTrialSupport?: boolean, reviewedYoutubeResolutionSupport?: boolean, reviewedIntegratedFiles?: Set<string> | null, reviewedProtectedInventorySupport?: boolean, eslintConfigDigests?: (string | null)[] | null}} [options]
  */
 export function classifyPrelaunchScope(files, before, after, {
   reviewedYoutubeTrialSupport = false,
   reviewedYoutubeResolutionSupport = false,
   reviewedIntegratedFiles = null,
   reviewedProtectedInventorySupport = false,
+  eslintConfigDigests = null,
 } = {}) {
   const scope = { web: [], database: [], support: [], api: [] };
+  // Only the reviewed pnpm plugin-resolution change, not arbitrary lint config edits.
+  const reviewedEslintResolution = isDeepStrictEqual(eslintConfigDigests, [
+    "516f348fb17cd091ba8bb033aea2de9230672cf910d02171833419058930f43d",
+    "632dfa7702050ae3c0b21a3b578922eed714a883954ee97864410c9152a9c32a",
+  ]);
   const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/|\.claude\/|\.codex\/|\.opencode\/|\.workflow-v2\/)|^(?:AGENTS|CLAUDE|README)\.md$|^opencode\.json$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
   const exactSupport = new Set([
     // Reviewed offline nutrition tools and contract checks; never executed as runtime hooks.
@@ -688,7 +694,8 @@ export function classifyPrelaunchScope(files, before, after, {
     else if (support.test(file) || exactSupport.has(file) || youtubeTrialSupport.has(file)
       || youtubeResolutionSupport.has(file) || reviewedIntegratedFiles?.has(file)
       || (reviewedProtectedInventorySupport && file === "scripts/lib/full-local-security-inventory.mjs")) scope.support.push(file);
-    else if (web.test(file) || file === "instrumentation.ts") scope.web.push(file);
+    else if (web.test(file) || file === "instrumentation.ts"
+      || (file === "eslint.config.mjs" && reviewedEslintResolution)) scope.web.push(file);
     else denied.push(file);
   }
   if (denied.length) throw new DeploymentError(`빠른 웹/DB 배포에서 허용하지 않는 서버 구성 변경: ${denied.join(", ")}`);
