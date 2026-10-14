@@ -72,8 +72,8 @@ export const QUANTITY_V4_WORKER_SCHEMA_IDENTITY = "youtube-extraction-worker-sch
 export const COOKED_WEIGHT_ATTESTATION_FEATURE = "cooked-weight-user-attestation";
 export const COOKED_WEIGHT_ATTESTATION_MIGRATION = "20261014224500_cooked_weight_user_attestation.sql";
 export const COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256 = "d334ebe8824db1d4e94f865bc0bbd692c46cdde2f6c2077e4cac9d9f8db8d146";
-export const COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-personal-weight-20261015-secrwkhy/approved-rollout-review.json", sha256: "987b39c80c5a786923a90ec88967b90961c0d105a03b1c1bae330f6e77cbf2d8" });
-export const COOKED_WEIGHT_ATTESTATION_WRITER_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-personal-weight-20261015-secrwkhy/approved-writer-review.json", sha256: "368f61eb5c65421aaf281983419f043581b5b3b1e4a6c391b59f86fd4d70ef6d" });
+export const COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-personal-weight-20261015-secrwkhy/approved-rollout-review-v2.json", sha256: "2f4f2cca5d4ef64e5278088c5137943a02e76ba77fa7a9c82d6f1c5ee57fbac7" });
+export const COOKED_WEIGHT_ATTESTATION_WRITER_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-personal-weight-20261015-secrwkhy/approved-writer-review-v2.json", sha256: "f1c9bad6c635ce15f6102c7636c1d844cd2004249a0f29881f6c387efe3b84a8" });
 
 export function quantityV4StageForPhase(phase) {
   if (["database", "database-retry", "reconcile"].includes(phase)) return "consumers";
