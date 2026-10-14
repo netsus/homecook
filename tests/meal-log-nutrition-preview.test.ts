@@ -23,6 +23,17 @@ describe("readonly meal nutrition preview",()=>{
     expect(fetcher.mock.calls[0][1].cache).toBe("no-store");
     expect(fetcher.mock.calls[0][1].method).toBeUndefined();
   });
+  it("sends the original raw unit separately from the converted display unit", async () => {
+    const converted = { ...input, quantity: { amount: 0.2, unit: "L" }, quantityInput: { schema_version: "quantity-v4" as const, raw_value: "200", raw_unit: "mL" } };
+    const fetcher = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: { ...converted, nutrition } }) });
+    vi.stubGlobal("fetch", fetcher);
+    await fetchMealLogNutritionPreview(converted);
+    const params = new URL(String(fetcher.mock.calls[0][0]), "http://fixture.invalid").searchParams;
+    expect(params.get("unit")).toBe("L"); expect(params.get("raw_unit")).toBe("mL");
+    expect(parseMealLogNutritionPreviewQuery(params, true)).toEqual({ ok: true, value: converted });
+    expect(parseMealLogNutritionPreviewQuery(params).ok).toBe(false);
+    params.append("raw_unit", "g"); expect(parseMealLogNutritionPreviewQuery(params, true).ok).toBe(false);
+  });
   it("rejects response identity mismatch and invalid evidence",async()=>{
     vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:true,status:200,json:async()=>({success:true,data:{...input,quantity:{amount:99,unit:"g"},nutrition}})}));
     await expect(fetchMealLogNutritionPreview(input)).rejects.toMatchObject({code:"INVALID_RESPONSE"});

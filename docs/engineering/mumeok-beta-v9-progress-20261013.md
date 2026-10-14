@@ -244,3 +244,14 @@
 **남은 후속:** 완료 모달 취소 후 초점이 원 요리 완료 버튼으로 돌아오지 않고, 나중 무게 저장에서도 사라진 원 액션 대신 같은batch 관리 버튼으로 돌아오지 않는 문제가 확인됐다. 공유 dialog 보호를 완화하지 않고 실제 호출 버튼/ref 연결만 별도 좁은 웹 수정으로 준비한다. 이 후속의 미검증 변경은 운영32ab에 섞지 않았다. C01의 실제 추정 정확도, 개인 보정·전체 모델 활성화, 미정 정책/보유기간, C04/C05 운영은 여전히 별도다. 실제 영상 추출/P5/외부AI 호출은0이다.
 
 비공개 증거는 같은 C01 operation의 `writer-and-journeys.json`, `authenticated-off-journey.json`, `on-flow-readonly-evidence.json`, `completion-measured-readonly-evidence.json`, `legacy-meal-after-on.json`, `worker-readiness-after-on.txt`, `status-after-writer-on.json`, `writer-on-plan.log`·`writer-on-apply.log`와 해당 PNG들이다. 테스트 조리 세 건과 식사 한 건은 보존했다. 총괄의 이 단계 Discord 전송은HTTP204를 확인했다.
+
+
+## C01 초점 후속 운영 확인 — 2026-10-14
+
+PR #1692와 배포 도구 보완 #1693을 검증 후 병합하고 웹 `5be05649968e261d83bfc216754f4540b1b0b636`·build `prelaunch-5be05649968e-X8W1FZ`를 운영 확인했다. 기본 무게 저장 ON 이후 발견했던 완료창/실측 저장 초점 문제는 이 버전에서 해소됐다. DB221·C03/C01 ON·R2 OFF·worker는 유지했다.
+
+- 모바일375의 완료창 닫기와 데스크톱1440의 Escape 후 실제 요리 완료 BUTTON으로 복귀했다. 데스크톱 무게 입력 취소는 원 무게 수정 액션, 모바일 실측 저장 성공 후에는 같은배치의 관리 BUTTON으로 복귀했다. 동일 제목의 다른 배치로 이동하지 않았고 새로고침 후120g도 유지됐다. 가짜 QA 요리1건을 추가로 보존했으며 새 식사는 만들지 않았다.
+- 원 공유 dialog 보호를 재사용하고 leftovers 화면의 중복 수동 animation-frame 복귀 코드를 제거했다. 독립67검사, 실제 모의 화면6흐름, root build/type 통과. 운영 배포1385통과·133선택제외이며 기본 빌드 lint도 통과(기존 경고4)했다.
+- 첫 plan은 `eslint.config.mjs`를 허용하지 않는 구성 변경으로 거부해 운영 변경 없이 중단됐다. 원 `pnpm deploy:dev:plan -- --reviewed-ref 5be05649968e261d83bfc216754f4540b1b0b636 --already-applied-db --db-config <고정 운영 설정> --test-script test:feedback-batch:web`와 원인은 비공개 `focus-web-plan.log`에 보존했다. 정확 Git 원문 SHA의 검토한 경로 수정3줄만 허용하는 보완을 독립211검사·실제 Git 원문/거절16조건·타입/lint로 검증했다. 새 우회 옵션이나 임의 설정 허용은 없다.
+- 기존 installer로 도구 `4385861d96a81bdf69a57e7240d7729cbb7835bd`를 설치하고 설치된 plan 재검증 후 배포했다. 최초 다른worktree config lint의 모듈 경로 충돌은 같은 검토 원문을 현재 폴더의 임시 config로 읽어 검증한 뒤 삭제해 해소했다. source 규칙·의존성은 바꾸지 않았다.
+- 실제 증거: 기존 C01 operation의 `focus-operating-verification.json`, `status-after-focus-deploy.json`, `focus-web-apply.log`, `focus-completion-return-375.png`, `focus-completion-return-1440.png`, `focus-late-measure-manager-375.png`. 배포 로그 `deploy-1791966537730.log`. 단계 Discord HTTP204 확인. C04/C05 운영이나 실제 정확도 평가 완료 주장이 아니다.

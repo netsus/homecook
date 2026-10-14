@@ -1,3 +1,5 @@
+import { hydrateRecipeQuantityNutrition, isRecipeQuantityInputDraft } from "@/lib/server/recipe-quantity-input";
+import { RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION } from "@/lib/nutrition/recipe-nutrition-calculator";
 import type { RecipeIngredientSourceKind } from "@/types/recipe";
 import { isRecipeIngredientIdentityValid, recipeIngredientSourceId } from "@/lib/recipe-ingredient-source";
 import { recipeIngredientGroupKey } from "@/lib/recipe-editor-ingredients";
@@ -86,6 +88,9 @@ const PUBLIC_RPC_ERRORS = {
     message: "새 요리 세션을 지금 시작할 수 없어요.",
     status: 409,
   },
+  UNIT_CONTEXT_STALE: { message: "단위 근거가 바뀌었어요. 원입력은 유지되며 수량 정보를 다시 확인해 주세요.", status: 409 },
+  UNIT_POLICY_INACTIVE: { message: "지금은 새 수량 정보를 저장할 수 없어요. 입력은 유지돼요.", status: 409 },
+  NUTRITION_VERSION_CONFLICT: { message: "제품의 고정된 영양 정보를 다시 확인해 주세요. 원입력은 유지돼요.", status: 409 },
   VALIDATION_ERROR: {
     message: "요청 값을 확인해 주세요.",
     status: 422,
@@ -101,7 +106,7 @@ export interface FuturePropagationRpcClient {
   ): PromiseLike<{ data: unknown; error: unknown }>;
 }
 
-export interface RecipeDraftNutritionClient {
+export interface RecipeDraftNutritionClient extends Partial<RecipeProductNutritionClient> {
   from(table: string): unknown;
 }
 
@@ -210,7 +215,15 @@ function parseRecipeDraft(value: unknown): RecipeDraft | null {
     return null;
   }
 
-  return value as unknown as RecipeDraft;
+  if (value.ingredients.some(item => !isRecord(item) || item.quantity_input !== undefined
+    && !isRecipeQuantityInputDraft(item.quantity_input, {
+      amount: typeof item.amount === "number" ? item.amount : null,
+      unit: typeof item.unit === "string" ? item.unit : null,
+      ingredient_type: typeof item.ingredient_type === "string" ? item.ingredient_type : "QUANT",
+      food_product_nutrition_version_id: typeof item.food_product_nutrition_version_id === "string" ? item.food_product_nutrition_version_id : null,
+    }))) return null;
+  return { title: value.title, base_servings: value.base_servings,
+    description: value.description, ingredients: value.ingredients, steps: value.steps };
 }
 
 export function parseRecipeFutureImpactRequest(
@@ -505,6 +518,8 @@ export async function calculateRecipeDraftNutrition(
     baseRecipeRevision: number;
     draft: RecipeDraft;
     ownerUserId?: string;
+    /** Only the verified recipe entrypoint context supplies this; never draft JSON. */
+    quantityMode?: boolean;
   },
 ) {
   const ingredients = input.draft.ingredients.map(draftNutritionIngredient);
@@ -559,10 +574,14 @@ export async function calculateRecipeDraftNutrition(
     throw new RecipeDraftNutritionInfrastructureError();
   }
 
+  const rpcClient: RecipeProductNutritionClient = { rpc(name, args) {
+    if (!client.rpc) throw new RecipeDraftNutritionInfrastructureError();
+    return client.rpc(name, args);
+  } };
   let productHydration;
   try {
     productHydration = await hydrateRecipeProductNutrition(
-      client as unknown as RecipeProductNutritionClient,
+      rpcClient,
       validIngredients,
       hydrateRecipeNutritionIngredients(validIngredients, predecessors),
       input.ownerUserId,
@@ -570,13 +589,19 @@ export async function calculateRecipeDraftNutrition(
   } catch {
     throw new RecipeDraftNutritionInfrastructureError();
   }
+  const quantityV4 = input.quantityMode === true || input.draft.ingredients.some(row => isRecord(row) && row.quantity_input !== undefined);
+  let quantityHydration;
+  try {
+    quantityHydration = quantityV4 ? await hydrateRecipeQuantityNutrition(rpcClient, validIngredients, productHydration.ingredients, input.ownerUserId) : null;
+  } catch { throw new RecipeDraftNutritionInfrastructureError(); }
   let calculation;
   try {
     calculation = calculateRecipeNutrition({
       recipe_id: input.recipeId,
       recipe_version: `revision:${input.baseRecipeRevision}`,
       base_servings: input.draft.base_servings,
-      ingredients: productHydration.ingredients,
+      ingredients: quantityHydration?.ingredients ?? productHydration.ingredients,
+      calculation_version: quantityV4 ? RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION : undefined,
     });
   } catch {
     throw new RecipeDraftNutritionValidationError();
@@ -600,7 +625,10 @@ export async function calculateRecipeDraftNutrition(
       if (!guard) {
         throw new RecipeDraftNutritionValidationError();
       }
+      const quantityStamp: { recipe_quantity_context_sha256?: string } = {};
+      if (quantityHydration) quantityStamp.recipe_quantity_context_sha256 = quantityHydration.hashes.get(ingredient.id);
       return {
+        ...quantityStamp,
         ingredient_id: ingredient.ingredient_id,
         amount: ingredient.amount,
         unit: ingredient.unit,

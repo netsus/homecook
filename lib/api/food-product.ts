@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   FoodProductCreateInput,
@@ -72,6 +73,7 @@ export async function fetchFoodProducts({
 
   return requestFoodProduct<FoodProductListData>(
     `/api/v1/food-products?${params.toString()}`,
+    { headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION } },
   );
 }
 

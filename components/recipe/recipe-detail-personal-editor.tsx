@@ -1,5 +1,7 @@
 "use client";
 
+import { useRecipeQuantityContext } from "@/components/recipe/use-recipe-quantity-context";
+
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -10,12 +12,12 @@ import {
 } from "@/components/recipe/personal-recipe-editor-shell";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { changeRecipeIngredient, recipeIngredientGroupKey, toRecipeEditIngredient, withRecipeIngredientRowKeys } from "@/lib/recipe-editor-ingredients";
-import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
-import type { RecipeProductSelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
+import { recipeQuantityContextNeedsConfirmation, changeRecipeQuantityUnit, recipeQuantityUnits, updateRecipeQuantityText } from "@/lib/recipe-quantity-input";
+import { RecipeQuantityInput } from "@/components/recipe/recipe-quantity-input";
+import type { RecipeProductSelectionContexts, RecipeQuantitySelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
 import { getRecipeIngredientUnitOptions } from "@/lib/recipe-ingredient-units";
 import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
-import { DecimalInput } from "@/components/shared/decimal-input";
 import { fetchUserProfile } from "@/lib/api/mypage";
 import {
   createPersonalRecipeFromSource,
@@ -29,6 +31,7 @@ import type { RecipeEditorPantryResume } from "@/lib/auth/pending-action";
 interface RecipeDetailPersonalEditorProps {
   editContext: RecipeEditContext;
   ingredientNames?: Record<string, string>;
+  initialQuantityContexts?: RecipeQuantitySelectionContexts;
   mode: "edit" | "fork";
   onClose: () => void;
   onSaved: (result: { id: string; revision: number }) => void;
@@ -101,6 +104,7 @@ function toEditorShellDraft(
     baseServings: draft.base_servings,
     ingredients: draft.ingredients.map((ingredient, index) => ({
       amount: ingredient.amount,
+      quantityInput: ingredient.quantity_input,
       draftId: ingredient.row_key ?? `${ingredient.ingredient_id ?? "product"}:${index}`,
       ingredientType: ingredient.ingredient_type,
       sortOrder: index + 1,
@@ -138,6 +142,7 @@ function toEditorShellDraft(
 export function RecipeDetailPersonalEditor({
   editContext,
   ingredientNames = {},
+  initialQuantityContexts = {},
   mode,
   onClose,
   onSaved,
@@ -155,19 +160,22 @@ export function RecipeDetailPersonalEditor({
     resumeContext?.draft ?? initialDraft,
   ));
   const [productContexts, setProductContexts] = useState<RecipeProductSelectionContexts>({});
+  const [quantityContexts, setQuantityContexts] = useState<RecipeQuantitySelectionContexts>(initialQuantityContexts);
   const [changeBaseline] = useState(() => cloneDraft(draft));
   const [ingredientKeys, setIngredientKeys] = useState(() => draft.ingredients.map((_, index) => index));
   const nextIngredientKey = useRef(draft.ingredients.length);
   const [removedIngredients, setRemovedIngredients] = useState<RemovedIngredient[]>([]);
   const [impactDialogOpen, setImpactDialogOpen] = useState(false);
   const [ingredientPicker, setIngredientPicker] = useState<number | "add" | null>(() => {
-    if (!resumeIngredientPicker) return null;
+    if (!resumeIngredientPicker || resumeIngredientPicker.source === "quantity") return null;
     if (resumeIngredientPicker.rowKey === null) return "add";
     const index = draft.ingredients.findIndex(row => row.row_key === resumeIngredientPicker.rowKey);
     return index < 0 ? null : index;
   });
-  const [pickerSource, setPickerSource] = useState<"catalog" | "pantry">(resumeIngredientPicker ? "pantry" : "catalog");
+  const [pickerSource, setPickerSource] = useState<"catalog" | "pantry">(resumeIngredientPicker && resumeIngredientPicker.source !== "quantity" ? "pantry" : "catalog");
   const [ingredientError, setIngredientError] = useState<string | null>(null);
+  const ingredientErrorRef = useRef<HTMLParagraphElement | null>(null);
+  useEffect(() => { if (ingredientError) ingredientErrorRef.current?.focus(); }, [ingredientError]);
   const [isCreatingDerivedRecipe, setIsCreatingDerivedRecipe] = useState(false);
   const [createDerivedRecipeError, setCreateDerivedRecipeError] = useState<string | null>(null);
   const openAuthGate = useAuthGateStore((state) => state.open);
@@ -189,6 +197,22 @@ export function RecipeDetailPersonalEditor({
     });
     return () => { current = false; };
   }, [recipeId]);
+  const quantityContextRead = useRecipeQuantityContext({
+    sources: draft.ingredients.flatMap(row => row.row_key ? [{ row_key: row.row_key, ingredient_id: row.ingredient_id,
+      food_product_id: row.food_product_id ?? null, food_product_nutrition_version_id: row.food_product_nutrition_version_id ?? null }] : []),
+    subject: () => ({ owner: draftOwnerUuidRef.current, generation: draftOwnerGenerationRef.current }),
+    onResolved: (key, context) => { setIngredientError(null); setQuantityContexts(current => ({ ...current, [key]: context })); },
+    onError: setIngredientError,
+    onUnauthorized: rowKey => {
+      const owner = draftOwnerUuidRef.current; const generation = draftOwnerGenerationRef.current;
+      if (!owner || generation === null) return "초안을 작성한 계정 정보를 확인하지 못했어요. 원입력은 이 화면에 유지돼요.";
+      openAuthGate({ recipeId, type: "recipe-fork", sourceOwnerUuid: owner, sourceAccountGeneration: generation,
+        resumeEditor: { mode, rowKey, source: "quantity" }, editContext: {
+          base_recipe_revision: (resumeContext ?? editContext).base_recipe_revision, draft,
+          image_object_id: (resumeContext ?? editContext).image_object_id,
+        } });
+    },
+  });
   const saveContext = resumeContext ?? editContext;
   const resumeSaveAsNew = mode === "edit" && resumeAction === "save-as-new";
   const initialShellDraft = useMemo(
@@ -207,12 +231,15 @@ export function RecipeDetailPersonalEditor({
   }, [createDerivedRecipeError]);
   const fallbackOpenerRef = useRef<HTMLElement | null>(null);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(initialDraft);
-  const ingredientsValid = draft.ingredients.length > 0 && draft.ingredients.every((ingredient) =>
+  const ingredientQuantitiesValid = draft.ingredients.length > 0 && draft.ingredients.every((ingredient) =>
     ingredient.ingredient_type === "TO_TASTE"
       ? ingredient.amount === null && ingredient.unit === null
       : ingredient.amount !== null && Number.isFinite(ingredient.amount)
         && ingredient.amount > 0 && Boolean(ingredient.unit?.trim()),
   );
+  const quantityContextsReady = draft.ingredients.every(ingredient =>
+    !recipeQuantityContextNeedsConfirmation(ingredient, ingredient.row_key ? quantityContexts[ingredient.row_key] : undefined));
+  const ingredientsValid = ingredientQuantitiesValid && quantityContextsReady;
   const controller = usePersonalRecipeEditorShell({
     accessState: "ready",
     cleanupState: "idle",
@@ -381,17 +408,18 @@ export function RecipeDetailPersonalEditor({
   const pickerIngredient = typeof ingredientPicker === "number" ? draft.ingredients[ingredientPicker] : null;
   function changeIngredientUnit(index: number, unit: string | null) {
     const ingredient = draft.ingredients[index];
-    let amount = ingredient.amount;
-    if (ingredient.food_product_id && ingredient.unit && unit && ingredient.unit !== unit && amount !== null) {
-      const context = ingredient.row_key ? productContexts[ingredient.row_key] : undefined;
-      const converted = context?.id === ingredient.food_product_id && context.nutrition_version_id === ingredient.food_product_nutrition_version_id
-        ? convertProductQuantity(amount, ingredient.unit, unit, context.basis_relations) : null;
-      if (converted === null) { setIngredientError("단위 전환 근거를 확인하지 못해 기존 분량과 단위를 유지했어요."); return; }
-      amount = converted;
-    }
+    if (!unit) return;
+    const context = ingredient.row_key ? quantityContexts[ingredient.row_key] : undefined;
+    const product = ingredient.row_key ? productContexts[ingredient.row_key] : undefined;
+    const converted = changeRecipeQuantityUnit(ingredient, unit, {
+      ingredientOptions: context?.options, product: context?.product ?? product,
+      recordInput: context?.ready === true,
+      contextSha256: context?.context_sha256,
+    });
+    if (!converted.ok) { setIngredientError(converted.message); return; }
     setIngredientError(null);
     setDraft(current => ({ ...current, ingredients: current.ingredients.map((item, itemIndex) => itemIndex === index
-      ? { ...item, ingredient_type: "QUANT", unit, amount } : item) }));
+      ? { ...converted.ingredient, ingredient_type: "QUANT" } : item) }));
   }
 
   return (
@@ -487,29 +515,24 @@ export function RecipeDetailPersonalEditor({
                     </div>
                     {ingredient.component_label ? <p className="mb-1.5 text-xs text-[var(--text-2)]">{ingredient.component_label}</p> : null}
                     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem] items-center gap-1.5">
-                      <DecimalInput
-                        aria-label={`재료 ${index + 1} 수량`}
-                        className="h-11 min-w-0 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-2 text-base text-[var(--foreground)]"
-                        inputMode="decimal"
-                        placeholder={ingredient.ingredient_type === "TO_TASTE" ? "약간" : "수량"}
-                        onValueChange={(amount) => setDraft((current) => ({
-                          ...current,
-                          ingredients: current.ingredients.map((item, itemIndex) => itemIndex === index
-                            ? { ...item, ingredient_type: "QUANT", amount }
-                            : item),
-                        }))}
-                        value={ingredient.amount}
-                      />
-                      <select
-                        aria-label={`재료 ${index + 1} 단위`}
-                        className="h-11 min-w-0 w-full rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-1 text-base text-[var(--foreground)] disabled:bg-[var(--surface-fill)]"
-                        disabled={Boolean(ingredient.food_product_id) && (!ingredient.row_key || !productContexts[ingredient.row_key])}
-                        onChange={(event) => changeIngredientUnit(index, event.target.value || null)}
-                        value={ingredient.unit ?? ""}
-                      >
-                        <option disabled value="">{ingredient.ingredient_type === "TO_TASTE" ? "약간" : "단위"}</option>
-                        {getRecipeIngredientUnitOptions(ingredient, ingredient.row_key ? productContexts[ingredient.row_key] : undefined).map((unit) => <option key={unit} value={unit}>{unit === "serving" ? "회분" : unit === "package" ? "포장" : unit}</option>)}
-                      </select>
+                      <div className="col-span-2 min-w-0">
+                        <RecipeQuantityInput label={`재료 ${index + 1}`} amount={ingredient.amount} unit={ingredient.unit}
+                          quantityInput={ingredient.quantity_input}
+                          onRequestContext={ingredient.row_key ? () => void quantityContextRead.request(ingredient.row_key!) : undefined}
+                          contextLoading={ingredient.row_key === quantityContextRead.loadingKey}
+                          contextChanged={Boolean(ingredient.quantity_input && ingredient.row_key && quantityContexts[ingredient.row_key]?.ready && ingredient.quantity_input.expected_context_sha256 !== quantityContexts[ingredient.row_key].context_sha256)} toTaste={ingredient.ingredient_type === "TO_TASTE"}
+                          enabled={Boolean(ingredient.row_key && quantityContexts[ingredient.row_key]?.ready)}
+                          units={ingredient.row_key && quantityContexts[ingredient.row_key]?.ready
+                            ? recipeQuantityUnits(ingredient, quantityContexts[ingredient.row_key])
+                            : getRecipeIngredientUnitOptions(ingredient, ingredient.row_key ? productContexts[ingredient.row_key] : undefined)}
+                          unitDisabled={Boolean(ingredient.food_product_id) && (!ingredient.row_key || !productContexts[ingredient.row_key] && !quantityContexts[ingredient.row_key]?.product)}
+                          onTextChange={(text) => setDraft(current => ({ ...current, ingredients: current.ingredients.map((item, itemIndex) => itemIndex === index
+                            ? { ...updateRecipeQuantityText(item, text, item.row_key ? quantityContexts[item.row_key]?.context_sha256 : undefined), ingredient_type: "QUANT" } : item) }))}
+                          onAmountChange={(amount) => setDraft(current => ({ ...current, ingredients: current.ingredients.map((item, itemIndex) => itemIndex === index
+                            ? { ...item, ingredient_type: "QUANT", amount } : item) }))}
+                          onUnitChange={unit => changeIngredientUnit(index, unit)}
+                        />
+                      </div>
                       <button className="h-11 text-sm font-bold text-[var(--brand)]" type="button" onClick={() => { setIngredientError(null); setIngredientPicker(index); }}>교체</button>
                       <button aria-label={`${name} 삭제`} className="h-11 text-xl text-[var(--danger)]" type="button" onClick={() => removeIngredient(index)}>×</button>
                     </div>
@@ -523,8 +546,9 @@ export function RecipeDetailPersonalEditor({
                 </div>
               ))}
               <button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line)] text-sm font-bold" type="button" onClick={() => { setIngredientError(null); setIngredientPicker("add"); }}>+ 재료 추가하기</button>
-              {ingredientError ? <p role="alert" className="text-sm text-[var(--danger)]">{ingredientError}</p> : null}
-              {!ingredientsValid && draft.ingredients.length > 0 ? <p role="status" className="text-sm text-[var(--danger)]">재료의 수량과 단위를 입력해 주세요.</p> : null}
+              {resumeIngredientPicker?.source === "quantity" ? <p role="status" className="text-sm text-[var(--text-2)]">원입력과 분량을 복원했어요. ‘수량 정보 재확인’을 누른 뒤 저장해 주세요.</p> : null}
+              {ingredientError ? <p ref={ingredientErrorRef} role="alert" tabIndex={-1} className="text-sm text-[var(--danger)]">{ingredientError}</p> : null}
+              {!ingredientQuantitiesValid && draft.ingredients.length > 0 ? <p role="status" className="text-sm text-[var(--danger)]">재료의 수량과 단위를 입력해 주세요.</p> : null}
               {draft.ingredients.some((ingredient) => ingredient.food_product_id && (!ingredient.row_key || !productContexts[ingredient.row_key])) ? <p className="text-xs text-[var(--text-2)]">기존 단위와 분량은 유지돼요. 다른 단위로 바꾸려면 제품을 다시 선택해 주세요.</p> : null}
               <p className="text-xs text-[var(--text-2)]">일반 재료를 교체하면 기존 양을 유지해요. 다른 제품으로 교체하면 실제 사용량을 다시 입력해 주세요. 아래 만들기 설명도 확인해 주세요.</p>
             </section>
@@ -637,7 +661,7 @@ export function RecipeDetailPersonalEditor({
             resumeEditor: { mode, rowKey }, editContext: { base_recipe_revision: saveContext.base_recipe_revision, draft, image_object_id: saveContext.image_object_id } });
           setIngredientPicker(null); setPickerSource("catalog");
         }}
-        onAdd={(items, products = {}) => {
+        onAdd={(items, products = {}, quantities = {}) => {
           if (ingredientPicker !== "add" && items.length !== 1) {
             setIngredientError("교체할 재료를 하나만 선택해 주세요."); return;
           }
@@ -649,6 +673,12 @@ export function RecipeDetailPersonalEditor({
           if (typeof ingredientPicker === "number") {
             warnUnscopedStepReferences(ingredientPicker);
           }
+          setQuantityContexts((current) => {
+            if (typeof ingredientPicker !== "number") return { ...current, ...quantities };
+            const key = draft.ingredients[ingredientPicker].row_key;
+            const quantity = items[0].row_key ? quantities[items[0].row_key] : undefined;
+            return key && quantity ? { ...current, [key]: quantity } : current;
+          });
           setProductContexts((current) => {
             if (typeof ingredientPicker !== "number") return { ...current, ...products };
             const key = draft.ingredients[ingredientPicker].row_key;

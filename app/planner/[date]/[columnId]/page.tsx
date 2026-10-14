@@ -33,6 +33,7 @@ interface MealScreenPageProps {
     productEntryId?: string;
     productAmount?: string;
     productUnit?: string;
+    productQuantityResume?: string;
   }>;
 }
 
@@ -78,6 +79,9 @@ export default async function MealScreenPage({
     if (pageSearchParams.productEntryId) returnParams.set("productEntryId", pageSearchParams.productEntryId);
     if (pageSearchParams.productAmount) returnParams.set("productAmount", pageSearchParams.productAmount);
     if (pageSearchParams.productUnit) returnParams.set("productUnit", pageSearchParams.productUnit);
+    if (pageSearchParams.productAction === "edit" && pageSearchParams.productQuantityResume === "unavailable") {
+      returnParams.set("productQuantityResume", "unavailable");
+    }
     const suffix = returnParams.size ? `?${returnParams.toString()}` : "";
     const returnPath = resolveNextPath(`/planner/${date}/${columnId}${suffix}`);
     redirect(`/login?next=${encodeURIComponent(returnPath)}`);

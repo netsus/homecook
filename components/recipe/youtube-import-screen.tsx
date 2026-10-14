@@ -64,6 +64,8 @@ import {
   type IngredientSubcategoryOption,
 } from "@/lib/ingredient-categories";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
+import { parseQuantityInput } from "@/lib/quantity-input";
+import { savedQuantitySnapshot, savedQuantityText, switchSavedQuantityUnit } from "@/lib/youtube-saved-quantity-input";
 import { stripMatchingSectionPrefix } from "@/lib/recipe-section-labels";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
@@ -84,7 +86,8 @@ import type {
   YoutubeExtractionJobData,
 } from "@/types/youtube-extraction";
 import type { PlannerColumnData } from "@/types/planner";
-import type { YoutubeSavedRecipeEditableContent, YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
+import type { YoutubeSavedQuantityContext, YoutubeSavedQuantityDraft, YoutubeSavedRecipeIngredientInput, YoutubeSavedRecipeEditableContent, YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
+import { QUANTITY_INPUT_VERSION, type QuantityInputSnapshot } from "@/types/quantity-input";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,6 +156,16 @@ interface TempIngredient extends ManualRecipeIngredientInput {
   quantity_review_required?: boolean;
   quantity_user_confirmed?: boolean;
   quantity_confirmation_status?: YoutubeQuantityConfirmationStatus;
+  savedQuantity?: {
+    text: string;
+    input: YoutubeSavedQuantityDraft | QuantityInputSnapshot | null;
+    context: YoutubeSavedQuantityContext | null;
+    storedFingerprint: string | null;
+    enabled: boolean;
+    changed: boolean;
+    error: string | null;
+    invalid: boolean;
+  };
 }
 
 type IngredientQuantityPatch = Partial<
@@ -168,7 +181,7 @@ type IngredientQuantityPatch = Partial<
     | "quantity_confirmation_status"
     | "standard_name"
   >
->;
+> & { savedQuantityText?: string; savedQuantityUnit?: string };
 
 const QUANTITY_SOURCE_LABELS: Record<
   NonNullable<YoutubeExtractedIngredient["quantity_source"]>,
@@ -219,6 +232,60 @@ function applyIngredientQuantityPatch(
   ingredient: TempIngredient,
   patch: IngredientQuantityPatch,
 ): TempIngredient {
+  const saved = ingredient.savedQuantity;
+  if (saved && ("savedQuantityText" in patch || "savedQuantityUnit" in patch || "ingredient_type" in patch)) {
+    if (!saved.enabled || !saved.context) return ingredient;
+    if (patch.savedQuantityText !== undefined) {
+      const parsed = parseQuantityInput(patch.savedQuantityText);
+      const empty = patch.savedQuantityText.trim() === "";
+      const invalid = !empty && (!parsed || !ingredient.unit);
+      return {
+        ...ingredient, amount: parsed?.amount ?? null, ingredient_type: "QUANT", scalable: true,
+        display_text: parsed && ingredient.unit ? `${ingredient.standard_name} ${parsed.raw_value}${ingredient.unit}` : ingredient.standard_name,
+        ...getQuantityEditPatch(ingredient),
+        savedQuantity: { ...saved, text: patch.savedQuantityText, changed: true, invalid,
+          storedFingerprint: saved.context.fingerprint,
+          error: invalid ? "양과 단위를 확인해 주세요. 1/3 같은 분수도 입력할 수 있어요." : null,
+          input: parsed && ingredient.unit ? { schema_version: QUANTITY_INPUT_VERSION, raw_value: parsed.raw_value,
+            raw_unit: ingredient.unit, expected_context_fingerprint: saved.context.fingerprint } : null },
+      };
+    }
+    if (patch.savedQuantityUnit !== undefined) {
+      const target = patch.savedQuantityUnit.trim();
+      if (target === ingredient.unit) return { ...ingredient, savedQuantity: { ...saved, error: null } };
+      const entered = parseQuantityInput(saved.text);
+      if (!ingredient.unit && saved.changed && entered && target) {
+        return { ...ingredient, unit: target, amount: entered.amount, display_text: `${ingredient.standard_name} ${entered.raw_value}${target}`,
+          savedQuantity: { ...saved, changed: true, invalid: false, error: null,
+            storedFingerprint: saved.context.fingerprint,
+            input: { schema_version: QUANTITY_INPUT_VERSION, raw_value: entered.raw_value, raw_unit: target,
+              expected_context_fingerprint: saved.context.fingerprint } } };
+      }
+      if (ingredient.amount === null) return { ...ingredient, unit: target || null,
+        savedQuantity: { ...saved, changed: true, error: null, invalid: saved.text.trim() !== "" && !entered, input: null } };
+      if (!ingredient.unit || !target) return { ...ingredient,
+        savedQuantity: { ...saved, error: "단위를 입력해 주세요. 현재 양은 그대로 유지해요." } };
+      // SI conversion needs no catalog. Frozen old evidence must not borrow a
+      // newly changed density/count relationship merely to change its label.
+      let converted = switchSavedQuantityUnit(ingredient.amount, ingredient.unit, target);
+      if (converted === null && saved.storedFingerprint !== saved.context.fingerprint) {
+        return { ...ingredient, savedQuantity: { ...saved, error: "단위 근거가 바뀌었어요. 원입력을 다시 확인해 주세요." } };
+      }
+      converted ??= switchSavedQuantityUnit(ingredient.amount, ingredient.unit, target, saved.context.options);
+      if (converted === null) return { ...ingredient,
+        savedQuantity: { ...saved, error: "그 단위로 바꿀 근거가 없어요. 현재 양을 유지해 주세요." } };
+      const input: YoutubeSavedQuantityDraft = { schema_version: QUANTITY_INPUT_VERSION,
+        raw_value: saved.input?.raw_value ?? saved.text, raw_unit: saved.input?.raw_unit ?? ingredient.unit,
+        expected_context_fingerprint: saved.context.fingerprint };
+      return { ...ingredient, amount: converted, unit: target, ...getQuantityEditPatch(ingredient),
+        display_text: `${ingredient.standard_name} ${savedQuantityText(converted, target, input)}${target}`,
+        savedQuantity: { ...saved, input, text: savedQuantityText(converted, target, input), changed: true, invalid: false, error: null } };
+    }
+    if (patch.ingredient_type === "TO_TASTE") {
+      return { ...ingredient, ...patch, amount: null, unit: null, scalable: false, display_text: `${ingredient.standard_name} 약간`,
+        savedQuantity: { ...saved, text: "", input: null, changed: true, invalid: false, error: null } };
+    }
+  }
   const next = { ...ingredient, ...patch };
 
   if ("standard_name" in patch && !("amount" in patch) && !("unit" in patch) && !("ingredient_type" in patch)) {
@@ -872,6 +939,7 @@ function ExtractionSessionStatus({
 // ─── Step 3: Review / Edit ────────────────────────────────────────────────────
 
 interface ReviewStepProps {
+  isSavingSavedDraft?: boolean;
   editingSection: "basic" | "ingredients" | "steps" | null;
   onEditingSectionChange: (section: "basic" | "ingredients" | "steps" | null) => void;
   headingRef?: React.Ref<HTMLHeadingElement>;
@@ -928,6 +996,8 @@ function ReviewIngredientRow({
   onRegisterIngredient,
   onRemoveIngredient,
 }: ReviewIngredientRowProps) {
+  const [unitText, setUnitText] = useState(ingredient.unit ?? "");
+  useEffect(() => { setUnitText(ingredient.unit ?? ""); }, [ingredient.unit]);
   const ingredientName = getIngredientName(ingredient);
   const resolutionLabel = getIngredientResolutionLabel(ingredient);
   const needsIngredientResolution = !isIngredientResolvedForRegister(ingredient);
@@ -946,6 +1016,8 @@ function ReviewIngredientRow({
       ingredient.unit.trim().length > 0
     );
   const unitListId = `youtube-unit-options-${ingredient.tempId.replace(/[^a-z0-9_-]/giu, "-")}`;
+  const options = ingredient.savedQuantity?.context?.options;
+  const unitChoices = options && Array.isArray(options.choices) ? options.choices.map(choice => choice.unit) : COOKING_UNIT_OPTIONS;
 
   return (
     <div
@@ -1009,7 +1081,12 @@ function ReviewIngredientRow({
             inputMode="decimal"
             min={0}
             step="any"
+            allowFractions={Boolean(ingredient.savedQuantity)}
+            rawValue={ingredient.savedQuantity?.text}
+            disabled={ingredient.savedQuantity ? !ingredient.savedQuantity.enabled : false}
+            onRawValueChange={ingredient.savedQuantity ? (text) => onUpdateIngredient(ingredient.tempId, { savedQuantityText: text }) : undefined}
             onValueChange={(amount) => {
+              if (ingredient.savedQuantity) return;
               onUpdateIngredient(ingredient.tempId, {
                 amount,
                 ingredient_type: "QUANT",
@@ -1035,22 +1112,38 @@ function ReviewIngredientRow({
             className="h-9 w-full min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
             list={unitListId}
             maxLength={20}
-            onChange={(event) => onUpdateIngredient(ingredient.tempId, {
+            disabled={ingredient.savedQuantity ? !ingredient.savedQuantity.enabled : false}
+            onBlur={ingredient.savedQuantity ? () => {
+              if (unitText.trim() !== ingredient.unit || ingredient.savedQuantity?.error) {
+                onUpdateIngredient(ingredient.tempId, { savedQuantityUnit: unitText });
+              }
+              setUnitText(ingredient.unit ?? "");
+            } : undefined}
+            onChange={(event) => ingredient.savedQuantity ? setUnitText(event.target.value) : onUpdateIngredient(ingredient.tempId, {
               ingredient_type: "QUANT",
               scalable: true,
               unit: event.target.value || null,
               ...getQuantityEditPatch(ingredient),
             })}
             placeholder="단위 입력 또는 선택"
-            value={ingredient.unit ?? ""}
+            value={ingredient.savedQuantity ? unitText : ingredient.unit ?? ""}
           />
           <datalist id={unitListId}>
-            {COOKING_UNIT_OPTIONS.map((option) => (
+            {unitChoices.map((option) => (
               <option key={option} value={option} />
             ))}
           </datalist>
         </div>
       </div>
+      {ingredient.savedQuantity?.input && ingredient.savedQuantity.input.raw_unit !== ingredient.unit ? (
+        <p className="mt-2 text-xs text-[var(--text-2)]">원입력: {ingredient.savedQuantity.input.raw_value} {ingredient.savedQuantity.input.raw_unit}</p>
+      ) : null}
+      {ingredient.savedQuantity && !ingredient.savedQuantity.enabled ? (
+        <p className="mt-2 text-xs text-[var(--text-2)]">{ingredient.savedQuantity.changed
+          ? "수량 수정은 잠시 사용할 수 없어요. 현재 수정 내용은 아직 저장되지 않았어요."
+          : "수량 수정은 잠시 사용할 수 없어요. 보관한 원입력은 그대로 유지해요."}</p>
+      ) : null}
+      {ingredient.savedQuantity?.error ? <p className="mt-2 text-xs text-[var(--danger)]" role="alert">{ingredient.savedQuantity.error}</p> : null}
 
       {needsQuantityReview ? (
         <div
@@ -1074,7 +1167,7 @@ function ReviewIngredientRow({
                   : "cursor-not-allowed bg-[var(--surface-fill)] text-[var(--text-3)]",
               ].join(" ")}
               data-testid={`quantity-confirm-${ingredient.tempId}`}
-              disabled={!hasValidQuantitySuggestion}
+              disabled={!hasValidQuantitySuggestion || (ingredient.savedQuantity ? !ingredient.savedQuantity.enabled : false)}
               onClick={() =>
                 onUpdateIngredient(ingredient.tempId, {
                   quantity_user_confirmed: true,
@@ -1088,6 +1181,7 @@ function ReviewIngredientRow({
             <button
               className="rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--foreground)]"
               data-testid={`quantity-clear-${ingredient.tempId}`}
+              disabled={ingredient.savedQuantity ? !ingredient.savedQuantity.enabled : false}
               onClick={() =>
                 onUpdateIngredient(ingredient.tempId, {
                   ingredient_type: "TO_TASTE",
@@ -1250,6 +1344,7 @@ function ReviewCookingStepRow({
 }
 
 function ReviewStep({
+  isSavingSavedDraft = false,
   editingSection,
   onEditingSectionChange,
   headingRef,
@@ -1283,6 +1378,7 @@ function ReviewStep({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
+      <fieldset className="m-0 min-w-0 border-0 p-0" disabled={isSavingSavedDraft}>
       {thumbnailUrl ? (
         <div
           className="mt-4 overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-fill)]"
@@ -1454,7 +1550,7 @@ function ReviewStep({
                 ? "분량 확인 필요"
                 : ingredient.ingredient_type === "TO_TASTE"
                   ? "약간"
-                  : `${ingredient.amount}${ingredient.unit}`;
+                  : `${ingredient.savedQuantity?.text ?? ingredient.amount}${ingredient.unit}`;
               return (
                 <div className={[
                   "flex items-start justify-between gap-4 px-4 py-3",
@@ -1609,6 +1705,7 @@ function ReviewStep({
           </>
         )}
       </div>
+      </fieldset>
     </div>
   );
 }
@@ -2338,11 +2435,13 @@ function RegisterErrorModal({ errorMessage, onRetry, onClose }: RegisterErrorMod
 }
 
 function SaveConflictModal({
+  title = "다른 곳에서 변경됐어요",
   errorMessage,
   actionLabel,
   onLoadLatest,
   onClose,
 }: {
+  title?: string;
   errorMessage: string;
   actionLabel: string;
   onLoadLatest: () => void;
@@ -2356,7 +2455,7 @@ function SaveConflictModal({
         className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]"
         role="alertdialog"
       >
-        <ModalHeader title="다른 곳에서 변경됐어요" titleId="youtube-save-conflict-title" onClose={onClose} />
+        <ModalHeader title={title} titleId="youtube-save-conflict-title" onClose={onClose} />
         <p className="mt-4 text-base text-[var(--text-2)]">{errorMessage}</p>
         <p className="mt-2 text-sm font-semibold text-[var(--danger)]">
           {actionLabel === "최신 내용 불러오기"
@@ -2489,6 +2588,7 @@ function ActiveYoutubeImportScreen({
   // Registration state
   const [isRegistering, setIsRegistering] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [saveConflictTitle, setSaveConflictTitle] = useState("다른 곳에서 변경됐어요");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [savedDraftId, setSavedDraftId] = useState(initialSavedDraftId);
   const [savedRecipeId, setSavedRecipeId] = useState("");
@@ -2498,6 +2598,10 @@ function ActiveYoutubeImportScreen({
   const savedRowIdsRef = useRef(new Map<string, string>());
   const originalIngredientNamesRef = useRef(new Map<string, string>());
   const saveAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
+  const savedRequestTokenRef = useRef(0);
+  const requestedSavedIdRef = useRef(initialSavedDraftId);
+  requestedSavedIdRef.current = initialSavedDraftId;
+  useEffect(() => () => { savedRequestTokenRef.current += 1; }, []);
   const ensureAttemptRef = useRef<{ extractionId: string; key: string } | null>(null);
   const ensureInFlightRef = useRef<string | null>(null);
   const ensureRequestTokenRef = useRef(0);
@@ -2539,6 +2643,7 @@ function ActiveYoutubeImportScreen({
     setRecipeBookNavigationError(null);
     setEditingSection(null);
     setHasUnsavedChanges(false);
+    setIsRegistering(false);
     setExtractionId(saved.source.extraction_id);
     setYoutubeUrl(saved.source.youtube_url);
     setTitle(saved.content.title);
@@ -2549,8 +2654,10 @@ function ActiveYoutubeImportScreen({
     setDraftWarnings([]);
     setIngredients(saved.content.ingredients.map((ingredient, index) => {
       const ingredientLink = saved.ingredient_links?.[ingredient.row_id];
+      const quantityInput = savedQuantitySnapshot(ingredient.quantity_input, ingredient.amount, ingredient.unit);
+      const context = saved.quantity_contexts?.[ingredient.row_id] ?? null;
       originalIngredientNamesRef.current.set(ingredient.row_id, ingredient.standard_name);
-      return {
+      const mapped: TempIngredient = {
         tempId: ingredient.row_id,
         draft_ingredient_id: ingredient.source_draft_ingredient_id ?? undefined,
         ingredient_id: ingredientLink?.ingredient_id ?? "",
@@ -2569,6 +2676,16 @@ function ActiveYoutubeImportScreen({
         quantity_review_required: ingredient.quantity_mode === "unknown",
         quantity_user_confirmed: ingredient.quantity_mode !== "unknown",
       };
+      if ("quantity_policy" in saved || "quantity_contexts" in saved || "quantity_input" in ingredient || "quantity_context_fingerprint" in ingredient) {
+        mapped.savedQuantity = { text: savedQuantityText(ingredient.amount, ingredient.unit, quantityInput), input: quantityInput,
+          context, storedFingerprint: ingredient.quantity_context_fingerprint ?? null,
+          enabled: saved.quantity_policy === QUANTITY_INPUT_VERSION && context !== null
+            && typeof context.fingerprint === "string" && /^[a-f0-9]{64}$/u.test(context.fingerprint)
+            && (context.options === null || Array.isArray(context.options?.choices))
+            && (ingredient.quantity_input === null || ingredient.quantity_input === undefined || quantityInput !== null),
+          changed: false, invalid: false, error: null };
+      }
+      return mapped;
     }));
     setSteps(saved.content.steps.map((step, index) => ({
       tempId: step.row_id,
@@ -2993,9 +3110,13 @@ function ActiveYoutubeImportScreen({
 
   useEffect(() => {
     if (!initialSavedDraftId) return;
+    const requestToken = ++savedRequestTokenRef.current;
+    setCurrentStep("session-loading");
+    setIsRegistering(false);
+    setModalMode("none");
     let current = true;
-    void fetchYoutubeSavedRecipe(initialSavedDraftId).then((result) => {
-      if (!current) return;
+    void fetchYoutubeSavedRecipe(initialSavedDraftId, true).then((result) => {
+      if (!current || requestToken !== savedRequestTokenRef.current || requestedSavedIdRef.current !== initialSavedDraftId) return;
       if (!result.success || !result.data) {
         setSessionRecipePath(null);
         setSessionError(result.error?.message ?? "보관한 레시피를 불러오지 못했어요.");
@@ -3007,6 +3128,7 @@ function ActiveYoutubeImportScreen({
     });
     return () => {
       current = false;
+      savedRequestTokenRef.current += 1;
     };
   }, [applySavedResult, initialSavedDraftId]);
 
@@ -3024,7 +3146,7 @@ function ActiveYoutubeImportScreen({
     ensureInFlightRef.current = extractionId;
     const requestToken = ++ensureRequestTokenRef.current;
 
-    void ensureYoutubeSavedRecipe(extractionId, idempotencyKey).then((result) => {
+    void ensureYoutubeSavedRecipe(extractionId, idempotencyKey, true).then((result) => {
       if (requestToken !== ensureRequestTokenRef.current) return;
       ensureInFlightRef.current = null;
       if (!result.success || !result.data) {
@@ -3338,7 +3460,9 @@ function ActiveYoutubeImportScreen({
     setTagSubmitError(null);
   }, []);
 
-  const canSave = hasUnsavedChanges && Boolean(savedDraftId) && savedDraftRevision !== null && title.trim().length > 0;
+  const canSave = hasUnsavedChanges && Boolean(savedDraftId) && savedDraftRevision !== null && title.trim().length > 0
+    && !ingredients.some(ingredient => ingredient.savedQuantity?.invalid
+      || (ingredient.savedQuantity?.changed && !ingredient.savedQuantity.enabled));
 
   // ─── Registration ──────────────────────────────────────────────────
 
@@ -3347,7 +3471,12 @@ function ActiveYoutubeImportScreen({
       router.replace("/recipes/youtube/saved");
       return;
     }
-    const result = await fetchYoutubeSavedRecipe(savedDraftId);
+    const requestToken = ++savedRequestTokenRef.current;
+    const requestedId = requestedSavedIdRef.current;
+    setIsRegistering(true);
+    const result = await fetchYoutubeSavedRecipe(savedDraftId, true);
+    if (requestToken !== savedRequestTokenRef.current || requestedId !== requestedSavedIdRef.current) return;
+    setIsRegistering(false);
     if (!result.success || !result.data) {
       setRegisterError(result.error?.message ?? "최신 내용을 불러오지 못했어요.");
       setModalMode("register-error");
@@ -3362,7 +3491,10 @@ function ActiveYoutubeImportScreen({
   }, [applySavedResult, router, savedDraftId]);
 
   const handleSave = useCallback(async () => {
-    if (!title.trim() || !extractionId) return;
+    if (!title.trim() || !extractionId || isRegistering || ingredients.some(ingredient => ingredient.savedQuantity?.invalid
+      || (ingredient.savedQuantity?.changed && !ingredient.savedQuantity.enabled))) return;
+    const requestToken = ++savedRequestTokenRef.current;
+    const requestedId = requestedSavedIdRef.current;
     setIsRegistering(true);
     setRegisterError(null);
 
@@ -3380,7 +3512,8 @@ function ActiveYoutubeImportScreen({
       title: title.trim(),
       base_servings: Math.max(1, baseServings),
       tags: draftTags,
-      ingredients: ingredients.map((ing) => ({
+      ingredients: ingredients.map((ing) => {
+        const row: YoutubeSavedRecipeIngredientInput = {
         row_id: getStableRowId(ing.tempId),
         source_draft_ingredient_id:
           ing.draft_ingredient_id &&
@@ -3401,7 +3534,13 @@ function ActiveYoutubeImportScreen({
         unit: ing.unit?.trim() || null,
         display_text: ing.display_text,
         component_label: ing.component_label ?? null,
-      })),
+        };
+        if (ing.savedQuantity?.changed) row.quantity_input = ing.savedQuantity.input && ing.savedQuantity.context
+          ? { schema_version: QUANTITY_INPUT_VERSION, raw_value: ing.savedQuantity.input.raw_value,
+            raw_unit: ing.savedQuantity.input.raw_unit, expected_context_fingerprint: ing.savedQuantity.context.fingerprint }
+          : null;
+        return row;
+      }),
       steps: steps.map((step) => ({
         row_id: getStableRowId(step.tempId),
         source_step_index: step.source_step_index ?? null,
@@ -3423,23 +3562,47 @@ function ActiveYoutubeImportScreen({
       return;
     }
     const result = await updateYoutubeSavedRecipe(savedDraftId, savedDraftRevision, content, idempotencyKey);
-
-    setIsRegistering(false);
+    if (requestToken !== savedRequestTokenRef.current || requestedId !== requestedSavedIdRef.current) return;
 
     if (!result.success || !result.data) {
-      const isConflict = result.error?.code === "STALE_REVISION" || result.error?.code === "CONFLICT";
+      setIsRegistering(false);
+      const quantityConflict = result.error?.code === "QUANTITY_CONTEXT_CHANGED" || result.error?.code === "QUANTITY_INPUT_REQUIRED"
+        || result.error?.code === "UNIT_POLICY_INACTIVE";
+      const isConflict = result.error?.code === "STALE_REVISION" || result.error?.code === "CONFLICT" || quantityConflict;
+      setSaveConflictTitle(quantityConflict ? "단위 입력을 다시 확인해 주세요" : "다른 곳에서 변경됐어요");
+      if (result.error?.code === "UNIT_POLICY_INACTIVE") {
+        setIngredients(current => current.map(ingredient => ingredient.savedQuantity
+          ? { ...ingredient, savedQuantity: { ...ingredient.savedQuantity, enabled: false } } : ingredient));
+      }
       setRegisterError(isConflict
-        ? "서버의 최신 내용을 먼저 확인하거나, 창을 닫고 현재 수정 내용을 따로 비교해 주세요."
+        ? quantityConflict ? result.error?.message ?? "단위 근거를 다시 확인해 주세요. 현재 원입력은 유지해요."
+          : "서버의 최신 내용을 먼저 확인하거나, 창을 닫고 현재 수정 내용을 따로 비교해 주세요."
         : getApiErrorMessage("레시피를 저장하지 못했어요.", result.error?.message));
       setModalMode(isConflict ? "save-conflict" : "register-error");
       return;
     }
 
-    setSavedDraftId(result.data.draft_id);
-    setSavedRecipeId(result.data.recipe_id ?? "");
-    setSavedDraftRevision(result.data.revision);
-    setHasUnsavedChanges(false);
-    setRecipeBookNavigationError(null);
+    let saved = result.data;
+    // A title-only legacy write keeps eight row keys and therefore returns the
+    // legacy DTO. Reload through the reader contract before replacing raw UI.
+    if (saved.quantity_policy === undefined) {
+      const refreshed = await fetchYoutubeSavedRecipe(saved.draft_id, true);
+      if (requestToken !== savedRequestTokenRef.current || requestedId !== requestedSavedIdRef.current) return;
+      if (!refreshed?.success || !refreshed.data || refreshed.data.revision < saved.revision) {
+        setIsRegistering(false);
+        setSavedDraftRevision(saved.revision);
+        setHasUnsavedChanges(false);
+        setIngredients(current => current.map(ingredient => ingredient.savedQuantity
+          ? { ...ingredient, savedQuantity: { ...ingredient.savedQuantity, enabled: false, changed: false } } : ingredient));
+        saveAttemptRef.current = null;
+        setRegisterError("저장은 완료됐어요. 원입력 표시를 다시 불러와 확인해 주세요.");
+        setSaveConflictTitle("저장한 원입력을 확인해 주세요");
+        setModalMode("save-conflict");
+        return;
+      }
+      saved = refreshed.data;
+    }
+    applySavedResult(saved);
     saveAttemptRef.current = null;
     showActionConfirmation("변경사항을 저장했어요.");
     router.replace(`/recipes/youtube/saved/${result.data.draft_id}`);
@@ -3453,6 +3616,8 @@ function ActiveYoutubeImportScreen({
     savedDraftId,
     savedDraftRevision,
     router,
+    isRegistering,
+    applySavedResult,
   ]);
 
   const openMyAddedRecipeBook = useCallback(async () => {
@@ -3905,6 +4070,7 @@ function ActiveYoutubeImportScreen({
             </div>
           ) : null}
           <ReviewStep
+            isSavingSavedDraft={Boolean(savedDraftId) && isRegistering}
             editingSection={editingSection}
             onEditingSectionChange={setEditingSection}
             headingRef={reviewHeadingRef}
@@ -4063,6 +4229,7 @@ function ActiveYoutubeImportScreen({
       )}
       {modalMode === "save-conflict" && registerError && (
         <SaveConflictModal
+          title={saveConflictTitle}
           actionLabel={savedDraftId ? "최신 내용 불러오기" : "보관한 결과 확인"}
           errorMessage={registerError}
           onClose={() => setModalMode("none")}
@@ -4266,6 +4433,7 @@ function ActiveYoutubeImportScreen({
 
         {currentStep === "review" && (
           <ReviewStep
+            isSavingSavedDraft={Boolean(savedDraftId) && isRegistering}
             editingSection={editingSection}
             onEditingSectionChange={setEditingSection}
             headingRef={reviewHeadingRef}
@@ -4392,6 +4560,7 @@ function ActiveYoutubeImportScreen({
       )}
       {modalMode === "save-conflict" && registerError && (
         <SaveConflictModal
+          title={saveConflictTitle}
           actionLabel={savedDraftId ? "최신 내용 불러오기" : "보관한 결과 확인"}
           errorMessage={registerError}
           onClose={() => setModalMode("none")}

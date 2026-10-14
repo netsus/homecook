@@ -1,5 +1,6 @@
 import { fetchJson, isApiFetchError } from "@/lib/api/fetch-json";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import type { ApiResponse } from "@/types/api";
 import type {
   YoutubeSavedRecipeEditableContent,
@@ -27,14 +28,19 @@ export function fetchYoutubeSavedRecipes() {
   return request<YoutubeSavedRecipeListData>(basePath);
 }
 
-export function fetchYoutubeSavedRecipe(id: string) {
-  return request<YoutubeSavedRecipeResult>(`${basePath}/${encodeURIComponent(id)}`);
+export function fetchYoutubeSavedRecipe(id: string, quantityContract = false) {
+  if (!quantityContract) return request<YoutubeSavedRecipeResult>(`${basePath}/${encodeURIComponent(id)}`);
+  return request<YoutubeSavedRecipeResult>(`${basePath}/${encodeURIComponent(id)}`, {
+    headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION },
+  });
 }
 
-export function ensureYoutubeSavedRecipe(extractionId: string, idempotencyKey: string) {
+export function ensureYoutubeSavedRecipe(extractionId: string, idempotencyKey: string, quantityContract = false) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey };
+  if (quantityContract) headers[QUANTITY_CONTRACT_HEADER] = QUANTITY_INPUT_VERSION;
   return request<YoutubeSavedRecipeResult>(basePath, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+    headers,
     body: JSON.stringify({ extraction_id: extractionId }),
   });
 }
@@ -44,9 +50,11 @@ export function createYoutubeSavedRecipe(
   content: YoutubeSavedRecipeEditableContent,
   idempotencyKey: string,
 ) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey };
+  if (content.ingredients.some(row => "quantity_input" in row)) headers[QUANTITY_CONTRACT_HEADER] = QUANTITY_INPUT_VERSION;
   return request<YoutubeSavedRecipeResult>(basePath, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+    headers,
     body: JSON.stringify({ extraction_id: extractionId, content }),
   });
 }
@@ -57,9 +65,11 @@ export function updateYoutubeSavedRecipe(
   content: YoutubeSavedRecipeEditableContent,
   idempotencyKey: string,
 ) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey };
+  if (content.ingredients.some(row => "quantity_input" in row)) headers[QUANTITY_CONTRACT_HEADER] = QUANTITY_INPUT_VERSION;
   return request<YoutubeSavedRecipeResult>(`${basePath}/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+    headers,
     body: JSON.stringify({ expected_revision: revision, content }),
   });
 }

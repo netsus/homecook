@@ -352,3 +352,41 @@ describe("prepared food planner entry existing read projections", () => {
     });
   });
 });
+
+
+describe("product entry quantity capability negotiation", () => {
+  it("exposes DB current policy only when metadata and write negotiation are both explicit", async () => {
+    const { parseProductPlannerEntries } = await import("@/lib/server/prepared-food-planner-entry");
+    const active = { ...entry, quantity_policy: "quantity-v4" };
+    expect(parseProductPlannerEntries([active])).toEqual([entry]);
+    expect(parseProductPlannerEntries([active], true)).toEqual([entry]);
+    expect(parseProductPlannerEntries([active], true, true)).toEqual([active]);
+    expect(parseProductPlannerEntries([{ ...entry, quantity_policy: null }], true, true)).toEqual([entry]);
+    expect(parseProductPlannerEntries([entry], true, true)).toEqual([entry]);
+    expect(parseProductPlannerEntries([{ ...entry, quantity_policy: "guess" }], true, true)).toBeNull();
+  });
+});
+
+
+describe("meal list current DB capability with frozen metadata", () => {
+  it.each([
+    ["true", true, "quantity-v4", true], ["false", true, "quantity-v4", false],
+    ["true", false, "quantity-v4", false], ["true", true, null, false],
+  ] as const)("negotiates env%s/header%s/DB%s", async (env, header, policy, enabled) => {
+    const quantity_input = { schema_version: "quantity-v4", raw_value: "1", raw_unit: "serving", numerator: "1", denominator: "1", normalized: null, quality: "unavailable", reason: "PRODUCT_PHYSICAL_BASIS_UNAVAILABLE", evidence_ids: [], source_versions: [VERSION_ID], batch_basis: null };
+    const column = stateQuery({ data: { id: COLUMN_ID, user_id: USER_ID, name: "아침" }, error: null });
+    const meals = thenableQuery({ data: [], error: null });
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: USER_ID } } })) },
+      from: vi.fn((table: string) => ({ select: vi.fn(() => table === "meal_plan_columns" ? column : meals) })),
+      rpc: vi.fn(async () => ({ data: [{ ...entry, quantity_input, quantity_policy: policy }], error: null })) });
+    vi.stubEnv("MUMEOK_QUANTITY_V4_ENABLED", env);
+    try {
+      const { GET } = await import("@/app/api/v1/meals/route"); const headers = new Headers(); if (header) headers.set("X-Homecook-Quantity-Contract", "quantity-v4");
+      const response = await GET(new NextRequest(`http://localhost/api/v1/meals?plan_date=2026-07-16&column_id=${COLUMN_ID}`, { headers }));
+      expect(response.status).toBe(200); const actual = (await response.json()).data.product_entries[0];
+      expect(actual.product_nutrition_version_id).toBe(VERSION_ID); expect(actual.quantity).toEqual(entry.quantity);
+      if (enabled) expect(actual.quantity_policy).toBe("quantity-v4"); else expect(actual).not.toHaveProperty("quantity_policy");
+      if (header) expect(actual.quantity_input).toEqual(quantity_input); else expect(actual).not.toHaveProperty("quantity_input");
+    } finally { vi.unstubAllEnvs(); }
+  });
+});

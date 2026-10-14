@@ -1,5 +1,6 @@
 import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiResponse } from "@/types/api";
 import type { MealCreateBody, MealCreateData, MealListData, MealMutationData } from "@/types/meal";
@@ -95,7 +96,7 @@ export async function fetchMeals(planDate: string, columnId: string): Promise<Me
   const params = new URLSearchParams({ plan_date: planDate, column_id: columnId });
   const response = await fetch(
     `/api/v1/meals?${params.toString()}`,
-    withE2EAuthOverrideHeaders(),
+    withE2EAuthOverrideHeaders({ headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION } }),
   );
 
   let payload: ApiResponse<MealListData> | null = null;

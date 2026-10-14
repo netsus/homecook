@@ -1,5 +1,7 @@
 "use client";
 
+import { useRecipeQuantityContext } from "@/components/recipe/use-recipe-quantity-context";
+
 import { showActionConfirmation } from "@/stores/ui-store";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 
@@ -12,10 +14,10 @@ import {
   formatMealAddTargetLabel,
 } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
-import type { RecipeProductSelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
+import type { RecipeProductSelectionContexts, RecipeQuantitySelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
 import { recipeIngredientGroupKey, recipeIngredientMatchesStepReference } from "@/lib/recipe-editor-ingredients";
 import { recipeIngredientSourceKind } from "@/lib/recipe-ingredient-source";
-import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
+import { recipeQuantityContextNeedsConfirmation, isRecipeQuantityInputState, changeRecipeQuantityUnit } from "@/lib/recipe-quantity-input";
 import {
   PersonalRecipeEditorShell,
   PersonalRecipeEditorShellFeedback,
@@ -112,6 +114,9 @@ function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
 }
 
 function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
+  if (ingredient.ingredient_type === "TO_TASTE") return {
+    ...ingredient, amount: null, unit: null, scalable: false,
+  };
   return {
     ...ingredient,
     ingredient_type: "QUANT",
@@ -198,7 +203,8 @@ function readManualDraft(key: string, ownerId: string, accountGeneration: number
       || !Array.isArray(value.ingredients) || !Array.isArray(value.steps)
       || !Array.isArray(value.reviewedTags)
       || (value.resumePantry !== undefined && typeof value.resumePantry !== "boolean")
-      || value.ingredients.some((item) => !item || typeof item.tempId !== "string" || typeof item.standard_name !== "string")
+      || value.ingredients.some((item) => !item || typeof item.tempId !== "string" || typeof item.standard_name !== "string"
+        || item.quantity_input !== undefined && !isRecipeQuantityInputState(item.quantity_input, item.food_product_nutrition_version_id))
       || value.steps.some((item) => !item || typeof item.tempId !== "string" || typeof item.instruction !== "string")
       || (value.pending && (typeof value.pending.key !== "string" || !value.pending.body))) {
       return null;
@@ -414,6 +420,10 @@ export function ManualRecipeCreateScreen({
   const [baseServings, setBaseServings] = useState(2);
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
   const [productContexts, setProductContexts] = useState<RecipeProductSelectionContexts>({});
+  const [quantityContexts, setQuantityContexts] = useState<RecipeQuantitySelectionContexts>({});
+  const [quantityContextError, setQuantityContextError] = useState<string | null>(null);
+  const quantityContextErrorRef = useRef<HTMLParagraphElement | null>(null);
+  useEffect(() => { if (quantityContextError) quantityContextErrorRef.current?.focus(); }, [quantityContextError]);
   const [ingredientUnitErrors, setIngredientUnitErrors] = useState<Record<string, string>>({});
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>("none");
@@ -484,6 +494,15 @@ export function ManualRecipeCreateScreen({
   const [isCreatingMeal, setIsCreatingMeal] = useState(false);
   const [mealAddError, setMealAddError] = useState<string | null>(null);
 
+  const quantityContextRead = useRecipeQuantityContext({
+    sources: ingredients.flatMap(row => row.row_key ? [{ row_key: row.row_key, ingredient_id: row.ingredient_id,
+      food_product_id: row.food_product_id ?? null, food_product_nutrition_version_id: row.food_product_nutrition_version_id ?? null }] : []),
+    subject: () => ({ owner: draftOwnerIdRef.current, generation: draftGenerationRef.current }),
+    onResolved: (key, context) => { setQuantityContextError(null); setQuantityContexts(current => ({ ...current, [key]: context })); },
+    onError: setQuantityContextError,
+    onUnauthorized: () => handlePantryLogin(false),
+  });
+
   useEffect(() => {
     let cancelled = false;
     void fetchUserProfile().then((profile) => {
@@ -524,7 +543,7 @@ export function ManualRecipeCreateScreen({
         }
         setDraftNotice(draft.pending
           ? "이전에 보낸 저장 요청이 있어요. 저장 결과를 확인해 주세요."
-          : "이 탭에서 작성하던 내용을 복원했어요. 업로드 전 사진은 다시 선택해 주세요.");
+          : draft.ingredients.some(row => row.quantity_input) ? "원입력과 분량을 복원했어요. 재료의 ‘수량 정보 재확인’을 누른 뒤 저장해 주세요." : "이 탭에서 작성하던 내용을 복원했어요. 업로드 전 사진은 다시 선택해 주세요.");
         if (draft.resumePantry) { setIngredientPickerSource("pantry"); setModalMode("ingredient-add"); }
       }
       setDraftReady(true);
@@ -613,6 +632,7 @@ export function ManualRecipeCreateScreen({
     ingredients,
     steps,
   });
+  if (ingredients.some(row => recipeQuantityContextNeedsConfirmation(row, row.row_key ? quantityContexts[row.row_key] : undefined))) saveRequirements.push("수량 정보 재확인");
   const canSave = saveRequirements.length === 0;
   const initialEditorDraftRef = useRef<RecipeEditorDraft>(
     createEmptyRecipeEditorDraft(),
@@ -622,6 +642,7 @@ export function ManualRecipeCreateScreen({
     baseServings,
     ingredients: ingredients.map((ingredient, index) => ({
       amount: ingredient.amount,
+      quantityInput: ingredient.quantity_input,
       draftId: ingredient.tempId,
       ingredientType: ingredient.ingredient_type,
       sortOrder: index + 1,
@@ -850,8 +871,9 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleAddIngredient = useCallback(
-    (newIngredients: ManualRecipeIngredientInput[], products: RecipeProductSelectionContexts = {}) => {
+    (newIngredients: ManualRecipeIngredientInput[], products: RecipeProductSelectionContexts = {}, quantities: RecipeQuantitySelectionContexts = {}) => {
       setProductContexts((current) => ({ ...current, ...products }));
+      setQuantityContexts((current) => ({ ...current, ...quantities }));
       setIngredients((prev) => {
         const existing = new Set(prev.map(recipeIngredientGroupKey));
         const added = newIngredients.filter((ingredient) => !existing.has(recipeIngredientGroupKey(ingredient)));
@@ -873,31 +895,33 @@ export function ManualRecipeCreateScreen({
   const handleUpdateIngredient = useCallback(
     (
       tempId: string,
-      patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
+      patch: Pick<ManualRecipeIngredientInput, "amount" | "unit" | "quantity_input">,
     ) => {
       const ingredient = ingredients.find(row => row.tempId === tempId);
-      let amount = patch.amount;
-      if (ingredient?.food_product_id && ingredient.unit && patch.unit && ingredient.unit !== patch.unit && ingredient.amount !== null) {
-        const context = ingredient.row_key ? productContexts[ingredient.row_key] : undefined;
-        const converted = context?.id === ingredient.food_product_id && context.nutrition_version_id === ingredient.food_product_nutrition_version_id
-          ? convertProductQuantity(ingredient.amount, ingredient.unit, patch.unit, context.basis_relations) : null;
-        if (converted === null) {
-          setIngredientUnitErrors(current => ({ ...current, [tempId]: "단위 전환 근거를 확인하지 못해 기존 분량과 단위를 유지했어요." })); return;
+      if (!ingredient) return;
+      let updated = { ...ingredient, ...patch };
+      if (patch.amount !== null) updated.ingredient_type = "QUANT";
+      if (patch.unit && ingredient.unit !== patch.unit) {
+        const context = ingredient.row_key ? quantityContexts[ingredient.row_key] : undefined;
+        const product = ingredient.row_key ? productContexts[ingredient.row_key] : undefined;
+        const converted = changeRecipeQuantityUnit(ingredient, patch.unit, {
+          ingredientOptions: context?.options, product: context?.product ?? product,
+          recordInput: context?.ready === true,
+          contextSha256: context?.context_sha256,
+        });
+        if (!converted.ok) {
+          setIngredientUnitErrors(current => ({ ...current, [tempId]: converted.message })); return;
         }
-        amount = converted;
+        updated = converted.ingredient;
       }
       setIngredientUnitErrors(current => { const next = { ...current }; delete next[tempId]; return next; });
       setIngredients((prev) =>
         prev.map((ingredient) =>
-          ingredient.tempId === tempId ? normalizeIngredient({
-            ...ingredient,
-            ...patch,
-            amount,
-          }) : ingredient,
+          ingredient.tempId === tempId ? normalizeIngredient(updated) : ingredient,
         ),
       );
     },
-    [ingredients, productContexts],
+    [ingredients, productContexts, quantityContexts],
   );
 
   const handleRemoveIngredient = useCallback((tempId: string) => {
@@ -1530,6 +1554,7 @@ export function ManualRecipeCreateScreen({
               sort_order: idx + 1,
             };
             if (ing.component_label !== undefined) ingredient.component_label = ing.component_label;
+            if (ing.quantity_input !== undefined) ingredient.quantity_input = ing.quantity_input;
             if (!ing.food_product_id) return ingredient;
             return {
               ...ingredient,
@@ -1671,11 +1696,11 @@ export function ManualRecipeCreateScreen({
   }, [appReturn]);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
-  const handlePantryLogin = () => {
+  const handlePantryLogin = (resumePantry = true) => {
     if (!draftOwnerIdRef.current || draftGenerationRef.current === null) {
       return "초안을 작성한 계정 정보를 확인하지 못했어요. 이 화면을 열어 둔 채 다시 확인해 주세요.";
     }
-    resumePantryRef.current = true;
+    resumePantryRef.current = resumePantry;
     if (!persistDraft()) { resumePantryRef.current = false; return "초안을 보관하지 못했어요. 이 화면을 열어 둔 채 다시 시도해 주세요."; }
     const query = new URLSearchParams({ date: planDate, columnId, slot: slotName });
     const currentQuery = new URLSearchParams(window.location.search);
@@ -1752,11 +1777,15 @@ export function ManualRecipeCreateScreen({
         <RecipeEditorIngredientList
           ingredients={ingredients}
           productContexts={productContexts}
+          quantityContexts={quantityContexts}
+          onRequestQuantityContext={key => { setQuantityContextError(null); void quantityContextRead.request(key); }}
+          quantityContextLoadingKey={quantityContextRead.loadingKey}
           unitErrors={ingredientUnitErrors}
           showValidationError={showValidationErrors}
           onChange={handleUpdateIngredient}
           onRemove={handleRemoveIngredient}
         />
+        {quantityContextError ? <p ref={quantityContextErrorRef} role="alert" tabIndex={-1} className="mt-2 text-sm text-[var(--danger)]">{quantityContextError}</p> : null}
         {showValidationErrors && saveRequirements.includes("재료 수량·단위") ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">재료 수량을 0보다 크게 입력하고 단위를 확인해 주세요.</p> : null}
         <WebButton
           className="web-manual-add-button"
@@ -2058,11 +2087,15 @@ export function ManualRecipeCreateScreen({
             <RecipeEditorIngredientList
               ingredients={ingredients}
               productContexts={productContexts}
+          quantityContexts={quantityContexts}
+          onRequestQuantityContext={key => { setQuantityContextError(null); void quantityContextRead.request(key); }}
+          quantityContextLoadingKey={quantityContextRead.loadingKey}
               unitErrors={ingredientUnitErrors}
               showValidationError={showValidationErrors}
               onChange={handleUpdateIngredient}
               onRemove={handleRemoveIngredient}
             />
+        {quantityContextError ? <p ref={quantityContextErrorRef} role="alert" tabIndex={-1} className="mt-2 text-sm text-[var(--danger)]">{quantityContextError}</p> : null}
             {showValidationErrors && saveRequirements.includes("재료 수량·단위") ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">재료 수량을 0보다 크게 입력하고 단위를 확인해 주세요.</p> : null}
             <button
               className="mt-2 flex h-11 w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--brand-contrast)] hover:bg-[var(--brand-soft)]"

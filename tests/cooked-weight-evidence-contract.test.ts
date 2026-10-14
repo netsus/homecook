@@ -67,9 +67,16 @@ describe("compatible frozen meal weight evidence", () => {
     const entry = { id: batch.recipe_id, revision: 1, consumed_at: null, consumed_local_date: "2026-10-13", timezone_name_snapshot: "Asia/Seoul",
       meal_plan_column_id: null, slot_name_snapshot: "식사", source: input.source, quantity: input.quantity, display_name: "요리", display_brand: null,
       nutrition: evidence, created_at: "2026-10-13T00:00:00Z", updated_at: "2026-10-13T00:00:00Z" };
-    expect(projectMealLogData({ entry }, true)).toEqual({ entry });
+    expect(projectMealLogData({ entry }, false, true)).toEqual({ entry });
     expect(projectMealLogData({ entry })).toEqual({ entry: { ...entry, nutrition } });
-    expect(projectMealLogData({ entry: { ...entry, source: { type: "ingredient", id: batch.id } } }, true)).toBeNull();
+    const quantityInput = { schema_version: "quantity-v4", raw_value: "100", raw_unit: "g", numerator: "100", denominator: "1",
+      normalized: { amount: 100, unit: "g" }, quality: "direct", reason: null, evidence_ids: [], source_versions: [], batch_basis: null };
+    const withQuantity = { ...entry, quantity_input: quantityInput };
+    expect(projectMealLogData({ entry: withQuantity })).toEqual({ entry: { ...entry, nutrition } });
+    expect(projectMealLogData({ entry: withQuantity }, true)).toEqual({ entry: { ...withQuantity, nutrition } });
+    expect(projectMealLogData({ entry: withQuantity }, false, true)).toEqual({ entry });
+    expect(projectMealLogData({ entry: withQuantity }, true, true)).toEqual({ entry: withQuantity });
+    expect(projectMealLogData({ entry: { ...entry, source: { type: "ingredient", id: batch.id } } }, false, true)).toBeNull();
   });
   it("requires exact display capability and leaves original DTOs for old or unknown requests", () => {
     for (const headers of [undefined, { "X-Homecook-Cooked-Weight-Contract": "evidence-v2" }]) {

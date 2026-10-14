@@ -1,3 +1,5 @@
+import { hydrateRecipeQuantityNutrition } from "@/lib/server/recipe-quantity-input";
+import { RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { addRecipeProductNutritionGuard, hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import {
   calculateRecipeNutrition,
@@ -14,6 +16,7 @@ interface RecipeNutritionRecipeRow {
   base_servings: number;
   updated_at: string;
   created_by?: string | null;
+  revision?: number;
 }
 
 interface RecipeNutritionIngredientRow {
@@ -24,6 +27,7 @@ interface RecipeNutritionIngredientRow {
   ingredient_type: "QUANT" | "TO_TASTE";
   scalable: boolean;
   sort_order: number;
+  quantity_input?: unknown;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
 }
@@ -121,12 +125,12 @@ export async function prepareRecipeNutritionSnapshot(
   const [recipeResult, ingredientsResult] = await Promise.all([
     dbClient
       .from("recipes")
-      .select("id, base_servings, updated_at, created_by")
+      .select("id, base_servings, updated_at, created_by, revision")
       .eq("id", recipeId)
       .maybeSingle(),
     dbClient
       .from("recipe_ingredients")
-      .select("id, ingredient_id, amount, unit, ingredient_type, scalable, sort_order, food_product_id, food_product_nutrition_version_id")
+      .select("id, ingredient_id, amount, unit, ingredient_type, scalable, sort_order, quantity_input, food_product_id, food_product_nutrition_version_id")
       .eq("recipe_id", recipeId)
       .order("sort_order", { ascending: true }),
   ]);
@@ -164,21 +168,44 @@ export async function prepareRecipeNutritionSnapshot(
   } catch {
     throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
   }
+  // The recipe read above has already passed its existing RLS/ownership path.
+  // Reuse the existing service-only input guard, not a catalog reader.
+  const modeRead = await predecessorClient.rpc("build_recipe_nutrition_input_guard", { p_recipe_id: recipeId });
+  const mode = modeRead.data;
+  if (modeRead.error || !mode || typeof mode !== "object" || !("recipe_ingredients" in mode)
+    || !Array.isArray(mode.recipe_ingredients)) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
+  const quantityV4 = "quantity_policy_version" in mode;
+  if (!quantityV4 && ingredientsResult.data.some(row => row.quantity_input !== null && row.quantity_input !== undefined)) {
+    throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
+  }
+  if (quantityV4 && (!("quantity_recipe_revision" in mode) || mode.quantity_policy_version !== "quantity-v4"
+    || mode.quantity_recipe_revision !== recipeResult.data.revision)) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
+  let quantityHydration;
+  try {
+    quantityHydration = quantityV4 ? await hydrateRecipeQuantityNutrition(predecessorClient, ingredientsResult.data,
+      productHydration.ingredients, recipeResult.data.created_by ?? undefined) : null;
+  } catch { throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED"); }
   const calculation = calculateRecipeNutrition({
     recipe_id: recipeId,
     recipe_version: recipeResult.data.updated_at,
     base_servings: recipeResult.data.base_servings,
-    ingredients: productHydration.ingredients,
+    ingredients: quantityHydration?.ingredients ?? productHydration.ingredients,
+    calculation_version: quantityV4 ? RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION : undefined,
   });
 
+  const guard = addRecipeProductNutritionGuard(
+    buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors), ingredientsResult.data, productHydration.predecessors);
+  if (quantityHydration && "quantity_recipe_revision" in mode) {
+    Object.assign(guard, { quantity_policy_version: "quantity-v4", quantity_recipe_revision: mode.quantity_recipe_revision });
+  }
+  if (quantityHydration && Array.isArray(guard.recipe_ingredients)) {
+    guard.recipe_ingredients = guard.recipe_ingredients.map(row => ({ ...row,
+      recipe_quantity_context_sha256: quantityHydration.hashes.get(String(row.id)) }));
+  }
   return {
     calculation,
     expectedRecipeVersion: recipeResult.data.updated_at,
-    inputGuard: addRecipeProductNutritionGuard(
-      buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors),
-      ingredientsResult.data,
-      productHydration.predecessors,
-    ),
+    inputGuard: guard,
   };
 }
 

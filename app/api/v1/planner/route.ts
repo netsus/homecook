@@ -4,6 +4,7 @@ import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import { getQaFixturePlannerData, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
+import { quantityInputContractRequested } from "@/lib/server/quantity-input";
 import {
   dedupeProductPlannerEntries,
   parseProductPlannerEntries,
@@ -292,7 +293,7 @@ export async function GET(request: NextRequest) {
 
   const parsedProductEntries = productEntriesResult.error
     ? null
-    : parseProductPlannerEntries(productEntriesResult.data);
+    : parseProductPlannerEntries(productEntriesResult.data, quantityInputContractRequested(request));
   if (!parsedProductEntries) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }

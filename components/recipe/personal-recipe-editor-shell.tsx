@@ -10,7 +10,8 @@ import React, {
 } from "react";
 
 import { Button } from "@/components/ui/button";
-import { DecimalInput } from "@/components/shared/decimal-input";
+import { RecipeQuantityInput } from "@/components/recipe/recipe-quantity-input";
+import { recipeQuantityUnits, updateRecipeQuantityText } from "@/lib/recipe-quantity-input";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
@@ -91,11 +92,14 @@ export interface RecipeEditorIngredientRow extends ManualRecipeIngredientInput {
 interface RecipeEditorIngredientListProps {
   ingredients: RecipeEditorIngredientRow[];
   productContexts?: Record<string, FoodProductData>;
+  quantityContexts?: Record<string, import("@/types/recipe").RecipeIngredientQuantityContext>;
   unitErrors?: Record<string, string>;
+  onRequestQuantityContext?: (rowKey: string) => void;
+  quantityContextLoadingKey?: string | null;
   showValidationError: boolean;
   onChange: (
     tempId: string,
-    patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
+    patch: Pick<ManualRecipeIngredientInput, "amount" | "unit" | "quantity_input">,
   ) => void;
   onRemove: (tempId: string) => void;
 }
@@ -103,7 +107,10 @@ interface RecipeEditorIngredientListProps {
 export function RecipeEditorIngredientList({
   ingredients,
   productContexts = {},
+  quantityContexts = {},
   unitErrors = {},
+  onRequestQuantityContext,
+  quantityContextLoadingKey,
   showValidationError,
   onChange,
   onRemove,
@@ -134,57 +141,28 @@ export function RecipeEditorIngredientList({
                 {ingredient.standard_name}
               </div>
             </div>
-            <DecimalInput
-              aria-label={`${ingredient.standard_name} 수량`}
-              className={`${ingredient.food_product_id ? "col-span-2 sm:col-span-1 " : ""}h-11 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]`}
-              inputMode="decimal"
-              min={0}
-              placeholder={ingredient.food_product_id ? "사용량" : undefined}
-              onValueChange={(amount) => {
-                onChange(ingredient.tempId, {
-                  amount,
-                  unit: ingredient.unit ?? "g",
-                });
-              }}
-              value={ingredient.amount}
-            />
-            {ingredient.food_product_id ? <select
-              aria-label={`${ingredient.standard_name} 단위`}
-              className="h-11 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-1 text-sm"
-              value={ingredient.unit ?? ""}
-              onChange={(event) => onChange(ingredient.tempId, { amount: ingredient.amount, unit: event.target.value })}
-            >
-              {getRecipeIngredientUnitOptions(ingredient, ingredient.row_key ? productContexts[ingredient.row_key] : undefined).map((unit) => (
-                <option key={unit} value={unit}>{unit === "serving" ? "회분" : unit === "package" ? "포장" : unit}</option>
-              ))}
-            </select> : <div
-              aria-label={`${ingredient.standard_name} 단위`}
-              className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
-              role="group"
-            >
-              {COOKING_UNIT_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  aria-label={`${ingredient.standard_name} ${option}`}
-                  aria-pressed={(ingredient.unit ?? "g") === option}
-                  className={[
-                    "h-11 min-w-11 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
-                    (ingredient.unit ?? "g") === option
-                      ? "bg-[var(--brand)] text-[var(--text-inverse)]"
-                      : "text-[var(--text-2)] hover:bg-[var(--surface)]",
-                  ].join(" ")}
-                  onClick={() =>
-                    onChange(ingredient.tempId, {
-                      amount: ingredient.amount,
-                      unit: option,
-                    })
-                  }
-                  type="button"
-                >
-                  {option}
-                </button>
-              ))}
-            </div>}
+            <div className={ingredient.food_product_id ? "col-span-3 min-w-0 sm:col-span-2" : "col-span-2 min-w-0"}>
+              <RecipeQuantityInput
+                label={ingredient.standard_name} amount={ingredient.amount} unit={ingredient.unit}
+                quantityInput={ingredient.quantity_input}
+                onRequestContext={ingredient.row_key && onRequestQuantityContext ? () => onRequestQuantityContext(ingredient.row_key!) : undefined}
+                contextLoading={ingredient.row_key === quantityContextLoadingKey}
+                contextChanged={Boolean(ingredient.quantity_input && ingredient.row_key && quantityContexts[ingredient.row_key]?.ready && ingredient.quantity_input.expected_context_sha256 !== quantityContexts[ingredient.row_key].context_sha256)}
+                toTaste={ingredient.ingredient_type === "TO_TASTE"}
+                enabled={Boolean(ingredient.row_key && quantityContexts[ingredient.row_key]?.ready)}
+                units={ingredient.row_key && quantityContexts[ingredient.row_key]?.ready
+                  ? recipeQuantityUnits(ingredient, quantityContexts[ingredient.row_key])
+                  : ingredient.food_product_id ? getRecipeIngredientUnitOptions(ingredient, ingredient.row_key ? productContexts[ingredient.row_key] : undefined)
+                    : [...new Set([...(ingredient.unit ? [ingredient.unit] : []), ...COOKING_UNIT_OPTIONS])]}
+                onTextChange={(text) => {
+                  const updated = updateRecipeQuantityText(ingredient, text,
+                    ingredient.row_key ? quantityContexts[ingredient.row_key]?.context_sha256 : undefined);
+                  onChange(ingredient.tempId, { amount: updated.amount, unit: updated.unit, quantity_input: updated.quantity_input });
+                }}
+                onAmountChange={amount => onChange(ingredient.tempId, { amount, unit: ingredient.unit ?? "g" })}
+                onUnitChange={unit => onChange(ingredient.tempId, { amount: ingredient.amount, unit })}
+              />
+            </div>
             <button
               aria-label={`${ingredient.standard_name} 삭제`}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-[var(--text-3)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]"

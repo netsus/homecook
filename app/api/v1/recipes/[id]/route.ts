@@ -1,3 +1,7 @@
+import { readRecipeQuantityMode, RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
+import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
+import { quantityInputContractRequested } from "@/lib/server/quantity-input";
+import { recipeQuantityWriteFailure } from "@/lib/server/recipe-quantity-input";
 import { readPublicRecipeProductLabels, readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
@@ -302,7 +306,7 @@ export async function GET(request: Request, context: RouteContext) {
         })
       : Promise.resolve(legacyThumbnailUrl);
 
-    const ingredientColumns = "id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)"
+    const ingredientColumns = (quantityInputContractRequested(request) ? "quantity_input, " : "") + "id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)"
       + (authResult.data.user ? ", food_product_id, food_product_nutrition_version_id" : "");
     const [
       sourceResult,
@@ -401,6 +405,13 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
+    if (entrypointContext && !quantityInputContractRequested(request)) {
+      for (const context of [entrypointContext.edit_context]) {
+        if (context) context.draft.ingredients = context.draft.ingredients.map(row => {
+          const legacy = { ...row }; delete legacy.quantity_input; return legacy;
+        });
+      }
+    }
     const revision = entrypointContext?.revision ?? recipeResult.data.revision;
     if (!Number.isSafeInteger(revision) || Number(revision) <= 0) {
       return fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요.", 500);
@@ -611,6 +622,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  const quantityFailure = recipeQuantityWriteFailure(request, parsed.value.draft.ingredients);
+  if (quantityFailure) return quantityFailure;
+
   const authority = await readRecipeMutationAuthority(routeClient, user);
   if (!authority.ok) {
     return authority.response;
@@ -622,16 +636,21 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   let nutrition;
   try {
+    const quantityMode = await readRecipeQuantityMode({ client: { rpc: (name, args) => serviceClient.rpc(name, args) },
+      sessionAuthority: authority.sessionAuthority, recipeId, expectedRevision: parsed.value.baseRecipeRevision });
+    if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를 저장할 수 없어요. 입력은 유지돼요.", 422);
     nutrition = await calculateRecipeDraftNutrition(
       serviceClient as unknown as RecipeDraftNutritionClient,
       {
         recipeId,
         ownerUserId: user.id,
+        quantityMode,
         baseRecipeRevision: parsed.value.baseRecipeRevision,
         draft: parsed.value.draft,
       },
     );
   } catch (error) {
+    if (error instanceof RecipeQuantityModeError) return fail(error.code, error.message, error.status);
     if (error instanceof RecipeDraftNutritionValidationError) {
       return fail("VALIDATION_ERROR", "레시피 영양 입력을 확인해 주세요.", 422, [
         { field: "draft.ingredients", reason: "invalid_nutrition_input" },
