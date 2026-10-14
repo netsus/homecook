@@ -20,6 +20,8 @@ export interface CookedBatchCompletionError {
 }
 
 interface CookedBatchCompletionSheetProps {
+  returnFocusRef?: React.RefObject<HTMLButtonElement | null>;
+  restoreFocusWhen?: () => boolean;
   candidates: SnapshotV2PantryCandidate[];
   initialSelection?: string[];
   onClose: () => void;
@@ -31,6 +33,8 @@ interface CookedBatchCompletionSheetProps {
 }
 
 export function CookedBatchCompletionSheet({
+  returnFocusRef,
+  restoreFocusWhen,
   candidates,
   initialSelection = [],
   onClose,
@@ -48,12 +52,17 @@ export function CookedBatchCompletionSheet({
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
 
-  useDialogBoundary({
+  const { setReturnFocusTarget } = useDialogBoundary({
     closeOnEscape: !submitting,
     dialogRef: panelRef,
     initialFocusRef: titleRef,
     onClose,
+    restoreFocusWhen,
   });
+
+  useEffect(() => {
+    setReturnFocusTarget(returnFocusRef ? () => returnFocusRef.current : null);
+  }, [returnFocusRef, setReturnFocusTarget]);
 
   useEffect(() => {
     const validIds = new Set(candidates.map((candidate) => candidate.pantry_item_id));

@@ -38,6 +38,18 @@ export function LeftoversScreen({ initialAuthenticated = false }: LeftoversScree
   const [batchMutationPending, setBatchMutationPending] = useState(false);
   const batchOperationRef = useRef<CookedBatchOperation | null>(null);
   const batchActionReturnFocusRef = useRef<HTMLElement | null>(null);
+  const batchActionReturnPathRef = useRef<string | null>(null);
+  const batchActionReturnBatchRef = useRef<string | null>(null);
+  const restoreBatchFocusWhen = useCallback(() =>
+    window.location.pathname === batchActionReturnPathRef.current, []);
+  const resolveBatchReturnFocus = useCallback(() => {
+    const original = batchActionReturnFocusRef.current;
+    if (original?.isConnected && original !== document.body) return original;
+    const batchId = batchActionReturnBatchRef.current;
+    return batchId
+      ? document.querySelector<HTMLButtonElement>(`[data-cooked-batch-manager="${batchId}"]`)
+      : null;
+  }, []);
   const [feedback, setFeedback] = useState<{ message: string; tone: "error" | "status" } | null>(null);
   const [mealLogTarget, setMealLogTarget] = useState<MealLogSourceSelection | null>(null);
   const [mealLogColumns, setMealLogColumns] = useState<MealLogColumn[]>([]);
@@ -121,6 +133,8 @@ export function LeftoversScreen({ initialAuthenticated = false }: LeftoversScree
   }, [batchCursor, batchMutationPending, batchPagePending]);
 
   const openBatchAction = useCallback((batch: CookedBatchProjection, action: CookedBatchAction) => {
+    batchActionReturnPathRef.current = window.location.pathname;
+    batchActionReturnBatchRef.current = batch.id;
     batchActionReturnFocusRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
@@ -131,22 +145,10 @@ export function LeftoversScreen({ initialAuthenticated = false }: LeftoversScree
 
   const closeBatchAction = useCallback(() => {
     if (batchMutationPending) return;
-    const returnTarget = batchActionReturnFocusRef.current;
-    const fallbackSelector = batchActionTarget
-      ? `[data-batch-id="${batchActionTarget.batch.id}"][data-batch-action="${batchActionTarget.action}"]`
-      : null;
     setBatchActionTarget(null);
     setBatchActionError(null);
     batchOperationRef.current = null;
-    requestAnimationFrame(() => {
-      const fallbackTarget = fallbackSelector
-        ? document.querySelector<HTMLElement>(fallbackSelector)
-        : null;
-      if (returnTarget?.isConnected) returnTarget.focus();
-      else fallbackTarget?.focus();
-      batchActionReturnFocusRef.current = null;
-    });
-  }, [batchActionTarget, batchMutationPending]);
+  }, [batchMutationPending]);
 
   const submitBatchAction = useCallback(async (request: CookedBatchMutationRequest) => {
     if (!batchActionTarget || mutationLatch.current) return;
@@ -255,7 +257,7 @@ export function LeftoversScreen({ initialAuthenticated = false }: LeftoversScree
       {authState === "unauthorized" ? <div className="p-8 text-center"><p>로그인이 필요해요.</p><Link className="mt-4 inline-block rounded-xl bg-[var(--brand)] px-5 py-3 text-white" href={`/login?next=${encodeURIComponent(selfHref)}`}>로그인</Link></div> : <CookedBatchSection error={batchError} hasNext={batchHasNext} items={batchItems} onAction={openBatchAction} onRecord={batch => void openMealLogSheet(batch)} onLoadMore={() => void loadMoreCookedBatches()} onRetry={() => void loadCookedBatches()} pagePending={batchPagePending || batchMutationPending} state={batchState} />}
     </main>
     {feedback ? <AppFeedbackToast message={feedback.message} position="bottom" testId="feedback-toast" tone={feedback.tone === "error" ? "error" : "success"} /> : null}
-    {batchActionTarget ? <CookedBatchActionSheet action={batchActionTarget.action} batch={batchActionTarget.batch} error={batchActionError} onClose={closeBatchAction} onSubmit={request => void submitBatchAction(request)} pending={batchMutationPending} /> : null}
+    {batchActionTarget ? <CookedBatchActionSheet action={batchActionTarget.action} batch={batchActionTarget.batch} error={batchActionError} onClose={closeBatchAction} onSubmit={request => void submitBatchAction(request)} pending={batchMutationPending} returnFocusTarget={resolveBatchReturnFocus} restoreFocusWhen={restoreBatchFocusWhen} /> : null}
     {mealLogSheet}
     <Wave1MobileBottomTab ariaLabel="남은 요리 하단 탭" currentTab="mypage" />
   </div>;

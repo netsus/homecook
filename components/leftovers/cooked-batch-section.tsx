@@ -50,7 +50,7 @@ export function CookedBatchSection({ error, hasNext, items, onAction, onRecord, 
           <div className="flex items-center gap-2">
             {canRecord ? <button aria-label={`${batch.recipe_title} 식사 기록`} className="min-h-11 rounded-xl bg-[var(--brand)] px-3 font-bold text-white" onClick={() => onRecord(batch)} type="button">식사 기록</button>
               : actions.includes("set_finished_weight") ? <button className="min-h-11 rounded-xl border border-[var(--brand)] px-3 text-[var(--brand)]" onClick={() => onAction(batch, "set_finished_weight")} type="button">무게 입력</button> : null}
-            {actions.length > 0 ? <button aria-label={`${batch.recipe_title} 관리`} aria-expanded={expandedId === batch.id} className="grid h-11 w-11 place-items-center rounded-xl border text-xl" onClick={() => setExpandedId(current => current === batch.id ? null : batch.id)} type="button">⋯</button> : null}
+            {actions.length > 0 ? <button aria-label={`${batch.recipe_title} 관리`} aria-expanded={expandedId === batch.id} data-cooked-batch-manager={batch.id} className="grid h-11 w-11 place-items-center rounded-xl border text-xl" onClick={() => setExpandedId(current => current === batch.id ? null : batch.id)} type="button">⋯</button> : null}
           </div>
         </div>
         {batch.weight_evidence ? <p className="mt-2 text-sm leading-5 text-[var(--text-2)]">전체무게 근거: {cookedWeightSourceLabel(batch.weight_evidence.source)}</p> : null}
