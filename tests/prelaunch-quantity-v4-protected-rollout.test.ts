@@ -266,7 +266,8 @@ describe("the existing global deploy lock shared by two CLI callers", () => {
       expect(existsSync(join(stateRoot, "deploy.lock"))).toBe(false);
       const owner = copy.acquirePrelaunchDeployLock(); renameSync(join(stateRoot, "deploy.lock"), join(stateRoot, "previous-lock")); mkdirSync(join(stateRoot, "deploy.lock"));
       expect(() => owner.release()).toThrow("소유자가 달라"); expect(existsSync(join(stateRoot, "deploy.lock"))).toBe(true);
-      const oldCli = execFileSync("git", ["show", "HEAD:scripts/deploy-prelaunch-web.mjs"], { encoding: "utf8" });
+      // The predecessor must stay fixed after this change is committed.
+      const oldCli = execFileSync("git", ["show", "4385861d96a81bdf69a57e7240d7729cbb7835bd:scripts/deploy-prelaunch-web.mjs"], { encoding: "utf8" });
       expect(oldCli).toContain('try { mkdirSync(lock, { mode: 0o700 }); } catch { throw new DeploymentError("배포 잠금이 있습니다. 다른 배포 종료 여부를 확인하세요."); }');
       expect(original).toContain('try { mkdirSync(lock, { mode: 0o700 }); } catch { throw new DeploymentError("배포 잠금이 있습니다. 다른 배포 종료 여부를 확인하세요."); }');
       expect(oldCli).toContain("rmdirSync(lock);"); expect(original).toContain("rmdirSync(lock);");
