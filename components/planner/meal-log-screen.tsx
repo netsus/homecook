@@ -17,6 +17,7 @@ import { PlannerWeekNavigation } from "@/components/planner/planner-week-navigat
 import { MealLogDayNutritionDetail } from "@/components/planner/meal-log-day-nutrition-detail";
 import { formatMealLogEnergy, hasKnownEnergyAndMacros, MEAL_LOG_MACROS, scaleMealLogNutrition } from "@/lib/planner/meal-log-nutrition-presentation";
 import { MealLogMacroBar, MealLogNutritionChart, MealLogNutritionNote } from "@/components/planner/meal-log-nutrition-chart";
+import { COOKED_MIX_ASSUMPTION_TEXT, cookedWeightSourceLabel } from "@/lib/cooking/cooked-weight-summary";
 import { emitAppActionNotification } from "@/lib/app-action-notifications";
 import { createGuestMealLogDay, createGuestPlannerData } from "@/lib/planner/guest-planner-preview";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
@@ -540,6 +541,10 @@ function EntryDialog({
         {entry.quantity_input?.quality === "estimated" ? <p className="mb-4 text-sm text-[var(--text-2)]">약 환산값으로 기록했어요.</p> : null}
         {entry.quantity_input?.reason ? <p className="mb-4 text-sm text-[var(--text-2)]">입력한 양을 보존했어요. 영양을 환산할 근거는 확인하지 못했어요.</p> : null}
         <section aria-label="기록한 음식 영양정보" className="rounded-2xl bg-[var(--ui-sky-50)] p-5"><h3 className="mb-3 text-sm font-medium">먹은 양 기준 영양</h3><MealLogNutritionChart nutrition={entry.nutrition} /></section>
+        {entry.nutrition.weight_basis ? <section aria-label="기록 당시 전체무게 근거" className="mt-4 space-y-2 text-sm leading-5 text-[var(--text-2)]">
+          <p>기록 당시 전체무게{entry.nutrition.weight_basis.finished_weight_g === null ? "는 미확인이에요" : `는 ${Math.round(entry.nutrition.weight_basis.finished_weight_g).toLocaleString("ko-KR")}g이에요`}. 무게 근거: {cookedWeightSourceLabel(entry.nutrition.weight_basis.source)}.</p>
+          {entry.nutrition.weight_assumption_codes?.length ? <p>{COOKED_MIX_ASSUMPTION_TEXT}</p> : null}
+        </section> : null}
         {entry.nutrition.sodium_mg !== null && Number.isFinite(entry.nutrition.sodium_mg) ? <div className="my-6 flex justify-between"><span>나트륨</span><span>{number(entry.nutrition.sodium_mg, "mg")}</span></div> : null}
         <button aria-label="식사 기록 수정" className="mt-4 min-h-12 w-full rounded-xl bg-[var(--brand-primary-accessible)] px-4 font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => setAction("edit")} type="button">먹은 양 수정</button>
         <button className="mt-3 min-h-12 w-full rounded-xl border border-[var(--danger-border)] px-4 font-medium text-[var(--danger-strong)] disabled:opacity-50" disabled={!mutationEnabled || pending} onClick={() => setAction("delete")} type="button">기록 삭제</button>

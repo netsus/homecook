@@ -126,6 +126,11 @@ export function formatProductUnit(unit: FoodProductBasisUnit) {
   return "g";
 }
 
+export function formatProductRawQuantity(input: { raw_value: string; raw_unit: string }): string {
+  const unit = FOOD_PRODUCT_BASIS_UNITS.find(candidate => candidate === input.raw_unit);
+  return `${input.raw_value}${unit ? formatProductUnit(unit) : input.raw_unit}`;
+}
+
 function isObserved(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }

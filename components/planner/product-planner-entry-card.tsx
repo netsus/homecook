@@ -5,6 +5,7 @@ import React from "react";
 import {
   formatProductExpectedEnergy,
   formatProductQuantity,
+  formatProductRawQuantity,
 } from "@/lib/planner/product-planner-entry-presentation";
 import type { MealProductPlannerEntryData } from "@/types/product-planner-entry";
 
@@ -52,6 +53,7 @@ export function ProductPlannerEntryCard({
             <span>{formatProductQuantity(entry.quantity)} ·</span>
             <span>{expectedEnergy}</span>
           </p>
+          {entry.quantity_input ? <p className="mt-1 break-words text-xs text-[var(--text-3)]">원입력 {formatProductRawQuantity(entry.quantity_input)}</p> : null}
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">

@@ -182,7 +182,12 @@ describe.runIf(enabled)("quantity v4 on owned schema-only PostgreSQL", () => {
     expect(sql(`select remaining_weight_g from public.leftover_dishes where id='${batch}';`).stdout.trim()).toBe("1000");
     const entry = json(mutation(6, payload)).data.entry;
     expect(entry.quantity).toEqual({ amount: 125, unit: "g" });
-    expect(entry.nutrition).toEqual(nutritionPreview);
+    const { weight_basis: previewWeightBasis, ...previewValues } = nutritionPreview;
+    expect(previewWeightBasis).toEqual({ schema_version: "cooked-weight-basis-v1", batch_id: batch,
+      recipe_content_snapshot_id: content, finished_weight_g: 1000, source: "historical_estimate", model_version: null,
+      prediction_id: null, observation_id: null, batch_revision: currentRevision });
+    expect(entry.nutrition).toEqual(previewValues);
+    expect(entry.nutrition.weight_basis).toBeUndefined();
     expect(entry.quantity_input).toMatchObject({ raw_value: "1/2", raw_unit: "인분", numerator: "1", denominator: "2",
       normalized: { amount: 125, unit: "g" }, batch_basis: { batch_id: batch, revision: currentRevision, cooking_servings: 4, finished_weight_g: 1000 } });
     expect(isQuantityInputSnapshot(entry.quantity_input)).toBe(true);
@@ -196,6 +201,33 @@ describe.runIf(enabled)("quantity v4 on owned schema-only PostgreSQL", () => {
     const deleted = json(mutation(6, {} as ReturnType<typeof body>, "delete", "1")).data.entry;
     expect(deleted.quantity_input).toEqual(entry.quantity_input);
     expect(Number(sql(`select remaining_weight_g from public.leftover_dishes where id='${batch}';`).stdout.trim())).toBe(1000);
+  });
+  it("preserves both frozen bases and historic snapshots through OFF date moves and receipt replay", () => {
+    sql("update private.quantity_input_v4_policy set enabled=true; update private.cooked_batch_weight_evidence_control set enabled=true;");
+    const historic = () => sql(`select md5(jsonb_build_object('recipe',(select to_jsonb(r) from public.recipes r where id='${recipe}'),
+      'content',(select to_jsonb(r) from public.recipe_content_snapshots r where id='${content}'))::text);`).stdout.trim();
+    const before = historic();
+    const revision = Number(sql(`select revision from public.leftover_dishes where id='${batch}';`).stdout.trim());
+    const payload = { ...body(0.5, "인분", "1/2"), source: { type: "cooked_batch", id: batch },
+      quantity_input: { ...body(0.5, "인분", "1/2").quantity_input, expected_batch_revision: revision } };
+    const previewNutrition = json(`begin; set local request.jwt.claim.role='service_role'; select public.preview_meal_log_nutrition(${args},'cooked_batch','${batch}',0.5,'인분','${JSON.stringify(payload.quantity_input)}'); commit;`);
+    const entry = json(mutation(41, payload)).data.entry;
+    expect(entry.quantity).toEqual({ amount: 125, unit: "g" });
+    expect(entry.nutrition).toEqual(previewNutrition);
+    expect(entry.nutrition.weight_basis).toMatchObject({ finished_weight_g: 1000, source: "historical_estimate", batch_revision: revision });
+    expect(entry.quantity_input).toMatchObject({ raw_value: "1/2", raw_unit: "인분", numerator: "1", denominator: "2",
+      normalized: { amount: 125, unit: "g" }, batch_basis: { batch_id: batch, revision, cooking_servings: 4, finished_weight_g: 1000 } });
+    sql("update private.quantity_input_v4_policy set enabled=false; update private.cooked_batch_weight_evidence_control set enabled=false;");
+    const movedPayload: Record<string, unknown> = { ...payload, consumed_local_date: "2026-10-15", quantity: entry.quantity };
+    delete movedPayload.quantity_input;
+    const moved = json(mutation(41, movedPayload, "patch", "1")).data.entry;
+    expect(moved.nutrition).toEqual(entry.nutrition);
+    expect(moved.quantity).toEqual(entry.quantity);
+    expect(moved.quantity_input).toEqual(entry.quantity_input);
+    expect(json(mutation(41, payload))).toEqual({ success: true, data: { entry }, error: null });
+    expect(sql(`select remaining_weight_g from public.leftover_dishes where id='${batch}';`).stdout.trim()).toBe("875");
+    expect(historic()).toBe(before);
+    sql("update private.quantity_input_v4_policy set enabled=true;");
   });
   it("hydrates only reviewed physical count/density rows and shares preview and writer conversions", () => {
     sql(`insert into public.nutrition_sources(id,provider_code,dataset_name,source_kind,source_version,fetched_at,freshness_checked_at,freshness_status,source_url,license_name,manifest_sha256,review_status,decision_reason,reviewed_by,reviewed_at,is_active)
@@ -259,8 +291,46 @@ describe.runIf(enabled)("quantity v4 on owned schema-only PostgreSQL", () => {
     expect(json(productPreview)).toEqual(logged.nutrition);
     expect(sql(mutation(31, { ...meal, quantity_input: { ...input, expected_product_nutrition_version_id: id(899) } }), false).stderr).toContain("NUTRITION_VERSION_CONFLICT");
     sql("update private.quantity_input_v4_policy set enabled=false;");
-    expect(json(`begin;set local request.jwt.claim.role='service_role';select public.product_planner_entry_payload('${entry.id}','${owner}');commit;`)).toEqual(entry);
+    expect(json(`begin;set local request.jwt.claim.role='service_role';select public.product_planner_entry_payload('${entry.id}','${owner}');commit;`)).toEqual({ ...entry, quantity_policy: null });
     expect(sql(create, false).stderr).toContain("UNIT_POLICY_INACTIVE");
+  });
+  it("reads current policy independently from saved metadata without admitting another owner", () => {
+    const entryId = sql("select id from public.product_planner_entries;").stdout.trim();
+    const read = (user: string) => `begin;set local request.jwt.claim.role='service_role';set local request.jwt.claim.sub='${user}';select public.product_planner_entry_payload('${entryId}','${user}');commit;`;
+    const saved = json(read(owner)); expect(saved.quantity_policy).toBeNull(); expect(saved.quantity_input.raw_value).toBe("1/3");
+    expect(json(read(other))).toBeNull();
+    expect(sql(`begin;set local request.jwt.claim.role='service_role';set local request.jwt.claim.sub='${other}';select public.list_product_planner_entries('${other}','2026-10-14','2026-10-14',null);commit;`).stdout.trim()).toBe("[]");
+    sql("update private.quantity_input_v4_policy set enabled=true;"); const on = json(read(owner));
+    expect(on).toEqual({ ...saved, quantity_policy: "quantity-v4" });
+  });
+  it("edits only the saved version's quantities and leaves metadata unchanged on same-quantity retry", () => {
+    const entryId = sql("select id from public.product_planner_entries;").stdout.trim();
+    sql(`select public.set_account_generation_internal_writer_marker('${cutover}',true);
+      insert into public.nutrition_sources(id,provider_code,dataset_name,source_kind,source_version,fetched_at,freshness_checked_at,freshness_status,source_url,license_name,manifest_sha256,review_status,decision_reason,reviewed_by,reviewed_at,is_active)
+      select '${id(807)}',provider_code,'fixture nutrition v2',source_kind,'fixture-v2',fetched_at,freshness_checked_at,freshness_status,source_url,license_name,manifest_sha256,review_status,decision_reason,reviewed_by,reviewed_at,is_active from public.nutrition_sources where id='${source}';
+      insert into public.nutrition_source_items(id,source_id,external_item_key,external_name,preparation_state,edible_portion_percent,stable_fingerprint,review_status,decision_reason,reviewed_by,reviewed_at,source_basis_amount,source_basis_unit)
+      select '${id(806)}','${id(807)}',external_item_key,external_name,preparation_state,edible_portion_percent,'fixture-product-v2',review_status,decision_reason,reviewed_by,reviewed_at,source_basis_amount,source_basis_unit from public.nutrition_source_items where id='${id(803)}';
+      insert into public.nutrition_profiles(id,source_item_id,profile_kind,normalization_method,basis_amount,basis_unit,version,review_status,decision_reason,reviewed_by,reviewed_at,is_active,created_by)
+      select '${id(805)}','${id(806)}',profile_kind,normalization_method,basis_amount,basis_unit,2,review_status,decision_reason,reviewed_by,reviewed_at,is_active,created_by from public.nutrition_profiles where id='${id(802)}';
+      insert into public.nutrition_values(profile_id,nutrient_code,source_nutrient_code,source_unit,amount,value_status)
+      select '${id(805)}',nutrient_code,source_nutrient_code,source_unit,amount,value_status from public.nutrition_values where profile_id='${id(802)}';
+      insert into public.food_product_nutrition_versions(id,product_id,nutrition_profile_id,version,source_item_id,created_by,basis_relations_json)
+      values('${id(804)}','${id(800)}','${id(805)}',2,'${id(806)}',null,'[{"from":{"amount":1,"unit":"package"},"to":{"amount":150,"unit":"g"}}]');
+      update public.food_products set current_nutrition_version_id='${id(804)}' where id='${id(800)}';
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);`);
+    const input = { schema_version: "quantity-v4", raw_value: "1/4", raw_unit: "package", expected_product_nutrition_version_id: id(801) };
+    const patch = (user = owner, raw = input) => `begin;set local request.jwt.claim.role='service_role';set local request.jwt.claim.sub='${user}';select public.set_account_generation_internal_writer_marker('${cutover}',true);select public.update_product_planner_entry_quantity('${user}','${entryId}',30,'g','${JSON.stringify(raw)}');select public.set_account_generation_internal_writer_marker('${cutover}',false);commit;`;
+    const updated = json(patch()); expect(updated.quantity).toEqual({ amount: 30, unit: "g" });
+    expect(updated.product_nutrition_version_id).toBe(id(801)); expect(updated.nutrition.values.energy_kcal.amount).toBe(72);
+    expect(updated.quantity_input).toMatchObject({ raw_value: "1/4", raw_unit: "package", numerator: "1", denominator: "4", source_versions: [id(801)] });
+    expect(json(patch())).toEqual(updated);
+    expect(sql(patch(owner, { ...input, expected_product_nutrition_version_id: id(804) }), false).stderr).toContain("NUTRITION_VERSION_CONFLICT");
+    expect(sql(patch(other), false).stderr).toContain("FORBIDDEN");
+    sql("update private.quantity_input_v4_policy set enabled=false;");
+    const before = json(`begin;set local request.jwt.claim.role='service_role';set local request.jwt.claim.sub='${owner}';select public.product_planner_entry_payload('${entryId}','${owner}');commit;`);
+    expect(sql(patch(), false).stderr).toContain("UNIT_POLICY_INACTIVE");
+    expect(json(`begin;set local request.jwt.claim.role='service_role';set local request.jwt.claim.sub='${owner}';select public.product_planner_entry_payload('${entryId}','${owner}');commit;`)).toEqual(before);
+    expect(before.quantity_input).toEqual(updated.quantity_input); expect(before.quantity_policy).toBeNull();
   });
   it("keeps role, private metadata, ownership and revoked session boundaries", () => {
     const signature = "public.preview_meal_log_nutrition(uuid,timestamptz,text,integer,timestamptz,text,uuid,numeric,text,jsonb)";

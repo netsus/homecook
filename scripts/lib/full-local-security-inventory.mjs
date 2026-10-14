@@ -25,6 +25,10 @@ const RECIPE_PRODUCT_POSTIMAGES_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/recipe-product-source-function-postimages.json",
 );
+const COOKED_WEIGHT_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/cooked-weight-evidence-source-function-postimages.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -640,8 +644,67 @@ function withRecipeProductContracts(contracts) {
   return result;
 }
 
-export function buildRecipeProductSourceFunctionInventorySql() {
-  const functions = recipeProductPostimages().functions.map((entry) => entry.postimage);
+function cookedWeightPostimages() {
+  const manifest = JSON.parse(readFileSync(COOKED_WEIGHT_POSTIMAGES_PATH, "utf8"));
+  const migration = readFileSync(join(REPOSITORY_ROOT, manifest.migration));
+  if (manifest.schema_version !== 1 || manifest.status !== "local-review-draft"
+    || manifest.migration !== "supabase/migrations/20261013233000_cooked_batch_weight_evidence.sql"
+    || createHash("sha256").update(migration).digest("hex") !== manifest.migration_sha256
+    || manifest.schema_archive_sha256 !== "15c29821618e9cb7c70bbbe0df2cb2f0bd3246924352667bf8ce047400f48097"
+    || manifest.predecessor_219_sha256 !== "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
+    || manifest.predecessor_C03_sha256 !== recipeProductPostimages().migration_sha256
+    || manifest.application_rows_restored !== 0 || manifest.C03_integration_pending !== false
+    || manifest.functions.length !== 15) throw new Error("cooked weight postimage provenance drift");
+  const publicWriters = new Set(["complete_snapshot_v2_cooking_session_with_weight_evidence", "mutate_cooked_batch_weight_with_evidence"]);
+  for (const { postimage, preimage } of manifest.functions) {
+    if (!/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || !["public", "private"].includes(postimage.schema)
+      || !postimage.searchPath.startsWith("pg_catalog,")
+      || !postimage.searchPath.endsWith("pg_temp")) throw new Error("invalid cooked weight postimage");
+    if (preimage) {
+      for (const field of ["securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]) {
+        if (preimage[field] !== postimage[field]) throw new Error(`cooked weight metadata changed: ${field}`);
+      }
+    } else if (postimage.owner !== "postgres"
+      || postimage.allowedAcl !== (publicWriters.has(postimage.name) ? "service_role:EXECUTE:false" : "")) {
+      throw new Error("cooked weight new function privilege drift");
+    }
+  }
+  const predecessor = manifest.preserved_scope_predecessor;
+  const before = manifest.functions.find((entry) => entry.postimage.name === "verify_full_local_internal_scope")?.preimage;
+  const alias = manifest.functions.find((entry) => entry.postimage.name === "verify_scope_pre_cooked_weight_evidence_20261013")?.postimage;
+  if (!before || !alias || !predecessor.body_and_attributes_unchanged
+    || JSON.stringify(before) !== JSON.stringify(predecessor.before)
+    || JSON.stringify(alias) !== JSON.stringify(predecessor.renamed)
+    || ["sourceHash", "securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]
+      .some((field) => before[field] !== alias[field])) throw new Error("cooked weight scope predecessor drift");
+  return manifest;
+}
+
+function withCookedWeightContracts(contracts) {
+  const result = [...contracts];
+  for (const { postimage, checkedInInventoryPreimageMd5 } of cookedWeightPostimages().functions) {
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index >= 0) {
+      if (checkedInInventoryPreimageMd5 !== result[index].sourceHash) throw new Error("cooked weight checked-in preimage drift");
+      result[index] = { ...result[index], sourceHash: postimage.sourceHash };
+    } else result.push(postimage);
+  }
+  return result;
+}
+
+export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false } = {}) {
+  const contracts = recipeProductPostimages().functions.map((entry) => entry.postimage);
+  const functions = includeCookedWeightEvidenceFunctions ? withCookedWeightContracts(contracts) : contracts;
+  return buildSourceFunctionInventorySql(functions);
+}
+
+export function buildCookedWeightEvidenceSourceFunctionInventorySql() {
+  return buildSourceFunctionInventorySql(cookedWeightPostimages().functions.map((entry) => entry.postimage));
+}
+
+function buildSourceFunctionInventorySql(functions) {
   const rows = functions.map((entry) => [entry.lookupSignature, entry.sourceHash,
     entry.owner, String(entry.securityDefiner), `search_path=${entry.searchPath}`, entry.allowedAcl, entry.volatility]);
   return `with expected(signature, body_md5, owner_name, security_definer, search_path, allowed_acl, volatility) as (
@@ -665,10 +728,18 @@ export function buildRecipeProductSourceFunctionInventorySql() {
     'volatility',count(*) filter(where actual_volatility is distinct from volatility)) from actual;`;
 }
 
-export function assertRecipeProductSourceFunctionInventoryResult(result) {
+export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false } = {}) {
+  return assertSourceFunctionInventoryResult(result, includeCookedWeightEvidenceFunctions ? 38 : 24);
+}
+
+export function assertCookedWeightEvidenceSourceFunctionInventoryResult(result) {
+  return assertSourceFunctionInventoryResult(result, 15);
+}
+
+function assertSourceFunctionInventoryResult(result, count) {
   const keys = ["required_functions", "missing", "body", "owner", "security", "search_path", "acl", "volatility"];
   if (!result || Object.keys(result).length !== keys.length
-    || result.required_functions !== 24 || keys.slice(1).some((key) => result[key] !== 0)) {
+    || result.required_functions !== count || keys.slice(1).some((key) => result[key] !== 0)) {
     throw new Error("recipe product source inventory failed closed");
   }
   return result;
@@ -713,6 +784,7 @@ function buildSecurityInventoryExpression({
   includePersonalRecipeFunctions,
   includeRecipeFuturePropagationFunctions,
   includeRecipeProductFunctions,
+  includeCookedWeightEvidenceFunctions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
@@ -730,8 +802,13 @@ function buildSecurityInventoryExpression({
     && includePersonalRecipeFunctions && includeRecipeFuturePropagationFunctions)) {
     throw new Error("recipe product inventory requires all predecessor contracts");
   }
-  const functions = includeRecipeProductFunctions
+  if (includeCookedWeightEvidenceFunctions && !includeRecipeProductFunctions) {
+    throw new Error("cooked weight inventory requires the recipe product predecessor contracts");
+  }
+  const productFunctions = includeRecipeProductFunctions
     ? withRecipeProductContracts(legacyFunctions) : legacyFunctions;
+  const functions = includeCookedWeightEvidenceFunctions
+    ? withCookedWeightContracts(productFunctions) : productFunctions;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -1108,6 +1185,7 @@ export function buildFullLocalSecurityInventoryExpression({
   includePersonalRecipeFunctions = false,
   includeRecipeFuturePropagationFunctions = false,
   includeRecipeProductFunctions = false,
+  includeCookedWeightEvidenceFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeCookedBatchPolicyCutover,
@@ -1115,6 +1193,7 @@ export function buildFullLocalSecurityInventoryExpression({
     includePersonalRecipeFunctions,
     includeRecipeFuturePropagationFunctions,
     includeRecipeProductFunctions,
+    includeCookedWeightEvidenceFunctions,
   });
 }
 
@@ -1132,6 +1211,7 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     includePersonalRecipeFunctions = false,
     includeRecipeFuturePropagationFunctions = false,
     includeRecipeProductFunctions = false,
+    includeCookedWeightEvidenceFunctions = false,
   } = {},
 ) {
   const baseFunctionCount = includeSnapshotTables
@@ -1142,7 +1222,8 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     + (includeRecipeFuturePropagationFunctions
       ? RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT.length
       : 0)
-    + (includeRecipeProductFunctions ? 19 : 0);
+    + (includeRecipeProductFunctions ? 19 : 0)
+    + (includeCookedWeightEvidenceFunctions ? 14 : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;

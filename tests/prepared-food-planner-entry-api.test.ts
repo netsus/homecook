@@ -519,3 +519,39 @@ describe("prepared food planner entry API contract", () => {
     expect(db.rpc).not.toHaveBeenCalled();
   });
 });
+
+
+describe("quantity edit capability and fixed-version failures", () => {
+  it.each(["POST", "PATCH"] as const)("keeps %s capability out of old DTOs and exposes only the reviewed DB flag", async (method) => {
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: USER_ID }));
+    createServiceRoleClient.mockReturnValue(serviceClient({ columnState: ownedColumn(), productState: activeProduct(), entryState: ownedEntry(), rpcResults: {
+      create_product_planner_entry: { data: { ...entry, quantity_policy: "quantity-v4" }, error: null },
+      update_product_planner_entry_quantity: { data: { ...entry, quantity_policy: "quantity-v4" }, error: null },
+    } }));
+    const invoke = async (env: string, contract: boolean) => {
+      vi.stubEnv("MUMEOK_QUANTITY_V4_ENABLED", env);
+      const headers = new Headers(); if (contract) headers.set("X-Homecook-Quantity-Contract", "quantity-v4");
+      const request = new Request("http://localhost", { method, headers, body: JSON.stringify(method === "POST"
+        ? { product_id: PRODUCT_ID, plan_date: "2026-07-16", column_id: COLUMN_ID, quantity: entry.quantity } : { quantity: entry.quantity }) });
+      if (method === "POST") { const route = await importCollectionRoute(); if (!route) throw Error("Missing route"); return route.POST(request); }
+      const route = await importItemRoute(); if (!route) throw Error("Missing item route"); return route.PATCH(request, { params: Promise.resolve({ entry_id: ENTRY_ID }) });
+    };
+    try {
+      for (const [env, header] of [["false", true], ["true", false]] as const) {
+        const response = await invoke(env, header); expect(response.status).toBe(method === "POST" ? 201 : 200); expect((await response.json()).data.entry).toEqual(entry);
+      }
+      const response = await invoke("true", true); expect(response.status).toBe(method === "POST" ? 201 : 200); expect((await response.json()).data.entry).toEqual({ ...entry, quantity_policy: "quantity-v4" });
+    } finally { vi.unstubAllEnvs(); }
+  });
+  it("returns409 for a raw quantity pinned to another version without changing owner guards", async () => {
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: USER_ID }));
+    createServiceRoleClient.mockReturnValue(serviceClient({ entryState: ownedEntry(), rpcResults: { update_product_planner_entry_quantity: { data: null, error: { message: "NUTRITION_VERSION_CONFLICT" } } } }));
+    const route = await importItemRoute(); if (!route) throw Error("Missing item route");
+    vi.stubEnv("MUMEOK_QUANTITY_V4_ENABLED", "true");
+    try {
+      const response = await route.PATCH(new Request("http://localhost", { method: "PATCH", headers: { "X-Homecook-Quantity-Contract": "quantity-v4" }, body: JSON.stringify({ quantity: entry.quantity, quantity_input: { schema_version: "quantity-v4", raw_value: "1", raw_unit: "serving", expected_product_nutrition_version_id: OTHER_USER_ID } }) }), { params: Promise.resolve({ entry_id: ENTRY_ID }) });
+      expect(response.status).toBe(409); expect((await response.json()).error.code).toBe("NUTRITION_VERSION_CONFLICT");
+    } finally { vi.unstubAllEnvs(); }
+
+  });
+});

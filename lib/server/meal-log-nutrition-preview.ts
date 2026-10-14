@@ -34,7 +34,13 @@ export function parseMealLogNutritionPreviewQuery(params: URLSearchParams, quant
   return { ok: true, value };
 }
 
-export function projectMealLogNutritionPreview(value: unknown, input: MealLogNutritionPreviewInput): MealLogNutritionPreview | null {
+export function projectMealLogNutritionPreview(value: unknown, input: MealLogNutritionPreviewInput, includeWeightEvidence = false): MealLogNutritionPreview | null {
   if (!isMealLogNutritionEvidence(value)) return null;
-  return { ...input, nutrition: value };
+  if (value.weight_basis && (input.source.type !== "cooked_batch" || value.weight_basis.batch_id !== input.source.id)) return null;
+  const nutrition = { ...value };
+  if (!includeWeightEvidence) {
+    delete nutrition.weight_basis;
+    delete nutrition.weight_assumption_codes;
+  }
+  return { ...input, nutrition };
 }

@@ -1,6 +1,6 @@
 # C04 단위 근거·첫 소비 묶음 — 명시 v4 준비
 
-상태: 별도 작업트리의 로컬 구현·fixture 검증. 운영 미적용·활성화 OFF. 기본 계산은 여전히 `recipe-nutrition-v3`다. 첫 소비 묶음은 식사기록과 완제품 계획 신규 추가/재조회에 `quantity-v4`를 연결한다. 기존 완제품 계획의 수량 편집 UI·원문 상세 표시와 recipe 편집/저장·worker predecessor 소비는 다음 독립 변경으로 남았다. C03 제품 resolver·nullable 제품 행·고정 영양 버전과 C01의 무게 근거는 최종 통합 경계다.
+상태: 별도 작업트리의 로컬 구현·fixture 검증. 운영 미적용·활성화 OFF. 기본 계산은 여전히 `recipe-nutrition-v3`다. 첫 소비 묶음은 식사기록과 완제품 계획 신규 추가/재조회에 `quantity-v4`를 연결한다. 기존 완제품 계획의 수량 편집 UI·원문 표시는 뒤의 별도 로컬 변경으로 연결했다. recipe 편집/저장·worker predecessor 소비는 다음 독립 변경으로 남았다. C03 제품 resolver·nullable 제품 행·고정 영양 버전과 C01의 무게 근거는 최종 통합 경계다.
 
 ## 2026-10-14 첫 소비 묶음
 
@@ -36,6 +36,20 @@ draft는 `schema_version`, `raw_value`, `raw_unit`과 목적에 맞는 `expected
 ### 검증 구분
 
 U0/U1 원 freeze는 독립 reviewer가164개를 확인했다. 이후 whitespace parity 수정과 소비 구현 검사는 이 문서 작성자의 자체 검증이며 별도 최종 독립 review를 대신하지 않는다. 최종 관련37suite452개, schema-only219+자기 소유 network-none 컨테이너의 실제 writer/preview/read9개, typecheck·선택52파일 ESLint·신규 anti-slop0을 확인했다. 원 lint 규칙의 설치 경로 shim을 사용했고 동일 관련 lint를 별도 통과한 뒤 fake QA env/v4 OFF로 `next build --no-lint`를 확인했다. 자기 컨테이너를 제거했다. 제품은 승인된 C03 frozen converter helper를 fixture에만 선행 소비했다. 실제 C03 전체·C01 최종 source/SQL과 OFF/legacy writer byte 계약은 통합 후 다시 확인해야 한다. Next fixture320/375/1440의30PNG는 API/데이터가 synthetic인 화면 검사이고 운영 검증이나 실제 근거 등록을 뜻하지 않는다. 테스트용 서버/브라우저는 종료했다.
+
+## 2026-10-14 기존 완제품 계획의 편집·원문 읽기 (별도 로컬 변경)
+
+저장된 제품 계획 카드와 수량 변경창에서 원문 분수/단위를 읽는다. 편집은 당시 저장한 `product_nutrition_version_id`와 `basis_relations`만 사용하며 최신 제품 조회로 환산 근거를 바꾸지 않는다. 1/3팩/40g은 단위 전환에도 같은 실제 양을 유지한다. 새 입력1/4팩을30g으로 전환해 저장하면 원문1/4팩과 저장 당시 version을 함께 보낸다. 새 물리량을 임의 반올림하거나 g↔mL 밀도를 추정하지 않는다. 지원하지 않는 기존 단위는 양/단위와 이유를 보존하고 변경을 중지한다.
+
+현재 활성화는 저장된 metadata의 존재로 판단하지 않는다. 새 미적용 `20261014213000_product_quantity_edit_capability.sql`은 기존 권한 아래 읽는 `public.product_planner_entry_payload(uuid,uuid)`와 `public.list_product_planner_entries(uuid,date,date,uuid)`의 JSON에 현재 private DB 정책의 nullable `quantity_policy`만 추가한다. 기존 owner/actor 필터·함수 소유자/ACL/security/search_path는 유지하고 새 RPC/grant/table/writer/기존행 재작성은 없다. API는 env/header 협상이 없으면 새 키를 제거하며, metadata 응답 협상은 OFF에서도 읽기만 허용한다. 실제 식사 목록의 슬롯 DTO에도 협상된 원문을 유지한다.
+
+OFF 뒤의 저장 원문이나 로그인 복귀 v4 draft는 읽되 새 단위 편집·저장은 막는다. DB policy가 편집 중 OFF로 바뀌어409를 돌려주어도 입력을 유지하고 읽기 상태로 전환한다. 해당 항목의 남아 있던 활성화 표시를 지워 취소 후 재열기도 읽기 상태를 유지한다. 구 payload·quantity_input 없는 과거 항목은 기존 숫자 입력/응답을 유지한다. legacy 단위 전환이 기존4자리 저장 정밀도에 정확히 맞지 않으면 양/단위를 보존하고 이유를 안내한다.
+
+`meal-entry` 로그인 복귀에 optional `quantityInput`을 결속한다. 표시량/단위와 원문은 별개이며 당시 version도 유지한다. 현재 소유 항목·고정 version·지원 단위를 다시 확인한 뒤 자동 PATCH 없이 명시 저장을 기다린다. 다른 version의 draft는 재해석하지 않고 편집을 중지한다. 취소/닫기는 저장된 수량을 바꾸지 않고 복귀 보조 상태만 지운다. pending 중 중복 PATCH/닫기는 기존 보호를 재사용하며 일반 실패는 같은 draft로 재시도한다. 브라우저 저장소가 v4 원입력을 보관하지 못한401은 숫자량을 원문으로 바꿔 복원하지 않는다. 원문/소유자 정보를 URL에 넣지 않고 정확한 비민감 `productQuantityResume=unavailable` 표시만 전달해 입력창 복원을 종료한다. stale 저장소를 재사용하지 않고 복귀query를 정리하며 원계획에서 명시적으로 다시 입력하도록 안내한다. 뒤로/새로고침에도 옛 draft를 자동 저장/복원하지 않는다. 저장소 삭제도 실패하면 표시를 유지해 stale draft 재사용을 막는다. 저장소 성공과 legacy 숫자 URL 복귀는 그대로다.
+
+213000은 기존210000 뒤, recipe220000/C05230000 앞이다. 복구는 새 편집 env/DB policy OFF와 저장 metadata 읽기 유지가 기본이다. reader JSON의 추가 키를 되돌릴 경우 정확 preimage의 reader2개만 검토하며 metadata·수량·고정 version을 삭제/재계산하지 않는다. 운영 적용/활성화 승인과 실제 C03/C01 전체 통합 검증은 아직 없다. 자체 unit/API·격리 SQL·Next fixture 결과와 독립 리뷰는 총괄 인계에서 구분한다.
+
+이 편집 변경의 자체 검증은 선택12suite182개, 실제 schema-only219+고정 C03 converter+미적용 C04 SQL4개의11개 검사, 타입·원 규칙 ESLint15파일·Anti Slop 전체3단계 신규0, fake QA env/v4 OFF 빌드다. Next320/375/1440의36PNG에서 원량 전환·취소/재열기·401 복귀 후 명시 저장·실패 재시도·OFF409/읽기·다른 version 입력 차단·legacy 정밀도 실패 보존을 확인했다. API는 synthetic이며 운영 검증이 아니다. 자기 서버/브라우저/격리 컨테이너를 종료·제거했다. 독립 최종 리뷰와 C03/C01 전체 통합 검증은 별도로 남는다.
 
 ## 작은 계약
 
@@ -87,3 +101,19 @@ SQL 검증은 독립 `/tmp/homecook-unit-v4-*`의 PostgreSQL15 UTF8·자체 Unix
 ## 레시피 입력 소비자 후속
 
 수동 생성·개인 편집·복사의 원문 fraction 및 고정 context 계약은 `recipe-quantity-input-v4-20261014.md`에 기록한다. quantity 정보가 없는 과거 JSON/hash는 유지한다. 단위 클릭 시 근거가 없으면 양과 단위를 보존하며, 새 수량·단위로 숫자를 재해석하지 않는다. 운영 활성화와 worker/import 끝단은 별도 범위다.
+
+
+## C03 → C01 → C04 편집 소비자의 로컬 통합 · 2026-10-14
+
+독립 검토된 기존 제품 계획 편집18파일을 `1af8ff277`에 보존하고, 지정된 C03+첫 C04 checkpoint `5bbf3c291`과 C01 OFF 보완 `2b543cfd1`을 순서대로 병합했다. 진행 중인 recipe220000·worker bridge223000·C05의 미커밋 코드는 포함하지 않는다. 운영 적용 기록과 구분한다.
+
+식사 응답의 수량 원문과 무게 근거는 독립 요청 계약이다. 서버 `projectMealLogData(value, quantityV4, includeWeightEvidence)`에서 각 헤더를 별도로 전달하고, 새 클라이언트는 두 헤더를 함께 보낸다. C01 헤더만 보낸 구 탭에는 quantity_input/quantity_policy를 추가하지 않고, C04 헤더만 보냈을 때에는 weight_basis/가정을 추가하지 않는다. 아무 헤더가 없는 기존 DTO와 contains_ai_estimate의 기존 키 순서를 유지한다. 이 헤더는 정책 활성화·동의·쓰기 권위가 아니다.
+
+[C01 OFF 호환 계약](cooked-weight-evidence-integration-20261014.md#c01-off-호환-완료제어-경합-보완--2026-10-14)의 기존 preview는 `private.cooked_weight_meal_basis`를 읽어 당시 계산에 사용할 분모를 보여줄 수 있다. 제어 OFF의 신규 writer는 그 이유만으로 새 weight_basis를 저장하지 않는다. 미리보기의 읽기용 분모와 저장된 영양 근거를 동일하다고 약속하지 않는다. 화면 안내는 실제 선택한 g/인분 단위를 말하고 ‘영양 미리보기의 전체무게 기준’으로 구분한다. 기본 영양 수치의 정확 비교와 C04 raw/batch_basis 저장 검사는 유지한다.
+
+C04 `14200000`의 기존 catalog DO 시작에 `PERFORM public.similarity('', '');` 한 줄을 추가해 새 PostgreSQL 세션에서도 기존 pg_trgm GUC를 정상 등록한다. 새 세션의 비슈퍼유저 postgres에서 원 SQL의 search_food_catalog_ranked CREATE OR REPLACE가 실패하는 것을 재현한 뒤, harness의 선행 similarity 호출 없이 같은 actor·같은 권한·동일 GUC SET 정의로 통과했다. 권한/GRANT/role 속성·C03/C01 SQL·기존 함수 설정을 바꾸지 않는다. 실제 배포도 이 초기화가 포함된 정확 새 SQL bytes를 검토해야 하며, fixture의 사전 library load만으로 운영 적용을 보장하지 않는다.
+
+미적용 C04 SQL은 `010000` SHA `c66ee907de4130b2fe3b86bcdbe48b15021f228485e52fbe1aca5acfee5e7bfd`, `200000` SHA `9ec96a2a7bbf7192801b1f6dd43304ed8ba78ab73f934eac4c2c300e3ca85573`, `210000` SHA `e33a2110afd4a71a6042ce6d4d416f2bf189e107f4528e5b5ae2e440e180ad88`, `213000` SHA `acb0ec83aeabc91320a61b406c2a23dda258033592defbb09bd7f1bb8667399b`다. 위의 이전 `200000` hash·converter만 붙인 fixture 수치는 당시 근거다. 최신 통합은 schema-only218 자료 행0→정확219→전체 C03→C01→네 C04 SQL 순서로 검사한다. 두 정책 ON에서 저장한 원문/배치 분모/weight_basis/영양은 정책 OFF 후 동일 양의 날짜 이동·성공 receipt replay에도 불변이며, 과거 recipe/content snapshot digest도 유지한다. 전체 보안 inventory PASS나 실제 운영·외부 AI·worker 검증으로 확대하지 않는다.
+
+
+독립 통합 검토의 POST legacy 분기 반례를 추가로 교정했다. 명시 quantity-v4 원문이 있는 cooked_batch 요청은 기존 v4-aware `mutate_meal_log_entry`만 호출해 DB 정책과 고정 배치 검사를 받는다. raw 없는 일반 숫자 요청의 legacy 성공/같은 키 재생과 handled=false의 기존 snapshot writer 복귀는 유지한다. legacy helper가 새 필드를 모르는 성공 결과로 원문을 버리거나 정책 OFF를 우회할 수 없으며, 새 SQL/RPC/grant는 없다. 실제 POST/parser/projector 회귀는 수정 전 raw 세 경우 실패·구 경로 네 경우 통과를 확인한 뒤 관련4suite32검사가 통과했다. 이 API 후속은 기존 SQL12/18/13·빌드/브라우저 검사보다 뒤의 작은 delta이므로 이전 실행을 후속의 새 운영/통합 실행이라고 보고하지 않는다.

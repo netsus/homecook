@@ -1,3 +1,4 @@
+import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { callMealLogRpc, parseIdempotencyKey, parseMealLogMutationRequest, projectMealLogData, toMealLogRpcPayload } from "@/lib/server/meal-log";
 import { authorizeMealLogRequest, readMealLogJson } from "@/lib/server/meal-log-route";
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
   const entryId = crypto.randomUUID();
   const payload = toMealLogRpcPayload(parsed.value);
   let rpcResult: { data: unknown; error: unknown } | null = null;
-  if (parsed.value.source.type === "cooked_batch") {
+  if (parsed.value.source.type === "cooked_batch" && parsed.value.quantityInput === undefined) {
     rpcResult = await authorized.client.rpc("create_legacy_leftover_meal_log_entry", {
       ...authorized.authorityArgs,
       p_entry_id: entryId,
@@ -37,6 +38,6 @@ export async function POST(request: Request) {
   rpcResult ??= await authorized.client.rpc("mutate_meal_log_entry", { ...authorized.authorityArgs, p_action: "create", p_entry_id: entryId, p_idempotency_key: key.value, p_expected_revision: null, p_payload: payload });
   const result = await callMealLogRpc({ rpc: async () => rpcResult }, "mutate_meal_log_entry", {});
   if (!result.ok) return result.response;
-  const data = projectMealLogData(result.data, quantityInputContractRequested(request));
+  const data = projectMealLogData(result.data, quantityInputContractRequested(request), wantsCookedWeightEvidence(request));
   return data ? ok(data, { status: 201 }) : fail("INTERNAL_ERROR", "식사 기록 결과를 확인하지 못했어요.", 500);
 }

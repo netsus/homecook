@@ -153,5 +153,6 @@ export async function POST(request: Request) {
 
   const entry = { ...(result.data as ProductPlannerEntryData) };
   if (!quantityInputContractRequested(request) || entry.quantity_input === null) delete entry.quantity_input;
+  if (!quantityInputWriteEnabled(request) || entry.quantity_policy !== "quantity-v4") delete entry.quantity_policy;
   return ok({ entry }, { status: 201 });
 }

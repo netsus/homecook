@@ -40,6 +40,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 function databaseFailure(error: RpcError | null, fallback: string) {
   const detail = `${error?.code ?? ""} ${error?.message ?? ""}`;
   if (/UNIT_POLICY_INACTIVE/i.test(detail)) return fail("UNIT_POLICY_INACTIVE", "새 단위 입력은 아직 사용할 수 없어요. 입력한 양은 그대로 유지했어요.", 409);
+  if (/NUTRITION_VERSION_CONFLICT/i.test(detail)) return fail("NUTRITION_VERSION_CONFLICT", "저장했던 제품의 영양 버전과 입력 기준이 달라요. 원래 양은 유지했어요.", 409);
   if (/NUTRITION_BASIS_MISMATCH/i.test(detail)) {
     return fail("NUTRITION_BASIS_MISMATCH", "이 수량 단위로 영양을 계산할 수 없어요.", 422);
   }
@@ -169,6 +170,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
   const entry = { ...(result.data as ProductPlannerEntryData) };
   if (!quantityInputContractRequested(request) || entry.quantity_input === null) delete entry.quantity_input;
+  if (!quantityInputWriteEnabled(request) || entry.quantity_policy !== "quantity-v4") delete entry.quantity_policy;
   return ok({ entry });
 }
 
