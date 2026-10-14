@@ -30,15 +30,20 @@ const mappings = [
   { id: id(121), recipe_id: id(207), ingredient_id: id(8) },
 ];
 
-function searchFixture(options: { failTable?: string; extraMappings?: typeof mappings } = {}) {
+function searchFixture(options: { failTable?: string; extraMappings?: typeof mappings; productMappings?: Array<{recipe_id: string; ingredient_id: string}> } = {}) {
   const requests: URL[] = [];
   const client = (scope: "ingredients" | "recipes") => createClient("http://127.0.0.1:54321", "test-only-key", {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { fetch: async (input) => {
+    global: { fetch: async (input, init) => {
       const url = new URL(String(input));
       requests.push(url);
       const path = url.pathname.replace("/rest/v1", "");
-      expect(isAnonymousHybridPublicReadRequest({ scope, path, method: "GET", search: url.search })).toBe(true);
+      const method = init?.method ?? "GET";
+      const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+      expect(isAnonymousHybridPublicReadRequest({ scope, path, method, search: url.search, body })).toBe(true);
+      if (path === "/rpc/read_recipe_product_ingredient_classification") {
+        return new Response(JSON.stringify((options.productMappings ?? []).filter((row) => body.p_ingredient_ids.includes(row.ingredient_id))), { headers: { "Content-Type": "application/json" } });
+      }
       const table = path.slice(1);
       if (table === options.failTable) return new Response(JSON.stringify({ message: "lookup unavailable" }), { status: 500 });
       let rows: Record<string, unknown>[] = table === "ingredients" ? [...ingredients]
@@ -86,6 +91,14 @@ describe("recipe ingredient discovery", () => {
     const { search } = searchFixture();
     expect(await search.filter([id(1), id(10)])).toEqual([id(201)]);
     expect(await search.filter([id(1), id(8)])).toEqual([]);
+  });
+
+  it("matches mixed generic/product classifications inside family OR and selected-condition AND", async () => {
+    const recipe = id(900);
+    const { search } = searchFixture({ extraMappings: [{ id: id(901), recipe_id: recipe, ingredient_id: id(10) }],
+      productMappings: [{ recipe_id: recipe, ingredient_id: id(2) }] });
+    expect(await search.filter([id(1), id(10)])).toContain(recipe);
+    expect(await search.filter([id(1), id(8)])).not.toContain(recipe);
   });
 
   it("normalizes spacing and does not expand a specific cut to unrelated pork cuts", async () => {

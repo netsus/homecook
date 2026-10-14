@@ -22,6 +22,20 @@ function consumedAmountText(ingredient: CookingModeIngredient) {
   return amount.trim() === ingredient.standard_name.trim() ? "" : amount;
 }
 
+function consumedRowKey(ingredient: CookingModeIngredient, index: number) {
+  if (ingredient.row_key) return ingredient.row_key;
+  if (ingredient.food_product_id && ingredient.food_product_nutrition_version_id) {
+    return `product:${ingredient.food_product_id}:${ingredient.food_product_nutrition_version_id}:${ingredient.component_label ?? ""}`;
+  }
+  return ingredient.ingredient_id ?? `unidentified:${index}`;
+}
+
+function nullableConsumptionNotice(ingredient: CookingModeIngredient) {
+  return ingredient.food_product_id || ingredient.source_kind === "food_product"
+    ? "이전 요리 완료 화면에서는 제품별 팬트리 소진을 선택할 수 없어요."
+    : "재료 정보를 확인할 수 없어 팬트리 소진을 선택할 수 없어요.";
+}
+
 export function ConsumedIngredientSheet({
   ingredients,
   recipeTitle,
@@ -32,10 +46,15 @@ export function ConsumedIngredientSheet({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const isMobileViewport = useIsMobileViewport();
   const ingredientIds = useMemo(
-    () =>
-      Array.from(
-        new Set(ingredients.map((ingredient) => ingredient.ingredient_id)),
-      ),
+    () => {
+      const ids = new Set<string>();
+      for (const ingredient of ingredients) {
+        // Existing linked rows keep the legacy generic-ID contract. Row and
+        // product IDs must never be sent to this completion payload.
+        if (ingredient.ingredient_id !== null) ids.add(ingredient.ingredient_id);
+      }
+      return Array.from(ids);
+    },
     [ingredients],
   );
   const totalCount = ingredientIds.length;
@@ -125,14 +144,17 @@ export function ConsumedIngredientSheet({
           data-testid="consumed-ingredient-list"
         >
           {ingredients.map((ingredient, index) => {
-            const isChecked = checked.has(ingredient.ingredient_id);
+            const id = ingredient.ingredient_id;
+            const isChecked = id !== null && checked.has(id);
+            const key = consumedRowKey(ingredient, index);
 
             return (
               <button
                 className="flex min-h-[58px] w-full cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--surface)] px-3 py-2.5 text-left"
-                data-testid={`consumed-check-${ingredient.ingredient_id}`}
-                key={`${ingredient.ingredient_id}-${index}`}
-                onClick={() => toggleIngredient(ingredient.ingredient_id)}
+                data-testid={`consumed-check-${id ?? key}`}
+                disabled={id === null}
+                key={`${key}-${index}`}
+                onClick={() => { if (id !== null) toggleIngredient(id); }}
                 aria-checked={isChecked}
                 aria-label={`${ingredient.standard_name} ${consumedAmountText(ingredient)} 소진 재료 선택`}
                 role="checkbox"
@@ -153,12 +175,13 @@ export function ConsumedIngredientSheet({
                   className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5"
                   data-testid="consumed-ingredient-item"
                 >
-                  <span className="truncate text-[14px] font-semibold leading-[1.35] text-[var(--wave1-ink)]">
+                  <span className={`${ingredient.food_product_id ? "col-span-2 line-clamp-2 break-words" : "truncate"} text-[14px] font-semibold leading-[1.35] text-[var(--wave1-ink)]`}>
                     {ingredient.standard_name}
                   </span>
-                  <span className="shrink-0 text-right text-[12px] font-semibold leading-[1.35] text-[var(--wave1-text-2)]">
+                  <span className={`${ingredient.food_product_id ? "col-span-2 " : ""}shrink-0 text-right text-[12px] font-semibold leading-[1.35] text-[var(--wave1-text-2)]`}>
                     {consumedAmountText(ingredient)}
                   </span>
+                  {id === null ? <span className="col-span-2 text-xs text-[var(--text-2)]">{nullableConsumptionNotice(ingredient)}</span> : null}
                 </span>
               </button>
             );
@@ -221,16 +244,19 @@ export function ConsumedIngredientSheet({
         >
           {selectionToolbar}
           {ingredients.map((ing, index) => {
-            const isChecked = checked.has(ing.ingredient_id);
+            const id = ing.ingredient_id;
+            const isChecked = id !== null && checked.has(id);
+            const key = consumedRowKey(ing, index);
 
             return (
               <button
                 aria-checked={isChecked}
                 aria-label={`${ing.standard_name} ${consumedAmountText(ing)} 소진 재료 선택`}
                 className="mb-2 flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-left last:mb-0"
-                data-testid={`consumed-check-${ing.ingredient_id}`}
-                key={`${ing.ingredient_id}-${index}`}
-                onClick={() => toggleIngredient(ing.ingredient_id)}
+                data-testid={`consumed-check-${id ?? key}`}
+                disabled={id === null}
+                key={`${key}-${index}`}
+                onClick={() => { if (id !== null) toggleIngredient(id); }}
                 role="checkbox"
                 type="button"
               >
@@ -247,6 +273,7 @@ export function ConsumedIngredientSheet({
                 </span>
                 <span className="min-w-0 flex-1 break-keep text-sm text-[var(--foreground)]">
                   {ing.standard_name}
+                  {id === null ? <span className="mt-1 block text-xs text-[var(--text-2)]">{nullableConsumptionNotice(ing)}</span> : null}
                 </span>
                 <span className="min-w-0 max-w-[44%] break-words text-right text-xs text-[var(--muted)]">
                   {consumedAmountText(ing)}

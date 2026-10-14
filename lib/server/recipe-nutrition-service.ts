@@ -18,7 +18,7 @@ interface RecipeNutritionRecipeRow {
 
 interface RecipeNutritionIngredientRow {
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   amount: number | null;
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
@@ -93,7 +93,11 @@ function isValidRecipe(
 }
 
 function isValidIngredient(row: RecipeNutritionIngredientRow) {
-  if (!isNonEmptyText(row.id) || !isNonEmptyText(row.ingredient_id)) return false;
+  if (!isNonEmptyText(row.id)) return false;
+  const product = row.food_product_id ?? null;
+  const version = row.food_product_nutrition_version_id ?? null;
+  if ((product === null) !== (version === null)) return false;
+  if (product ? !isNonEmptyText(product) || !isNonEmptyText(version) : !isNonEmptyText(row.ingredient_id)) return false;
   if (!Number.isInteger(row.sort_order) || typeof row.scalable !== "boolean") return false;
   if (row.ingredient_type === "TO_TASTE") {
     return row.amount === null && row.unit === null && row.scalable === false;
@@ -143,7 +147,7 @@ export async function prepareRecipeNutritionSnapshot(
   try {
     predecessors = await loadRecipeNutritionPredecessors(
       predecessorClient,
-      ingredientsResult.data.map((ingredient) => ingredient.ingredient_id),
+      ingredientsResult.data.flatMap((ingredient) => ingredient.food_product_id || !ingredient.ingredient_id ? [] : [ingredient.ingredient_id]),
     );
   } catch {
     throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");

@@ -20,7 +20,8 @@ interface RecipeIngredientsRow {
   food_product_name?: string | null;
   food_product_brand?: string | null;
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
+  source_kind?: "ingredient" | "food_product" | null;
   amount: number | string | null;
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
@@ -93,6 +94,10 @@ export function normalizeRecipeIngredients(
         sort_order: item.sort_order,
       };
 
+      if (item.source_kind) {
+        ingredient.source_kind = item.source_kind;
+        ingredient.row_key = item.id;
+      }
       if (item.food_product_id) {
         ingredient.food_product_id = item.food_product_id;
         ingredient.food_product_nutrition_version_id =

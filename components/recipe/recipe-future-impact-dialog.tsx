@@ -39,6 +39,13 @@ export function RecipeFutureImpactDialog({ errorCode, errorPhase = "preview", im
   const [strategy, setStrategy] = useState<Strategy | null>(null);
   const unauthorized = errorCode === "UNAUTHORIZED";
   const needsRecheck = Boolean(errorCode) && !unauthorized;
+  const errorMessage = errorCode === "RECIPE_PRODUCT_UNAVAILABLE"
+    ? "지금은 선택한 제품 재료를 저장할 수 없어요. 입력 내용을 유지한 채 다시 시도해 주세요."
+    : errorCode === "RECIPE_SOURCE_CONTRACT_REQUIRED"
+      ? "레시피의 재료 정보를 안전하게 저장하려면 최신 레시피를 다시 열어 주세요. 입력 내용을 별도로 보관한 뒤 다시 시도해 주세요."
+    : errorPhase === "save"
+      ? "저장하지 못했어요. 수정한 내용은 유지했으니 다시 확인한 뒤 저장해 주세요."
+      : "영향을 확인하지 못했어요. 최신 내용으로 다시 확인해 주세요.";
   useDialogBoundary({ dialogRef, initialFocusRef: unauthorized ? loginRef : needsRecheck ? recheckRef : undefined, onClose, closeOnEscape: !submitting });
   useEffect(() => {
     if (!errorCode) return;
@@ -52,7 +59,7 @@ export function RecipeFutureImpactDialog({ errorCode, errorPhase = "preview", im
       <div className="min-h-0 overflow-y-auto p-4" id="future-impact-copy">
         {loading ? <p role="status">영향을 확인하고 있어요.</p> : null}
         {unauthorized ? <div role="alert"><p>로그인이 만료됐어요. 다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onLogin} ref={loginRef} type="button">로그인하고 저장 계속하기</button></div> : null}
-        {needsRecheck ? <div role="alert"><p>{errorPhase === "save" ? "저장하지 못했어요. 수정한 내용은 유지했으니 다시 확인한 뒤 저장해 주세요." : "영향을 확인하지 못했어요. 최신 내용으로 다시 확인해 주세요."}</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onRecheck} ref={recheckRef} type="button">{errorCode === "RECIPE_IMPACT_STALE" || errorCode === "MEAL_COOKING_ALREADY_STARTED" ? "최신 영향 다시 확인" : "다시 확인"}</button></div> : null}
+        {needsRecheck ? <div role="alert"><p>{errorMessage}</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onRecheck} ref={recheckRef} type="button">{errorCode === "RECIPE_IMPACT_STALE" || errorCode === "MEAL_COOKING_ALREADY_STARTED" ? "최신 영향 다시 확인" : "다시 확인"}</button></div> : null}
         {!loading && !errorCode && impact ? <>
           <section className="rounded-[16px] bg-[var(--surface-fill)] p-4" aria-label="영향 요약">
             <p className="font-bold">미래 계획 {impact.future_meal_count}개</p>

@@ -1,4 +1,5 @@
 import { recipeProductLabel } from "@/lib/server/recipe-product-labels";
+import { scaleProductAmount } from "@/lib/server/recipe-product-quantity";
 import type {
   CookingModeIngredient,
   CookingModeStep,
@@ -23,11 +24,14 @@ interface IngredientJoinRow {
 }
 
 export interface CookingIngredientRow {
+  id?: string;
+  row_key?: string;
+  source_kind?: "ingredient" | "food_product" | null;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
   food_product_name?: string | null;
   food_product_brand?: string | null;
-  ingredient_id: string;
+  ingredient_id: string | null;
   amount: number | null;
   unit: string | null;
   display_text: string | null;
@@ -288,20 +292,23 @@ export function toCookingModeIngredient({
 }): CookingModeIngredient {
   const ingredient = firstJoin(row.ingredients) ?? {};
   const name = recipeProductLabel(row) ?? ingredient.standard_name ?? "";
-  const amount = scaleAmount({
+  const fixedProduct = Boolean(row.food_product_id && row.food_product_nutrition_version_id);
+  const amount = fixedProduct && row.amount !== null && row.scalable && baseServings >= 1
+    ? scaleProductAmount(row.amount, cookingServings, baseServings)
+    : fixedProduct ? row.amount : scaleAmount({
     amount: row.amount,
     baseServings,
     cookingServings,
     scalable: row.scalable,
   });
-  const amountText = formatAmount(amount);
+  const amountText = fixedProduct ? amount?.toString() ?? null : formatAmount(amount);
   const componentLabel = normalizeRecipeSectionLabel(row.component_label);
   const displayText =
     row.ingredient_type === "QUANT" && amountText && row.unit
       ? `${name} ${amountText}${row.unit}`
       : stripMatchingSectionPrefix(row.display_text, componentLabel);
 
-  return {
+  const projected: CookingModeIngredient = {
     ingredient_id: row.ingredient_id,
     standard_name: name,
     amount,
@@ -311,6 +318,17 @@ export function toCookingModeIngredient({
     ingredient_type: row.ingredient_type,
     scalable: row.scalable,
   };
+  if (row.source_kind || row.row_key || row.food_product_id) {
+    projected.row_key = row.row_key ?? row.id;
+    projected.source_kind = row.food_product_id ? "food_product" : "ingredient";
+  }
+  if (row.food_product_id) {
+    projected.food_product_id = row.food_product_id;
+    projected.food_product_nutrition_version_id = row.food_product_nutrition_version_id ?? null;
+    projected.food_product_name = row.food_product_name ?? null;
+    projected.food_product_brand = row.food_product_brand ?? null;
+  }
+  return projected;
 }
 
 export function toCookingModeStep(row: CookingStepRow): CookingModeStep {
