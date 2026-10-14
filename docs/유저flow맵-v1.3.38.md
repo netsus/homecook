@@ -2543,3 +2543,9 @@ SHOPPING_FLOW 안내 문구:
 3. 남은 요리의 개인 확인 기록 읽기(`target=batch`) → 기존 record를 선택해 철회 → record ID/revision/저장 지문과 UUID 멱등키 검증 → retracted event 추가 → 원무게·식사·prediction은 보존. 새 저장OFF에서도 유효한 조회/철회/성공 재생이 가능하다.
 
 C05 동의·수집·보유기간·모델 전환은 이 흐름에 포함하지 않는다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
+
+## 2026-10-15 추가 계약 — C05 선택 참여 비활성 통합 후보
+
+개인 기능은 개선 참여 여부와 무관하게 이용한다. 설명 확인 → 명시 선택 → 주체/문서/revision 검증 → 서버 성공 상태 반영 순서이며, 계정·세대가 바뀌면 이전 안내·확인을 폐기한다. 원 참여 철회는 consent/receipt와 pending을 같은 transaction에 기록한다. 정책 OFF·문서 없음 및 같은 키 재시도에서도 현재 withdrawn/pending을 반환하고 과거 참여 상태를 되살리지 않는다. 다른 주체·세대의 재전송은 409로 거절한다. 개인 확인 취소는 별도 append event만 기록하며 원 실측 g·식사 당시 분모·영양을 바꾸지 않는다.
+
+현재는 개인 실측 확인 이후의 로컬 통합 후보이며 운영 UI·참여·수집은 비활성이다. 동의 문서·보유기간은 미정(NULL), 적격 자료는 0이다. 실제 선별 caller·저장 transaction·삭제/복원·모델 생명주기는 미완료다. [참여 준비와 한계](engineering/mumeok-beta-participation-preparation-20261014.md), [통합 근거](engineering/weight-improvement-source-read-20261014.md)를 따른다.

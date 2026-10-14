@@ -1,0 +1,203 @@
+{
+  "synthetic": true,
+  "author_fixture_sha256": "5aa29304275cc56b6d590388ed3718b0d9a9b35d850257e1c2640e8c3752485c",
+  "cases": {
+    "product_package": {
+      "row_key": "78000000-0000-4000-8000-000000000020",
+      "ingredient_id": null,
+      "food_product_id": "78000000-0000-4000-8000-000000000003",
+      "food_product_nutrition_version_id": "78000000-0000-4000-8000-000000000004",
+      "amount": 66.66666666666667,
+      "unit": "g",
+      "ingredient_type": "QUANT",
+      "scalable": true,
+      "quantity_input": {
+        "schema_version": "quantity-v4",
+        "raw_value": "1/3",
+        "raw_unit": "package",
+        "numerator": "1",
+        "denominator": "3",
+        "normalized": {
+          "amount": 66.66666666666667,
+          "unit": "g"
+        },
+        "display_quantity": {
+          "amount": 66.66666666666667,
+          "unit": "g"
+        },
+        "source_versions": [
+          "78000000-0000-4000-8000-000000000004"
+        ],
+        "evidence_ids": [],
+        "quality": "direct",
+        "reason": null,
+        "batch_basis": null,
+        "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "ingredient_piece": {
+      "row_key": "78000000-0000-4000-8000-000000000020",
+      "ingredient_id": "78000000-0000-4000-8000-000000000001",
+      "food_product_id": null,
+      "food_product_nutrition_version_id": null,
+      "amount": 100,
+      "unit": "g",
+      "ingredient_type": "QUANT",
+      "scalable": true,
+      "quantity_input": {
+        "schema_version": "quantity-v4",
+        "raw_value": "1",
+        "raw_unit": "개",
+        "numerator": "1",
+        "denominator": "1",
+        "normalized": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "display_quantity": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "source_versions": [
+          "piece-v1"
+        ],
+        "evidence_ids": [
+          "78000000-0000-4000-8000-000000000005"
+        ],
+        "quality": "estimated",
+        "reason": null,
+        "batch_basis": null,
+        "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "ingredient_density": {
+      "row_key": "78000000-0000-4000-8000-000000000020",
+      "ingredient_id": "78000000-0000-4000-8000-000000000001",
+      "food_product_id": null,
+      "food_product_nutrition_version_id": null,
+      "amount": 12,
+      "unit": "g",
+      "ingredient_type": "QUANT",
+      "scalable": true,
+      "quantity_input": {
+        "schema_version": "quantity-v4",
+        "raw_value": "10",
+        "raw_unit": "ml",
+        "numerator": "10",
+        "denominator": "1",
+        "normalized": {
+          "amount": 12,
+          "unit": "g"
+        },
+        "display_quantity": {
+          "amount": 12,
+          "unit": "g"
+        },
+        "source_versions": [
+          "density-v1"
+        ],
+        "evidence_ids": [
+          "78000000-0000-4000-8000-000000000005"
+        ],
+        "quality": "direct",
+        "reason": null,
+        "batch_basis": null,
+        "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "invalid_version": {
+      "row_key": "78000000-0000-4000-8000-000000000020",
+      "ingredient_id": null,
+      "food_product_id": "78000000-0000-4000-8000-000000000003",
+      "food_product_nutrition_version_id": "78000000-0000-4000-8000-000000000004",
+      "amount": 66.66666666666667,
+      "unit": "g",
+      "ingredient_type": "QUANT",
+      "scalable": true,
+      "quantity_input": {
+        "schema_version": "quantity-v4",
+        "raw_value": "1/3",
+        "raw_unit": "package",
+        "numerator": "1",
+        "denominator": "3",
+        "normalized": {
+          "amount": 66.66666666666667,
+          "unit": "g"
+        },
+        "display_quantity": {
+          "amount": 66.66666666666667,
+          "unit": "g"
+        },
+        "source_versions": [
+          "78000000-0000-4000-8000-000000000009"
+        ],
+        "evidence_ids": [],
+        "quality": "direct",
+        "reason": null,
+        "batch_basis": null,
+        "context_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "expected_rows": {
+    "product_package": {
+      "rowKey": "78000000-0000-4000-8000-000000000020",
+      "sourceKind": "food_product",
+      "sourceId": "78000000-0000-4000-8000-000000000003",
+      "sourceVersion": "78000000-0000-4000-8000-000000000004",
+      "amount": 0.6666666666666666,
+      "unit": "package",
+      "grams": 133.33333333333334,
+      "quantityOrigin": "planned",
+      "gramsEvidence": {
+        "kind": "product_relation",
+        "status": "confirmed",
+        "version": "78000000-0000-4000-8000-000000000004",
+        "quality": "exact"
+      }
+    },
+    "ingredient_piece": {
+      "rowKey": "78000000-0000-4000-8000-000000000020",
+      "sourceKind": "ingredient",
+      "sourceId": "78000000-0000-4000-8000-000000000001",
+      "sourceVersion": null,
+      "amount": 2,
+      "unit": "개",
+      "grams": 200,
+      "quantityOrigin": "planned",
+      "gramsEvidence": {
+        "kind": "ingredient_conversion",
+        "status": "confirmed",
+        "version": "piece-v1",
+        "quality": "estimated"
+      }
+    },
+    "ingredient_density": {
+      "rowKey": "78000000-0000-4000-8000-000000000020",
+      "sourceKind": "ingredient",
+      "sourceId": "78000000-0000-4000-8000-000000000001",
+      "sourceVersion": null,
+      "amount": 20,
+      "unit": "ml",
+      "grams": 24,
+      "quantityOrigin": "planned",
+      "gramsEvidence": {
+        "kind": "ingredient_conversion",
+        "status": "confirmed",
+        "version": "density-v1",
+        "quality": "exact"
+      }
+    },
+    "invalid_version": {
+      "rowKey": "78000000-0000-4000-8000-000000000020",
+      "sourceKind": "food_product",
+      "sourceId": "78000000-0000-4000-8000-000000000003",
+      "sourceVersion": "78000000-0000-4000-8000-000000000004",
+      "amount": 0.6666666666666666,
+      "unit": "package",
+      "grams": null,
+      "quantityOrigin": "planned",
+      "gramsEvidence": null
+    }
+  }
+}

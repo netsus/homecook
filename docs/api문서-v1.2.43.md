@@ -5840,3 +5840,9 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 record는 id/revision/status(`attested`1 또는 `retracted`2), statement version, measurement_evidence_id/measurement_original_revision, measured_g, recipe_content_snapshot_id, 저장 context_fingerprint, observed_at, row_count와 `provenance=user_attested`, `physical_verification=not_verified`, `record_usage=qa_personal_record`를 제공한다. 새 확인 응답의 지문/측정g는 요청과 저장 결과에 일치해야 한다. C05 동의·수집·기간·모델 적격을 포함하지 않는다.
 
 미로그인401과 없는/타인 target404를 유지한다. 신규 조회의 id/target 형식 오류는422, 철회 본문의 형식/추가필드 오류는422이며 기존 완료·무게 API의 id404/본문422 계약은 유지한다. 새409는 `WEIGHT_ATTESTATION_DISABLED`, `WEIGHT_ATTESTATION_SUBJECT_CHANGED`, `WEIGHT_ATTESTATION_CONTEXT_CHANGED`, `WEIGHT_ATTESTATION_REVISION_CONFLICT`, `WEIGHT_ATTESTATION_OLD_RECEIPT`이며 기존 세대/세션/멱등409·정비503도 유지한다. 잘못된 결과는 서버500 INVALID_RESPONSE/INTERNAL_ERROR 또는 client502 INVALID_RESPONSE로 성공 처리하지 않는다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
+
+## 2026-10-15 추가 계약 — C05 선택 참여 비활성 통합 후보
+
+`GET /api/v1/users/me/weight-improvement-participation`은 검증된 계정의 선택 상태를 반환한다. PATCH는 UUID Idempotency-Key, action(`notice_seen`/`decline`/`opt_in`/`withdraw`), `expected_subject`(owner_uuid/account_generation), `expected_revision`, `surface`를 받는다. opt_in은 `consent_checked:true`와 문서 version/hash가 필요하다. 표시 주체는 권한이 아닌 전제조건이며 불일치는 쓰기 전 `409 PARTICIPATION_SUBJECT_CHANGED`로 거절한다. 기존 응답·오류 래퍼를 유지하고 신규 참여 OFF·문서 없음에도 철회를 허용한다. 원 12인자 source-read RPC는 제한된 C01 receipt/evidence 관계만 투영하며 개인 확인을 actual·physical·QA 제외 사실로 승격하지 않는다. 새 registry/overload나 실제 collector/sample writer는 추가하지 않았다.
+
+현재는 개인 실측 확인 이후의 로컬 통합 후보이며 운영 UI·참여·수집은 비활성이다. 동의 문서·보유기간은 미정(NULL), 적격 자료는 0이다. 실제 선별 caller·저장 transaction·삭제/복원·모델 생명주기는 미완료다. [참여 준비와 한계](engineering/mumeok-beta-participation-preparation-20261014.md), [통합 근거](engineering/weight-improvement-source-read-20261014.md)를 따른다.
