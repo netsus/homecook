@@ -26,6 +26,7 @@ interface MealRow {
   user_id: string;
   recipe_id: string;
   status: string;
+  recipe_content_snapshots?: { ingredients_json: unknown } | Array<{ ingredients_json: unknown }> | null;
 }
 
 interface SessionInsertRow {
@@ -90,6 +91,9 @@ interface CookingSessionMealsTable {
 }
 
 interface CookingSessionDbClient {
+  from(table: "recipe_ingredients"): { select(columns: string): {
+    eq(column: string, value: string): ArrayResult<{ ingredient_id: string | null; food_product_id: string | null; food_product_nutrition_version_id: string | null }>;
+  } };
   from(table: "recipes"): RecipesTable;
   from(table: "meals"): MealsTable;
   from(table: "cooking_sessions"): CookingSessionsTable;
@@ -162,7 +166,7 @@ export async function POST(request: Request) {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, user_id, recipe_id, status")
+    .select("id, user_id, recipe_id, status, recipe_content_snapshots(ingredients_json)")
     .in("id", sessionInput.meal_ids);
 
   if (mealsResult.error || !mealsResult.data) {
@@ -185,6 +189,28 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "같은 레시피의 식사만 함께 요리할 수 있어요.", 422, [
       { field: "meal_ids", reason: "recipe_mismatch" },
     ]);
+  }
+
+  let requiresProductSession = mealsResult.data.some((meal) => {
+    const snapshot = Array.isArray(meal.recipe_content_snapshots)
+      ? meal.recipe_content_snapshots[0] : meal.recipe_content_snapshots;
+    return Array.isArray(snapshot?.ingredients_json) && snapshot.ingredients_json.some((item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      return "ingredient_id" in item && item.ingredient_id === null
+        && "food_product_id" in item && typeof item.food_product_id === "string"
+        && "food_product_nutrition_version_id" in item && typeof item.food_product_nutrition_version_id === "string";
+    });
+  });
+  if (!requiresProductSession && mealsResult.data.some((meal) => !meal.recipe_content_snapshots
+    || (Array.isArray(meal.recipe_content_snapshots) && meal.recipe_content_snapshots.length === 0))) {
+    const sources = await dbClient.from("recipe_ingredients")
+      .select("ingredient_id, food_product_id, food_product_nutrition_version_id")
+      .eq("recipe_id", sessionInput.recipe_id);
+    if (sources.error || !sources.data) return fail("INTERNAL_ERROR", "요리 세션을 만들지 못했어요.", 500);
+    requiresProductSession = sources.data.some((row) => row.ingredient_id === null && row.food_product_id && row.food_product_nutrition_version_id);
+  }
+  if (requiresProductSession) {
+    return fail("CONFLICT", "이 레시피의 요리 화면을 준비하지 못했어요. 다시 시도해 주세요.", 409);
   }
 
   const sessionResult = await dbClient

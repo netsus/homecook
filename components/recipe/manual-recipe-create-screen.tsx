@@ -1,6 +1,7 @@
 "use client";
 
 import { showActionConfirmation } from "@/stores/ui-store";
+import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +12,10 @@ import {
   formatMealAddTargetLabel,
 } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
+import type { RecipeProductSelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
+import { recipeIngredientGroupKey, recipeIngredientMatchesStepReference } from "@/lib/recipe-editor-ingredients";
+import { recipeIngredientSourceKind } from "@/lib/recipe-ingredient-source";
+import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
 import {
   PersonalRecipeEditorShell,
   PersonalRecipeEditorShellFeedback,
@@ -177,11 +182,13 @@ interface ManualRecipeDraftStorage {
   areTagsDirty: boolean;
   uploadedImage: RecipeImageUploadData | null;
   pending: PendingManualCreate | null;
+  accountGeneration?: number;
+  resumePantry?: boolean;
 }
 
 const MANUAL_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 
-function readManualDraft(key: string, ownerId: string): ManualRecipeDraftStorage | null {
+function readManualDraft(key: string, ownerId: string, accountGeneration: number | null): ManualRecipeDraftStorage | "blocked" | null {
   try {
     const raw = sessionStorage.getItem(key);
     if (!raw) return null;
@@ -190,6 +197,7 @@ function readManualDraft(key: string, ownerId: string): ManualRecipeDraftStorage
       || typeof value.title !== "string" || !Number.isFinite(value.baseServings)
       || !Array.isArray(value.ingredients) || !Array.isArray(value.steps)
       || !Array.isArray(value.reviewedTags)
+      || (value.resumePantry !== undefined && typeof value.resumePantry !== "boolean")
       || value.ingredients.some((item) => !item || typeof item.tempId !== "string" || typeof item.standard_name !== "string")
       || value.steps.some((item) => !item || typeof item.tempId !== "string" || typeof item.instruction !== "string")
       || (value.pending && (typeof value.pending.key !== "string" || !value.pending.body))) {
@@ -206,6 +214,8 @@ function readManualDraft(key: string, ownerId: string): ManualRecipeDraftStorage
       sessionStorage.removeItem(key);
       return null;
     }
+    if ((value.accountGeneration !== undefined && value.accountGeneration !== accountGeneration)
+      || (value.resumePantry && (!Number.isSafeInteger(value.accountGeneration) || Number(value.accountGeneration) <= 0))) return "blocked";
     return value;
   } catch {
     return null;
@@ -403,14 +413,19 @@ export function ManualRecipeCreateScreen({
   const [title, setTitle] = useState("");
   const [baseServings, setBaseServings] = useState(2);
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
+  const [productContexts, setProductContexts] = useState<RecipeProductSelectionContexts>({});
+  const [ingredientUnitErrors, setIngredientUnitErrors] = useState<Record<string, string>>({});
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>("none");
+  const [ingredientPickerSource, setIngredientPickerSource] = useState<"catalog" | "pantry">("catalog");
   const [isSaving, setIsSaving] = useState(false);
   const [isCreateOutcomeUnknown, setIsCreateOutcomeUnknown] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const draftStorageKeyRef = useRef<string | null>(null);
   const draftOwnerIdRef = useRef<string | null>(null);
+  const draftGenerationRef = useRef<number | null>(null);
+  const resumePantryRef = useRef(false);
   const draftCompleteRef = useRef(false);
   const pendingCreateRef = useRef<PendingManualCreate | null>(null);
   const saveInFlightRef = useRef(false);
@@ -473,11 +488,20 @@ export function ManualRecipeCreateScreen({
     let cancelled = false;
     void fetchUserProfile().then((profile) => {
       if (cancelled) return;
-      const key = `homecook:manual-recipe-draft:${profile.id}:${planDate}:${columnId}`;
+      const baseKey = `homecook:manual-recipe-draft:${profile.id}:${planDate}:${columnId}`;
+      const generation = Number.isSafeInteger(profile.account_generation) && Number(profile.account_generation) > 0 ? profile.account_generation ?? null : null;
+      const generationKey = `${baseKey}:generation:${generation ?? "unverified"}`;
+      let key = baseKey;
+      try { if (sessionStorage.getItem(generationKey)) key = generationKey; } catch { /* Draft storage can be unavailable. */ }
       draftStorageKeyRef.current = key;
       draftOwnerIdRef.current = profile.id;
-      const draft = readManualDraft(key, profile.id);
-      if (draft) {
+      draftGenerationRef.current = generation;
+      const draft = readManualDraft(key, profile.id, generation);
+      if (draft === "blocked") {
+        // Never overwrite the locked old-generation draft while preparing a new one.
+        draftStorageKeyRef.current = generationKey;
+        setDraftNotice("계정 정보를 확인할 수 없거나 바뀌어 이전 초안을 자동으로 복원하지 않았어요. 이전 내용은 이 탭에 보관했어요.");
+      } else if (draft) {
         setTitle(draft.title);
         setBaseServings(draft.baseServings);
         setIngredients(draft.ingredients);
@@ -501,6 +525,7 @@ export function ManualRecipeCreateScreen({
         setDraftNotice(draft.pending
           ? "이전에 보낸 저장 요청이 있어요. 저장 결과를 확인해 주세요."
           : "이 탭에서 작성하던 내용을 복원했어요. 업로드 전 사진은 다시 선택해 주세요.");
+        if (draft.resumePantry) { setIngredientPickerSource("pantry"); setModalMode("ingredient-add"); }
       }
       setDraftReady(true);
     }).catch(() => {
@@ -516,6 +541,7 @@ export function ManualRecipeCreateScreen({
         version: 1, ownerId: draftOwnerIdRef.current,
         savedAt: Date.now(), title, baseServings, ingredients, steps,
         reviewedTags, areTagsDirty, uploadedImage: uploadedImageRef.current, pending,
+        accountGeneration: draftGenerationRef.current ?? undefined, resumePantry: resumePantryRef.current,
       };
       sessionStorage.setItem(draftStorageKeyRef.current, JSON.stringify(draft));
       return true;
@@ -824,17 +850,22 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleAddIngredient = useCallback(
-    (newIngredients: ManualRecipeIngredientInput[]) => {
-      setIngredients((prev) => [
-        ...prev,
-        ...newIngredients.map((ingredient, index) =>
-          normalizeIngredient({
+    (newIngredients: ManualRecipeIngredientInput[], products: RecipeProductSelectionContexts = {}) => {
+      setProductContexts((current) => ({ ...current, ...products }));
+      setIngredients((prev) => {
+        const existing = new Set(prev.map(recipeIngredientGroupKey));
+        const added = newIngredients.filter((ingredient) => !existing.has(recipeIngredientGroupKey(ingredient)));
+        return [...prev, ...added.map((ingredient, index) => {
+          const rowKey = ingredient.row_key ?? crypto.randomUUID();
+          return normalizeIngredient({
             ...ingredient,
+            row_key: rowKey,
+            source_kind: recipeIngredientSourceKind(ingredient),
             sort_order: prev.length + index + 1,
-            tempId: `temp-ing-${Date.now()}-${index}`,
-          }),
-        ),
-      ]);
+            tempId: rowKey,
+          });
+        })];
+      });
     },
     []
   );
@@ -844,22 +875,37 @@ export function ManualRecipeCreateScreen({
       tempId: string,
       patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
     ) => {
+      const ingredient = ingredients.find(row => row.tempId === tempId);
+      let amount = patch.amount;
+      if (ingredient?.food_product_id && ingredient.unit && patch.unit && ingredient.unit !== patch.unit && ingredient.amount !== null) {
+        const context = ingredient.row_key ? productContexts[ingredient.row_key] : undefined;
+        const converted = context?.id === ingredient.food_product_id && context.nutrition_version_id === ingredient.food_product_nutrition_version_id
+          ? convertProductQuantity(ingredient.amount, ingredient.unit, patch.unit, context.basis_relations) : null;
+        if (converted === null) {
+          setIngredientUnitErrors(current => ({ ...current, [tempId]: "단위 전환 근거를 확인하지 못해 기존 분량과 단위를 유지했어요." })); return;
+        }
+        amount = converted;
+      }
+      setIngredientUnitErrors(current => { const next = { ...current }; delete next[tempId]; return next; });
       setIngredients((prev) =>
         prev.map((ingredient) =>
-          ingredient.tempId === tempId
-            ? normalizeIngredient({ ...ingredient, ...patch })
-            : ingredient,
+          ingredient.tempId === tempId ? normalizeIngredient({
+            ...ingredient,
+            ...patch,
+            amount,
+          }) : ingredient,
         ),
       );
     },
-    [],
+    [ingredients, productContexts],
   );
 
   const handleRemoveIngredient = useCallback((tempId: string) => {
     const removed = ingredients.find((item) => item.tempId === tempId);
     setIngredients((prev) => prev.filter((ing) => ing.tempId !== tempId));
     if (removed) setSteps((current) => current.map((step) => ({
-      ...step, ingredients_used: step.ingredients_used.filter((item) => item.ingredient_id !== removed.ingredient_id),
+      ...step, ingredients_used: step.ingredients_used.filter((item) => !recipeIngredientMatchesStepReference(removed, item)
+        || (!item.row_key && ingredients.filter((row) => recipeIngredientMatchesStepReference(row, item)).length !== 1)),
     })));
   }, [ingredients]);
 
@@ -1432,6 +1478,7 @@ export function ManualRecipeCreateScreen({
       const verifyDraftOwner = async () => {
         const profile = await fetchUserProfile();
         if (!ownerId || profile.id !== ownerId
+          || (draftGenerationRef.current !== null && profile.account_generation !== draftGenerationRef.current)
           || (pendingCreateRef.current && pendingCreateRef.current.ownerId !== ownerId)) {
           const stored = persistDraft();
           throw new Error(stored
@@ -1471,6 +1518,8 @@ export function ManualRecipeCreateScreen({
           ...imagePayload,
           ingredients: ingredients.map((ing, idx) => {
             const ingredient: ManualRecipeIngredientInput = {
+              source_kind: recipeIngredientSourceKind(ing),
+              row_key: ing.row_key ?? crypto.randomUUID(),
               ingredient_id: ing.ingredient_id,
               standard_name: ing.standard_name,
               amount: ing.amount,
@@ -1480,6 +1529,7 @@ export function ManualRecipeCreateScreen({
               scalable: ing.scalable,
               sort_order: idx + 1,
             };
+            if (ing.component_label !== undefined) ingredient.component_label = ing.component_label;
             if (!ing.food_product_id) return ingredient;
             return {
               ...ingredient,
@@ -1487,12 +1537,16 @@ export function ManualRecipeCreateScreen({
               food_product_nutrition_version_id: ing.food_product_nutrition_version_id,
             };
           }),
-          steps: steps.map((step) => ({
-            step_number: step.step_number, instruction: step.instruction,
-            cooking_method_id: step.cooking_method?.id ?? "",
-            ingredients_used: step.ingredients_used, heat_level: step.heat_level,
-            duration_seconds: step.duration_seconds, duration_text: step.duration_text,
-          })),
+          steps: steps.map((step) => {
+            const input: ManualRecipeStepInput = {
+              step_number: step.step_number, instruction: step.instruction,
+              cooking_method_id: step.cooking_method?.id ?? "",
+              ingredients_used: step.ingredients_used, heat_level: step.heat_level,
+              duration_seconds: step.duration_seconds, duration_text: step.duration_text,
+            };
+            if (step.component_label !== undefined) input.component_label = step.component_label;
+            return input;
+          }),
         };
         if (reviewedTagPayload !== undefined) body.tags = reviewedTagPayload;
         pending = {
@@ -1617,6 +1671,21 @@ export function ManualRecipeCreateScreen({
   }, [appReturn]);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
+  const handlePantryLogin = () => {
+    if (!draftOwnerIdRef.current || draftGenerationRef.current === null) {
+      return "초안을 작성한 계정 정보를 확인하지 못했어요. 이 화면을 열어 둔 채 다시 확인해 주세요.";
+    }
+    resumePantryRef.current = true;
+    if (!persistDraft()) { resumePantryRef.current = false; return "초안을 보관하지 못했어요. 이 화면을 열어 둔 채 다시 시도해 주세요."; }
+    const query = new URLSearchParams({ date: planDate, columnId, slot: slotName });
+    const currentQuery = new URLSearchParams(window.location.search);
+    for (const name of ["returnTo", "returnSurface", "restore"]) {
+      const value = currentQuery.get(name); if (value) query.set(name, value);
+    }
+    const next = presentation === "embedded" ? `/menu/add/manual?${query.toString()}` : `${window.location.pathname}${window.location.search}`;
+    document.cookie = createPostAuthNextCookie(next);
+    releaseHistoryGuard(() => router.push(`/login?reauthenticate=1&next=${encodeURIComponent(next)}`));
+  };
   const desktopManualBody = (
     <>
       <section className="web-manual-section">
@@ -1682,6 +1751,8 @@ export function ManualRecipeCreateScreen({
         </div>
         <RecipeEditorIngredientList
           ingredients={ingredients}
+          productContexts={productContexts}
+          unitErrors={ingredientUnitErrors}
           showValidationError={showValidationErrors}
           onChange={handleUpdateIngredient}
           onRemove={handleRemoveIngredient}
@@ -1759,8 +1830,10 @@ export function ManualRecipeCreateScreen({
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
           enableProducts
-          excludedIngredientIds={ingredients.map((item) => item.ingredient_id)}
-          onClose={() => setModalMode("none")}
+          excludedIngredients={ingredients}
+          initialSource={ingredientPickerSource}
+          onRequireLogin={handlePantryLogin}
+          onClose={() => { setModalMode("none"); setIngredientPickerSource("catalog"); }}
           onAdd={handleAddIngredient}
           presentation="web"
         />
@@ -1792,6 +1865,7 @@ export function ManualRecipeCreateScreen({
         <PersonalRecipeEditorShell
           context="planner-add"
           controller={editorShell}
+          feedbackPlacement="consumer"
           presentation="integrated"
         >
           <div
@@ -1800,6 +1874,7 @@ export function ManualRecipeCreateScreen({
           >
             <div className="web-menu-add-embedded-form">
               {draftRecoveryNotice}
+              <PersonalRecipeEditorShellFeedback controller={editorShell} />
               <fieldset disabled={isImageLifecycleLocked || !draftReady} className="min-w-0">
                 {desktopManualBody}
               </fieldset>
@@ -1816,6 +1891,7 @@ export function ManualRecipeCreateScreen({
       <PersonalRecipeEditorShell
         context="planner-add"
         controller={editorShell}
+        feedbackPlacement="consumer"
         presentation="integrated"
       >
         <div className="web-menu-add-shell">
@@ -1852,6 +1928,7 @@ export function ManualRecipeCreateScreen({
 
             <WebCard className="web-manual-card">
               {draftRecoveryNotice}
+              <PersonalRecipeEditorShellFeedback controller={editorShell} />
               <fieldset disabled={isImageLifecycleLocked || !draftReady} className="min-w-0">
                 {desktopManualBody}
               </fieldset>
@@ -1980,6 +2057,8 @@ export function ManualRecipeCreateScreen({
             </div>
             <RecipeEditorIngredientList
               ingredients={ingredients}
+              productContexts={productContexts}
+              unitErrors={ingredientUnitErrors}
               showValidationError={showValidationErrors}
               onChange={handleUpdateIngredient}
               onRemove={handleRemoveIngredient}
@@ -2047,8 +2126,10 @@ export function ManualRecipeCreateScreen({
         {modalMode === "ingredient-add" && (
           <RecipeIngredientAddModal
           enableProducts
-          excludedIngredientIds={ingredients.map((item) => item.ingredient_id)}
-            onClose={() => setModalMode("none")}
+          excludedIngredients={ingredients}
+            initialSource={ingredientPickerSource}
+            onRequireLogin={handlePantryLogin}
+            onClose={() => { setModalMode("none"); setIngredientPickerSource("catalog"); }}
             onAdd={handleAddIngredient}
           />
         )}
