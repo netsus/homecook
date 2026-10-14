@@ -80,4 +80,30 @@ describe("server-owned pinned weight input", () => {
     expect((await readSnapshotWeightPrediction({ client: reader, weightClient: null, ownerId: owner, sessionId,
       cookingSteps: [{ ...projectedStep, instruction: original.instruction }] }))?.prediction.totalGrams).toBeNull();
   });
+  it("reattaches the frozen C04 conversion after the actual generic hydrator reconstructs the row", async () => {
+    const real = await vi.importActual<typeof import("@/scripts/lib/recipe-nutrition-predecessor.mjs")>("@/scripts/lib/recipe-nutrition-predecessor.mjs");
+    loaders.load.mockResolvedValue(new Map());
+    loaders.hydrate.mockImplementationOnce(real.hydrateRecipeNutritionIngredients);
+    const metadata = { schema_version: "quantity-v4", raw_value: "2", raw_unit: "개", numerator: "2", denominator: "1",
+      normalized: { amount: 200, unit: "g" }, display_quantity: { amount: 200, unit: "g" }, quality: "estimated", reason: null,
+      evidence_ids: ["550e8400-e29b-41d4-a716-446655440019"], source_versions: ["piece-v1"], batch_basis: null, context_sha256: "a".repeat(64) };
+    const value = source();
+    const row = { ...value.recipe_content_snapshots.ingredients_json[0], amount: 200, quantity_input: metadata };
+    const input = { ...value, recipe_content_snapshots: { ...value.recipe_content_snapshots, ingredients_json: [row] } };
+    const before = JSON.stringify(input);
+    const result = await readSnapshotWeightPrediction({ client: client(input), weightClient: { from: () => null }, ownerId: owner, sessionId,
+      cookingSteps: [projectedStep] });
+    expect(result?.prediction.totalGrams).toBe(200);
+    expect(result?.prediction.input?.rows[0]).toMatchObject({ amount: 2, unit: "개", quantityOrigin: "planned", grams: 200,
+      gramsEvidence: { kind: "ingredient_conversion", version: "piece-v1", quality: "estimated" } });
+    expect(result?.rawRows[0]).toMatchObject({ amount: 200, unit: "g" });
+    expect(JSON.stringify(input)).toBe(before);
+  });
+  it("does not attach a frozen conversion to a different hydrated row or product version", async () => {
+    for (const patch of [{ id: "other-row" }, { food_product_id: ingredient, food_product_nutrition_version_id: pin }]) {
+      loaders.hydrate.mockImplementationOnce(rows => rows.map((row: Record<string, unknown>) => ({ ...row, ...patch })));
+      expect(await readSnapshotWeightPrediction({ client: client(source()), weightClient: { from: () => null }, ownerId: owner, sessionId,
+        cookingSteps: [projectedStep] })).toBeNull();
+    }
+  });
 });

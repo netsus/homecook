@@ -4,6 +4,9 @@ import { isUuid } from "@/lib/server/cooked-batches";
 import type { CookingModeStep } from "@/types/cooking";
 import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
 import { pieceWeightMatchesIngredient } from "@/lib/nutrition/ingredient-piece-units.mjs";
+import { isQuantityInputSnapshot, parseQuantityInput } from "@/lib/quantity-input";
+import { FOOD_PRODUCT_BASIS_UNITS } from "@/types/food-product";
+import type { CookingWeightSnapshotIngredient } from "@/lib/server/cooked-batch-weight-estimate";
 
 export const COOKED_WEIGHT_INPUT_VERSION = "snapshot-weight-v2";
 
@@ -134,9 +137,61 @@ function gramsEvidence(row: RecipeNutritionIngredientInput, grams: number | null
     version: evidence.source.source_version, quality: "estimated" };
 }
 
+type WeightQuantity = Pick<CookedWeightRow, "amount" | "unit" | "grams" | "gramsEvidence">;
+
+function frozenQuantity(row: CookingWeightSnapshotIngredient, scale: number): WeightQuantity {
+  const unknown: WeightQuantity = { amount: row.amount === null ? null : row.amount * scale, unit: row.unit, grams: null, gramsEvidence: null };
+  if (!record(row.quantity_input) || row.amount === null || row.unit === null) return unknown;
+  const input = { ...row.quantity_input };
+  if (Object.hasOwn(input, "context_sha256")) {
+    if (typeof input.context_sha256 !== "string" || !/^[a-f0-9]{64}$/u.test(input.context_sha256)) return unknown;
+    delete input.context_sha256;
+  }
+  if (!isQuantityInputSnapshot(input, { amount: row.amount, unit: row.unit }) || !input.display_quantity
+    || input.batch_basis !== null || !Number.isFinite(Number(input.numerator))
+    || !Number.isFinite(Number(input.denominator))) return unknown;
+  const parsed = parseQuantityInput(input.raw_value);
+  if (!parsed) return unknown;
+  const quantity: WeightQuantity = { amount: parsed.amount * scale, unit: input.raw_unit, grams: null, gramsEvidence: null };
+  if (!Number.isFinite(quantity.amount) || !Number.isFinite(scale) || scale <= 0
+    || input.quality === "unavailable" || input.reason !== null || input.normalized === null) return quantity;
+  const product = Boolean(row.food_product_id || row.food_product_nutrition_version_id);
+  if (product && (input.source_versions.length !== 1 || input.source_versions[0] !== row.food_product_nutrition_version_id)) return quantity;
+  const rawUnit = input.raw_unit.trim();
+  const direct = rawUnit.toLowerCase() === "g" || rawUnit.toLowerCase() === "kg";
+  const mass = (amount: number, unit: string) => unit.trim().toLowerCase() === "g" ? amount
+    : unit.trim().toLowerCase() === "kg" ? amount * 1000 : null;
+  const agrees = (left: number, right: number) => Math.abs(left - right) <= Math.max(1, Math.abs(left), Math.abs(right)) * 1e-12;
+  const grams = input.normalized.unit === "g" ? input.normalized.amount
+    : product ? convertProductQuantity(input.normalized.amount, "ml", "g", row.product_basis_relations ?? []) : null;
+  if (grams === null || !Number.isFinite(grams) || grams <= 0) return quantity;
+  const displayGrams = mass(row.amount, row.unit);
+  if (displayGrams !== null && !agrees(displayGrams, grams)) return quantity;
+  if (product && row.product_basis_relations !== undefined) {
+    const converted = convertProductQuantity(parsed.amount, direct ? rawUnit.toLowerCase() : rawUnit, "g", row.product_basis_relations);
+    if (converted === null || !agrees(converted, grams)) return quantity;
+  }
+  const quality = input.quality === "estimated" ? "estimated" : "exact";
+  if (direct) {
+    const rawGrams = mass(parsed.amount, rawUnit);
+    if (rawGrams === null || !agrees(rawGrams, grams)) return quantity;
+    return { ...quantity, grams: rawGrams * scale, gramsEvidence: { kind: "direct_mass", status: "confirmed", evidenceId: null, version: null, quality } };
+  }
+  if (product) {
+    if (!FOOD_PRODUCT_BASIS_UNITS.some(unit => unit === rawUnit) && convertProductQuantity(1, rawUnit, "ml", []) === null) return quantity;
+    return { ...quantity, grams: grams * scale, gramsEvidence: { kind: "product_relation", status: "confirmed",
+      evidenceId: row.food_product_nutrition_version_id ?? null, version: row.food_product_nutrition_version_id ?? null, quality } };
+  }
+  // A single recorded conversion reference fits the existing evidence contract.
+  // Do not discard parts of an ambiguous multi-source conversion to fill it.
+  if (input.evidence_ids.length !== 1 || !isUuid(input.evidence_ids[0]) || input.source_versions.length !== 1) return quantity;
+  return { ...quantity, grams: grams * scale, gramsEvidence: { kind: "ingredient_conversion", status: "confirmed",
+    evidenceId: input.evidence_ids[0], version: input.source_versions[0], quality } };
+}
+
 /** Existing snapshots do not assert closed boundaries, drainage, or exact yield protocols. */
 export function predictSnapshotWeight({ snapshotId, baseServings, cookingServings, ingredients, snapshotSteps = [], cookingSteps = [] }: {
-  snapshotId: string; baseServings: number; cookingServings: number; ingredients: RecipeNutritionIngredientInput[];
+  snapshotId: string; baseServings: number; cookingServings: number; ingredients: CookingWeightSnapshotIngredient[];
   snapshotSteps?: readonly unknown[]; cookingSteps?: readonly CookingModeStep[];
 }): SnapshotWeightPrediction {
   const scale = Number.isFinite(baseServings) && baseServings > 0 ? cookingServings / baseServings : NaN;
@@ -147,12 +202,15 @@ export function predictSnapshotWeight({ snapshotId, baseServings, cookingServing
       : product ? amount !== null && row.unit !== null && row.food_product_id && row.food_product_nutrition_version_id
         ? convertProductQuantity(amount, ["g", "kg"].includes(row.unit.trim().toLowerCase()) ? row.unit.trim().toLowerCase() : row.unit.trim(), "g", row.product_basis_relations ?? []) : null
         : calculateRecipeIngredientWeightGrams([{ ...row, amount }]);
+    const quantity = row.ingredient_type !== "TO_TASTE" && Object.hasOwn(row, "quantity_input")
+      ? frozenQuantity(row, row.scalable ? scale : 1)
+      : { amount: Number.isFinite(amount) ? amount : null, unit: row.unit, grams, gramsEvidence: gramsEvidence(row, grams) };
     return { rowKey: row.id, sourceKind: product ? "food_product" : "ingredient",
       sourceId: product ? row.food_product_id ?? "" : row.ingredient_id ?? "",
       sourceVersion: product ? row.food_product_nutrition_version_id ?? null : null,
-      amount: Number.isFinite(amount) ? amount : null, unit: row.unit,
+      amount: quantity.amount, unit: quantity.unit,
       quantityKind: row.ingredient_type === "TO_TASTE" ? "to_taste" : "quantitative",
-      quantityOrigin: "planned", grams, gramsEvidence: gramsEvidence(row, grams),
+      quantityOrigin: "planned", grams: quantity.grams, gramsEvidence: quantity.gramsEvidence,
       preparationState: unknownFact(), role: unknownFact(), foodIdentity: unknownFact() };
   });
   const steps = methodSteps(snapshotId, snapshotSteps, cookingSteps);

@@ -124,3 +124,13 @@ C03 뒤 C01의 새 SQL SHA는 `0c92fa9d4a83cfefa5313e7b8a13c610ac108555248d1db75
 미적용 migration의 해당 미리보기에서만 제어 ON일 때 새 무게 근거/가정을 추가하도록 제한했다. OFF에서는 기존 영양값·키 형태를 유지한다. 저장된 식사 근거, 과거 무게 이력과 기존 읽기 함수는 유지하며 과거 데이터를 수정하지 않는다. 새 SQL SHA는 `60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0`, 해당 preview 본문 MD5는 `dfe22488455c4ba9d70f55adf76dd31e`다. source manifest의 raw SQL과 한 함수 본문만 갱신했다. 별도 source-derived native 비교에서 나머지14함수 및 해당 함수 owner/ACL/전체 설정/속성은 정확히 같다.
 
 root 작성 회귀는 원 SQL에서 새 미리보기 검사1실패(다른18개 선택 skip)를 확인한 뒤, 수정 SQL의 fresh schema219→C03→C01에서19개 모두 통과했다. OFF 기존 미리보기, ON 새 근거, 재OFF 시 기존 응답과 저장된 근거 불변을 포함한다. 관련 단위5파일39개·타입 검사를 통과했고 source postimage 갱신 전의 예상 실패1개도 별도 보존했다. 자기 network-none 컨테이너는 제거했다. 운영 DB/설정/실제 계정 변경0이며 새 예상 catalog·배포 도구 fullengine 재결속·독립 리뷰·최종 웹 후보 검증은 별도다.
+
+## C04 원문 수량 → C01 근거 소비 교정 (2026-10-14, 로컬)
+
+C04 `quantity_input`이 있는 고정 재료는 원문 분수·단위, 표시 수량, 정규량, source version과 품질을 기존 스냅샷 계약으로 검증한다. 파서와 일반 재료 영양 hydration 사이에서도 이 필드를 원 행/재료/제품/영양 버전에 결속해 보존한다. 표시값이 g이라는 이유로 package·piece·volume 환산을 `direct_mass`로 다시 분류하지 않는다. 기존 `prediction.input.rows`의 amount/unit에 원 입력의 수치와 단위를 한 번만 인분 환산하고, gramsEvidence의 기존 kind/status/version/quality에 고정 환산 근거를 연결한다. `rawRows`의 당시 표시 수량·단위와 원 recipe snapshot JSON은 변경하지 않는다.
+
+직접 g/kg/SI는 기존 질량 근거, 제품 환산은 고정 영양 UUID의 product_relation, 일반 환산은 명시된 단일 evidence/source version의 ingredient_conversion이다. 품질 direct/estimated도 exact/estimated로 보존하며 confirmed는 단위 환산 자격이지 실제 사용·저울 측정 확인이 아니다. `quantityOrigin=planned`와 learningEligible=false는 그대로다. 잘못된/불완전/불일치 메타데이터, 비유한 분수, batch revision 근거, 질량 없는 ml, 하나의 기존 version/ref로 표현하지 못하는 다중 근거는 unknown이며 표시 g로 확인 근거를 대체하지 않는다.
+
+기존 quantity_input 없는 recipe snapshot은 SQL14220000의 362–363행처럼 키 자체를 생략하므로 legacy g/kg 경로와 현재 JSON/hash를 유지한다. 명시 null/잘못된 필드가 있는 행을 legacy 부재로 숨기지 않는다. 새 저장 필드·SQL·과거 record UPDATE·모델/AI/추출·C05 수집 연결은 없다. C05의 기존9 row field/4 evidence field에 맞고, 원분수 문자열·전체 quantity_input은 원 snapshot에 남으며 C05에 새 필드를 추가하지 않는다.
+
+`snapshot-weight-v2`는 기존 외피·row/evidence 구조를 유지하는 선택 메타데이터 소비 누락 교정이므로 그대로다. 운영 C01 SQL60b9는 v2를 엄격히 검사하며, 성공 receipt claim은 HTTP 의미 payload만 비교하고 p_prediction을 포함하지 않는다. replay는 새 prediction context/기록 전에 저장된 결과를 반환하므로 과거 성공 receipt를 다시 계산·쓰기하지 않는다. 조회 당시 새 변환 분류를 과거 이력에 덮어쓰지 않는다. 실제 C05 joined/native roundtrip과 운영 반영은 총괄 통합 검증에서 별도 확인한다.
