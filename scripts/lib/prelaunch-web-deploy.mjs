@@ -447,6 +447,78 @@ export function assertQuantityV4ReaderWriterWorkerEvidence(review, reader, write
     writerWorker.policyRepair ? { ...writerWorker.policyRepair, earlierOrigin: readerWorker.origin.record } : undefined);
 }
 
+// Ordinary UI continuation consumes completed activation; it cannot publish or repair it.
+export function assertQuantityV4ActiveWorkerContinuation(review, evidence) {
+  const { current, post, verification, activation, authority } = evidence;
+  const before = verification.record.observation, after = activation.record.observation;
+  closedR2Require(review.feature === QUANTITY_V4_FEATURE && review.quantityStage === "worker"
+    && current.state === "activation-committed" && activation.record.status === "committed",
+    "C04 UI continuation requires a committed worker activation");
+  assertQuantityV4WorkerCheckpoint(review, post.record, "after");
+  for (const record of [current, verification.record, activation.record]) {
+    closedR2Require(record.reviewSha256 === review.workerAuthority.controlReviewSha256
+      && record.operationId === review.workerAuthority.operationId && record.operationDirectory === post.origin.record.operationDirectory
+      && record.releaseSha === review.to && record.targetSha256 === review.database.targetSha256
+      && record.workerDatabaseReceiptSha256 === authority.database.pointer.sha256,
+      "C04 activation source/target/operation/DB2 differs");
+  }
+  closedR2Require(current.schema === "homecook.youtube-c04-controlled-cutover-journal.v1"
+    && verification.record.schema === "homecook.youtube-c04-activation-verification.v1"
+    && activation.record.schema === "homecook.youtube-c04-activation-receipt.v1"
+    && isDeepStrictEqual(current.postWorkerTerminal, post.pointer) && isDeepStrictEqual(current.postWorkerOrigin, post.origin.pointer)
+    && isDeepStrictEqual(current.activationVerification, verification.pointer) && isDeepStrictEqual(current.activationReceipt, activation.pointer)
+    && isDeepStrictEqual(activation.record.activationVerification, verification.pointer)
+    && isDeepStrictEqual(verification.record.post, post.record)
+    && isDeepStrictEqual(activation.record.beforeObservation, before) && isDeepStrictEqual(activation.record.database, after)
+    && isDeepStrictEqual(verification.record.authority, { readerReceiptSha256: authority.reader.pointer.sha256, writerReceiptSha256: authority.writer.pointer.sha256 })
+    && activation.record.readerReceiptSha256 === authority.reader.pointer.sha256 && activation.record.writerReceiptSha256 === authority.writer.pointer.sha256
+    && verification.record.zeroActualAI === true && activation.record.zeroActualAI === true,
+    "C04 activation immutable publication/reader/writer chain differs");
+  for (const observation of [before, after]) {
+    closedR2Require(observation.targetSha256 === review.database.targetSha256 && observation.ledgerCount === 227
+      && observation.catalogFingerprint === QUANTITY_V4_WORKER_CATALOG_AFTER
+      && observation.credentialGeneration === 48 && observation.workerReleaseSha === review.to
+      && observation.schemaIdentity === post.record.schemaIdentity && observation.snapshotDigest === post.record.snapshotDigest
+      && observation.credentialRowSha256 === post.record.credentialRowSha256
+      && observation.policyStableSha256 === post.origin.record.policyStableSha256
+      && observation.quantityPolicyEnabled === true && observation.productWriterEnabled === true && observation.weightWriterEnabled === true
+      && observation.queued === 0 && observation.processing === 0 && observation.permitHeld === false && observation.activeEnqueueSessions === 0,
+      "C04 activation identity/stable policy/ON/zero state differs");
+  }
+  closedR2Require(before.workerPolicyEnabled === false && before.policy?.enabled === false && before.policyRowSha256 === post.record.policyRowSha256
+    && after.workerPolicyEnabled === true && CLOSED_R2_SHA.test(after.policyRowSha256 ?? "")
+    && isDeepStrictEqual(after.policy, { ...before.policy, enabled: true }), "C04 activation changed the reviewed policy");
+  for (const service of [verification.record.service, activation.record.service]) {
+    closedR2Require(service?.loaded === true && service.state === "running" && Number.isSafeInteger(service.pid) && service.pid > 0
+      && service.plistSha256 === post.record.plistSha256, "C04 activation historical service identity differs");
+  }
+  return after;
+}
+
+export function loadQuantityV4ActiveWorkerContinuation(repositoryRoot, review) {
+  closedR2Require(review.feature === QUANTITY_V4_FEATURE && review.quantityStage === "worker"
+    && review.to === QUANTITY_V4_RELEASE_SHA && CLOSED_R2_SHA.test(QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN.sha256 ?? "")
+    && isAbsolute(QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN.path ?? "")
+    && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(review.workerAuthority.operationId ?? "")
+    && review.workerAuthority.controlReviewSha256 === QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN.sha256
+    && isAbsolute(QUANTITY_V4_WORKER_OPERATION_ROOT ?? ""), "C04 active continuation authority is unbound");
+  const directory = join(QUANTITY_V4_WORKER_OPERATION_ROOT, review.workerAuthority.operationId);
+  const current = JSON.parse(readClosedR2PrivateBytes(join(directory, "cutover-journal.json"), repositoryRoot, 524288));
+  if (current.state === "verified-policy-disabled") return null; // The existing strict OFF path remains unchanged.
+  closedR2Require(current.state === "activation-committed", "C04 UI continuation denies pending/unknown/not-applied activation");
+  const authority = loadQuantityV4ReaderWriterReceipts(repositoryRoot);
+  closedR2Require(isDeepStrictEqual(authority.database.review, review), "C04 active continuation DB authority differs");
+  const post = loadQuantityV4WorkerCheckpointEvidence(review, repositoryRoot, "after", true);
+  const pre = loadQuantityV4WorkerCheckpointEvidence(review, repositoryRoot, "before");
+  assertQuantityV4WorkerPublicationPair(review, authority.writerWorker.record, post.record,
+    post.policyRepair ? { ...post.policyRepair, earlierOrigin: authority.writerWorker.origin.record } : undefined);
+  const verification = readQuantityV4PolicyRepairFile(current.activationVerification, "verification", directory, repositoryRoot);
+  const activation = readQuantityV4PolicyRepairFile(current.activationReceipt, "activation", directory, repositoryRoot);
+  const evidence = { current, pre, post, verification, activation, authority };
+  assertQuantityV4ActiveWorkerContinuation(review, evidence);
+  return evidence;
+}
+
 export function assertQuantityV4WorkerCheckpoint(review, record, phase) {
   const keys = "activeEnqueueSessions,artifactSha256,catalogFingerprint,consumersReceiptSha256,credentialGeneration,credentialMetadataSha256,credentialRowSha256,descriptorSha256,feature,ledgerCount,normalDataSha256,permitHeld,pid,plistSha256,policyRowSha256,processing,productWriterEnabled,quantityPolicyEnabled,queued,releaseSha,schema,schemaIdentity,serviceState,snapshotDigest,status,targetSha256,weightWriterEnabled,workerDatabaseReceiptSha256,workerOperationId,workerPolicyEnabled,workerReleaseSha,workerReviewSha256,zeroActualAI";
   closedR2Require(["before", "after"].includes(phase) && record && Object.keys(record).sort().join() === keys

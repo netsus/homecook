@@ -239,6 +239,127 @@ function policyRepairFixture(directory: string, reconciled = false) {
   return { review: f.review, previous, later, repair, controlPointer, files, bytes };
 }
 
+function activeContinuationFixture(directory = "/owned-active-fixture") {
+  const f = policyRepairFixture(directory);
+  const post = f.repair.previous;
+  const before = { ...f.repair.verification.record.observation, policy: { enabled: false, pipelineIdentity: "same-model" } };
+  const after = { ...f.repair.activation!.record.observation, policy: { enabled: true, pipelineIdentity: "same-model" } };
+  const verification = { ...structuredClone(f.repair.verification), record: { ...structuredClone(f.repair.verification.record), observation: before } };
+  const activation = { ...structuredClone(f.repair.activation!), record: { ...f.repair.activation!.record,
+    beforeObservation: structuredClone(before), observation: after, database: structuredClone(after) } };
+  const current = { ...f.repair.earlierOrigin, state: "activation-committed", postWorkerTerminal: post.pointer,
+    postWorkerOrigin: post.origin.pointer, activationVerification: verification.pointer, activationReceipt: activation.pointer };
+  const authority = { database: { review: f.review, record: { status: "committed" },
+    guardPointer: { path: join(directory, "db-guard.json"), sha256: post.record.workerDatabaseReceiptSha256 },
+    pointer: { path: join(directory, "db.json"), sha256: post.record.workerDatabaseReceiptSha256 } },
+    reader: { record: { readerFloor: f.review.to, workerReceipt: post.pointer }, pointer: { path: join(directory, "reader.json"), sha256: verification.record.authority.readerReceiptSha256 } },
+    writer: { record: { status: "committed", readerFloor: f.review.to, workerReceipt: post.pointer }, pointer: { path: join(directory, "writer.json"), sha256: verification.record.authority.writerReceiptSha256 } },
+    approval: { readerReceiptSha256: null }, readerWorker: post, writerWorker: post };
+  const pre = { record: { ...fixture("worker").checkpoint, workerReviewSha256: f.controlPointer.sha256 },
+    pointer: { path: join(directory, operationId, "pre-worker-checkpoint.json"), sha256: "" },
+    origin: { record: { ...f.repair.earlierOrigin, state: "quiesced", workerDatabaseReceiptSha256: null, preWorkerCheckpoint: {path:"",sha256:""} },
+      pointer: { path: join(directory, operationId, "pre-worker-origin.json"), sha256: "" } } };
+  pre.pointer.sha256 = hash(f.bytes(pre.record)); pre.origin.record.preWorkerCheckpoint = pre.pointer;
+  pre.origin.pointer.sha256 = hash(f.bytes(pre.origin.record));
+  return { ...f, evidence: { current, pre, post, verification, activation, authority } };
+}
+
+describe("C04 active worker authority for an ordinary UI continuation", () => {
+  it("consumes an exact committed activation without changing its OFF publication or historical PID", () => {
+    const f = activeContinuationFixture(), original = structuredClone(f.evidence);
+    expect(deploy.assertQuantityV4ActiveWorkerContinuation(f.review, f.evidence)).toEqual(f.evidence.activation.record.observation);
+    expect(f.evidence).toEqual(original);
+  });
+  it.each(["activation-not-applied", "activation-outcome-unknown", "activation-commit-intent", "verified-policy-disabled"])("denies %s even with a historical committed receipt", state => {
+    const f = activeContinuationFixture(); f.evidence.current.state = state;
+    expect(() => deploy.assertQuantityV4ActiveWorkerContinuation(f.review, f.evidence)).toThrow();
+  });
+  it.each(["source", "DB2", "verification", "reader", "writer", "policy", "stable", "credential", "queue", "permit", "enqueue", "zeroAI", "post"])("rejects a forged %s binding", kind => {
+    const f = activeContinuationFixture(), e = f.evidence, receipt = e.activation.record;
+    if (kind === "source") receipt.releaseSha = ref("e");
+    if (kind === "DB2") receipt.workerDatabaseReceiptSha256 = sha("e");
+    if (kind === "verification") receipt.activationVerification = pointer("foreign", "e");
+    if (kind === "reader") receipt.readerReceiptSha256 = sha("e");
+    if (kind === "writer") receipt.writerReceiptSha256 = sha("e");
+    if (kind === "policy") receipt.observation.policy.pipelineIdentity = "different-model";
+    if (kind === "stable") receipt.observation.policyStableSha256 = sha("e");
+    if (kind === "credential") receipt.observation.credentialRowSha256 = sha("e");
+    if (kind === "queue") receipt.observation.queued = 1;
+    if (kind === "permit") receipt.observation.permitHeld = true;
+    if (kind === "enqueue") receipt.observation.activeEnqueueSessions = 1;
+    if (kind === "zeroAI") receipt.zeroActualAI = false;
+    if (kind === "post") e.verification.record.post.pid++;
+    expect(() => deploy.assertQuantityV4ActiveWorkerContinuation(f.review, e)).toThrow();
+  });
+  it("uses committed ON whole/stable hashes for fresh DB readback while preserving the existing OFF gate", () => {
+    const f = activeContinuationFixture(), base = fixture("worker"), after = structuredClone(base.observation);
+    Object.assign(after, { ledger: f.review.database.after, catalogSha256: f.review.database.afterCatalogSha256,
+      immutableSha256: f.review.database.afterImmutableSha256, normalColumnsSha256: f.review.database.afterColumnsSha256, scope: f.review.database.afterScope });
+    Object.assign(after.worker, f.evidence.activation.record.observation, { credentialActive: true });
+    after.writerEnabled = false;
+    expect(() => assertProtectedPrelaunchObservation(f.review, after, "after", { activeWorkerContinuation: f.evidence })).not.toThrow();
+    expect(() => assertProtectedPrelaunchObservation(f.review, after, "after", { workerCheckpoint: f.evidence.post.record })).toThrow();
+    after.worker.policyRowSha256 = sha("e");
+    expect(() => assertProtectedPrelaunchObservation(f.review, after, "after", { activeWorkerContinuation: f.evidence })).toThrow();
+  });
+  it("allows new business rows/quantity metadata without rewriting the historical activation transaction snapshot", () => {
+    const f = activeContinuationFixture(), base = fixture("worker"), original = structuredClone(f.evidence);
+    const after = { ...base.observation, ledger: f.review.database.after, catalogSha256: f.review.database.afterCatalogSha256,
+      immutableSha256: f.review.database.afterImmutableSha256, normalColumnsSha256: f.review.database.afterColumnsSha256,
+      scope: f.review.database.afterScope, normalDataSha256: sha("f"), metadataNull: false,
+      worker: { ...base.observation.worker, ...f.evidence.activation.record.observation, credentialActive: true } };
+    expect(after.normalDataSha256).not.toBe(f.evidence.post.record.normalDataSha256);
+    expect(() => assertProtectedPrelaunchObservation(f.review, after, "after", { activeWorkerContinuation: f.evidence })).not.toThrow();
+    expect(f.evidence).toEqual(original);
+    after.worker.credentialRowSha256 = sha("e");
+    expect(() => assertProtectedPrelaunchObservation(f.review, after, "after", { activeWorkerContinuation: f.evidence })).toThrow();
+  });
+  it("loads exact immutable activation bytes in an owned graph, rejects substitution, and keeps strict OFF loading separate", async () => {
+    const directory = mkdtempSync(join(realpathSync("/tmp"), "c04-active-origin-unit-")); chmodSync(directory, 0o700);
+    try {
+      const f = activeContinuationFixture(directory), e = f.evidence;
+      const save = (path: string, value: object) => { mkdirSync(join(path, ".."), { recursive: true, mode: 0o700 }); writeFileSync(path, f.bytes(value), { mode: 0o600 }); };
+      e.verification.pointer.sha256 = hash(f.bytes(e.verification.record));
+      e.activation.record.activationVerification = { ...e.verification.pointer };
+      e.activation.pointer.sha256 = hash(f.bytes(e.activation.record));
+      e.current.activationReceipt = { ...e.activation.pointer }; e.current.activationVerification = { ...e.verification.pointer };
+      Object.assign(e.current, { preWorkerCheckpoint: e.pre.pointer, preWorkerOrigin: e.pre.origin.pointer });
+      for (const [path, value] of [[f.controlPointer.path, f.files[0][1]], [e.post.pointer.path, e.post.record],
+        [e.pre.pointer.path, e.pre.record], [e.pre.origin.pointer.path, e.pre.origin.record],
+        [e.post.origin.pointer.path, e.post.origin.record], [e.verification.pointer.path, e.verification.record], [e.activation.pointer.path, e.activation.record],
+        [join(directory, operationId, "cutover-journal.json"), e.current]] as Array<[string, object]>) save(path, value);
+      const modulePath = join(directory, "web.mjs"), source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8");
+      writeFileSync(modulePath, fixtureStateRoot(webFixtureSource(source, {
+        QUANTITY_V4_RELEASE_SHA: JSON.stringify(f.review.to),
+        QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN: `Object.freeze(${JSON.stringify(f.controlPointer)})`, QUANTITY_V4_WORKER_OPERATION_ROOT: JSON.stringify(directory),
+      }), join(directory, "state")), { mode: 0o600 });
+      const bound = await import(pathToFileURL(modulePath).href);
+      const start = source.indexOf("export function loadQuantityV4ActiveWorkerContinuation("), end = source.indexOf("export function assertQuantityV4WorkerCheckpoint(", start);
+      const loader = new Function("closedR2Require", "QUANTITY_V4_FEATURE", "QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN", "QUANTITY_V4_WORKER_OPERATION_ROOT", "isAbsolute", "join", "QUANTITY_V4_RELEASE_SHA", "CLOSED_R2_SHA",
+        "readClosedR2PrivateBytes", "loadQuantityV4ReaderWriterReceipts", "isDeepStrictEqual", "loadQuantityV4WorkerCheckpointEvidence", "assertQuantityV4WorkerPublicationPair",
+        "readQuantityV4PolicyRepairFile", "assertQuantityV4ActiveWorkerContinuation", source.slice(start, end).replace("export function", "function") + ";return loadQuantityV4ActiveWorkerContinuation;")(
+        (condition: boolean, message: string) => { if (!condition) throw new Error(message); }, bound.QUANTITY_V4_FEATURE, f.controlPointer, directory,
+        (path: string) => path.startsWith("/"), join, f.review.to, /^[a-f0-9]{64}$/u, bound.readClosedR2PrivateBytes,
+        () => ({ ...e.authority, writerWorker: e.post }), isDeepStrictEqual, bound.loadQuantityV4WorkerCheckpointEvidence, bound.assertQuantityV4WorkerPublicationPair,
+        (pointer: {path: string; sha256: string}, kind: string) => {
+          const expected = kind === "verification" ? e.verification.pointer : e.activation.pointer;
+          if (!isDeepStrictEqual(pointer, expected)) throw new Error("Foreign fixed publication");
+          const bytes = bound.readClosedR2PrivateBytes(pointer.path, process.cwd());
+          if (hash(bytes) !== pointer.sha256) throw new Error("Immutable bytes differ");
+          return { pointer, record: JSON.parse(bytes) };
+        }, bound.assertQuantityV4ActiveWorkerContinuation);
+      expect(loader(process.cwd(), f.review).activation.record).toEqual(e.activation.record);
+      expect(() => bound.loadQuantityV4WorkerCheckpointEvidence(f.review, process.cwd(), "after")).toThrow("not OFF verified");
+      save(e.activation.pointer.path, { ...e.activation.record, status: "unknown" });
+      expect(() => loader(process.cwd(), f.review)).toThrow("Immutable bytes");
+      save(join(directory, operationId, "cutover-journal.json"), { ...e.current, state: "verified-policy-disabled" });
+      expect(loader(process.cwd(), f.review)).toBeNull();
+      save(join(directory, operationId, "cutover-journal.json"), { ...e.current, state: "activation-outcome-unknown" });
+      expect(() => loader(process.cwd(), f.review)).toThrow("denies");
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});
+
 it("isolates all nine authority initializers even when the source is already bound", () => {
   const original = readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8");
   const marker = "/synthetic-unreadable-c04-authority/never-open";

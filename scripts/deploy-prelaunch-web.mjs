@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { chmodSync, closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -34,8 +34,13 @@ import {
 } from "./lib/prelaunch-integrated-master-readiness.mjs";
 
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
+import { verifyYoutubeExtractionWorkerArtifact } from "./lib/youtube-extraction-worker-artifact.mjs";
+import { readYoutubeExtractionWorkerCredential, parseLaunchctlPrintStatus } from "./lib/youtube-extraction-worker-ops.mjs";
+import { readWorkerEnvironment } from "./lib/youtube-extraction-worker-runtime.mjs";
+import { verifyYoutubeResolutionWorkerCaller, assertYoutubeResolutionLauncherPreserved } from "./lib/prelaunch-youtube-resolution-worker-install.mjs";
 import { createPrelaunchDatabase, createProtectedPrelaunchAdapter, createProtectedPrelaunchDatabase, createProtectedPrelaunchJournal, createProtectedPrelaunchWriter,
   openProtectedPrelaunchTarget, planProtectedPrelaunchMigrations, assertProtectedPrelaunchObservation } from "./lib/prelaunch-database.mjs";
+import { QUANTITY_V4_WORKER_STATE_SQL } from "./lib/prelaunch-database.mjs";
 import { createRecordingDockerAdapter, durableJson } from "./lib/marketing-round2-controlled-deploy.mjs";
 import {
   CLOSED_R2_REVIEW_PIN, acquireClosedR2ControlLease, assertClosedR2CompensationTarget, assertClosedR2ContinuationOptions, assertClosedR2Database, assertClosedR2Environment,
@@ -47,6 +52,7 @@ import {
   QUANTITY_V4_FEATURE, loadQuantityV4WorkerCheckpoint, loadQuantityV4WorkerCheckpointEvidence, assertQuantityV4ConsumersReceipt,
   loadQuantityV4DatabaseReceipt, acquirePrelaunchDeployLock,
   assertQuantityV4WorkerProcess,
+  loadQuantityV4ActiveWorkerContinuation,
 } from "./lib/prelaunch-web-deploy.mjs";
 
 const repository = realpathSync(resolve(process.env.HOMECOOK_DEPLOY_REPOSITORY || resolve(dirname(fileURLToPath(import.meta.url)), "..")));
@@ -351,6 +357,128 @@ function verifyQuantityV4WorkerBoundary(review, phase) {
   return checkpoint;
 }
 
+// LaunchAgents is a shared macOS install directory, unlike private proof/secret directories.
+function readQuantityV4InstalledWorkerPlist() {
+  const path = join(homedir(), "Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist"), parent = dirname(path);
+  const parentBefore = lstatSync(parent), maximum = 65536;
+  const validParent = info => info.isDirectory() && !info.isSymbolicLink() && info.uid === process.getuid()
+    && (info.mode & 0o022) === 0 && realpathSync(parent) === parent;
+  const validFile = info => info.isFile() && !info.isSymbolicLink() && info.nlink === 1 && info.uid === process.getuid()
+    && (info.mode & 0o777) === 0o600 && info.size <= maximum;
+  if (!validParent(parentBefore)) throw new DeploymentError("C04 canonical installed plist parent ownership/path/permissions differ");
+  const before = lstatSync(path);
+  if (!validFile(before) || realpathSync(path) !== path) throw new DeploymentError("C04 canonical installed plist ownership/path/permissions differ");
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const opened = fstatSync(fd);
+    if (!validFile(opened) || opened.ino !== before.ino || opened.dev !== before.dev) throw new DeploymentError("C04 installed plist binding changed");
+    const buffer = Buffer.alloc(maximum + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const length = readSync(fd, buffer, offset, buffer.length - offset, null);
+      if (!length) break;
+      offset += length;
+    }
+    const after = fstatSync(fd), named = lstatSync(path), parentAfter = lstatSync(parent);
+    if (offset > maximum || !validFile(after) || !validFile(named) || !validParent(parentAfter)
+      || named.ino !== opened.ino || named.dev !== opened.dev || after.size !== opened.size
+      || after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs
+      || named.size !== after.size || named.mtimeMs !== after.mtimeMs || named.ctimeMs !== after.ctimeMs
+      || parentAfter.ino !== parentBefore.ino || parentAfter.dev !== parentBefore.dev || realpathSync(path) !== path) {
+      throw new DeploymentError("C04 installed plist changed during read");
+    }
+    return buffer.subarray(0, offset);
+  } finally { closeSync(fd); }
+}
+
+async function verifyQuantityV4ActiveWorkerService(review, evidence) {
+  const checkpoint = evidence.post.record;
+  const home = homedir(), secretRoot = join(home, ".homecook/youtube-extraction");
+  const prefix = review.to.slice(0, 12), suffix = `${prefix}-${review.workerAuthority.operationId.slice(0, 8)}`;
+  const artifactRoot = join(home, `.homecook/youtube-extraction-releases/${prefix}-c04-quantity-v4`);
+  const manifest = join(artifactRoot, "artifact.json"), descriptor = join(secretRoot, `app-descriptor-${suffix}-c04.json`);
+  const credential = join(secretRoot, `worker-credential-v48-${suffix}-c04.json`), config = join(secretRoot, `worker-v48-${suffix}-c04.env`);
+  const runner = join(artifactRoot, "scripts/youtube-extraction-worker-runner.mjs");
+  const flags = ["--config", config, "--manifest", manifest, "--credential", credential, "--secret-root", secretRoot,
+    "--app-descriptor", descriptor, "--policy", join(secretRoot, `current-policy-${suffix}-c04.json`),
+    "--expected-schema", join(artifactRoot, "scripts/manifests/youtube-extraction-expected-schema.json")];
+  const path = join(home, "Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist");
+  const plistBytes = readQuantityV4InstalledWorkerPlist(), plist = parsePlist(plistBytes);
+  const node = join(home, ".nvm/versions/node/v22.19.0/bin/node"), args = plist.ProgramArguments;
+  const nodeIndex = Array.isArray(args) ? args.indexOf(node) : -1;
+  if (hash(plistBytes) !== checkpoint.plistSha256 || plist.Label !== "com.homecook.youtube-extraction-worker"
+    || plist.WorkingDirectory !== artifactRoot || !Array.isArray(args) || args[0] !== "/usr/bin/env" || args[1] !== "-i"
+    || args[2] !== `HOME=${home}` || nodeIndex < 4 || !args.slice(2, nodeIndex).every(value => /^[A-Z_][A-Z0-9_]*=/u.test(value))
+    || !isDeepStrictEqual(args.slice(nodeIndex + 1), [runner, "run", ...flags])) {
+    throw new DeploymentError("C04 active worker exact installed launcher differs");
+  }
+  const previousBytes = readClosedR2PrivateBytes(join(evidence.post.origin.record.operationDirectory, "generation-47.plist"), repository);
+  if (hash(previousBytes) !== evidence.pre.record.plistSha256) throw new DeploymentError("C04 approved predecessor launcher bytes differ");
+  assertYoutubeResolutionLauncherPreserved(parsePlist(previousBytes), plist);
+  const artifactInfo = lstatSync(manifest);
+  if (!artifactInfo.isFile() || artifactInfo.isSymbolicLink() || artifactInfo.nlink !== 1 || artifactInfo.uid !== process.getuid()
+    || (artifactInfo.mode & 0o022)
+    || hash(readClosedR2PrivateBytes(descriptor, repository)) !== checkpoint.descriptorSha256
+    || hash(readClosedR2PrivateBytes(credential, repository)) !== checkpoint.credentialMetadataSha256) {
+    throw new DeploymentError("C04 active worker artifact/descriptor/credential bytes differ");
+  }
+  if (verifyYoutubeExtractionWorkerArtifact(manifest).artifact_sha256 !== checkpoint.artifactSha256) throw new DeploymentError("C04 active worker logical artifact identity differs");
+  const metadata = readYoutubeExtractionWorkerCredential(credential, { secretRoot });
+  if (metadata.generation !== 48 || metadata.release_sha !== review.to || metadata.schema_identity !== checkpoint.schemaIdentity
+    || metadata.allowed_snapshot_digest !== checkpoint.snapshotDigest || Date.parse(metadata.expires_at) <= Date.now() + 30 * 60 * 1000) {
+    throw new DeploymentError("C04 active worker current credential identity/expiry differs");
+  }
+  const status = () => {
+    const result = spawnSync("/bin/launchctl", ["print", `${domain}/com.homecook.youtube-extraction-worker`], { encoding: "utf8", maxBuffer: 1024 * 1024 });
+    if (result.status !== 0) throw new DeploymentError("C04 active worker is not loaded");
+    const raw = result.stdout;
+    if (typeof raw !== "string") throw new DeploymentError("C04 active worker loaded identity missing");
+    const lines = raw.replace(/\n+$/u, "").split("\n");
+    if (lines[0] !== `${domain}/com.homecook.youtube-extraction-worker = {` || lines.at(-1) !== "}") throw new DeploymentError("C04 active worker loaded output is incomplete");
+    let depth = 0;
+    const rootLines = [], rootPositions = new Set();
+    for (const [index, line] of lines.entries()) {
+      if (depth === 1) { rootLines.push(line); rootPositions.add(index); }
+      if (/ = \{$/u.test(line)) depth++;
+      if (/^\t*\}$/u.test(line)) depth--;
+      if (depth < 0 || (depth === 0 && index !== lines.length - 1)) throw new DeploymentError("C04 active worker loaded output is ambiguous");
+    }
+    if (depth !== 0) throw new DeploymentError("C04 active worker loaded output is truncated");
+    const field = name => {
+      const prefix = `\t${name} = `, values = rootLines.filter(line => line.startsWith(prefix));
+      if (values.length !== 1) throw new DeploymentError("C04 active worker loaded field missing/duplicate");
+      return values[0].slice(prefix.length);
+    };
+    const argumentBlocks = lines.flatMap((line, index) => rootPositions.has(index) && line === "\targuments = {" ? [index] : []);
+    if (argumentBlocks.length !== 1) throw new DeploymentError("C04 active worker loaded arguments missing/duplicate");
+    const argumentEnd = lines.indexOf("\t}", argumentBlocks[0] + 1), argumentLines = lines.slice(argumentBlocks[0] + 1, argumentEnd);
+    if (argumentEnd < 0 || argumentLines.some(line => !line.startsWith("\t\t"))) throw new DeploymentError("C04 active worker loaded arguments are incomplete");
+    if (field("path") !== path || field("type") !== "LaunchAgent" || field("program") !== plist.ProgramArguments[0]
+      || field("working directory") !== plist.WorkingDirectory || field("state") !== "running"
+      || !isDeepStrictEqual(argumentLines.map(line => line.slice(2)), plist.ProgramArguments)) {
+      throw new DeploymentError("C04 active worker loaded command/environment differs from the approved plist");
+    }
+    // The existing general parser is unchanged; only validated root fields are passed to it.
+    const running = parseLaunchctlPrintStatus({ serviceTarget: `${domain}/com.homecook.youtube-extraction-worker`, ...result, stdout: rootLines.join("\n") });
+    if (!running.loaded || running.state !== "running" || !Number.isSafeInteger(running.pid) || running.pid <= 0 || field("pid") !== String(running.pid)) throw new DeploymentError("C04 active worker is not running");
+    return running;
+  };
+  const first = status(); await delay(250); const second = status();
+  if (first.pid !== second.pid) throw new DeploymentError("C04 active worker PID is not stable");
+  const environment = await readWorkerEnvironment(config);
+  const token = readClosedR2PrivateBytes(metadata.token_file, repository).toString("utf8").trim();
+  const caller = await verifyYoutubeResolutionWorkerCaller({ environment, token, secretRoot });
+  const healthResult = spawnSync(node, [runner, "health", ...flags], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000, maxBuffer: 1024 * 1024, env: { HOME: home, PATH: `${dirname(node)}:/usr/bin:/bin` } });
+  if (healthResult.status !== 0) throw new DeploymentError("C04 active worker local health failed; output withheld");
+  const health = JSON.parse(healthResult.stdout);
+  if (!health.ok || !health.ready || caller.authenticatedStatus !== 200 || caller.emptyClaimDenied !== true
+    || status().pid !== second.pid || hash(readQuantityV4InstalledWorkerPlist()) !== checkpoint.plistSha256) {
+    throw new DeploymentError("C04 active worker health/auth/plist/PID changed");
+  }
+  return { pid: second.pid, stableObservations: 2 }; // Current PID is separate from the immutable activation/P1 PIDs.
+}
+
 function verifyProtectedBoundary(review, captured) {
   const actual = current();
   assertClosedR2LiveUnchanged(captured, actual);
@@ -440,9 +568,17 @@ async function verifyProtectedBaseline(review, plan, options) {
   const observed = await createProtectedPrelaunchAdapter(base, review.feature, review).observe(undefined, "protected-baseline-readback");
   const productOffReceipt = cookedWeightProductOffReceipt(review);
   if (options.reviewedProtectedRollout && options.protectedPhase === "reader") assertCookedWeightFirstReader(review, productOffReceipt, protectedRolloutPins(review).rollout.sha256);
+  const activeWorkerContinuation = !options.reviewedProtectedRollout && review.feature === QUANTITY_V4_FEATURE
+    ? loadQuantityV4ActiveWorkerContinuation(repository, review) : null;
+  if (activeWorkerContinuation) {
+    if (!observed.writerEnabled) throw new DeploymentError("C04 active continuation requires the original quantity writer ON");
+    await verifyQuantityV4ActiveWorkerService(review, activeWorkerContinuation);
+    observed.worker = JSON.parse((await base.query(QUANTITY_V4_WORKER_STATE_SQL)).trim());
+  }
   assertProtectedPrelaunchObservation(review, { ...observed, writerEnabled: false }, "after", {
     productOffReceipt, reviewSha256: protectedRolloutPins(review).rollout.sha256,
-    workerCheckpoint: review.feature === QUANTITY_V4_FEATURE ? verifyQuantityV4WorkerBoundary(review, "after") : undefined });
+    activeWorkerContinuation,
+    workerCheckpoint: !activeWorkerContinuation && review.feature === QUANTITY_V4_FEATURE ? verifyQuantityV4WorkerBoundary(review, "after") : undefined });
   if (review.feature === COOKED_WEIGHT_FEATURE) verifyCookedWeightPredecessor(review, repository);
   if (protectedRolloutPins(review).writer.sha256) {
     for (const action of ["writer-on", "writer-off"]) {
