@@ -18,6 +18,8 @@ export interface CookedBatchActionError {
 }
 
 interface CookedBatchActionSheetProps {
+  returnFocusTarget?: () => HTMLElement | null;
+  restoreFocusWhen?: () => boolean;
   action: CookedBatchAction;
   batch: CookedBatchProjection;
   error: CookedBatchActionError | null;
@@ -57,6 +59,8 @@ function formatGrams(value: number) {
 }
 
 export function CookedBatchActionSheet({
+  returnFocusTarget,
+  restoreFocusWhen,
   action,
   batch,
   error,
@@ -73,12 +77,17 @@ export function CookedBatchActionSheet({
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
 
-  useDialogBoundary({
+  const { setReturnFocusTarget } = useDialogBoundary({
     closeOnEscape: !pending,
     dialogRef: panelRef,
     initialFocusRef: titleRef,
     onClose,
+    restoreFocusWhen,
   });
+
+  useEffect(() => {
+    setReturnFocusTarget(returnFocusTarget ?? null);
+  }, [returnFocusTarget, setReturnFocusTarget]);
 
   const parsedAmount = Number(amount);
   const validAmount = amount.trim() !== "" && Number.isFinite(parsedAmount) && parsedAmount !== 0;
