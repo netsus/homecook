@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
+import { openRecordingSession } from "@/scripts/lib/marketing-round2-controlled-deploy.mjs";
 import { predictCookedWeight, type CookedWeightFact, type CookedWeightRow } from "@/lib/server/cooked-weight-prediction";
 import { readSnapshotWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
 import { assertCookedWeightEvidenceSourceFunctionInventoryResult, buildCookedWeightEvidenceSourceFunctionInventorySql,
@@ -125,11 +126,56 @@ describe.runIf(enabled)("personal cooked weight evidence PostgreSQL", () => {
   });
   it("defaults OFF, denies fresh writes at either switch, and leaves completion atomic", () => {
     const batch = session(1); const before = digest(batch);
-    expect(service(complete(batch, id(101)), false).stderr).toContain("CONFLICT");
+    expect(service(complete(batch, id(101)), false).stderr).toContain("COOKED_WEIGHT_EVIDENCE_DISABLED");
     expect(digest(batch)).toBe(before);
     sql("update private.cooked_batch_weight_evidence_control set enabled=true where singleton;");
-    expect(service(complete(batch, id(101), prediction(), "null", "null", "false"), false).stderr).toContain("CONFLICT");
+    expect(service(complete(batch, id(101), prediction(), "null", "null", "false"), false).stderr).toContain("COOKED_WEIGHT_EVIDENCE_DISABLED");
     expect(digest(batch)).toBe(before);
+  });
+  it("holds only the mutation control row until commit so operator OFF waits while plain capability reads continue", async () => {
+    sql("update private.cooked_batch_weight_evidence_control set enabled=true where singleton;");
+    const batch = session(900), key = id(901);
+    // The sql() ownership/image/network guard runs before opening the same exact owned transport.
+    sql("select 1;");
+    const writer = openRecordingSession(container, process.env, `c01-accepted-write-${tag}`);
+    try {
+      await writer.query("begin; set local request.jwt.claim.role='service_role';");
+      await writer.query(complete(batch, key));
+      expect(sql("select enabled from private.cooked_batch_weight_evidence_control where singleton;").stdout.trim()).toBe("t");
+      const off = sql("begin; set local lock_timeout='200ms'; update private.cooked_batch_weight_evidence_control set enabled=false where singleton; commit;", false);
+      expect(off.status).not.toBe(0); expect(off.stderr).toContain("lock timeout");
+      expect(sql("begin read only; select enabled from private.cooked_batch_weight_evidence_control where singleton; commit;").stdout.trim()).toBe("t");
+      await writer.query("commit;"); await writer.close();
+      sql("update private.cooked_batch_weight_evidence_control set enabled=false where singleton;");
+      expect(sql(`select count(*) from private.cooked_batch_weight_evidence where batch_id='${batch}';`).stdout.trim()).toBe("1");
+      const original = digest(batch);
+      expect(service(complete(batch, key, prediction(), "null", "null", "false")).status).toBe(0);
+      expect(digest(batch)).toBe(original); // Successful receipt replay remains unchanged after OFF.
+      const fresh = session(902), before = digest(fresh);
+      expect(service(complete(fresh, id(903)), false).stderr).toContain("COOKED_WEIGHT_EVIDENCE_DISABLED");
+      expect(digest(fresh)).toBe(before); // Failed wrapper leaves no receipt/batch/evidence writes.
+      const legacy = service(`select public.complete_snapshot_v2_cooking_session(${args},'${fresh}','${id(903)}','{}'::uuid[],'estimate_from_ingredients',225,clock_timestamp());`);
+      expect(legacy.status).toBe(0);
+      expect(sql(`select count(*) from private.cooked_batch_weight_evidence where batch_id='${fresh}';`).stdout.trim()).toBe("0");
+      expect(sql(`select count(*),min(operation_scope) from public.mutation_idempotency_keys where owner_uuid='${owner}' and key_hash=encode(extensions.digest('${id(903)}','sha256'),'hex');`).stdout.trim()).toBe("1|snapshot_v2_complete");
+      for (const mutation of [measure(batch, id(904)), meal(batch, id(905), id(906))]) {
+        sql("update private.cooked_batch_weight_evidence_control set enabled=true where singleton;");
+        const pending = openRecordingSession(container, process.env, `c01-accepted-write-${tag}`);
+        try {
+          await pending.query("begin; set local request.jwt.claim.role='service_role';");
+          await pending.query(mutation);
+          const stop = sql("begin; set local lock_timeout='200ms'; update private.cooked_batch_weight_evidence_control set enabled=false where singleton; commit;", false);
+          expect(stop.status).not.toBe(0); expect(stop.stderr).toContain("lock timeout");
+          expect(sql(`begin read only; select private.project_cooked_batch('${batch}','${owner}')->>'weight_evidence_enabled'; commit;`).stdout.trim()).toBe("true");
+          await pending.query("commit;"); await pending.close();
+          sql("update private.cooked_batch_weight_evidence_control set enabled=false where singleton;");
+        } finally { pending.stop(); }
+      }
+      expect(mealNutrition(id(905)).weight_basis.finished_weight_g).toBe(200);
+      sql("update private.cooked_batch_weight_evidence_control set enabled=true where singleton;");
+    } finally {
+      writer.stop();
+    }
   });
   it("keeps owner, role, private ACL and exact scope fences", () => {
     for (const functionName of functions) {

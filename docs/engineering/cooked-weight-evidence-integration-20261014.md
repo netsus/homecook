@@ -94,3 +94,16 @@ actual 격리 fixture는 real C03 builder를 호출해 NULL 공공제품의 save
 
 
 최신 통합 확인: 관련12파일112, 식사4파일50, 변경 없는 W4 보정1파일64, schema218 행0→219→C03→C01 fresh native1파일17, 합계18파일243 검사가 각각 실패/skip0·exit0이다. `pnpm typecheck`, 변경9개 TS/JS 파일 ESLint, `pnpm verify:anti-slop`(716파일·신규0·baseline 변경0), `git diff --check`, 최종 mapper 변경 후 `pnpm build` exit0을 확인했다. build에는 변경 밖 기존 경고4개가 남는다(플래너·팬트리·레시피북 useCallback과 YouTube bundle unused). 실제 private table2 owner postgres/API역할 grant0 및 C0115/combined38 지문·메타0을 확인했고, whole inventory 잔존 drift와 전체 보안 PASS를 구분한다. 실제 UI/OAuth/운영 DB 적용 및 C04 교차 검사는 이 명령들이 증명하지 않는다.
+
+
+## C01 OFF 호환 완료·제어 경합 보완 · 2026-10-14
+
+C03 뒤 C01의 새 SQL SHA는 `0c92fa9d4a83cfefa5313e7b8a13c610ac108555248d1db756d4bd7f2d8384af`다. 위 `fa1c8e...`는 통합 마감 당시 원본이며 이번 두 보완의 최신 대상이 아니다. C03 SQL·권한·scope·기존9키·W4 보정은 바꾸지 않았다. source manifest의 네 함수 body와 raw migration SHA만 새 SQL에 결속한다.
+
+웹 env가 ON이고 DB 제어가 OFF인 fresh 일반 완료도 가능하다. 새 wrapper의 정확한 SQLSTATE55000/message `COOKED_WEIGHT_EVIDENCE_DISABLED`에만 명시 source 없는 완료·구 수동 무게 요청을 기존 RPC로 보낸다. `weigh_later`는 기존 재료 추정 계산을 유지하며, 수동 숫자는 원값을 보존한다. failed wrapper의 transaction은 receipt·근거·batch 변경 없이 끝난다. 명시 `reported_measured` 요청은409를 유지하므로 같은 draft 재시도도 자동 호환 처리되지 않는다. 정보를 다시 확인한 뒤 source 없는 완료는 새 요청으로 보낸다. 응답 헤더·없는 헤더는 권위가 아니며 일반 충돌·권한·멱등 오류·문자열 포함 일치에는 fallback0이다. 성공한 새 wrapper receipt는 DB OFF 후에도 원결과를 재생한다.
+
+완료·무게 wrapper, fresh 근거 기록, cooked-batch 식사 근거 trigger는 제어 행 `FOR SHARE`를 transaction 끝까지 유지한다. operator OFF가 이미 승인된 쓰기 완료를 기다린 뒤 다음 새 쓰기를 막는다. stable projection/cook-mode capability는 plain SELECT이고 일반 recipe 식사는 제어 행을 잠그지 않는다. DB OFF→web OFF 순서와 이력/reader 보존은 그대로다. 제어표가 없는 옛 DB와 새 서버의 호환이나 C01 운영 적용은 이 로컬 보완이 승인하지 않는다.
+
+원 fa1c SQL의 자기 pinned-image/network-none/schema-only fixture에서 exact disabled 신호와 열린 완료 중 OFF 경합 두 회귀가 실패했고, 교정 후 fresh218→219→C03→C01의 native18 검사가 통과했다. 완료·무게·식사 transaction 중 OFF lock timeout과 plain/읽기 전용 projection 동시조회, commit 뒤 OFF 성공, 성공 receipt OFF 재생, failed wrapper 쓰기0 뒤 legacy 완료를 확인했다. 원 실패 로그·첫 Green의 테스트 receipt 필드 오인 실패·교정 로그를 `/tmp/mumeok-c01-off-lock-*.log`에 보존하며 자기 container는 정리했다. 실제 운영 DB·OAuth·개인 자료·UI 브라우저·build는 이번 보완에서 실행하지 않았다. 후속 배포의 정확 source/DB 대상과 reader/ON/floor는 총괄의 별도 적용 경계다.
+
+보완 최종 검사: 관련7파일71검사와 fresh native1파일18검사, 합계8파일89검사 PASS·skip0·exit0이다. 타입 검사·변경5개 TS ESLint·Anti Slop(716파일, 신규finding0, baseline 변경0)·diff 공백 검사도 exit0이다. 기본 ESLint 호출의 공유 pnpm plugin 탐색 실패는 규칙을 바꾸지 않은 `/tmp` config로 실제 plugin 위치만 지정해 검사했다. 추가 수동 완료 fixture의 잘못된 구 DTO source 값으로 실패한 로그도 보존하고 기존 `measured` 값으로 교정했다. 본문에 남은 이전 검사 수치는 당시 기록이다.

@@ -377,6 +377,17 @@ const RPC_ERRORS = {
   WEIGHT_UNRECOVERABLE: [409, "원래 완성 중량을 확인할 수 없는 요리예요."],
 } as const;
 
+const EVIDENCE_DISABLED = "COOKED_WEIGHT_EVIDENCE_DISABLED";
+
+export async function isCookedWeightEvidenceDisabledResponse(response: Response) {
+  if (response.status !== 409) return false;
+  try {
+    const payload: unknown = await response.clone().json();
+    return isRecord(payload) && payload.success === false && isRecord(payload.error)
+      && payload.error.code === EVIDENCE_DISABLED;
+  } catch { return false; }
+}
+
 function readErrorText(error: unknown) {
   if (!isRecord(error)) return typeof error === "string" ? error : "";
   return [error.code, error.message, error.details, error.hint].filter((item) => typeof item === "string").join(" ");
@@ -393,7 +404,12 @@ function rpcError(error: unknown) {
 export async function callCookedBatchRpc(client: CookedBatchRpcClient, functionName: string, args: Record<string, unknown>) {
   try {
     const result = await client.rpc(functionName, args);
-    if (result.error) return { ok: false as const, response: rpcError(result.error) };
+    if (result.error) {
+      if (isRecord(result.error) && result.error.code === "55000" && result.error.message === EVIDENCE_DISABLED) {
+        return { ok: false as const, response: fail(EVIDENCE_DISABLED, "무게 근거 저장이 꺼졌어요. 요리 정보를 다시 확인해 주세요.", 409) };
+      }
+      return { ok: false as const, response: rpcError(result.error) };
+    }
     if (isRecord(result.data) && typeof result.data.success === "boolean") {
       if (!result.data.success) return { ok: false as const, response: rpcError(result.data.error) };
       return { ok: true as const, data: result.data.data };

@@ -1,6 +1,6 @@
 import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
-import { callCookedBatchRpc, isUuid, parseBatchWeightRequest, projectCookedBatchMutationData } from "@/lib/server/cooked-batches";
+import { callCookedBatchRpc, isCookedWeightEvidenceDisabledResponse, isUuid, parseBatchWeightRequest, projectCookedBatchMutationData } from "@/lib/server/cooked-batches";
 import { authorizeCookedBatchRequest, readJson } from "@/lib/server/cooked-batch-route";
 import { readRequiredIdempotencyKey } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import { cookedWeightEvidenceEnabled } from "@/lib/server/cooked-batch-weight-evidence";
@@ -22,7 +22,13 @@ export async function PATCH(request: Request, context: RouteContext) {
     args.p_weight_input_source = parsed.value.weightInputSource;
     args.p_write_enabled = cookedWeightEvidenceEnabled();
   }
-  const result = await callCookedBatchRpc(authorized.client, evidence ? "mutate_cooked_batch_weight_with_evidence" : "mutate_cooked_batch_weight", args);
+  let result = await callCookedBatchRpc(authorized.client, evidence ? "mutate_cooked_batch_weight_with_evidence" : "mutate_cooked_batch_weight", args);
+  if (evidence && parsed.value.weightInputSource === null && !result.ok && await isCookedWeightEvidenceDisabledResponse(result.response)) {
+    const legacyArgs = { ...args };
+    delete legacyArgs.p_weight_input_source;
+    delete legacyArgs.p_write_enabled;
+    result = await callCookedBatchRpc(authorized.client, "mutate_cooked_batch_weight", legacyArgs);
+  }
   if (!result.ok) return result.response; const data = projectCookedBatchMutationData(result.data, wantsCookedWeightEvidence(request));
   return data ? ok(data) : fail("INTERNAL_ERROR", "중량 변경 결과를 확인하지 못했어요.", 500);
 }

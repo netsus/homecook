@@ -100,7 +100,8 @@ begin
   -- These entries are written only inside the existing owner/revision/ledger RPC.
   -- Never backfill an old entry during a same-source/quantity date or slot move.
   new.nutrition_evidence_json:=new.nutrition_evidence_json-'weight_basis'-'weight_assumption_codes';
-  if (select enabled from private.cooked_batch_weight_evidence_control where singleton) is distinct from true then
+  if new.source_type is distinct from 'cooked_batch' then return new; end if;
+  if (select enabled from private.cooked_batch_weight_evidence_control where singleton for share) is distinct from true then
     if tg_op='UPDATE' and old.source_type='cooked_batch' and new.source_type='cooked_batch'
       and new.cooked_batch_id=old.cooked_batch_id and old.nutrition_evidence_json ? 'weight_basis' then
       new.nutrition_evidence_json:=new.nutrition_evidence_json||jsonb_build_object('weight_basis',old.nutrition_evidence_json->'weight_basis');
@@ -146,7 +147,7 @@ begin
   v_context:=current_setting('homecook.cooked_weight_evidence_context',true)::jsonb;
   v_receipt:=(v_context->>'receipt_id')::uuid;
   v_source:=v_context->>'input_source';
-  if (select enabled from private.cooked_batch_weight_evidence_control where singleton) is distinct from true
+  if (select enabled from private.cooked_batch_weight_evidence_control where singleton for share) is distinct from true
     or not exists(select 1 from public.mutation_idempotency_keys where id=v_receipt
       and owner_uuid=p_owner_uuid and account_generation=p_generation and state='in_progress'
       and operation_scope in ('snapshot_v2_complete_weight_evidence','cooked_batch_weight_evidence'))
@@ -223,8 +224,8 @@ begin
       'consumed_pantry_item_ids',p_consumed_pantry_item_ids,'weight_action',p_weight_action,'finished_weight_g',p_finished_weight_g,
       'weight_input_source',p_weight_input_source),p_now);
   if v_claim ? 'replay' then return v_claim->'replay'; end if;
-  if p_write_enabled is distinct from true or (select enabled from private.cooked_batch_weight_evidence_control where singleton) is distinct from true
-    then raise exception 'CONFLICT' using errcode='55000'; end if;
+  if p_write_enabled is distinct from true or (select enabled from private.cooked_batch_weight_evidence_control where singleton for share) is distinct from true
+    then raise exception 'COOKED_WEIGHT_EVIDENCE_DISABLED' using errcode='55000'; end if;
   v_receipt:=(v_claim->>'receipt_id')::uuid;
   v_previous:=current_setting('homecook.cooked_weight_evidence_context',true);
   perform set_config('homecook.cooked_weight_evidence_context',jsonb_build_object('receipt_id',v_receipt,'prediction',p_prediction,
@@ -258,8 +259,8 @@ begin
     'cooked_batch_weight_evidence',p_idempotency_key,jsonb_build_object('batch_id',p_batch_id,'expected_revision',p_expected_revision,
       'action',p_action,'finished_weight_g',p_finished_weight_g,'weight_input_source',p_weight_input_source),p_now);
   if v_claim ? 'replay' then return v_claim->'replay'; end if;
-  if p_write_enabled is distinct from true or (select enabled from private.cooked_batch_weight_evidence_control where singleton) is distinct from true
-    then raise exception 'CONFLICT' using errcode='55000'; end if;
+  if p_write_enabled is distinct from true or (select enabled from private.cooked_batch_weight_evidence_control where singleton for share) is distinct from true
+    then raise exception 'COOKED_WEIGHT_EVIDENCE_DISABLED' using errcode='55000'; end if;
   v_receipt:=(v_claim->>'receipt_id')::uuid;
   v_previous:=current_setting('homecook.cooked_weight_evidence_context',true);
   perform set_config('homecook.cooked_weight_evidence_context',jsonb_build_object('receipt_id',v_receipt,
