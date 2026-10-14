@@ -29,7 +29,7 @@ async function rehearseProtectedLedger(cookedWeight: boolean) {
   expect(beforeLedger).toHaveLength(beforeCount);
   const filename = cookedWeight ? "20261013233000_cooked_batch_weight_evidence.sql" : "20261013190000_recipe_product_only_identity.sql";
   const bytes = readFileSync(new URL(`../supabase/migrations/${filename}`, import.meta.url));
-  expect(hash(bytes)).toBe(cookedWeight ? "0c92fa9d4a83cfefa5313e7b8a13c610ac108555248d1db756d4bd7f2d8384af" : "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75");
+  expect(hash(bytes)).toBe(cookedWeight ? "60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0" : "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75");
   const envelope = cookedWeight ? bytes.toString("utf8").replace(/^-- Local draft only\. No historical batch\/meal\/snapshot UPDATE and no learning collection\.\n/u, "") : bytes.toString("utf8");
   const payload = envelope.replace(/^begin;\n/u, "").replace(/\ncommit;\n$/u, "");
   const migration = { filename, sha256: hash(bytes), bytes };
@@ -165,7 +165,7 @@ async function rehearseProtectedLedger(cookedWeight: boolean) {
       expect(sql("SELECT to_regclass('private.cooked_batch_weight_evidence_control') IS NULL;", "supabase_admin", "fixture_backup_restore")).toBe("t");
     } else expect(sql("SELECT to_regclass('private.recipe_product_only_write_control') IS NULL;", "supabase_admin", "fixture_backup_restore")).toBe("t");
     Object.assign(report, { status: "PASS", actualLedgerOwner: "supabase_admin", postgresLedgerSelectOnly: true, ledgerBefore: beforeCount, ledgerAfter: after.ledger.length,
-      payloadSha256: hash(bytes), beforeCatalog, afterCatalog, immutable, afterImmutable, stableImmutable, beforeScope, afterScope, productWriterEnabled: cookedWeight ? true : false, payloadContext: rolesAtPayload[0], fullSnapshotDecoded: true, fullSnapshotRestored: true,
+      migrationSha256: hash(bytes), payloadSha256: hash(payload), beforeCatalog, afterCatalog, immutable, afterImmutable, stableImmutable, beforeScope, afterScope, productWriterEnabled: cookedWeight ? true : false, payloadContext: rolesAtPayload[0], fullSnapshotDecoded: true, fullSnapshotRestored: true,
       backupSha256: result.backup.sha256, rolesSha256: result.backup.rolesSha256, notificationRole: "postgres", writerEnabled: false, readerReady: false });
   } catch (error) {
     report.error = error instanceof Error ? error.message : "Owned fixture failure";

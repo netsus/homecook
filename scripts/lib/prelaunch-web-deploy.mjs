@@ -15,9 +15,9 @@ export const CLOSED_R2_REVIEW_PIN = Object.freeze({
 // Human-approved C03 DB/reader and conditional writer authority. No CLI/env overrides.
 export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-rollout-review.json", sha256: "0112e9ba64f6765a24fe64a891bd96fe2fb6edc19a314d398d0b5a7fbbdb2b6f" });
 export const PROTECTED_WRITER_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-writer-review.json", sha256: "87d989c6ca9c50da8cb93ec0c0da4af95d1f30941a9ed2255d67e3ccdea663c4" });
-// C01 source/current220/isolated postimage authority is not yet pinned. Never borrow C03 approval.
-export const COOKED_WEIGHT_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
-export const COOKED_WEIGHT_WRITER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+// Exact C01 bindings under the user's standing v9 authorization; retain separate C03 authority.
+export const COOKED_WEIGHT_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c01-20261014-HhhiQC/approved-cooked-weight-rollout-review.json", sha256: "3d6f179bcdb964835f25e2c03376d560cd9d6b4de6e8b522b1007e4350f1f7f4" });
+export const COOKED_WEIGHT_WRITER_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c01-20261014-HhhiQC/approved-cooked-weight-writer-review.json", sha256: "48f34663f05d475c4c67780eeabadee209a70fd1dd384942b95863a32b92879b" });
 export const COOKED_WEIGHT_FEATURE = "cooked-weight-evidence";
 export const COOKED_WEIGHT_MIGRATION = "20261013233000_cooked_batch_weight_evidence.sql";
 export const COOKED_WEIGHT_ENVIRONMENT = "HOMECOOK_COOKED_WEIGHT_EVIDENCE";

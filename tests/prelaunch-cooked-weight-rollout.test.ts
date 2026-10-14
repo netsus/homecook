@@ -39,9 +39,15 @@ function fixture() {
 }
 
 describe("fixed C01 authority, independent C03 history and unchanged whole immutable guard", () => {
-  it("keeps two new pins empty and has no arbitrary role, SQL or feature input", () => {
-    expect(deploy.COOKED_WEIGHT_ROLLOUT_REVIEW_PIN).toEqual({ path: null, sha256: null });
-    expect(deploy.COOKED_WEIGHT_WRITER_REVIEW_PIN).toEqual({ path: null, sha256: null });
+  it("binds the exact reviewed C01 source separately from the original C03 authority", () => {
+    expect(deploy.COOKED_WEIGHT_ROLLOUT_REVIEW_PIN).toEqual({
+      path: "/Users/cwj/.homecook/operations/mumeok-beta-c01-20261014-HhhiQC/approved-cooked-weight-rollout-review.json",
+      sha256: "3d6f179bcdb964835f25e2c03376d560cd9d6b4de6e8b522b1007e4350f1f7f4",
+    });
+    expect(deploy.COOKED_WEIGHT_WRITER_REVIEW_PIN).toEqual({
+      path: "/Users/cwj/.homecook/operations/mumeok-beta-c01-20261014-HhhiQC/approved-cooked-weight-writer-review.json",
+      sha256: "48f34663f05d475c4c67780eeabadee209a70fd1dd384942b95863a32b92879b",
+    });
   });
   it("accepts only the C01 transition with exact predecessor C03 ON/floor and separate writer authority", () => {
     expect(deploy.assertProtectedRolloutReview(fixture().review)).toMatchObject({ feature: "cooked-weight-evidence" });
@@ -202,7 +208,11 @@ it("selects only an exact feature ref from copied private pins and never treats 
     expect(copied.loadProtectedRolloutReview(process.cwd(), { ref: f.review.to, phase: "writer-off" }).feature).toBe("cooked-weight-evidence");
     expect(() => copied.loadProtectedRolloutReview(process.cwd(), { ref: ref("e"), phase: "writer-off" })).toThrow("exact approved reader reference");
     expect(() => copied.loadProtectedRolloutReview(process.cwd(), { feature: "other-private-control" })).toThrow("arbitrary protected feature");
-    expect(() => deploy.loadProtectedRolloutReview(process.cwd(), { feature: "cooked-weight-evidence" })).toThrow("핀이 비어");
+    const unapprovedSource = source.replace(/export const COOKED_WEIGHT_ROLLOUT_REVIEW_PIN = Object\.freeze\([^\n]+/u,
+      "export const COOKED_WEIGHT_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });");
+    const unapprovedPath = join(root, "unapproved.mjs"); writeFileSync(unapprovedPath, unapprovedSource);
+    const unapproved = await import(pathToFileURL(unapprovedPath).href);
+    expect(() => unapproved.loadProtectedRolloutReview(process.cwd(), { feature: "cooked-weight-evidence" })).toThrow("핀이 비어");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 

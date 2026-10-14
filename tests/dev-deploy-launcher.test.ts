@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, expect, it } from "vitest";
 import { DEV_DEPLOY_SNAPSHOT_PATHS, installDevDeployLauncher, verifyDevDeployToolLoad } from "../scripts/lib/dev-deploy-launcher.mjs";
-import { prelaunchVerificationEnvironment } from "../scripts/lib/prelaunch-web-deploy.mjs";
+import { COOKED_WEIGHT_ROLLOUT_REVIEW_PIN, COOKED_WEIGHT_WRITER_REVIEW_PIN, prelaunchVerificationEnvironment } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const snapshotRoots: string[] = [];
 afterEach(() => { for (const root of snapshotRoots.splice(0)) rmSync(root, { recursive: true, force: true }); });
@@ -40,8 +40,9 @@ it("installs the working C01 tool graph as an actual archive and invokes its fix
   const probe = `import assert from 'node:assert/strict';
     const web=await import(${JSON.stringify(join(snapshot, "scripts/lib/prelaunch-web-deploy.mjs"))});
     const db=await import(${JSON.stringify(join(snapshot, "scripts/lib/prelaunch-database.mjs"))});
-    assert.deepEqual(web.COOKED_WEIGHT_ROLLOUT_REVIEW_PIN,{path:null,sha256:null});
-    assert.throws(()=>web.loadProtectedRolloutReview(${JSON.stringify(repository)},{feature:'cooked-weight-evidence'}));
+    assert.deepEqual(web.COOKED_WEIGHT_ROLLOUT_REVIEW_PIN,${JSON.stringify(COOKED_WEIGHT_ROLLOUT_REVIEW_PIN)});
+    assert.deepEqual(web.COOKED_WEIGHT_WRITER_REVIEW_PIN,${JSON.stringify(COOKED_WEIGHT_WRITER_REVIEW_PIN)});
+    assert.throws(()=>web.loadProtectedRolloutReview(${JSON.stringify(repository)},{feature:'unreviewed-feature'}));
     assert.ok(db.COOKED_WEIGHT_SCOPE_SQL.includes('verify_scope_pre_cooked_weight_evidence_20261013'));
     assert.ok(db.COOKED_WEIGHT_STABLE_IMMUTABLE_SQL.includes("p.pronargs=0"));
     assert.ok(web.protectedReaderFenceSql({feature:'cooked-weight-evidence'}).check.includes('cooked_batch_weight_evidence_control'));
