@@ -145,6 +145,50 @@ describe("planner addition inside one sheet", () => {
     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(3));
     expect(api.create.mock.calls[2]![1]).not.toBe(originalKey);
   });
+  it("uses a new action key when the same selection is explicitly added after a successful retry closes the sheet", async () => {
+    const completed = vi.fn();
+    function ReopenPicker() {
+      const [open, setOpen] = React.useState(false);
+      return <>
+        <button onClick={() => setOpen(true)}>새 계획 추가</button>
+        {open ? <MealAddPickerFlow columnId="column" entryMode="search"
+          onClose={() => setOpen(false)} onComplete={() => { completed(); setOpen(false); }}
+          planDate="2026-10-06" slotName="점심" /> : null}
+      </>;
+    }
+    api.create.mockClear();
+    api.create.mockResolvedValueOnce({ success: false, error: { message: "잠시 후 다시 시도해 주세요." } })
+      .mockResolvedValueOnce({ success: true, data: { id: "first-meal" } })
+      .mockResolvedValueOnce({ success: true, data: { id: "second-meal" } });
+    const user = userEvent.setup();
+    render(<ReopenPicker />);
+    await user.click(screen.getByRole("button", { name: "새 계획 추가" }));
+    await user.click(await screen.findByRole("button", { name: "김치찌개 선택" }));
+    await user.click(screen.getByRole("button", { name: "추가하기" }));
+    await screen.findByRole("alert");
+    expect(api.create).toHaveBeenCalledTimes(1);
+    expect(completed).not.toHaveBeenCalled();
+    const firstKey = api.create.mock.calls[0]![1];
+    expect(firstKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu);
+    await user.click(screen.getByRole("button", { name: "추가하기" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(completed).toHaveBeenCalledTimes(1);
+    expect(api.create).toHaveBeenCalledTimes(2);
+    expect(api.create.mock.calls[1]![1]).toBe(firstKey);
+
+    await user.click(screen.getByRole("button", { name: "새 계획 추가" }));
+    await user.click(await screen.findByRole("button", { name: "김치찌개 선택" }));
+    expect(api.create).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("button", { name: "추가하기" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(completed).toHaveBeenCalledTimes(2);
+    expect(api.create).toHaveBeenCalledTimes(3);
+    expect(api.create.mock.calls[2]![1]).not.toBe(firstKey);
+    expect(api.create.mock.calls[2]![1]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu);
+    for (const [body] of api.create.mock.calls) expect(body).toEqual({
+      recipe_id: "recipe-a", plan_date: "2026-10-06", column_id: "column", planned_servings: 2,
+    });
+  });
   it("keeps the quantity and target after failure and asks once before discarding edited input", async () => {
     const close = vi.fn(); openPicker(close);
     fireEvent.click(await screen.findByRole("button", { name: "김치찌개 선택" }));
