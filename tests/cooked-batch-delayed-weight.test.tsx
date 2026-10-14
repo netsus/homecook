@@ -46,7 +46,7 @@ describe("cooked batch delayed weight", () => {
 
     await user.type(screen.getByRole("spinbutton", { name: "음식만의 원래 전체 중량" }), "920");
     expect(screen.getByRole("button", { name: "중량 저장" }).hasAttribute("disabled")).toBe(true);
-    await user.click(screen.getByRole("checkbox", { name: /먹거나 버린 적이 없고/ }));
+    await user.click(screen.getByRole("checkbox", { name: "아직 먹거나 버리지 않은 전체 무게예요" }));
     await user.click(screen.getByRole("button", { name: "중량 저장" }));
 
     expect(onSubmit).toHaveBeenCalledWith({
