@@ -495,3 +495,35 @@ C01 DB만 committed이고 reader가 pending일 때 C03 안전 OFF를 먼저 실�
 임시 full pg_dump가 C03 control을 이미 포함한다는 것과 정규 platform backup/restore의 관계 분류는 별개다. 기존 분류기에 `private.recipe_product_only_write_control`, `private.cooked_batch_weight_evidence_control`, `private.cooked_batch_weight_evidence` 정확히 세 관계만 include로 추가한다. 다른 private 관계의 미분류 거절, 암호화/동일 target/USB/격리 복원·semantic 비교는 유지한다. 개인 evidence를 C05 공동 수집이나 미정 보유기간 정책으로 해석하지 않는다. DB full restore·C03/C01 쓰기 재개는 웹 rollback과 별도 운영 경계다.
 
 설치 snapshot의 기존 선택 경로는 그대로다. runtime은 fixed catalog/scope SQL을 사용하며 `docs/security` JSON을 읽는 source-inventory helper를 새로 호출하지 않는다. 기존 installer의 실제 archive·모듈 load·고정 C01 helper invoke를 격리 HOME에서 확인하고, 검증되지 않은 문서 복사나 새 runner로 누락을 감추지 않는다. C01 whole/immutable 기대값의 source/actual-before/isolated 변경 투영 및 원 데이터 보존은 별도 준비 증거이며 owned clone의 전체 hash를 운영 기대값으로 채택하지 않는다.
+
+## C04 수량 정책의 보호 경로 준비 · 2026-10-14
+
+기존 `--reviewed-protected-rollout`에 `ingredient-quantity-v4`의 정확 5+1 단계만 준비한다. 현재 C04 source/review/writer/worker-control/protection PIN은 null이며 실제 설정·대상 접근 전에 거부한다. 이 준비가 운영 적용, worker 설치 또는 policy 활성화의 완료 기록은 아니다. F01/C03/C01 원 PIN과 권한·SQL을 바꾸지 않는다.
+
+- `database`/`database-retry`/`reconcile`: source227의 정확 first5 postgres payload·admin ledger만 실행하는 221→226 OFF 단계. reader floor나 ON을 게시하지 않는다.
+- `worker-database`/`worker-database-retry`/`worker-reconcile`: terminal226 출처와 worker quiesced checkpoint를 검증한 뒤 정확 f586 admin payload·원장1개를 실행하는 226→227 OFF 단계. 두 단계는 각각 같은 snapshot의 full archive decode/roles 백업·기존 데이터·원 원장 행·scope/ACL/control을 보존하며 unknown에서 자동 재실행하지 않는다.
+- `reader`: 실제 terminal227 bytes와 새 sealed worker의 원 검토 자료·controlled journal·post terminal 및 fresh target/catalog/queue/credential/plist/PID를 검증한 뒤 정확 웹 source/build/plist/floor를 게시한다. C01의 committed DB/reader/floor/실제 writer ON과 C03 ON을 먼저 요구한다.
+- `writer-on`: 위 reader/DB/worker 조건과 별도 원 writer 검토 자료에서만 C04 policy를 ON한다. `writer-off`는 원 출처·실제 target/catalog/scope/권한·reader 하한을 유지하며 C04 policy만 닫는다. 정상 queue 증가, worker 장애, credential 만료가 안전 OFF를 막지 않게 구분하되 worker policy/credential/C03/C01은 바꾸지 않는다. 원 수량·과거 snapshot/영양과 성공 receipt는 OFF에서도 보존한다.
+
+5표의 새 nullable JSONB 열만 기존 열의 정확 projection과 별도 SQL NULL 검사를 사용한다. 다른 명시 domain 표와 기존 auth/R2/YouTube10표의 전체 행/중첩 JSON, 배포 원장의 원 행도 보존한다. root가 확인한 5표의 모든 이름/type/default/nullability와 고정 source 이후의 메타데이터 지문을 비교하며 source 밖 열을 자동 제외하지 않는다. NULL 준비 조건은 DDL 단계에만 적용한다. 각 transaction의 데이터 보존 증거는 별개이며 두 단계 사이의 정상 쓰기를 소급 손상 또는 묵시 허가로 해석하지 않는다. T2 before의 실제 normalDataSha256은 worker checkpoint에 기록한다.
+
+worker는 이 웹/DB 도구의 실행 소유가 아니다. 별도 기존 worker CLI의 C04 profile이 quiesce/CAS/install을 수행하고 DB 도구는 생성 기록을 소비한다. 원 `homecook.youtube-c04-controlled-cutover-review.v1`은 source/target/CAS47→48/226·227/artifact/schema를 고정한다. `preReceiptSha256`/`postReceiptSha256`는 null 조건부로 두고 생성 기록의 실제 PID·row timestamps를 원 review SHA·승인된 UUID·고정 operation root·controlled journal의 immutable pointer와 fresh state에 결속한다. 원 review를 덮거나 생성 receipt 해시를 원 review 해시에 되물리지 않는다. post의 `workerDatabaseReceiptSha256`은 실제 DB2 terminal bytes와 같아야 한다. 임의 유효기간을 정하지 않으며 별도 새 PIN의 결속이 원 권위를 대체하지 않는다.
+
+worker CLI가 재사용하는 최소 export는 기존 lib의 `loadQuantityV4DatabaseReceipt(repositoryRoot, stage)`, `observeQuantityV4WorkerBoundary({repositoryRoot, stage})`, `acquirePrelaunchDeployLock()`이다. 첫 함수는 code-bound review와 고정 global guard→immutable receipt만 읽으며 임의 locator를 받지 않는다. 관찰 preflight는 원 config/protection/actual target/backup readiness를 확인하고 `{authority, observation, adapter}`를 반환한다. 잠금 안에서는 `adapter.observe(sql => session.query(sql), applicationName)`의 고정 쿼리를 같은 transaction에서 재사용하며 target-open/USB verifier를 다시 실행하지 않는다. 기존 global deploy.lock의 mkdir/rmdir를 공유하고 소유 inode만 release하며 stale lock을 자동 삭제하지 않는다. worker pure lib의 DB 역방향 import는 추가하지 않는다.
+
+백업/복원 classifier에는 정확 `private.quantity_input_v4_policy` 한 표만 추가한다. OFF/ON bytes를 그대로 복원하며 unknown private 표의 거부, R2·인증 복원 조건은 유지한다. source SQL6과 역사 actor/권한은 그대로다. 제어 engine 전체를 실제 구성한 owned rehearsal와 독립 검토·최종 source/postimage/PIN 결속은 운영 전에 별도로 수행한다.
+
+worker publication의 immutable origin은 고정 `pre-worker-origin.json`/`post-worker-origin.json`이며 current cutover journal의 source/target/원 review/UUID와 pointer bytes를 교차 검증한다. 자연 restart의 좁은 재검증은 같은 opdir의 `verifications/<UUIDv4>/post-worker-terminal.json`과 같은 디렉터리의 origin snapshot만 허용한다. publisher는 quantity OFF/worker OFF/gen48/같은 source·artifact·plist에서 fresh PID 두 번을 확인해야 하며 원 post 파일을 덮지 않는다. 원 review의 post digest가 nonnull이면 새 digest를 자동 승격하지 않는다. reader/최초 quantity ON은 현재 검증 pointer와 fresh PID 일치를 요구한다. 안전 quantity OFF 또는 별도 worker 활성화는 immutable post 출처를 읽는 historical 경로와 현재 실행 상태를 구분한다.
+
+별도 worker `--activate`는 runtime profile 소유이며 이 DB 도구는 worker 정책을 바꾸지 않는다. worker CLI는 고정 `loadQuantityV4ReaderWriterReceipts(repositoryRoot)`로 DB227·원 C04 reader/floor·원 writer 승인과 실제 quantity ON receipt를 소비한다. `observeQuantityV4WorkerBoundary`의 고정 `quantityWriterState='on'`도 이 출처와 실제 quantity ON을 함께 확인한다. worker 활성화·일시 중지는 별도 profile의 원 review/confirmation·fresh 검증·자체 기록이 필요하며 DB writer ON/OFF와 서로 대신 수행한다고 가정하지 않는다. 원 postOFF publication과 activation 기록은 구분한다.
+
+C01 predecessor의 원 DB/reader/ON 출처와 floor32ab는 이후 정상 웹 continuation의 live5be와 구분한다. C04의 실제 from/build/plist는 live를 검증하고 원 C01 floor→live→C04 후보의 git ancestry를 별도로 확인하며 원 C01 review/receipt를 retarget하지 않는다.
+
+reader publication P1과 quantity ON 시점의 fresh P2는 서로 다른 기록이다. C04 reader의 `workerReceipt:{path,sha256}`는 원 P1을 보존하고, C04 quantity ON receipt의 같은 필드는 실제 검증한 P2를 보존한다. 각 고정 initial/UUID locator의 immutable origin과 원 review/op/source/target/artifact/descriptor/plist/gen48/DB2·credential·당시 worker OFF를 대조하며 이전 PID나 normalData 값을 같게 만들지 않는다. 원 nonnull post/approval digest와 다른 P2를 자동 승격하지 않는다. ON 이후 자연 restart P3는 원 P2를 덮지 않고 별도 runtime activation의 fresh stable PID 두 번/health로 검증한다. activation authority loader는 P1/P2의 역사 출처를 검증하고 P2.pid를 현재 PID로 retarget하지 않는다.
+
+
+P1 OFF 이후 별도 worker 활성화·명시 복구 중지로 P2 OFF의 전체 정책 행 해시가 바뀌면 원 immutable 활성화→중지 영수증의 정확한 OFF→ON→OFF 해시 연결만 허용한다. `policyStableSha256`은 PostgreSQL에서 정책 전체 JSON의 `enabled`와 `updated_at` 두 열만 제외한 고정 SHA이며 원본 origin과 모든 단계의 observation에 보존한다. 옵션·키 버전·이전 키 만료·model/pipeline 등 나머지 열은 모두 포함된다. checkpoint33 필드는 바꾸지 않는다.
+
+소비자는 고정 초기/UUID activation verification·activation receipt·repair pause·P2 origin을 소유권·권한·symlink·bytes hash와 원 R/op/source/target/artifact/gen48/DB2로 검증한다. 이전 post publication은 정확 1개만 읽으며 재귀 탐색하지 않는다. `drain_pending`·체인 없는 행 변경·혼합 출처는 거부한다. activation receipt가 null이면 동일 durable OFF verification과 정확 실제 ON을 기록한 고정 `activation-reconciliations/<UUID>/receipt.json`의 `committed` 기록이 필수다. `not_applied`는 새 P2의 긍정 활성화 권위가 아니며 원본을 보존한다. DB writer는 worker 정책을 변경하지 않고 별도 runtime profile만 활성화·복구 중지를 수행한다.
+
+동일 pause 뒤 quantity ON 전 자연 재시작 P3는 pause가 고정한 원 P1의 previous post/origin을 그대로 보존하고 현재 post pointer만 새 immutable P3로 갱신한다. PID·normalData는 각 시점의 기록이며 같게 만들지 않는다. quantity writer가 이미 ON 완료된 뒤 safe OFF했거나 두 번째 정책 수명에 들어간 경우에는 새 정확 review/operation 준비 없이 재활성화하지 않는다. 현재 reader phase는 원 first-source/build/plist를 요구하고 기존 writer journal은 자동 재활성화를 거부한다. 원 receipt나 이 guard를 덮거나 완화하지 않고 quantity OFF와 현재 reader를 유지한다. 이 범위를 자동 복구 완료로 확대하지 않는다.
