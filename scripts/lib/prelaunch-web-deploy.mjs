@@ -1488,15 +1488,23 @@ export function inheritRound2Readiness({ readiness, previous, next, liveSha, rel
   return { ...readiness, release_sha: releaseSha };
 }
 
-export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false }) {
+/** @param {{previous: any, next: any, files: string[], databaseDeployment?: boolean, quantityPublicReadDigests?: (string | null)[] | null}} input */
+export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false, quantityPublicReadDigests = null }) {
   const before = previous.EnvironmentVariables ?? {}, after = next.EnvironmentVariables ?? {};
+  // Only the reviewed guest quantity projection, with R2 still closed on both sides.
+  const reviewedQuantityPublicRead = CLOSED_R2_FLAGS.every(key => before[key] === "false" && after[key] === "false")
+    && isDeepStrictEqual(quantityPublicReadDigests, [
+      "d7399684db1e10d0bc86847dad3e2d6a361d61f7c1589446b37b9eb0dc089639",
+      "e0d54ee86c56eeae6df11cd7ddf7346e744c72323d098599dc62425c006ac37e",
+    ]);
   // Existing active and closed inheritance share the same protected source/environment boundaries.
   const protectedSources = [
     /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|app\/(?:layout\.|globals\.css$)|components\/marketing\/|lib\/(?:marketing[./-]|supabase\/|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u,
     /^(?:supabase\/|infra\/|scripts\/sql\/|scripts\/(?:start-production\.mjs|lib\/(?:start-production-runtime|production-data-quality|full-local-|marketing-round2)))/u,
     /^(?:middleware\.|proxy\.|next\.config\.|tsconfig\.json$|package\.json$|pnpm-lock\.yaml$|\.env(?:\.|$))/u,
   ];
-  if (databaseDeployment || !Array.isArray(files) || files.some(file => protectedSources.some(pattern => pattern.test(file)))) {
+  if (databaseDeployment || !Array.isArray(files) || files.some(file => protectedSources.some(pattern => pattern.test(file))
+    && !(reviewedQuantityPublicRead && file === "lib/server/hybrid-auth/public-read-policy-runtime.mjs"))) {
     throw new DeploymentError("R2 보호 코드·SQL·동의·라우팅 변경은 기존 readiness를 승계할 수 없습니다.");
   }
   const protectedEnvironment = /^(?:(?:NEXT_PUBLIC_)?(?:MUMEOK_|MARKETING_|SUPABASE_|TURNSTILE_)|(?:DATA|LOCAL)_SUPABASE_|HOMECOOK_(?:AUTH|DATA|FULL_LOCAL|SESSION)|NEXT_PUBLIC_SITE_URL$|NODE_ENV$)/u;

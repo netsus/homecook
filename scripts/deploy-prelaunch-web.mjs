@@ -185,6 +185,16 @@ async function logged(bin, args, options) {
   } finally { await owned.stop(); owned.forget(); }
 }
 
+function quantityPublicReadDigests(live, selection, closedContext) {
+  const file = "lib/server/hybrid-auth/public-read-policy-runtime.mjs";
+  if (closedContext?.rollout?.feature !== QUANTITY_V4_FEATURE || closedContext.rollout.quantityStage !== "worker"
+    || !selection.files.includes(file)) return null;
+  // Read Git blob bytes, not the working tree or trimmed command output.
+  return [live.ref, selection.target].map(ref => git(["ls-tree", ref, "--", file]).length
+    ? hash(execFileSync("git", ["-C", repository, "show", `${ref}:${file}`],
+      { maxBuffer: 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null);
+}
+
 async function stageRound2Readiness(plist, release, live, selection, databaseDeployment, options, databasePlan, closedContext) {
   if (options.reviewedClosedR2Maintenance || closedContext) {
     const review = loadClosedR2Review(repository);
@@ -202,7 +212,8 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
         envPatchSha256: hash(readClosedR2PrivateBytes(options.envFile, repository)) });
     } else {
       assertClosedR2ContinuationOptions(options);
-      assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment });
+      assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment,
+        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext) });
       if (!isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
     }
     if (!options.reviewedProtectedRollout) {
@@ -1409,7 +1420,8 @@ async function main() {
       validateClosedR2Candidate(review, live, selection, patch, options, closedContext);
       verifyClosedR2Control(review, repository);
     } else if (closedContext) {
-      assertRound2InheritanceBoundaries({ previous: live.plist, next: live.plist, files: selection.files, databaseDeployment: selection.scope.database.length > 0 });
+      assertRound2InheritanceBoundaries({ previous: live.plist, next: live.plist, files: selection.files, databaseDeployment: selection.scope.database.length > 0,
+        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext) });
       verifyClosedR2Control(closedContext.review, repository);
     }
     say(JSON.stringify({ ...selection, environmentKeys, database: { required: selection.scope.database.length > 0 || Boolean(options.dbConfig), configProvided: Boolean(options.dbConfig), readOnly: Boolean(options.alreadyAppliedDb || options.reviewedIntegratedMasterReadiness), requiresCompatibilityConfirmation: (selection.scope.database.length > 0 || Boolean(options.dbConfig)) && !options.dbCompatible && !options.alreadyAppliedDb && !options.reviewedIntegratedMasterReadiness, note: options.reviewedIntegratedMasterReadiness ? "DB218 선행 상태를 읽기 전용으로 고정하고 웹만 먼저 배포합니다." : "DB 이력·현재 스키마·추가형 변경 여부는 배포 시 대상 커밋에서 검사합니다." } }, null, 2));
