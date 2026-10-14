@@ -120,6 +120,8 @@ export interface SnapshotV2CookModeData {
   status: CookingSessionStatus;
   recipe: CookingModeRecipe;
   pantry_candidates: SnapshotV2PantryCandidate[];
+  weight_evidence_enabled?: boolean;
+  weight_prediction?: CookedWeightSummary;
 }
 
 export interface SnapshotV2PantryCandidate {
@@ -140,12 +142,21 @@ export type SnapshotV2CompleteBody =
       consumed_pantry_item_ids: string[];
       weight_action: "set_finished_weight";
       finished_weight_g: number;
+      weight_input_source?: "reported_measured";
     }
   | {
       consumed_pantry_item_ids: string[];
       weight_action: "weigh_later";
       finished_weight_g: null;
     };
+
+export interface CookedWeightSummary {
+  source: "conditional_estimate" | "unavailable" | "historical_estimate" | "reported_measured" | "manual_estimate" | "legacy_unknown";
+  predicted_g: number | null;
+  model_version: string | null;
+  reason_codes: string[];
+  assumption_codes?: string[];
+}
 
 export interface CookedBatchProjection {
   id: string;
@@ -159,6 +170,8 @@ export interface CookedBatchProjection {
   remaining_weight_g: number | null;
   weight_status: "known" | "missing" | "unrecoverable" | null;
   weight_source?: "estimated" | "measured" | null;
+  weight_evidence?: CookedWeightSummary;
+  weight_evidence_enabled?: boolean;
   batch_status: "available" | "depleted" | null;
   depleted_reason:
     | "consumed"

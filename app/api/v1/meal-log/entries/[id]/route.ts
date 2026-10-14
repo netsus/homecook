@@ -1,3 +1,4 @@
+import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { callMealLogRpc, isMealLogEntryId, parseIdempotencyKey, parseMealLogDeleteRequest, parseMealLogMutationRequest, projectMealLogData, toMealLogRpcPayload } from "@/lib/server/meal-log";
 import { authorizeMealLogRequest, readMealLogJson } from "@/lib/server/meal-log-route";
@@ -36,7 +37,7 @@ async function mutate(request: Request, context: Context, action: "patch" | "del
     p_payload: payload,
   });
   if (!result.ok) return result.response;
-  const data = projectMealLogData(result.data, quantityInputContractRequested(request));
+  const data = projectMealLogData(result.data, quantityInputContractRequested(request), wantsCookedWeightEvidence(request));
   return data ? ok(data) : fail("INTERNAL_ERROR", "식사 기록 결과를 확인하지 못했어요.", 500);
 }
 

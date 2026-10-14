@@ -14,6 +14,7 @@ import type {
   MealLogSourceType,
 } from "@/types/meal-log";
 import { fail } from "@/lib/api/response";
+import { isCookedWeightAssumptionCodes, isMealLogWeightBasis } from "@/lib/cooking/cooked-weight-summary";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -259,17 +260,19 @@ export async function callMealLogRpc(client: MealLogRpcClient, name: string, arg
 }
 
 export function isMealLogNutritionEvidence(value: unknown): value is MealLogNutritionEvidence {
-  if (!isRecord(value) || !hasOnlyKeys(value, [...NUTRITION_KEYS, "contains_ai_estimate"])
+  if (!isRecord(value) || !hasOnlyKeys(value, [...NUTRITION_KEYS, "contains_ai_estimate", "weight_basis", "weight_assumption_codes"])
     || !NUTRITION_KEYS.every((key) => key in value)
     || !NUTRITION_STATUSES.includes(value.calculation_status as typeof NUTRITION_STATUSES[number])) return false;
   if ("contains_ai_estimate" in value && typeof value.contains_ai_estimate !== "boolean") return false;
+  if ("weight_basis" in value && !isMealLogWeightBasis(value.weight_basis)) return false;
+  if ("weight_assumption_codes" in value && (!isCookedWeightAssumptionCodes(value.weight_assumption_codes) || !isMealLogWeightBasis(value.weight_basis) || value.weight_basis.source !== "conditional_estimate")) return false;
   return NUTRITION_KEYS.slice(1).every((key) => value[key] === null
     || (typeof value[key] === "number" && Number.isFinite(value[key])));
 }
 
-function projectMealLogNutrition(value: unknown): MealLogNutritionEvidence | null {
+function projectMealLogNutrition(value: unknown, includeWeightEvidence = false): MealLogNutritionEvidence | null {
   if (!isMealLogNutritionEvidence(value)) return null;
-  const nutrition = {
+  const values = {
     calculation_status: value.calculation_status,
     calories_kcal: value.calories_kcal,
     carbohydrate_g: value.carbohydrate_g,
@@ -277,9 +280,11 @@ function projectMealLogNutrition(value: unknown): MealLogNutritionEvidence | nul
     fat_g: value.fat_g,
     sodium_mg: value.sodium_mg,
   };
-  return value.contains_ai_estimate === undefined
-    ? nutrition
-    : { contains_ai_estimate: value.contains_ai_estimate, ...nutrition };
+  const nutrition: MealLogNutritionEvidence = value.contains_ai_estimate === undefined
+    ? values : { contains_ai_estimate: value.contains_ai_estimate, ...values };
+  if (includeWeightEvidence && value.weight_basis !== undefined) nutrition.weight_basis = { ...value.weight_basis };
+  if (includeWeightEvidence && value.weight_assumption_codes !== undefined) nutrition.weight_assumption_codes = [...value.weight_assumption_codes];
+  return nutrition;
 }
 
 const ENTRY_KEYS = [
@@ -296,7 +301,7 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function projectMealLogEntry(value: unknown, quantityV4 = false): MealLogEntry | null {
+function projectMealLogEntry(value: unknown, quantityV4 = false, includeWeightEvidence = false): MealLogEntry | null {
   if (!isRecord(value) || !hasExactKeys(value, [...ENTRY_KEYS, ...("quantity_input" in value ? ["quantity_input"] : [])])
     || !isUuid(value.id)
     || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1
@@ -315,8 +320,9 @@ function projectMealLogEntry(value: unknown, quantityV4 = false): MealLogEntry |
     || !isTimestamp(value.created_at) || !isTimestamp(value.updated_at)) return null;
   if (value.quantity_input !== undefined && value.quantity_input !== null
     && !isQuantityInputSnapshot(value.quantity_input, { amount: value.quantity.amount, unit: value.quantity.unit })) return null;
-  const nutrition = projectMealLogNutrition(value.nutrition);
+  const nutrition = projectMealLogNutrition(value.nutrition, includeWeightEvidence);
   if (!nutrition) return null;
+  if (nutrition.weight_basis && (value.source.type !== "cooked_batch" || nutrition.weight_basis.batch_id !== value.source.id)) return null;
   const entry: MealLogEntry = {
     id: value.id,
     revision: value.revision as number,
@@ -344,9 +350,9 @@ function projectMealLogColumn(value: unknown): MealLogColumn | null {
   return { id: value.id, name: value.name, sort_order: value.sort_order as number };
 }
 
-function projectMealLogEntries(value: unknown, quantityV4 = false): MealLogEntry[] | null {
+function projectMealLogEntries(value: unknown, quantityV4 = false, includeWeightEvidence = false): MealLogEntry[] | null {
   if (!Array.isArray(value)) return null;
-  const entries = value.map(entry => projectMealLogEntry(entry, quantityV4));
+  const entries = value.map(entry => projectMealLogEntry(entry, quantityV4, includeWeightEvidence));
   return entries.some((entry) => entry === null) ? null : entries as MealLogEntry[];
 }
 
@@ -361,13 +367,13 @@ function projectMealLogDayTotal(value: unknown): MealLogDayTotal | null {
   return projected ? { ...projected, incomplete_count: value.incomplete_count as number } : null;
 }
 
-function projectMealLogActiveSection(value: unknown, quantityV4 = false): MealLogActiveSection | null {
+function projectMealLogActiveSection(value: unknown, quantityV4 = false, includeWeightEvidence = false): MealLogActiveSection | null {
   if (!isRecord(value) || !hasExactKeys(value, [
     "meal_plan_column_id", "slot_name_snapshot", "sort_order", "entries", "subtotal", "incomplete_count",
   ]) || !isUuid(value.meal_plan_column_id) || !isNonEmptyString(value.slot_name_snapshot)
     || !Number.isSafeInteger(value.sort_order) || !Number.isSafeInteger(value.incomplete_count)
     || Number(value.incomplete_count) < 0) return null;
-  const entries = projectMealLogEntries(value.entries, quantityV4);
+  const entries = projectMealLogEntries(value.entries, quantityV4, includeWeightEvidence);
   const subtotal = projectMealLogNutrition(value.subtotal);
   return entries && subtotal ? {
     meal_plan_column_id: value.meal_plan_column_id,
@@ -379,12 +385,12 @@ function projectMealLogActiveSection(value: unknown, quantityV4 = false): MealLo
   } : null;
 }
 
-function projectMealLogDeletedSection(value: unknown, quantityV4 = false): MealLogDeletedColumnSection | null {
+function projectMealLogDeletedSection(value: unknown, quantityV4 = false, includeWeightEvidence = false): MealLogDeletedColumnSection | null {
   if (!isRecord(value) || !hasExactKeys(value, [
     "slot_name_snapshot", "entries", "subtotal", "incomplete_count",
   ]) || !isNonEmptyString(value.slot_name_snapshot)
     || !Number.isSafeInteger(value.incomplete_count) || Number(value.incomplete_count) < 0) return null;
-  const entries = projectMealLogEntries(value.entries, quantityV4);
+  const entries = projectMealLogEntries(value.entries, quantityV4, includeWeightEvidence);
   const subtotal = projectMealLogNutrition(value.subtotal);
   return entries && subtotal ? {
     slot_name_snapshot: value.slot_name_snapshot,
@@ -400,11 +406,11 @@ function projectArray<T>(value: unknown, project: (item: unknown) => T | null): 
   return projected.some((item) => item === null) ? null : projected as T[];
 }
 
-export function projectMealLogData(value: unknown, quantityV4 = false): MealLogMutationData | MealLogDayData | null {
+export function projectMealLogData(value: unknown, quantityV4 = false, includeWeightEvidence = false): MealLogMutationData | MealLogDayData | null {
   if (!isRecord(value)) return null;
   if ("entry" in value) {
     if (!hasExactKeys(value, ["entry"])) return null;
-    const entry = projectMealLogEntry(value.entry, quantityV4);
+    const entry = projectMealLogEntry(value.entry, quantityV4, includeWeightEvidence);
     return entry ? { entry } : null;
   }
   if (!hasExactKeys(value, [
@@ -413,9 +419,9 @@ export function projectMealLogData(value: unknown, quantityV4 = false): MealLogM
   ]) || !isDate(value.date)) return null;
   if (value.quantity_policy !== undefined && value.quantity_policy !== null && value.quantity_policy !== "quantity-v4") return null;
   const activeColumns = projectArray(value.active_columns, projectMealLogColumn);
-  const activeSections = projectArray(value.active_sections, entry => projectMealLogActiveSection(entry, quantityV4));
-  const deletedSections = projectArray(value.deleted_column_sections, entry => projectMealLogDeletedSection(entry, quantityV4));
-  const entries = projectMealLogEntries(value.entries, quantityV4);
+  const activeSections = projectArray(value.active_sections, entry => projectMealLogActiveSection(entry, quantityV4, includeWeightEvidence));
+  const deletedSections = projectArray(value.deleted_column_sections, entry => projectMealLogDeletedSection(entry, quantityV4, includeWeightEvidence));
+  const entries = projectMealLogEntries(value.entries, quantityV4, includeWeightEvidence);
   const dayTotal = projectMealLogDayTotal(value.day_total);
   if (!activeColumns || !activeSections || !deletedSections || !entries || !dayTotal) return null;
   const day: MealLogDayData = {

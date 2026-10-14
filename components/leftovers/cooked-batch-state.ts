@@ -9,7 +9,7 @@ export type CookedBatchAction =
   | "cancel_current";
 
 export type CookedBatchMutationRequest =
-  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number }
+  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number; weight_input_source?: "reported_measured" }
   | { action: "mark_unrecoverable"; expected_revision: number }
   | { action: "discard"; discarded_g: number; reason: string; expected_revision: number }
   | { action: "adjust"; delta_g: number; reason: string; expected_revision: number }

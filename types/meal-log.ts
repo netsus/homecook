@@ -27,12 +27,28 @@ export interface MealLogMutationInput {
 export interface MealLogNutritionEvidence {
   /** Frozen provenance; absent on older records means no recorded AI estimate. */
   contains_ai_estimate?: boolean;
+  /** Server-frozen denominator/provenance. Missing on historical records stays missing. */
+  weight_basis?: MealLogWeightBasis;
+  /** Frozen assumptions accompany the estimate; they never alter the nine-key basis. */
+  weight_assumption_codes?: string[];
   calculation_status: MealLogNutritionStatus;
   calories_kcal: number | null;
   carbohydrate_g: number | null;
   protein_g: number | null;
   fat_g: number | null;
   sodium_mg: number | null;
+}
+
+export interface MealLogWeightBasis {
+  schema_version: "cooked-weight-basis-v1";
+  batch_id: string;
+  recipe_content_snapshot_id: string | null;
+  finished_weight_g: number | null;
+  source: import("@/types/cooking").CookedWeightSummary["source"];
+  model_version: string | null;
+  prediction_id: string | null;
+  observation_id: string | null;
+  batch_revision: number | null;
 }
 
 export interface MealLogEntry {
