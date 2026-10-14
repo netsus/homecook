@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "status": "local-review-draft",
+  "runtime_authority": false,
+  "application_rows_restored": 0,
+  "schema_archive_sha256": "5447e5ae08359feb9750676820968daf2edcf0ed57b64997e718ccc8d8dae790",
+  "password_free_roles_sha256": "a37b43865c14194ab8aae8758c7f596679cc50e93f425d0af52767f54b9145d3",
+  "source_ledger_count": 219,
+  "source_ledger_sha256": "4da770185bf35bc0ff7834a8284766c54d314b1638146bae830157da626c5204",
+  "migrations": [
+    {
+      "path": "supabase/migrations/20261013190000_recipe_product_only_identity.sql",
+      "sha256": "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261013233000_cooked_batch_weight_evidence.sql",
+      "sha256": "60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014010000_ingredient_quantity_policy_v4.sql",
+      "sha256": "c66ee907de4130b2fe3b86bcdbe48b15021f228485e52fbe1aca5acfee5e7bfd",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014200000_quantity_input_v4_consumers.sql",
+      "sha256": "9ec96a2a7bbf7192801b1f6dd43304ed8ba78ab73f934eac4c2c300e3ca85573",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014210000_product_quantity_input_v4.sql",
+      "sha256": "e33a2110afd4a71a6042ce6d4d416f2bf189e107f4528e5b5ae2e440e180ad88",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014213000_product_quantity_edit_capability.sql",
+      "sha256": "acb0ec83aeabc91320a61b406c2a23dda258033592defbb09bd7f1bb8667399b",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014220000_recipe_quantity_input_v4.sql",
+      "sha256": "9b15696aa8f33cb6a9c707d1355a90efb07bd929df3943519e58b1d6d6cc2367",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014223000_youtube_quantity_input_bridge.sql",
+      "sha256": "f586b27f2f5da5063a7eaa70278c7f00edab762aa27248b91a224411f436c750",
+      "actor": "supabase_admin"
+    },
+    {
+      "path": "supabase/migrations/20261014224500_cooked_weight_user_attestation.sql",
+      "sha256": "d334ebe8824db1d4e94f865bc0bbd692c46cdde2f6c2077e4cac9d9f8db8d146",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014230000_weight_improvement_participation.sql",
+      "sha256": "bc263347ef51f7ffc86731b7c161618f3181b81cd00bf8f2ec57a01b989eeda8",
+      "actor": "postgres"
+    },
+    {
+      "path": "supabase/migrations/20261014231000_weight_improvement_source_read.sql",
+      "sha256": "5ee6c6ba4d03cafe80b7a2c0b5f7ac64c2715467f454cb293bc62e70d08b6889",
+      "actor": "postgres"
+    }
+  ],
+  "synthetic_worker_bootstrap": {
+    "source": "20260812160000_youtube_async_extraction_notification.sql",
+    "source_sha256": "49f9243d91b240b76e39fd711aef9e1d8b699d5e76e668ae2b51e92abbf87343",
+    "seed_sha256": "a71dcf0f5bf9f0d3db550fb9bd723ebaeea95584a7bbaed830c3770060167ad8",
+    "synthetic_only": true,
+    "enabled": false
+  },
+  "C01_C04_internal_scope": {
+    "source_md5": "0733f42e7cd26c3ea0f326d051084dc4",
+    "body_and_attributes_unchanged": true,
+    "native_metadata": {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "owner": "postgres",
+      "raw_body": "376fb097534933ea26eeff323c56b02c",
+      "security": true,
+      "volatility": "v",
+      "configuration": [
+        "search_path=pg_catalog, public, private, pg_temp"
+      ]
+    }
+  },
+  "groups": {
+    "C04_source": 63,
+    "C03_C01_C04_combined": 94,
+    "preserved_C01": 15,
+    "C05_participation_alias": 8,
+    "C05_source_read": 4,
+    "joined_combined": 113,
+    "personal_attestation": 10
+  },
+  "whole_inventory_drift_not_waived": true,
+  "whole_inventory": {
+    "required_before": 151,
+    "required_after": 161,
+    "function_source_drift_count": 4,
+    "function_owner_drift_count": 18,
+    "function_acl_drift_count": 16,
+    "unexpected_role_membership_count": 8,
+    "result": "failed_closed"
+  },
+  "collection_enabled": false,
+  "actual_eligible_samples": 0,
+  "product_source_origin_followup_pending": false,
+  "source_manifests": [
+    {
+      "path": "docs/security/recipe-product-source-function-postimages.json",
+      "sha256": "3e6c37c014fb3a90984b3f857bd9d59cb1611a692d4974a186cfd8792782e75f"
+    },
+    {
+      "path": "docs/security/cooked-weight-evidence-source-function-postimages.json",
+      "sha256": "61dbd7b976441964d6b6cfb81d5b1914a5bbc86ad2fc9e16abf1d386eb0ead88"
+    },
+    {
+      "path": "docs/security/quantity-input-v4-source-function-postimages.json",
+      "sha256": "365d277cdc0a62c3aee5973d51dfff363d76298946fa6e65c6be24de95d8daab"
+    },
+    {
+      "path": "docs/security/cooked-weight-user-attestation-source-function-postimages.json",
+      "sha256": "7c8db1f6db7f644caaa787bc2b744098053fea27e201689e132df3b127571bb8"
+    },
+    {
+      "path": "docs/security/weight-improvement-participation-source-function-postimages.json",
+      "sha256": "dbbbd871f6a3349511d5a5a9666aa19037e12409a93d8b1a18e1ba06873d3b47"
+    },
+    {
+      "path": "docs/security/weight-improvement-source-read-function-postimages.json",
+      "sha256": "9fe34674924e9d9c0e80662e0f9d75ae997c99d029aa8d19bf7728ee1f3c69ea"
+    }
+  ],
+  "worker_catalog_after_C05": "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05",
+  "quantity_origin_roundtrip": {
+    "source_commit": "6f5b21acfe2096d57c113a4e38de2a590a59180c",
+    "source_digest": "16020553dd9f135eec19ad1151800b479da093be64075a51eb46d0cbed06213f",
+    "author_fixture_sha256": "5aa29304275cc56b6d590388ed3718b0d9a9b35d850257e1c2640e8c3752485c",
+    "fixture_path": "tests/fixtures/weight-improvement-quantity-origin.json",
+    "fixture_sha256": "9e3973405aefb32e773b38e09401c3c941afb49e066b89565ad32a4d90b18ce0",
+    "cases": [
+      "product_package",
+      "ingredient_piece",
+      "ingredient_density",
+      "invalid_version"
+    ],
+    "row_fields": 9,
+    "evidence_fields": 4,
+    "actual_C01_wrapper_and_C05_RPC": true,
+    "collection_allowed": false,
+    "actual_eligible_samples": 0
+  },
+  "personal_attestation_scope": {
+    "source_md5": "8e7b1121eb12adcd9b63ee384840c8f6",
+    "body_and_attributes_unchanged": true
+  },
+  "integration_application_source": "33f2ef5c72b7c0a10894af6084741716506620ed",
+  "predecessor_schema_count": 228,
+  "source_schema_count_after_C05": 230,
+  "scope_alias_chain": [
+    {
+      "prior_source_md5": "0733f42e7cd26c3ea0f326d051084dc4",
+      "alias": "private.verify_scope_pre_weight_attestation_20261014()"
+    },
+    {
+      "prior_source_md5": "8e7b1121eb12adcd9b63ee384840c8f6",
+      "alias": "private.verify_scope_pre_weight_participation_20261014()"
+    },
+    {
+      "prior_source_md5": "b333ab0e7389a26a4864f86bd3fc5cb8",
+      "alias": "private.verify_scope_pre_weight_source_read_20261014()"
+    }
+  ],
+  "personal_record_independent": true,
+  "personal_attestation_does_not_confirm_C05_facts": true
+}

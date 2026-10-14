@@ -3602,3 +3602,9 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 - 당시g는 원 `reported_measurement` evidence를 읽고 고정 재료행/입력/제품version·인분과 함께 보존한다. `quantity_origin=planned`와 원 prediction/meals/무게·영양을 덮어쓰지 않는다. C05 표본/모델/새 보유기간이 아니며 물리 검증을 선언하지 않는다.
 - 신규 RPC4: `public.read_cooked_weight_attestation`, `public.complete_snapshot_v2_cooking_session_with_attestation`, `public.mutate_cooked_batch_weight_with_attestation`, `public.retract_cooked_weight_attestation`. public/anon/authenticated EXECUTE는 제거하고 service_role의 검증된 서버 경로만 사용한다. 두 private 표 직접 권한과 private helper는 service_role까지 REVOKE하며 RLS/owner 보호를 유지한다.
 - 기존 `private.verify_full_local_internal_scope()`는 `private.verify_scope_pre_weight_attestation_20261014()`로 보존하고 새 wrapper는 `snapshot-v2-session` scope의 정확4개 POST RPC 경로만 먼저 처리한다. 나머지는 원 alias로 위임하며 R2·C03/C01/worker scope를 일반화하지 않는다. 기본OFF·reader 준비·조건 충족 새 저장과 복구 검증은 후속 배포 경계다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
+
+## 2026-10-15 추가 계약 — C05 선택 참여 비활성 통합 후보
+
+`20261014230000_weight_improvement_participation.sql`은 private 참여 상태·불변 동의 이벤트·문서·기본 OFF control을 준비하고, `20261014231000_weight_improvement_source_read.sql`은 제한된 원 C01 근거 읽기를 제공한다. 실제 계정/세대를 receipt 조회 전에 비교하고, 참여 read/mutate RPC는 service_role 전용 내부 scope이며 private 직접 API 접근은 금지한다. 철회는 pending만 기록하고 원 개인 기록·과거 snapshot의 변경/backfill은 하지 않는다. 로컬 적용 순서는 개인 `224500`을 포함한 이력228 뒤 원 C05 두 SQL로 이력230이다. 두 SQL 원본은 보존하며 원 C01 outer → 개인 alias, 개인 outer → 참여 alias, 참여 outer → source-read alias의 본문·owner·ACL·config를 보존한다. `collection CHECK(false)`와 미정 문서·기간은 유지한다.
+
+현재는 개인 실측 확인 이후의 로컬 통합 후보이며 운영 UI·참여·수집은 비활성이다. 동의 문서·보유기간은 미정(NULL), 적격 자료는 0이다. 실제 선별 caller·저장 transaction·삭제/복원·모델 생명주기는 미완료다. [참여 준비와 한계](engineering/mumeok-beta-participation-preparation-20261014.md), [통합 근거](engineering/weight-improvement-source-read-20261014.md)를 따른다.

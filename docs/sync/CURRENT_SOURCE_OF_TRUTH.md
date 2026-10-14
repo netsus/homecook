@@ -1,5 +1,10 @@
 # Current Source of Truth
 
+## 2026-10-15 — C05 비활성 통합 후보 (운영 미적용)
+
+개인 실측 확인 `224500` 이후 기존 C05 D1/D2/D3a/b/c의 소스 통합과 격리 검증을 마쳤다. 원 C05 SQL 두 개는 바꾸지 않았고 관련 단위257·native33·타입·lint, 독립 delta20검사를 통과했다. 원 개인 실측g·식사 분모·영양과 기존 scope/worker 지문을 보존했다. 새 빈 registry/13인자 overload는 추가하지 않았으며 실제 선별·저장·삭제/복원·모델 생명주기는 남아 있다. 운영 UI·참여·수집은 비활성, 동의 문서·기간은 미정이고 적격 자료는0이다. 이는 운영 반영·정책 결정·정확도 개선·모델 평가 완료가 아니다. 원 branch/PR1681을 보존하며 [통합 근거](../engineering/weight-improvement-source-read-20261014.md)와 [후속 경계](../engineering/weight-improvement-d3-d5-draft.md)를 따른다. 개인 실측 기능의 실제 운영 상태는 최신 운영 진행 장부에서 별도로 확인한다.
+
+
 ## 2026-10-15 — 선택 개인 무게 확인 후보·운영 미적용
 
 완료/나중 실측에 기본 미선택 확인을 추가하고, 원 실측값의 개인 조회·철회를 분리하는 후보를 준비했다. 새 `224500` SQL의 두 private 표와 독립 기본OFF 제어는 원 C01·과거 식사 기록을 보존한다. 자기보고를 물리 검증이나 C05 참여·학습 적격으로 승격하지 않는다. UI·격리 DB 검증과 독립 리뷰를 진행했으며, DB228 배포 도구·최종 후보 빌드·운영 확인은 아직 남았다. **현재 운영은 아래 e00d·DB227·worker48 ON 그대로다.** 공식 5종의 같은 날짜 개인 확인 addendum과 [단위 계약](../engineering/cooked-weight-user-attestation-20261015.md), [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md)를 따른다.

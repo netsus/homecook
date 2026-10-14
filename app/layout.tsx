@@ -2,6 +2,7 @@ import { PrelaunchNotice, ServiceNotificationBoundary } from "@/components/share
 import type { Metadata } from "next";
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import { ProviderMemorySync } from "@/components/auth/provider-memory-sync";
+import { WeightImprovementParticipationProvider } from "@/components/weight-improvement/participation-provider";
 import {
   GlobalToastPresentationProvider,
   GlobalToastPresentationSlot,
@@ -78,7 +79,7 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         <PrelaunchNotice />
-        {children}
+        <WeightImprovementParticipationProvider>{children}</WeightImprovementParticipationProvider>
         <ProviderMemorySync />
         <ServiceNotificationBoundary>
         <ActionConfirmation />
