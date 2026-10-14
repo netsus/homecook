@@ -1415,16 +1415,18 @@ async function createC04Adapters(review, reviewSha256) {
   }
   async function transaction(context, callback) {
     const session = openDedicatedAdminSession(context.target.postgresContainerId, `youtube-resolution-c04-${randomUUID().slice(0, 8)}`);
+    // Activation keeps the verified worker polling: allow its empty read/row-share claim, but exclude every concurrent write.
+    const workerLockMode = context.stage === "worker" && context.quantityWriterState === "on" ? "SHARE ROW EXCLUSIVE" : "ACCESS EXCLUSIVE";
     try {
       await session.query(`BEGIN ISOLATION LEVEL SERIALIZABLE; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; SET LOCAL idle_in_transaction_session_timeout='30s';
 SELECT pg_advisory_xact_lock(86120317);
 SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE;
 SELECT singleton FROM private.cooked_batch_weight_evidence_control WHERE singleton FOR SHARE;
 SELECT singleton FROM private.quantity_input_v4_policy WHERE singleton FOR SHARE;
-LOCK TABLE private.youtube_extraction_current_policy IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE private.youtube_extraction_worker_credentials IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE public.youtube_extraction_jobs IN ACCESS EXCLUSIVE MODE;
-LOCK TABLE public.youtube_extractor_permits IN ACCESS EXCLUSIVE MODE;`);
+LOCK TABLE private.youtube_extraction_current_policy IN ${workerLockMode} MODE;
+LOCK TABLE private.youtube_extraction_worker_credentials IN ${workerLockMode} MODE;
+LOCK TABLE public.youtube_extraction_jobs IN ${workerLockMode} MODE;
+LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       const tx = { observe: () => observation(context, sql => session.query(sql)),
         closePolicy: () => session.query("UPDATE private.youtube_extraction_current_policy SET enabled=false,updated_at=clock_timestamp() WHERE policy_key='primary' AND enabled IS TRUE;"),
         enablePolicy: () => session.query("UPDATE private.youtube_extraction_current_policy SET enabled=true,updated_at=clock_timestamp() WHERE policy_key='primary' AND enabled IS FALSE;"),

@@ -201,6 +201,43 @@ describe("C04 T1 transaction evidence and later business activity", () => {
   });
 });
 
+describe("C04 activation transaction lock scope", () => {
+  it.each([
+    ["worker", "on", "SHARE ROW EXCLUSIVE"],
+    ["worker", "off", "ACCESS EXCLUSIVE"],
+    ["consumers", "off", "ACCESS EXCLUSIVE"],
+    ["consumers", "on", "ACCESS EXCLUSIVE"],
+  ])("keeps %s/%s transaction locks at %s", async (stage, quantityWriterState, mode) => {
+    const source = readFileSync(resolve("scripts/youtube-v71-controlled-cutover.mjs"), "utf8");
+    const start = source.indexOf("  async function transaction(context, callback) {");
+    const end = source.indexOf("  function existingCredentials(", start);
+    if (start < 0 || end <= start) throw new Error("Exact C04 transaction boundary missing");
+    const session = { query: vi.fn(async (sql: string) => sql), close: vi.fn(), stop: vi.fn() };
+    const open = vi.fn(() => session);
+    // Exercise the actual adapter body without loading operational authority or opening a DB connection.
+    const transaction = new Function("openDedicatedAdminSession", "randomUUID",
+      source.slice(start, end) + ";return transaction;")(open, () => "owned-fixture-uuid");
+    const callback = vi.fn();
+    await transaction({ stage, quantityWriterState, target: { postgresContainerId: "owned-fixture" } }, callback);
+    expect(open).toHaveBeenCalledExactlyOnceWith("owned-fixture", "youtube-resolution-c04-owned-fi");
+    const begin = session.query.mock.calls[0][0];
+    expect(begin.match(/LOCK TABLE [^;]+;/gu)).toEqual([
+      `LOCK TABLE private.youtube_extraction_current_policy IN ${mode} MODE;`,
+      `LOCK TABLE private.youtube_extraction_worker_credentials IN ${mode} MODE;`,
+      `LOCK TABLE public.youtube_extraction_jobs IN ${mode} MODE;`,
+      `LOCK TABLE public.youtube_extractor_permits IN ${mode} MODE;`,
+    ]);
+    expect(begin).toContain("BEGIN ISOLATION LEVEL SERIALIZABLE;");
+    expect(begin).toContain("lock_timeout='5s'");
+    expect(begin).toContain("statement_timeout='30s'");
+    expect(begin).toContain("pg_advisory_xact_lock(86120317)");
+    expect(begin.match(/WHERE singleton FOR SHARE;/gu)).toHaveLength(3);
+    expect(callback).toHaveBeenCalledOnce();
+    expect(session.query.mock.calls.at(-1)?.[0]).toBe("COMMIT;");
+    expect(session.close).toHaveBeenCalledOnce(); expect(session.stop).toHaveBeenCalledOnce();
+  });
+});
+
 describe("fixed C04 worker cutover boundaries", () => {
   it("denies an unbound source/artifact/review before private operational I/O", () => {
     expect(YOUTUBE_C04_CUTOVER_REVIEW_PIN).toEqual({ path: null, sha256: null });
