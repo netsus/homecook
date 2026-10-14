@@ -24,6 +24,7 @@ import { formatCount } from "@/lib/recipe";
 import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 import { useAuthGateStore } from "@/stores/ui-store";
+import { HOME_DISCOVERY_SCROLL_STATE_KEY } from "@/lib/navigation/home-discovery-state";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
 const fetchJson = vi.fn();
@@ -232,6 +233,12 @@ vi.mock("@/lib/api/fetch-json", () => ({
   isApiFetchError: () => false,
 }));
 
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...await importOriginal<typeof import("next/navigation")>(),
+  usePathname: () => window.location.pathname,
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
+
 function installMatchMedia(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -257,6 +264,8 @@ function ruleBody(selector: string) {
 
 describe("home screen", () => {
   beforeEach(() => {
+    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    window.sessionStorage.removeItem(HOME_DISCOVERY_SCROLL_STATE_KEY);
     useRecipeViewCountStore.setState({ counts: {} });
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [] });
     useAuthGateStore.setState({ action: null, isOpen: false });
@@ -295,6 +304,7 @@ describe("home screen", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
     Reflect.deleteProperty(window, "matchMedia");
     vi.unstubAllGlobals();
     vi.useRealTimers();
@@ -302,6 +312,191 @@ describe("home screen", () => {
     useAuthGateStore.setState({ action: null, isOpen: false });
     window.localStorage.removeItem(E2E_AUTH_OVERRIDE_KEY);
     window.history.replaceState({}, "", "/");
+  });
+
+  it.each([
+    { viewport: "mobile", desktop: false }, { viewport: "desktop", desktop: true },
+  ])("keeps search, sorting, and scroll after detail remount on $viewport", async ({ desktop }) => {
+    installMatchMedia(desktop);
+    const user = userEvent.setup();
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(725);
+    const list = {
+      items: Array.from({ length: 8 }, (_, index) => buildRecipeCard({ id: `tofu-${index}`, title: `두부 요리 ${index}` })),
+      has_next: false, next_cursor: null,
+    };
+    const baseFetch = fetchJson.getMockImplementation()!;
+    fetchJson.mockImplementation((input: string) => input.startsWith("/api/v1/recipes?")
+      ? Promise.resolve(list) : baseFetch(input));
+    const first = render(<HomeScreen />);
+    await user.type(await screen.findByPlaceholderText("제목·재료 검색"), "두부");
+    await user.click(await screen.findByRole("button", { name: /정렬 기준/ }));
+    await user.click(screen.getByText("최신순"));
+    await waitFor(() => expect(fetchJson).toHaveBeenCalledWith(expect.stringContaining("q=%EB%91%90%EB%B6%80")));
+
+    const link = await screen.findByRole("link", { name: /두부 요리 0/ });
+    const destination = new URL(link.getAttribute("href")!, "http://homecook.local");
+    const returnUrl = new URL(destination.searchParams.get("returnTo")!, "http://homecook.local");
+    expect(returnUrl.searchParams.get("q")).toBe("두부");
+    expect(returnUrl.searchParams.get("sort")).toBe("latest");
+    link.addEventListener("click", (event) => event.preventDefault());
+    await user.click(link);
+    expect(window.history.state[HOME_DISCOVERY_SCROLL_STATE_KEY]).toEqual({
+      href: window.location.pathname + window.location.search, top: 725, pages: 1,
+    });
+    first.unmount();
+
+    const returnedList = createDeferred<typeof list>();
+    fetchJson.mockImplementation((input: string) => input.startsWith("/api/v1/recipes?")
+      ? returnedList.promise : baseFetch(input));
+    render(<HomeScreen />);
+    expect((await screen.findByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("두부");
+    expect(scrollTo).not.toHaveBeenCalled();
+    await act(async () => returnedList.resolve(list));
+    expect(await screen.findByRole("link", { name: /두부 요리 0/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /정렬 기준/ }).textContent).toContain("최신순");
+    expect(screen.getByTestId("home-result-status").textContent).toContain("8개");
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 725, behavior: "instant" }));
+  });
+
+  it("reads deep-link filters, synchronizes back/forward URL changes, and clears them without stale store state", async () => {
+    window.history.replaceState({ nextRouterState: "keep" }, "", `/?q=두부&sort=save_count&ingredient_ids=${ONION_ID}&tag=한식`);
+    render(<HomeScreen />);
+    await waitFor(() => {
+      expect(fetchJson).toHaveBeenCalledWith(expect.stringContaining("sort=save_count"));
+      expect(useDiscoveryFilterStore.getState().appliedIngredientIds).toEqual([ONION_ID]);
+    });
+    expect((screen.getByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("두부");
+    expect(screen.getByTestId("home-result-status").textContent).toContain("한식");
+    await userEvent.click(screen.getByRole("button", { name: "전체 초기화" }));
+    expect(new URLSearchParams(window.location.search).has("q")).toBe(false);
+    expect(new URLSearchParams(window.location.search).has("ingredient_ids")).toBe(false);
+    expect(new URLSearchParams(window.location.search).has("tag")).toBe(false);
+    expect(window.history.state.nextRouterState).toBe("keep");
+
+    act(() => {
+      window.history.replaceState({}, "", "/?q=뒤로&sort=latest");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await waitFor(() => expect((screen.getByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("뒤로"));
+    await waitFor(() => expect(fetchJson).toHaveBeenCalledWith(expect.stringContaining("q=%EB%92%A4%EB%A1%9C")));
+    act(() => {
+      window.history.replaceState({}, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect((screen.getByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("");
+    await waitFor(() => expect(screen.getByRole("button", { name: /정렬 기준/ }).textContent).toContain("조회수순"));
+    expect(useDiscoveryFilterStore.getState().appliedIngredientIds).toEqual([]);
+  });
+
+  it("does not apply old ingredient filters to a fresh home URL", async () => {
+    useDiscoveryFilterStore.setState({ appliedIngredientIds: [ONION_ID] });
+    render(<HomeScreen />);
+    await waitFor(() => expect(useDiscoveryFilterStore.getState().appliedIngredientIds).toEqual([]));
+    expect(screen.queryByRole("button", { name: "재료 1개" })).toBeNull();
+  });
+
+  it("synchronizes same-page client navigation without popstate and avoids own URL-write loops", async () => {
+    installMatchMedia(true);
+    window.history.replaceState({}, "", "/?q=initial&sort=latest");
+    const { rerender } = render(<HomeScreen />);
+    expect((await screen.findByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("initial");
+    expect((await screen.findByRole("button", { name: /정렬 기준/ })).textContent).toContain("최신순");
+    const replaceState = vi.spyOn(window.history, "replaceState");
+
+    act(() => window.history.replaceState({}, "", "/"));
+    rerender(<HomeScreen />);
+    await waitFor(() => expect((screen.getByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe(""));
+    expect(screen.getByRole("button", { name: /정렬 기준/ }).textContent).toContain("조회수순");
+    expect(window.location.search).toBe("");
+    expect(replaceState).toHaveBeenCalledTimes(1);
+
+    window.history.replaceState({
+      __NA: true,
+      __PRIVATE_NEXTJS_INTERNALS_TREE: { segments: ["home"] },
+      userMetadata: "keep",
+    }, "", "/");
+    replaceState.mockClear();
+    await userEvent.type(screen.getByPlaceholderText("제목·재료 검색"), "new");
+    await waitFor(() => expect(fetchJson).toHaveBeenCalledWith("/api/v1/recipes?sort=view_count&q=new"));
+    expect(replaceState).toHaveBeenCalledTimes(3);
+    expect(replaceState.mock.calls[0]?.[0]).toMatchObject({
+      __PRIVATE_NEXTJS_INTERNALS_TREE: { segments: ["home"] }, userMetadata: "keep",
+    });
+    expect(Object.hasOwn(replaceState.mock.calls[0]?.[0], "__NA")).toBe(false);
+    expect((screen.getByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("new");
+
+    act(() => window.history.replaceState({}, "", `/?q=deep&sort=save_count&ingredient_ids=${ONION_ID}&tag=한식`));
+    rerender(<HomeScreen />);
+    await waitFor(() => expect((screen.getByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("deep"));
+    expect(screen.getByRole("button", { name: /정렬 기준/ }).textContent).toContain("저장순");
+    expect(useDiscoveryFilterStore.getState().appliedIngredientIds).toEqual([ONION_ID]);
+    expect(new URLSearchParams(window.location.search).get("q")).toBe("deep");
+  });
+
+  it("restores scroll on an in-app return without reusing the recipe history entry", async () => {
+    const href = "/?q=김치&sort=latest";
+    window.history.replaceState({}, "", href);
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(725);
+    const first = render(<HomeScreen />);
+    const link = await screen.findByRole("link", { name: MOCK_RECIPE_CARD.title });
+    link.addEventListener("click", (event) => event.preventDefault());
+    await userEvent.click(link);
+    expect(window.sessionStorage.getItem(HOME_DISCOVERY_SCROLL_STATE_KEY)).not.toBeNull();
+    first.unmount();
+
+    window.history.replaceState({ recipeEntry: true }, "", `${href}&returnSurface=home`);
+    const returnedList = createDeferred<ReturnType<typeof getMockRecipeList>>();
+    const baseFetch = fetchJson.getMockImplementation()!;
+    fetchJson.mockImplementation((input: string) => input.startsWith("/api/v1/recipes?")
+      ? returnedList.promise : baseFetch(input));
+    render(<HomeScreen />);
+    expect(scrollTo).not.toHaveBeenCalled();
+    await act(async () => returnedList.resolve(getMockRecipeList()));
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 725, behavior: "instant" }));
+    expect(window.sessionStorage.getItem(HOME_DISCOVERY_SCROLL_STATE_KEY)).toBeNull();
+    expect(window.history.state.recipeEntry).toBe(true);
+    expect((screen.getByPlaceholderText("제목·재료 검색") as HTMLInputElement).value).toBe("김치");
+    expect(screen.getByRole("button", { name: /정렬 기준/ }).textContent).toContain("최신순");
+  });
+
+  it("loads the previously expanded pages before restoring scroll", async () => {
+    const href = "/?q=tofu&sort=latest";
+    window.history.replaceState({
+      [HOME_DISCOVERY_SCROLL_STATE_KEY]: { href, top: 1200, pages: 2 },
+    }, "", href);
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    const secondPage = createDeferred<{ items: RecipeCardItem[]; has_next: boolean; next_cursor: null }>();
+    const baseFetch = fetchJson.getMockImplementation()!;
+    fetchJson.mockImplementation((input: string) => {
+      if (!input.startsWith("/api/v1/recipes?")) return baseFetch(input);
+      if (new URL(input, "http://homecook.local").searchParams.has("cursor")) return secondPage.promise;
+      return Promise.resolve({
+        items: [buildRecipeCard({ id: "page-1", title: "첫 페이지 두부" })],
+        has_next: true, next_cursor: "page-two",
+      });
+    });
+    render(<HomeScreen />);
+    await waitFor(() => expect(fetchJson).toHaveBeenCalledWith(expect.stringContaining("cursor=page-two")));
+    expect(scrollTo).not.toHaveBeenCalled();
+    await act(async () => secondPage.resolve({
+      items: [buildRecipeCard({ id: "page-2", title: "둘째 페이지 두부" })], has_next: false, next_cursor: null,
+    }));
+    expect(await screen.findByRole("link", { name: "둘째 페이지 두부" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "첫 페이지 두부" })).toBeTruthy();
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 1200, behavior: "instant" }));
+  });
+
+  it("restores the selected theme from a deep link and removes it when clearing filters", async () => {
+    const theme = getMockRecipeThemes().themes[0]!;
+    window.history.replaceState({}, "", `/?theme=${encodeURIComponent(theme.id)}`);
+    render(<HomeScreen />);
+    await waitFor(() => expect(screen.getByTestId("home-result-status").textContent).toContain(theme.title));
+    const themeButton = screen.getByRole("button", { name: new RegExp(theme.title) });
+    expect(themeButton.getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(screen.getByRole("button", { name: "필터 해제" }));
+    expect(new URLSearchParams(window.location.search).has("theme")).toBe(false);
   });
 
   it("renders the prototype HOME sections on initial load", async () => {
@@ -368,6 +563,18 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" }).getAttribute("href")).toBe("/beta/r2/homeflow");
     expect(screen.queryByRole("link", { name: "무먹 가이드 보기" })).toBeNull();
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
+  });
+
+  it.each([false, true])("keeps core discovery without paused R2 links (desktop=%s)", async (desktop) => {
+    installMatchMedia(desktop);
+    render(<HomeScreen round2EntrypointsEnabled={false} />);
+
+    await screen.findByRole("heading", { level: 2, name: "모든 레시피" });
+    expect(screen.getByRole("textbox", { name: "제목·재료 검색" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /식단 짜기/ }).getAttribute("href")).toBe("/planner");
+    expect(screen.queryByRole("link", { name: "집밥 기록 유형 테스트 바로가기" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "집밥 흐름 유형 테스트 바로가기" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "무먹 R2 광고 체험" })).toBeNull();
   });
 
   it("rotates the two desktop R2 banners and keeps both direct landing links", async () => {
@@ -1235,6 +1442,7 @@ describe("home screen", () => {
   it("keeps draft ingredients across parent rerenders and resets them after close and reopen", async () => {
     const user = userEvent.setup();
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [ONION_ID] });
+    window.history.replaceState({}, "", `/?ingredient_ids=${ONION_ID}`);
     const { rerender } = render(<HomeScreen />);
 
     await user.click(await screen.findByRole("button", { name: "재료 1개" }));
@@ -1839,6 +2047,7 @@ describe("home screen", () => {
   it("keeps the title search when clearing only the ingredient filter", async () => {
     const user = userEvent.setup();
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [ONION_ID] });
+    window.history.replaceState({}, "", `/?ingredient_ids=${ONION_ID}`);
 
     fetchJson.mockImplementation((input: string) => {
       if (input.startsWith("/api/v1/ingredients")) {
@@ -1913,7 +2122,8 @@ describe("home screen", () => {
       ).toBe(true);
     });
 
-    expect(window.location.search).toBe("");
+    expect(new URLSearchParams(window.location.search).get("q")).toBe("김치");
+    expect(new URLSearchParams(window.location.search).has("ingredient_ids")).toBe(false);
   });
 
   it("positions the ingredient filter action under the mobile search field", async () => {

@@ -136,6 +136,23 @@ describe("10a shopping detail backend", () => {
     ensureUserBootstrapState.mockResolvedValue(undefined);
   });
 
+  it.each([true,false])("derives exact purchase references from owned immutable pins, leaving stored need unchanged (pin=%s)",async(hasPin)=>{
+    const listId="550e8400-e29b-41d4-a716-446655440001";
+    const stored=[{amount:0.030000000000000002,unit:"g"}];
+    createRouteHandlerClient.mockResolvedValue({auth:{getUser:async()=>({data:{user:{id:"user-1"}}})}});
+    createServiceRoleClient.mockReturnValue({
+      rpc:async()=>({data:[{id:"product:version",unit_context:{basis:{amount:100,unit:"g"},basis_relations:[{from:{amount:1,unit:"package"},to:{amount:0.03,unit:"g"}}]}}],error:null}),
+      from:(table:string)=>({select:()=>table==="shopping_lists"?createMaybeSingleQuery([{data:{id:listId,user_id:"user-1",title:"제품장보기",date_range_start:"2026-10-14",date_range_end:"2026-10-14",is_completed:true,completed_at:"2026-10-14T00:00:00Z",created_at:"2026-10-14T00:00:00Z"},error:null}]):createArraySelectQuery<Record<string,unknown>>([{data:table==="shopping_list_recipes"?[{recipe_id:"recipe",recipe_content_snapshot_id:hasPin?"snapshot":null,shopping_servings:9,planned_servings_total:9,recipe_content_snapshots:hasPin?{base_servings:3,ingredients_json:[{food_product_id:"product",food_product_nutrition_version_id:"version",amount:0.01,unit:"g",ingredient_type:"QUANT",scalable:true}]}:null}]
+        :table==="meals"?Array.from({length:9},()=>({recipe_id:"recipe",recipe_content_snapshot_id:hasPin?"snapshot":null,recipe_content_snapshots:hasPin?{title:"고정원문"}:null}))
+        :table==="recipes"?[{id:"recipe",title:"현재제목",thumbnail_url:null}]
+        :table==="shopping_list_items"?[{id:"item",ingredient_id:null,food_product_id:"product",food_product_nutrition_version_id:"version",display_text:"원문 제품",amounts_json:stored,is_checked:true,is_pantry_excluded:false,added_to_pantry:false,sort_order:0}]:[],error:null}])}),
+    });
+    const {GET}=await importListDetailRoute();const response=await GET(new Request(`http://localhost/api/v1/shopping/lists/${listId}`),{params:Promise.resolve({list_id:listId})});
+    expect(response.status).toBe(200);const body=await response.json();
+    expect(body.data.items[0].amounts_json).toEqual(stored);
+    expect(body.data.items[0].purchase_suggestion).toEqual(hasPin?{amount:1,unit:"package"}:null);
+    expect(body.data.is_completed).toBe(true);
+  });
   it("returns shopping list detail in envelope with sorted items", async () => {
     const listQuery = createMaybeSingleQuery([
       {
@@ -349,6 +366,7 @@ describe("10a shopping detail backend", () => {
             category: null,
             display_text: "고정 상품",
             amounts_json: [{ amount: 100, unit: "g" }],
+            purchase_suggestion: null,
             is_checked: true,
             is_pantry_excluded: false,
             added_to_pantry: false,

@@ -39,6 +39,7 @@ import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   clearPendingAction,
   readPendingAction,
+  type RecipeEditorPantryResume,
 } from "@/lib/auth/pending-action";
 import {
   deletePersonalRecipe,
@@ -217,7 +218,8 @@ export function RecipeDetailScreen({
   const [personalEditorMode, setPersonalEditorMode] = useState<"edit" | "fork">("edit");
   const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
   const [personalEditResumeAction, setPersonalEditResumeAction] = useState<"same-id-save" | "save-as-new" | null>(null);
-  const [pendingDraftVerification, setPendingDraftVerification] = useState<"idle" | "checking" | "retry" | "unverifiable">("idle");
+  const [personalEditResumePicker, setPersonalEditResumePicker] = useState<RecipeEditorPantryResume | null>(null);
+  const [pendingDraftVerification, setPendingDraftVerification] = useState<"idle" | "checking" | "retry" | "unverifiable" | "source-changed">("idle");
   const [pendingDraftVerificationAttempt, setPendingDraftVerificationAttempt] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false);
@@ -233,8 +235,15 @@ export function RecipeDetailScreen({
   const currentRecipeIdRef = React.useRef(recipeId);
   const snapshotStartLatchRef = React.useRef(false);
   const personalEditorOpenerRef = React.useRef<HTMLElement | null>(null);
+  const plannerOpenerRef = React.useRef<HTMLElement | null>(null);
+  const plannerRequestSequenceRef = React.useRef(0);
   const deleteKeyRef = React.useRef<string | null>(null);
   currentRecipeIdRef.current = recipeId;
+
+  useEffect(() => () => {
+    plannerOpenerRef.current = null;
+    plannerRequestSequenceRef.current += 1;
+  }, [recipeId]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -326,6 +335,22 @@ export function RecipeDetailScreen({
   useEffect(() => {
     void loadRecipe();
   }, [loadRecipe, recipeId]);
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    const pageTitle = detailState === "ready" && recipe?.id === recipeId
+      ? recipe.title
+      : detailState === "error" && detailErrorKind === "not-found"
+        ? "레시피를 찾을 수 없어요"
+        : "레시피 상세";
+    const browserTitle = `${pageTitle} | 무엇을 먹든`;
+    document.title = browserTitle;
+
+    return () => {
+      // Let a destination's Next metadata keep ownership after navigation.
+      if (document.title === browserTitle) document.title = previousTitle;
+    };
+  }, [detailErrorKind, detailState, recipe?.id, recipe?.title, recipeId]);
 
   useEffect(() => {
     if (!recipe?.id || !recipe.base_servings) {
@@ -539,10 +564,12 @@ export function RecipeDetailScreen({
   }, [selectableDates]);
 
   const openPlannerAddSheet = useCallback(
-    async ({ source, servings = selectedServings }: {
+    async ({ source, servings = selectedServings, opener }: {
       source: "manual" | "return-to-action";
       servings?: number;
+      opener?: HTMLElement;
     }) => {
+      plannerOpenerRef.current = source === "manual" ? opener ?? null : null;
       if (!isAuthenticated) {
         openAuthGate({ recipeId, type: "planner", plannedServings: servings });
         return;
@@ -584,6 +611,8 @@ export function RecipeDetailScreen({
 
     setPlannerAddSheetState("submitting");
     setPlannerAddError(null);
+    const requestSequence = ++plannerRequestSequenceRef.current;
+    const requestPath = window.location.pathname;
 
     try {
       await createMeal({
@@ -592,6 +621,8 @@ export function RecipeDetailScreen({
         column_id: selectedPlanColumnId,
         planned_servings: plannerServings,
       });
+
+      if (requestSequence !== plannerRequestSequenceRef.current || currentRecipeIdRef.current !== recipe.id || window.location.pathname !== requestPath) return;
 
       setIsPlannerAddSheetOpen(false);
       setPlannerAddSheetState("ready");
@@ -607,12 +638,13 @@ export function RecipeDetailScreen({
       const dateLabel = `${planM}월 ${planD}일`;
       const columnName =
         plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ?? "선택한 끼니";
-      showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`);
+      showActionConfirmation(`${dateLabel} ${columnName}에 추가됐어요`, plannerOpenerRef.current ? plannerOpenerRef : undefined);
       emitAppActionNotification({
         message: `${dateLabel} ${columnName}에 추가됐어요`,
         title: "요리계획",
       });
     } catch (error) {
+      if (requestSequence !== plannerRequestSequenceRef.current || currentRecipeIdRef.current !== recipe.id || window.location.pathname !== requestPath) return;
       const message =
         isMealApiError(error) && error.status === 403
           ? "내 플래너 슬롯에만 추가할 수 있어요."
@@ -907,7 +939,7 @@ export function RecipeDetailScreen({
     ],
   );
 
-  const handleProtectedAction = (type: "like" | "save" | "planner") => {
+  const handleProtectedAction = (type: "like" | "save" | "planner", opener?: HTMLElement) => {
     if (type === "like") {
       void handleLikeToggle({ source: "manual" });
       return;
@@ -918,7 +950,7 @@ export function RecipeDetailScreen({
       return;
     }
 
-    void openPlannerAddSheet({ source: "manual" });
+    void openPlannerAddSheet({ source: "manual", opener });
   };
 
   const openPersonalEditor = useCallback(() => {
@@ -928,6 +960,7 @@ export function RecipeDetailScreen({
     setPersonalEditorMode("edit");
     setPersonalEditResumeContext(null);
     setPersonalEditResumeAction(null);
+    setPersonalEditResumePicker(null);
     setIsPersonalEditorOpen(true);
   }, []);
 
@@ -991,6 +1024,7 @@ export function RecipeDetailScreen({
     setPersonalEditorMode("fork");
     setPersonalEditResumeContext(null);
     setPersonalEditResumeAction(null);
+    setPersonalEditResumePicker(null);
     setIsPersonalEditorOpen(true);
   }, [initialForkContext, qaForkContext, recipeSnapshotUiMode, showQaFutureImpact]);
 
@@ -1153,6 +1187,13 @@ export function RecipeDetailScreen({
       }
 
       if (pendingAction.type === "recipe-fork") {
+        if (pendingAction.resumeEditor?.mode === "edit" && pendingAction.editContext && activePersonalEditContext) {
+          personalEditorOpenerRef.current = null;
+          setPersonalEditorMode("edit");
+          setPersonalEditResumeContext({ ...pendingAction.editContext, image_object_id: activePersonalEditContext.imageObjectId });
+          setPersonalEditResumeAction(null); setPersonalEditResumePicker(pendingAction.resumeEditor); setIsPersonalEditorOpen(true);
+          return;
+        }
         const forkContext = initialForkContext ?? qaForkContext;
         if ((recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact) && forkContext) {
           personalEditorOpenerRef.current = null;
@@ -1162,6 +1203,7 @@ export function RecipeDetailScreen({
             image_object_id: forkContext.image_object_id,
           } : null);
           setPersonalEditResumeAction(null);
+          setPersonalEditResumePicker(pendingAction.resumeEditor ?? null);
           setIsPersonalEditorOpen(true);
         }
         return;
@@ -1229,6 +1271,23 @@ export function RecipeDetailScreen({
           if (profile.id !== pendingAction.sourceOwnerUuid) {
             discardDraft();
             return;
+          }
+          if (pendingAction.sourceAccountGeneration !== undefined) {
+            if (!Number.isSafeInteger(profile.account_generation) || Number(profile.account_generation) <= 0) {
+              setPendingDraftVerification("retry"); return;
+            }
+            if (profile.account_generation !== pendingAction.sourceAccountGeneration) { discardDraft(); return; }
+          } else if (pendingAction.type === "recipe-fork") {
+            // A legacy fork context was not rendered before; missing generation must not unlock it now.
+            setPendingDraftVerification("unverifiable"); return;
+          }
+          if (pendingAction.type === "recipe-fork" && pendingAction.resumeEditor) {
+            const contextRevision = pendingAction.resumeEditor.mode === "edit"
+              ? activePersonalEditContext?.baseRecipeRevision : (initialForkContext ?? qaForkContext)?.base_recipe_revision;
+            if (contextRevision === undefined || contextRevision !== pendingAction.editContext?.base_recipe_revision
+              || contextRevision !== recipe.revision) {
+              setPendingDraftVerification("source-changed"); return;
+            }
           }
           resume();
         }).catch(() => {
@@ -1420,7 +1479,7 @@ export function RecipeDetailScreen({
           image_object_id: activePersonalEditContext.imageObjectId,
         }
       : null
-    : initialForkContext ?? qaForkContext ?? null;
+    : personalEditResumeContext ?? initialForkContext ?? qaForkContext ?? null;
 
   return (
     <>
@@ -1760,7 +1819,7 @@ export function RecipeDetailScreen({
               <div className="space-y-3 py-4">
                 <ActionButton
                   label="플래너에 추가"
-                  onClick={() => handleProtectedAction("planner")}
+                  onClick={(event) => handleProtectedAction("planner", event.currentTarget)}
                   tone="olive"
                 />
                 <ActionButton
@@ -2161,7 +2220,7 @@ export function RecipeDetailScreen({
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <ActionButton
             label="플래너에 추가"
-            onClick={() => handleProtectedAction("planner")}
+            onClick={(event) => handleProtectedAction("planner", event.currentTarget)}
             tone="olive"
           />
           <ActionButton
@@ -2178,7 +2237,7 @@ export function RecipeDetailScreen({
         <div className="flex gap-2">
           <button
             className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand-primary-accessible)] px-3 text-[15px] font-bold [color:var(--text-inverse)]"
-            onClick={() => handleProtectedAction("planner")}
+            onClick={(event) => handleProtectedAction("planner", event.currentTarget)}
             type="button"
           >
             플래너에 추가
@@ -2274,9 +2333,11 @@ export function RecipeDetailScreen({
               ? "작성한 계정과 현재 계정이 같은지 확인하고 있어요."
               : pendingDraftVerification === "unverifiable"
                 ? "초안을 작성한 계정 정보가 없어 자동으로 열 수 없어요. 보관 기간이 끝나기 전까지 내용을 잠근 상태로 유지해요."
+                : pendingDraftVerification === "source-changed"
+                  ? "원래 레시피나 편집 권한이 달라져 초안을 자동으로 열 수 없어요. 보관 기간 동안 내용을 잠근 상태로 유지해요."
                 : "계정을 잠시 확인하지 못했어요. 초안은 보관 기간 동안 유지되며, 같은 계정으로 확인한 뒤에만 열어요."}
           </p>
-          {pendingDraftVerification !== "unverifiable" ? (
+          {pendingDraftVerification !== "unverifiable" && pendingDraftVerification !== "source-changed" ? (
             <button className="mt-3 min-h-11 rounded-full border border-[var(--line-strong)] px-4 text-sm font-bold disabled:opacity-50" disabled={pendingDraftVerification === "checking"} onClick={() => setPendingDraftVerificationAttempt((attempt) => attempt + 1)} type="button">
               {pendingDraftVerification === "checking" ? "계정 확인 중…" : "계정 확인 다시 시도"}
             </button>
@@ -2302,11 +2363,13 @@ export function RecipeDetailScreen({
             setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
             setPersonalEditResumeAction(null);
+            setPersonalEditResumePicker(null);
           }}
           onSaved={(result) => {
             setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
             setPersonalEditResumeAction(null);
+            setPersonalEditResumePicker(null);
             if (result.id !== recipeId) {
               showActionConfirmation("‘내가 추가한 레시피’에 저장했어요. 마이 → 레시피북에서 다시 볼 수 있어요.");
               router.push(buildReturnHref(`/recipe/${result.id}`, {
@@ -2321,6 +2384,7 @@ export function RecipeDetailScreen({
           returnFocusRef={personalEditorOpenerRef}
           resumeAction={personalEditorMode === "edit" ? personalEditResumeAction : null}
           resumeContext={personalEditorMode === "edit" ? personalEditResumeContext : null}
+          resumeIngredientPicker={personalEditResumePicker}
         />
       ) : null}
     </>
@@ -2369,7 +2433,7 @@ function RecipeDetailWebView({
   personalRecipeAccessState: "unknown" | "public" | "owner-private";
   onPublished: () => void;
   personalRecipeCapabilityEnabled: boolean;
-  onProtectedAction: (type: "like" | "save" | "planner") => void;
+  onProtectedAction: (type: "like" | "save" | "planner", opener?: HTMLElement) => void;
   onRetryNutrition: () => void;
   onSelectedServingsChange: (value: number | ((current: number) => number)) => void;
   onShare: () => void;
@@ -2677,7 +2741,7 @@ function RecipeDetailWebView({
                   <p>재료 {recipe.ingredients.length}개 · 단계 {recipe.steps.length}개</p>
                 </div>
                 <div className="web-recipe-rail-actions">
-                  <WebButton fullWidth onClick={() => onProtectedAction("planner")}>
+                  <WebButton fullWidth onClick={(event) => onProtectedAction("planner", event.currentTarget)}>
                     <CalendarIcon />
                     플래너에 추가
                   </WebButton>
@@ -2697,7 +2761,7 @@ function RecipeDetailWebView({
       </div>
 
       <WebCTA className="web-recipe-bottom-cta">
-        <WebButton onClick={() => onProtectedAction("planner")}>
+        <WebButton onClick={(event) => onProtectedAction("planner", event.currentTarget)}>
           플래너에 추가
         </WebButton>
         <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
@@ -3118,7 +3182,7 @@ function ActionButton({
   ariaPressed?: boolean;
   disabled?: boolean;
   label: string;
-  onClick: () => void;
+  onClick: React.MouseEventHandler<HTMLButtonElement>;
   tone: "brand" | "olive" | "neutral";
 }) {
   return (
@@ -3538,7 +3602,7 @@ function FeedbackToast({
   const isError = tone === "error";
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 top-4 z-50 flex justify-center md:inset-x-auto md:right-6">
+    <div className="pointer-events-none fixed inset-x-4 top-4 z-50 flex justify-center md:inset-x-auto md:right-6 lg:top-[calc(var(--web-nav-h)+16px)]">
       <div
         aria-live={isError ? "assertive" : "polite"}
         className={`max-w-sm rounded-[var(--radius-lg)] border px-4 py-3 text-sm font-medium shadow-[var(--shadow-3)] ${

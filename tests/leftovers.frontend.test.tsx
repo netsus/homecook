@@ -157,6 +157,26 @@ describe("LeftoversScreen", () => {
     expect(await screen.findByRole("link", { name: "로그인" })).toBeTruthy();
     expect(cookingApi.fetchCookedBatches).not.toHaveBeenCalled();
   });
+
+  it.each(["2026-10-13", "2026-10-08"])("keeps the caller's meal-log date %s through the eaten-list link", async (date) => {
+    const returnTo = `/planner?segment=log&date=${date}`;
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({ returnTo, returnSurface: "planner.week" }));
+    render(<LeftoversScreen initialAuthenticated />);
+    expect(screen.getByRole("link", { name: "뒤로 가기" }).getAttribute("href"))
+      .toBe(`${returnTo}&returnSurface=planner.week`);
+    const eaten = new URL(screen.getByRole("link", { name: "다 먹은 요리" }).getAttribute("href")!, "http://homecook.local");
+    const listReturn = new URL(eaten.searchParams.get("returnTo")!, "http://homecook.local");
+    expect(listReturn.pathname).toBe("/leftovers");
+    const caller = new URL(listReturn.searchParams.get("returnTo")!, "http://homecook.local");
+    expect(caller.searchParams.get("date")).toBe(date);
+    expect(caller.searchParams.get("segment")).toBe("log");
+    await screen.findByText("남은 요리가 없어요.");
+  });
+
+  it("keeps the direct leftovers fallback", () => {
+    render(<LeftoversScreen />);
+    expect(screen.getByRole("link", { name: "뒤로 가기" }).getAttribute("href")).toBe("/planner");
+  });
   it("uses a single loading region and a single empty list", async () => {
     render(<LeftoversScreen initialAuthenticated />);
     expect(screen.getByRole("status", { name: "남은 요리 불러오는 중" })).toBeTruthy();
@@ -173,6 +193,10 @@ describe("LeftoversScreen", () => {
     expect(legacy).not.toHaveBeenCalled();
   });
   it("adds the chosen cooked batch to meal logging instead of creating another plan", async () => {
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams({
+      returnTo: "/planner?segment=log&date=2026-10-08",
+      returnSurface: "planner.week",
+    }));
     vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({ items: LEFTOVER_ITEMS });
     vi.spyOn(mealLogApi, "fetchMealLogDay").mockResolvedValue({ active_columns: [
       { id: "col-1", name: "아침", sort_order: 0 },
@@ -199,6 +223,8 @@ describe("LeftoversScreen", () => {
     }), expect.any(String)));
     expect(createPlan).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "먹은 음식 추가" })).toBeNull());
+    expect(screen.getByRole("link", { name: "뒤로 가기" }).getAttribute("href"))
+      .toBe("/planner?segment=log&date=2026-10-08&returnSurface=planner.week");
   });
 
 });

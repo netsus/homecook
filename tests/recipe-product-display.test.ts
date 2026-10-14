@@ -30,6 +30,14 @@ describe("recipe product identity display", () => {
       .toMatchObject({ standard_name: "브랜드 · 우유 100g", display_text: "브랜드 · 우유 100g 150g", amount: 150 });
   });
 
+  it("preserves finite product decimals in detail and cooking while generic formatting stays unchanged", () => {
+    const exact = { ...normalizeRecipeIngredients([ingredient])[0]!, amount: 0.125, unit: "package" };
+    expect(formatScaledIngredient(exact,2,2)).toBe("우유 0.125package");
+    expect(toCookingModeIngredient({row:{...ingredient,amount:0.125,unit:"package"},baseServings:2,cookingServings:2})).toMatchObject({amount:0.125,display_text:"우유 0.125package"});
+    expect(formatScaledIngredient({...exact,amount:0.1,unit:"g"},1,3)).toBe("우유 0.3g");
+    expect(formatScaledIngredient({...exact,food_product_id:undefined,food_product_nutrition_version_id:undefined},2,2)).toBe("우유 0.1package");
+  });
+
   it("uses the pinned product name in a cooking snapshot without a live catalog lookup", () => {
     expect(toCookingModeIngredient({
       row: { ...ingredient, food_product_name: "원래 우유", food_product_brand: "원래 브랜드" },
@@ -53,9 +61,7 @@ describe("recipe product identity display", () => {
     const client = { from: vi.fn(() => ({ select: vi.fn(() => ({
       in: vi.fn(async () => ({ data: [], error: null })),
     })) })) };
-    const [normalized] = normalizeRecipeIngredients(await readRecipeProductLabels(client, [ingredient]));
-    expect(normalized?.standard_name).toBe("우유");
-    expect(normalized?.food_product_id).toBe("product-1");
+    await expect(readRecipeProductLabels(client, [ingredient])).rejects.toThrow("RECIPE_PRODUCT_LABEL_READ_FAILED");
   });
 
   it("does not hide a product lookup failure or add lookups for generic ingredients", async () => {

@@ -12,6 +12,21 @@ const recipeDetailSelect = "id,title,description,thumbnail_url,base_servings,tag
 const recipeId = "00000000-0000-4000-8000-000000000001";
 
 describe("hybrid anonymous public read policy", () => {
+  it("exposes product pins only through the exact recipe RPC, never raw anonymous rows", () => {
+    const sourceColumns = "id,source_kind,ingredient_id,amount,unit,ingredient_type,display_text,component_label,scalable,sort_order,ingredients(standard_name)";
+    for (const columns of [sourceColumns, sourceColumns + ",food_product_id,food_product_nutrition_version_id"]) {
+      expect(isAllowed({scope:"recipe-detail",method:"GET",path:"/recipe_ingredients",search:new URLSearchParams({select:columns,recipe_id:`eq.${recipeId}`,order:"sort_order.asc"}).toString()})).toBe(columns===sourceColumns);
+    }
+    const rpc={scope:"recipe-detail",method:"POST",path:"/rpc/read_public_recipe_product_sources",body:{p_recipe_id:recipeId}};
+    expect(isAllowed(rpc)).toBe(true);
+    for(const override of [{scope:"recipes"},{method:"GET"},{body:{...rpc.body,p_owner:recipeId}},{body:{p_recipe_id:"forged"}},{path:"/food_products"}]) expect(isAllowed({...rpc,...override})).toBe(false);
+    const q={scope:"recipes",method:"POST",path:"/rpc/find_public_recipe_ids_by_product_name",body:{p_q:"업체"}};
+    expect(isAllowed(q)).toBe(true);
+    for(const body of [{p_q:""},{p_q:"x".repeat(201)},{p_q:"업체",p_owner:recipeId}]) expect(isAllowed({...q,body})).toBe(false);
+    const classification={scope:"recipes",method:"POST",path:"/rpc/read_recipe_product_ingredient_classification",body:{p_ingredient_ids:[recipeId]}};
+    expect(isAllowed(classification)).toBe(true);
+    for(const body of [{p_ingredient_ids:[]},{p_ingredient_ids:["forged"]},{p_ingredient_ids:Array(101).fill(recipeId)},{p_ingredient_ids:[recipeId],p_owner:recipeId}]) expect(isAllowed({...classification,body})).toBe(false);
+  });
   it("permits only the exact recipe image access-check columns and one recipe ID", () => {
     const request = { scope: "recipe-detail", method: "GET", path: "/recipes" };
     const search = new URLSearchParams({ select: "id,created_by,deleted_at,visibility", id: `eq.${recipeId}` });

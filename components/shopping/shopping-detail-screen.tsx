@@ -28,6 +28,7 @@ import {
 } from "@/lib/api/shopping";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { groupShoppingItemsByCategory } from "@/lib/shopping-categories";
+import { formatProductUnit } from "@/lib/planner/product-planner-entry-presentation";
 import type { ShoppingListDetail, ShoppingListItemSummary } from "@/types/shopping";
 
 export interface ShoppingDetailScreenProps {
@@ -1478,7 +1479,7 @@ function MobileShoppingItemRow({
     currentChecked: boolean,
   ) => void;
 }) {
-  const itemName = item.display_text.replace(/\s+\d+.*$/, "");
+  const itemName = item.food_product_id ? item.display_text : item.display_text.replace(/\s+\d+.*$/, "");
   const amountText = formatAmountText(item);
 
   const canToggleCheck = !isReadOnly && !item.is_pantry_excluded && !isUpdating;
@@ -1538,18 +1539,21 @@ function MobileShoppingItemRow({
       )}
 
       <div
-        className="flex min-w-0 flex-1 items-baseline justify-start gap-2"
+        className={item.food_product_id ? "flex min-w-0 flex-1 flex-col items-start gap-1" : "flex min-w-0 flex-1 items-baseline justify-start gap-2"}
         data-testid={`shopping-mobile-item-copy-${item.id}`}
       >
-        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+        <p className={`${item.food_product_id ? "break-words whitespace-normal" : "truncate"} text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]`}>
           {itemName}
         </p>
-        <p
-          className="shrink-0 max-w-[96px] truncate text-left text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]"
+        <div>
+          <p
+          className={`${item.food_product_id ? "break-words whitespace-normal" : "shrink-0 max-w-[96px] truncate"} text-left text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]`}
           data-testid={`shopping-mobile-item-amount-${item.id}`}
         >
-          {amountText}
+          {item.food_product_id && amountText ? `필요 ${amountText}` : amountText}
         </p>
+          {item.purchase_suggestion ? <p className="text-[11px] text-[var(--text-3)]">구매 참고 {item.purchase_suggestion.amount}팩</p> : null}
+        </div>
       </div>
 
       {!isReadOnly ? (
@@ -1702,9 +1706,7 @@ function ShoppingItemCard({
   onToggleCheck,
   onToggleExclude,
 }: ShoppingItemCardProps) {
-  const amountText = item.amounts_json
-    .map((a) => `${a.amount}${a.unit}`)
-    .join(" + ");
+  const amountText = formatAmountText(item);
 
   const showCheckButton = !isReadOnly && !item.is_pantry_excluded;
   const canToggleCheck = showCheckButton && !isUpdating;
@@ -1761,8 +1763,9 @@ function ShoppingItemCard({
           isReadOnly ? "web-shopping-item-copy-inline" : "",
         ].join(" ")}
       >
-        <strong>{item.display_text.replace(/\s+\d+.*$/, "")}</strong>
-        <small>{amountText}</small>
+        <strong>{item.food_product_id ? item.display_text : item.display_text.replace(/\s+\d+.*$/, "")}</strong>
+        <small>{item.food_product_id && amountText ? `필요 ${amountText}` : amountText}</small>
+        {item.purchase_suggestion ? <small>구매 참고 {item.purchase_suggestion.amount}팩</small> : null}
       </div>
 
       {!isReadOnly ? (
@@ -1785,7 +1788,7 @@ function ShoppingItemCard({
 }
 
 function formatAmountText(item: ShoppingListItemSummary): string {
-  return item.amounts_json.map((a) => `${a.amount}${a.unit}`).join(" + ");
+  return item.amounts_json.map((a) => `${a.amount}${item.food_product_id && (a.unit === "package" || a.unit === "serving") ? formatProductUnit(a.unit) : a.unit}`).join(" + ");
 }
 
 function formatShoppingDisplayTitle(detail: ShoppingListDetail): string {

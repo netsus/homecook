@@ -21,6 +21,7 @@ interface Query<T> extends PromiseLike<{ data: T[] | null; error: unknown }> {
   range(from: number, to: number): Query<T>;
 }
 export interface RecipeIngredientSearchClient {
+  rpc?(name: "read_recipe_product_ingredient_classification", args: { p_ingredient_ids: string[] }): PromiseLike<{ data: Match[] | null; error: unknown }>;
   from(table: "ingredients"): { select(columns: string): Query<Ingredient> };
   from(table: "ingredient_synonyms"): { select(columns: string): Query<Synonym> };
   from(table: "recipe_ingredients"): { select(columns: string): Query<Match> };
@@ -85,6 +86,11 @@ export function createRecipeIngredientSearch(
         rows.push(...await readPages(() => recipes.from("recipe_ingredients")
           .select("recipe_id,ingredient_id").in("ingredient_id", unique.slice(i, i + ID_BATCH_SIZE))
           .order("id", { ascending: true })));
+        if (recipes.rpc) {
+          const result = await recipes.rpc("read_recipe_product_ingredient_classification", { p_ingredient_ids: unique.slice(i, i + ID_BATCH_SIZE) });
+          if (result.error || !result.data) throw result.error ?? new Error("Product classification lookup returned no data");
+          rows.push(...result.data);
+        }
       }
       return rows;
     })());

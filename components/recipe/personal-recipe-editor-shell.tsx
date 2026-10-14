@@ -16,6 +16,8 @@ import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
+import { getRecipeIngredientUnitOptions } from "@/lib/recipe-ingredient-units";
+import type { FoodProductData } from "@/types/food-product";
 import { suggestCookingMethod } from "@/lib/cooking-method-suggestion";
 import {
   getRecipeEditorContextPolicy,
@@ -88,6 +90,8 @@ export interface RecipeEditorIngredientRow extends ManualRecipeIngredientInput {
 
 interface RecipeEditorIngredientListProps {
   ingredients: RecipeEditorIngredientRow[];
+  productContexts?: Record<string, FoodProductData>;
+  unitErrors?: Record<string, string>;
   showValidationError: boolean;
   onChange: (
     tempId: string,
@@ -98,6 +102,8 @@ interface RecipeEditorIngredientListProps {
 
 export function RecipeEditorIngredientList({
   ingredients,
+  productContexts = {},
+  unitErrors = {},
   showValidationError,
   onChange,
   onRemove,
@@ -123,16 +129,17 @@ export function RecipeEditorIngredientList({
           className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5"
         >
           <div className="grid grid-cols-[minmax(3.5rem,1fr)_4.25rem_auto_2.5rem] items-center gap-1.5">
-            <div className="min-w-0">
-              <div className="truncate text-[14px] font-semibold text-[var(--foreground)]">
+            <div className={ingredient.food_product_id ? "col-span-4 min-w-0 sm:col-span-1" : "min-w-0"}>
+              <div className={`${ingredient.food_product_id ? "line-clamp-2 break-words" : "truncate"} text-[14px] font-semibold text-[var(--foreground)]`}>
                 {ingredient.standard_name}
               </div>
             </div>
             <DecimalInput
               aria-label={`${ingredient.standard_name} 수량`}
-              className="h-11 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+              className={`${ingredient.food_product_id ? "col-span-2 sm:col-span-1 " : ""}h-11 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]`}
               inputMode="decimal"
               min={0}
+              placeholder={ingredient.food_product_id ? "사용량" : undefined}
               onValueChange={(amount) => {
                 onChange(ingredient.tempId, {
                   amount,
@@ -141,12 +148,21 @@ export function RecipeEditorIngredientList({
               }}
               value={ingredient.amount}
             />
-            <div
+            {ingredient.food_product_id ? <select
+              aria-label={`${ingredient.standard_name} 단위`}
+              className="h-11 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-1 text-sm"
+              value={ingredient.unit ?? ""}
+              onChange={(event) => onChange(ingredient.tempId, { amount: ingredient.amount, unit: event.target.value })}
+            >
+              {getRecipeIngredientUnitOptions(ingredient, ingredient.row_key ? productContexts[ingredient.row_key] : undefined).map((unit) => (
+                <option key={unit} value={unit}>{unit === "serving" ? "회분" : unit === "package" ? "포장" : unit}</option>
+              ))}
+            </select> : <div
               aria-label={`${ingredient.standard_name} 단위`}
               className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
               role="group"
             >
-              {(ingredient.food_product_id ? [ingredient.unit ?? "g"] : COOKING_UNIT_OPTIONS).map((option) => (
+              {COOKING_UNIT_OPTIONS.map((option) => (
                 <button
                   key={option}
                   aria-label={`${ingredient.standard_name} ${option}`}
@@ -168,7 +184,7 @@ export function RecipeEditorIngredientList({
                   {option}
                 </button>
               ))}
-            </div>
+            </div>}
             <button
               aria-label={`${ingredient.standard_name} 삭제`}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-[var(--text-3)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]"
@@ -178,6 +194,10 @@ export function RecipeEditorIngredientList({
               ×
             </button>
           </div>
+          {ingredient.food_product_id && (!ingredient.row_key || !productContexts[ingredient.row_key]) ? (
+            <p className="mt-1 text-xs text-[var(--text-2)]">기존 단위와 분량은 유지돼요. 다른 단위로 바꾸려면 제품을 다시 선택해 주세요.</p>
+          ) : null}
+          {unitErrors[ingredient.tempId] ? <p className="mt-1 text-xs text-[var(--danger)]" role="alert">{unitErrors[ingredient.tempId]}</p> : null}
         </div>
       ))}
     </div>

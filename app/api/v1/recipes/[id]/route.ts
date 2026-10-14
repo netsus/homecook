@@ -1,4 +1,4 @@
-import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
+import { readPublicRecipeProductLabels, readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import {
@@ -302,9 +302,8 @@ export async function GET(request: Request, context: RouteContext) {
         })
       : Promise.resolve(legacyThumbnailUrl);
 
-    const ingredientColumns = authResult.data.user
-      ? "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name), food_product_id, food_product_nutrition_version_id"
-      : "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)";
+    const ingredientColumns = "id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)"
+      + (authResult.data.user ? ", food_product_id, food_product_nutrition_version_id" : "");
     const [
       sourceResult,
       ingredientsResult,
@@ -435,7 +434,7 @@ export async function GET(request: Request, context: RouteContext) {
     >;
     let ingredients = normalizeRecipeIngredients(user
       ? await readRecipeProductLabels(dbClient, ingredientRows)
-      : ingredientRows);
+      : await readPublicRecipeProductLabels(routeClient, id, ingredientRows));
     let steps = normalizeRecipeSteps(stepsResult.data);
 
     if (

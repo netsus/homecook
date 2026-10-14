@@ -130,6 +130,50 @@ describe("recipe future impact save flow", () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { code: "RECIPE_PRODUCT_UNAVAILABLE", status: 422, message: "지금은 선택한 제품 재료를 저장할 수 없어요." },
+    { code: "RECIPE_SOURCE_CONTRACT_REQUIRED", status: 409, message: "레시피의 재료 정보를 안전하게 저장하려면 최신 레시피를 다시 열어 주세요." },
+  ])("releases saving and retains the exact product draft through $code, cancel and retry", async ({code,status,message}) => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    const productDraft = { ...draft, ingredients: [{
+      row_key: "550e8400-e29b-41d4-a716-446655440081", source_kind: "food_product" as const,
+      ingredient_id: null, food_product_id: "550e8400-e29b-41d4-a716-446655440091",
+      food_product_nutrition_version_id: "550e8400-e29b-41d4-a716-446655440092",
+      amount: 0.5, unit: "package", ingredient_type: "QUANT" as const, scalable: true,
+      display_text: "원문 업체 · 간장", component_label: null,
+    }] };
+    vi.mocked(fetchRecipeFutureImpact).mockResolvedValue(impact);
+    vi.mocked(patchRecipeWithFutureStrategy)
+      .mockRejectedValueOnce(Object.assign(new Error("private internal details"), { code, status }))
+      .mockResolvedValue({ id: "recipe-id", revision: 13 });
+    render(<RecipeFutureImpactSaveFlow baseRecipeRevision={12} draft={productDraft} enabled imageObjectId={null}
+      onSaved={onSaved} recipeId="recipe-id" />);
+    await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
+    await user.click(await screen.findByRole("radio", { name: /기존 계획 유지/ }));
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    expect((await screen.findByRole("alert")).textContent).toContain(message);
+    expect(screen.queryByText("private internal details")).toBeNull();
+    expect(screen.getByRole("dialog").getAttribute("aria-busy")).toBe("false");
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "취소" }).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "저장" }).disabled).toBe(true);
+    expect(onSaved).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "다시 확인" }));
+    await user.click(await screen.findByRole("radio", { name: /기존 계획 유지/ }));
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "저장" }).disabled).toBe(false);
+    await user.click(screen.getByRole("button", { name: "취소" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
+    await user.click(await screen.findByRole("radio", { name: /기존 계획 유지/ }));
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith({ id: "recipe-id", revision: 13 }));
+    expect(fetchRecipeFutureImpact).toHaveBeenCalledTimes(3);
+    for (const call of vi.mocked(fetchRecipeFutureImpact).mock.calls) expect(call[2]).toEqual(productDraft);
+    expect(patchRecipeWithFutureStrategy).toHaveBeenCalledTimes(2);
+    for (const call of vi.mocked(patchRecipeWithFutureStrategy).mock.calls) expect(call[1].draft).toEqual(productDraft);
+  });
+
   it("stays completely dark when the capability boundary is off", () => {
     render(<RecipeFutureImpactSaveFlow baseRecipeRevision={12} draft={draft} enabled={false} imageObjectId={null} onSaved={vi.fn()} recipeId="recipe-id" />);
     expect(screen.queryByRole("button")).toBeNull();

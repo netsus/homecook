@@ -1,3 +1,4 @@
+import { hydratePantryCatalogSource, type PantryCatalogSourceClient } from "@/lib/server/food-catalog-pantry-source";
 import { fail, ok } from "@/lib/api/response";
 import {
   encodeFoodCatalogSearchCursor,
@@ -42,12 +43,12 @@ export async function GET(request: Request) {
 
   const params = new URL(request.url).searchParams;
   const db: FoodCatalogSearchDb = routeClient;
-  if (params.has("source_type") || params.has("source_id")) {
+  if (params.has("source_type") || params.has("source_id") || params.has("pantry_item_id")) {
     const sourceType = params.get("source_type");
     const sourceId = params.get("source_id")?.trim().toLowerCase();
     const fields: Array<{ field: string; reason: string }> = [];
     for (const key of new Set(params.keys())) {
-      if (key !== "source_type" && key !== "source_id") {
+      if (key !== "source_type" && key !== "source_id" && key !== "pantry_item_id") {
         fields.push({ field: key, reason: "unsupported_filter" });
       }
       if (params.getAll(key).length !== 1) {
@@ -60,6 +61,11 @@ export async function GET(request: Request) {
     if (!sourceId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(sourceId)) {
       fields.push({ field: "source_id", reason: "invalid_uuid" });
     }
+    const pantryItemId = params.get("pantry_item_id")?.trim().toLowerCase();
+    if (params.has("pantry_item_id") && (sourceType !== "food_product" || !pantryItemId
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(pantryItemId))) {
+      fields.push({ field: "pantry_item_id", reason: "invalid_source_reference" });
+    }
     if (fields.length > 0) {
       return fail("INVALID_SEARCH_FILTER", "검색 조건을 확인해 주세요.", 400, fields);
     }
@@ -70,6 +76,30 @@ export async function GET(request: Request) {
       !isRecord(result.data) || result.data.type !== sourceType || result.data.id !== sourceId
     ))) {
       return fail("INTERNAL_ERROR", "음식 정보를 불러오지 못했어요. 다시 시도해 주세요.", 500);
+    }
+    if (pantryItemId) {
+      if (!isRecord(result.data) || result.data.source_type !== "public_dataset" && result.data.source_type !== "manual") {
+        return fail("RESOURCE_NOT_FOUND", "선택한 팬트리 제품의 영양 기준을 확인하지 못했어요.", 404);
+      }
+      try {
+        const lookup: PantryCatalogSourceClient = { rpc: (name, args) => routeClient.rpc(name, args), from: (table) => ({ select: (columns) => {
+          let query = routeClient.from(table).select(columns);
+          const reader = {
+            eq: (column: string, value: string) => { query = query.eq(column, value); return reader; },
+            maybeSingle: async () => {
+              const result = await query.maybeSingle();
+              return { data: result.data, error: result.error };
+            },
+          };
+          return reader;
+        } }) };
+        const item = await hydratePantryCatalogSource(lookup,
+          user.id, pantryItemId, result.data);
+        return item ? ok({ items: [projectQuantityOptions(item, request)], next_cursor: null, has_next: false })
+          : fail("RESOURCE_NOT_FOUND", "선택한 팬트리 제품의 영양 기준을 확인하지 못했어요.", 404);
+      } catch {
+        return fail("INTERNAL_ERROR", "음식 정보를 불러오지 못했어요. 다시 시도해 주세요.", 500);
+      }
     }
     return ok({ items: result.data ? [projectQuantityOptions(result.data, request)] : [], next_cursor: null, has_next: false });
   }

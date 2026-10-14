@@ -1,3 +1,4 @@
+import { readProfileAccountGeneration } from "@/lib/server/account-generation/profile-subject";
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { isQaFixtureModeEnabled } from "@/lib/mock/recipes";
@@ -149,6 +150,7 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
     return {
       response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401),
       dbClient: null,
+      routeClient: null,
       user: null,
     };
   }
@@ -166,6 +168,7 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
         500,
       ),
       dbClient: null,
+      routeClient: null,
       user: null,
     };
   }
@@ -179,6 +182,7 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
         500,
       ),
       dbClient: null,
+      routeClient: null,
       user: null,
     };
   }
@@ -186,6 +190,7 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
   return {
     response: null,
     dbClient,
+    routeClient,
     user,
   };
 }
@@ -199,7 +204,7 @@ export async function GET(request: Request) {
     return ok(createQaFixtureUserProfile());
   }
 
-  const { response, dbClient, user } =
+  const { response, dbClient, routeClient, user } =
     await createAuthedUsersMeDbClient("내 정보를 불러오지 못했어요.");
 
   if (response) {
@@ -220,7 +225,12 @@ export async function GET(request: Request) {
     return fail("RESOURCE_NOT_FOUND", "사용자 정보를 찾을 수 없어요.", 404);
   }
 
-  return ok(toUserProfileData(userResult.data));
+  const profile = toUserProfileData(userResult.data);
+  if (profile.id === user.id && routeClient) {
+    const generation = await readProfileAccountGeneration(routeClient, user).catch(() => null);
+    if (generation !== null) profile.account_generation = generation;
+  }
+  return ok(profile);
 }
 
 export async function PATCH(request: Request) {
