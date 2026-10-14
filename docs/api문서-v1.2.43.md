@@ -5821,3 +5821,9 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 ## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
 
 공개 endpoint와 `{success,data,error}`는 유지한다. 완료/무게 `set_finished_weight`에만 선택 `weight_input_source=reported_measured`를 허용하고 client 예측/source ID/owner 주입은 거절한다. 정확 `X-Homecook-Cooked-Weight-Contract: evidence-v1`일 때만 additive weight summary/9키 식사 weight_basis·선택 weight_assumption_codes를 반환한다. 서버 wrapper의 정확한 SQLSTATE `55000`/`COOKED_WEIGHT_EVIDENCE_DISABLED` 응답에만, 명시 source 없는 일반 완료·구 수동 무게 요청을 기존 RPC로 처리한다. 실패한 wrapper transaction의 receipt·근거·완료 쓰기는 남지 않는다. `reported_measured` 요청은 헤더 유무와 무관하게409를 유지하며 요리 정보 갱신 후 일반 완료는 새 요청으로 보낸다. 일반 충돌·권한·멱등 오류에는 호환 재시도를 하지 않는다. 이미 성공한 근거 receipt는 OFF 후에도 원결과를 재생한다. 헤더 없음·미지원 판본은 기존 DTO, 새 client는 구 DTO를 읽는다. 헤더는 display opt-in이며 동의/권한/receipt 입력이 아니다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.
+
+## 2026-10-14 추가 계약 — C05 선택 참여 비활성 준비
+
+`GET /api/v1/users/me/weight-improvement-participation`는 검증된 계정의 선택 상태를 반환한다. PATCH는 UUID Idempotency-Key, action(notice_seen/decline/opt_in/withdraw), 필수 expected_subject(owner_uuid/account_generation), expected_revision, surface를 받는다. opt_in은 consent_checked:true와 document_version/hash가 필요하다. 표시 주체는 권한이 아닌 전제조건이며 불일치는 쓰기 전 409 PARTICIPATION_SUBJECT_CHANGED다. 기존 응답/오류 래퍼를 유지하고 철회는 신규 참여 OFF·문서 없음에도 허용한다.
+
+현재는 로컬 QA 준비이며 운영 UI/참여/수집은 OFF, 문서·기간은 미정이다. 운영 DB 적용과 수집·삭제/복원·모델 처리는 별도 구현/승인 대상이다. [검증과 후속 경계](engineering/mumeok-beta-participation-preparation-20261014.md)를 따른다.
