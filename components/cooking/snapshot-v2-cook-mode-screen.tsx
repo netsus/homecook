@@ -168,6 +168,7 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
       {preparationError ? <AppFeedbackToast message={preparationError} position="bottom" tone="error" /> : null}
       {completionOpen ? (
         <CookedBatchCompletionSheet
+          sessionId={sessionId}
           candidates={data.pantry_candidates}
           returnFocusRef={completionButtonRef}
           restoreFocusWhen={restoreCompletionFocusWhen}

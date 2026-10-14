@@ -1,6 +1,9 @@
+import { isWeightAttestationInput, matchesWeightAttestationAcknowledgement } from "@/lib/cooking/cooked-weight-attestation";
+import type { WeightAttestationInput, WeightAttestationRecord } from "@/types/cooked-weight-attestation";
+import { attestationRpcError } from "@/lib/server/cooked-weight-attestation";
 import { fail } from "@/lib/api/response";
 import { calculateUserProgressLevel } from "@/lib/server/user-progress";
-import type { CookedWeightSummary } from "@/types/cooking";
+import type { CookedWeightSummary, SnapshotV2CompleteData } from "@/types/cooking";
 import { isCookedWeightSummary } from "@/lib/cooking/cooked-weight-summary";
 import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
 import type { UserProgressData, UserProgressEventCounts } from "@/types/user-progress";
@@ -109,7 +112,12 @@ export function parseSnapshotV2CompleteRequest(value: unknown) {
     "weight_action",
     "finished_weight_g",
     "weight_input_source",
+    "weight_attestation",
   ])) fields.push({ field: "body", reason: "unknown_field" });
+  if (value.weight_attestation !== undefined && (!isWeightAttestationInput(value.weight_attestation)
+    || value.weight_action !== "set_finished_weight" || value.weight_input_source !== "reported_measured")) {
+    fields.push({ field: "weight_attestation", reason: "invalid_attestation" });
+  }
   const ids = Array.isArray(value.consumed_pantry_item_ids)
     ? value.consumed_pantry_item_ids
     : null;
@@ -131,32 +139,37 @@ export function parseSnapshotV2CompleteRequest(value: unknown) {
     fields.push({ field: "weight_action", reason: "invalid_enum" });
   }
   if (fields.length > 0 || !ids) return invalid(fields);
-  return {
-    ok: true as const,
-    value: {
-      consumedPantryItemIds: [...ids] as string[],
-      weightAction: value.weight_action as "set_finished_weight" | "weigh_later",
-      finishedWeightG: value.finished_weight_g as number | null,
-      weightInputSource: value.weight_input_source === "reported_measured" ? "reported_measured" as const : null,
-    },
+  const parsed: { consumedPantryItemIds: string[]; weightAction: "set_finished_weight" | "weigh_later";
+    finishedWeightG: number | null; weightInputSource: "reported_measured" | null; weightAttestation?: WeightAttestationInput } = {
+    consumedPantryItemIds: [...ids] as string[], weightAction: value.weight_action as "set_finished_weight" | "weigh_later",
+    finishedWeightG: value.finished_weight_g as number | null,
+    weightInputSource: value.weight_input_source === "reported_measured" ? "reported_measured" : null,
   };
+  if (isWeightAttestationInput(value.weight_attestation)) parsed.weightAttestation = value.weight_attestation;
+  return { ok: true as const, value: parsed };
 }
 
 export function parseBatchWeightRequest(value: unknown) {
   if (!isRecord(value)) return invalid([{ field: "body", reason: "invalid_json" }]);
   if (value.action === "set_finished_weight") {
-    if (!hasOnlyKeys(value, ["action", "finished_weight_g", "expected_revision", "weight_input_source"])) {
+    if (!hasOnlyKeys(value, ["action", "finished_weight_g", "expected_revision", "weight_input_source", "weight_attestation"])) {
       return invalid([{ field: "body", reason: "unknown_field" }]);
     }
     const fields: ValidationField[] = [];
+    if (value.weight_attestation !== undefined && (!isWeightAttestationInput(value.weight_attestation) || value.weight_input_source !== "reported_measured")) {
+      fields.push({ field: "weight_attestation", reason: "invalid_attestation" });
+    }
     if (value.weight_input_source !== undefined && value.weight_input_source !== "reported_measured") fields.push({ field: "weight_input_source", reason: "invalid_enum" });
     if (!isPositiveNumber(value.finished_weight_g)) fields.push({ field: "finished_weight_g", reason: "invalid_positive_number" });
     if (!isPositiveInteger(value.expected_revision)) fields.push({ field: "expected_revision", reason: "invalid_integer" });
-    return fields.length > 0 ? invalid(fields) : {
-      ok: true as const,
-      value: { action: "set_finished_weight" as const, finishedWeightG: value.finished_weight_g as number, expectedRevision: value.expected_revision as number,
-        weightInputSource: value.weight_input_source === "reported_measured" ? "reported_measured" as const : null },
+    if (fields.length > 0) return invalid(fields);
+    const parsed: { action: "set_finished_weight"; finishedWeightG: number; expectedRevision: number;
+      weightInputSource: "reported_measured" | null; weightAttestation?: WeightAttestationInput } = {
+      action: "set_finished_weight", finishedWeightG: value.finished_weight_g as number, expectedRevision: value.expected_revision as number,
+      weightInputSource: value.weight_input_source === "reported_measured" ? "reported_measured" : null,
     };
+    if (isWeightAttestationInput(value.weight_attestation)) parsed.weightAttestation = value.weight_attestation;
+    return { ok: true as const, value: parsed };
   }
   if (value.action === "mark_unrecoverable") {
     if (!hasOnlyKeys(value, ["action", "expected_revision"])) {
@@ -283,7 +296,7 @@ export function projectCookedBatch(value: unknown, includeEvidence = false): Coo
   return projection;
 }
 
-export function projectSnapshotV2CompleteData(value: unknown, includeEvidence = false) {
+export function projectSnapshotV2CompleteData(value: unknown, includeEvidence = false, attestation?: WeightAttestationInput) {
   if (!isRecord(value) || !isUuid(value.session_id) || value.contract_version !== "snapshot_v2"
     || !["planner", "standalone"].includes(String(value.mode)) || value.status !== "completed"
     || !Number.isSafeInteger(value.meals_updated) || Number(value.meals_updated) < 0
@@ -291,24 +304,36 @@ export function projectSnapshotV2CompleteData(value: unknown, includeEvidence = 
     || !Number.isSafeInteger(value.cook_count) || Number(value.cook_count) < 0) return null;
   const cookedBatch = projectCookedBatch(value.cooked_batch, includeEvidence);
   if (!cookedBatch) return null;
-  return {
+  const result: SnapshotV2CompleteData = {
     session_id: value.session_id,
     contract_version: "snapshot_v2" as const,
     mode: value.mode as "planner" | "standalone",
     status: "completed" as const,
     cooked_batch: cookedBatch,
-    meals_updated: value.meals_updated,
-    pantry_removed: value.pantry_removed,
-    cook_count: value.cook_count,
+    meals_updated: Number(value.meals_updated),
+    pantry_removed: Number(value.pantry_removed),
+    cook_count: Number(value.cook_count),
   };
+  if (attestation) {
+    if (!matchesWeightAttestationAcknowledgement(value.weight_attestation, attestation)
+      || value.weight_attestation.measured_g !== cookedBatch.finished_weight_g) return null;
+    result.weight_attestation = value.weight_attestation;
+  }
+  return result;
 }
 
-export function projectCookedBatchMutationData(value: unknown, includeEvidence = false) {
+export function projectCookedBatchMutationData(value: unknown, includeEvidence = false, attestation?: WeightAttestationInput) {
   if (!isRecord(value) || !includes(MUTATION_ACTIONS, value.action)) return null;
   const batch = projectCookedBatch(value.batch, includeEvidence);
   if (!batch) return null;
   if (value.action === "set_finished_weight" ? value.event_id !== null : !isUuid(value.event_id)) return null;
-  return { action: value.action, batch, event_id: value.event_id as string | null };
+  const result: { action: typeof value.action; batch: CookedBatchProjection; event_id: string | null; weight_attestation?: WeightAttestationRecord } = { action: value.action, batch, event_id: value.event_id as string | null };
+  if (attestation) {
+    if (!matchesWeightAttestationAcknowledgement(value.weight_attestation, attestation)
+      || value.weight_attestation.measured_g !== batch.finished_weight_g) return null;
+    result.weight_attestation = value.weight_attestation;
+  }
+  return result;
 }
 
 export interface CookedBatchCursor {
@@ -394,6 +419,8 @@ function readErrorText(error: unknown) {
 }
 
 function rpcError(error: unknown) {
+  const attestationError = isRecord(error) ? attestationRpcError(error) : null;
+  if (attestationError) return attestationError;
   const text = readErrorText(error);
   const code = (Object.keys(RPC_ERRORS) as Array<keyof typeof RPC_ERRORS>).find((item) => text.includes(item));
   if (!code) return fail("INTERNAL_ERROR", "요청을 처리하지 못했어요.", 500);

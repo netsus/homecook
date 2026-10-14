@@ -3591,3 +3591,14 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 ## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
 
 20261013233000_cooked_batch_weight_evidence는 로컬 draft이며 private 제어표 enabled=false·개인 append-only 예측/관찰 표를 준비한다. 기존 완료/weight fresh branch와 meal nutrition_evidence_json의9키 weight_basis·선택 가정은 기존 owner/revision/no-events/receipt 보호 안에서 원자 저장한다. 신규2개 service-role wrapper와 exact scope predecessor chain·검토 postimage 등록이 필요하다. 과거batch/meal/snapshot UPDATE0·quantity event에 evidence 추가0·학습 수집0이다. DB OFF가 새 쓰기 중지 기준이며 이력 reader는 보존한다. 완료/무게 wrapper·개인 근거 기록·cooked-batch 식사 근거 trigger의 제어 행 읽기만 `FOR SHARE`로 transaction 끝까지 고정한다. operator OFF는 이미 승인된 쓰기를 기다리며 stable projection·cook-mode capability는 plain SELECT를 유지한다. 일반 recipe 식사는 이 제어 행을 잠그지 않는다. 두 wrapper는 성공 receipt 재생을 제어 검사보다 먼저 수행하고, 새 쓰기 불가에는 정확한 `COOKED_WEIGHT_EVIDENCE_DISABLED`/SQLSTATE55000을 반환한다. 원 owner·generation·revision·scope/ACL은 유지한다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.
+
+
+## 2026-10-15 — 선택 개인 무게 확인 event/control (로컬·운영 미적용)
+
+현재 소스·SQL 작성 마무리와 격리 검증 단계이며 운영 미적용이다. 같은 v9의 검증 후 반영은 최신 사용자 상시 승인으로 진행한다. 과거의 구현 승인 대기 문장은 당시 기록이며, 여기의 미적용 표시는 배포 완료를 뜻하지 않는다.
+
+- migration `20261014224500_cooked_weight_user_attestation.sql`은 정확 두 표를 추가한다. `private.cooked_weight_user_attestation_control`은 singleton/`enabled=false` 기본이며 새 확인 저장만 제어한다. C01 제어를 대체하지 않고 유효한 read/retract/replay는 별개다.
+- `private.cooked_weight_user_attestations`는 owner/generation/batch, measurement evidence·원 revision, recipe content snapshot, assertion revision/event kind, prior assertion, statement version/context fingerprint, 서버 생성 assertion JSON·operation receipt·observed_at을 결속한다. `attested`는revision1/prior없음, `retracted`는revision2/prior참조이며 측정당 새 확인1개다. UPDATE는 금지하고 철회 event를 추가한다. user/batch/measurement/선행확인 삭제 FK cascade를 따르며 실제 복원·삭제 이행 검증은 별도다.
+- 당시g는 원 `reported_measurement` evidence를 읽고 고정 재료행/입력/제품version·인분과 함께 보존한다. `quantity_origin=planned`와 원 prediction/meals/무게·영양을 덮어쓰지 않는다. C05 표본/모델/새 보유기간이 아니며 물리 검증을 선언하지 않는다.
+- 신규 RPC4: `public.read_cooked_weight_attestation`, `public.complete_snapshot_v2_cooking_session_with_attestation`, `public.mutate_cooked_batch_weight_with_attestation`, `public.retract_cooked_weight_attestation`. public/anon/authenticated EXECUTE는 제거하고 service_role의 검증된 서버 경로만 사용한다. 두 private 표 직접 권한과 private helper는 service_role까지 REVOKE하며 RLS/owner 보호를 유지한다.
+- 기존 `private.verify_full_local_internal_scope()`는 `private.verify_scope_pre_weight_attestation_20261014()`로 보존하고 새 wrapper는 `snapshot-v2-session` scope의 정확4개 POST RPC 경로만 먼저 처리한다. 나머지는 원 alias로 위임하며 R2·C03/C01/worker scope를 일반화하지 않는다. 기본OFF·reader 준비·조건 충족 새 저장과 복구 검증은 후속 배포 경계다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
