@@ -1,0 +1,111 @@
+import { spawnSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+export const C05_NATIVE_IMAGE = "public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a";
+export const C05_NATIVE_MIGRATIONS = [
+  ["20261013190000_recipe_product_only_identity.sql", "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75"],
+  ["20261013233000_cooked_batch_weight_evidence.sql", "0c92fa9d4a83cfefa5313e7b8a13c610ac108555248d1db756d4bd7f2d8384af"],
+  ["20261014230000_weight_improvement_participation.sql", "bc263347ef51f7ffc86731b7c161618f3181b81cd00bf8f2ec57a01b989eeda8"],
+];
+const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+// This owns only a new offline container. It cannot attach to an existing DB,
+// read runtime config, open a host port, or restore application rows.
+export function createC05OwnedSchemaHarness() {
+  const tag = randomUUID().replaceAll("-", "");
+  let container = "";
+  const evidence = { image: C05_NATIVE_IMAGE, tag, container_id: "", application_rows_restored: null,
+    ledger: null, source_ledger_sha256: "", migrations: [], resources_removed: false };
+  const docker = (args, input) => spawnSync("docker", args, {
+    input, encoding: "utf8", timeout: 30000, maxBuffer: 32 * 1024 * 1024,
+  });
+  function assertOwned() {
+    if (!/^[a-f0-9]{64}$/u.test(container)) throw new Error("An exact newly owned CID is required");
+    const result = docker(["inspect", container]);
+    if (result.status !== 0) throw new Error(result.stderr);
+    const [state] = JSON.parse(result.stdout);
+    if (state.Id !== container || state.Config.Labels["homecook.c05-integration"] !== tag
+      || state.Config.Image !== C05_NATIVE_IMAGE || state.HostConfig.NetworkMode !== "none"
+      || state.Mounts.length !== 0 || Object.keys(state.HostConfig.PortBindings ?? {}).length !== 0) {
+      throw new Error("Refusing an unowned, networked or shared target");
+    }
+  }
+  function exec(args, input) {
+    assertOwned();
+    return docker(["exec", "-i", container, ...args], input);
+  }
+  function sql(statement, { admin = false, succeeds = true } = {}) {
+    const result = exec(["psql", "-h", "/tmp/pgsocket", "-U", "supabase_admin", "-d", "postgres", "-XqAt", "-v", "ON_ERROR_STOP=1"],
+      `${admin ? "" : "set session authorization postgres;"}\n${statement}`);
+    if (succeeds && result.status !== 0) throw new Error(result.stderr);
+    return result;
+  }
+  async function restore({ schemaArchive, rolesArchive, ledgerEvidence }) {
+    const schema = readFileSync(schemaArchive);
+    const roles = readFileSync(rolesArchive, "utf8");
+    if (digest(schema) !== "5447e5ae08359feb9750676820968daf2edcf0ed57b64997e718ccc8d8dae790"
+      || digest(roles) !== "a37b43865c14194ab8aae8758c7f596679cc50e93f425d0af52767f54b9145d3"
+      || /\bpassword\b/iu.test(roles)) throw new Error("Schema-only/password-free source digest drift");
+    // Only the already-authorized filename/hash metadata is consumed.
+    const { ledger } = JSON.parse(readFileSync(ledgerEvidence, "utf8"));
+    if (!Array.isArray(ledger) || ledger.length !== 219) throw new Error("Expected the exact 219-entry source ledger");
+    for (const entry of ledger) {
+      if (!/^\d{14}_[a-z0-9_]+\.sql$/u.test(entry.filename) || !/^[a-f0-9]{64}$/u.test(entry.sha256)
+        || digest(readFileSync(`supabase/migrations/${entry.filename}`)) !== entry.sha256) throw new Error("Source ledger drift");
+    }
+    const launch = docker(["run", "--detach", "--platform", "linux/arm64", "--pull=never", "--network", "none",
+      "--label", `homecook.c05-integration=${tag}`, "--entrypoint", "bash", C05_NATIVE_IMAGE, "-c",
+      "mkdir -p /tmp/c05pg /tmp/pgsocket /var/run/postgresql; chown postgres:postgres /tmp/c05pg /tmp/pgsocket /var/run/postgresql; "
+        + "exec gosu postgres bash -c 'initdb -D /tmp/c05pg -U supabase_admin --auth=trust >/tmp/c05-initdb.log && "
+        + "exec postgres -D /tmp/c05pg -c listen_addresses= -c unix_socket_directories=/tmp/pgsocket "
+        + "-c shared_preload_libraries=pg_stat_statements,pgaudit,pg_cron,supautils'"]);
+    if (launch.status !== 0) throw new Error(launch.stderr);
+    container = launch.stdout.trim(); evidence.container_id = container;
+    let ready = false;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (exec(["pg_isready", "-h", "/tmp/pgsocket", "-U", "supabase_admin"]).status === 0) { ready = true; break; }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!ready) throw new Error("Owned offline database did not initialize");
+    // initdb already creates its matching superuser; all original ALTER ROLE
+    // attributes, memberships and role configuration are restored unchanged.
+    sql(roles.replace(/^CREATE ROLE supabase_admin;$/mu, ""), { admin: true });
+    const restored = exec(["pg_restore", "--schema-only", "--exit-on-error", "-h", "/tmp/pgsocket", "-U", "supabase_admin", "-d", "postgres"], schema);
+    if (restored.status !== 0) throw new Error(restored.stderr);
+    sql(`do $empty$ declare t record; n bigint; begin
+      for t in select schemaname,tablename from pg_tables where schemaname in('public','private','auth') loop
+        execute format('select count(*) from %I.%I',t.schemaname,t.tablename) into n;
+        if n<>0 then raise exception 'Restored application rows: %.% = %',t.schemaname,t.tablename,n;end if;
+      end loop;
+      if (select count(*) from homecook_deploy.migrations)<>0 then raise exception 'Ledger was not schema-only';end if;
+    end $empty$;`, { admin: true });
+    evidence.application_rows_restored = 0;
+    evidence.ledger = JSON.parse(sql(`select jsonb_build_object('owner',pg_get_userbyid(relowner),
+      'select',has_table_privilege('postgres',oid,'SELECT'),'insert',has_table_privilege('postgres',oid,'INSERT'),
+      'update',has_table_privilege('postgres',oid,'UPDATE'),'delete',has_table_privilege('postgres',oid,'DELETE'))
+      from pg_class where oid='homecook_deploy.migrations'::regclass;`, { admin: true }).stdout.trim());
+    if (evidence.ledger.owner !== "supabase_admin" || evidence.ledger.select !== true
+      || evidence.ledger.insert || evidence.ledger.update || evidence.ledger.delete) throw new Error("Original ledger authority drift");
+    sql(`insert into homecook_deploy.migrations(filename,sha256) values ${ledger.map((entry) => `('${entry.filename}','${entry.sha256}')`).join(",")};`, { admin: true });
+    evidence.source_ledger_sha256 = digest(JSON.stringify(ledger));
+  }
+  function applyMigration(index) {
+    if (evidence.migrations.length !== index) throw new Error("Migration sequence must be C03 → C01 → C05");
+    const [filename, sha256] = C05_NATIVE_MIGRATIONS[index];
+    const source = readFileSync(`supabase/migrations/${filename}`, "utf8");
+    if (digest(source) !== sha256) throw new Error("Exact migration source drift");
+    sql(`do $principal$ begin if session_user<>'postgres' or current_user<>'postgres' then raise exception 'Wrong DDL principal';end if;end $principal$;\n${source}`);
+    evidence.migrations.push({ filename, sha256, principal: "postgres" });
+  }
+  function close() {
+    if (!container) return;
+    assertOwned();
+    const removed = docker(["rm", "--force", container]);
+    if (removed.status !== 0) throw new Error(removed.stderr);
+    const probe = docker(["inspect", container]);
+    if (probe.status === 0) throw new Error("Owned container cleanup was incomplete");
+    evidence.resources_removed = true;
+  }
+  return { restore, applyMigration, sql, close, evidence };
+}

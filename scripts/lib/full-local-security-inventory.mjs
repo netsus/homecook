@@ -29,6 +29,10 @@ const COOKED_WEIGHT_POSTIMAGES_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/cooked-weight-evidence-source-function-postimages.json",
 );
+const WEIGHT_PARTICIPATION_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/weight-improvement-participation-source-function-postimages.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -694,25 +698,124 @@ function withCookedWeightContracts(contracts) {
   return result;
 }
 
-export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false } = {}) {
+function weightParticipationPostimages() {
+  const manifest = JSON.parse(readFileSync(WEIGHT_PARTICIPATION_POSTIMAGES_PATH, "utf8"));
+  const migration = readFileSync(join(REPOSITORY_ROOT, manifest.migration), "utf8");
+  if (manifest.schema_version !== 1 || manifest.status !== "local-review-draft"
+    || manifest.migration !== "supabase/migrations/20261014230000_weight_improvement_participation.sql"
+    || manifest.migration_sha256 !== "bc263347ef51f7ffc86731b7c161618f3181b81cd00bf8f2ec57a01b989eeda8"
+    || createHash("sha256").update(migration).digest("hex") !== manifest.migration_sha256
+    || manifest.schema_archive_sha256 !== "5447e5ae08359feb9750676820968daf2edcf0ed57b64997e718ccc8d8dae790"
+    || manifest.password_free_roles_sha256 !== "a37b43865c14194ab8aae8758c7f596679cc50e93f425d0af52767f54b9145d3"
+    || manifest.source_ledger_count !== 219
+    || manifest.source_ledger_sha256 !== "4da770185bf35bc0ff7834a8284766c54d314b1638146bae830157da626c5204"
+    || manifest.predecessor_219_sha256 !== cookedWeightPostimages().predecessor_219_sha256
+    || manifest.predecessor_C03_sha256 !== recipeProductPostimages().migration_sha256
+    || manifest.predecessor_C01_sha256 !== cookedWeightPostimages().migration_sha256
+    || manifest.application_rows_restored !== 0 || manifest.C03_C01_integration_pending !== false
+    || manifest.whole_inventory_drift_not_waived !== true || manifest.functions.length !== 8) {
+    throw new Error("weight participation postimage provenance drift");
+  }
+  const metadata = {
+    is_weight_improvement_document_complete: [false, "i", "pg_catalog,private,pg_temp"],
+    protect_weight_improvement_evidence: [false, "v", "pg_catalog,private,pg_temp"],
+    require_weight_improvement_scope: [false, "v", "pg_catalog,public,private,pg_temp"],
+    project_weight_improvement_participation: [false, "s", "pg_catalog,public,private,pg_temp"],
+    verify_full_local_internal_scope: [true, "v", "pg_catalog,public,private,pg_temp"],
+    verify_scope_pre_weight_participation_20261014: [true, "v", "pg_catalog,public,private,pg_temp"],
+    read_weight_improvement_participation: [true, "v", "pg_catalog,public,private,pg_temp"],
+    mutate_weight_improvement_participation: [true, "v", "pg_catalog,public,private,pg_temp"],
+  };
+  const signatures = {
+    is_weight_improvement_document_complete: "private.is_weight_improvement_document_complete(jsonb)",
+    protect_weight_improvement_evidence: "private.protect_weight_improvement_evidence()",
+    require_weight_improvement_scope: "private.require_weight_improvement_scope(text)",
+    project_weight_improvement_participation: "private.project_weight_improvement_participation(uuid,bigint)",
+    verify_full_local_internal_scope: "private.verify_full_local_internal_scope()",
+    verify_scope_pre_weight_participation_20261014: "private.verify_scope_pre_weight_participation_20261014()",
+    read_weight_improvement_participation: "public.read_weight_improvement_participation(uuid,timestampwithtimezone,text,integer,timestampwithtimezone)",
+    mutate_weight_improvement_participation: "public.mutate_weight_improvement_participation(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,bigint,text,bigint,text,uuid,text,text,boolean)",
+  };
+  const names = new Set();
+  for (const { postimage, preimage } of manifest.functions) {
+    const expected = metadata[postimage.name];
+    const schema = postimage.name.startsWith("read_") || postimage.name.startsWith("mutate_") ? "public" : "private";
+    if (!expected || names.has(postimage.name) || !/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || postimage.signature !== signatures[postimage.name]
+      || postimage.schema !== schema || postimage.owner !== "postgres"
+      || postimage.securityDefiner !== expected[0] || postimage.volatility !== expected[1]
+      || postimage.searchPath !== expected[2]
+      || postimage.allowedAcl !== (schema === "public" ? "service_role:EXECUTE:false" : "")
+      || JSON.stringify(postimage.configuration) !== JSON.stringify([`search_path=${expected[2].replaceAll(",", ", ")}`])) {
+      throw new Error("weight participation function contract drift");
+    }
+    names.add(postimage.name);
+    if (postimage.name !== "verify_scope_pre_weight_participation_20261014") {
+      const body = migration.match(new RegExp(`create function ${schema}\\.${postimage.name}\\([\\s\\S]*?\\$\\$([\\s\\S]*?)\\$\\$;`))?.[1];
+      if (!body || createHash("md5").update(body.replace(/^\n+|\n+$/gu, "")).digest("hex") !== postimage.sourceHash) {
+        throw new Error("weight participation exact source drift");
+      }
+    }
+    if (preimage && postimage.name !== "verify_full_local_internal_scope") throw new Error("unexpected weight participation preimage");
+  }
+  const predecessor = manifest.preserved_scope_predecessor;
+  const before = manifest.functions.find((entry) => entry.postimage.name === "verify_full_local_internal_scope")?.preimage;
+  const alias = manifest.functions.find((entry) => entry.postimage.name === "verify_scope_pre_weight_participation_20261014")?.postimage;
+  const c01Scope = cookedWeightPostimages().functions.find((entry) => entry.postimage.name === "verify_full_local_internal_scope")?.postimage;
+  if (!before || !alias || !predecessor.body_and_attributes_unchanged
+    || JSON.stringify(before) !== JSON.stringify(predecessor.before)
+    || JSON.stringify(alias) !== JSON.stringify(predecessor.renamed)
+    || ["sourceHash", "securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]
+      .some((field) => before[field] !== alias[field] || before[field] !== c01Scope[field])
+    || JSON.stringify(before.configuration) !== JSON.stringify(alias.configuration)) {
+    throw new Error("weight participation C01 scope predecessor drift");
+  }
+  return manifest;
+}
+
+function withWeightParticipationContracts(contracts) {
+  const result = [...contracts];
+  for (const { postimage, checkedInInventoryPreimageMd5 } of weightParticipationPostimages().functions) {
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index >= 0) {
+      if (checkedInInventoryPreimageMd5 !== result[index].sourceHash) throw new Error("weight participation checked-in preimage drift");
+      result[index] = { ...result[index], sourceHash: postimage.sourceHash, configuration: postimage.configuration };
+    } else result.push(postimage);
+  }
+  return result;
+}
+
+export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false,
+  includeWeightImprovementParticipationFunctions = false } = {}) {
+  if (includeWeightImprovementParticipationFunctions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("weight participation inventory requires the cooked weight predecessor contracts");
+  }
   const contracts = recipeProductPostimages().functions.map((entry) => entry.postimage);
   const functions = includeCookedWeightEvidenceFunctions ? withCookedWeightContracts(contracts) : contracts;
-  return buildSourceFunctionInventorySql(functions);
+  return buildSourceFunctionInventorySql(includeWeightImprovementParticipationFunctions ? withWeightParticipationContracts(functions) : functions,
+    includeWeightImprovementParticipationFunctions);
 }
 
 export function buildCookedWeightEvidenceSourceFunctionInventorySql() {
   return buildSourceFunctionInventorySql(cookedWeightPostimages().functions.map((entry) => entry.postimage));
 }
 
-function buildSourceFunctionInventorySql(functions) {
+export function buildWeightImprovementParticipationSourceFunctionInventorySql() {
+  return buildSourceFunctionInventorySql(weightParticipationPostimages().functions.map((entry) => entry.postimage), true);
+}
+
+function buildSourceFunctionInventorySql(functions, exactConfiguration = false) {
   const rows = functions.map((entry) => [entry.lookupSignature, entry.sourceHash,
-    entry.owner, String(entry.securityDefiner), `search_path=${entry.searchPath}`, entry.allowedAcl, entry.volatility]);
-  return `with expected(signature, body_md5, owner_name, security_definer, search_path, allowed_acl, volatility) as (
+    entry.owner, String(entry.securityDefiner), `search_path=${entry.searchPath}`, entry.allowedAcl, entry.volatility,
+    ...(exactConfiguration ? [JSON.stringify(entry.configuration ?? null)] : [])]);
+  return `with expected(signature, body_md5, owner_name, security_definer, search_path, allowed_acl, volatility${exactConfiguration ? ", configuration" : ""}) as (
     values ${valuesSql(rows)}
   ), actual as (
     select expected.*, p.oid, md5(btrim(p.prosrc,chr(10))) as actual_body,
       pg_get_userbyid(p.proowner) as actual_owner, p.prosecdef as actual_security, p.provolatile::text as actual_volatility,
       replace(coalesce((select c from unnest(p.proconfig) c where c like 'search_path=%'),''),' ','') as actual_path,
+      ${exactConfiguration ? "to_jsonb(p.proconfig) as actual_configuration," : ""}
       coalesce((select string_agg((case when a.grantee=0 then 'public' else r.rolname end)||':'||a.privilege_type||':'||a.is_grantable::text,','
         order by (case when a.grantee=0 then 'public' else r.rolname end),a.privilege_type,a.is_grantable)
         from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a left join pg_roles r on r.oid=a.grantee
@@ -725,19 +828,30 @@ function buildSourceFunctionInventorySql(functions) {
     'security',count(*) filter(where actual_security is distinct from security_definer::boolean),
     'search_path',count(*) filter(where actual_path is distinct from search_path),
     'acl',count(*) filter(where actual_acl is distinct from allowed_acl),
-    'volatility',count(*) filter(where actual_volatility is distinct from volatility)) from actual;`;
+    'volatility',count(*) filter(where actual_volatility is distinct from volatility)
+    ${exactConfiguration ? ",'configuration',count(*) filter(where configuration::jsonb <> 'null'::jsonb and actual_configuration is distinct from configuration::jsonb)" : ""}) from actual;`;
 }
 
-export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false } = {}) {
-  return assertSourceFunctionInventoryResult(result, includeCookedWeightEvidenceFunctions ? 38 : 24);
+export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false,
+  includeWeightImprovementParticipationFunctions = false } = {}) {
+  if (includeWeightImprovementParticipationFunctions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("weight participation inventory requires the cooked weight predecessor contracts");
+  }
+  return assertSourceFunctionInventoryResult(result, includeWeightImprovementParticipationFunctions ? 45 : includeCookedWeightEvidenceFunctions ? 38 : 24,
+    includeWeightImprovementParticipationFunctions);
 }
 
 export function assertCookedWeightEvidenceSourceFunctionInventoryResult(result) {
   return assertSourceFunctionInventoryResult(result, 15);
 }
 
-function assertSourceFunctionInventoryResult(result, count) {
-  const keys = ["required_functions", "missing", "body", "owner", "security", "search_path", "acl", "volatility"];
+export function assertWeightImprovementParticipationSourceFunctionInventoryResult(result) {
+  return assertSourceFunctionInventoryResult(result, 8, true);
+}
+
+function assertSourceFunctionInventoryResult(result, count, exactConfiguration = false) {
+  const keys = ["required_functions", "missing", "body", "owner", "security", "search_path", "acl", "volatility",
+    ...(exactConfiguration ? ["configuration"] : [])];
   if (!result || Object.keys(result).length !== keys.length
     || result.required_functions !== count || keys.slice(1).some((key) => result[key] !== 0)) {
     throw new Error("recipe product source inventory failed closed");
@@ -785,6 +899,7 @@ function buildSecurityInventoryExpression({
   includeRecipeFuturePropagationFunctions,
   includeRecipeProductFunctions,
   includeCookedWeightEvidenceFunctions,
+  includeWeightImprovementParticipationFunctions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
@@ -805,10 +920,15 @@ function buildSecurityInventoryExpression({
   if (includeCookedWeightEvidenceFunctions && !includeRecipeProductFunctions) {
     throw new Error("cooked weight inventory requires the recipe product predecessor contracts");
   }
+  if (includeWeightImprovementParticipationFunctions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("weight participation inventory requires the cooked weight predecessor contracts");
+  }
   const productFunctions = includeRecipeProductFunctions
     ? withRecipeProductContracts(legacyFunctions) : legacyFunctions;
-  const functions = includeCookedWeightEvidenceFunctions
+  const cookedWeightFunctions = includeCookedWeightEvidenceFunctions
     ? withCookedWeightContracts(productFunctions) : productFunctions;
+  const functions = includeWeightImprovementParticipationFunctions
+    ? withWeightParticipationContracts(cookedWeightFunctions) : cookedWeightFunctions;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -830,6 +950,7 @@ function buildSecurityInventoryExpression({
     entry.owner,
     entry.searchPath,
     entry.allowedAcl,
+    JSON.stringify(entry.configuration ?? null),
   ]));
   const tableValues = valuesSql(rlsTables);
   const policyValues = valuesSql(policies.map((policy) => [
@@ -851,7 +972,7 @@ function buildSecurityInventoryExpression({
   return `
     with expected_functions(
       lookup_signature, signature, schema_name, function_name, source_hash, security_definer,
-      owner_name, search_path, allowed_acl
+      owner_name, search_path, allowed_acl, exact_configuration
     ) as (
       values
       ${functionValues}
@@ -860,6 +981,7 @@ function buildSecurityInventoryExpression({
         expected.*,
         procedure.oid,
         procedure.prosecdef,
+        pg_catalog.to_jsonb(procedure.proconfig) as actual_configuration,
         owner.rolname as actual_owner,
         pg_catalog.md5(pg_catalog.btrim(procedure.prosrc, pg_catalog.chr(10)))
           as actual_source_hash,
@@ -1027,7 +1149,9 @@ function buildSecurityInventoryExpression({
       'function_source_drift_count', (select count(*) from function_inventory where oid is not null and actual_source_hash is distinct from source_hash),
       'function_security_drift_count', (select count(*) from function_inventory where oid is not null and prosecdef is distinct from security_definer::boolean),
       'function_owner_drift_count', (select count(*) from function_inventory where oid is not null and actual_owner is distinct from owner_name),
-      'function_search_path_drift_count', (select count(*) from function_inventory where oid is not null and actual_search_path is distinct from 'search_path=' || search_path),
+      'function_search_path_drift_count', (select count(*) from function_inventory where oid is not null and
+        (actual_search_path is distinct from 'search_path=' || search_path
+          or (exact_configuration::jsonb <> 'null'::jsonb and actual_configuration is distinct from exact_configuration::jsonb))),
       'function_acl_drift_count', (select count(*) from function_inventory where oid is not null and actual_acl is distinct from allowed_acl),
       'unexpected_function_overload_count', (
         select count(*)
@@ -1186,6 +1310,7 @@ export function buildFullLocalSecurityInventoryExpression({
   includeRecipeFuturePropagationFunctions = false,
   includeRecipeProductFunctions = false,
   includeCookedWeightEvidenceFunctions = false,
+  includeWeightImprovementParticipationFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeCookedBatchPolicyCutover,
@@ -1194,6 +1319,7 @@ export function buildFullLocalSecurityInventoryExpression({
     includeRecipeFuturePropagationFunctions,
     includeRecipeProductFunctions,
     includeCookedWeightEvidenceFunctions,
+    includeWeightImprovementParticipationFunctions,
   });
 }
 
@@ -1212,8 +1338,12 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     includeRecipeFuturePropagationFunctions = false,
     includeRecipeProductFunctions = false,
     includeCookedWeightEvidenceFunctions = false,
+    includeWeightImprovementParticipationFunctions = false,
   } = {},
 ) {
+  if (includeWeightImprovementParticipationFunctions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("weight participation inventory requires the cooked weight predecessor contracts");
+  }
   const baseFunctionCount = includeSnapshotTables
     ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
     : FUNCTION_CONTRACT.length;
@@ -1223,7 +1353,8 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
       ? RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT.length
       : 0)
     + (includeRecipeProductFunctions ? 19 : 0)
-    + (includeCookedWeightEvidenceFunctions ? 14 : 0);
+    + (includeCookedWeightEvidenceFunctions ? 14 : 0)
+    + (includeWeightImprovementParticipationFunctions ? 7 : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;
