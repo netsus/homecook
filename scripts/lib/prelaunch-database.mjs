@@ -6,7 +6,7 @@ import path from "node:path";
 import { readPinnedLocalDockerTarget } from "./local-supabase-isolated-runtime.mjs";
 import { parseFullLocalProductionConfig, selectFullLocalProductionResources } from "./full-local-production-resources.mjs";
 import { createRecordingDockerAdapter, durableJson } from "./marketing-round2-controlled-deploy.mjs";
-import { assertProtectedWriterReview, readClosedR2PrivateBytes } from "./prelaunch-web-deploy.mjs";
+import { assertProtectedWriterReview, assertProtectedRolloutReview, assertCookedWeightProductOff, readClosedR2PrivateBytes, COOKED_WEIGHT_FEATURE, COOKED_WEIGHT_MIGRATION, protectedImmutableSha256 } from "./prelaunch-web-deploy.mjs";
 
 const FILE = /^([0-9]{14})_[A-Za-z0-9_-]+\.sql$/u;
 const SHA = /^[a-f0-9]{64}$/u;
@@ -28,11 +28,20 @@ const catalogRoles = `jsonb_build_array((SELECT coalesce(jsonb_agg(jsonb_build_a
 // Fixed semantic catalog queries. A review never supplies a query, identifier or runtime postimage.
 export const PROTECTED_CATALOG_SQL = catalogDigest(`jsonb_build_array(${catalogFunctions("n.nspname IN ('public','private','auth')")},${catalogRelations("n.nspname IN ('public','private','auth','homecook_deploy','marketing_round2_deploy')")},(SELECT coalesce(jsonb_agg(jsonb_build_array(nspname,pg_get_userbyid(nspowner),nspacl) ORDER BY nspname),'[]'::jsonb) FROM pg_namespace WHERE nspname IN ('public','private','auth','homecook_deploy','marketing_round2_deploy')),${catalogRoles})`);
 export const PROTECTED_IMMUTABLE_CATALOG_SQL = catalogDigest(`jsonb_build_array(${catalogFunctions("n.nspname='private' AND (p.proname LIKE 'marketing_round2_%' OR p.proname LIKE 'verify_full_local_internal_scope%' OR p.proname LIKE '%bootstrap%' OR p.proname LIKE 'verify_full_local_youtube%') OR n.nspname='public' AND (p.proname LIKE 'marketing_round2_%' OR p.proname LIKE 'youtube_%')")},${catalogRelations("n.nspname='auth' OR n.nspname='marketing_round2_deploy' OR n.nspname='public' AND (c.relname LIKE 'marketing_%' OR c.relname LIKE 'youtube_%')")},${catalogRoles})`);
+// Keep the whole query above. Only this one C01-authorized outer is removed from the additional unchanged-remainder query.
+export const COOKED_WEIGHT_STABLE_IMMUTABLE_SQL = PROTECTED_IMMUTABLE_CATALOG_SQL.replace(
+  "OR p.proname LIKE 'verify_full_local_youtube%') OR n.nspname='public'",
+  "OR p.proname LIKE 'verify_full_local_youtube%') AND NOT (p.proname='verify_full_local_internal_scope' AND p.pronargs=0) OR n.nspname='public'",
+);
+const cookedWeightScopeDigest = name => `(SELECT encode(sha256(convert_to(jsonb_build_array(replace(pg_get_functiondef(p.oid),'CREATE OR REPLACE FUNCTION private.verify_scope_pre_cooked_weight_evidence_20261013()','CREATE OR REPLACE FUNCTION private.verify_full_local_internal_scope()'),pg_get_userbyid(p.proowner),p.proacl,p.proconfig,p.prosecdef,p.provolatile,p.proparallel,p.proleakproof,p.proisstrict)::text,'UTF8')),'hex') FROM pg_proc p WHERE p.oid=to_regprocedure('private.${name}()') AND p.prokind='f')`;
+export const COOKED_WEIGHT_SCOPE_SQL = `SELECT jsonb_build_object('outerSha256',${cookedWeightScopeDigest("verify_full_local_internal_scope")},'aliasSha256',${cookedWeightScopeDigest("verify_scope_pre_cooked_weight_evidence_20261013")});`;
 const PROTECTED_DATA_TABLES = ["auth.users", "auth.identities", "public.marketing_validation_sessions", "public.marketing_validation_events", "public.marketing_round2_participations", "public.marketing_round2_events", "public.marketing_round2_lead_requests", "public.youtube_extraction_jobs", "public.youtube_saved_recipe_results", "public.youtube_extractor_permits"];
 const PROTECTED_LEDGER_SQL = "SELECT coalesce(json_agg(t ORDER BY filename),'[]'::json) FROM (SELECT filename,sha256 FROM homecook_deploy.migrations) t;";
 const PROTECTED_WRITER_SQL = "SELECT CASE WHEN count(*)=1 AND bool_and(singleton) THEN bool_or(enabled)::text ELSE 'invalid' END FROM private.recipe_product_only_write_control;";
+const COOKED_WEIGHT_WRITER_SQL = "SELECT CASE WHEN count(*)=1 AND bool_and(singleton) THEN bool_or(enabled)::text ELSE 'invalid' END FROM private.cooked_batch_weight_evidence_control;";
 
-export function createProtectedPrelaunchAdapter(base) {
+export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-source") {
+  if (!["recipe-product-source", COOKED_WEIGHT_FEATURE].includes(feature)) throw new Error("Unknown protected adapter feature");
   return {
     ...base,
     async observe(sessionQuery, applicationName) {
@@ -48,8 +57,16 @@ export function createProtectedPrelaunchAdapter(base) {
       if (!["true", "false"].includes(control)) throw new Error("Protected writer control singleton differs");
       // Inside the owned session exclude only itself. Reconcile excludes no session.
       const active = (await query(`SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=${literal(applicationName)}${sessionQuery ? " AND pid<>pg_backend_pid()" : ""});`)).trim() === "t";
-      return { target, ledger: JSON.parse((await query(PROTECTED_LEDGER_SQL)).trim()), catalogSha256: (await query(PROTECTED_CATALOG_SQL)).trim(),
+      const result = { target, ledger: JSON.parse((await query(PROTECTED_LEDGER_SQL)).trim()), catalogSha256: (await query(PROTECTED_CATALOG_SQL)).trim(),
         immutableSha256: immutable.catalog, preservedRowsSha256: digest(JSON.stringify(immutable.rows)), writerEnabled: control === "true", active };
+      if (feature === COOKED_WEIGHT_FEATURE) {
+        const exists = (await query("SELECT to_regclass('private.cooked_batch_weight_evidence_control') IS NOT NULL;")).trim() === "t";
+        const weightControl = exists ? (await query(COOKED_WEIGHT_WRITER_SQL)).trim() : "false";
+        if (!["true", "false"].includes(weightControl)) throw new Error("C01 control singleton differs");
+        Object.assign(result, { productWriterEnabled: result.writerEnabled, writerEnabled: weightControl === "true",
+          stableImmutableSha256: (await query(COOKED_WEIGHT_STABLE_IMMUTABLE_SQL)).trim(), scope: JSON.parse((await query(COOKED_WEIGHT_SCOPE_SQL)).trim()) });
+      }
+      return result;
     },
   };
 }
@@ -111,7 +128,7 @@ export async function openProtectedPrelaunchTarget({ repositoryRoot, configPath,
   if (digest(JSON.stringify(target)) !== review.database.targetSha256) throw new Error("Protected database identity differs from approved config target");
   const { loadFullLocalBackupReadiness } = await import("../full-local-production-runtime.mjs");
   await loadFullLocalBackupReadiness({ config }, target); // Existing authenticated platform/USB/restore verifier; no materialization or service action.
-  return createProtectedPrelaunchAdapter(base);
+  return createProtectedPrelaunchAdapter(base, review.feature);
 }
 
 export async function createProtectedPrelaunchDatabase({ repositoryRoot, configPath, operationDirectory, operationId, guardPath, review, reviewSha256, assertBoundary, checkCancelled, readMigrations: readCandidate, previousNotAppliedSha256 }) {
@@ -123,31 +140,43 @@ export async function createProtectedPrelaunchDatabase({ repositoryRoot, configP
   const adapter = await openProtectedPrelaunchTarget({ repositoryRoot, configPath, backupDirectory: path.join(operationDirectory, "backup"), review });
   const journal = createProtectedPrelaunchJournal({ repositoryRoot, operationDirectory, operationId, guardPath, previousNotAppliedSha256 });
   const engine = createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, operationId, readMigrations, adapter, journal, assertBoundary, checkCancelled });
-  return { ...engine, observe: () => adapter.observe(undefined, `protected-c03-${operationId}`), adapter, journal };
+  return { ...engine, observe: () => adapter.observe(undefined, `${review.feature === COOKED_WEIGHT_FEATURE ? "protected-c01" : "protected-c03"}-${operationId}`), adapter, journal };
 }
 
-export function createProtectedPrelaunchWriter({ review, reviewSha256, approval, approvalSha256, readerReceipt, readerReceiptSha256, operationId, action, adapter, journal, assertBoundary }) {
+export function createProtectedPrelaunchWriter({ review, reviewSha256, approval, approvalSha256, readerReceipt, readerReceiptSha256, operationId, action, adapter, journal, assertBoundary,
+  baselineReview = review, baselineReviewSha256 = reviewSha256, productOffReceipt = null }) {
   assertProtectedWriterReview(approval, review, reviewSha256);
+  const productCloseOnWeightBaseline = review.feature === "recipe-product-source" && baselineReview.feature === COOKED_WEIGHT_FEATURE;
+  if (productCloseOnWeightBaseline) {
+    assertProtectedRolloutReview(baselineReview);
+    if (action !== "writer-off" || baselineReview.predecessorProtected.reviewSha256 !== reviewSha256 || !SHA.test(baselineReviewSha256)) throw new Error("Only original C03 safe OFF may use the exact successor C01 baseline");
+  } else if (!same(baselineReview, review) || baselineReviewSha256 !== reviewSha256) throw new Error("Writer cannot replace its approved baseline");
   if (!SHA.test(approvalSha256) || !SHA.test(readerReceiptSha256) || (approval.readerReceiptSha256 !== null && approval.readerReceiptSha256 !== readerReceiptSha256) || readerReceipt?.reviewSha256 !== reviewSha256
     || readerReceipt.readerFloor !== review.to || readerReceipt.releaseSha !== review.to || readerReceipt.backwardCompatible !== false
     || readerReceipt.databasePlanSha256 !== approval.databasePlanSha256 || readerReceipt.verifiedFlowsSha256 !== approval.readerFlowsSha256 || !["writer-on", "writer-off"].includes(action)
     || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(operationId ?? "")) {
     throw new Error("Protected writer approval/reader floor/action differs");
   }
-  review = structuredClone(review);
+  review = structuredClone(review); baselineReview = structuredClone(baselineReview); productOffReceipt = structuredClone(productOffReceipt);
   const enabled = action === "writer-on", applicationName = `protected-writer-${operationId}`;
-  const binding = () => ({ schema: "homecook.prelaunch-protected-writer-attempt.v1", reviewSha256, approvalSha256, operationId,
-    applicationName, from: review.from, to: review.to, action, readerReceiptSha256, readerFloor: readerReceipt.readerFloor, backwardCompatible: false });
+  const cookedWeight = review.feature === COOKED_WEIGHT_FEATURE;
+  const controlKey = productCloseOnWeightBaseline ? "productWriterEnabled" : "writerEnabled";
+  const binding = () => { const result = { schema: "homecook.prelaunch-protected-writer-attempt.v1", reviewSha256, approvalSha256, operationId,
+    applicationName, from: review.from, to: review.to, action, readerReceiptSha256, readerFloor: readerReceipt.readerFloor, backwardCompatible: false };
+    if (productCloseOnWeightBaseline) Object.assign(result, { baselineReviewSha256, baselineDatabasePlanSha256: digest(JSON.stringify({ source: baselineReview.database.after, applied: baselineReview.database.after })) });
+    return result;
+  };
   const check = observation => {
-    if (typeof observation.writerEnabled !== "boolean") throw new Error("Protected writer control observation is invalid");
-    return assertProtectedPrelaunchObservation(review, { ...observation, writerEnabled: false }, "after");
+    if (typeof observation[controlKey] !== "boolean") throw new Error("Protected writer control observation is invalid");
+    if (productCloseOnWeightBaseline) return assertProtectedPrelaunchObservation(baselineReview, { ...observation, writerEnabled: false, productWriterEnabled: true }, "after");
+    return assertProtectedPrelaunchObservation(review, { ...observation, writerEnabled: false }, "after", { productOffReceipt, reviewSha256 });
   };
   return {
     async apply() {
       if (await journal.read()) throw new Error("Protected writer attempt exists; reconcile without automatic reactivation");
       await assertBoundary();
       const before = await adapter.observe(undefined, applicationName); check(before);
-      if (before.writerEnabled === enabled) throw new Error("Protected writer already has requested state; no new control write permitted");
+      if (before[controlKey] === enabled) throw new Error("Protected writer already has requested state; no new control write permitted");
       let session;
       let guardCreated = false;
       let commitDispatched = false;
@@ -155,19 +184,25 @@ export function createProtectedPrelaunchWriter({ review, reviewSha256, approval,
         await journal.write({ ...binding(), status: "applying_precommit", target: before.target }, true);
         guardCreated = true;
         session = adapter.session(applicationName);
-        await session.query("BEGIN; SET LOCAL lock_timeout='10s'; SET LOCAL statement_timeout='30s'; SET LOCAL idle_in_transaction_session_timeout='30s'; SELECT pg_advisory_xact_lock(104230921,77101); LOCK TABLE private.recipe_product_only_write_control IN EXCLUSIVE MODE; LOCK TABLE public.recipe_ingredients IN SHARE ROW EXCLUSIVE MODE;");
+        await session.query(cookedWeight
+          ? "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; SET LOCAL idle_in_transaction_session_timeout='30s'; SELECT pg_advisory_xact_lock(104230921,77101); SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE; SELECT singleton FROM private.cooked_batch_weight_evidence_control WHERE singleton FOR UPDATE;"
+          : "BEGIN; SET LOCAL lock_timeout='10s'; SET LOCAL statement_timeout='30s'; SET LOCAL idle_in_transaction_session_timeout='30s'; SELECT pg_advisory_xact_lock(104230921,77101); LOCK TABLE private.recipe_product_only_write_control IN EXCLUSIVE MODE; LOCK TABLE public.recipe_ingredients IN SHARE ROW EXCLUSIVE MODE;");
+        if (productCloseOnWeightBaseline) await session.query("SELECT singleton FROM private.cooked_batch_weight_evidence_control WHERE singleton FOR SHARE;");
         const locked = await adapter.observe(sql => session.query(sql), applicationName); check(locked);
-        if (locked.writerEnabled !== before.writerEnabled) throw new Error("Protected writer changed before lock");
+        if (locked[controlKey] !== before[controlKey]) throw new Error("Protected writer changed before lock");
         await assertBoundary();
-        await session.query(`UPDATE private.recipe_product_only_write_control SET enabled=${enabled} WHERE singleton AND enabled=${!enabled};`);
+        await session.query(cookedWeight
+          ? `UPDATE private.cooked_batch_weight_evidence_control SET enabled=${enabled} WHERE singleton AND enabled=${!enabled};`
+          : `UPDATE private.recipe_product_only_write_control SET enabled=${enabled} WHERE singleton AND enabled=${!enabled};`);
         const post = await adapter.observe(sql => session.query(sql), applicationName); check(post);
-        if (post.writerEnabled !== enabled || post.preservedRowsSha256 !== locked.preservedRowsSha256) throw new Error("Protected control transition or preserved rows differ");
+        if (post[controlKey] !== enabled || post.preservedRowsSha256 !== locked.preservedRowsSha256
+          || (productCloseOnWeightBaseline && post.writerEnabled !== locked.writerEnabled)) throw new Error("Protected control transition or preserved rows differ");
         await assertBoundary();
         await journal.write({ ...binding(), status: "commit_dispatch_guard", target: before.target });
         commitDispatched = true;
         await session.query("COMMIT;"); await session.close();
         const after = await adapter.observe(undefined, applicationName); check(after);
-        if (after.writerEnabled !== enabled) throw new Error("Protected writer commit readback differs");
+        if (after[controlKey] !== enabled) throw new Error("Protected writer commit readback differs");
         const result = { ...binding(), status: "committed", target: before.target, writerEnabled: enabled };
         await journal.write(result); return result;
       } catch (error) {
@@ -188,12 +223,12 @@ export function createProtectedPrelaunchWriter({ review, reviewSha256, approval,
       }
       await assertBoundary();
       const observation = await adapter.observe(undefined, applicationName); check(observation);
-      const closedAfterUnknown = enabled && observation.writerEnabled === false && safeOffReceipt;
+      const closedAfterUnknown = enabled && observation[controlKey] === false && safeOffReceipt;
       if (closedAfterUnknown && (safeOffReceipt.status !== "committed" || safeOffReceipt.action !== "writer-off"
         || safeOffReceipt.approvalSha256 !== approvalSha256 || safeOffReceipt.readerReceiptSha256 !== readerReceiptSha256
         || safeOffReceipt.readerFloor !== review.to || safeOffReceipt.writerEnabled !== false)) throw new Error("Protected safe OFF supersession proof differs");
-      const result = { ...binding(), status: closedAfterUnknown ? "closed_after_unknown" : observation.writerEnabled === enabled ? "committed" : "not_applied", target: observation.target,
-        writerEnabled: observation.writerEnabled, automaticRetryAllowed: false };
+      const result = { ...binding(), status: closedAfterUnknown ? "closed_after_unknown" : observation[controlKey] === enabled ? "committed" : "not_applied", target: observation.target,
+        writerEnabled: observation[controlKey], automaticRetryAllowed: false };
       await journal.write(result); return result;
     },
   };
@@ -415,8 +450,11 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
       || Object.keys(spec).sort().join() !== "filename,payloadSha256,rawSha256" || !Buffer.isBuffer(migration.bytes)
       || digest(migration.bytes) !== spec.rawSha256) throw new Error("Protected migration exact raw bytes differ");
     const sql = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(migration.bytes);
-    if (!/^begin;\r?\n/iu.test(sql) || !/\r?\ncommit;\r?\n$/iu.test(sql)) throw new Error("Protected migration outer transaction wrapper differs");
-    const payload = sql.replace(/^begin;\r?\n/iu, "").replace(/\r?\ncommit;\r?\n$/iu, "");
+    const cookedWeight = review.feature === COOKED_WEIGHT_FEATURE;
+    if (cookedWeight && (before.length !== 220 || after.length !== 221 || specs.length !== 1 || migration.filename !== COOKED_WEIGHT_MIGRATION)) throw new Error("C01 only accepts its exact220 to221 migration");
+    const envelope = cookedWeight ? sql.replace(/^-- Local draft only\. No historical batch\/meal\/snapshot UPDATE and no learning collection\.\r?\n/u, "") : sql;
+    if (!/^begin;\r?\n/iu.test(envelope) || !/\r?\ncommit;\r?\n$/iu.test(envelope)) throw new Error("Protected migration outer transaction wrapper differs");
+    const payload = envelope.replace(/^begin;\r?\n/iu, "").replace(/\r?\ncommit;\r?\n$/iu, "");
     if (digest(payload) !== spec.payloadSha256) throw new Error("Protected migration exact payload bytes differ");
     assertProtectedSqlOperatorBoundary(payload);
     return { filename: migration.filename, sha256: migration.sha256, payload };
@@ -424,7 +462,9 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
   return { before, after, pending };
 }
 
-export function assertProtectedPrelaunchObservation(review, observation, phase) {
+/** @param {{productOffReceipt?: unknown, reviewSha256?: string}} [independent] */
+export function assertProtectedPrelaunchObservation(review, observation, phase, independent = {}) {
+  const { productOffReceipt = null, reviewSha256 } = independent;
   const database = review?.database;
   if (!["before", "after"].includes(phase) || !database || !SHA.test(database.targetSha256)
     || !SHA.test(database.beforeCatalogSha256) || !SHA.test(database.afterCatalogSha256) || !SHA.test(database.immutableSha256)) {
@@ -433,9 +473,19 @@ export function assertProtectedPrelaunchObservation(review, observation, phase) 
   const expectedLedger = database[phase];
   const expectedCatalog = phase === "before" ? database.beforeCatalogSha256 : database.afterCatalogSha256;
   if (digest(JSON.stringify(observation?.target)) !== database.targetSha256 || !same(observation.ledger, expectedLedger)
-    || observation.catalogSha256 !== expectedCatalog || observation.immutableSha256 !== database.immutableSha256
+    || observation.catalogSha256 !== expectedCatalog || observation.immutableSha256 !== protectedImmutableSha256(review, phase)
     || !SHA.test(observation.preservedRowsSha256) || observation.writerEnabled !== false || observation.active !== false) {
     throw new Error("Protected database target/ledger/catalog/immutable/OFF observation differs");
+  }
+  if (review.feature === COOKED_WEIGHT_FEATURE) {
+    const scope = database.scopeTransition;
+    let expectedProduct = true;
+    if (phase === "after" && productOffReceipt) { assertCookedWeightProductOff(productOffReceipt, review, reviewSha256); expectedProduct = false; }
+    if (!SHA.test(database.afterImmutableSha256) || !SHA.test(database.stableImmutableSha256)
+      || observation.stableImmutableSha256 !== database.stableImmutableSha256 || observation.productWriterEnabled !== expectedProduct
+      || !scope || observation.scope?.outerSha256 !== (phase === "before" ? scope.beforeOuterSha256 : scope.afterOuterSha256)
+      || observation.scope?.aliasSha256 !== (phase === "before" ? null : scope.afterAliasSha256)
+      || scope.afterAliasSha256 !== scope.beforeOuterSha256) throw new Error("C01 stable immutable/C03 ON/exact outer and predecessor alias differ");
   }
   return observation;
 }
@@ -450,13 +500,14 @@ export function classifyProtectedPrelaunchOutcome(review, observation) {
 export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, operationId, readMigrations, adapter, journal, assertBoundary, checkCancelled = () => {} }) {
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(operationId ?? "")
     || !SHA.test(reviewSha256) || review?.schema !== "homecook.prelaunch-protected-rollout-review.v1"
-    || review.feature !== "recipe-product-source" || review.approved?.database !== true || review.approved.writerOn !== false
+    || !["recipe-product-source", COOKED_WEIGHT_FEATURE].includes(review.feature) || review.approved?.database !== true || review.approved.writerOn !== false
     || review.allNewShapesOff !== true || review.legacyReaderCompatible !== true || !SHA.test(review.isolatedEvidenceSha256)) {
     throw new Error("Protected database exact approval/OFF/legacy compatibility evidence required");
   }
   // Neither the caller nor later observations may replace the reviewed expectations.
+  if (review.feature === COOKED_WEIGHT_FEATURE) assertProtectedRolloutReview(review);
   review = structuredClone(review);
-  const applicationName = `protected-c03-${operationId}`;
+  const applicationName = `${review.feature === COOKED_WEIGHT_FEATURE ? "protected-c01" : "protected-c03"}-${operationId}`;
   async function prepare() {
     const plan = planProtectedPrelaunchMigrations(review, await readMigrations());
     await assertBoundary();
@@ -465,10 +516,15 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
     return { plan, observation };
   }
   const binding = () => ({ schema: "homecook.prelaunch-protected-db-attempt.v1", reviewSha256, operationId, applicationName, from: review.from, to: review.to });
-  const receipt = (backup, preservedRowsSha256) => ({ ...binding(), status: "committed", targetSha256: review.database.targetSha256,
-    databasePlanSha256: digest(JSON.stringify({ source: review.database.after, applied: review.database.after })),
-    catalogSha256: review.database.afterCatalogSha256, immutableSha256: review.database.immutableSha256,
-    writerEnabled: false, readerReady: false, backwardCompatible: false, backup, preservedRowsSha256, rowsPreservedInTransaction: true });
+  const receipt = (backup, preservedRowsSha256) => {
+    const result = { ...binding(), status: "committed", targetSha256: review.database.targetSha256,
+      databasePlanSha256: digest(JSON.stringify({ source: review.database.after, applied: review.database.after })),
+      catalogSha256: review.database.afterCatalogSha256, immutableSha256: protectedImmutableSha256(review),
+      writerEnabled: false, readerReady: false, backwardCompatible: false, backup, preservedRowsSha256, rowsPreservedInTransaction: true };
+    if (review.feature === COOKED_WEIGHT_FEATURE) Object.assign(result, { feature: COOKED_WEIGHT_FEATURE, productWriterEnabled: true,
+      stableImmutableSha256: review.database.stableImmutableSha256, predecessorProtected: review.predecessorProtected });
+    return result;
+  };
   return {
     async plan() {
       if (await journal.read()) throw new Error("Protected database attempt already exists; reconcile before a new attempt");
@@ -492,6 +548,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         const { searchPath, timeZone } = session.postgresContext ?? {};
         if (typeof searchPath !== "string" || typeof timeZone !== "string") throw new Error("Protected migration postgres context unavailable");
         await session.query(`BEGIN ISOLATION LEVEL SERIALIZABLE; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='180s'; SET LOCAL idle_in_transaction_session_timeout='180s'; SET LOCAL standard_conforming_strings=on; SELECT pg_advisory_xact_lock(104230921,77101); LOCK TABLE homecook_deploy.migrations IN SHARE ROW EXCLUSIVE MODE; SET LOCAL ROLE postgres; SELECT set_config('search_path',${literal(searchPath)},true),set_config('TimeZone',${literal(timeZone)},true);`);
+        if (review.feature === COOKED_WEIGHT_FEATURE) await session.query("SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE;");
         const query = sql => session.query(sql);
         const locked = assertProtectedPrelaunchObservation(review, await adapter.observe(query, applicationName), "before");
         preservedRowsSha256 = locked.preservedRowsSha256;

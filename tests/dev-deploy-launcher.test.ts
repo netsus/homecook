@@ -1,10 +1,10 @@
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, lstatSync, rmSync, realpathSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, lstatSync, rmSync, realpathSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, expect, it } from "vitest";
 import { DEV_DEPLOY_SNAPSHOT_PATHS, installDevDeployLauncher, verifyDevDeployToolLoad } from "../scripts/lib/dev-deploy-launcher.mjs";
-import { prelaunchVerificationEnvironment } from "../scripts/lib/prelaunch-web-deploy.mjs";
+import { COOKED_WEIGHT_ROLLOUT_REVIEW_PIN, COOKED_WEIGHT_WRITER_REVIEW_PIN, prelaunchVerificationEnvironment } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const snapshotRoots: string[] = [];
 afterEach(() => { for (const root of snapshotRoots.splice(0)) rmSync(root, { recursive: true, force: true }); });
@@ -19,6 +19,36 @@ it("loads the committed deployment import graph from its exact git archive", () 
   const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...DEV_DEPLOY_SNAPSHOT_PATHS], { cwd: repository, maxBuffer: 128 * 1024 * 1024 });
   execFileSync("/usr/bin/tar", ["-xf", "-", "-C", root], { input: archive });
   expect(() => verifyDevDeployToolLoad({ entryPoint: join(root, "scripts/deploy-prelaunch-web.mjs"), repository, nodePath: process.execPath })).not.toThrow();
+});
+
+it("installs the working C01 tool graph as an actual archive and invokes its fixed probes without security document data", () => {
+  const root = snapshotRoot(), repository = join(root, "repo"), taskHome = join(root, "fixture-home"), current = process.cwd();
+  mkdirSync(repository);
+  const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...DEV_DEPLOY_SNAPSHOT_PATHS], { cwd: current, maxBuffer: 128 * 1024 * 1024 });
+  execFileSync("/usr/bin/tar", ["-xf", "-", "-C", repository], { input: archive });
+  for (const path of ["scripts/deploy-prelaunch-web.mjs", "scripts/lib/prelaunch-web-deploy.mjs", "scripts/lib/prelaunch-database.mjs", "scripts/lib/full-local-restore-cutover.mjs"]) {
+    writeFileSync(join(repository, path), readFileSync(join(current, path)));
+  }
+  const git = (args: string[]) => execFileSync("git", ["-C", repository, ...args], { stdio: "ignore" });
+  git(["init"]); git(["config", "user.name", "Snapshot Fixture"]); git(["config", "user.email", "snapshot-fixture@example.invalid"]);
+  git(["remote", "add", "origin", "https://github.com/netsus/homecook.git"]); git(["add", "."]); git(["commit", "-m", "Verify fixed C01 helpers in an isolated install archive"]);
+  const env = { ...prelaunchVerificationEnvironment("test", process.env), HOME: taskHome };
+  const installed = spawnSync(process.execPath, ["--", join(repository, "scripts/install-dev-deploy.mjs"), "--ref", "HEAD"], { env, encoding: "utf8" });
+  expect(installed.status, installed.stderr).toBe(0);
+  const tools = join(taskHome, ".homecook/prelaunch-web/tools"), snapshot = join(tools, readdirSync(tools)[0]);
+  expect(() => readFileSync(join(snapshot, "docs/security/cooked-weight-evidence-source-function-postimages.json"))).toThrow();
+  const probe = `import assert from 'node:assert/strict';
+    const web=await import(${JSON.stringify(join(snapshot, "scripts/lib/prelaunch-web-deploy.mjs"))});
+    const db=await import(${JSON.stringify(join(snapshot, "scripts/lib/prelaunch-database.mjs"))});
+    assert.deepEqual(web.COOKED_WEIGHT_ROLLOUT_REVIEW_PIN,${JSON.stringify(COOKED_WEIGHT_ROLLOUT_REVIEW_PIN)});
+    assert.deepEqual(web.COOKED_WEIGHT_WRITER_REVIEW_PIN,${JSON.stringify(COOKED_WEIGHT_WRITER_REVIEW_PIN)});
+    assert.throws(()=>web.loadProtectedRolloutReview(${JSON.stringify(repository)},{feature:'unreviewed-feature'}));
+    assert.ok(db.COOKED_WEIGHT_SCOPE_SQL.includes('verify_scope_pre_cooked_weight_evidence_20261013'));
+    assert.ok(db.COOKED_WEIGHT_STABLE_IMMUTABLE_SQL.includes("p.pronargs=0"));
+    assert.ok(web.protectedReaderFenceSql({feature:'cooked-weight-evidence'}).check.includes('cooked_batch_weight_evidence_control'));
+  `;
+  const loaded = spawnSync(process.execPath, ["--input-type=module", "-e", probe], { env, encoding: "utf8" });
+  expect(loaded.status, loaded.stderr).toBe(0);
 });
 
 it("rejects the old archive that omits the required static JSON", () => {
