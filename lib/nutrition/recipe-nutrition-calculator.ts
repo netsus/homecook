@@ -92,6 +92,7 @@ export interface RecipeNutritionIngredientInput {
       is_active: boolean;
     };
     evidence?: {
+      id?: string;
       normalized_g_per_15ml?: number | null;
       review_status: string;
       is_active: boolean;

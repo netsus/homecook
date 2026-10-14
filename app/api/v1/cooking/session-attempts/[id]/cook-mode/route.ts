@@ -1,4 +1,11 @@
+import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
+import { cookedWeightEvidenceEnabled, readSnapshotWeightPrediction, summarizeWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
+import { createRecipeMealWeightReadInternalClient } from "@/lib/supabase/server";
+import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
+import type { CookingWeightSessionClient } from "@/lib/server/cooked-batch-weight-estimate";
+import type { RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
+import type { SnapshotV2CookModeData } from "@/types/cooking";
 import { readVerifiedAccountGenerationSession } from
   "@/lib/server/account-generation/session-authority";
 import {
@@ -55,7 +62,35 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const data = projectSnapshotV2CookModeData(result.data);
+  const metadata: Pick<SnapshotV2CookModeData, "weight_evidence_enabled" | "weight_prediction"> = {};
+  if (data && wantsCookedWeightEvidence(_request) && cookedWeightEvidenceEnabled() && result.data && typeof result.data === "object"
+    && "weight_evidence_enabled" in result.data && result.data.weight_evidence_enabled === true) {
+    metadata.weight_evidence_enabled = true;
+    try {
+      const sessionClient: CookingWeightSessionClient & RecipeProductNutritionClient = {
+        rpc: (name, params) => routeClient.rpc(name, params),
+        from: (table) => ({ select: (columns) => {
+          let query = routeClient.from(table).select(columns);
+          const reader = {
+            eq: (column: string, value: string) => { query = query.eq(column, value); return reader; },
+            maybeSingle: async () => {
+              const result = await query.maybeSingle();
+              return { data: result.data, error: result.error };
+            },
+          };
+          return reader;
+        } }),
+      };
+      const prediction = await readSnapshotWeightPrediction({ client: sessionClient,
+        weightClient: createRecipeMealWeightReadInternalClient(), ownerId: user.id, sessionId, cookingSteps: data.recipe.steps });
+      if (prediction) metadata.weight_prediction = summarizeWeightPrediction(prediction);
+    } catch (error) {
+      const failure = createHybridAuthorityRouteError(error);
+      if (failure) return failure;
+      // Preview is optional. Completion remains available without a number.
+    }
+  }
   return data
-    ? ok(data)
+    ? ok({ ...data, ...metadata })
     : fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
 }
