@@ -50,3 +50,23 @@ pnpm deploy:dev -- --reviewed-ref <동일SHA> --already-applied-db --db-config <
 plan 통과는 실제 DB/worker 검증 통과를 뜻하지 않는다. 이 변경의 로컬 증거는 PIN을 중립화한
 소유 fixture와 OS/file/network mock이다. 실제 activation 파일·키·DB·서비스는 로컬 검사에서
 읽거나 실행하지 않았다. 실제 installed 도구와 정상 UI 후속 배포의 성공 확인은 총괄의 별도 단계다.
+
+
+## 공개 레시피 수량 projection의 닫힘 승계 예외
+
+C04 worker 단계의 기존 closed-R2 continuation에서만 공개 레시피 재료의
+`quantity_input` exact projection 보완을 허용한다. CLI의 plan과 stage가 실제
+live.ref/target의 Git blob 원문 SHA256 두 개를 계산하고, 보호 함수는 검토된
+정방향 hash pair와 양쪽 R2/lead false를 모두 요구한다. working tree·환경변수·
+새 CLI 옵션으로 이 증거를 바꾸지 않는다. 대상은
+`lib/server/hybrid-auth/public-read-policy-runtime.mjs` 한 경로다.
+
+다른 인증/marketing/SQL 파일, 누락·삭제·다른 해시·역방향, active R2 또는
+환경/실행 설정 변경은 기존대로 거절한다. 전체 변경 파일 목록을 필터링하지
+않으며 active readiness 승계에는 이 예외 증거를 전달하지 않는다. 기존
+`verifyProtectedBaseline`의 실제 C04 원 권위·DB227·worker 검증은 그대로다.
+이 예외는 새 DB 권한이나 범용 hybrid-auth 변경을 허용하지 않는다.
+
+검토 대상 정책 raw SHA256은 `d7399684db1e10d0bc86847dad3e2d6a361d61f7c1589446b37b9eb0dc089639`
+→ `e0d54ee86c56eeae6df11cd7ddf7346e744c72323d098599dc62425c006ac37e`다.
+코드의 고정 비교값은 이 순방향 전환만 허용하며 정책 파일이 바뀌면 새 검토가 필요하다.
