@@ -818,7 +818,13 @@ describe("full-local backup readiness", () => {
       .toBeUndefined();
     expect(runtime).not.toContain('case "verify-restored-platform"');
     expect(runtime).toContain('restore_execution: "clean-isolated-restore-platform-v1"');
-    expect(runtime).toContain("verifyRestoredPlatformDataSnapshot");
+    const restorePlatform = runtime.slice(
+      runtime.indexOf("async function restorePlatformBackup("),
+      runtime.indexOf("function compareRestoreManifests("),
+    );
+    expect(restorePlatform).toMatch(
+      /verifyRestoredPlatform: \(\) => \{\s*const restoreManifest = writeRestoreManifest\(\{[\s\S]*semantic: \{\s*\.\.\.restoredPlatformDataSnapshot\(restoreRuntime, metadata\)/u,
+    );
   });
 
   it("rejects restore manifests when the restored raw SHA is malformed even if semantic digests match", () => {
