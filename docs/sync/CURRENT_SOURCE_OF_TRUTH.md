@@ -29,6 +29,10 @@ C01 앱 PR #1684/#1689/#1690과 기존 배포 경로 #1691을 검증·병합한 
 
 대표 연결 없는 공공제품도 정확한 제품/영양 버전으로 레시피에 사용할 수 있도록 준비했다. 보유 제품 버전·원량·단계 참조·과거 snapshot을 보존하고 새 형식을 모르는 저장 요청은 원자 거절한다. 신규 DB/control은 미적용이며 writer 기본 OFF·reader 선행·별도 ON 승인과 안전 OFF 복구를 따른다. [구현 계약](../engineering/mumeok-beta-product-contract-20261014.md)에 화면/API/DB·검증·잔존 위험을 구분한다.
 
+## 2026-10-14 — C05 선택 참여 비활성 준비
+
+필수 로그인과 별개인 선택 참여·철회·주체 경합 방지를 로컬에서 준비했다. 운영 UI는 QA 외 비활성, 문서/기간 미정, 수집 OFF다. 실제 수집·삭제/복원·모델 처리는 미완료이며 [검증과 후속 경계](../engineering/mumeok-beta-participation-preparation-20261014.md)를 따른다. C04 여섯 SQL 뒤 C05 두 SQL의 비활성 순서와 보존 scope/source 검사는 [joined 로컬 근거](../engineering/weight-improvement-source-read-20261014.md#c04-순서-뒤-c05의-비활성-통합--2026-10-14)로 구분한다. 독립 원근거 mapper 보완의 SQL→decoder→candidate 왕복도 로컬에서 확인했으며, 최종 화면/제품 검증과 실제 운영 완료를 대신하지 않는다.
+
 ## 2026-10-14 — F01 직접 접속 안내·R2 수집 중지 운영 확인
 
 사용자가 정확한 F01 웹·두 false flag·닫힘 복구 범위를 승인했다. PR #1672/#1677 및 검사 요청의 Host 보존 보완 #1678을 병합하고 웹 `87cd04e11607b85cda720e7fe60ac06b42356e7a`·build `prelaunch-87cd04e11607-Hl2nrc`를 운영 확인했다. 일반 접속·소셜 로그인과 일부 신청 화면의 Turnstile을 구분하는 개인정보 안내가 표시되고, 모바일/데스크톱 홈의 R2 광고 진입은 숨겨진다.

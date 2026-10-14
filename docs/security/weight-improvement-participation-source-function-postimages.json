@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "status": "local-review-draft",
+  "schema_archive_sha256": "5447e5ae08359feb9750676820968daf2edcf0ed57b64997e718ccc8d8dae790",
+  "password_free_roles_sha256": "a37b43865c14194ab8aae8758c7f596679cc50e93f425d0af52767f54b9145d3",
+  "source_ledger_count": 219,
+  "source_ledger_sha256": "4da770185bf35bc0ff7834a8284766c54d314b1638146bae830157da626c5204",
+  "predecessor_219_sha256": "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993",
+  "predecessor_C03_sha256": "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75",
+  "predecessor_C01_sha256": "60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0",
+  "migration": "supabase/migrations/20261014230000_weight_improvement_participation.sql",
+  "migration_sha256": "bc263347ef51f7ffc86731b7c161618f3181b81cd00bf8f2ec57a01b989eeda8",
+  "application_rows_restored": 0,
+  "C03_C01_integration_pending": false,
+  "whole_inventory_drift_not_waived": true,
+  "source_hash_algorithm": "MD5(btrim(prosrc, chr(10))), checked against exact SQL body and raw MD5",
+  "preserved_scope_predecessor": {
+    "before": {
+      "lookupSignature": "private.verify_full_local_internal_scope()",
+      "signature": "private.verify_full_local_internal_scope()",
+      "schema": "private",
+      "name": "verify_full_local_internal_scope",
+      "sourceHash": "0733f42e7cd26c3ea0f326d051084dc4",
+      "securityDefiner": true,
+      "owner": "postgres",
+      "searchPath": "pg_catalog,public,private,pg_temp",
+      "allowedAcl": "",
+      "volatility": "v",
+      "configuration": [
+        "search_path=pg_catalog, public, private, pg_temp"
+      ]
+    },
+    "renamed": {
+      "lookupSignature": "private.verify_scope_pre_weight_participation_20261014()",
+      "signature": "private.verify_scope_pre_weight_participation_20261014()",
+      "schema": "private",
+      "name": "verify_scope_pre_weight_participation_20261014",
+      "sourceHash": "0733f42e7cd26c3ea0f326d051084dc4",
+      "securityDefiner": true,
+      "owner": "postgres",
+      "searchPath": "pg_catalog,public,private,pg_temp",
+      "allowedAcl": "",
+      "volatility": "v",
+      "configuration": [
+        "search_path=pg_catalog, public, private, pg_temp"
+      ]
+    },
+    "body_and_attributes_unchanged": true
+  },
+  "functions": [
+    {
+      "postimage": {
+        "lookupSignature": "private.is_weight_improvement_document_complete(jsonb)",
+        "signature": "private.is_weight_improvement_document_complete(jsonb)",
+        "schema": "private",
+        "name": "is_weight_improvement_document_complete",
+        "sourceHash": "2a2bee28ae0b6fb2de4b906aa7fb7d43",
+        "securityDefiner": false,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "i",
+        "configuration": [
+          "search_path=pg_catalog, private, pg_temp"
+        ]
+      },
+      "preimage": null
+    },
+    {
+      "postimage": {
+        "lookupSignature": "private.project_weight_improvement_participation(uuid, bigint)",
+        "signature": "private.project_weight_improvement_participation(uuid,bigint)",
+        "schema": "private",
+        "name": "project_weight_improvement_participation",
+        "sourceHash": "ae7d2f8fe7ee300712c5ee83a20f5630",
+        "securityDefiner": false,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "s",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "preimage": null
+    },
+    {
+      "postimage": {
+        "lookupSignature": "private.protect_weight_improvement_evidence()",
+        "signature": "private.protect_weight_improvement_evidence()",
+        "schema": "private",
+        "name": "protect_weight_improvement_evidence",
+        "sourceHash": "a7de29f7ab1161aff190e591f45ccdcf",
+        "securityDefiner": false,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, private, pg_temp"
+        ]
+      },
+      "preimage": null
+    },
+    {
+      "postimage": {
+        "lookupSignature": "private.require_weight_improvement_scope(text)",
+        "signature": "private.require_weight_improvement_scope(text)",
+        "schema": "private",
+        "name": "require_weight_improvement_scope",
+        "sourceHash": "c45dfcd37cfc6124e396751597cfe200",
+        "securityDefiner": false,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "preimage": null
+    },
+    {
+      "postimage": {
+        "lookupSignature": "private.verify_full_local_internal_scope()",
+        "signature": "private.verify_full_local_internal_scope()",
+        "schema": "private",
+        "name": "verify_full_local_internal_scope",
+        "sourceHash": "b333ab0e7389a26a4864f86bd3fc5cb8",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "preimage": {
+        "lookupSignature": "private.verify_full_local_internal_scope()",
+        "signature": "private.verify_full_local_internal_scope()",
+        "schema": "private",
+        "name": "verify_full_local_internal_scope",
+        "sourceHash": "0733f42e7cd26c3ea0f326d051084dc4",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "checkedInInventoryPreimageMd5": "0733f42e7cd26c3ea0f326d051084dc4"
+    },
+    {
+      "postimage": {
+        "lookupSignature": "private.verify_scope_pre_weight_participation_20261014()",
+        "signature": "private.verify_scope_pre_weight_participation_20261014()",
+        "schema": "private",
+        "name": "verify_scope_pre_weight_participation_20261014",
+        "sourceHash": "0733f42e7cd26c3ea0f326d051084dc4",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "preimage": null
+    },
+    {
+      "postimage": {
+        "lookupSignature": "public.mutate_weight_improvement_participation(uuid, timestamp with time zone, text, integer, timestamp with time zone, bigint, text, bigint, text, uuid, text, text, boolean)",
+        "signature": "public.mutate_weight_improvement_participation(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,bigint,text,bigint,text,uuid,text,text,boolean)",
+        "schema": "public",
+        "name": "mutate_weight_improvement_participation",
+        "sourceHash": "5d9d777479485e060e5574087ac3c403",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "service_role:EXECUTE:false",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "preimage": null
+    },
+    {
+      "postimage": {
+        "lookupSignature": "public.read_weight_improvement_participation(uuid, timestamp with time zone, text, integer, timestamp with time zone)",
+        "signature": "public.read_weight_improvement_participation(uuid,timestampwithtimezone,text,integer,timestampwithtimezone)",
+        "schema": "public",
+        "name": "read_weight_improvement_participation",
+        "sourceHash": "c665a3a7329caffbc342ca80a2ce023e",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "service_role:EXECUTE:false",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "preimage": null
+    }
+  ]
+}

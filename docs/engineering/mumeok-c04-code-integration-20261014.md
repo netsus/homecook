@@ -43,3 +43,9 @@ production build는 실제 `.env` 파일이 없는 것을 확인하고 환경을
 수량 source merge는 `06328887f`로 고정했고, 경로 보완은 별도 `b398c9e9f`의 `eslint.config.mjs` 한 파일·추가3줄이다. 선언된 eslint-config-next package를 `createRequire(import.meta.url).resolve`로 찾고 실제 parent node_modules만 `resolvePluginsRelativeTo`에 전달한다. 기존 baseDirectory·extends·rules·ignore와 의존성은 byte-equivalent이며 절대 작업 경로를 넣지 않았다. 기본 config의 관련22파일 lint와 같은 기본 Next production build를 다시 확인했다. 내장 lint·타입·compile·94정적 페이지·trace가 모두 수행되어 exit0이고, 변경 밖의 기존 경고4개만 남는다(마이페이지·팬트리·레시피북 showToast dependency, YouTube bundle `_private` unused). 경고 정리나 규칙 완화는 하지 않았다. 첫 경로 실패 로그/result는 `-before-eslint-fix` 사본으로 보존한다. 최신 `.next`도 검사용 가짜 값이므로 운영에 재사용하지 않는다.
 
 최종 freeze는 incoming20파일을 `23c1aa47c`와 비교한다. 19파일은 byte-identical, 타입1파일만 기존 정상 recipe 선언을 보존하면서 읽기 snapshot을 함께 수용하는 예외다. C01·first·editor·recipe·worker SQL과 worker13/de001 guard는 exact bytes를 유지한다. 상세 파일 SHA·검사 종료값·미실행 native/운영 경계는 `/tmp/mumeok-c04-final-integrated-freeze.json`에 둔다. 최종 전체-prefix DB 검증과 C04 보안 postimage 등록은 별도 worktree에서 총괄이 이어간다.
+
+## 웹 후보 검증 중 발견한 OFF 경로 회귀 보완
+
+C04를 끈 기존 최근 음식 선택에서 지원하지 않는 단위를 선택하면 입력창을 열지 않고 오류를 안내하는 기존 동작을 복원했다. C04를 켠 경우에는 원래 양과 단위를 보존하며 환산 근거를 안내하는 새 동작을 유지한다. 기존 기대값은 유지하고 미리보기·저장 호출이 0회임을 추가 확인했다. 웹 배포 후보에 존재하지 않는 과거 운영 준비 helper에 의존하던 새 fixture는 검토된 고정 상수 3개로 분리했으며 실제 digest·artifact 검증은 유지한다.
+
+관련 3suite27개, 독립 27개, 타입·변경 파일 lint가 각각 통과했다. 최초 후보의 타입 실패와 최근 단위 검사 실패는 수정 전 증거로 보존한다. 이 기록은 로컬 소스 검증이며 C04 운영 완료를 의미하지 않는다. DB·worker·권한·과거 기록 변경은 없다.

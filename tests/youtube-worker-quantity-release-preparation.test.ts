@@ -16,11 +16,10 @@ import {
   stableStringify,
   verifyYoutubeExtractionWorkerArtifact,
 } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
-import {
-  YOUTUBE_V71_PIPELINE_IDENTITY,
-  YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,
-  YOUTUBE_V71_POLICY_VERSION,
-} from "../scripts/lib/youtube-v71-worker-preparation.mjs";
+// Reviewed predecessor fixture values; the web release need not ship the old operator helper.
+const YOUTUBE_V71_POLICY_VERSION = 3;
+const YOUTUBE_V71_PIPELINE_IDENTITY = "85fbf4877e6f2894841bfd160f2d9a63894eb709fd63e897483efe71fd4016cd";
+const YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST = "17577b8be8be9da59d37aee80c4467e09fc27b8398a547f63497760c774dc6d7";
 
 const priorCatalog = "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9";
 const nextCatalog = "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05";

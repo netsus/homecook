@@ -3591,3 +3591,9 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 ## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
 
 20261013233000_cooked_batch_weight_evidence는 로컬 draft이며 private 제어표 enabled=false·개인 append-only 예측/관찰 표를 준비한다. 기존 완료/weight fresh branch와 meal nutrition_evidence_json의9키 weight_basis·선택 가정은 기존 owner/revision/no-events/receipt 보호 안에서 원자 저장한다. 신규2개 service-role wrapper와 exact scope predecessor chain·검토 postimage 등록이 필요하다. 과거batch/meal/snapshot UPDATE0·quantity event에 evidence 추가0·학습 수집0이다. DB OFF가 새 쓰기 중지 기준이며 이력 reader는 보존한다. 완료/무게 wrapper·개인 근거 기록·cooked-batch 식사 근거 trigger의 제어 행 읽기만 `FOR SHARE`로 transaction 끝까지 고정한다. operator OFF는 이미 승인된 쓰기를 기다리며 stable projection·cook-mode capability는 plain SELECT를 유지한다. 일반 recipe 식사는 이 제어 행을 잠그지 않는다. 두 wrapper는 성공 receipt 재생을 제어 검사보다 먼저 수행하고, 새 쓰기 불가에는 정확한 `COOKED_WEIGHT_EVIDENCE_DISABLED`/SQLSTATE55000을 반환한다. 원 owner·generation·revision·scope/ACL은 유지한다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.
+
+## 2026-10-14 추가 계약 — C05 선택 참여 비활성 준비
+
+`20261014230000_weight_improvement_participation.sql`은 private 참여 상태·불변 동의 이벤트·문서·기본 OFF control을 준비한다. 계정/세대/목적을 분리하고 기존 세션 권위·receipt를 재사용한다. 두 read/mutate RPC는 service_role 전용 내부 scope이며 private 직접 API 접근은 금지한다. 실제 generation을 receipt 조회 전에 비교한다. 철회는 pending만 기록하며 기존 개인 기록/과거 snapshot을 수정하거나 backfill하지 않는다.
+
+현재는 로컬 QA 준비이며 운영 UI/참여/수집은 OFF, 문서·기간은 미정이다. 운영 DB 적용과 수집·삭제/복원·모델 처리는 별도 구현/승인 대상이다. [검증과 후속 경계](engineering/mumeok-beta-participation-preparation-20261014.md)를 따른다.

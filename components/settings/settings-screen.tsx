@@ -9,6 +9,7 @@ import { ContentState } from "@/components/shared/content-state";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { LinkedAuthProviders } from "@/components/auth/linked-auth-providers";
+import { WeightImprovementParticipationSetting } from "@/components/weight-improvement/participation-setting";
 import {
   SettingsMobileScreen,
   type SettingsMobileSurface,
@@ -534,6 +535,7 @@ export function SettingsScreen({
         logoutError={logoutError}
         plannerColumns={plannerColumns}
         profile={profile}
+        participationSetting={<WeightImprovementParticipationSetting surface="settings_mobile" />}
         renameTarget={renameTarget}
         showDeleteDialog={showDeleteDialog}
         showLogoutDialog={showLogoutDialog}
@@ -803,6 +805,7 @@ export function SettingsScreen({
           </WebCard>
         </section>
 
+        <WeightImprovementParticipationSetting surface="settings_desktop" />
         <section
           className="web-settings-section web-settings-bordered-section"
           data-testid="settings-account-section"
