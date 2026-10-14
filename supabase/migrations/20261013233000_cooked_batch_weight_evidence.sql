@@ -312,9 +312,13 @@ begin
   v_definition:=replace(v_definition,v_anchor,$hook$select * into v_batch from public.leftover_dishes where id=p_source_id and user_id=p_owner_uuid for share;$hook$);
   v_anchor:=$anchor$p_amount/v_batch.finished_weight_g);$anchor$;
   if (length(v_definition)-length(replace(v_definition,v_anchor,'')))/length(v_anchor)<>1 then raise exception 'meal preview basis anchor missing or ambiguous'; end if;
+  -- DB-first rollout keeps the predecessor reader's exact JSON shape while OFF.
+  -- Previously stored meal evidence remains readable through its existing reader.
   execute replace(v_definition,v_anchor,$hook$p_amount/v_batch.finished_weight_g)
-      ||jsonb_build_object('weight_basis',private.cooked_weight_meal_basis(v_batch.id,p_owner_uuid))
-      ||private.cooked_weight_meal_assumptions(v_batch.id,p_owner_uuid);$hook$);
+      ||case when (select enabled from private.cooked_batch_weight_evidence_control where singleton) is true
+        then jsonb_build_object('weight_basis',private.cooked_weight_meal_basis(v_batch.id,p_owner_uuid))
+          ||private.cooked_weight_meal_assumptions(v_batch.id,p_owner_uuid)
+        else '{}'::jsonb end;$hook$);
 
 end;
 $migration$;
