@@ -6,6 +6,7 @@ import {
 import { ensurePublicUserRow, type UserBootstrapDbClient } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { FoodProductData, FoodProductListData } from "@/types/food-product";
+import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 
 interface RpcError {
   code?: string;
@@ -72,7 +73,9 @@ export async function GET(request: Request) {
     return mapDatabaseError(result.error, "완제품을 불러오지 못했어요.");
   }
 
-  return ok(result.data as FoodProductListData);
+  const data = { ...(result.data as FoodProductListData) };
+  if (!quantityInputWriteEnabled(request) || data.quantity_policy !== "quantity-v4") delete data.quantity_policy;
+  return ok(data);
 }
 
 export async function POST(request: Request) {

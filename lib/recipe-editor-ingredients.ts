@@ -11,7 +11,7 @@ export function recipeIngredientGroupKey(ingredient: {
 }
 
 export function toRecipeEditIngredient(item: ManualRecipeIngredientInput): RecipeEditIngredientDraft {
-  return {
+  const ingredient: RecipeEditIngredientDraft = {
     source_kind: recipeIngredientSourceKind(item), row_key: item.row_key ?? crypto.randomUUID(),
     ingredient_id: item.ingredient_id, amount: item.amount, unit: item.unit,
     ingredient_type: item.ingredient_type, display_text: item.standard_name,
@@ -19,6 +19,8 @@ export function toRecipeEditIngredient(item: ManualRecipeIngredientInput): Recip
     food_product_id: item.food_product_id ?? null,
     food_product_nutrition_version_id: item.food_product_nutrition_version_id ?? null,
   };
+  if (item.quantity_input !== undefined) ingredient.quantity_input = item.quantity_input;
+  return ingredient;
 }
 
 export function recipeIngredientMatchesStepReference(
@@ -59,7 +61,7 @@ export function changeRecipeIngredient(
   const bothGeneric = !previous.food_product_id && !replacement?.food_product_id;
   const sameProduct = Boolean(previous.food_product_id && previous.food_product_id === replacement?.food_product_id
     && previous.food_product_nutrition_version_id === replacement.food_product_nutrition_version_id);
-  const keepQuantity = bothGeneric || sameProduct;
+  const keepQuantity = (bothGeneric && (!previous.quantity_input || previous.ingredient_id === replacement?.ingredient_id)) || sameProduct;
   const corrected = replacement ? {
     ...replacement,
     source_kind: recipeIngredientSourceKind(replacement),
@@ -72,6 +74,8 @@ export function changeRecipeIngredient(
     ingredient_type: keepQuantity ? previous.ingredient_type : "QUANT" as const,
     scalable: previous.scalable,
   } : null;
+  if (corrected && previous.quantity_input !== undefined && (sameProduct
+    || bothGeneric && previous.ingredient_id === corrected.ingredient_id)) corrected.quantity_input = previous.quantity_input;
   return {
     ...draft,
     ingredients: corrected

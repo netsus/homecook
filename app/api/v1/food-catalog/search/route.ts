@@ -6,6 +6,7 @@ import {
   parseFoodCatalogSearchTuple,
 } from "@/lib/server/food-catalog-search";
 import { encodeProductCursor } from "@/lib/server/prepared-food-catalog";
+import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 import {
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
@@ -24,6 +25,16 @@ interface FoodCatalogSearchDb {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function projectQuantityOptions(value: unknown, request: Request) {
+  if (!isRecord(value) || !("quantity_options" in value)) return value;
+  if (quantityInputWriteEnabled(request)) return value;
+  const item = { ...value };
+  delete item.quantity_options;
+  delete item.quantity_context_sha256;
+  delete item.recipe_quantity_context;
+  return item;
 }
 
 export async function GET(request: Request) {
@@ -86,13 +97,13 @@ export async function GET(request: Request) {
         } }) };
         const item = await hydratePantryCatalogSource(lookup,
           user.id, pantryItemId, result.data);
-        return item ? ok({ items: [item], next_cursor: null, has_next: false })
+        return item ? ok({ items: [projectQuantityOptions(item, request)], next_cursor: null, has_next: false })
           : fail("RESOURCE_NOT_FOUND", "선택한 팬트리 제품의 영양 기준을 확인하지 못했어요.", 404);
       } catch {
         return fail("INTERNAL_ERROR", "음식 정보를 불러오지 못했어요. 다시 시도해 주세요.", 500);
       }
     }
-    return ok({ items: result.data ? [result.data] : [], next_cursor: null, has_next: false });
+    return ok({ items: result.data ? [projectQuantityOptions(result.data, request)] : [], next_cursor: null, has_next: false });
   }
 
   const parsed = parseFoodCatalogSearchQuery(params);
@@ -162,7 +173,7 @@ export async function GET(request: Request) {
   }
 
   return ok({
-    items: result.data.items,
+    items: result.data.items.map(item => projectQuantityOptions(item, request)),
     next_cursor: nextCursor,
     has_next: result.data.has_next,
   });

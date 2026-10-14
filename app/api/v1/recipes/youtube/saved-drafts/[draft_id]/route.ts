@@ -7,9 +7,9 @@ interface RouteContext {
   params: Promise<{ draft_id: string }>;
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { draft_id: draftId } = await context.params;
-  return handleGetYoutubeSavedRecipe(draftId);
+  return handleGetYoutubeSavedRecipe(draftId, request);
 }
 
 export async function PATCH(request: Request, context: RouteContext) {

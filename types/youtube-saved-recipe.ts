@@ -2,6 +2,17 @@ import type {
   YoutubeIngredientCandidate,
   YoutubeIngredientResolutionStatus,
 } from "@/types/recipe";
+import type { IngredientQuantityOptions, QuantityInputDraft, QuantityInputSnapshot } from "@/types/quantity-input";
+
+export interface YoutubeSavedQuantityContext {
+  /** Hash of the current server-hydrated reviewed context, never a client fact. */
+  fingerprint: string;
+  options: IngredientQuantityOptions | null;
+}
+
+export interface YoutubeSavedQuantityDraft extends QuantityInputDraft {
+  expected_context_fingerprint: string;
+}
 
 export interface YoutubeSavedRecipeIngredientInput {
   row_id: string;
@@ -12,6 +23,9 @@ export interface YoutubeSavedRecipeIngredientInput {
   unit: string | null;
   display_text: string | null;
   component_label: string | null;
+  quantity_input?: YoutubeSavedQuantityDraft | QuantityInputSnapshot | null;
+  /** Server-stored context of the quantity, separate from current choices. */
+  quantity_context_fingerprint?: string;
 }
 
 export interface YoutubeSavedRecipeIngredientLink {
@@ -57,6 +71,9 @@ export interface YoutubeSavedRecipeResult {
    */
   ingredient_links?: Record<string, YoutubeSavedRecipeIngredientLink>;
   source: YoutubeSavedRecipeSource;
+  /** Present only in the new read contract; the stored source is unchanged. */
+  quantity_policy?: "quantity-v4" | null;
+  quantity_contexts?: Record<string, YoutubeSavedQuantityContext>;
 }
 
 export interface YoutubeSavedRecipeSummary {

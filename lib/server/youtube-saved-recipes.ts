@@ -1,4 +1,6 @@
 import { fail, ok } from "@/lib/api/response";
+import { isQuantityInputDraft, isQuantityInputSnapshot } from "@/lib/quantity-input";
+import { quantityInputContractRequested, quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 import {
   readVerifiedAccountGenerationSession,
 } from "@/lib/server/account-generation/session-authority";
@@ -58,9 +60,10 @@ function parseIngredient(
   value: unknown,
   index: number,
   fields: ValidationField[],
+  quantityContract: boolean,
 ): YoutubeSavedRecipeIngredientInput | null {
   const field = `content.ingredients[${index}]`;
-  if (!isRecord(value) || !hasExactKeys(value, [
+  const keys = [
     "row_id",
     "source_draft_ingredient_id",
     "standard_name",
@@ -69,7 +72,10 @@ function parseIngredient(
     "unit",
     "display_text",
     "component_label",
-  ])) {
+  ];
+  if (isRecord(value) && "quantity_input" in value) keys.push("quantity_input");
+  if (isRecord(value) && "quantity_context_fingerprint" in value) keys.push("quantity_context_fingerprint");
+  if (!isRecord(value) || !hasExactKeys(value, keys)) {
     fields.push({ field, reason: "invalid_shape" });
     return null;
   }
@@ -100,8 +106,22 @@ function parseIngredient(
   if (value.quantity_mode === "quantity" && (typeof value.amount !== "number" || value.amount <= 0 || typeof value.unit !== "string" || !value.unit.trim())) {
     fields.push({ field: `${field}.quantity_mode`, reason: "quantity_requires_amount_and_unit" });
   }
+  if ("quantity_input" in value) {
+    if (!quantityContract) fields.push({ field: `${field}.quantity_input`, reason: "quantity_contract_required" });
+    else if (value.quantity_input !== null) {
+      const quantity = { amount: Number(value.amount), unit: String(value.unit ?? "") };
+      const input = value.quantity_input;
+      const raw = isRecord(input) ? { schema_version: input.schema_version, raw_value: input.raw_value, raw_unit: input.raw_unit } : null;
+      const draft = isRecord(input) && hasExactKeys(input, ["schema_version", "raw_value", "raw_unit", "expected_context_fingerprint"])
+        && typeof input.expected_context_fingerprint === "string" && /^[a-f0-9]{64}$/u.test(input.expected_context_fingerprint)
+        && isQuantityInputDraft(raw, quantity);
+      if (!draft && !isQuantityInputSnapshot(input, quantity)) fields.push({ field: `${field}.quantity_input`, reason: "invalid_quantity_input" });
+    }
+  }
+  if ("quantity_context_fingerprint" in value && (!quantityContract || typeof value.quantity_context_fingerprint !== "string"
+    || !/^[a-f0-9]{64}$/u.test(value.quantity_context_fingerprint))) fields.push({ field: `${field}.quantity_context_fingerprint`, reason: "invalid_context_stamp" });
   if (fields.some((item) => item.field === field || item.field.startsWith(`${field}.`))) return null;
-  return {
+  const parsed: YoutubeSavedRecipeIngredientInput = {
     row_id: value.row_id as string,
     source_draft_ingredient_id: value.source_draft_ingredient_id as string | null,
     standard_name: name,
@@ -111,6 +131,11 @@ function parseIngredient(
     display_text: typeof value.display_text === "string" ? value.display_text.trim() || null : null,
     component_label: typeof value.component_label === "string" ? value.component_label.trim() || null : null,
   };
+  // The strict runtime checks above distinguish a raw draft, a stored snapshot
+  // echo and explicit null. SQL revalidates every server-held source relation.
+  if ("quantity_input" in value) parsed.quantity_input = value.quantity_input as YoutubeSavedRecipeIngredientInput["quantity_input"];
+  if (typeof value.quantity_context_fingerprint === "string") parsed.quantity_context_fingerprint = value.quantity_context_fingerprint;
+  return parsed;
 }
 
 function parseStep(
@@ -151,7 +176,7 @@ function parseStep(
   };
 }
 
-function parseContent(value: unknown): { content: YoutubeSavedRecipeEditableContent | null; fields: ValidationField[] } {
+function parseContent(value: unknown, quantityContract = false): { content: YoutubeSavedRecipeEditableContent | null; fields: ValidationField[] } {
   const fields: ValidationField[] = [];
   if (!isRecord(value) || !hasExactKeys(value, ["title", "base_servings", "tags", "ingredients", "steps"])) {
     return { content: null, fields: [{ field: "content", reason: "invalid_shape" }] };
@@ -172,7 +197,7 @@ function parseContent(value: unknown): { content: YoutubeSavedRecipeEditableCont
     fields.push({ field: "content.steps", reason: "invalid_array" });
   }
   const ingredients = Array.isArray(value.ingredients)
-    ? value.ingredients.map((item, index) => parseIngredient(item, index, fields)).filter((item): item is YoutubeSavedRecipeIngredientInput => item !== null)
+    ? value.ingredients.map((item, index) => parseIngredient(item, index, fields, quantityContract)).filter((item): item is YoutubeSavedRecipeIngredientInput => item !== null)
     : [];
   const steps = Array.isArray(value.steps)
     ? value.steps.map((item, index) => parseStep(item, index, fields)).filter((item): item is YoutubeSavedRecipeStepInput => item !== null)
@@ -240,12 +265,35 @@ function rpcFailure(error: RpcEnvelope["error"]) {
     IDEMPOTENCY_KEY_REUSED: { message: "이미 다른 요청에 사용한 요청 키예요.", status: 409 },
     RESOURCE_NOT_FOUND: { message: "저장 결과를 찾을 수 없어요.", status: 404 },
     VALIDATION_ERROR: { message: "저장할 내용을 확인해 주세요.", status: 422 },
+    UNIT_POLICY_INACTIVE: { message: "단위 입력을 수정할 준비가 되지 않았어요.", status: 503 },
+    UNIT_CONVERSION_MISSING: { message: "그 단위로 바꿀 근거가 없어요. 현재 양을 유지해 주세요.", status: 422 },
+    QUANTITY_CONTEXT_CHANGED: { message: "단위 근거가 바뀌었어요. 최신 내용을 다시 확인해 주세요.", status: 409 },
+    QUANTITY_INPUT_REQUIRED: { message: "원입력을 유지하려면 화면을 다시 열고 수정해 주세요.", status: 409 },
   };
   const contract = contracts[code] ?? { message: "저장 결과를 처리하지 못했어요.", status: 500 };
   return fail(code, error?.message ?? contract.message, contract.status);
 }
 
-async function callRpc(client: RpcClient, name: string, args: Record<string, unknown>) {
+function projectQuantityRead(data: unknown, requested: boolean, writeEnabled: boolean): unknown {
+  if (!isRecord(data) || !isRecord(data.content) || !Array.isArray(data.content.ingredients)) return data;
+  const output = { ...data };
+  if (!requested) {
+    delete output.quantity_policy; delete output.quantity_contexts;
+    output.content = { ...data.content, ingredients: data.content.ingredients.map(value => {
+      if (!isRecord(value)) return value;
+      const row = { ...value }; delete row.quantity_input; delete row.quantity_context_fingerprint;
+      return row;
+    }) };
+  } else if ("quantity_policy" in output && !writeEnabled) output.quantity_policy = null;
+  return output;
+}
+
+function newQuantityWrite(content: YoutubeSavedRecipeEditableContent): boolean {
+  return content.ingredients.some(row => "quantity_input" in row && (row.quantity_input === null
+    || !isQuantityInputSnapshot(row.quantity_input, row.amount !== null && row.unit !== null ? { amount: row.amount, unit: row.unit } : undefined)));
+}
+
+async function callRpc(client: RpcClient, name: string, args: Record<string, unknown>, quantityRequest?: Request) {
   const result = await client.rpc(name, args);
   if (result.error) {
     const text = isRecord(result.error)
@@ -259,12 +307,14 @@ async function callRpc(client: RpcClient, name: string, args: Record<string, unk
       "IDEMPOTENCY_KEY_REUSED",
       "RESOURCE_NOT_FOUND",
       "VALIDATION_ERROR",
+      "UNIT_POLICY_INACTIVE", "UNIT_CONVERSION_MISSING", "QUANTITY_CONTEXT_CHANGED", "QUANTITY_INPUT_REQUIRED",
     ].find((candidate) => text.includes(candidate));
     return code ? rpcFailure({ code }) : fail("INTERNAL_ERROR", "저장 결과를 처리하지 못했어요.", 500);
   }
   const envelope = parseEnvelope(result.data);
   if (!envelope) return fail("INTERNAL_ERROR", "저장 결과 응답을 확인하지 못했어요.", 500);
-  return envelope.success ? ok(envelope.data) : rpcFailure(envelope.error);
+  return envelope.success ? ok(projectQuantityRead(envelope.data, Boolean(quantityRequest && quantityInputContractRequested(quantityRequest)),
+    Boolean(quantityRequest && quantityInputWriteEnabled(quantityRequest)))) : rpcFailure(envelope.error);
 }
 
 export async function handleCreateYoutubeSavedRecipe(request: Request) {
@@ -281,15 +331,16 @@ export async function handleCreateYoutubeSavedRecipe(request: Request) {
       ...buildSessionAuthorityRpcArgs(access.authority),
       p_extraction_id: raw.extraction_id,
       p_idempotency_key: idempotency.key,
-    });
+    }, request);
   }
   if (!hasExactKeys(raw, ["extraction_id", "content"])) {
     return fail("VALIDATION_ERROR", "저장할 내용을 확인해 주세요.", 422, [{ field: "body", reason: "invalid_shape" }]);
   }
-  const parsed = parseContent(raw.content);
+  const parsed = parseContent(raw.content, quantityInputContractRequested(request));
   if (!parsed.content) return fail("VALIDATION_ERROR", "저장할 내용을 확인해 주세요.", 422, parsed.fields);
   const access = await requireAuthority();
   if (!access.ok) return access.response;
+  if (newQuantityWrite(parsed.content) && !quantityInputWriteEnabled(request)) return rpcFailure({ code: "UNIT_POLICY_INACTIVE" });
   return callRpc(access.client, "write_youtube_saved_recipe_result", {
     ...buildSessionAuthorityRpcArgs(access.authority),
     p_action: "create",
@@ -298,7 +349,7 @@ export async function handleCreateYoutubeSavedRecipe(request: Request) {
     p_expected_revision: null,
     p_editable_content: parsed.content,
     p_idempotency_key: idempotency.key,
-  });
+  }, request);
 }
 
 export async function handleListYoutubeSavedRecipes() {
@@ -310,14 +361,14 @@ export async function handleListYoutubeSavedRecipes() {
   });
 }
 
-export async function handleGetYoutubeSavedRecipe(draftId: string) {
+export async function handleGetYoutubeSavedRecipe(draftId: string, request?: Request) {
   if (!isUuid(draftId)) return fail("RESOURCE_NOT_FOUND", "저장 결과를 찾을 수 없어요.", 404);
   const access = await requireAuthority();
   if (!access.ok) return access.response;
   return callRpc(access.client, "read_youtube_saved_recipe_results", {
     ...buildSessionAuthorityRpcArgs(access.authority),
     p_result_id: draftId,
-  });
+  }, request);
 }
 
 export async function handleUpdateYoutubeSavedRecipe(request: Request, draftId: string) {
@@ -328,10 +379,11 @@ export async function handleUpdateYoutubeSavedRecipe(request: Request, draftId: 
   if (!isRecord(raw) || !hasExactKeys(raw, ["expected_revision", "content"]) || !Number.isSafeInteger(raw.expected_revision) || Number(raw.expected_revision) <= 0) {
     return fail("VALIDATION_ERROR", "저장할 내용을 확인해 주세요.", 422, [{ field: "body", reason: "invalid_shape" }]);
   }
-  const parsed = parseContent(raw.content);
+  const parsed = parseContent(raw.content, quantityInputContractRequested(request));
   if (!parsed.content) return fail("VALIDATION_ERROR", "저장할 내용을 확인해 주세요.", 422, parsed.fields);
   const access = await requireAuthority();
   if (!access.ok) return access.response;
+  if (newQuantityWrite(parsed.content) && !quantityInputWriteEnabled(request)) return rpcFailure({ code: "UNIT_POLICY_INACTIVE" });
   return callRpc(access.client, "write_youtube_saved_recipe_result", {
     ...buildSessionAuthorityRpcArgs(access.authority),
     p_action: "update",
@@ -340,5 +392,5 @@ export async function handleUpdateYoutubeSavedRecipe(request: Request, draftId: 
     p_expected_revision: raw.expected_revision,
     p_editable_content: parsed.content,
     p_idempotency_key: idempotency.key,
-  });
+  }, request);
 }

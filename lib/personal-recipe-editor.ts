@@ -42,6 +42,7 @@ export type RecipeEditorIngredientSource =
     };
 
 export interface RecipeEditorIngredientDraft {
+  quantityInput?: import("@/types/quantity-input").QuantityInputDraft | null;
   draftId: string;
   source: RecipeEditorIngredientSource;
   standardName: string;

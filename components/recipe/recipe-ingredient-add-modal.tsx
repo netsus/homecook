@@ -24,7 +24,7 @@ import {
   WebSkeleton,
   WebIconButton,
 } from "@/components/web";
-import { RecipeFoodCatalogPicker, type RecipeProductSelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
+import { RecipeFoodCatalogPicker, type RecipeProductSelectionContexts, type RecipeQuantitySelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
 import type { RecipeIngredientIdentity } from "@/lib/recipe-ingredient-source";
 import { fetchIngredients } from "@/lib/api/ingredients";
 import {
@@ -50,13 +50,12 @@ interface RecipeIngredientAddModalProps {
   onRequireLogin?: () => void | string;
   single?: boolean;
   onClose: () => void;
-  onAdd: (ingredients: ManualRecipeIngredientInput[], products?: RecipeProductSelectionContexts) => void;
+  onAdd: (ingredients: ManualRecipeIngredientInput[], products?: RecipeProductSelectionContexts, quantities?: RecipeQuantitySelectionContexts) => void;
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
   presentation?: "auto" | "web" | "app";
 }
 
-const DEFAULT_INGREDIENT_AMOUNT = 100;
 const DEFAULT_INGREDIENT_UNIT = "g";
 const INGREDIENT_ADD_DESCRIPTION = "재료를 골라 추가해요";
 
@@ -104,10 +103,10 @@ function buildIngredientInput(
     ingredient_id: ingredient.id,
     standard_name: ingredient.standard_name,
     ingredient_type: "QUANT",
-    amount: DEFAULT_INGREDIENT_AMOUNT,
+    amount: null,
     unit: DEFAULT_INGREDIENT_UNIT,
     scalable: true,
-    display_text: `${ingredient.standard_name} ${DEFAULT_INGREDIENT_AMOUNT}${DEFAULT_INGREDIENT_UNIT}`,
+    display_text: ingredient.standard_name,
     sort_order: sortOrder,
   };
 }

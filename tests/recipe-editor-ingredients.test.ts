@@ -18,7 +18,7 @@ describe("personal recipe ingredient correction", () => {
     const next = changeRecipeIngredient(draft, 0, ingredient("mushroom"));
     expect(next.ingredients[0].ingredient_id).toBe("mushroom");
     expect(next.ingredients[0]).toMatchObject({ amount: 200, unit: "kg", scalable: false });
-    expect(formatScaledIngredient({ ...next.ingredients[0], id: "row", sort_order: 1, standard_name: "양송이버섯" }, 1, 4))
+    expect(formatScaledIngredient({ ...next.ingredients[0], quantity_input: undefined, id: "row", sort_order: 1, standard_name: "양송이버섯" }, 1, 4))
       .toBe("양송이버섯 200kg");
     expect(next.steps[0].ingredients_used).toEqual([{ ingredient_id: "mushroom", row_key: draft.ingredients[0].row_key, amount: 20, unit: "g", cut_size: null }]);
     expect(next.steps[0].instruction).toBe("버섯을 볶아요");

@@ -5,6 +5,8 @@ import { PlannerTaskSheet } from "@/components/planner/planner-task-sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { DecimalInput } from "@/components/shared/decimal-input";
+import { formatQuantityAmount, isQuantityInputDraft } from "@/lib/quantity-input";
+import { QUANTITY_INPUT_VERSION, type QuantityInputDraft } from "@/types/quantity-input";
 
 import Image from "next/image";
 import { showActionConfirmation } from "@/stores/ui-store";
@@ -31,6 +33,7 @@ import type {
   MealLogDayData,
   MealLogDeletedColumnSection,
   MealLogEntry,
+  MealLogMutationInput,
 } from "@/types/meal-log";
 
 interface MealLogScreenProps {
@@ -48,7 +51,7 @@ interface MealLogScreenProps {
 
 type DialogState =
   | { type: "add"; columnId: string; restoredInvoker?: boolean; selection?: MealLogSourceSelection; backgroundEntry?: MealLogEntry }
-  | { type: "edit"; entry: MealLogEntry; restoredInvoker?: boolean; draft?: { amount: number; columnId: string; unit: string } }
+  | { type: "edit"; entry: MealLogEntry; restoredInvoker?: boolean; draft?: { amount: number; columnId: string; unit: string; quantityInput?: QuantityInputDraft } }
   | { type: "delete"; entry: MealLogEntry; restoredInvoker?: boolean }
   | { type: "detail"; entry: MealLogEntry; guestPreview?: boolean }
   | null;
@@ -73,7 +76,7 @@ type MealLogReturnContext =
       date: string;
       entryId: string;
       invoker: "entry-edit";
-      draft: { amount: number; columnId: string; unit: string };
+      draft: { amount: number; columnId: string; unit: string; quantityInput?: QuantityInputDraft };
     }
   | {
       version: 1;
@@ -117,22 +120,25 @@ function parseReturnContext(value: unknown): MealLogReturnContext | null {
       || value.invoker !== "section-add" || !isUuid(value.columnId)) return null;
     if (value.draft === null) return value as unknown as MealLogReturnContext;
     if (!isRecord(value.draft)) return null;
-    const draftKeys = ["type", "id", "name", "brand", "amount", "unit"];
+    const draftKeys = ["type", "id", "name", "brand", "amount", "unit", ...("quantityInput" in value.draft ? ["quantityInput"] : [])];
     const draftKeysWithMax = [...draftKeys, "maxAmount"];
     if (!hasExactKeys(value.draft, draftKeys) && !hasExactKeys(value.draft, draftKeysWithMax)) return null;
     if (typeof value.draft.type !== "string" || !SOURCE_TYPES.has(value.draft.type)
       || !isUuid(value.draft.id) || !isSafeText(value.draft.name, 160)
       || (value.draft.brand !== null && !isSafeText(value.draft.brand, 160))
-      || !isPositiveNumber(value.draft.amount) || !isSafeText(value.draft.unit, 40)
+      || (value.draft.amount !== null && !isPositiveNumber(value.draft.amount)) || !isSafeText(value.draft.unit, 40)
       || (value.draft.maxAmount !== undefined && !isPositiveNumber(value.draft.maxAmount))) return null;
+    if ("quantityInput" in value.draft && (!isPositiveNumber(value.draft.amount)
+      || !isQuantityInputDraft(value.draft.quantityInput, { amount: value.draft.amount as number, unit: value.draft.unit as string }))) return null;
     return value as unknown as MealLogReturnContext;
   }
   if (value.action === "edit") {
     if (!hasExactKeys(value, ["version", "action", "date", "entryId", "invoker", "draft"])
       || value.invoker !== "entry-edit" || !isUuid(value.entryId) || !isRecord(value.draft)
-      || !hasExactKeys(value.draft, ["amount", "columnId", "unit"])
+      || !hasExactKeys(value.draft, ["amount", "columnId", "unit", ...("quantityInput" in value.draft ? ["quantityInput"] : [])])
       || !isPositiveNumber(value.draft.amount) || !isUuid(value.draft.columnId)
       || !isSafeText(value.draft.unit, 40)) return null;
+    if ("quantityInput" in value.draft && !isQuantityInputDraft(value.draft.quantityInput, { amount: value.draft.amount as number, unit: value.draft.unit as string })) return null;
     return value as unknown as MealLogReturnContext;
   }
   if (value.action === "delete") {
@@ -145,20 +151,20 @@ function parseReturnContext(value: unknown): MealLogReturnContext | null {
 
 function saveReturnContext(context: MealLogReturnContext) {
   // Persist the editable draft contract, not transient catalog conversion metadata.
-  const storedContext = context.action === "add" && context.draft
-    ? {
-        ...context,
-        draft: {
+  let storedContext = context;
+  if (context.action === "add" && context.draft) {
+    const draft: MealLogSourceSelection = {
           type: context.draft.type,
           id: context.draft.id,
           name: context.draft.name,
           brand: context.draft.brand,
           amount: context.draft.amount,
           unit: context.draft.unit,
-          ...(context.draft.maxAmount !== undefined ? { maxAmount: context.draft.maxAmount } : {}),
-        },
-      }
-    : context;
+    };
+    if (context.draft.quantityInput) draft.quantityInput = context.draft.quantityInput;
+    if (context.draft.maxAmount !== undefined) draft.maxAmount = context.draft.maxAmount;
+    storedContext = { ...context, draft };
+  }
   try { window.sessionStorage.setItem(MEAL_LOG_RETURN_CONTEXT_KEY, JSON.stringify(storedContext)); } catch { /* optional return aid */ }
 }
 
@@ -218,10 +224,15 @@ function returnInvokerId(context: MealLogReturnContext) {
 
 function number(value: number | null, unit: string) {
   if (value === null) return "정보 준비 중";
+  if (unit.trim() !== "kcal") return `${formatQuantityAmount(value)}${unit === "ml" ? "mL" : unit}`;
   const wholeNumber = unit === "g" || unit.trim() === "kcal";
   const formatted = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: wholeNumber ? 0 : 1 })
     .format(wholeNumber ? Math.round(value) : value);
   return `${formatted}${unit}`;
+}
+
+function entryQuantity(entry: MealLogEntry) {
+  return entry.quantity_input ? `${entry.quantity_input.raw_value}${entry.quantity_input.raw_unit}` : number(entry.quantity.amount, entry.quantity.unit);
 }
 
 function foodNutritionValue(value: number | null, unit: string) {
@@ -242,7 +253,7 @@ function EntryRow({ disabled, entry, guest = false, onDetail }: {
       <button aria-describedby={`meal-log-entry-${entry.id}-quantity`} aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 식사 기록 상세`} className="block min-h-11 w-full rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-sky-400)]" disabled={disabled} id={entryActionId(entry.id, "edit")} onClick={onDetail} type="button">
       <span className="flex items-start gap-3">
         {thumbnail ? <Image alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" height={48} src={thumbnail} width={48} /> : null}
-        <span className="min-w-0 flex-1"><span className="block break-words text-base font-medium leading-6 text-[var(--ui-slate-800)]">{entry.display_name}</span>{entry.display_brand ? <span className="mt-0.5 block text-xs text-[var(--ui-slate-500)]">{entry.display_brand}</span> : null}<span id={`meal-log-entry-${entry.id}-quantity`} className="mt-1 block text-xs leading-5 text-[var(--ui-slate-600)]" aria-label={`먹은 양 ${number(entry.quantity.amount, entry.quantity.unit)}`}>{number(entry.quantity.amount, entry.quantity.unit)}</span></span>
+        <span className="min-w-0 flex-1"><span className="block break-words text-base font-medium leading-6 text-[var(--ui-slate-800)]">{entry.display_name}</span>{entry.display_brand ? <span className="mt-0.5 block text-xs text-[var(--ui-slate-500)]">{entry.display_brand}</span> : null}<span id={`meal-log-entry-${entry.id}-quantity`} className="mt-1 block text-xs leading-5 text-[var(--ui-slate-600)]" aria-label={`먹은 양 ${entryQuantity(entry)}`}>{entryQuantity(entry)}</span></span>
         <span className="min-w-0 max-w-[50%] break-words pt-0.5 text-right text-lg leading-6">{formatMealLogEnergy(entry.nutrition)}<span aria-hidden="true" className="ml-2 text-[var(--text-2)]">›</span></span>
       </span>
       <div aria-label={`${entry.slot_name_snapshot}의 ${entry.display_name} 영양정보`} className={`${thumbnail ? "ml-[60px]" : ""} mt-3 text-xs leading-5 text-[var(--ui-slate-600)]`}>
@@ -373,7 +384,13 @@ function EntryDialog({
     ? state.draft.columnId
     : authorityColumnActive ? entry.meal_plan_column_id ?? "" : "");
   const [amount, setAmount] = useState<number | null>(state.type === "edit" && state.draft ? state.draft.amount : entry.quantity.amount);
-  const amountInvalid = amount === null || !Number.isFinite(amount) || amount < 0.01;
+  const legacyUnitWithoutV4Evidence = entry.source.type === "ingredient" && !entry.quantity_input
+    && !["g", "kg", "ml", "mL", "l", "L"].includes(entry.quantity.unit);
+  const quantityV4 = day.quantity_policy === QUANTITY_INPUT_VERSION && !legacyUnitWithoutV4Evidence
+    && (entry.source.type !== "cooked_batch" || Boolean(entry.quantity_input));
+  const [rawValue, setRawValue] = useState(state.type === "edit" && state.draft?.quantityInput ? state.draft.quantityInput.raw_value
+    : entry.quantity_input?.raw_unit === entry.quantity.unit ? entry.quantity_input.raw_value : String(entry.quantity.amount));
+  const amountInvalid = amount === null || !Number.isFinite(amount) || amount <= 0 || (!quantityV4 && amount < 0.01);
   const [unit, setUnit] = useState(state.type === "edit" && state.draft ? state.draft.unit : entry.quantity.unit);
   const [revision, setRevision] = useState(entry.revision);
   const [pending, setPending] = useState(false);
@@ -409,6 +426,7 @@ function EntryDialog({
     const changed = mode === "edit" && (amount !== entry.quantity.amount || columnId !== (entry.meal_plan_column_id ?? ""));
     if (changed && !discard) { setDiscard(true); return; }
     setAmount(entry.quantity.amount); setUnit(entry.quantity.unit); setColumnId(entry.meal_plan_column_id ?? "");
+    setRawValue(entry.quantity_input?.raw_unit === entry.quantity.unit ? entry.quantity_input.raw_value : String(entry.quantity.amount));
     setError(null); setDiscard(false); setAction(null);
   }
 
@@ -427,7 +445,7 @@ function EntryDialog({
         await deleteMealLogEntry(entry.id, revision, operation.current.key);
       } else {
         if (amount === null) return;
-        const input = {
+        const input: MealLogMutationInput & { expectedRevision: number } = {
           consumedAt: entry.consumed_at,
           consumedLocalDate: entry.consumed_local_date,
           expectedRevision: revision,
@@ -436,6 +454,7 @@ function EntryDialog({
           source: entry.source,
           timezoneNameSnapshot: entry.timezone_name_snapshot,
         };
+        if (quantityV4 && amount !== entry.quantity.amount) input.quantityInput = { schema_version: QUANTITY_INPUT_VERSION, raw_value: rawValue, raw_unit: unit.trim() };
         const fingerprint = JSON.stringify({ entryId: entry.id, input, type: "edit" });
         if (operation.current?.fingerprint !== fingerprint) {
           operation.current = { fingerprint, key: crypto.randomUUID() };
@@ -453,6 +472,7 @@ function EntryDialog({
           setAuthorityEntry(updatedEntry);
           setRevision(updatedEntry.revision);
           setAmount(updatedEntry.quantity.amount);
+          setRawValue(updatedEntry.quantity_input?.raw_unit === updatedEntry.quantity.unit ? updatedEntry.quantity_input.raw_value : String(updatedEntry.quantity.amount));
           setUnit(updatedEntry.quantity.unit);
           setColumnId(updatedEntry.meal_plan_column_id ?? "");
           onEntryUpdated(updatedEntry);
@@ -474,7 +494,9 @@ function EntryDialog({
         if (mode === "delete") {
           onUnauthorized({ version: 1, action: "delete", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-delete" });
         } else if (amount !== null) {
-          onUnauthorized({ version: 1, action: "edit", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-edit", draft: { amount, columnId, unit } });
+          const draft: { amount: number; columnId: string; unit: string; quantityInput?: QuantityInputDraft } = { amount, columnId, unit };
+          if (quantityV4) draft.quantityInput = { schema_version: QUANTITY_INPUT_VERSION, raw_value: rawValue, raw_unit: unit };
+          onUnauthorized({ version: 1, action: "edit", date: entry.consumed_local_date, entryId: entry.id, invoker: "entry-edit", draft });
         }
         return;
       }
@@ -514,7 +536,10 @@ function EntryDialog({
         <header className="flex items-center gap-3"><AppBackButton ariaLabel="식사 기록으로 돌아가기" disabled={pending} onClick={onClose} ref={cancelRef} /><h2 className="flex-1 text-xl font-semibold">{entryTitle}</h2>{authorityColumnActive ? <button aria-label={`${entry.slot_name_snapshot}에 먹은 음식 추가`} className="h-11 w-11 rounded-xl border border-[var(--brand-primary-border)] text-2xl text-[var(--brand-primary-text)]" disabled={pending} onClick={() => onAdd(entry.meal_plan_column_id!)} type="button">+</button> : null}</header>
         <h3 className="mt-6 break-words text-2xl font-medium">{entry.display_name}</h3>
         {entry.display_brand ? <p className="mt-2 text-sm text-[var(--text-2)]">{entry.display_brand}</p> : null}
-        <div className="my-6 flex justify-between rounded-xl bg-[var(--surface-fill)] p-4"><span className="font-medium">먹은 양</span><span>{number(entry.quantity.amount, entry.quantity.unit)}</span></div>
+        <div className="my-6 flex justify-between rounded-xl bg-[var(--surface-fill)] p-4"><span className="font-medium">먹은 양</span><span>{entryQuantity(entry)}</span></div>
+        {entry.quantity_input?.batch_basis ? <p className="mb-4 text-sm text-[var(--text-2)]">조리 당시 전체 {formatQuantityAmount(entry.quantity_input.batch_basis.finished_weight_g)}g · {entry.quantity_input.batch_basis.cooking_servings}인분 기준 · 기록량 {number(entry.quantity.amount, entry.quantity.unit)}</p> : null}
+        {entry.quantity_input?.quality === "estimated" ? <p className="mb-4 text-sm text-[var(--text-2)]">약 환산값으로 기록했어요.</p> : null}
+        {entry.quantity_input?.reason ? <p className="mb-4 text-sm text-[var(--text-2)]">입력한 양을 보존했어요. 영양을 환산할 근거는 확인하지 못했어요.</p> : null}
         <section aria-label="기록한 음식 영양정보" className="rounded-2xl bg-[var(--ui-sky-50)] p-5"><h3 className="mb-3 text-sm font-medium">먹은 양 기준 영양</h3><MealLogNutritionChart nutrition={entry.nutrition} /></section>
         {entry.nutrition.weight_basis ? <section aria-label="기록 당시 전체무게 근거" className="mt-4 space-y-2 text-sm leading-5 text-[var(--text-2)]">
           <p>기록 당시 전체무게{entry.nutrition.weight_basis.finished_weight_g === null ? "는 미확인이에요" : `는 ${Math.round(entry.nutrition.weight_basis.finished_weight_g).toLocaleString("ko-KR")}g이에요`}. 무게 근거: {cookedWeightSourceLabel(entry.nutrition.weight_basis.source)}.</p>
@@ -534,7 +559,7 @@ function EntryDialog({
         {requiresColumnSelection && day.active_columns.length === 0 ? <p role="alert" className="text-sm text-[var(--danger-strong)]">옮길 수 있는 현재 끼니가 없어 저장할 수 없어요.</p> : null}
         <label className="block font-medium">먹은 양
           <span className="app-field-input mt-2 flex items-center rounded-xl border border-[var(--ui-slate-200)] bg-[var(--ui-white)] px-3 transition-[border-color,box-shadow]">
-            <DecimalInput disabled={pending} aria-label="먹은 양" className="min-h-12 min-w-0 flex-1 bg-transparent text-base font-normal" style={{ border: 0, outline: "none", boxShadow: "none" }} min="0.01" onValueChange={setAmount} step="any" value={amount} onKeyDown={event => {
+            <DecimalInput allowFractions={quantityV4} rawValue={quantityV4 ? rawValue : undefined} onRawValueChange={quantityV4 ? setRawValue : undefined} disabled={pending} aria-label="먹은 양" className="min-h-12 min-w-0 flex-1 bg-transparent text-base font-normal" style={{ border: 0, outline: "none", boxShadow: "none" }} min={quantityV4 ? "0" : "0.01"} onValueChange={setAmount} step="any" value={amount} onKeyDown={event => {
               if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
               event.preventDefault();
               if (!event.repeat) void mutate();
@@ -542,6 +567,7 @@ function EntryDialog({
             <input aria-label="단위" readOnly tabIndex={-1} className="w-12 bg-transparent text-right text-base font-normal text-[var(--text-2)]" style={{ border: 0, outline: "none", boxShadow: "none" }} value={unit} />
           </span>
         </label>
+        {day.quantity_policy === QUANTITY_INPUT_VERSION && legacyUnitWithoutV4Evidence ? <p className="text-sm text-[var(--text-2)]">이전 단위의 환산 근거를 확인하지 못해 기존 숫자 입력을 유지해요. 원래 양과 단위는 보존했어요.</p> : null}
         {amount !== null && !amountInvalid ? <div className="rounded-xl bg-[var(--ui-sky-50)] p-4"><p className="mb-3 text-sm">{number(amount, unit)} 기준</p><MealLogNutritionChart nutrition={scaleMealLogNutrition(entry.nutrition, amount / entry.quantity.amount)} /></div> : null}
       </> : <><p>이 식사 기록을 삭제할까요?</p>{entry.source.type === "cooked_batch" ? <p className="text-sm text-[var(--text-2)]">먹은 양 {number(entry.quantity.amount, entry.quantity.unit)}을 남은 요리에 돌려놓아요.</p> : null}</>}
       {error ? <p className="text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
@@ -727,7 +753,8 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
 
   async function add(selection: MealLogSourceSelection, columnId: string, targetDate: string) {
     if (guestRef.current) return;
-    const input = {
+    if (selection.amount === null) return;
+    const input: Omit<MealLogMutationInput, "expectedRevision"> = {
       consumedAt: null,
       consumedLocalDate: targetDate,
       mealPlanColumnId: columnId,
@@ -735,6 +762,7 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
       source: { id: selection.id, type: selection.type },
       timezoneNameSnapshot: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
+    if (selection.quantityInput) input.quantityInput = selection.quantityInput;
     const fingerprint = JSON.stringify(input);
     const key = mutationKeys.current.get(fingerprint) ?? crypto.randomUUID();
     mutationKeys.current.set(fingerprint, key);
@@ -837,7 +865,7 @@ export function MealLogScreen({ date, guest = false, activeColumns, showDateNavi
 
       {nutritionDate && displayDays[nutritionDate] ? <MealLogDayNutritionDetail active={!dialog} day={displayDays[nutritionDate]} onClose={() => setNutritionDate(null)} onEntry={entry => openDialog({ type: "detail", entry }, nutritionDate)} /> : null}
       {!guest && dialog?.type === "add" && dialog.backgroundEntry && dialogDay ? <EntryDialog inactive day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={false} state={{ type: "detail", entry: dialog.backgroundEntry, guestPreview: false }} onClose={() => {}} onAdd={() => {}} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => null} /> : null}
-      {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed returnFocusTarget={() => dialog.backgroundEntry ? null : document.getElementById(sectionAddActionId(dialog.columnId, dialogDate))} mutationEnabled={dialogMutationEnabled} onClose={closeAdd} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
+      {!guest && dialog?.type === "add" && dialogDay ? <MealLogAddSheet columns={dialogDay.active_columns} date={dialogDate} initialColumnId={dialog.columnId} initialSelection={dialog.selection} initialSuggestionConfirmed returnFocusTarget={() => dialog.backgroundEntry ? null : document.getElementById(sectionAddActionId(dialog.columnId, dialogDate))} mutationEnabled={dialogMutationEnabled} quantityV4Enabled={dialogDay.quantity_policy === "quantity-v4"} onClose={closeAdd} onSave={add} onUnauthorized={handleAddUnauthorized} /> : null}
       {dialog && dialog.type !== "add" && (dialog.type === "detail" ? Boolean(dialog.guestPreview) === guest : !guest) && dialogDay ? <EntryDialog day={dialogDay} fallbackFocusRef={headingRef} mutationEnabled={dialogMutationEnabled} onClose={() => setDialog(null)} onRemoved={() => { setDialog(null); setNutritionDate(null); }} onAdd={columnId => openDialog({ type: "add", columnId, backgroundEntry: dialog.entry }, dialogDate)} onComplete={reloadSelected} onFeedback={showSuccess} onEntryUpdated={entry => setDialog(current => current && current.type !== "add" && current.entry.id === entry.id ? { ...current, entry } : current)} onUnauthorized={loseAuthorization} returnFocusTarget={() => (nutritionDate ? document.querySelector<HTMLElement>(`[data-meal-log-contributor="${dialog.entry.id}"]`) : null) ?? document.querySelector<HTMLElement>(`[data-planner-date="${dialogDate}"] [id="${entryActionId(dialog.entry.id, "edit")}"]`)} state={dialog} /> : null}
     </main>
     </>

@@ -1,3 +1,6 @@
+import { readRecipeQuantityMode, RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
+import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
+import { isRecipeQuantityInputDraft, recipeQuantityWriteFailure } from "@/lib/server/recipe-quantity-input";
 import { isRecipeIngredientIdentityValid, recipeIngredientSourceKind } from "@/lib/recipe-ingredient-source";
 import { isRecipeProductUnitAllowed } from "@/lib/recipe-ingredient-units";
 import { randomUUID } from "node:crypto";
@@ -354,7 +357,7 @@ function normalizeNullableString(value: unknown) {
 }
 
 function normalizeIngredient(row: Record<string, unknown>): ManualRecipeIngredientInput {
-  return {
+  const ingredient: ManualRecipeIngredientInput = {
     ingredient_id: typeof row.ingredient_id === "string" ? row.ingredient_id.trim() : row.ingredient_id === null ? null : "",
     source_kind: row.source_kind === "ingredient" || row.source_kind === "food_product" ? row.source_kind : undefined,
     row_key: typeof row.row_key === "string" ? row.row_key.trim() : undefined,
@@ -371,6 +374,8 @@ function normalizeIngredient(row: Record<string, unknown>): ManualRecipeIngredie
     sort_order: typeof row.sort_order === "number" ? row.sort_order : Number.NaN,
     scalable: typeof row.scalable === "boolean" ? row.scalable : true,
   };
+  if (row.quantity_input !== undefined && isRecipeQuantityInputDraft(row.quantity_input, ingredient)) ingredient.quantity_input = row.quantity_input;
+  return ingredient;
 }
 
 function normalizeIngredientsUsed(value: unknown): ManualRecipeStepInput["ingredients_used"] {
@@ -443,7 +448,7 @@ function validateIngredient(
 
     if (!ingredient.unit) {
       fields.push({ field: `ingredients[${index}].unit`, reason: "required" });
-    } else if (!(ingredient.food_product_id && ingredient.ingredient_id === null ? isRecipeProductUnitAllowed(ingredient.unit) : isRecipeIngredientUnitAllowed(ingredient.unit) || (Boolean(ingredient.food_product_id) && isRecipeProductUnitAllowed(ingredient.unit)))) {
+    } else if (!ingredient.quantity_input && !(ingredient.food_product_id && ingredient.ingredient_id === null ? isRecipeProductUnitAllowed(ingredient.unit) : isRecipeIngredientUnitAllowed(ingredient.unit) || (Boolean(ingredient.food_product_id) && isRecipeProductUnitAllowed(ingredient.unit)))) {
       fields.push({ field: `ingredients[${index}].unit`, reason: "unsupported_unit" });
     }
 
@@ -579,6 +584,9 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
     }
 
     if (isRecord(rawIngredient)) {
+      if (rawIngredient.quantity_input !== undefined && !isRecipeQuantityInputDraft(rawIngredient.quantity_input, ingredient)) {
+        fields.push({ field: `ingredients[${index}].quantity_input`, reason: "invalid_raw_quantity" });
+      }
       if (rawIngredient.source_kind !== undefined && rawIngredient.source_kind !== "ingredient" && rawIngredient.source_kind !== "food_product") fields.push({ field: `ingredients[${index}].source_kind`, reason: "invalid_enum" });
       if (rawIngredient.row_key !== undefined && !isUuid(rawIngredient.row_key)) fields.push({ field: `ingredients[${index}].row_key`, reason: "invalid_uuid" });
       if (rawIngredient.ingredient_id !== null && typeof rawIngredient.ingredient_id !== "string") fields.push({ field: `ingredients[${index}].ingredient_id`, reason: "invalid_uuid" });
@@ -793,6 +801,7 @@ function parseStrictRecipeEditDraft(
             "ingredient_id",
             "row_key",
             "source_kind",
+            "quantity_input",
             "amount",
             "unit",
             "ingredient_type",
@@ -903,7 +912,17 @@ function parseStrictRecipeEditDraft(
         const normalizedIngredientType: RecipeEditDraft["ingredients"][number]["ingredient_type"] =
           ingredientType === "TO_TASTE" ? "TO_TASTE" : "QUANT";
 
+        if (item.quantity_input !== undefined && !isRecipeQuantityInputDraft(item.quantity_input, {
+          amount: Number.isNaN(amount) ? null : amount, unit, ingredient_type: normalizedIngredientType,
+          food_product_nutrition_version_id: foodProductVersionId,
+        })) fields.push({ field: `${fieldBase}.quantity_input`, reason: "invalid_raw_quantity" });
+        const quantityFields: Pick<RecipeEditDraft["ingredients"][number], "quantity_input"> = {};
+        if (item.quantity_input !== undefined && isRecipeQuantityInputDraft(item.quantity_input, {
+          amount: Number.isNaN(amount) ? null : amount, unit, ingredient_type: normalizedIngredientType,
+          food_product_nutrition_version_id: foodProductVersionId,
+        })) quantityFields.quantity_input = item.quantity_input;
         return {
+          ...quantityFields,
           ingredient_id: ingredientId,
           source_kind: sourceKind,
           row_key: rowKey,
@@ -1329,7 +1348,11 @@ function buildManualRecipeRpcPayload(
     p_thumbnail_url: parsed.thumbnailUrl,
     p_tags: tags,
     p_tag_source: tagSource,
-    p_ingredients: parsed.ingredients.map((ingredient) => ({
+    p_ingredients: parsed.ingredients.map((ingredient) => {
+      const quantityFields: Pick<ManualRecipeIngredientInput, "quantity_input"> = {};
+      if (ingredient.quantity_input !== undefined) quantityFields.quantity_input = ingredient.quantity_input;
+      return ({
+      ...quantityFields,
       ingredient_id: ingredient.ingredient_id,
       source_kind: recipeIngredientSourceKind(ingredient),
       row_key: ingredient.row_key,
@@ -1344,7 +1367,7 @@ function buildManualRecipeRpcPayload(
         food_product_id: ingredient.food_product_id,
         food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id,
       } : {}),
-    })),
+    }); }),
     p_steps: parsed.steps.map((step) => ({
       step_number: step.step_number,
       instruction: step.instruction,
@@ -1954,18 +1977,25 @@ async function postRecipe(request: Request) {
       return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
     }
 
+    const quantityFailure = recipeQuantityWriteFailure(request, parsed.draft.ingredients);
+    if (quantityFailure) return quantityFailure;
     let nutrition;
     try {
+      const quantityMode = await readRecipeQuantityMode({ client: { rpc: (name, args) => serviceClient.rpc(name, args) },
+        sessionAuthority: authority.sessionAuthority, recipeId: parsed.originRecipeId, expectedRevision: parsed.baseRecipeRevision });
+      if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를 저장할 수 없어요. 입력은 유지돼요.", 422);
       nutrition = await calculateRecipeDraftNutrition(
         serviceClient as unknown as RecipeDraftNutritionClient,
         {
           recipeId: parsed.originRecipeId,
           ownerUserId: user.id,
+        quantityMode,
           baseRecipeRevision: parsed.baseRecipeRevision,
           draft: parsed.draft,
         },
       );
     } catch (error) {
+      if (error instanceof RecipeQuantityModeError) return fail(error.code, error.message, error.status);
       if (error instanceof RecipeDraftNutritionValidationError) {
         return fail("VALIDATION_ERROR", "레시피 영양 입력을 확인해 주세요.", 422, [
           { field: "draft.ingredients", reason: "invalid_nutrition_input" },
@@ -2022,6 +2052,8 @@ async function postRecipe(request: Request) {
     return ok(data, { status: 201 });
   }
 
+  const quantityFailure = recipeQuantityWriteFailure(request, isRecord(body) && Array.isArray(body.ingredients) ? body.ingredients : []);
+  if (quantityFailure) return quantityFailure;
   const { fields, parsed } = parseManualRecipeCreateBody(body);
   if (!parsed) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);

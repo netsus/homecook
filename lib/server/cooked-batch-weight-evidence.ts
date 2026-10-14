@@ -1,4 +1,4 @@
-import { snapshotIngredients, type CookingWeightSessionClient } from "@/lib/server/cooked-batch-weight-estimate";
+import { snapshotIngredients, type CookingWeightSessionClient, type CookingWeightSnapshotIngredient } from "@/lib/server/cooked-batch-weight-estimate";
 import { hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import { predictSnapshotWeight } from "@/lib/server/cooked-weight-snapshot-prediction";
 import { hydrateRecipeNutritionIngredients, loadRecipeNutritionPredecessors } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
@@ -63,8 +63,19 @@ export async function readSnapshotWeightPrediction({ client, weightClient, owner
     } catch { /* Missing approved conversion evidence remains unknown; no fallback. */ }
   }
   hydrated = (await hydrateRecipeProductNutrition(client, ingredients, hydrated, ownerId)).ingredients;
+  const weighted: CookingWeightSnapshotIngredient[] = [];
+  for (const [index, row] of hydrated.entries()) {
+    const source = ingredients[index];
+    if (!source || source.id !== row.id || source.ingredient_id !== row.ingredient_id
+      || (source.food_product_id ?? null) !== (row.food_product_id ?? null)
+      || (source.food_product_nutrition_version_id ?? null) !== (row.food_product_nutrition_version_id ?? null)) return null;
+    const weightRow: CookingWeightSnapshotIngredient = { ...row };
+    if (Object.hasOwn(source, "quantity_input")) weightRow.quantity_input = source.quantity_input;
+    weighted.push(weightRow);
+  }
+  if (weighted.length !== ingredients.length) return null;
   return predictSnapshotWeight({ snapshotId: snapshot.id, baseServings: snapshot.base_servings,
-    cookingServings: session.cooking_servings, ingredients: hydrated,
+    cookingServings: session.cooking_servings, ingredients: weighted,
     snapshotSteps: Array.isArray(snapshot.steps_json) ? snapshot.steps_json : [], cookingSteps: steps });
 }
 

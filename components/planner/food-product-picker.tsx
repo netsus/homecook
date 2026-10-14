@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DecimalInput } from "@/components/shared/decimal-input";
+import { parseQuantityInput } from "@/lib/quantity-input";
+import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
+import { QUANTITY_INPUT_VERSION, type QuantityInputDraft } from "@/types/quantity-input";
 
 import { FoodProductCreateForm } from "@/components/planner/food-product-create-form";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
@@ -37,7 +41,7 @@ import type {
   FoodProductListSource,
   FoodProductReportReason,
 } from "@/types/food-product";
-import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
+import type { ProductPlannerEntryCreateBody, ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 const PAGE_LIMIT = 20;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -73,8 +77,8 @@ function productOriginLabel(product: FoodProductData) {
   return product.visibility === "public" ? "사용자 등록" : "비공개 보관";
 }
 
-function getDefaultQuantityState(product: FoodProductData) {
-  const comparisonQuantity = getFoodProductComparisonQuantity(product);
+function getDefaultQuantityState(product: FoodProductData, quantityV4 = false) {
+  const comparisonQuantity = getFoodProductComparisonQuantity(product, quantityV4);
   if (comparisonQuantity) {
     return {
       amount: String(comparisonQuantity.amount),
@@ -170,24 +174,26 @@ async function fetchProductPagesUntil(
 function ProductNutritionSummary({
   product,
   quantity,
+  quantityV4 = false,
 }: {
   product: FoodProductData;
   quantity?: { amount: number; unit: FoodProductBasisUnit };
+  quantityV4?: boolean;
 }) {
   return (
     <span className="mt-2 block text-xs leading-5 text-[var(--text-2)]">
       <span className="block font-extrabold text-[var(--brand-primary-text)]">
-        {formatFoodProductExpectedEnergy(product, quantity)}
+        {formatFoodProductExpectedEnergy(product, quantity, quantityV4)}
       </span>
       <span className="block">
-        {getFoodProductCoreNutritionLines(product, quantity).join(" · ")}
+        {getFoodProductCoreNutritionLines(product, quantity, quantityV4).join(" · ")}
       </span>
     </span>
   );
 }
 
-function ProductBasisLabel({ product }: { product: FoodProductData }) {
-  const comparisonQuantity = getFoodProductComparisonQuantity(product);
+function ProductBasisLabel({ product, quantityV4 = false }: { product: FoodProductData; quantityV4?: boolean }) {
+  const comparisonQuantity = getFoodProductComparisonQuantity(product, quantityV4);
   if (comparisonQuantity) {
     return (
       <span className="mt-2 block text-xs font-semibold text-[var(--brand-primary-text)]">
@@ -253,12 +259,15 @@ export function FoodProductPicker({
   const [listError, setListError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<FoodProductData | null>(null);
   const [quantityAmount, setQuantityAmount] = useState(pickerReturn?.quantityAmount ?? initialQuantityAmount);
+  const [quantityV4Enabled, setQuantityV4Enabled] = useState(false);
+  const originalQuantityRef = useRef<QuantityInputDraft | undefined>(pickerReturn?.quantityInput);
   const [quantityUnit, setQuantityUnit] = useState<FoodProductBasisUnit | null>(pickerReturn?.quantityUnit ?? initialQuantityUnit);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshingSelection, setIsRefreshingSelection] = useState(false);
   const [entryError, setEntryError] = useState<string | null>(null);
   const [hasNutritionConflict, setHasNutritionConflict] = useState(false);
+  const [requiresProductReselection, setRequiresProductReselection] = useState(false);
   const [isCreating, setIsCreating] = useState(Boolean(createReturn && !restoredEditContext));
   const [editingProduct, setEditingProduct] = useState<FoodProductData | null>(null);
   const [createDirty, setCreateDirty] = useState(Boolean(createReturn));
@@ -351,7 +360,7 @@ export function FoodProductPicker({
       source: selectedSource,
       slotName,
     });
-    beginLoginReturn({
+    const context: ProductPlannerReturnContext = {
       version: 1,
       kind: "picker",
       planDate,
@@ -362,7 +371,9 @@ export function FoodProductPicker({
       productId: selectedId,
       quantityAmount: quantityAmountRef.current,
       quantityUnit: quantityUnitRef.current,
-    }, nextPath);
+    };
+    if (originalQuantityRef.current) context.quantityInput = originalQuantityRef.current;
+    beginLoginReturn(context, nextPath);
   }, [columnId, planDate, selectedSource, slotName]);
 
   const loadFirstPage = useCallback(async (
@@ -380,6 +391,7 @@ export function FoodProductPicker({
       const data = await fetchProductPagesUntil(activeQuery, source, restoreTargetId);
       if (generationRef.current !== generation) return;
       setItems(data.items);
+      setQuantityV4Enabled(data.quantity_policy === QUANTITY_INPUT_VERSION);
       setNextCursor(data.next_cursor);
       setHasNext(data.has_next);
       setListState(data.items.length === 0 ? "empty" : "ready");
@@ -398,7 +410,13 @@ export function FoodProductPicker({
       if (restoreProductIdRef.current) {
         const restored = data.items.find((product) => product.id === restoreProductIdRef.current);
         restoreProductIdRef.current = null;
-        if (restored) setSelectedProduct(restored);
+        if (restored) {
+          setSelectedProduct(restored);
+          if (originalQuantityRef.current?.expected_product_nutrition_version_id
+            && restored.nutrition_version_id !== originalQuantityRef.current.expected_product_nutrition_version_id) {
+            setHasNutritionConflict(true); setEntryError("선택했던 제품의 규격이 달라졌어요. 입력한 양은 보존했어요. 현재 정보를 다시 확인해 주세요.");
+          }
+        }
         else setEntryError("선택했던 완제품을 더 이상 찾을 수 없어요. 다시 선택해 주세요.");
       }
     } catch (caught) {
@@ -431,16 +449,19 @@ export function FoodProductPicker({
   }, [isCreating, isDesktopViewport]);
 
   const compatibleUnits = useMemo(
-    () => selectedProduct ? buildCompatibleFoodProductUnits(selectedProduct) : [],
-    [selectedProduct],
+    () => selectedProduct ? buildCompatibleFoodProductUnits(selectedProduct, quantityV4Enabled) : [],
+    [quantityV4Enabled, selectedProduct],
   );
+  const quantityPolicyUnavailable = Boolean(originalQuantityRef.current) && !quantityV4Enabled;
+  const restoredUnitUnavailable = Boolean(originalQuantityRef.current && quantityUnit && selectedProduct && !compatibleUnits.includes(quantityUnit));
 
   useEffect(() => {
     if (!selectedProduct) return;
+    if (quantityPolicyUnavailable || restoredUnitUnavailable) return;
     if (!quantityUnit || !compatibleUnits.includes(quantityUnit)) {
       setQuantityUnit(compatibleUnits[0] ?? selectedProduct.nutrition.basis.unit);
     }
-  }, [compatibleUnits, quantityUnit, selectedProduct]);
+  }, [compatibleUnits, quantityPolicyUnavailable, quantityUnit, restoredUnitUnavailable, selectedProduct]);
 
   useEffect(() => {
     if (selectedProduct) quantityInputRef.current?.focus();
@@ -476,20 +497,24 @@ export function FoodProductPicker({
   };
 
   const handleSelect = (product: FoodProductData) => {
-    const defaults = getDefaultQuantityState(product);
-    setSelectedProduct(product);
-    setQuantityAmount(defaults.amount);
+    clearProductPlannerReturnContext();
+    const defaults = getDefaultQuantityState(product, quantityV4Enabled);
+    setSelectedProduct({ ...product });
+    originalQuantityRef.current = undefined;
+    setQuantityAmount(quantityV4Enabled ? "" : defaults.amount);
     setQuantityUnit(
-      buildCompatibleFoodProductUnits(product).includes(defaults.unit)
+      buildCompatibleFoodProductUnits(product, quantityV4Enabled).includes(defaults.unit)
         ? defaults.unit
-        : buildCompatibleFoodProductUnits(product)[0] ?? product.nutrition.basis.unit,
+        : buildCompatibleFoodProductUnits(product, quantityV4Enabled)[0] ?? product.nutrition.basis.unit,
     );
     setEntryError(null);
     setHasNutritionConflict(false);
+    setRequiresProductReselection(false);
   };
 
   const handleSubmit = async () => {
-    const amount = safePositiveAmount(quantityAmount);
+    if (quantityPolicyUnavailable || restoredUnitUnavailable || requiresProductReselection) return;
+    const amount = quantityV4Enabled ? parseQuantityInput(quantityAmount)?.amount ?? null : safePositiveAmount(quantityAmount);
     if (!selectedProduct || !quantityUnit) {
       setEntryError("추가할 완제품을 선택해 주세요.");
       return;
@@ -503,12 +528,15 @@ export function FoodProductPicker({
     setIsSubmitting(true);
     setEntryError(null);
     try {
-      const entry = await createProductPlannerEntry({
+      const body: ProductPlannerEntryCreateBody = {
         product_id: selectedProduct.id,
         plan_date: planDate,
         column_id: columnId,
         quantity: { amount, unit: quantityUnit },
-      });
+      };
+      if (quantityV4Enabled) body.quantity_input = originalQuantityRef.current ?? { schema_version: QUANTITY_INPUT_VERSION, raw_value: quantityAmount, raw_unit: quantityUnit,
+        expected_product_nutrition_version_id: selectedProduct.nutrition_version_id };
+      const entry = await createProductPlannerEntry(body);
       clearProductPlannerReturnContext();
       await onComplete(entry);
     } catch (caught) {
@@ -521,10 +549,12 @@ export function FoodProductPicker({
           columnId, planDate, productId: selectedProduct.id, quantityAmount,
           quantityUnit, query, source: selectedSource, slotName,
         });
-        beginLoginReturn({
+        const context: ProductPlannerReturnContext = {
           version: 1, kind: "picker", planDate, columnId, slotName, query, source: selectedSource,
           productId: selectedProduct.id, quantityAmount, quantityUnit,
-        }, nextPath);
+        };
+        if (originalQuantityRef.current) context.quantityInput = originalQuantityRef.current;
+        beginLoginReturn(context, nextPath);
         return;
       }
       if (caught.code === "PRODUCT_DELETED") {
@@ -563,8 +593,13 @@ export function FoodProductPicker({
       }
       setItems(data.items);
       setSelectedProduct(refreshed);
-      setEntryError(null);
-      setHasNutritionConflict(false);
+      const originalVersion = originalQuantityRef.current?.expected_product_nutrition_version_id;
+      const requiresReselection = Boolean(originalVersion && originalVersion !== refreshed.nutrition_version_id);
+      setRequiresProductReselection(requiresReselection);
+      setHasNutritionConflict(requiresReselection);
+      setEntryError(requiresReselection
+        ? "제품의 규격이 달라졌어요. 입력한 양은 보존했어요. 목록에서 제품을 다시 선택하고 수량을 새로 입력해 주세요."
+        : null);
     } catch (caught) {
       if (!isCurrentRefresh()) return;
       if (isFoodProductApiError(caught) && caught.status === 401) {
@@ -819,7 +854,7 @@ export function FoodProductPicker({
     );
   }
 
-  const selectedAmount = safePositiveAmount(quantityAmount);
+  const selectedAmount = quantityV4Enabled ? parseQuantityInput(quantityAmount)?.amount ?? null : safePositiveAmount(quantityAmount);
   return (
     <section
       aria-labelledby="food-product-picker-title"
@@ -939,7 +974,7 @@ export function FoodProductPicker({
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {items.map((product) => {
               const selected = selectedProduct?.id === product.id;
-              const comparisonQuantity = getFoodProductComparisonQuantity(product);
+              const comparisonQuantity = getFoodProductComparisonQuantity(product, quantityV4Enabled);
               return (
                 <div
                   className={[
@@ -964,11 +999,11 @@ export function FoodProductPicker({
                       </span>
                       <span className="shrink-0 rounded-full bg-[var(--surface-fill)] px-2 py-1 text-xs font-bold text-[var(--text-2)]">{productOriginLabel(product)}</span>
                     </span>
-                    <ProductBasisLabel product={product} />
+                    <ProductBasisLabel product={product} quantityV4={quantityV4Enabled} />
                     {product.nutrition.label_basis_text ? (
                       <span className="mt-1 block text-[11px] text-[var(--text-3)]">라벨 {product.nutrition.label_basis_text}</span>
                     ) : null}
-                    <ProductNutritionSummary product={product} quantity={comparisonQuantity ?? undefined} />
+                    <ProductNutritionSummary product={product} quantity={comparisonQuantity ?? undefined} quantityV4={quantityV4Enabled} />
                   </button>
                   {canEditProduct(product) || canReportProduct(product) ? (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -1038,7 +1073,7 @@ export function FoodProductPicker({
           <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-4" data-testid="food-product-selection-summary">
             <p className="text-sm font-extrabold text-[var(--foreground)]">{selectedProduct.name} 수량</p>
             <p className="mt-1 text-xs leading-5 text-[var(--text-2)]">표시 기준과 직접 연결된 단위만 선택할 수 있어요.</p>
-            <ProductNutritionSummary product={selectedProduct} quantity={selectedAmount && quantityUnit ? { amount: selectedAmount, unit: quantityUnit } : undefined} />
+            <ProductNutritionSummary product={selectedProduct} quantity={selectedAmount && quantityUnit ? { amount: selectedAmount, unit: quantityUnit } : undefined} quantityV4={quantityV4Enabled} />
           </div>
         ) : null}
       </div>
@@ -1050,22 +1085,36 @@ export function FoodProductPicker({
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(96px,0.7fr)] gap-2">
             <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
               수량
-              <input aria-label="완제품 수량" className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none" disabled={isSubmitting} inputMode="decimal" min={quantityUnit === "g" || quantityUnit === "ml" ? "1" : "0.01"} onChange={(event) => { setQuantityAmount(event.target.value); setEntryError(null); setHasNutritionConflict(false); }} ref={quantityInputRef} step={quantityUnit === "g" || quantityUnit === "ml" ? "1" : "any"} type="number" value={quantityAmount} />
+              {quantityV4Enabled ? <DecimalInput allowFractions aria-label="완제품 수량" className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none" disabled={isSubmitting || quantityPolicyUnavailable || restoredUnitUnavailable || requiresProductReselection} rawValue={quantityAmount} onRawValueChange={value => { setQuantityAmount(value); if (quantityUnit) originalQuantityRef.current = { schema_version: QUANTITY_INPUT_VERSION, raw_value: value, raw_unit: quantityUnit, expected_product_nutrition_version_id: selectedProduct.nutrition_version_id }; }} onValueChange={() => { setEntryError(null); setHasNutritionConflict(false); }} ref={quantityInputRef} value={selectedAmount} />
+                : <input aria-label="완제품 수량" className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none" disabled={isSubmitting || quantityPolicyUnavailable || restoredUnitUnavailable || requiresProductReselection} inputMode="decimal" min={quantityUnit === "g" || quantityUnit === "ml" ? "1" : "0.01"} onChange={(event) => { setQuantityAmount(event.target.value); setEntryError(null); setHasNutritionConflict(false); }} ref={quantityInputRef} step={quantityUnit === "g" || quantityUnit === "ml" ? "1" : "any"} type="number" value={quantityAmount} />}
             </label>
             <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
               단위
-              <select aria-label="완제품 수량 단위" className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none" disabled={isSubmitting} onChange={(event) => { setQuantityUnit(event.target.value as FoodProductBasisUnit); setEntryError(null); setHasNutritionConflict(false); }} value={quantityUnit ?? ""}>
-                {compatibleUnits.map((unit) => <option key={unit} value={unit}>{formatProductUnit(unit)}</option>)}
+              <select aria-label="완제품 수량 단위" className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none" disabled={isSubmitting || quantityPolicyUnavailable || restoredUnitUnavailable || requiresProductReselection} onChange={(event) => {
+                const unit = event.target.value as FoodProductBasisUnit;
+                if (quantityUnit && quantityAmount.trim()) {
+                  const amount = quantityV4Enabled ? parseQuantityInput(quantityAmount)?.amount ?? null : safePositiveAmount(quantityAmount);
+                  const converted = amount === null ? null : convertProductQuantity(amount, quantityUnit, unit, selectedProduct.basis_relations);
+                  if (converted === null) { setEntryError("이 단위로 바꿀 환산 근거가 없어요. 원래 양과 단위를 유지했어요."); return; }
+                  originalQuantityRef.current ??= { schema_version: QUANTITY_INPUT_VERSION, raw_value: quantityAmount, raw_unit: quantityUnit, expected_product_nutrition_version_id: selectedProduct.nutrition_version_id };
+                  setQuantityAmount(converted.toLocaleString("en-US", { useGrouping: false, maximumSignificantDigits: 17 }));
+                }
+                setQuantityUnit(unit); setEntryError(null); setHasNutritionConflict(false);
+              }} value={quantityUnit ?? ""}>
+                {restoredUnitUnavailable && quantityUnit ? <option value={quantityUnit}>{formatProductUnit(quantityUnit)} (이전 입력)</option> : null}
+                {compatibleUnits.map((unit) => <option key={unit} value={unit}>{quantityV4Enabled && unit === "serving" ? "제품 1회분" : formatProductUnit(unit)}</option>)}
               </select>
             </label>
           </div>
           {entryError ? <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-sm font-semibold text-[var(--danger)]" role="alert">{entryError}</p> : null}
+          {quantityPolicyUnavailable ? <p className="mt-2 text-sm text-[var(--text-2)]" role="status">현재 새 단위 입력을 사용할 수 없어요. 이전 입력은 보존했어요. 제품을 다시 선택해 주세요.</p> : restoredUnitUnavailable ? <p className="mt-2 text-sm text-[var(--text-2)]" role="status">이전 단위의 환산 근거를 확인할 수 없어요. 원래 양과 단위를 보존했어요. 제품을 다시 선택해 주세요.</p> : null}
+          {quantityV4Enabled ? <div className="mt-2 flex gap-2">{["1/2", "1/3", "1/4", "3/4"].map(value => <button className="min-h-11 flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] text-sm" disabled={isSubmitting || quantityPolicyUnavailable || restoredUnitUnavailable || requiresProductReselection} key={value} onClick={() => { setQuantityAmount(value); if (quantityUnit) originalQuantityRef.current = { schema_version: QUANTITY_INPUT_VERSION, raw_value: value, raw_unit: quantityUnit, expected_product_nutrition_version_id: selectedProduct.nutrition_version_id }; }} type="button">{value}</button>)}</div> : null}
           {hasNutritionConflict ? (
             <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--brand-primary)] bg-[var(--surface)] px-4 text-sm font-extrabold text-[var(--brand-primary-text)] disabled:opacity-50" disabled={isRefreshingSelection} onClick={() => void refreshSelectedProduct()} type="button">
               {isRefreshingSelection ? "최신 영양정보 확인 중…" : "최신 영양정보로 새로고침"}
             </button>
           ) : null}
-          <button className="mt-3 min-h-12 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-50" disabled={isSubmitting} onClick={() => void handleSubmit()} type="button">{isSubmitting ? "플래너에 추가 중…" : `${slotName || "플래너"}에 완제품 추가`}</button>
+          <button className="mt-3 min-h-12 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-50" disabled={isSubmitting || quantityPolicyUnavailable || restoredUnitUnavailable || requiresProductReselection || (quantityV4Enabled && selectedAmount === null)} onClick={() => void handleSubmit()} type="button">{isSubmitting ? "플래너에 추가 중…" : `${slotName || "플래너"}에 완제품 추가`}</button>
         </div>
       ) : null}
 

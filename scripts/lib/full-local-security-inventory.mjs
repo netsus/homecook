@@ -29,6 +29,10 @@ const COOKED_WEIGHT_POSTIMAGES_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/cooked-weight-evidence-source-function-postimages.json",
 );
+const QUANTITY_V4_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/quantity-input-v4-source-function-postimages.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -694,9 +698,114 @@ function withCookedWeightContracts(contracts) {
   return result;
 }
 
-export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false } = {}) {
+function quantityV4Postimages() {
+  const manifest = JSON.parse(readFileSync(QUANTITY_V4_POSTIMAGES_PATH, "utf8"));
+  const paths = ["20261014010000_ingredient_quantity_policy_v4.sql", "20261014200000_quantity_input_v4_consumers.sql",
+    "20261014210000_product_quantity_input_v4.sql", "20261014213000_product_quantity_edit_capability.sql",
+    "20261014220000_recipe_quantity_input_v4.sql", "20261014223000_youtube_quantity_input_bridge.sql"];
+  if (manifest.schema_version !== 1 || manifest.status !== "local-review-draft"
+    || manifest.schema_archive_sha256 !== recipeProductPostimages().schema_archive_sha256
+    || manifest.predecessor_219_sha256 !== recipeProductPostimages().predecessor_219_sha256
+    || manifest.predecessor_C03_sha256 !== recipeProductPostimages().migration_sha256
+    || manifest.predecessor_C01_sha256 !== cookedWeightPostimages().migration_sha256
+    || manifest.application_rows_restored !== 0 || manifest.whole_inventory_drift_not_waived !== true
+    || manifest.functions.length !== 60 || manifest.preserved_overloads.length !== 3 || manifest.migrations.length !== paths.length
+    || manifest.catalog_before !== "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9"
+    || manifest.catalog_after !== "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05") {
+    throw new Error("quantity v4 postimage provenance drift");
+  }
+  for (const [index, migration] of manifest.migrations.entries()) {
+    if (migration.path !== `supabase/migrations/${paths[index]}`
+      || migration.actor !== (index === 5 ? "supabase_admin" : "postgres")
+      || createHash("sha256").update(readFileSync(join(REPOSITORY_ROOT, migration.path))).digest("hex") !== migration.sha256) {
+      throw new Error("quantity v4 migration source drift");
+    }
+  }
+  const privileges = new Map([
+    ["create_product_planner_entry", "authenticated:EXECUTE:false,service_role:EXECUTE:false"],
+    ["update_product_planner_entry_quantity", "authenticated:EXECUTE:false,service_role:EXECUTE:false"],
+    ["preview_meal_log_nutrition", "service_role:EXECUTE:false"],
+    ["youtube_worker_quantity_input_v4", "youtube_extraction_worker_rpc_owner:EXECUTE:false"],
+    ["youtube_worker_quantity_write_admission_v4", "youtube_extraction_worker_rpc_owner:EXECUTE:false"],
+  ]);
+  const signatures = new Set();
+  let existing = 0;
+  for (const { preimage, postimage } of manifest.functions) {
+    if (!/^[a-f0-9]{32}$/u.test(postimage.sourceHash) || !/^[a-f0-9]{64}$/u.test(postimage.definitionSha256)
+      || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || !["public", "private"].includes(postimage.schema) || signatures.has(postimage.signature)
+      || !/^[a-z_][a-z0-9_]*$/u.test(postimage.name)
+      || !postimage.lookupSignature.startsWith(`${postimage.schema}.${postimage.name}(`)
+      || typeof postimage.securityDefiner !== "boolean" || !["i", "s", "v"].includes(postimage.volatility)
+      || !Array.isArray(postimage.configuration)
+      || !postimage.configuration.includes(`search_path=${postimage.searchPath === '""' ? '""' : postimage.searchPath.split(",").join(", ")}`)) {
+      throw new Error("invalid quantity v4 postimage");
+    }
+    signatures.add(postimage.signature);
+    if (preimage) {
+      existing += 1;
+      for (const key of ["signature", "owner", "allowedAcl", "searchPath", "configuration", "securityDefiner", "volatility"]) {
+        if (JSON.stringify(preimage[key]) !== JSON.stringify(postimage[key])) throw new Error(`quantity v4 metadata changed: ${key}`);
+      }
+    } else if (postimage.owner !== "postgres" || postimage.allowedAcl !== (privileges.get(postimage.name) ?? "")) {
+      throw new Error("quantity v4 new function privilege drift");
+    }
+  }
+  if (existing !== 33) throw new Error("quantity v4 preimage identity drift");
+  const preserved = new Set(["public.create_product_planner_entry(uuid,uuid,date,uuid,numeric,text,uuid)",
+    "public.update_product_planner_entry_quantity(uuid,uuid,numeric,text)",
+    "public.list_food_products(uuid,text,timestampwithtimezone,uuid,integer)"]);
+  for (const { preimage, postimage } of manifest.preserved_overloads) {
+    if (!preserved.delete(postimage.signature) || JSON.stringify(preimage) !== JSON.stringify(postimage)) {
+      throw new Error("quantity v4 preserved overload drift");
+    }
+  }
+  const worker = JSON.parse(readFileSync(join(REPOSITORY_ROOT, "docs/security/youtube-worker-quantity-function-postimages.json"), "utf8"));
+  if (worker.migration_sha256 !== manifest.migrations[5].sha256 || worker.functions.length !== 13
+    || worker.catalog_before !== manifest.catalog_before || worker.catalog_after !== manifest.catalog_after) {
+    throw new Error("quantity v4 worker provenance drift");
+  }
+  for (const { postimage } of worker.functions) {
+    const registered = manifest.functions.find((entry) => entry.postimage.signature === normalizeSignature(postimage.signature))?.postimage;
+    if (!registered || registered.sourceHash !== postimage.source_md5 || registered.definitionSha256 !== postimage.definition_sha256
+      || registered.owner !== postimage.owner || registered.securityDefiner !== postimage.security_definer
+      || registered.volatility !== postimage.volatility || JSON.stringify(registered.configuration) !== JSON.stringify(postimage.config)) {
+      throw new Error("quantity v4 worker execution contract drift");
+    }
+  }
+  return manifest;
+}
+
+function withQuantityV4Contracts(contracts) {
+  const result = [...contracts];
+  const manifest = quantityV4Postimages();
+  for (const { postimage, checkedInInventoryPreimageMd5 } of [...manifest.functions, ...manifest.preserved_overloads]) {
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index >= 0) {
+      if (result[index].sourceHash !== checkedInInventoryPreimageMd5) throw new Error("quantity v4 checked-in preimage drift");
+      result[index] = { ...result[index], sourceHash: postimage.sourceHash,
+        configuration: postimage.configuration, quantityVolatility: postimage.volatility };
+    } else result.push(postimage);
+  }
+  return result;
+}
+
+export function buildQuantityInputV4SourceFunctionInventorySql() {
+  const manifest = quantityV4Postimages();
+  return buildSourceFunctionInventorySql([...manifest.functions, ...manifest.preserved_overloads].map((entry) => entry.postimage));
+}
+
+export function assertQuantityInputV4SourceFunctionInventoryResult(result) {
+  return assertSourceFunctionInventoryResult(result, 63);
+}
+
+export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false } = {}) {
   const contracts = recipeProductPostimages().functions.map((entry) => entry.postimage);
-  const functions = includeCookedWeightEvidenceFunctions ? withCookedWeightContracts(contracts) : contracts;
+  const weight = includeCookedWeightEvidenceFunctions ? withCookedWeightContracts(contracts) : contracts;
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
+  const functions = includeQuantityInputV4Functions ? withQuantityV4Contracts(weight) : weight;
   return buildSourceFunctionInventorySql(functions);
 }
 
@@ -706,13 +815,15 @@ export function buildCookedWeightEvidenceSourceFunctionInventorySql() {
 
 function buildSourceFunctionInventorySql(functions) {
   const rows = functions.map((entry) => [entry.lookupSignature, entry.sourceHash,
-    entry.owner, String(entry.securityDefiner), `search_path=${entry.searchPath}`, entry.allowedAcl, entry.volatility]);
-  return `with expected(signature, body_md5, owner_name, security_definer, search_path, allowed_acl, volatility) as (
+    entry.owner, String(entry.securityDefiner), `search_path=${entry.searchPath}`, entry.allowedAcl, entry.volatility,
+    entry.configuration ? JSON.stringify(entry.configuration) : ""]);
+  return `with expected(signature, body_md5, owner_name, security_definer, search_path, allowed_acl, volatility, configuration) as (
     values ${valuesSql(rows)}
   ), actual as (
     select expected.*, p.oid, md5(btrim(p.prosrc,chr(10))) as actual_body,
       pg_get_userbyid(p.proowner) as actual_owner, p.prosecdef as actual_security, p.provolatile::text as actual_volatility,
       replace(coalesce((select c from unnest(p.proconfig) c where c like 'search_path=%'),''),' ','') as actual_path,
+      to_jsonb(p.proconfig) as actual_configuration,
       coalesce((select string_agg((case when a.grantee=0 then 'public' else r.rolname end)||':'||a.privilege_type||':'||a.is_grantable::text,','
         order by (case when a.grantee=0 then 'public' else r.rolname end),a.privilege_type,a.is_grantable)
         from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a left join pg_roles r on r.oid=a.grantee
@@ -723,13 +834,20 @@ function buildSourceFunctionInventorySql(functions) {
     'body',count(*) filter(where actual_body is distinct from body_md5),
     'owner',count(*) filter(where actual_owner is distinct from owner_name),
     'security',count(*) filter(where actual_security is distinct from security_definer::boolean),
-    'search_path',count(*) filter(where actual_path is distinct from search_path),
+    'search_path',count(*) filter(where actual_path is distinct from search_path
+      or (nullif(configuration,'') is not null and actual_configuration is distinct from configuration::jsonb)),
     'acl',count(*) filter(where actual_acl is distinct from allowed_acl),
     'volatility',count(*) filter(where actual_volatility is distinct from volatility)) from actual;`;
 }
 
-export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false } = {}) {
-  return assertSourceFunctionInventoryResult(result, includeCookedWeightEvidenceFunctions ? 38 : 24);
+export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false } = {}) {
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
+  const count = includeQuantityInputV4Functions
+    ? withQuantityV4Contracts(withCookedWeightContracts(recipeProductPostimages().functions.map((entry) => entry.postimage))).length
+    : includeCookedWeightEvidenceFunctions ? 38 : 24;
+  return assertSourceFunctionInventoryResult(result, count);
 }
 
 export function assertCookedWeightEvidenceSourceFunctionInventoryResult(result) {
@@ -785,6 +903,7 @@ function buildSecurityInventoryExpression({
   includeRecipeFuturePropagationFunctions,
   includeRecipeProductFunctions,
   includeCookedWeightEvidenceFunctions,
+  includeQuantityInputV4Functions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
@@ -807,8 +926,12 @@ function buildSecurityInventoryExpression({
   }
   const productFunctions = includeRecipeProductFunctions
     ? withRecipeProductContracts(legacyFunctions) : legacyFunctions;
-  const functions = includeCookedWeightEvidenceFunctions
+  const weightFunctions = includeCookedWeightEvidenceFunctions
     ? withCookedWeightContracts(productFunctions) : productFunctions;
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
+  const functions = includeQuantityInputV4Functions ? withQuantityV4Contracts(weightFunctions) : weightFunctions;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -830,6 +953,8 @@ function buildSecurityInventoryExpression({
     entry.owner,
     entry.searchPath,
     entry.allowedAcl,
+    entry.configuration ? JSON.stringify(entry.configuration) : "",
+    entry.configuration ? (entry.quantityVolatility ?? entry.volatility) : "",
   ]));
   const tableValues = valuesSql(rlsTables);
   const policyValues = valuesSql(policies.map((policy) => [
@@ -851,7 +976,7 @@ function buildSecurityInventoryExpression({
   return `
     with expected_functions(
       lookup_signature, signature, schema_name, function_name, source_hash, security_definer,
-      owner_name, search_path, allowed_acl
+      owner_name, search_path, allowed_acl, configuration, quantity_volatility
     ) as (
       values
       ${functionValues}
@@ -860,6 +985,8 @@ function buildSecurityInventoryExpression({
         expected.*,
         procedure.oid,
         procedure.prosecdef,
+        procedure.proconfig,
+        procedure.provolatile::text as actual_volatility,
         owner.rolname as actual_owner,
         pg_catalog.md5(pg_catalog.btrim(procedure.prosrc, pg_catalog.chr(10)))
           as actual_source_hash,
@@ -1025,9 +1152,13 @@ function buildSecurityInventoryExpression({
       'required_function_count', (select count(*) from expected_functions),
       'function_missing_count', (select count(*) from function_inventory where oid is null),
       'function_source_drift_count', (select count(*) from function_inventory where oid is not null and actual_source_hash is distinct from source_hash),
-      'function_security_drift_count', (select count(*) from function_inventory where oid is not null and prosecdef is distinct from security_definer::boolean),
+      'function_security_drift_count', (select count(*) from function_inventory where oid is not null and (
+        prosecdef is distinct from security_definer::boolean
+        or (nullif(quantity_volatility,'') is not null and actual_volatility is distinct from quantity_volatility))),
       'function_owner_drift_count', (select count(*) from function_inventory where oid is not null and actual_owner is distinct from owner_name),
-      'function_search_path_drift_count', (select count(*) from function_inventory where oid is not null and actual_search_path is distinct from 'search_path=' || search_path),
+      'function_search_path_drift_count', (select count(*) from function_inventory where oid is not null and (
+        actual_search_path is distinct from 'search_path=' || search_path
+        or (nullif(configuration,'') is not null and to_jsonb(proconfig) is distinct from configuration::jsonb))),
       'function_acl_drift_count', (select count(*) from function_inventory where oid is not null and actual_acl is distinct from allowed_acl),
       'unexpected_function_overload_count', (
         select count(*)
@@ -1040,10 +1171,7 @@ function buildSecurityInventoryExpression({
         )
           and not exists (
             select 1 from expected_functions as expected
-            where expected.signature = pg_catalog.replace(pg_catalog.format(
-              '%I.%I(%s)', namespace.nspname, procedure.proname,
-              pg_catalog.oidvectortypes(procedure.proargtypes)
-            ), ' ', '')
+            where procedure.oid = pg_catalog.to_regprocedure(expected.lookup_signature)
           )
       ),
       'required_role_count', (select count(*) from expected_roles),
@@ -1186,6 +1314,7 @@ export function buildFullLocalSecurityInventoryExpression({
   includeRecipeFuturePropagationFunctions = false,
   includeRecipeProductFunctions = false,
   includeCookedWeightEvidenceFunctions = false,
+  includeQuantityInputV4Functions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeCookedBatchPolicyCutover,
@@ -1194,6 +1323,7 @@ export function buildFullLocalSecurityInventoryExpression({
     includeRecipeFuturePropagationFunctions,
     includeRecipeProductFunctions,
     includeCookedWeightEvidenceFunctions,
+    includeQuantityInputV4Functions,
   });
 }
 
@@ -1212,18 +1342,23 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     includeRecipeFuturePropagationFunctions = false,
     includeRecipeProductFunctions = false,
     includeCookedWeightEvidenceFunctions = false,
+    includeQuantityInputV4Functions = false,
   } = {},
 ) {
   const baseFunctionCount = includeSnapshotTables
     ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
     : FUNCTION_CONTRACT.length;
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
   const expectedFunctionCount = baseFunctionCount
     + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0)
     + (includeRecipeFuturePropagationFunctions
       ? RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT.length
       : 0)
     + (includeRecipeProductFunctions ? 19 : 0)
-    + (includeCookedWeightEvidenceFunctions ? 14 : 0);
+    + (includeCookedWeightEvidenceFunctions ? 14 : 0)
+    + (includeQuantityInputV4Functions ? quantityV4Postimages().functions.filter((entry) => !entry.checkedInInventoryPreimageMd5).length + 3 : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;

@@ -47,8 +47,13 @@ export function estimateCookedWeight(ingredients: RecipeNutritionIngredientInput
   return Number.isFinite(estimate) && estimate > 0 ? estimate : null;
 }
 
-export function snapshotIngredients(value: unknown[]): RecipeNutritionIngredientInput[] | null {
-  const result: RecipeNutritionIngredientInput[] = [];
+export interface CookingWeightSnapshotIngredient extends RecipeNutritionIngredientInput {
+  /** Owner-verified frozen metadata; the prediction mapper validates its shape and binding. */
+  quantity_input?: unknown;
+}
+
+export function snapshotIngredients(value: unknown[]): CookingWeightSnapshotIngredient[] | null {
+  const result: CookingWeightSnapshotIngredient[] = [];
   for (const [index, item] of value.entries()) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return null;
     const row = item as Record<string, unknown>;
@@ -61,11 +66,13 @@ export function snapshotIngredients(value: unknown[]): RecipeNutritionIngredient
       || (row.ingredient_type !== "QUANT" && row.ingredient_type !== "TO_TASTE")
       || (row.amount !== null && (typeof row.amount !== "number" || !Number.isFinite(row.amount)))
       || (row.unit !== null && typeof row.unit !== "string")) return null;
-    result.push({ id: typeof row.row_key === "string" ? row.row_key : `${product ?? row.ingredient_id}:${index}`, ingredient_id: row.ingredient_id,
+    const ingredient: CookingWeightSnapshotIngredient = { id: typeof row.row_key === "string" ? row.row_key : `${product ?? row.ingredient_id}:${index}`, ingredient_id: row.ingredient_id,
       ingredient_type: row.ingredient_type, amount: row.amount,
       unit: row.unit, scalable: row.scalable, preparation_state: null,
       food_product_id: typeof product === "string" ? product : null,
-      food_product_nutrition_version_id: typeof version === "string" ? version : null });
+      food_product_nutrition_version_id: typeof version === "string" ? version : null };
+    if (Object.hasOwn(row, "quantity_input")) ingredient.quantity_input = row.quantity_input;
+    result.push(ingredient);
   }
   return result;
 }

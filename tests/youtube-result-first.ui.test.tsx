@@ -883,6 +883,7 @@ describe("YouTube result-first UI", () => {
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
       MULTI_CHILD_ID,
       expect.any(String),
+      true,
     );
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalledWith(
       MULTI_PARENT_ID,
