@@ -25,7 +25,7 @@ import { fetchMealLogRecent, isMealLogApiError } from "@/lib/api/meal-log";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { buildPlannerShellHref } from "@/lib/planner/planner-shell-navigation";
-import { buildCompatibleFoodProductUnits, formatProductUnit } from "@/lib/planner/product-planner-entry-presentation";
+import { buildCompatibleFoodProductUnits, formatProductRawQuantity, formatProductUnit } from "@/lib/planner/product-planner-entry-presentation";
 import type { CookedBatchProjection } from "@/types/cooking";
 import type { MealLogColumn, MealLogRecentItem, MealLogSourceType } from "@/types/meal-log";
 import type { MealLogNutritionPreviewInput } from "@/types/meal-log-preview";
@@ -216,6 +216,7 @@ export function MealLogAddSheet({
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
+  const sourceErrorRef = useRef<HTMLParagraphElement | null>(null);
   const restoredCookedBatchId = initialSelection?.type === "cooked_batch"
     ? initialSelection.id
     : null;
@@ -311,6 +312,8 @@ export function MealLogAddSheet({
   const [restoredSourcePending, setRestoredSourcePending] = useState(Boolean(initialSelection));
   const [suggestionConfirmed, setSuggestionConfirmed] = useState(initialSuggestionConfirmed);
   const [loading, setLoading] = useState(true);
+  const [sourceReadFailed, setSourceReadFailed] = useState(false);
+  const [sourceReadError, setSourceReadError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState<"batch" | "catalog" | "recent" | null>(null);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
@@ -359,6 +362,11 @@ export function MealLogAddSheet({
     if (!error) return;
     requestAnimationFrame(() => errorRef.current?.focus());
   }, [error]);
+  useEffect(() => {
+    if (!sourceReadError) return;
+    const frame = requestAnimationFrame(() => sourceErrorRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [sourceReadError]);
   useEffect(() => () => { selectionRequestRef.current += 1; }, []);
 
   useEffect(() => {
@@ -430,9 +438,14 @@ export function MealLogAddSheet({
               : current);
           }
         }
+        if (isCurrent()) {
+          setSourceReadFailed(false);
+          setSourceReadError(null);
+        }
       })
       .catch((reason: unknown) => {
         if (!isCurrent()) return;
+        setSourceReadFailed(true);
         if (initialSelection && restorationRequest === selectionRequestRef.current) {
           setSelection((current) => current?.type === initialSelection.type
             && current.id === initialSelection.id ? null : current);
@@ -441,7 +454,7 @@ export function MealLogAddSheet({
           onUnauthorized(initialSelection ?? null, columnId);
           return;
         }
-        setError(reason instanceof Error ? reason.message : "음식 목록을 불러오지 못했어요.");
+        setSourceReadError(reason instanceof Error ? reason.message : "음식 목록을 불러오지 못했어요.");
       })
       .finally(() => {
         if (isCurrent()) {
@@ -768,7 +781,7 @@ export function MealLogAddSheet({
                 type="button"
               >
                 <span className="block truncate font-medium" title={item.display_name}>{item.display_name}</span>
-                <span className="block text-xs text-[var(--text-2)]">{item.display_brand ? `${item.display_brand} · ` : ""}{recentSourceLabel(item.source.type)} · 최근 {item.last_quantity.amount}{quantityUnitLabel(item.last_quantity.unit)} · {item.frequency}회 기록</span>
+                <span className="block text-xs text-[var(--text-2)]">{item.display_brand ? `${item.display_brand} · ` : ""}{recentSourceLabel(item.source.type)} · 최근 {isQuantityInputSnapshot(item.quantity_input, item.last_quantity) ? formatProductRawQuantity(item.quantity_input) : `${formatQuantityAmount(item.last_quantity.amount)}${quantityUnitLabel(item.last_quantity.unit)}`} · {item.frequency}회 기록</span>
               </button>
               {unavailable ? <p className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 추가할 수 없는 음식이에요. 요리한 음식 탭에서 상태를 확인해 주세요.</p>
                 : checkingRecentId === item.source.id ? <p aria-live="polite" className="px-3 pb-3 text-xs text-[var(--text-2)]">음식의 현재 정보를 확인하고 있어요…</p>
@@ -817,6 +830,7 @@ export function MealLogAddSheet({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-[calc(20px+env(safe-area-inset-bottom))]" data-testid="meal-log-source-scroll" ref={sourceScrollRef}>
         {discardConfirm ? <div className="space-y-3 p-4"><button className="min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand)] font-medium text-white" onClick={() => setDiscardConfirm(false)} type="button">계속 편집</button><button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium" onClick={onClose} type="button">변경사항 버리기</button></div> : <>
         {error ? <p className="mx-4 mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] p-3 text-sm" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
+        {sourceReadError ? <div><p className="mx-4 mb-3 rounded-[var(--radius-control)] border border-[var(--danger)] p-3 text-sm" ref={sourceErrorRef} role="alert" tabIndex={-1}>{sourceReadError}</p><button className="mx-4 mb-3 min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-medium" disabled={loading || saving} onClick={() => setBatchRefresh(current => current + 1)} type="button">음식 목록 다시 불러오기</button></div> : null}
         {!(amountStep && selection) ? <>
         <div aria-label="음식 출처 선택" className="grid shrink-0 grid-cols-3 gap-1 border-b border-[var(--line-strong)] p-2" role="tablist">
           {SOURCE_TABS.map(({ id, label }, index) => (
@@ -875,7 +889,7 @@ export function MealLogAddSheet({
         <div className="px-4 py-4">
           {loading && tab !== "catalog" ? <div aria-busy="true" aria-label="음식 목록 불러오는 중" className="space-y-3 py-4" role="status"><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
 
-          {tab === "recent" ? <section aria-labelledby="meal-log-source-recent-tab" id="meal-log-source-recent" role="tabpanel">{recentSection}{!loading && visibleRecent.length === 0 && !recentHasNext ? <p className="py-8 text-center text-sm text-[var(--text-2)]">최근 기록한 음식이 없어요.</p> : null}<button className="mt-3 min-h-11 w-full text-[var(--brand)]" onClick={() => setTab("cooked")} type="button">요리한 음식 전체 보기</button></section> : tab === "cooked" ? (
+          {tab === "recent" ? <section aria-labelledby="meal-log-source-recent-tab" id="meal-log-source-recent" role="tabpanel">{recentSection}{!loading && !sourceReadFailed && visibleRecent.length === 0 && !recentHasNext ? <p className="py-8 text-center text-sm text-[var(--text-2)]">최근 기록한 음식이 없어요.</p> : null}<button className="mt-3 min-h-11 w-full text-[var(--brand)]" onClick={() => setTab("cooked")} type="button">요리한 음식 전체 보기</button></section> : tab === "cooked" ? (
             <section aria-labelledby="meal-log-source-cooked-tab" id="meal-log-source-cooked" role="tabpanel">
               <h3 className="mt-5 text-sm font-semibold">요리한 음식 전체</h3>
               <ul className="divide-y divide-[var(--line-strong)]">
@@ -945,7 +959,7 @@ export function MealLogAddSheet({
                   {loadingMore === "batch" ? "불러오는 중…" : "요리한 음식 더 불러오기"}
                 </button>
               ) : null}
-              {!loading && batches.length === 0 ? <p className="py-8 text-center text-sm text-[var(--text-2)]">표시할 요리한 음식이 없어요.</p> : null}
+              {!loading && !sourceReadFailed && batches.length === 0 ? <p className="py-8 text-center text-sm text-[var(--text-2)]">표시할 요리한 음식이 없어요.</p> : null}
             </section>
           ) : (
             <section aria-labelledby="meal-log-source-catalog-tab" id="meal-log-source-catalog" role="tabpanel">
@@ -1021,7 +1035,7 @@ export function MealLogAddSheet({
             {selection.ingredientOptions?.choices.find(choice => choice.unit === selection.unit)?.quality === "estimated" || selection.batchBasis?.weight_source === "estimated" ? <p className="mt-2 text-sm text-[var(--text-2)]">약 환산값이에요. 실제 무게에 따라 달라질 수 있어요.</p> : null}
             {selection.unit === "인분" && selection.batchBasis ? <p className="mt-2 text-sm text-[var(--text-2)]">조리 당시 {selection.batchBasis.cooking_servings}인분 · 전체 {formatQuantityAmount(selection.batchBasis.finished_weight_g)}g 기준이에요.</p> : null}
             {previewLoading ? <div aria-label="영양 미리보기 불러오는 중" className="mt-5 space-y-3" role="status"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4" /></div> : null}
-            {preview ? <section aria-label="입력한 양의 영양 미리보기" className="my-5 space-y-3"><div className="flex items-center justify-between text-sm"><span>{amount}{quantityUnitLabel(selection.unit)} 기준</span><span className="text-xl">{formatMealLogEnergy(preview)}</span></div><MealLogMacroBar nutrition={preview} thin /><dl className="flex justify-between gap-3 text-sm">{MEAL_LOG_MACROS.map(macro => <div key={macro.key} className="flex gap-1"><dt aria-label={macro.label}>{macro.short}</dt><dd>{formatMealLogNumber(preview[macro.key])}{preview[macro.key] !== null ? "g" : ""}</dd></div>)}</dl></section> : null}
+            {preview ? <section aria-label="입력한 양의 영양 미리보기" className="my-5 space-y-3"><div className="flex items-center justify-between text-sm"><span>{amount === null ? "-" : formatQuantityAmount(amount)}{quantityUnitLabel(selection.unit)} 기준</span><span className="text-xl">{formatMealLogEnergy(preview)}</span></div><MealLogMacroBar nutrition={preview} thin /><dl className="flex justify-between gap-3 text-sm">{MEAL_LOG_MACROS.map(macro => <div key={macro.key} className="flex gap-1"><dt aria-label={macro.label}>{macro.short}</dt><dd>{formatMealLogNumber(preview[macro.key])}{preview[macro.key] !== null ? "g" : ""}</dd></div>)}</dl></section> : null}
             {preview?.weight_basis ? <p className="text-sm leading-5 text-[var(--text-2)]">{selection.unit === "g" ? "먹은 양은 입력한 g이에요." : `먹은 양은 입력한 ${quantityUnitLabel(selection.unit)} 수량이에요.`} 영양 미리보기의 전체무게 기준{preview.weight_basis.finished_weight_g === null ? "은 미확인이에요" : `은 ${Math.round(preview.weight_basis.finished_weight_g).toLocaleString("ko-KR")}g이에요`}. 무게 근거: {cookedWeightSourceLabel(preview.weight_basis.source)}.</p> : null}
             {preview?.weight_assumption_codes?.length ? <p className="text-sm leading-5 text-[var(--text-2)]">{COOKED_MIX_ASSUMPTION_TEXT}</p> : null}
             {previewError ? <div className="mt-4 flex items-center justify-between gap-2 text-sm"><span>영양 미리보기를 불러오지 못했어요.</span><button className="min-h-11 shrink-0 text-[var(--brand)]" onClick={() => setPreviewRetry(current => current + 1)} type="button">다시 확인</button></div> : null}
