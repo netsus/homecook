@@ -377,8 +377,38 @@ export function assertC04QuantityCheckpointOrigin(review, record, journal, { pha
   return record;
 }
 
-function c04Identity(review, observation, stage, generation) {
-  c04Check([47, 48].includes(generation) && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (stage === "consumers" ? 226 : 227)
+export function assertC04WorkerSuccessorBinding(review, binding, databaseReceiptSha256) {
+  c04Check(binding && Object.keys(binding).sort().join() === "ledgerCount,migrationSha256,predecessorDatabaseReceiptSha256,receipt,reviewSha256,schema,targetSha256"
+    && binding.schema === "homecook.cooked-weight-attestation-successor.v1" && binding.ledgerCount === 228
+    && binding.targetSha256 === review.targetSha256 && binding.predecessorDatabaseReceiptSha256 === databaseReceiptSha256
+    && [binding.reviewSha256, binding.migrationSha256, binding.predecessorDatabaseReceiptSha256, binding.receipt?.sha256].every(value => SHA64.test(value ?? ""))
+    && Object.keys(binding.receipt ?? {}).sort().join() === "path,sha256"
+    && typeof binding.receipt.path === "string" && binding.receipt.path.startsWith("/") && resolve(binding.receipt.path) === binding.receipt.path,
+  "unbound current228 successor");
+  return binding;
+}
+
+export function assertC04SuccessorCheckpoint(review, record, reviewSha256) {
+  const predecessor = record?.predecessorRecord;
+  assertC04QuantityCheckpoint(review, predecessor, "after", reviewSha256);
+  assertC04WorkerSuccessorBinding(review, record.databaseSuccessor, predecessor.workerDatabaseReceiptSha256);
+  c04Check(Object.keys(record).sort().join() === [...C04_RECEIPT_KEYS.split(","), "databaseSuccessor", "predecessorRecord"].sort().join()
+    && record.schema === "homecook.prelaunch-quantity-worker-after-successor.v1" && record.status === "committed"
+    && record.ledgerCount === 228 && record.catalogFingerprint === review.catalogAfter
+    && record.serviceState === "running" && Number.isSafeInteger(record.pid) && record.pid > 0,
+  "current228 checkpoint shape differs");
+  for (const key of ["feature", "releaseSha", "targetSha256", "consumersReceiptSha256", "credentialGeneration", "workerReleaseSha", "schemaIdentity", "snapshotDigest",
+    "credentialRowSha256", "artifactSha256", "descriptorSha256", "credentialMetadataSha256", "plistSha256", "workerDatabaseReceiptSha256", "workerOperationId", "workerReviewSha256", "zeroActualAI"])
+    c04Check(isDeepStrictEqual(record[key], predecessor[key]), `current228 checkpoint ${key} changed`);
+  c04Quiescence(record);
+  for (const key of ["normalDataSha256", "policyRowSha256"]) c04Check(SHA64.test(record[key] ?? ""), "current228 checkpoint hash missing");
+  return record;
+}
+
+function c04Identity(review, observation, stage, generation, successor = null) {
+  if (successor) assertC04WorkerSuccessorBinding(review, successor, successor.predecessorDatabaseReceiptSha256);
+  c04Check(isDeepStrictEqual(observation?.databaseSuccessor ?? null, successor) && (!successor || stage === "worker" && generation === 48), "current successor/stage differs");
+  c04Check([47, 48].includes(generation) && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (successor ? 228 : stage === "consumers" ? 226 : 227)
     && observation.catalogFingerprint === (stage === "consumers" ? review.catalogBefore : review.catalogAfter)
     && observation.credentialGeneration === generation
     && observation.workerReleaseSha === (generation === 47 ? YOUTUBE_V71_RELEASE_SHA : review.releaseSha)
@@ -393,7 +423,7 @@ function c04Quiescence(observation, quantityEnabled = false) {
     && observation.queued === 0 && observation.processing === 0 && observation.permitHeld === false && observation.activeEnqueueSessions === 0,
   "OFF/control/quiescence required for positive checkpoint");
 }
-function c04Record(review, reviewSha256, observation, service, consumersReceiptSha256, databaseReceiptSha256, metadataSha256) {
+function c04Record(review, reviewSha256, observation, service, consumersReceiptSha256, databaseReceiptSha256, metadataSha256, successor = null, predecessor = null) {
   const before = databaseReceiptSha256 === null;
   const record = { schema: `homecook.prelaunch-quantity-worker-${before ? "before" : "after"}.v1`, status: "committed",
     feature: "ingredient-quantity-v4", releaseSha: review.releaseSha, targetSha256: review.targetSha256,
@@ -411,6 +441,11 @@ function c04Record(review, reviewSha256, observation, service, consumersReceiptS
     serviceState: service.loaded ? "running" : "stopped", pid: service.loaded ? service.pid : null,
     workerDatabaseReceiptSha256: databaseReceiptSha256, workerOperationId: review.operationId,
     workerReviewSha256: reviewSha256, zeroActualAI: true };
+  if (successor) {
+    c04Check(!before && predecessor?.credentialGeneration === 48, "successor cannot replace original47 authority");
+    return assertC04SuccessorCheckpoint(review, { ...record, schema: "homecook.prelaunch-quantity-worker-after-successor.v1",
+      databaseSuccessor: successor, predecessorRecord: predecessor.predecessorRecord ?? predecessor }, reviewSha256);
+  }
   return assertC04QuantityCheckpoint(review, record, before ? "before" : "after", reviewSha256);
 }
 
@@ -419,10 +454,13 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
   assertC04QuantityControlReview(review, bindings);
   c04Check(SHA64.test(reviewSha256 ?? ""), "original review is unbound");
   const checkedJournal = async () => assertC04QuantityJournal(review, await adapters.readJournal(), reviewSha256);
-  const observe = async context => adapters.observe(context);
+  const observe = async context => {
+    if (context.successor) assertC04WorkerSuccessorBinding(review, context.successor, context.databaseReceiptSha256);
+    return adapters.observe(context);
+  };
   async function predecessor(context, stage, checkpoint = null) {
     const current = await observe(context);
-    c04Identity(review, current, stage, 47);
+    c04Identity(review, current, stage, 47, context.successor ?? null);
     if (checkpoint) {
       c04Quiescence(current);
       for (const key of ["credentialRowSha256", "policyRowSha256", "normalDataSha256"])
@@ -456,11 +494,11 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     await adapters.journal("policy-disable-intent", { workerDatabaseReceiptSha256: null, predecessor: service });
     // Busy queues/expired credentials never roll back the safe OFF itself.
     await adapters.transaction(context, async tx => {
-      const before = await tx.observe(); c04Identity(review, before, "consumers", 47);
+      const before = await tx.observe(); c04Identity(review, before, "consumers", 47, context.successor ?? null);
       c04Check(before.quantityPolicyEnabled === false && before.productWriterEnabled === true && before.weightWriterEnabled === true, "locked quiesce controls changed");
       await tx.closePolicy();
       const closed = await tx.observe();
-      c04Identity(review, closed, "consumers", 47);
+      c04Identity(review, closed, "consumers", 47, context.successor ?? null);
       c04Check(closed.workerPolicyEnabled === false && closed.normalDataSha256 === before.normalDataSha256
         && closed.credentialRowSha256 === before.credentialRowSha256 && closed.policyStableSha256 === before.policyStableSha256 && isDeepStrictEqual(closed.policy, { ...before.policy, enabled: false }), "policy OFF changed more than enabled/timestamp");
     });
@@ -471,7 +509,7 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     c04Check(!stopped.loaded && stopped.plistSha256 === service.plistSha256 && stopped.metadataSha256 === service.metadataSha256,
       "old worker did not stop at the exact predecessor");
     const current = await observe(context);
-    c04Identity(review, current, "consumers", 47); c04Quiescence(current);
+    c04Identity(review, current, "consumers", 47, context.successor ?? null); c04Quiescence(current);
     const record = c04Record(review, reviewSha256, current, stopped, context.consumersReceiptSha256, null, stopped.metadataSha256);
     return adapters.publishCheckpoint("before", record, { policyStableSha256: current.policyStableSha256 });
   }
@@ -479,8 +517,9 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     await adapters.verifyCandidate();
     await adapters.verifyPreparation();
     const journal = await checkedJournal();
-    const pre = await adapters.readCheckpoint("before", journal);
     const context = await adapters.preflight("worker");
+    if (context.successor) assertC04WorkerSuccessorBinding(review, context.successor, context.databaseReceiptSha256);
+    const pre = await adapters.readCheckpoint(context.successor ? "after" : "before", journal);
     c04Check(context.consumersReceiptSha256 === pre.consumersReceiptSha256 && SHA64.test(context.databaseReceiptSha256 ?? ""), "DB2/consumers immutable receipt differs");
     const initial = await observe(context);
     const savedRepairBasis = journal.installationRepairBasis;
@@ -492,6 +531,11 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     if (interruptedActivation && !savedRepairBasis) await adapters.journal(journal.state, { installationRepairBasis: journal.activationVerification });
     const repaired = !interruptedActivation && journal.repairPause ? await adapters.readRepairPause(journal) : null;
     const baseline = interruptedActivation?.observation ?? repaired?.observation ?? pre;
+    if (context.successor) {
+      c04Check(resume && initial.credentialGeneration === 48 && pre?.credentialGeneration === 48
+        && Boolean(interruptedActivation || repaired)
+        && isDeepStrictEqual(baseline.databaseSuccessor, context.successor), "current228 resume requires original48 current repair/activation origin");
+    }
     let credentials;
     if (initial.credentialGeneration === 48) {
       c04Check(resume && ["credential-commit-intent", "credential-48-committed-policy-disabled", "install-repair-required", "checkpoint-publish-intent", "verified-policy-disabled", "repair-quiesced", "activation-verified-policy-disabled", "activation-not-applied"].includes(journal.state), "current48 requires its original resume origin");
@@ -506,12 +550,12 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
         await adapters.authenticateManager(manager);
         await adapters.journal("credential-commit-intent", { credentials: adapters.credentialProof(credentials), workerDatabaseReceiptSha256: context.databaseReceiptSha256 });
         await adapters.transaction(context, async tx => {
-          const before = await tx.observe(); c04Identity(review, before, "worker", 47); c04Quiescence(before);
+          const before = await tx.observe(); c04Identity(review, before, "worker", 47, context.successor ?? null); c04Quiescence(before);
           for (const key of ["credentialRowSha256", "policyRowSha256", "normalDataSha256"])
             c04Check(before[key] === pre[key], `locked predecessor ${key} changed`);
           await adapters.assertStoppedPredecessor(pre);
           await tx.rotate(manager, credentials);
-          const after = await tx.observe(); c04Identity(review, after, "worker", 48); c04Quiescence(after);
+          const after = await tx.observe(); c04Identity(review, after, "worker", 48, context.successor ?? null); c04Quiescence(after);
           c04Check(after.policyRowSha256 === before.policyRowSha256 && after.normalDataSha256 === before.normalDataSha256
             && after.policyStableSha256 === before.policyStableSha256 && isDeepStrictEqual(after.policy, before.policy)
             && after.jtiHash === credentials.metadata.jti_sha256, "CAS changed policy/data or registered a foreign credential");
@@ -520,7 +564,7 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
         const actual = await observe(context).catch(() => null);
         let outcome = "credential-outcome-unknown";
         try {
-          c04Identity(review, actual, "worker", actual?.credentialGeneration); c04Quiescence(actual);
+          c04Identity(review, actual, "worker", actual?.credentialGeneration, context.successor ?? null); c04Quiescence(actual);
           c04Check(actual.policyRowSha256 === pre.policyRowSha256 && actual.normalDataSha256 === pre.normalDataSha256, "unknown policy/data");
           if (actual.credentialGeneration === 48 && actual.jtiHash === credentials.metadata.jti_sha256) outcome = "credential-48-committed-policy-disabled";
           else if (actual.credentialGeneration === 47 && actual.credentialRowSha256 === pre.credentialRowSha256) outcome = "credential-not-applied";
@@ -532,19 +576,19 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
       await adapters.journal("credential-48-committed-policy-disabled", { credentials: adapters.credentialProof(credentials), workerDatabaseReceiptSha256: context.databaseReceiptSha256 });
     }
     c04Check(!(repaired || interruptedActivation) || initial.credentialRowSha256 === baseline.credentialRowSha256, "repair credential changed");
-    const registered = await observe(context); c04Identity(review, registered, "worker", 48); c04Quiescence(registered);
+    const registered = await observe(context); c04Identity(review, registered, "worker", 48, context.successor ?? null); c04Quiescence(registered);
     c04Check(registered.jtiHash === credentials.metadata.jti_sha256 && registered.policyRowSha256 === baseline.policyRowSha256
       && registered.normalDataSha256 === baseline.normalDataSha256, "registered credential/policy/data differs");
     try {
       // The adapter checks actual plist before any replacement; foreign writes are never compensated over.
-      const health = await adapters.installAndVerify(credentials, pre, { resume });
+      const health = await adapters.installAndVerify(credentials, pre, { resume, successor: context.successor ?? null });
       c04Check(health.authenticatedStatus === 200 && health.emptyClaimDenied && health.health.ok && health.health.ready
         && health.stableObservations === 2, "actual zero-budget health is incomplete");
-      const current = await observe(context); c04Identity(review, current, "worker", 48); c04Quiescence(current);
+      const current = await observe(context); c04Identity(review, current, "worker", 48, context.successor ?? null); c04Quiescence(current);
       c04Check(current.credentialRowSha256 === registered.credentialRowSha256 && current.policyRowSha256 === registered.policyRowSha256
         && current.normalDataSha256 === registered.normalDataSha256, "worker state changed during verification");
       const service = await adapters.currentService();
-      const record = c04Record(review, reviewSha256, current, service, pre.consumersReceiptSha256, context.databaseReceiptSha256, credentials.metadataSha256);
+      const record = c04Record(review, reviewSha256, current, service, pre.consumersReceiptSha256, context.databaseReceiptSha256, credentials.metadataSha256, context.successor ?? null, pre);
       return adapters.publishCheckpoint("after", record, { repair: resume, policyStableSha256: current.policyStableSha256 });
     } catch (error) {
       await adapters.journal("install-repair-required", { credentials: adapters.credentialProof(credentials), workerDatabaseReceiptSha256: context.databaseReceiptSha256 });
@@ -552,8 +596,11 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     }
   }
   async function activate() {
-    await adapters.verifyCandidate();
     const journal = await checkedJournal();
+    const pendingIntent = ["activation-commit-intent", "activation-outcome-unknown"].includes(journal.state);
+    // Candidate verification may materialize missing files. Resolve pending intent
+    // identity using read-only evidence before allowing that or a new activation.
+    if (!pendingIntent) await adapters.verifyCandidate();
     c04Check(["verified-policy-disabled", "activation-verified-policy-disabled", "activation-commit-intent", "activation-not-applied", "activation-outcome-unknown", "activation-committed"].includes(journal.state), "unknown activation origin");
     const post = await adapters.readCheckpoint("after", journal);
     const context = await adapters.preflight("worker", "on");
@@ -562,8 +609,24 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     const credentials = await adapters.existingCredentials(journal);
     const authority = await adapters.readerWriterAuthority(context);
     for (const key of ["readerReceiptSha256", "writerReceiptSha256"]) c04Check(SHA64.test(authority[key] ?? ""), "unbound reader/writer ON authority");
-    const fresh = await observe(context); c04Identity(review, fresh, "worker", 48);
+    const fresh = await observe(context); c04Identity(review, fresh, "worker", 48, context.successor ?? null);
     c04Check(fresh.credentialRowSha256 === post.credentialRowSha256 && fresh.jtiHash === credentials.metadata.jti_sha256, "activation credential changed");
+    if (pendingIntent) {
+      const intent = await adapters.activationOrigin(journal);
+      // The intent's before observation fixes the DB identity expected after its
+      // enabled-only update too; historical227 cannot authorize current228.
+      c04Identity(review, intent?.observation, "worker", 48, context.successor ?? null);
+      c04Check(intent.post?.workerDatabaseReceiptSha256 === context.databaseReceiptSha256
+        && intent.post?.consumersReceiptSha256 === context.consumersReceiptSha256
+        && intent.authority?.readerReceiptSha256 === authority.readerReceiptSha256
+        && intent.authority?.writerReceiptSha256 === authority.writerReceiptSha256
+        && fresh.credentialRowSha256 === intent.observation.credentialRowSha256
+        && fresh.policyStableSha256 === intent.observation.policyStableSha256
+        && isDeepStrictEqual(fresh.policy, { ...intent.observation.policy, enabled: fresh.workerPolicyEnabled })
+        && (fresh.workerPolicyEnabled || fresh.policyRowSha256 === intent.observation.policyRowSha256),
+      "pending activation intent authority/whole policy differs");
+      await adapters.verifyCandidate();
+    }
     if (fresh.workerPolicyEnabled) {
       c04Check(["activation-committed", "activation-commit-intent", "activation-outcome-unknown"].includes(journal.state), "already ON without original durable activation intent");
       if (journal.state !== "activation-committed") return adapters.finalizeActivation(context, journal, credentials, post, authority);
@@ -579,11 +642,11 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     try {
       await adapters.journal("activation-commit-intent", { activationVerification: proof });
       await adapters.transaction(context, async tx => {
-        const before = await tx.observe(); c04Identity(review, before, "worker", 48); c04Quiescence(before, true);
+        const before = await tx.observe(); c04Identity(review, before, "worker", 48, context.successor ?? null); c04Quiescence(before, true);
         for (const key of ["credentialRowSha256", "policyRowSha256", "normalDataSha256"]) c04Check(before[key] === fresh[key], "locked activation state changed");
         await adapters.assertStableInstalled(health.service);
         await tx.enablePolicy();
-        const after = await tx.observe(); c04Identity(review, after, "worker", 48);
+        const after = await tx.observe(); c04Identity(review, after, "worker", 48, context.successor ?? null);
         c04Check(after.workerPolicyEnabled === true && after.quantityPolicyEnabled === true
           && after.productWriterEnabled === true && after.weightWriterEnabled === true
           && after.credentialRowSha256 === before.credentialRowSha256 && after.normalDataSha256 === before.normalDataSha256
@@ -594,7 +657,8 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     } catch (error) {
       const actual = await observe(context).catch(() => null);
       const known = actual?.credentialRowSha256 === fresh.credentialRowSha256 && actual?.targetSha256 === review.targetSha256
-        && actual?.ledgerCount === 227 && actual?.catalogFingerprint === review.catalogAfter;
+        && actual?.ledgerCount === (context.successor ? 228 : 227) && actual?.catalogFingerprint === review.catalogAfter
+        && isDeepStrictEqual(actual?.databaseSuccessor ?? null, context.successor ?? null);
       await adapters.journal(known && actual.workerPolicyEnabled === false ? "activation-not-applied" : "activation-outcome-unknown", { activationVerification: proof });
       throw error; // Never compensate a possibly committed ON by restoring old credentials/plist.
     }
@@ -608,7 +672,7 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     const context = await adapters.preflight("worker");
     c04Check(context.databaseReceiptSha256 === post.workerDatabaseReceiptSha256, "repair DB2 differs");
     const activation = await adapters.activationOrigin(journal);
-    const initial = await observe(context); c04Identity(review, initial, "worker", 48);
+    const initial = await observe(context); c04Identity(review, initial, "worker", 48, context.successor ?? null);
     c04Check(initial.quantityPolicyEnabled === false && initial.productWriterEnabled === true && initial.weightWriterEnabled === true
       && initial.credentialRowSha256 === activation.observation.credentialRowSha256
       && initial.policyStableSha256 === activation.observation.policyStableSha256
@@ -617,28 +681,29 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     const service = await adapters.currentService();
     c04Check(service.plistSha256 === post.plistSha256, "repair foreign launcher");
     const repairBefore = journal.state.startsWith("repair-") && journal.repairBeforeObservation ? journal.repairBeforeObservation : initial;
+    if (context.successor) c04Identity(review, repairBefore, "worker", 48, context.successor);
     c04Check(repairBefore.credentialRowSha256 === initial.credentialRowSha256 && repairBefore.policyStableSha256 === initial.policyStableSha256,
       "original repair intent differs");
     await adapters.journal("repair-disable-intent", { repairBeforeObservation: repairBefore });
     await adapters.transaction(context, async tx => {
-      const before = await tx.observe(); c04Identity(review, before, "worker", 48);
+      const before = await tx.observe(); c04Identity(review, before, "worker", 48, context.successor ?? null);
       c04Check(before.quantityPolicyEnabled === false && before.productWriterEnabled === true && before.weightWriterEnabled === true
         && before.credentialRowSha256 === initial.credentialRowSha256 && before.policyRowSha256 === initial.policyRowSha256,
       "locked repair authority changed");
       await tx.closePolicy();
-      const after = await tx.observe(); c04Identity(review, after, "worker", 48);
+      const after = await tx.observe(); c04Identity(review, after, "worker", 48, context.successor ?? null);
       c04Check(after.workerPolicyEnabled === false && after.credentialRowSha256 === before.credentialRowSha256
         && after.normalDataSha256 === before.normalDataSha256 && after.policyStableSha256 === before.policyStableSha256
         && isDeepStrictEqual(after.policy, { ...before.policy, enabled: false }), "repair OFF changed more than enabled/timestamp");
     });
-    const closed = await observe(context); c04Identity(review, closed, "worker", 48);
+    const closed = await observe(context); c04Identity(review, closed, "worker", 48, context.successor ?? null);
     c04Check(closed.workerPolicyEnabled === false, "repair OFF not confirmed");
     const drained = closed.queued === 0 && closed.processing === 0 && !closed.permitHeld && closed.activeEnqueueSessions === 0;
     if (!drained) return adapters.publishRepairPause({ beforeObservation: repairBefore, observation: closed, service, status: "drain_pending", post });
     await adapters.stopInstalled(service);
     const stopped = await adapters.currentService();
     c04Check(!stopped.loaded && stopped.plistSha256 === post.plistSha256, "exact48 worker not stopped");
-    const final = await observe(context); c04Identity(review, final, "worker", 48); c04Quiescence(final);
+    const final = await observe(context); c04Identity(review, final, "worker", 48, context.successor ?? null); c04Quiescence(final);
     return adapters.publishRepairPause({ beforeObservation: repairBefore, observation: final, service: stopped, status: "quiesced", post });
   }
   return { prepare, quiesce, execute, resume: () => execute({ resume: true }), activate, pauseForRepair };

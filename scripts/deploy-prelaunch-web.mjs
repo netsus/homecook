@@ -53,6 +53,8 @@ import {
   loadQuantityV4DatabaseReceipt, acquirePrelaunchDeployLock,
   assertQuantityV4WorkerProcess,
   loadQuantityV4ActiveWorkerContinuation,
+  COOKED_WEIGHT_ATTESTATION_FEATURE, loadCookedWeightAttestationSuccessor,
+  loadCookedWeightAttestationWorkerContinuation, loadCookedWeightAttestationQuantityOff,
 } from "./lib/prelaunch-web-deploy.mjs";
 
 const repository = realpathSync(resolve(process.env.HOMECOOK_DEPLOY_REPOSITORY || resolve(dirname(fileURLToPath(import.meta.url)), "..")));
@@ -200,7 +202,7 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
     const review = loadClosedR2Review(repository);
     const patch = readEnvironmentPatch(options.envFile, repository);
     if (options.reviewedProtectedRollout) {
-      const rollout = loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase });
+      const rollout = loadProtectedRolloutReview(repository, { feature: options.protectedFeature, ref: options.ref, phase: options.protectedPhase });
       validateProtectedCandidate(rollout, live, selection, closedContext);
       assertProtectedRolloutEnvironment({ review: rollout, before: live.plist, after: plist,
         currentControlSha256: review.controlSha256, currentProofsSha256: hash(JSON.stringify(verifyClosedR2HistoricalProofs(review, repository))), currentGeneration: review.consentGeneration,
@@ -337,6 +339,10 @@ function currentProtectedPhase(live = current()) {
   if (!existsSync(join(root, "protected-cooked-weight-database-guard.json"))) return product;
   const review = loadProtectedRolloutReview(repository, { feature: COOKED_WEIGHT_FEATURE });
   const weight = recordedProtectedPhase(review, live);
+  if (existsSync(join(root, "protected-cooked-weight-attestation-database-guard.json"))) {
+    const personal = loadProtectedRolloutReview(repository, { feature: COOKED_WEIGHT_ATTESTATION_FEATURE });
+    return { ...recordedProtectedPhase(personal, live), feature: COOKED_WEIGHT_ATTESTATION_FEATURE, predecessorReaderFloor: personal.predecessorQuantity.readerFloor };
+  }
   if (existsSync(join(root, "protected-quantity-v4-consumers-database-guard.json"))) {
     const consumers = loadProtectedRolloutReview(repository, { feature: QUANTITY_V4_FEATURE, phase: "database" });
     const workerGuard = join(root, "protected-quantity-v4-worker-database-guard.json");
@@ -503,6 +509,10 @@ function validateProtectedCandidate(review, live, selection, context) {
   if (!context || selection.target !== review.to) throw new DeploymentError("보호 전환은 실제 닫힘 predecessor에서만 시작합니다.");
   const digests = Object.fromEntries(Object.keys(review.files).map(file => [file, [review.from, review.to].map(sha =>
     git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`], { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null)]));
+  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) {
+    git(["merge-base", "--is-ancestor", review.predecessorQuantity.readerFloor, live.ref]);
+    git(["merge-base", "--is-ancestor", live.ref, selection.target]);
+  }
   if ([COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE].includes(review.feature)) {
     git(["merge-base", "--is-ancestor", review.predecessorProtected.readerFloor, live.ref]);
     git(["merge-base", "--is-ancestor", live.ref, selection.target]);
@@ -519,6 +529,11 @@ function validateProtectedCandidate(review, live, selection, context) {
   verifyProtectedBoundary(review, live);
 }
 function loadProtectedDatabaseReceipt(review) {
+  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) {
+    const successor = loadCookedWeightAttestationSuccessor(repository);
+    if (!successor || !isDeepStrictEqual(successor.review, review)) throw new DeploymentError("Personal attestation committed successor is required");
+    return successor;
+  }
   if (review.feature === QUANTITY_V4_FEATURE) return loadQuantityV4DatabaseReceipt(repository, review.quantityStage);
   const { databaseGuardPath: protectedDatabaseGuardPath, operationRoot: protectedOperationRoot } = protectedRolloutPaths(root, review);
   const guardBytes = readClosedR2PrivateBytes(protectedDatabaseGuardPath, repository, 524288);
@@ -569,17 +584,25 @@ function cookedWeightProductOffReceipt(review) {
 }
 async function verifyProtectedBaseline(review, plan, options) {
   const { readerReceiptPath: protectedReaderReceiptPath, writerPrefix } = protectedRolloutPaths(root, review);
-  if (plan.baselineRequired || plan.pending.length || !isDeepStrictEqual(plan.source, review.database.after) || !isDeepStrictEqual(plan.applied, review.database.after)) {
+  const successor = loadCookedWeightAttestationSuccessor(repository);
+  const currentReview = successor && [QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE].includes(review.feature) ? successor.review : review;
+  if (plan.baselineRequired || plan.pending.length || !isDeepStrictEqual(plan.source, currentReview.database.after) || !isDeepStrictEqual(plan.applied, currentReview.database.after)) {
     throw new DeploymentError("현재 승인된 보호 DB source/applied 이력이 다릅니다.");
   }
   loadProtectedDatabaseReceipt(review);
   if (options.reviewedProtectedRollout && (options.dbConfig !== review.database.configPath
     || hash(readClosedR2PrivateBytes(options.dbConfig, repository, 65536)) !== review.database.configSha256)) throw new DeploymentError("보호 reader의 승인된 config bytes가 다릅니다.");
   const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
-  const observed = await createProtectedPrelaunchAdapter(base, review.feature, review).observe(undefined, "protected-baseline-readback");
+  const observed = await createProtectedPrelaunchAdapter(base, currentReview.feature, currentReview).observe(undefined, "protected-baseline-readback");
+  const workerContinuation = successor ? loadCookedWeightAttestationWorkerContinuation(successor, repository) : null;
+  const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
+  if (workerContinuation) {
+    await verifyQuantityV4ActiveWorkerService(workerContinuation.historical.authority.database.review, workerContinuation.historical);
+    observed.worker = JSON.parse((await base.query(QUANTITY_V4_WORKER_STATE_SQL)).trim());
+  }
   const productOffReceipt = cookedWeightProductOffReceipt(review);
   if (options.reviewedProtectedRollout && options.protectedPhase === "reader") assertCookedWeightFirstReader(review, productOffReceipt, protectedRolloutPins(review).rollout.sha256);
-  const activeWorkerContinuation = !options.reviewedProtectedRollout && review.feature === QUANTITY_V4_FEATURE
+  const activeWorkerContinuation = !successor && !options.reviewedProtectedRollout && review.feature === QUANTITY_V4_FEATURE
     ? loadQuantityV4ActiveWorkerContinuation(repository, review) : null;
   if (activeWorkerContinuation) {
     if (!observed.writerEnabled) throw new DeploymentError("C04 active continuation requires the original quantity writer ON");
@@ -588,8 +611,9 @@ async function verifyProtectedBaseline(review, plan, options) {
   }
   assertProtectedPrelaunchObservation(review, { ...observed, writerEnabled: false }, "after", {
     productOffReceipt, reviewSha256: protectedRolloutPins(review).rollout.sha256,
-    activeWorkerContinuation,
-    workerCheckpoint: !activeWorkerContinuation && review.feature === QUANTITY_V4_FEATURE ? verifyQuantityV4WorkerBoundary(review, "after") : undefined });
+    activeWorkerContinuation, attestationSuccessor: review.feature === QUANTITY_V4_FEATURE ? successor : undefined,
+    approvedWorkerPolicy: workerContinuation?.observation, quantityOffReceipt,
+    workerCheckpoint: !successor && !activeWorkerContinuation && review.feature === QUANTITY_V4_FEATURE ? verifyQuantityV4WorkerBoundary(review, "after") : undefined });
   if (review.feature === COOKED_WEIGHT_FEATURE) verifyCookedWeightPredecessor(review, repository);
   if (protectedRolloutPins(review).writer.sha256) {
     for (const action of ["writer-on", "writer-off"]) {
@@ -655,15 +679,19 @@ async function runProtectedDatabasePhase(options, action, review) {
 }
 async function runProtectedWriterPhase(options, action, review) {
   const quantityOff = review.feature === QUANTITY_V4_FEATURE && options.protectedPhase.startsWith("writer-off");
-  const workerCheckpoint = review.feature === QUANTITY_V4_FEATURE
+  const successor = loadCookedWeightAttestationSuccessor(repository);
+  const quantityCloseOnAttestation = quantityOff && Boolean(successor);
+  const workerContinuation = successor ? loadCookedWeightAttestationWorkerContinuation(successor, repository) : null;
+  const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
+  const workerCheckpoint = quantityCloseOnAttestation ? successor.predecessor.post.record : review.feature === QUANTITY_V4_FEATURE
     ? quantityOff ? loadQuantityV4WorkerCheckpoint(review, repository, "after", true) : verifyQuantityV4WorkerBoundary(review, "after") : undefined;
-  const workerEvidence = review.feature === QUANTITY_V4_FEATURE ? loadQuantityV4WorkerCheckpointEvidence(review, repository, "after", quantityOff) : null;
+  const workerEvidence = quantityCloseOnAttestation ? successor.predecessor.post : review.feature === QUANTITY_V4_FEATURE ? loadQuantityV4WorkerCheckpointEvidence(review, repository, "after", quantityOff) : null;
   if (workerEvidence && !isDeepStrictEqual(workerEvidence.record, workerCheckpoint)) throw new DeploymentError("C04 worker publication changed during fresh validation");
   if (workerCheckpoint && workerCheckpoint.workerDatabaseReceiptSha256 !== loadProtectedDatabaseReceipt(review).pointer.sha256) throw new DeploymentError("C04 writer worker/DB227 terminal bytes differ");
   const { readerReceiptPath: protectedReaderReceiptPath, operationRoot: protectedOperationRoot, writerPrefix } = protectedRolloutPaths(root, review);
   const approval = loadProtectedWriterReview(repository, review);
   const live = current(), context = requireClosedR2Mode(options, live);
-  let baselineReview = context?.rollout?.feature === COOKED_WEIGHT_FEATURE ? context.rollout : review;
+  let baselineReview = quantityCloseOnAttestation ? successor.review : context?.rollout?.feature === COOKED_WEIGHT_FEATURE ? context.rollout : review;
   if (review.feature === "recipe-product-source" && existsSync(join(root, "protected-cooked-weight-database-guard.json"))) {
     const successor = loadProtectedRolloutReview(repository, { feature: COOKED_WEIGHT_FEATURE });
     loadProtectedDatabaseReceipt(successor); // A committed C01 baseline is required even while its reader is pending.
@@ -684,7 +712,7 @@ async function runProtectedWriterPhase(options, action, review) {
   const safeOffReader = writerAction === "writer-off" && reader.readerFloor === review.to
     && spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", review.to, live.ref]).status === 0;
   if (!context?.marker.protectedRollout || !(exactReader || safeOffReader) || reader.verifiedFlowsSha256 !== approval.readerFlowsSha256
-    || hash(readerBytes) !== (productCloseOnWeightBaseline ? baselineReview.predecessorProtected.readerReceipt.sha256 : context.marker.protectedRollout.readerReceiptSha256)
+    || hash(readerBytes) !== (productCloseOnWeightBaseline ? baselineReview.predecessorProtected.readerReceipt.sha256 : (quantityCloseOnAttestation ? successor.review.predecessorQuantity.readerReceipt.sha256 : context.marker.protectedRollout.readerReceiptSha256))
     || (approval.readerReceiptSha256 !== null && hash(readerBytes) !== approval.readerReceiptSha256)) {
     throw new DeploymentError("신형 쓰기는 승인된 실제 reader ready/source/build/plist/floor에서만 전환합니다.");
   }
@@ -697,10 +725,13 @@ async function runProtectedWriterPhase(options, action, review) {
     : await openProtectedPrelaunchTarget({ repositoryRoot: repository, configPath: options.dbConfig, backupDirectory: root, review });
   if (action === "plan") {
     const observed = await adapter.observe(undefined, "protected-writer-plan");
-    assertProtectedPrelaunchObservation(baselineReview, { ...observed, writerEnabled: false,
+    if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE && writerAction === "writer-on"
+      && !options.protectedPhase.endsWith("-reconcile") && observed.quantityWriterEnabled !== true) throw new DeploymentError("Personal attestation fresh writer ON requires quantity ON");
+    assertProtectedPrelaunchObservation(quantityCloseOnAttestation ? review : baselineReview, { ...observed, writerEnabled: quantityCloseOnAttestation ? observed.quantityWriterEnabled : false,
       ...(productCloseOnWeightBaseline ? { productWriterEnabled: true } : {}) }, "after", {
       productOffReceipt: productCloseOnWeightBaseline ? null : cookedWeightProductOffReceipt(review), reviewSha256: protectedRolloutPins(baselineReview).rollout.sha256,
-      workerCheckpoint, safeQuantityOff: quantityOff });
+      workerCheckpoint, safeQuantityOff: quantityOff, safeAttestationOff: review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE && writerAction === "writer-off",
+      attestationSuccessor: quantityCloseOnAttestation ? successor : undefined, approvedWorkerPolicy: workerContinuation?.observation, quantityOffReceipt });
     say(JSON.stringify({ ready: true, mutationPerformed: false, phase: options.protectedPhase, readerFloor: reader.readerFloor, feature: review.feature, writerEnabled: productCloseOnWeightBaseline ? observed.productWriterEnabled : observed.writerEnabled }, null, 2)); return;
   }
   const guardPath = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-${writerAction}.json`);
@@ -731,6 +762,7 @@ async function runProtectedWriterPhase(options, action, review) {
       approvalSha256: protectedRolloutPins(review).writer.sha256, readerReceipt: reader, readerReceiptSha256: hash(readerBytes), operationId,
       action: writerAction, adapter, journal, baselineReview, baselineReviewSha256: protectedRolloutPins(baselineReview).rollout.sha256,
       productOffReceipt: productCloseOnWeightBaseline ? null : cookedWeightProductOffReceipt(review), workerCheckpoint,
+      attestationSuccessor: quantityCloseOnAttestation ? successor : undefined, approvedWorkerPolicy: workerContinuation?.observation, quantityOffReceipt,
       readerWorkerCheckpoint: readerWorkerEvidence?.record, workerReceipt: workerEvidence?.pointer,
       workerPolicyRepair: workerEvidence?.policyRepair ? { ...workerEvidence.policyRepair, earlierOrigin: readerWorkerEvidence.origin.record } : undefined,
       assertBoundary: async () => { lease.verify(); verifyProtectedBoundary(review, live);
@@ -756,7 +788,12 @@ async function completeProtectedReaderRecovery(options, review) {
   await verifyProtectedBaseline(review, state.databaseVerification, options);
   const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
   const observed = await createProtectedPrelaunchAdapter(base, review.feature, review).observe(undefined, "protected-reader-recovery");
-  assertProtectedPrelaunchObservation(review, observed, "after", { workerCheckpoint: review.feature === QUANTITY_V4_FEATURE ? verifyQuantityV4WorkerBoundary(review, "after") : undefined }); // OFF required throughout first-reader recovery.
+  const personalSuccessor = review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? loadCookedWeightAttestationSuccessor(repository) : null;
+  const personalWorker = personalSuccessor ? loadCookedWeightAttestationWorkerContinuation(personalSuccessor, repository) : null;
+  if (personalSuccessor && observed.attestationRowsEmpty !== true) throw new DeploymentError("Personal facts prevent predecessor reader recovery");
+  assertProtectedPrelaunchObservation(review, observed, "after", {
+    approvedWorkerPolicy: personalWorker?.observation,
+    workerCheckpoint: review.feature === QUANTITY_V4_FEATURE ? verifyQuantityV4WorkerBoundary(review, "after") : undefined }); // OFF required throughout first-reader recovery.
   const closed = loadClosedR2Review(repository), lease = await acquireClosedR2ControlLease(closed, repository);
   try {
     await smoke(3100, state.checkout, state.buildId); await verifyClosedR2Web(3100); lease.verify();
@@ -790,7 +827,7 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
     throw new DeploymentError("보호 DB 전환이 미확정이거나 새 reader가 준비되지 않았습니다. 기존 DB219 승계를 사용할 수 없습니다.");
   }
   let fenceOptions = options;
-  if (options.reviewedProtectedRollout) { loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase }); fenceOptions = { reviewedClosedR2Maintenance: true }; }
+  if (options.reviewedProtectedRollout) { loadProtectedRolloutReview(repository, { feature: options.protectedFeature, ref: options.ref, phase: options.protectedPhase }); fenceOptions = { reviewedClosedR2Maintenance: true }; }
   const records = [];
   for (const path of [recoveryPath, statePath]) {
     if (!existsSync(path)) continue;
@@ -958,7 +995,7 @@ async function deploy(options) {
   const live = current();
   const closedContext = requireClosedR2Mode(options, live);
   const protectedReader = options.reviewedProtectedRollout === true && options.protectedPhase === "reader";
-  const rollout = protectedReader ? loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase }) : closedContext?.rollout;
+  const rollout = protectedReader ? loadProtectedRolloutReview(repository, { feature: options.protectedFeature, ref: options.ref, phase: options.protectedPhase }) : closedContext?.rollout;
   const protectedReaderReceiptPath = rollout ? protectedRolloutPaths(root, rollout).readerReceiptPath : join(root, "protected-reader-ready.json");
   const readOnlyDatabase = options.alreadyAppliedDb || protectedReader;
   const closedReview = options.reviewedClosedR2Maintenance ? loadClosedR2Review(repository) : closedContext?.review;
@@ -1106,6 +1143,7 @@ process.exit(result.status ?? 1);`;
           const readerPointer = { path, sha256: hash(readClosedR2PrivateBytes(path, repository, 524288)) };
           closedR2.protectedRollout = { reviewSha256: protectedRolloutPins(rollout).rollout.sha256, databaseReceipt: database.pointer,
             databaseReceiptSha256: database.pointer.sha256, readerReceipt: readerPointer, readerReceiptSha256: readerPointer.sha256 };
+          if (rollout.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) closedR2.protectedRollout.predecessorQuantity = rollout.predecessorQuantity;
           if (rollout.feature === COOKED_WEIGHT_FEATURE) closedR2.protectedRollout.predecessorProtected = rollout.predecessorProtected;
           if (rollout.feature === QUANTITY_V4_FEATURE) Object.assign(closedR2.protectedRollout, { predecessorProtected: rollout.predecessorProtected,
             consumersReceiptSha256: rollout.consumersReceipt.sha256, workerReceiptSha256: workerEvidence.pointer.sha256 });
@@ -1182,6 +1220,8 @@ process.exit(result.status ?? 1);`;
     activate: async () => {
       if (closedLease) { closedLease.verify(); assertClosedR2LiveUnchanged(live, current()); }
       if (readerFence && (await readerFence.query(protectedReaderFenceSql(rollout).check)).trim() !== "t") throw new DeploymentError("새 reader 활성화 직전 OFF fence가 바뀌었습니다.");
+      if (protectedReader && rollout.feature === COOKED_WEIGHT_ATTESTATION_FEATURE
+        && (await readerFence.query("SELECT NOT EXISTS(SELECT 1 FROM private.cooked_weight_user_attestations);")).trim() !== "t") throw new DeploymentError("Personal attestation first reader requires empty facts under the OFF fence");
       say("웹 프로세스 교체 중"); await switchWeb(nextBytes);
     },
     verify: async () => {
@@ -1196,6 +1236,7 @@ process.exit(result.status ?? 1);`;
     restore: async () => {
       if (protectedReader) {
         const floorPublished = existsSync(protectedReaderReceiptPath) && hash(readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288)) === state.closedR2.protectedRollout.readerReceiptSha256;
+        if (rollout.feature === COOKED_WEIGHT_ATTESTATION_FEATURE && (await readerFence.query("SELECT NOT EXISTS(SELECT 1 FROM private.cooked_weight_user_attestations);")).trim() !== "t") throw new DeploymentError("Personal facts prevent old-reader compensation");
         const offLocked = Boolean(readerFence) && (await readerFence.query(protectedReaderFenceSql(rollout).check)).trim() === "t";
         assertProtectedReaderCompensation({ floorPublished, offLocked, actual: current(), before: live,
           target: { ref: state.ref, cwd: state.checkout, buildId: state.buildId, plistSha256: state.targetPlistHash }, closedPreviousPlistSha256: hash(closedRollbackBytes) });
@@ -1367,6 +1408,7 @@ async function main() {
   const { action, args } = parsePrelaunchArgs(process.argv.slice(2));
   if (action === "help" || action === "--help") {
     say("--reviewed-protected-rollout --protected-phase database|database-retry|reader|reconcile|writer-on|writer-off|writer-on-reconcile|writer-off-reconcile|writer-on-retry|writer-off-retry: 정확한 보호 DB/reader 승인과 별도 ON/OFF 승인 경로. 코드에 고정된 승인 자료와 정확히 일치해야 실행할 수 있습니다.");
+    say("개인 실측 exact227→228: --protected-phase attestation-database|attestation-reconcile|attestation-reader|attestation-writer-on|attestation-writer-off 및 고정 retry/reconcile 단계. 별도 개인 successor/writer PIN이 필요하며 원 C04 권위는 유지합니다.");
     say("--reviewed-r2-closed-maintenance: exact F01·중지 receipt·두 false flag·closed rollback 검토 경로. 고정된 검토 핀과 정확히 일치해야 실행할 수 있습니다.");
     say("추가 옵션: --reviewed-integrated-master-readiness (검토한 운영 f970→origin/master 전체 파일·DB218 선행 상태·R2 승계 웹 선배포), --reviewed-nutrition-recovery-readiness (검토한 영양 복구·215→216 DB·기존 worker와 R2 보존), --skip-automated-tests (명시적 테스트 생략), --already-applied-db (checksum 이력만 대조), --reviewed-repair-readiness (20260918 복구본의 한정된 R2 재검증), --reviewed-beta-readiness (20260922 베타 후보의 한정된 R2 재검증), --reviewed-feedback-readiness (검토한 exact 피드백 후보·고정 DB 이력·R2 경계 재검증), --reviewed-ai-nutrition-readiness (검토한 AI 후보·204→207개 DB 이력·비활성 worker·R2 경계 재검증), --reviewed-ingredient-search-readiness (검토한 재료 검색 후보·211→212개 DB 이력·익명/worker 권한 보존), --reviewed-piece-unit-readiness (검토한 개수 단위 후보·212→213개 DB 이력·기존 권한·과거 영양 보존), --reviewed-youtube-resolution-readiness (검토한 YouTube 재료 연결 후보·213→215 DB·동일 v63 runtime)\n출시 전 웹/API/환경/추가형 DB 빠른 배포\nplan | deploy [--ref <커밋, 기본 origin/master>] [--env-file <비공개 dotenv>] [--db-config <비공개 full-local 설정>] [--db-baseline <비공개 JSON>] [--db-compatible] [--test-script <package.json test 명령>] [--verify-script <추가 검증 명령>]\nstatus | record-youtube-resolution-database --db-config <비공개 full-local 설정> | record-integrated-master-database --db-config <비공개 full-local 설정> | rollback\nplan은 변경 파일과 환경 키 이름만 표시합니다. deploy는 설치·빌드·확인 후 웹을 교체합니다.\nrecord-youtube-resolution-database와 record-integrated-master-database는 해당 DB 상태를 읽기 전용으로 검증하고 로컬 배포 상태 메타데이터만 갱신합니다.\n환경 파일은 Git 저장소 밖 0600 권한이어야 합니다. 키 값은 명령 인수에 넣지 마세요.\nAPI 변경은 기본 test:product를 실행하며 --test-script로 관련 test 명령을 선택하고 --verify-script로 추가 검증을 지정할 수 있습니다.\nDB 변경은 격리 검증·백업·트랜잭션으로 반영하며, 웹 rollback으로 DB를 되돌리지 않습니다. 통합 배포는 새 웹을 먼저 올린 뒤 DB219를 별도 통제 경로로 적용하고 상태를 기록합니다.\n검토한 긴급 수정은 --ref 대신 --reviewed-ref <현재 웹 후속 커밋 40자리 SHA>를 사용합니다.");
     return;
@@ -1379,7 +1421,9 @@ async function main() {
   const options = parsePrelaunchOptions(args);
   let protectedReview;
   if (options.reviewedProtectedRollout) {
-    protectedReview = loadProtectedRolloutReview(repository, { ref: options.ref, phase: options.protectedPhase }); // Deny before live/env/private-state access. No CLI or env pin override.
+    protectedReview = loadProtectedRolloutReview(repository, { feature: options.protectedFeature, ref: options.ref, phase: options.protectedPhase }); // Deny before live/env/private-state access. No CLI or env pin override.
+    options.protectedFeature = protectedReview.feature;
+    if (options.protectedPhase.startsWith("attestation-")) options.protectedPhase = options.protectedPhase.slice("attestation-".length);
     if (options.protectedPhase.startsWith("writer-")) loadProtectedWriterReview(repository, protectedReview);
   }
   if (options.reviewedClosedR2Maintenance) loadClosedR2Review(repository); // Fail before live/env access while the pin is empty.

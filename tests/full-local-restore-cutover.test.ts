@@ -48,6 +48,41 @@ object-a\trecipe-images\tuser-a/a.jpg
 `;
 
 describe("full-local platform restore boundary", () => {
+  it.each(["f", "t"])("preserves the exact personal-attestation write control value %s", enabled => {
+    const control = `COPY private.cooked_weight_user_attestation_control (singleton, enabled) FROM stdin;\nt\t${enabled}\n\\.\n`;
+    const source = buildSanitizedPlatformData(platformData + control);
+    expect(source.sql).toContain(control);
+    expect(source.manifest.relations).toContainEqual(expect.objectContaining({ relation: "private.cooked_weight_user_attestation_control", action: "include" }));
+    expect(() => buildSanitizedPlatformData(platformData + control.replace("private.cooked_weight_user_attestation_control", "private.other_weight_attestation_control"))).toThrow("Unclassified");
+    expect(() => verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: platformData + control.replace(`t\t${enabled}\n`, `t\t${enabled === "t" ? "f" : "t"}\n`),
+      sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+      sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+      sourceRelationClassificationDigest: source.manifest.relation_classification_digest,
+    })).toThrow();
+  });
+  it("preserves personal attestation and retraction rows without admitting other private tables", () => {
+    const attestations = `COPY private.cooked_weight_user_attestations (id, owner_uuid, event_kind, prior_assertion_id) FROM stdin;
+fixture-assert\tfixture-owner\tattested\t\\N
+fixture-retract\tfixture-owner\tretracted\tfixture-assert
+\\.
+`;
+    const source = buildSanitizedPlatformData(platformData + attestations);
+    expect(source.manifest.relations).toContainEqual(expect.objectContaining({ relation: "private.cooked_weight_user_attestations", action: "include" }));
+    expect(source.sql).toContain(attestations);
+    expect(() => buildSanitizedPlatformData(platformData + attestations.replaceAll("private.cooked_weight_user_attestations", "private.other_weight_user_attestations"))).toThrow("Unclassified");
+    for (const altered of [
+      attestations.replace("fixture-owner", "other-owner"),
+      attestations.replace("fixture-retract\tfixture-owner\tretracted\tfixture-assert\n", ""),
+    ]) {
+      expect(() => verifyRestoredPlatformDataSnapshot({
+        restoredDataSql: platformData + altered,
+        sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+        sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+        sourceRelationClassificationDigest: source.manifest.relation_classification_digest,
+      })).toThrow();
+    }
+  });
   it("preserves exact C04 OFF/ON policy bytes and rejects similar unknown private relations", () => {
     for (const enabled of ["f", "t"]) {
       const policy = `COPY private.quantity_input_v4_policy (singleton, enabled) FROM stdin;\nt\t${enabled}\n\\.\n`;

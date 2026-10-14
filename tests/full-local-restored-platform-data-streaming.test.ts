@@ -111,10 +111,10 @@ describe.each([
   { name: "legacy ordered", format: undefined },
   { name: "COPY row multiset", format: PLATFORM_DATA_SEMANTIC_FORMAT },
 ])("restored platform streaming evidence: $name", ({ format }) => {
-  function metadata() {
+  function metadata(rows = durable) {
     const source = join(directory, "source.sql");
     const sanitized = join(directory, "source.sanitized.sql");
-    writeFileSync(source, dump("Alpha123"), { mode: 0o600 });
+    writeFileSync(source, dump("Alpha123", rows), { mode: 0o600 });
     const manifest = sanitizePlatformDataFile(source, sanitized, format);
     if (typeof manifest === "string" || !("relation_classification_digest" in manifest)) {
       throw new Error("Sanitizing to a file must return a classified restore manifest");
@@ -158,6 +158,21 @@ describe.each([
     const source = metadata();
     capture.dump = dump("Beta456", durable.replace("fixture-b\tsecond", "fixture-b\tchanged"));
     expect(() => restoredPlatformDataSnapshot(runtime, source)).toThrow("authenticated archive");
+  });
+
+  it.each([false, true])("checks personal confirmation, retraction and write control through streaming restore (altered=%s)", (altered) => {
+    const personalRows = "COPY private.cooked_weight_user_attestations (id, event_kind, prior_assertion_id) FROM stdin;\nassertion\tattested\t\\N\nretraction\tretracted\tassertion\n\\.\n"
+      + "COPY private.cooked_weight_user_attestation_control (singleton, enabled) FROM stdin;\nt\tf\n\\.\n";
+    const source = metadata(durable + personalRows);
+    capture.dump = dump("Beta456", durable + (altered
+      ? personalRows.replace("retraction\tretracted\tassertion\n", "")
+      : personalRows));
+    if (altered) {
+      expect(() => restoredPlatformDataSnapshot(runtime, source)).toThrow("authenticated archive");
+    } else {
+      expect(restoredPlatformDataSnapshot(runtime, source).restored_data_semantic_sha256)
+        .toBe(source.manifest.data_semantic_sha256);
+    }
   });
 
   it("rejects a failed dump capture before producing restore evidence", () => {

@@ -8,6 +8,17 @@ export const DEV_DEPLOY_SNAPSHOT_PATHS = Object.freeze([
   "scripts", "infra", ".env.example", "package.json", "supabase/config.toml",
   // Static data imported by the deployment tool's worker artifact validator.
   "lib/server/youtube-extraction-worker-timing.json",
+  // Committed SQL and the exact static authorization/postimage closure used by protected source inventories.
+  "supabase/migrations",
+  "docs/security/full-local-auth-db-security-function-authorization-manifest.json",
+  "docs/security/recipe-snapshot-authority-security-function-authorization-manifest.json",
+  "docs/security/personal-recipe-customization-write-core-security-function-authorization-manifest.json",
+  "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
+  "docs/security/recipe-product-source-function-postimages.json",
+  "docs/security/cooked-weight-evidence-source-function-postimages.json",
+  "docs/security/quantity-input-v4-source-function-postimages.json",
+  "docs/security/youtube-worker-quantity-function-postimages.json",
+  "docs/security/cooked-weight-user-attestation-source-function-postimages.json",
 ]);
 
 export function verifyDevDeployToolLoad({ entryPoint, repository, nodePath }) {
