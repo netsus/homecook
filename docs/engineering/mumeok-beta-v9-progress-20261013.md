@@ -210,3 +210,48 @@
 - 테스트 계획 `8b84870a-3365-4fe6-bb2e-98cb4d944b72`(10/27 저녁2인분)과 장보기 `d5b049ee-76f4-4155-9a06-411be70073bf`를 남겼다. 같은 제품/버전의125g이며 보유 제외→되살리기→구매 체크→보유 제외 후 is_checked=false를 실제 읽기 전용 조회로 확인했다. 팬트리 반영 안 함으로 완료하고 새로고침 뒤 read-only를 확인했다. 기존 폰타나 보유 항목은 유지했다. 기록 삭제·g 재고 자동 차감 없음.
 - DB220 이후 worker readiness는 ready=true/catalog `81362d75…`·기존 만료2026-10-19T08:24:41Z를 확인했다. worker·credential·pre-request는 바꾸지 않았다. 실제 OAuth 재로그인·다른 사람 계정·새 추출/P5/모델 평가·운영 장애 강제복원은 미실행이다. 직접 비소유자/전체 보안 검증 완료로 확대하지 않는다.
 - 새 데이터 이후 이전 reader로 내리지 않는다. 문제 시 기존 안전 OFF 경로로 새 저장을 중지하고 현재 reader/floor를 유지한다. 전체 DB 복원은 자동 실행하지 않는다. 실패/완료 Discord 전송은 각 HTTP204 확인. 비공개 operation `/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX`와 `.omx/beta-v9/current-state.json`에 시도·검증·운영 화면·테스트 기록을 남겼다.
+
+
+## C01 DB·읽기 웹 운영 반영 — 2026-10-14
+
+- **범위:** C01 DB221과 호환 읽기 웹을 반영했다. 새 무게 저장은 OFF이며, 로그인 후 실제 조리·선택 실측·식사 기록은 미검증이다. 기능 전체 완료나 정확도 개선 완료를 뜻하지 않는다.
+- **소스:** 앱 PR #1684/#1689/#1690, 기존 배포 도구 PR #1691. 웹 `32ab591babf7ec30b7f56b0cbddce65ec1e46e3a`, build `prelaunch-32ab591babf7-HteyQ9`, 설치 도구/master `db0fa13f58eae59b7b9b2ab7716d6008b67df415`. applied SQL `20261013233000_cooked_batch_weight_evidence.sql` SHA256 `60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0`.
+- **DB 보호:** 정확한 운영 대상·직전 백업의 전체 해독 가능 여부·원장/역할·예상 변경 구조·기존 행 보존을 확인했다. DB220→221 operation `a0679055-a297-48be-a1b7-67c012a617db`; 적용 후 catalog `523fcb7462b35b85667707438ae3138e05de11e093a51399caec944c0e57b7bb`가 격리 환경에서 미리 계산한 기대값과 일치했다. 기존 행은 같은 transaction에서 보존 확인했다. C03 ON/C01 OFF, worker readiness true와 기존 catalog `81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9`를 재확인했다.
+- **수정한 호환 결함:** C01 OFF 중에도 영양 미리보기에 새 필드를 붙이면 직전 웹의 엄격한 응답 검증이 실패했다. 구 응답 형태는 OFF에서 유지하고 새 필드는 ON에서만 추가했다. 격리 재현 실패 뒤 수정 후 통과했으며 과거 식사 근거 읽기는 보존했다. 적용된 SQL은 이후 편집하지 않는다.
+- **검사:** 최종 후보 typecheck/build 및 선택 회귀 1,385통과·133선택제외. 실제 배포 빌드의 내부 lint는 플러그인 경로 해석 오류를 출력했으므로 lint 통과로 계산하지 않는다. 같은 배포 checkout의 변경 TS/JS 53파일을 동일 규칙으로 명시 경로 해석해 별도 lint exit0을 확인했다. 규칙·의존성 변경은 없었다. 이후 C04 후보의 최소 경로 수정은 별도 검토이며 이 배포에 포함되지 않았다.
+- **총괄 운영 관찰:** Chrome 375/1440 공개 제품 레시피에서 2→3인분, 제품 `.125kg`→`.1875kg` 및 344→516kcal, 원문 조리법 `.125kg` 유지, 로그인 안내의 3인분·명시 재클릭 안내, 취소/Escape 후 요리 버튼 초점 복귀와 새로고침을 확인했다. 공개 API 200, 일반 익명 요리 시작 요청은 401 `UNAUTHORIZED`였다. 인증된 조리·실측·식사 저장으로 확대하지 않는다.
+- **외부 설정:** 승인된 네이버 이름 `무먹`, 기존 브랜드 로고 등록, 회원이름 수집 해제를 저장·재조회했다. 총괄이 확인한 동의 화면의 식별자/이메일 필수·별명/사진 선택 및 개발 중 멤버 제한은 유지한다. 로그인 화면의 별도 법적 동의는 제출하지 않았고 사용자 응답을 기다린다. 새 키·검수 신청은 하지 않았다.
+- **복구/남은 작업:** 읽기 버전 하한은 `32ab591babf7ec30b7f56b0cbddce65ec1e46e3a`다. 새 형식 호환 웹은 유지하고 문제 시 해당 저장만 OFF로 둔다. 구 웹으로 임의 복귀하거나 전체 DB를 자동 복원하지 않는다. 로그인 검증→조건부 저장 ON→테스트 계정의 새 조리·실측·식사와 기존 기록 회귀가 남았다. R2 수집·C05 개선 수집·C04는 활성화하지 않았다.
+- **증거:** 비공개 운영 경로 `~/.homecook/operations/mumeok-beta-c01-20261014-HhhiQC/`의 `reader-stage-verification.json`, `after-database-observation.json`, `worker-readiness-after221.json`, `release-related-eslint-result.json` 및 화면/배포 로그. 총괄 전송 기록에서 운영 DB 단계와 읽기 웹 단계의 Discord 요약은 각각 HTTP204를 확인했다. 현재 진행 상황은 이 문단이 앞선 로컬 준비 기록보다 우선한다.
+
+
+## C01 기본 무게 저장 ON 운영 확인 — 2026-10-14
+
+이 문단은 위 C01 OFF 읽기 단계 이후의 실제 확인이다. 사용자가 네이버 필수 개인정보 제공 두 항목 진행을 승인했고, 현재 화면의 무먹·이용자 식별자/이메일을 대조해 필수만 선택했다. 별명·프로필사진은 선택하지 않았다. 오래 대기한 첫 요청은 네이버 오류로 종료돼 성공으로 처리하지 않았고, 앱에서 새 요청을 시작해 같은 항목으로 로그인했다. 상세의 선택3인분을 복원했으며 자동 요리 시작은 없었다.
+
+기존 C01 writer-on plan이 ready=true/변경0임을 확인한 뒤 같은 보호 경로로 ON을 실행했다. writer-on 결과 committed/true, 실제 DB control true와 설치 도구 status의 loaded=true/readerPending=false/recoveryPending=false를 확인했다. 웹32ab·buildHteyQ9·DB221은 그대로다. C03 ON·R2 OFF와 worker를 유지했으며 소스/키/DB 스키마 추가 변경은 없었다.
+
+총괄의 운영 확인은 다음과 같다. 아래 무게 입력은 허용된 테스트 계정의 가짜 검사값이며 실제 음식의 물리 실측이나 개선용 적격 표본이 아니다.
+
+- OFF 때 저장한3인분 테스트 요리는140.63g·이전 방식 추정으로 남았다. ON 뒤 같은 레시피를 실측 빈칸으로 완료하면187.5g·조건별 추정으로 저장되고, 화면은 반올림한 약188g과 섞기 가정·미확인 조건을 표시한다. 팬트리 항목은 선택하지 않았다.
+- 375px 실제 모바일에서 완료 저장을 반복 클릭했으며 요리1건과 예측1건만 생성됐다. 이 요리에 섭취 전180g을 입력하면 원 예측을 보존하고 관찰1건을 추가한다. 무게 수정 재진입은 사라지고 전체무게 근거는 사용자가 보고한 실측으로 바뀐다.
+- 30g 식사의 미리보기는86kcal·전체무게180g·남을 양150g을 표시했다. 저장 반복 클릭 뒤 실제 식사1건과 잔량150g을 확인했다. DB의 새 식사 weight_basis에는 당시180g·model/예측/관찰 ID·batch revision2가 고정되고 현재 batch는revision3이다. 뒤로가기에서 같은10월14일을 유지했다.
+- 1440px 데스크톱의 별도2인분 완료에서는0g을 거절하고, 선택 입력120g을 저장했다. 실제 DB에 prediction1건과 completion 관찰1건, finished/remaining120g을 확인했다. 새로고침과 다시 읽기에서 정상 완료 상태를 유지했다.
+- 10월13일 기존 식사200g·134kcal의 목록/상세/뒤로가기를 확인했다. 해당 행 updated_at은10월13일 그대로이고 weight_basis가 새로 끼워지지 않았다. 기존3인분 계획도registered·고정snapshot을 유지한다. 모든 과거 데이터에 대한 새로운 전체 감사 결과로 확대하지 않는다.
+
+모바일/데스크톱은 DOM의 실제375/1440 너비와 PNG를 확인했다. 최초 캐시된 viewport 설정이 다른 탭에 적용돼 `c01-on-empty-optional-mobile.png`는 실제1496px이므로 모바일 증거로 쓰지 않는다. 정확375px의 `c01-on-empty-optional-375.png`를 별도 생성했다. 이 도구 설정 문제와 제품 문제를 구분했다.
+
+**남은 후속:** 완료 모달 취소 후 초점이 원 요리 완료 버튼으로 돌아오지 않고, 나중 무게 저장에서도 사라진 원 액션 대신 같은batch 관리 버튼으로 돌아오지 않는 문제가 확인됐다. 공유 dialog 보호를 완화하지 않고 실제 호출 버튼/ref 연결만 별도 좁은 웹 수정으로 준비한다. 이 후속의 미검증 변경은 운영32ab에 섞지 않았다. C01의 실제 추정 정확도, 개인 보정·전체 모델 활성화, 미정 정책/보유기간, C04/C05 운영은 여전히 별도다. 실제 영상 추출/P5/외부AI 호출은0이다.
+
+비공개 증거는 같은 C01 operation의 `writer-and-journeys.json`, `authenticated-off-journey.json`, `on-flow-readonly-evidence.json`, `completion-measured-readonly-evidence.json`, `legacy-meal-after-on.json`, `worker-readiness-after-on.txt`, `status-after-writer-on.json`, `writer-on-plan.log`·`writer-on-apply.log`와 해당 PNG들이다. 테스트 조리 세 건과 식사 한 건은 보존했다. 총괄의 이 단계 Discord 전송은HTTP204를 확인했다.
+
+
+## C01 초점 후속 운영 확인 — 2026-10-14
+
+PR #1692와 배포 도구 보완 #1693을 검증 후 병합하고 웹 `5be05649968e261d83bfc216754f4540b1b0b636`·build `prelaunch-5be05649968e-X8W1FZ`를 운영 확인했다. 기본 무게 저장 ON 이후 발견했던 완료창/실측 저장 초점 문제는 이 버전에서 해소됐다. DB221·C03/C01 ON·R2 OFF·worker는 유지했다.
+
+- 모바일375의 완료창 닫기와 데스크톱1440의 Escape 후 실제 요리 완료 BUTTON으로 복귀했다. 데스크톱 무게 입력 취소는 원 무게 수정 액션, 모바일 실측 저장 성공 후에는 같은배치의 관리 BUTTON으로 복귀했다. 동일 제목의 다른 배치로 이동하지 않았고 새로고침 후120g도 유지됐다. 가짜 QA 요리1건을 추가로 보존했으며 새 식사는 만들지 않았다.
+- 원 공유 dialog 보호를 재사용하고 leftovers 화면의 중복 수동 animation-frame 복귀 코드를 제거했다. 독립67검사, 실제 모의 화면6흐름, root build/type 통과. 운영 배포1385통과·133선택제외이며 기본 빌드 lint도 통과(기존 경고4)했다.
+- 첫 plan은 `eslint.config.mjs`를 허용하지 않는 구성 변경으로 거부해 운영 변경 없이 중단됐다. 원 `pnpm deploy:dev:plan -- --reviewed-ref 5be05649968e261d83bfc216754f4540b1b0b636 --already-applied-db --db-config <고정 운영 설정> --test-script test:feedback-batch:web`와 원인은 비공개 `focus-web-plan.log`에 보존했다. 정확 Git 원문 SHA의 검토한 경로 수정3줄만 허용하는 보완을 독립211검사·실제 Git 원문/거절16조건·타입/lint로 검증했다. 새 우회 옵션이나 임의 설정 허용은 없다.
+- 기존 installer로 도구 `4385861d96a81bdf69a57e7240d7729cbb7835bd`를 설치하고 설치된 plan 재검증 후 배포했다. 최초 다른worktree config lint의 모듈 경로 충돌은 같은 검토 원문을 현재 폴더의 임시 config로 읽어 검증한 뒤 삭제해 해소했다. source 규칙·의존성은 바꾸지 않았다.
+- 실제 증거: 기존 C01 operation의 `focus-operating-verification.json`, `status-after-focus-deploy.json`, `focus-web-apply.log`, `focus-completion-return-375.png`, `focus-completion-return-1440.png`, `focus-late-measure-manager-375.png`. 배포 로그 `deploy-1791966537730.log`. 단계 Discord HTTP204 확인. C04/C05 운영이나 실제 정확도 평가 완료 주장이 아니다.

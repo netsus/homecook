@@ -182,11 +182,9 @@ describe.runIf(enabled)("quantity v4 on owned schema-only PostgreSQL", () => {
     expect(sql(`select remaining_weight_g from public.leftover_dishes where id='${batch}';`).stdout.trim()).toBe("1000");
     const entry = json(mutation(6, payload)).data.entry;
     expect(entry.quantity).toEqual({ amount: 125, unit: "g" });
-    const { weight_basis: previewWeightBasis, ...previewValues } = nutritionPreview;
-    expect(previewWeightBasis).toEqual({ schema_version: "cooked-weight-basis-v1", batch_id: batch,
-      recipe_content_snapshot_id: content, finished_weight_g: 1000, source: "historical_estimate", model_version: null,
-      prediction_id: null, observation_id: null, batch_revision: currentRevision });
-    expect(entry.nutrition).toEqual(previewValues);
+    // C01 OFF keeps the predecessor preview DTO; ON basis checks remain below.
+    expect(nutritionPreview.weight_basis).toBeUndefined();
+    expect(entry.nutrition).toEqual(nutritionPreview);
     expect(entry.nutrition.weight_basis).toBeUndefined();
     expect(entry.quantity_input).toMatchObject({ raw_value: "1/2", raw_unit: "인분", numerator: "1", denominator: "2",
       normalized: { amount: 125, unit: "g" }, batch_basis: { batch_id: batch, revision: currentRevision, cooking_servings: 4, finished_weight_g: 1000 } });

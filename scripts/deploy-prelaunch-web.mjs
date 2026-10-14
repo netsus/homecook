@@ -140,10 +140,14 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
       readAt, isAncestor: (source) => spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", source, target]).status === 0 });
   }
   const manifest = (sha) => JSON.parse(git(["show", `${sha}:package.json`]));
+  const eslintConfigDigests = files.includes("eslint.config.mjs") ? [live.ref, target].map(sha =>
+    git(["ls-tree", sha, "--", "eslint.config.mjs"]).length
+      ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:eslint.config.mjs`],
+        { maxBuffer: 65536, stdio: ["ignore", "pipe", "pipe"] })) : null) : null;
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
       reviewedIntegratedFiles: integratedReview?.reviewedFiles,
-      reviewedProtectedInventorySupport: Boolean(protectedCandidate) });
+      reviewedProtectedInventorySupport: Boolean(protectedCandidate), eslintConfigDigests });
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts, integratedReview };
 }
