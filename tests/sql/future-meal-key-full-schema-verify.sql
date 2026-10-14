@@ -36,6 +36,61 @@ begin
  update public.recipes set deleted_at=null where id=v_recipe;
  perform public.set_account_generation_internal_writer_marker('a5000000-0000-4000-8000-000000000001',false);
 end $test$;
+-- A new explicit action is not a retry, even when every request field matches.
+do $same_body_new_action$
+declare
+ v_first jsonb;v_second jsonb;v_replay jsonb;v_first_id uuid;v_second_id uuid;
+ v_meals int;v_notices int;v_receipts int;v_date date:=current_date;
+ v_owner uuid:='a1000000-0000-4000-8000-000000000001';
+ v_recipe uuid:='a2000000-0000-4000-8000-000000000001';
+ v_column uuid:='a6000000-0000-4000-8000-000000000001';
+ v_key_a uuid:='cc000000-0000-4000-8000-000000000004';
+ v_key_b uuid:='cc000000-0000-4000-8000-000000000005';
+ v_hash_a text;v_hash_b text;
+begin
+ select count(*) into v_meals from public.meals;
+ select count(*) into v_notices from public.action_notifications;
+ select count(*) into v_receipts from public.mutation_idempotency_keys;
+ v_hash_a:=encode(extensions.digest(convert_to(v_key_a::text,'UTF8'),'sha256'),'hex');
+ v_hash_b:=encode(extensions.digest(convert_to(v_key_b::text,'UTF8'),'sha256'),'hex');
+ v_first:=public.create_future_meal_idempotent(v_owner,'2026-01-01',repeat('a',64),1,'2026-01-02',v_key_a,v_recipe,v_date,v_column,2);
+ v_first_id:=(v_first->>'id')::uuid;
+ v_replay:=public.create_future_meal_idempotent(v_owner,'2026-01-01',repeat('a',64),1,'2026-01-02',v_key_a,v_recipe,v_date,v_column,2);
+ if v_first_id is null or v_first is distinct from v_replay
+   or (select count(*) from public.meals)<>v_meals+1
+   or (select count(*) from public.action_notifications)<>v_notices+1
+   or (select count(*) from public.mutation_idempotency_keys)<>v_receipts+1
+ then raise exception 'same action retry must retain exactly one meal notification and receipt';end if;
+
+ v_second:=public.create_future_meal_idempotent(v_owner,'2026-01-01',repeat('a',64),1,'2026-01-02',v_key_b,v_recipe,v_date,v_column,2);
+ v_second_id:=(v_second->>'id')::uuid;
+ if v_second_id is null or v_second_id=v_first_id
+   or (select count(*) from public.meals)<>v_meals+2
+   or (select count(*) from public.action_notifications)<>v_notices+2
+   or (select count(*) from public.mutation_idempotency_keys)<>v_receipts+2
+ then raise exception 'new action key must create a second meal notification and receipt';end if;
+ v_replay:=public.create_future_meal_idempotent(v_owner,'2026-01-01',repeat('a',64),1,'2026-01-02',v_key_b,v_recipe,v_date,v_column,2);
+ if v_second is distinct from v_replay
+   or (select count(*) from public.meals)<>v_meals+2
+   or (select count(*) from public.action_notifications)<>v_notices+2
+   or (select count(*) from public.mutation_idempotency_keys)<>v_receipts+2
+ then raise exception 'new action retry created extra rows';end if;
+ if (select count(*) from public.meals where id in(v_first_id,v_second_id) and user_id=v_owner
+   and recipe_id=v_recipe and plan_date=v_date and column_id=v_column and planned_servings=2)<>2
+ then raise exception 'new actions did not preserve the identical logical body';end if;
+ if (select count(*) from public.action_notifications where source_id=v_first_id)<>1
+   or (select count(*) from public.action_notifications where source_id=v_second_id)<>1
+ then raise exception 'each explicit action must have its own single notification';end if;
+ if (select count(*) from public.mutation_idempotency_keys where owner_uuid=v_owner and account_generation=1
+     and operation_scope='future_meal_create' and key_hash=v_hash_a and state='succeeded'
+     and result_reference=v_first_id and durable_result=v_first)<>1
+   or (select count(*) from public.mutation_idempotency_keys where owner_uuid=v_owner and account_generation=1
+     and operation_scope='future_meal_create' and key_hash=v_hash_b and state='succeeded'
+     and result_reference=v_second_id and durable_result=v_second)<>1
+   or (select count(distinct payload_hash) from public.mutation_idempotency_keys where owner_uuid=v_owner
+     and account_generation=1 and operation_scope='future_meal_create' and key_hash in(v_hash_a,v_hash_b))<>1
+ then raise exception 'identical payload must retain one distinct terminal receipt per action key';end if;
+end $same_body_new_action$;
 -- A failure after source/notification insertion must also roll back the claimed key.
 create function public.test_meal_key_abort() returns trigger language plpgsql as $$begin if new.planned_servings=99 then raise exception 'TEST_ROLLBACK';end if;return new;end$$;
 create trigger zz_test_meal_key_abort after insert on public.meals for each row execute function public.test_meal_key_abort();
@@ -55,4 +110,4 @@ begin
  if has_function_privilege('anon','public.create_future_meal_idempotent(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,date,uuid,integer,uuid,timestamptz)','EXECUTE') or has_function_privilege('authenticated','public.create_future_meal_idempotent(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,date,uuid,integer,uuid,timestamptz)','EXECUTE') then raise exception 'ACL expanded';end if;
  perform set_config('request.headers','{"x-homecook-internal-scope":"future-meal-write"}',true);perform set_config('request.method','POST',true);perform set_config('request.path','/rpc/create_future_meal_idempotent',true);perform private.verify_full_local_internal_scope();
 end $test$;
-select jsonb_build_object('status','PASS','checks',array['two_calls_one_meal','one_notification','payload_mismatch_409','stale_session_replay_denied','owner_isolation','deleted_source_replay','failed_source_rollback','post_insert_atomic_rollback','role_acl','exact_scope_path']);
+select jsonb_build_object('status','PASS','checks',array['two_calls_one_meal','one_notification','payload_mismatch_409','stale_session_replay_denied','owner_isolation','deleted_source_replay','failed_source_rollback','post_insert_atomic_rollback','role_acl','exact_scope_path','same_body_new_key_two_meals','new_action_replay_no_extra_rows','one_terminal_receipt_per_action_key']);

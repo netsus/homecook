@@ -48,6 +48,15 @@ object-a\trecipe-images\tuser-a/a.jpg
 `;
 
 describe("full-local platform restore boundary", () => {
+  it("preserves exact C04 OFF/ON policy bytes and rejects similar unknown private relations", () => {
+    for (const enabled of ["f", "t"]) {
+      const policy = `COPY private.quantity_input_v4_policy (singleton, enabled) FROM stdin;\nt\t${enabled}\n\\.\n`;
+      const result = buildSanitizedPlatformData(platformData + policy);
+      expect(result.manifest.relations).toContainEqual(expect.objectContaining({ relation: "private.quantity_input_v4_policy", action: "include" }));
+      expect(result.sql).toContain(policy);
+      expect(() => buildSanitizedPlatformData(platformData + policy.replace("private.quantity_input_v4_policy", "private.quantity_input_v5_policy"))).toThrow("Unclassified");
+    }
+  });
   it("includes only exact C03/C01 controls and private personal weight evidence in the existing restore classification", () => {
     const additions = `COPY private.recipe_product_only_write_control (singleton, enabled) FROM stdin;
 t\tt
