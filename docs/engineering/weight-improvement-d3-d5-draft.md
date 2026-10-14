@@ -60,6 +60,16 @@ C01 담당이 인계한 `SnapshotWeightPrediction`은 `cooked-weight-evidence-v1
 
 검증 범위는 가짜 fixture의 주체·목적·문서·원본 revision 결속, malformed private ID/hash, 동일 배치 중복·정정 주소, 철회/재참여의 옛 요리·옛 세대 거절, 허용외 정보 분리와 원기록 불변이다. 완료 표현은 **D3a 비활성 저장 계약·합성 fixture 검증 완료**까지이며 D3 실수집 완료가 아니다.
 
+## 2026-10-14 · D3b 비활성 원천 reader/adapter 준비
+
+`lib/server/weight-improvement-source-reader.ts`는 C01의 `private.cooked_batch_weight_evidence`와 `prediction_json`에서 쓰는 필드만 받는 typed projection과 주입형 read-only repository 경계를 준비한다. 기본 `enabled=false`이고 환경 스위치·실제 caller·SQL client·새 RPC/권한을 추가하지 않는다. 기본 OFF 또는 정책 미완결, 미참여/철회/옛 주체·세대/동의 revision·문서 불일치에서는 repository를 조회하지 않는다. 완결된 가짜 정책과 명시 read gate를 쓰는 합성 검사도 collection/storage 권한은 false다. 이 read gate가 실제 운영 control이나 수집 승인인 것은 아니다.
+
+reader는 같은 owner/generation/batch/evidence/snapshot과 prediction 참조·original revision을 검증하고, future reader가 제공할 명시 `current_relation`을 요구한다. 이 관계는 현재 C01 column이 아니며 메모리 객체만으로 서버 권위가 생기지 않는다. latest observation이나 batch revision 등치로 관계를 추정하지 않는다. 실제 SQL reader가 원천·현재 세대/동의·정정/삭제 관계를 일관되게 읽고 검증하는 구현은 남아 있다. typed boundary는 외부 JSON decoder를 대신하지 않는다.
+
+원 amount/unit/fixed product version과 이미 batch-scaled인 g를 다시 환산하지 않고 기존 D3a gate에 전달한다. 현재 C01의 planned origin, qa/whole/container/timing 확인 null, expires_at null을 그대로 보존한다. 확인된 단일 구조화 조리 구간만 조건으로 투영하고 inferred MIX·여러 구간·모르는 조건은 null이다. 새로운 measurement fact·보유기간을 추정하지 않으므로 실제 eligible 표본은 0이다. private candidate/lineage는 서버 준비 입력이며 public/model DTO로 전달하지 않는다. 표준 catalog 식별자·환산 metadata의 실제 검증, 현재 선택 registry 조회도 아직 연결하지 않았다.
+
+입력과 원천을 변경하지 않으며 조회/투영 실패는 초안을 만들지 않는다. 모델용 features/private_binding 분리는 기존 gate를 재사용한다. 독립 배치 등록·정정/삭제·철회 worker·tombstone/restore·모델 처리는 추가하지 않았고 완료 권위도 없다. 실제 caller 연결 때에는 개인 원기록 성공과 선별 실패를 분리해야 하며 현재 이 흐름을 연결한 증거는 없다. 완료 표현은 **D3b 비활성 source-reader/adapter 코드와 합성 관계 검사 준비**까지다.
+
 
 ## 2026-10-14 · 표시 주체와 현재 인증 주체의 경합 방지
 

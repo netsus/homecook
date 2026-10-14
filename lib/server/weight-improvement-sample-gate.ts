@@ -25,6 +25,12 @@ function text(value: string | null): value is string {
 function positive(value: number | null): value is number {
   return value !== null && Number.isFinite(value) && value > 0;
 }
+export function isWeightImprovementSamplePolicyComplete(policy: Readonly<WeightImprovementSamplePolicy>) {
+  return [policy.document_version, policy.document_hash, policy.sample_retention_rule, policy.evidence_retention_rule,
+    policy.quality_evaluation_plan, policy.deletion_restore_validation].every(text)
+    && policy.approved_condition_protocols !== null && policy.approved_condition_protocols.length > 0
+    && policy.approved_condition_protocols.every(text);
+}
 type ConfirmedSampleRow = WeightImprovementSampleCandidate["rows"][number]
   & { amount: number; grams: number; unit: string; conversion_quality: "exact" | "estimated" };
 function confirmedQuantity(row: WeightImprovementSampleCandidate["rows"][number]): row is ConfirmedSampleRow {
@@ -49,10 +55,7 @@ export function assessWeightImprovementSample({ participation, candidate, policy
   now: string;
 }): { reasons: WeightImprovementSampleReason[]; features: WeightImprovementSampleFeatures | null; collection_allowed: false } {
   const reasons: WeightImprovementSampleReason[] = [];
-  if (![policy.document_version, policy.document_hash, policy.sample_retention_rule, policy.evidence_retention_rule,
-    policy.quality_evaluation_plan, policy.deletion_restore_validation].every(text)
-    || policy.approved_condition_protocols === null || policy.approved_condition_protocols.length === 0
-    || !policy.approved_condition_protocols.every(text)) reasons.push("policy_pending");
+  if (!isWeightImprovementSamplePolicyComplete(policy)) reasons.push("policy_pending");
   if (!participation.participation_enabled || !hasCurrentWeightImprovementConsent(participation)
     || participation.consent_document_version !== policy.document_version
     || participation.consent_document_hash !== policy.document_hash) reasons.push("consent_not_current");
