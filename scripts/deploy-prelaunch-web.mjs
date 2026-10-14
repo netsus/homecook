@@ -112,11 +112,12 @@ function assertClean(cwd) {
   }
 }
 function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript,
-  youtubeTrialReview = null, youtubeResolutionReview = null, integratedMaster = false) {
+  youtubeTrialReview = null, youtubeResolutionReview = null, integratedMaster = false, protectedCandidate = null) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
   git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
   const files = prelaunchChangedFiles((args) => command("git", ["-C", repository, ...args], { trimOutput: false }), live.ref, target);
+  if (protectedCandidate) validateProtectedCandidate(protectedCandidate.review, live, { target, files }, protectedCandidate.context);
   if (youtubeTrialReview) {
     const digests = Object.fromEntries(Object.keys(youtubeTrialReview.files).map(file => [file, [live.ref, target].map(sha =>
       git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`],
@@ -139,7 +140,8 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   const manifest = (sha) => JSON.parse(git(["show", `${sha}:package.json`]));
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
-      reviewedIntegratedFiles: integratedReview?.reviewedFiles });
+      reviewedIntegratedFiles: integratedReview?.reviewedFiles,
+      reviewedProtectedInventorySupport: Boolean(protectedCandidate) });
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts, integratedReview };
 }
@@ -382,8 +384,7 @@ async function verifyProtectedBaseline(review, plan, options) {
 }
 async function runProtectedDatabasePhase(options, action, review) {
   const live = current(), context = requireClosedR2Mode(options, live);
-  const selection = plan(options.ref, live, options.refOption, undefined, false, options.testScript);
-  validateProtectedCandidate(review, live, selection, context);
+  plan(options.ref, live, options.refOption, undefined, false, options.testScript, null, null, false, { review, context });
   if (action === "plan") {
     const adapter = await openProtectedPrelaunchTarget({ repositoryRoot: repository, configPath: options.dbConfig, backupDirectory: root, review });
     const observed = await adapter.observe(undefined, "protected-plan");
@@ -703,9 +704,9 @@ async function deploy(options) {
   if (options.reviewedAiNutritionReadiness) await loadAiNutritionReview();
   if (options.reviewedFeedbackReadiness) await loadFeedbackReview();
   if (existsSync(recoveryPath)) throw new DeploymentError("이전 배포 복구가 남아 있습니다. status와 rollback을 먼저 실행하세요.");
-  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness);
+  const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness,
+    protectedReader ? { review: rollout, context: closedContext } : null);
   const patch = readEnvironmentPatch(options.envFile, repository);
-  if (protectedReader) validateProtectedCandidate(rollout, live, selection, closedContext);
   if (options.reviewedClosedR2Maintenance) {
     validateClosedR2Candidate(closedReview, live, selection, patch, options, closedContext);
     verifyClosedR2Control(closedReview, repository);
@@ -1079,7 +1080,7 @@ async function recordIntegratedMasterDatabase(options) {
 async function main() {
   const { action, args } = parsePrelaunchArgs(process.argv.slice(2));
   if (action === "help" || action === "--help") {
-    say("--reviewed-protected-rollout --protected-phase database|database-retry|reader|reconcile|writer-on|writer-off|writer-on-reconcile|writer-off-reconcile|writer-on-retry|writer-off-retry: 정확한 보호 DB/reader 승인과 별도 ON/OFF 승인 경로. 두 핀은 현재 비어 있어 실행할 수 없습니다.");
+    say("--reviewed-protected-rollout --protected-phase database|database-retry|reader|reconcile|writer-on|writer-off|writer-on-reconcile|writer-off-reconcile|writer-on-retry|writer-off-retry: 정확한 보호 DB/reader 승인과 별도 ON/OFF 승인 경로. 코드에 고정된 승인 자료와 정확히 일치해야 실행할 수 있습니다.");
     say("--reviewed-r2-closed-maintenance: exact F01·중지 receipt·두 false flag·closed rollback 검토 경로. 고정된 검토 핀과 정확히 일치해야 실행할 수 있습니다.");
     say("추가 옵션: --reviewed-integrated-master-readiness (검토한 운영 f970→origin/master 전체 파일·DB218 선행 상태·R2 승계 웹 선배포), --reviewed-nutrition-recovery-readiness (검토한 영양 복구·215→216 DB·기존 worker와 R2 보존), --skip-automated-tests (명시적 테스트 생략), --already-applied-db (checksum 이력만 대조), --reviewed-repair-readiness (20260918 복구본의 한정된 R2 재검증), --reviewed-beta-readiness (20260922 베타 후보의 한정된 R2 재검증), --reviewed-feedback-readiness (검토한 exact 피드백 후보·고정 DB 이력·R2 경계 재검증), --reviewed-ai-nutrition-readiness (검토한 AI 후보·204→207개 DB 이력·비활성 worker·R2 경계 재검증), --reviewed-ingredient-search-readiness (검토한 재료 검색 후보·211→212개 DB 이력·익명/worker 권한 보존), --reviewed-piece-unit-readiness (검토한 개수 단위 후보·212→213개 DB 이력·기존 권한·과거 영양 보존), --reviewed-youtube-resolution-readiness (검토한 YouTube 재료 연결 후보·213→215 DB·동일 v63 runtime)\n출시 전 웹/API/환경/추가형 DB 빠른 배포\nplan | deploy [--ref <커밋, 기본 origin/master>] [--env-file <비공개 dotenv>] [--db-config <비공개 full-local 설정>] [--db-baseline <비공개 JSON>] [--db-compatible] [--test-script <package.json test 명령>] [--verify-script <추가 검증 명령>]\nstatus | record-youtube-resolution-database --db-config <비공개 full-local 설정> | record-integrated-master-database --db-config <비공개 full-local 설정> | rollback\nplan은 변경 파일과 환경 키 이름만 표시합니다. deploy는 설치·빌드·확인 후 웹을 교체합니다.\nrecord-youtube-resolution-database와 record-integrated-master-database는 해당 DB 상태를 읽기 전용으로 검증하고 로컬 배포 상태 메타데이터만 갱신합니다.\n환경 파일은 Git 저장소 밖 0600 권한이어야 합니다. 키 값은 명령 인수에 넣지 마세요.\nAPI 변경은 기본 test:product를 실행하며 --test-script로 관련 test 명령을 선택하고 --verify-script로 추가 검증을 지정할 수 있습니다.\nDB 변경은 격리 검증·백업·트랜잭션으로 반영하며, 웹 rollback으로 DB를 되돌리지 않습니다. 통합 배포는 새 웹을 먼저 올린 뒤 DB219를 별도 통제 경로로 적용하고 상태를 기록합니다.\n검토한 긴급 수정은 --ref 대신 --reviewed-ref <현재 웹 후속 커밋 40자리 SHA>를 사용합니다.");
     return;
@@ -1123,10 +1124,10 @@ async function main() {
     const youtubeTrialReview = options.reviewedYoutubeTrialReadiness ? await loadYoutubeTrialReview() : null;
     if (youtubeTrialReview) await verifyYoutubeTrialSourceBackfill({ review: youtubeTrialReview, repositoryRoot: repository });
     const youtubeResolutionReview = options.reviewedYoutubeResolutionReadiness ? await loadYoutubeResolutionReview() : null;
-    const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness);
+    const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness,
+      protectedReview ? { review: protectedReview, context: closedContext } : null);
     const environmentKeys = Object.keys(readEnvironmentPatch(options.envFile, repository)).sort();
     if (protectedReview) {
-      validateProtectedCandidate(protectedReview, live, selection, closedContext);
       loadProtectedDatabaseReceipt(protectedReview);
     } else if (options.reviewedClosedR2Maintenance) {
       const review = loadClosedR2Review(repository), patch = readEnvironmentPatch(options.envFile, repository);

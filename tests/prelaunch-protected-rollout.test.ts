@@ -360,6 +360,13 @@ describe("exact protected source, environment and reader floor", () => {
     expect(() => assertProtectedRolloutReview({ ...actual, feature: "unapproved-feature" })).toThrow("source pair");
     const manifest = { scripts: { build: "next build" } };
     expect(() => classifyPrelaunchScope(["scripts/lib/full-local-security-inventory.mjs"], manifest, manifest)).toThrow("서버 구성");
+    const scope = classifyPrelaunchScope(paths, manifest, manifest, { reviewedProtectedInventorySupport: true });
+    expect(scope.support).toContain("scripts/lib/full-local-security-inventory.mjs");
+    expect(scope.database).toEqual(["supabase/migrations/20261013190000_recipe_product_only_identity.sql"]);
+    expect(scope.web).toContain("app/api/v1/recipes/route.ts");
+    expect(scope.support.length + scope.database.length + scope.web.length).toBe(paths.length);
+    expect(() => classifyPrelaunchScope([...paths, "scripts/lib/full-local-security-inventory-other.mjs"], manifest, manifest,
+      { reviewedProtectedInventorySupport: true })).toThrow("서버 구성");
   });
   it("preserves false flags, generation, original proofs and every runtime setting", () => {
     const { review, previous } = fixture();
