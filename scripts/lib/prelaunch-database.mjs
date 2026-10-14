@@ -8,7 +8,7 @@ import { readPinnedLocalDockerTarget } from "./local-supabase-isolated-runtime.m
 import { parseFullLocalProductionConfig, selectFullLocalProductionResources } from "./full-local-production-resources.mjs";
 import { createRecordingDockerAdapter, durableJson } from "./marketing-round2-controlled-deploy.mjs";
 import { assertProtectedWriterReview, assertProtectedRolloutReview, assertCookedWeightProductOff, readClosedR2PrivateBytes, COOKED_WEIGHT_FEATURE, COOKED_WEIGHT_MIGRATION, protectedImmutableSha256,
-  QUANTITY_V4_FEATURE, QUANTITY_V4_MIGRATIONS, QUANTITY_V4_PROTECTION, assertQuantityV4WorkerCheckpoint, assertQuantityV4WorkerPublicationPair } from "./prelaunch-web-deploy.mjs";
+  QUANTITY_V4_FEATURE, QUANTITY_V4_MIGRATIONS, QUANTITY_V4_PROTECTION, assertQuantityV4WorkerCheckpoint, assertQuantityV4WorkerPublicationPair, assertQuantityV4ActiveWorkerContinuation } from "./prelaunch-web-deploy.mjs";
 import { loadQuantityV4DatabaseReceipt, loadQuantityV4ReaderWriterReceipts } from "./prelaunch-web-deploy.mjs";
 
 const FILE = /^([0-9]{14})_[A-Za-z0-9_-]+\.sql$/u;
@@ -667,9 +667,10 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
   return { before, after, pending };
 }
 
-/** @param {{productOffReceipt?: unknown, reviewSha256?: string, workerCheckpoint?: any, ddlOnly?: boolean, safeQuantityOff?: boolean}} [independent] */
+/** @param {{productOffReceipt?: unknown, reviewSha256?: string, workerCheckpoint?: any, ddlOnly?: boolean, safeQuantityOff?: boolean, activeWorkerContinuation?: ReturnType<typeof import("./prelaunch-web-deploy.mjs").loadQuantityV4ActiveWorkerContinuation>}} [independent] */
 export function assertProtectedPrelaunchObservation(review, observation, phase, independent = {}) {
-  const { productOffReceipt = null, reviewSha256, workerCheckpoint, ddlOnly = false, safeQuantityOff = false } = independent;
+  const { productOffReceipt = null, reviewSha256, workerCheckpoint, ddlOnly = false, safeQuantityOff = false, activeWorkerContinuation } = independent;
+  if (activeWorkerContinuation && (review?.feature !== QUANTITY_V4_FEATURE || phase !== "after" || ddlOnly || safeQuantityOff)) throw new Error("Active worker authority is only for ordinary after-state continuation");
   const database = review?.database;
   if (!["before", "after"].includes(phase) || !database || !SHA.test(database.targetSha256)
     || !SHA.test(database.beforeCatalogSha256) || !SHA.test(database.afterCatalogSha256) || !SHA.test(database.immutableSha256)) {
@@ -699,8 +700,11 @@ export function assertProtectedPrelaunchObservation(review, observation, phase, 
       || observation.normalColumnsSha256 !== database[phase === "before" ? "beforeColumnsSha256" : "afterColumnsSha256"]
       || (!safeQuantityOff && observation.worker?.credentialActive !== true)
       || observation.worker?.catalogFingerprint !== database[phase === "before" ? "workerCatalogBefore" : "workerCatalogAfter"]) throw new Error("C04 C03/C01 ON/ledger authority/data projection/scope/catalog/credential differs");
-    const expected = workerCheckpoint ?? database.workerBaseline;
-    if (workerCheckpoint && !safeQuantityOff) {
+    const expected = activeWorkerContinuation ? assertQuantityV4ActiveWorkerContinuation(review, activeWorkerContinuation) : workerCheckpoint ?? database.workerBaseline;
+    if (activeWorkerContinuation) {
+      if (observation.worker.queued !== 0 || observation.worker.processing !== 0 || observation.worker.permitHeld !== false
+        || observation.worker.activeEnqueueSessions !== 0 || observation.worker.policyStableSha256 !== expected.policyStableSha256) throw new Error("C04 active worker fresh zero/stable policy differs");
+    } else if (workerCheckpoint && !safeQuantityOff) {
       assertQuantityV4WorkerCheckpoint(review, workerCheckpoint, workerCheckpoint.serviceState === "stopped" ? "before" : "after");
       if ((ddlOnly && phase === "before" && observation.normalDataSha256 !== workerCheckpoint.normalDataSha256)
         || observation.worker.queued !== 0 || observation.worker.processing !== 0 || observation.worker.permitHeld !== false
