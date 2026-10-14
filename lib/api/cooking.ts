@@ -1,3 +1,5 @@
+import { isWeightAttestationContext, isWeightAttestationRecord, matchesWeightAttestationAcknowledgement } from "@/lib/cooking/cooked-weight-attestation";
+import type { WeightAttestationContext, WeightAttestationRecord, WeightAttestationInput, WeightAttestationRetraction, WeightAttestationTarget } from "@/types/cooked-weight-attestation";
 import { cookedWeightResponseHeaders } from "@/lib/cooking/cooked-weight-response-contract";
 import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
@@ -27,13 +29,14 @@ export interface CookedBatchListData {
 }
 
 export interface CookedBatchMutationData {
+  weight_attestation?: WeightAttestationRecord;
   action: "set_finished_weight" | "mark_unrecoverable" | "discard" | "adjust" | "close" | "cancel_current";
   batch: CookedBatchProjection;
   event_id: string | null;
 }
 
 export type CookedBatchWeightBody =
-  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number; weight_input_source?: "reported_measured" }
+  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number; weight_input_source?: "reported_measured"; weight_attestation?: WeightAttestationInput }
   | { action: "mark_unrecoverable"; expected_revision: number };
 
 export interface CookedBatchDiscardBody {
@@ -242,6 +245,7 @@ function isExactSnapshotV2CompleteData(
     sessionId: string;
   },
 ): value is SnapshotV2CompleteData {
+  const attestation = request.body.weight_action === "set_finished_weight" ? request.body.weight_attestation : undefined;
   if (!isRecord(value) || !hasExactKeys(value, [
     "session_id",
     "contract_version",
@@ -251,7 +255,9 @@ function isExactSnapshotV2CompleteData(
     "meals_updated",
     "pantry_removed",
     "cook_count",
+    ...(attestation ? ["weight_attestation"] : []),
   ])) return false;
+  if (attestation && !matchesWeightAttestationAcknowledgement(value.weight_attestation, attestation)) return false;
   if (
     value.session_id !== request.sessionId
     || value.contract_version !== "snapshot_v2"
@@ -267,6 +273,8 @@ function isExactSnapshotV2CompleteData(
   ) return false;
 
   const batch = value.cooked_batch;
+  if (attestation && isWeightAttestationRecord(value.weight_attestation)
+    && value.weight_attestation.measured_g !== request.body.finished_weight_g) return false;
   if (!isExactCookedBatchProjection(batch)) return false;
   const hasRequestedInitialWeight = request.body.weight_action === "set_finished_weight"
     ? batch.weight_status === "known"
@@ -318,11 +326,15 @@ function isExactCookedBatchListData(value: unknown): value is CookedBatchListDat
 function isExactCookedBatchMutationData(
   value: unknown,
   expectedAction: CookedBatchMutationData["action"],
+  attestation?: WeightAttestationInput,
 ): value is CookedBatchMutationData {
   if (!isRecord(value)
-    || !hasExactKeys(value, ["action", "batch", "event_id"])
+    || !hasExactKeys(value, ["action", "batch", "event_id", ...(attestation ? ["weight_attestation"] : [])])
+    || (attestation !== undefined && !matchesWeightAttestationAcknowledgement(value.weight_attestation, attestation))
     || value.action !== expectedAction
     || !isExactCookedBatchProjection(value.batch)) return false;
+  if (attestation && isWeightAttestationRecord(value.weight_attestation)
+    && value.weight_attestation.measured_g !== value.batch.finished_weight_g) return false;
   return expectedAction === "set_finished_weight"
     ? value.event_id === null
     : typeof value.event_id === "string" && UUID_PATTERN.test(value.event_id);
@@ -349,7 +361,7 @@ export async function fetchCookedBatches({
 async function mutateCookedBatch(
   input: string,
   method: "PATCH" | "POST",
-  body: unknown,
+  body: CookedBatchWeightBody | CookedBatchDiscardBody | CookedBatchAdjustmentBody | CookedBatchCloseBody,
   idempotencyKey: string,
   expectedAction: CookedBatchMutationData["action"],
 ): Promise<CookedBatchMutationData> {
@@ -358,8 +370,9 @@ async function mutateCookedBatch(
     headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey },
     body: JSON.stringify(body),
   });
-  if (!isExactCookedBatchMutationData(data, expectedAction)
-    || (isRecord(body) && body.weight_input_source === "reported_measured" && data.batch.weight_evidence?.source !== "reported_measured")) {
+  const attestation = "weight_attestation" in body ? body.weight_attestation : undefined;
+  if (!isExactCookedBatchMutationData(data, expectedAction, attestation)
+    || ("weight_input_source" in body && body.weight_input_source === "reported_measured" && data.batch.weight_evidence?.source !== "reported_measured")) {
     throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "중량·잔량 변경 결과를 확인하지 못했어요." });
   }
   notifyCookedBatchChanged(data.batch.id);
@@ -545,5 +558,22 @@ export async function completeStandaloneCooking(body: {
     },
   );
   notifyActionNotificationsChanged();
+  return data;
+}
+
+export async function fetchWeightAttestationContext(target: WeightAttestationTarget, id: string): Promise<WeightAttestationContext> {
+  const data = await requestCooking<WeightAttestationContext>(`/api/v1/cooked-weight-attestations/${id}?target=${target}`, { cache: "no-store" });
+  if (!isWeightAttestationContext(data) || data.target_kind !== target || data.target_id !== id) throw createCookingApiError({ status: 502,
+    code: "INVALID_RESPONSE", fields: [], message: "개인 확인 기록을 읽지 못했어요." });
+  return data;
+}
+export async function retractWeightAttestation(id: string, body: WeightAttestationRetraction, key: string): Promise<WeightAttestationContext> {
+  const data = await requestCooking<WeightAttestationContext>(`/api/v1/cooked-weight-attestations/${id}`, {
+    method: "PATCH", headers: { "content-type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(body),
+  });
+  if (!isWeightAttestationContext(data) || data.target_kind !== "batch" || data.target_id !== id
+    || data.subject.owner_uuid !== body.expected_subject.owner_uuid || data.subject.account_generation !== body.expected_subject.account_generation
+    || data.record?.status !== "retracted" || data.record.context_fingerprint !== body.expected_context_fingerprint) throw createCookingApiError({ status: 502,
+    code: "INVALID_RESPONSE", fields: [], message: "개인 확인 취소 결과를 읽지 못했어요." });
   return data;
 }

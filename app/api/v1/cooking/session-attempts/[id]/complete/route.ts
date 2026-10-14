@@ -1,3 +1,4 @@
+import { attestationOwnerPrecondition, attestationRpcArgs } from "@/lib/server/cooked-weight-attestation";
 import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
@@ -31,6 +32,11 @@ export async function POST(request: Request, context: RouteContext) {
   if (!body.ok) return body.response;
   const parsed = parseSnapshotV2CompleteRequest(body.value);
   if (!parsed.ok) return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
+  const attestation = parsed.value.weightAttestation;
+  if (attestation) {
+    const error = attestationOwnerPrecondition(attestation, authorized.user.id);
+    if (error) return error;
+  }
   const evidenceEnabled = cookedWeightEvidenceEnabled();
   const withEvidence = evidenceEnabled || parsed.value.weightInputSource !== null;
   const args: Record<string, unknown> = {
@@ -71,7 +77,8 @@ export async function POST(request: Request, context: RouteContext) {
     return createHybridAuthorityRouteError(error)
       ?? fail("INTERNAL_ERROR", "요리 중량 근거를 확인하지 못했어요. 다시 시도해 주세요.", 500);
   }
-  let result = await callCookedBatchRpc(authorized.client, withEvidence
+  if (attestation) Object.assign(args, attestationRpcArgs(attestation));
+  let result = await callCookedBatchRpc(authorized.client, attestation ? "complete_snapshot_v2_cooking_session_with_attestation" : withEvidence
     ? "complete_snapshot_v2_cooking_session_with_weight_evidence" : "complete_snapshot_v2_cooking_session", args);
   if (withEvidence && parsed.value.weightInputSource === null && !result.ok && await isCookedWeightEvidenceDisabledResponse(result.response)) {
     const legacyArgs = { ...args };
@@ -97,6 +104,6 @@ export async function POST(request: Request, context: RouteContext) {
     "cooking_completed",
     id,
   );
-  const data = projectSnapshotV2CompleteData(result.data, wantsCookedWeightEvidence(request));
+  const data = projectSnapshotV2CompleteData(result.data, wantsCookedWeightEvidence(request), attestation);
   return data ? ok(data) : fail("INTERNAL_ERROR", "요리 완료 결과를 확인하지 못했어요.", 500);
 }

@@ -5821,3 +5821,22 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 ## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
 
 공개 endpoint와 `{success,data,error}`는 유지한다. 완료/무게 `set_finished_weight`에만 선택 `weight_input_source=reported_measured`를 허용하고 client 예측/source ID/owner 주입은 거절한다. 정확 `X-Homecook-Cooked-Weight-Contract: evidence-v1`일 때만 additive weight summary/9키 식사 weight_basis·선택 weight_assumption_codes를 반환한다. 서버 wrapper의 정확한 SQLSTATE `55000`/`COOKED_WEIGHT_EVIDENCE_DISABLED` 응답에만, 명시 source 없는 일반 완료·구 수동 무게 요청을 기존 RPC로 처리한다. 실패한 wrapper transaction의 receipt·근거·완료 쓰기는 남지 않는다. `reported_measured` 요청은 헤더 유무와 무관하게409를 유지하며 요리 정보 갱신 후 일반 완료는 새 요청으로 보낸다. 일반 충돌·권한·멱등 오류에는 호환 재시도를 하지 않는다. 이미 성공한 근거 receipt는 OFF 후에도 원결과를 재생한다. 헤더 없음·미지원 판본은 기존 DTO, 새 client는 구 DTO를 읽는다. 헤더는 display opt-in이며 동의/권한/receipt 입력이 아니다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.
+
+
+## 2026-10-15 — cooked weight 개인 확인 API (로컬·운영 미적용)
+
+현재 소스·SQL 작성 마무리와 격리 검증 단계이며 운영 미적용이다. 같은 v9의 검증 후 반영은 최신 사용자 상시 승인으로 진행한다. 과거의 구현 승인 대기 문장은 당시 기록이며, 여기의 미적용 표시는 배포 완료를 뜻하지 않는다. 기본 응답은 `{success,data,error}`, 오류는 `{code,message,fields[]}`를 유지한다.
+
+| 경로 | 요청·응답 계약 |
+| --- | --- |
+| `GET /api/v1/cooked-weight-attestations/{id}?target=session` 또는 `?target=batch` | 인증 필수. id는 target의 session 또는 batch UUID이며 target은 필수다. data는 schema/statement version, 검증된 subject, target kind/id, context fingerprint, recipe content snapshot ID, cooking servings, can_attest, nullable record다. 세션 완료 전 context와 배치의 개인 기록 조회를 구분한다. |
+| `PATCH /api/v1/cooked-weight-attestations/{id}` | id는 batch UUID. UUID `Idempotency-Key`와 아래 철회 precondition4개를 요구하고, data는 batch context와 retracted record다. event ID를 URL target으로 사용하지 않는다. |
+| 기존 `POST /api/v1/cooking/session-attempts/{id}/complete` / `PATCH /api/v1/cooked-batches/{id}/weight` | `set_finished_weight` + 양수 finished_weight_g + `weight_input_source=reported_measured`의 새 저장에만 optional weight_attestation을 허용한다. completion은 weight_action, weight API는 action을 사용한다. 생략하면 기존 요청/RPC/응답 계약이며 명시 확인 성공 때만 data.weight_attestation을 추가한다. |
+
+`weight_attestation`의 exact4필드: `statement_version="pinned-quantities-whole-net-weight-v1"`, `checked=true`, `expected_subject={owner_uuid,account_generation}`, `expected_context_fingerprint=<64hex>`. 미선택은 필드 생략이며 checked=false/null을 보내지 않는다. 신규 저장 지문은 현재 GET context에서 온다. 표시 subject는 권한이 아니라 전제조건이고 서버가 실제 session/owner/generation을 재검증한다.
+
+철회 exact4필드: `expected_subject`, `expected_record_id`, `expected_revision`, `expected_context_fingerprint`. ID/revision/지문은 **GET record의 값**이며 현재 top-level context 지문으로 바꾸지 않는다. 유효한 동일 요청 재생/OFF read·retract는 허용하고 옛 C01 영수증에 새 확인을 덧붙이지 않는다.
+
+record는 id/revision/status(`attested`1 또는 `retracted`2), statement version, measurement_evidence_id/measurement_original_revision, measured_g, recipe_content_snapshot_id, 저장 context_fingerprint, observed_at, row_count와 `provenance=user_attested`, `physical_verification=not_verified`, `record_usage=qa_personal_record`를 제공한다. 새 확인 응답의 지문/측정g는 요청과 저장 결과에 일치해야 한다. C05 동의·수집·기간·모델 적격을 포함하지 않는다.
+
+미로그인401과 없는/타인 target404를 유지한다. 신규 조회의 id/target 형식 오류는422, 철회 본문의 형식/추가필드 오류는422이며 기존 완료·무게 API의 id404/본문422 계약은 유지한다. 새409는 `WEIGHT_ATTESTATION_DISABLED`, `WEIGHT_ATTESTATION_SUBJECT_CHANGED`, `WEIGHT_ATTESTATION_CONTEXT_CHANGED`, `WEIGHT_ATTESTATION_REVISION_CONFLICT`, `WEIGHT_ATTESTATION_OLD_RECEIPT`이며 기존 세대/세션/멱등409·정비503도 유지한다. 잘못된 결과는 서버500 INVALID_RESPONSE/INTERNAL_ERROR 또는 client502 INVALID_RESPONSE로 성공 처리하지 않는다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.

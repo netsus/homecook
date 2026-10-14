@@ -1,3 +1,4 @@
+import type { WeightAttestationInput, WeightAttestationRecord } from "@/types/cooked-weight-attestation";
 import type { ApiResponse } from "@/types/api";
 
 export type CookingSessionStatus = "in_progress" | "completed" | "cancelled";
@@ -143,6 +144,7 @@ export type SnapshotV2CompleteBody =
       weight_action: "set_finished_weight";
       finished_weight_g: number;
       weight_input_source?: "reported_measured";
+      weight_attestation?: WeightAttestationInput;
     }
   | {
       consumed_pantry_item_ids: string[];
@@ -187,6 +189,7 @@ export interface CookedBatchProjection {
 }
 
 export interface SnapshotV2CompleteData {
+  weight_attestation?: WeightAttestationRecord;
   session_id: string;
   contract_version: "snapshot_v2";
   mode: "planner" | "standalone";
