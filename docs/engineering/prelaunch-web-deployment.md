@@ -504,7 +504,9 @@ C01 DB만 committed이고 reader가 pending일 때 C03 안전 OFF를 먼저 실�
 
 ## C04 수량 정책의 보호 경로 준비 · 2026-10-14
 
-기존 `--reviewed-protected-rollout`에 `ingredient-quantity-v4`의 정확 5+1 단계를 연결한다. 최초 준비의 C04 PIN은 모두 null이었다. 현재는 사용자의 v9 상시 승인 아래 검토한 웹 `6b610eb012da`, 첫 consumers DB 단계와 원 worker 제어 자료·데이터 비교식을 소스에 고정했다. worker DB 단계와 writer 승인은 실제 선행 영수증이 생기기 전까지 null로 유지하며, 임의 경로나 환경변수로 대신하지 않는다. 이 소스 결속은 운영 적용·worker 설치·policy 활성화의 완료 기록이 아니다. F01/C03/C01 원 PIN과 권한·SQL은 보존한다.
+기존 `--reviewed-protected-rollout`에 `ingredient-quantity-v4`의 정확 5+1 단계를 연결한다. 최초 준비의 C04 PIN은 모두 null이었다. 현재는 사용자의 v9 상시 승인 아래 검토한 웹 `6b610eb012da`, 첫 consumers DB 단계와 원 worker 제어 자료·데이터 비교식을 소스에 고정했다. 실제226 영수증을 확인한 뒤 worker DB 검토와 조건부 writer 검토를 별도로 고정했다. 실제 worker 중지·DB227·새 worker·reader 영수증 검사는 각 실행 단계에서 계속 필수이며, 임의 경로나 환경변수로 대신하지 않는다. 이 소스 결속은 운영 적용·worker 설치·policy 활성화의 완료 기록이 아니다. F01/C03/C01 원 PIN과 권한·SQL은 보존한다.
+
+PR #1694·도구 `6306f862552f`로 first5를 반영하고 실제 DB226·C03/C01 ON·C04 OFF·worker47 및 기존 웹 `5be05649968e`를 확인했다. 실제 T1 영수증 `ea7887576f0fac6062d265eead00ba5329b4e94bad4262dc1174d1e9575a4c28`만 후속 검토에 연결한다. worker를 중지하기 전에 두 후속 검토를 고정하고 기존 도구를 갱신한다. 원 R/UUID/operationRoot/HOME는 유지하고 새 도구 ROOT의 고정 `.artifacts` 경로에 동일 봉인 소스·descriptor를 복사한다. 검토의 worker OFF는 실행 전제이며 현재 중지 완료를 뜻하지 않는다. 아직 생기지 않은 policy 행 SHA와 reader/post 영수증 SHA의 null은 원 controlled journal·실제 pre/post·fresh DB 검사를 생략할 권한이 아니다. 이후 prepare/quiesce→실제 pre 검증→DB227→CAS48/설치/postOFF→reader→writer ON→별도 worker 활성화 순서를 지킨다. 새 영수증을 미리 생성하거나 원 검토로 역참조하지 않는다.
 
 계획 검사에서는 C04의 전체 변경 파일·전후 byte·선행 증거를 먼저 검증한 경우에만 `scripts/lib/youtube-extraction-worker-runtime.mjs`와 `scripts/manifests/youtube-extraction-expected-schema.json`을 지원 파일로 분류한다. 일반 웹 및 C03/C01 분류에는 이 예외가 없고, 다른 worker 명령·설정 파일은 계속 거부한다. 이 분류로 worker를 실행하거나 교체하지 않으며 실제 전환은 별도 고정 worker 경로가 담당한다.
 
