@@ -43,15 +43,15 @@ export const COOKED_WEIGHT_MIGRATION = "20261013233000_cooked_batch_weight_evide
 export const COOKED_WEIGHT_ENVIRONMENT = "HOMECOOK_COOKED_WEIGHT_EVIDENCE";
 
 // C04 consumers and worker source bound under the standing v9 authorization after review.
-// Worker DB and writer authority remain unbound until their actual predecessor receipts exist.
+// Worker DB and conditional writer authority bind the actual T1 receipt; later runtime evidence is still required.
 // No CLI/environment replacement and no inheritance of C03/C01 authority.
 export const QUANTITY_V4_FEATURE = "ingredient-quantity-v4";
 export const QUANTITY_V4_ENVIRONMENT = "MUMEOK_QUANTITY_V4_ENABLED";
 export const QUANTITY_V4_RELEASE_SHA = "6b610eb012da42b5d151b058531815dc12a8ca45";
 export const QUANTITY_V4_PROTECTION = Object.freeze({"normalProjectionSha256":"ece6c7ccaf15312ae2b21cd34f8d1334eb80534a34af8e69970c9f3b23371ff3","postimageRegistrySha256":"365d277cdc0a62c3aee5973d51dfff363d76298946fa6e65c6be24de95d8daab"});
 export const QUANTITY_V4_CONSUMERS_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/approved-quantity-consumers-review.json","sha256":"7fe3e367c3b305b5ab6f79c98aa18701745fcf45eefd93e7b0cd75ef4414a1c9"});
-export const QUANTITY_V4_WORKER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
-export const QUANTITY_V4_WRITER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const QUANTITY_V4_WORKER_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/approved-quantity-worker-review.json","sha256":"7efc832daa0b72dc2a555b7c8f1e0a5dc807c054c598f6a91309f3399109fe5f"});
+export const QUANTITY_V4_WRITER_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/approved-quantity-writer-review.json","sha256":"4615dc8a3b8d07bcfbe52b42dc5aee96e9b9b1625a3c540a282392fd7c394f49"});
 export const QUANTITY_V4_WORKER_BEFORE_PIN = Object.freeze({ path: null, sha256: null });
 export const QUANTITY_V4_WORKER_AFTER_PIN = Object.freeze({ path: null, sha256: null });
 export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/approved-worker-control-review.json","sha256":"63ba82001909c381a7cf1a61c32ec2209aca157c42607371ed46a74c331839b6"});
