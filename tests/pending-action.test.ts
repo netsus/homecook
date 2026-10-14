@@ -271,3 +271,24 @@ describe("pending action", () => {
     expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 });
+
+it("preserves an exact fraction/revision/row in a resume-only quantity read and rejects new authority fields", () => {
+  const product = { ingredient_id: null, row_key: "79000000-0000-4000-8000-000000000003", source_kind: "food_product" as const,
+    food_product_id: "79000000-0000-4000-8000-000000000001", food_product_nutrition_version_id: "79000000-0000-4000-8000-000000000002",
+    amount: 1 / 3, unit: "package", ingredient_type: "QUANT" as const, display_text: "1/3팩 원문", component_label: null, scalable: true,
+    quantity_input: { schema_version: "quantity-v4" as const, raw_value: "1/3", raw_unit: "package", expected_product_nutrition_version_id: "79000000-0000-4000-8000-000000000002", expected_context_sha256: "a".repeat(64) } };
+  const action = { type: "recipe-fork" as const, recipeId: "recipe-1", redirectTo: "/recipe/recipe-1", createdAt: 123,
+    sourceOwnerUuid: "79000000-0000-4000-8000-000000000004", sourceAccountGeneration: 3,
+    resumeEditor: { mode: "edit" as const, rowKey: product.row_key, source: "quantity" as const },
+    editContext: { base_recipe_revision: 8, image_object_id: null, draft: { title: "분수 초안", description: null, base_servings: 4, ingredients: [product], steps: [] } } };
+  expect(parsePendingAction(JSON.stringify(action), 123)).toEqual(action);
+  for (const resumeEditor of [{ ...action.resumeEditor, source: "save" }, { ...action.resumeEditor, rowKey: null }, { ...action.resumeEditor, automatic: true }]) {
+    expect(parsePendingAction(JSON.stringify({ ...action, resumeEditor }), 123)).toBeNull();
+  }
+  for (const row of [{ ...product, quantity_input: { ...product.quantity_input, evidence_ids: ["fake"] } },
+    { ...product, quantity_input: { ...product.quantity_input, expected_product_nutrition_version_id: "wrong" } }, { ...product, quantity_input: null }]) {
+    expect(parsePendingAction(JSON.stringify({ ...action, editContext: { ...action.editContext, draft: { ...action.editContext.draft, ingredients: [row] } } }), 123)).toBeNull();
+  }
+  expect(parsePendingAction(JSON.stringify({ ...action, sourceAccountGeneration: undefined }), 123)).toBeNull();
+  expect(parsePendingAction(JSON.stringify(action), 123 + 15 * 60 * 1000)).toBeNull();
+});

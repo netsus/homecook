@@ -83,3 +83,7 @@ foundation calculator의 `amount/unit`은 원량이다. consumer는 화면 `quan
 첫 v4 원문 cup/스푼/통 회귀3개가 기존 계산에서 잘못 완전 영양으로 남는 실패를 확인한 뒤 정책 분기를 연결했다. 새 contract, 실제 명시 v4 calculator, source cup200/240·T/t, 계량 충돌, density/piece/가식부·상태·크기·원문 source 결속, 평균·중복·만료·양수·overflow를 집중 검사한다. 모든 숫자는 synthetic fixture이며 실제 음식 근거로 적재하지 않는다.
 
 SQL 검증은 독립 `/tmp/homecook-unit-v4-*`의 PostgreSQL15 UTF8·자체 Unix socket에서 실행한다. 함수 실제 실행과 JS 수량/quality/evidence 결과 parity, 기존 실제 v3 count 함수 의미, 고정 meal fixture 내용, runtime-role helper EXECUTE 거절을 확인한다. 이후 자신의 서버와 디렉터리는 종료·제거한다. 전체 운영 DB·모든 historical snapshot·실권한 API/화면 검증을 대신하지 않는다. 결과 수치와 최종 checks는 총괄 인계 기록에 별도로 남긴다.
+
+## 레시피 입력 소비자 후속
+
+수동 생성·개인 편집·복사의 원문 fraction 및 고정 context 계약은 `recipe-quantity-input-v4-20261014.md`에 기록한다. quantity 정보가 없는 과거 JSON/hash는 유지한다. 단위 클릭 시 근거가 없으면 양과 단위를 보존하며, 새 수량·단위로 숫자를 재해석하지 않는다. 운영 활성화와 worker/import 끝단은 별도 범위다.

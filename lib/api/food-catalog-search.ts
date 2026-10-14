@@ -1,6 +1,7 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type { FoodProductData } from "@/types/food-product";
+import type { RecipeIngredientQuantityContext } from "@/types/recipe";
 import type { IngredientQuantityOptions } from "@/types/quantity-input";
 import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 
@@ -14,11 +15,15 @@ export interface FoodCatalogIngredientData {
   category: string;
   default_unit: string;
   quantity_options?: IngredientQuantityOptions;
+  quantity_context_sha256?: string;
+  recipe_quantity_context?: RecipeIngredientQuantityContext;
 }
 
 export type FoodCatalogProductData = FoodProductData & {
   type: "food_product";
   recipe_ingredient_id?: string | null;
+  quantity_input_ready?: boolean;
+  quantity_context_sha256?: string;
 };
 
 export type FoodCatalogSearchItem =

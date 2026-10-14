@@ -442,6 +442,10 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput, calculationVers
   if (ingredient.food_product_id || ingredient.food_product_nutrition_version_id) {
     if (!ingredient.food_product_id || !ingredient.food_product_nutrition_version_id
       || !ingredient.product_basis_relations) return null;
+    if (calculationVersion === RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION) {
+      const basisQuantity = convertProductQuantity(amount, ingredient.unit ?? "", profile.basis_unit, ingredient.product_basis_relations);
+      return basisQuantity === null ? null : { factor: basisQuantity / profile.basis_amount, quality: "direct", warning: null, measurementSource: null };
+    }
     const grams = massInGrams(amount, ingredient.unit);
     const milliliters = volumeInMilliliters(amount, ingredient.unit);
     const unit = grams !== null ? "g" : milliliters !== null ? "ml" : normalizedUnit(ingredient.unit);
@@ -599,7 +603,7 @@ function outputNutrientCodes(input: RecipeNutritionCalculatorInput) {
       if (ingredient.ingredient_type === "TO_TASTE") {
         return !isAiNutrition(ingredient) && value?.value_status === "observed" && value.amount === 0;
       }
-      if (!resolveUnit(ingredient)) return false;
+      if (!resolveUnit(ingredient, input.calculation_version)) return false;
       return hasCalculableValueStatus(ingredient, value) && value?.amount !== null;
     })
   );

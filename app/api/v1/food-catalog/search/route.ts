@@ -29,9 +29,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function projectQuantityOptions(value: unknown, request: Request) {
   if (!isRecord(value) || !("quantity_options" in value)) return value;
-  if (quantityInputWriteEnabled(request) && value.quantity_options !== null) return value;
+  if (quantityInputWriteEnabled(request)) return value;
   const item = { ...value };
   delete item.quantity_options;
+  delete item.quantity_context_sha256;
+  delete item.recipe_quantity_context;
   return item;
 }
 

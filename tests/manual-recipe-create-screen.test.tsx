@@ -128,6 +128,7 @@ async function fillMinimumManualRecipe(
   await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
   await user.click(await screen.findByRole("checkbox", { name: "양파" }));
   await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+  await user.type(await screen.findByLabelText("양파 수량"), "100");
   await screen.findByRole("button", { name: "준비" });
   await user.click(screen.getByRole("button", { name: "준비" }));
   await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
@@ -258,18 +259,13 @@ describe("ManualRecipeCreateScreen", () => {
     expect(screen.queryByLabelText("양파 수량")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
-
     const amountInput = await screen.findByLabelText("양파 수량");
-    expect((amountInput as HTMLInputElement).value).toBe("100");
-    expect(screen.getByRole("button", { name: "양파 g" }).getAttribute("aria-pressed")).toBe(
-      "true",
-    );
-
-    await user.click(screen.getByRole("button", { name: "양파 ml" }));
-
-    expect(screen.getByRole("button", { name: "양파 ml" }).getAttribute("aria-pressed")).toBe(
-      "true",
-    );
+    expect((amountInput as HTMLInputElement).value).toBe("");
+    const unit = screen.getByRole<HTMLSelectElement>("combobox", { name: "양파 단위" });
+    expect(unit.value).toBe("g");
+    await user.selectOptions(unit, "ml");
+    expect(unit.value).toBe("ml");
+    expect((amountInput as HTMLInputElement).value).toBe("");
   });
 
   it("renders the desktop embedded form without nesting its own web shell", () => {
@@ -808,6 +804,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
 
     await screen.findByRole("button", { name: "준비" });
     await user.click(screen.getByRole("button", { name: "준비" }));
@@ -1200,6 +1197,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
 
     // Add a step
     await screen.findByRole("button", { name: "준비" });
@@ -1253,6 +1251,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
     await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
@@ -1334,6 +1333,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
     await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
@@ -1474,6 +1474,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
     await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
@@ -1508,6 +1509,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await screen.findByRole("button", { name: "준비" });
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
@@ -1847,6 +1849,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
 
     // Add step
     await screen.findByRole("button", { name: "준비" });
@@ -1922,6 +1925,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await screen.findByRole("button", { name: "준비" });
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");
@@ -1961,6 +1965,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await screen.findByRole("button", { name: "준비" });
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");
@@ -2007,6 +2012,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await screen.findByRole("button", { name: "준비" });
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");
@@ -2077,6 +2083,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.type(await screen.findByLabelText("양파 수량"), "100");
     await screen.findByRole("button", { name: "준비" });
     await user.click(screen.getByRole("button", { name: "준비" }));
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");

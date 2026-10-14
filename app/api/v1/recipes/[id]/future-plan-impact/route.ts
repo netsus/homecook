@@ -1,3 +1,6 @@
+import { readRecipeQuantityMode, RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
+import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
+import { recipeQuantityWriteFailure } from "@/lib/server/recipe-quantity-input";
 import { fail, ok } from "@/lib/api/response";
 import { readVerifiedAccountGenerationSession } from
   "@/lib/server/account-generation/session-authority";
@@ -49,6 +52,9 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
+  const quantityFailure = recipeQuantityWriteFailure(request, parsed.value.draft.ingredients);
+  if (quantityFailure) return quantityFailure;
+
   const verifiedSession = await readVerifiedAccountGenerationSession(
     routeClient,
     user,
@@ -63,6 +69,15 @@ export async function POST(request: Request, context: RouteContext) {
   const serviceClient = createRecipeFuturePropagationInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "레시피 변경 영향을 확인하지 못했어요.", 500);
+  }
+
+  try {
+    const quantityMode = await readRecipeQuantityMode({ client: { rpc: (name, args) => serviceClient.rpc(name, args) },
+      sessionAuthority: verifiedSession.sessionAuthority, recipeId, expectedRevision: parsed.value.baseRecipeRevision });
+    if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를저장할 수 없어요. 원입력은 유지돼요.", 422);
+  } catch (error) {
+    if (error instanceof RecipeQuantityModeError) return fail(error.code, error.message, error.status);
+    return fail("INTERNAL_ERROR", "레시피의 수량 정보를 확인하지 못했어요.", 500);
   }
 
   const result = await callFuturePropagationRpc(

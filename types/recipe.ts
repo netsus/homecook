@@ -1,5 +1,7 @@
 import type { ApiResponse } from "@/types/api";
 import type { IngredientCategory } from "@/lib/ingredient-categories";
+import type { FoodProductBasisUnit, FoodProductData } from "@/types/food-product";
+import type { IngredientQuantityOptions, QuantityInputDraft, QuantityInputSnapshot } from "@/types/quantity-input";
 
 export type RecipeSortKey =
   | "view_count"
@@ -106,7 +108,34 @@ export interface RecipeTagListData {
 
 export type RecipeIngredientSourceKind = "ingredient" | "food_product";
 
+export type RecipeQuantityInputDraft = QuantityInputDraft & { expected_context_sha256?: string };
+export type RecipeQuantityInputSnapshot = QuantityInputSnapshot & { context_sha256: string };
+
+/** Transient server evidence for the editor; never included in a save draft. */
+export interface RecipeIngredientQuantityContext {
+  ready: boolean;
+  raw_default_unit?: "g" | "mL";
+  context_sha256?: string;
+  options?: IngredientQuantityOptions;
+  product?: Pick<FoodProductData, "id" | "nutrition_version_id" | "basis_relations">
+    & { basis_unit: FoodProductBasisUnit };
+}
+
+export interface RecipeQuantitySource {
+  row_key: string;
+  ingredient_id: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
+}
+
+export interface RecipeQuantityContextData {
+  subject: { owner_uuid: string; account_generation: number };
+  items: Array<RecipeQuantitySource & { context: RecipeIngredientQuantityContext }>;
+}
+
 export interface RecipeIngredient {
+  quantity_input?: RecipeQuantityInputSnapshot;
+  quantity_context?: RecipeIngredientQuantityContext;
   source_kind?: RecipeIngredientSourceKind;
   row_key?: string;
   food_product_id?: string | null;
@@ -152,6 +181,7 @@ export interface RecipeStep {
 }
 
 export interface RecipeEditIngredientDraft {
+  quantity_input?: RecipeQuantityInputDraft | null;
   source_kind?: RecipeIngredientSourceKind;
   row_key?: string;
   ingredient_id: string | null;
@@ -249,6 +279,7 @@ export interface RecipeNutrition {
 }
 
 export interface ManualRecipeIngredientInput {
+  quantity_input?: RecipeQuantityInputDraft | null;
   component_label?: string | null;
   source_kind?: RecipeIngredientSourceKind;
   row_key?: string;

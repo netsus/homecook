@@ -9,6 +9,13 @@ const createServiceRoleClient = vi.fn();
 const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 
+// Quantity mode has its own actual-reader/native regressions; these tests keep
+// their existing session/nutrition/write boundary and legacy v3 behavior.
+vi.mock("@/lib/server/recipe-snapshot-entrypoint", async importOriginal => {
+  const actual = await importOriginal<typeof import("@/lib/server/recipe-snapshot-entrypoint")>();
+  return { ...actual, readRecipeQuantityMode: vi.fn(async () => false) };
+});
+
 vi.mock("@/lib/supabase/server", () => ({
   createAccountLifecycleInternalRpcClient: createServiceRoleClient,
   createRecipeFuturePropagationInternalClient: createServiceRoleClient,

@@ -1,3 +1,4 @@
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import { fetchJson } from "@/lib/api/fetch-json";
 import type { RecipeDetail } from "@/types/recipe";
 
@@ -5,6 +6,7 @@ import type { RecipeDetail } from "@/types/recipe";
 export async function fetchRecipePreview(recipeId: string, signal?: AbortSignal): Promise<RecipeDetail> {
   const data = await fetchJson<RecipeDetail>(`/api/v1/recipes/${encodeURIComponent(recipeId)}?view=preview`, {
     cache: "no-store",
+    headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION },
     signal,
   });
   if (data.id !== recipeId || !Array.isArray(data.ingredients) || !Array.isArray(data.steps)

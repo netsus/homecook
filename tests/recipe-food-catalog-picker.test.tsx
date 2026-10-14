@@ -42,16 +42,16 @@ describe("recipe food catalog picker", () => {
     });
   });
 
-  it("projects exact generic and product ingredient fields", () => {
+  it("projects exact generic and product fields with quantities left for explicit input", () => {
     expect(recipeIngredientFromCatalog(ingredientResult("tofu", "두부").items[0]!, 3)).toEqual({
       source_kind: "ingredient", row_key: expect.any(String),
       ingredient_id: "tofu",
       standard_name: "두부",
-      amount: 100,
+      amount: null,
       unit: "g",
       ingredient_type: "QUANT",
       scalable: true,
-      display_text: "두부 100g",
+      display_text: "두부",
       sort_order: 3,
     });
     expect(recipeIngredientFromCatalog(product(true), 4)).toEqual({

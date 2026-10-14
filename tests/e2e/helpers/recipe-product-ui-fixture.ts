@@ -38,7 +38,7 @@ export const PRODUCT_UI_DETAIL: RecipeDetail = {
   id: PRODUCT_UI_IDS.recipe, title: PRODUCT_UI_DRAFT.title, description: null, base_servings: 1,
   thumbnail_url: null, source_type: "manual", visibility: "private", source: null, tags: [], revision: 1,
   view_count: 0, like_count: 0, save_count: 0, plan_count: 0, cook_count: 0, user_status: { is_liked: false, is_saved: false, saved_book_ids: [] },
-  ingredients: [{ ...PRODUCT_UI_DRAFT.ingredients[0], id: PRODUCT_UI_IDS.rowA, standard_name: "원문 업체 A 양조간장", sort_order: 1 }],
+  ingredients: [{ ...PRODUCT_UI_DRAFT.ingredients[0], quantity_input: undefined, id: PRODUCT_UI_IDS.rowA, standard_name: "원문 업체 A 양조간장", sort_order: 1 }],
   steps: [{ id: "step-1", step_number: 1, instruction: PRODUCT_UI_DRAFT.steps[0].instruction,
     ingredients_used: PRODUCT_UI_DRAFT.steps[0].ingredients_used, heat_level: null, duration_seconds: null, duration_text: null,
     cooking_method: { id: PRODUCT_UI_IDS.generic, code: "prep", label: "준비", color_key: "gray" } }],

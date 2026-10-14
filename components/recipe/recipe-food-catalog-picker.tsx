@@ -9,12 +9,13 @@ import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { useSoftKeyboardOpen } from "@/components/shared/use-soft-keyboard-open";
 import { useDialogViewport } from "@/components/shared/use-dialog-viewport";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
-import type { ManualRecipeIngredientInput } from "@/types/recipe";
+import type { ManualRecipeIngredientInput, RecipeIngredientQuantityContext } from "@/types/recipe";
 import { FOOD_PRODUCT_BASIS_UNITS } from "@/types/food-product";
 import type { RecipeIngredientIdentity } from "@/lib/recipe-ingredient-source";
 import { recipeIngredientGroupKey } from "@/lib/recipe-editor-ingredients";
 
 export type RecipeProductSelectionContexts = Record<string, FoodCatalogProductData>;
+export type RecipeQuantitySelectionContexts = Record<string, RecipeIngredientQuantityContext>;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function productUnavailableReason(item: FoodCatalogProductData) {
@@ -59,8 +60,8 @@ export function recipeIngredientFromCatalog(item: FoodCatalogSearchItem, sortOrd
 
   if (item.type === "ingredient") {
     ingredientId = item.id;
-    amount = 100;
-    unit = "g";
+    amount = null;
+    unit = item.recipe_quantity_context?.raw_default_unit || item.quantity_options?.default_unit || item.default_unit || "g";
   } else {
     if (productUnavailableReason(item)) return null;
     ingredientId = item.source_type === "manual" ? item.recipe_ingredient_id ?? null : null;
@@ -87,7 +88,7 @@ export function recipeIngredientFromCatalog(item: FoodCatalogSearchItem, sortOrd
 
 export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, excludedIngredientIds = [], excludedIngredients = [], componentLabel = null,
   replacementIngredient, replacementProduct, initialSource = "catalog", onRequireLogin }: {
-  onAdd: (items: ManualRecipeIngredientInput[], products?: RecipeProductSelectionContexts) => void;
+  onAdd: (items: ManualRecipeIngredientInput[], products?: RecipeProductSelectionContexts, quantities?: RecipeQuantitySelectionContexts) => void;
   onClose: () => void;
   single?: boolean;
   excludedIngredientIds?: string[];
@@ -235,6 +236,7 @@ export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, exclud
       }
       const inputs: ManualRecipeIngredientInput[] = [];
       const products: RecipeProductSelectionContexts = {};
+      const quantities: RecipeQuantitySelectionContexts = {};
       const identities = new Set<string>();
       for (const [index, item] of selected.entries()) {
         const input = recipeIngredientFromCatalog(item, index + 1);
@@ -242,9 +244,22 @@ export function RecipeFoodCatalogPicker({ onAdd, onClose, single = false, exclud
         const identity = recipeIngredientGroupKey({ ...input, component_label: componentLabel });
         if (identities.has(identity)) { setError("같은 구성의 같은 재료는 하나만 선택해 주세요."); return; }
         identities.add(identity); inputs.push(input);
-        if (item.type === "food_product" && input.row_key) products[input.row_key] = item;
+        if (input.row_key) {
+          if (item.type === "food_product") {
+            products[input.row_key] = item;
+            if (item.quantity_input_ready === true) quantities[input.row_key] = {
+              ready: true, context_sha256: item.quantity_context_sha256,
+              product: { id: item.id, nutrition_version_id: item.nutrition_version_id,
+                basis_relations: item.basis_relations, basis_unit: item.nutrition.basis.unit },
+            };
+          } else if (item.recipe_quantity_context?.ready) quantities[input.row_key] = item.recipe_quantity_context;
+          else if (item.quantity_options) quantities[input.row_key] = { ready: true,
+            context_sha256: item.quantity_context_sha256, options: item.quantity_options };
+        }
       }
-      onAdd(inputs, products); onClose();
+      if (Object.keys(quantities).length) onAdd(inputs, products, quantities);
+      else onAdd(inputs, products);
+      onClose();
     } catch (reason) {
       if (controller.signal.aborted) return;
       if (isFoodCatalogSearchApiError(reason) && reason.status === 401) setPantryUnauthorized(true);

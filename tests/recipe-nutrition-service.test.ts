@@ -213,17 +213,11 @@ function serviceClient({
   const assignmentsQuery = listResult(conversionAssignments);
   const pieceWeightsQuery = listResult(pieceWeights);
   const rpc = vi.fn(async (_name: string, args: {
-    p_snapshot: Record<string, unknown>;
-    p_input_guard: Record<string, unknown>;
-  }) => ({
-    data: {
-      snapshot_id: "snapshot-1",
-      created: true,
-      is_current: true,
-      captured: args.p_snapshot,
-    },
-    error: null,
-  }));
+    p_snapshot: Record<string, unknown>; p_input_guard: Record<string, unknown>;
+  }) => {
+    if (_name === "build_recipe_nutrition_input_guard") return { data: { recipe_ingredients: [] }, error: null };
+    return { data: { snapshot_id: "snapshot-1", created: true, is_current: true, captured: args.p_snapshot }, error: null };
+  });
   const from = vi.fn((table: string) => {
     if (table === "recipes") return recipeQuery;
     if (table === "recipe_ingredients") return ingredientsQuery;
@@ -271,11 +265,11 @@ describe("recipe nutrition snapshot service", () => {
     );
 
     expect(result).toMatchObject({ snapshot_id: "snapshot-1", created: true, is_current: true });
-    expect(rpc).toHaveBeenCalledOnce();
-    expect(rpc.mock.calls[0][1]).toMatchObject({
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1]).toMatchObject({
       p_expected_recipe_updated_at: "2026-07-16T00:00:00.000Z",
     });
-    const snapshotPayload = rpc.mock.calls[0][1].p_snapshot;
+    const snapshotPayload = rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot;
     expect(snapshotPayload).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
@@ -317,7 +311,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "unavailable",
       calculation_quality: null,
       reflected_ingredient_count: 0,
@@ -360,12 +354,12 @@ describe("recipe nutrition snapshot service", () => {
       "recipe-1",
     );
 
-    expect(massClient.rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(massClient.rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
       scalable_values: expect.objectContaining({ energy_kcal: 100 }),
     });
-    expect(volumeClient.rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(volumeClient.rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
       scalable_values: expect.objectContaining({ energy_kcal: 100 }),
@@ -401,7 +395,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
       scalable_values: expect.objectContaining({ energy_kcal: expectedEnergy }),
@@ -425,7 +419,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -453,7 +447,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 17.7 }),
@@ -487,7 +481,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -511,7 +505,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -561,7 +555,7 @@ describe("recipe nutrition snapshot service", () => {
     expect(assignmentsQuery.select.mock.calls[0][0]).toContain("measurement_source_evidence(");
     expect(pieceWeightsQuery.in).toHaveBeenCalledOnce();
     expect(pieceWeightsQuery.select.mock.calls[0][0]).toContain("measurement_source_evidence(");
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       reflected_ingredient_count: 2,
       target_ingredient_count: 2,
@@ -585,7 +579,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_input_guard).toEqual({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_input_guard).toEqual({
       recipe_ingredients: [{
         id: "recipe-ingredient-1",
         ingredient_id: "ingredient-1",
@@ -699,7 +693,7 @@ describe("recipe nutrition snapshot service", () => {
       ["is_active", true],
     ]);
     expect(assignmentsQuery.range).toHaveBeenCalledWith(0, 999);
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       reflected_ingredient_count: 2,
       target_ingredient_count: 2,
@@ -722,7 +716,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -759,7 +753,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "unavailable",
       reflected_ingredient_count: 0,
       warnings: ["UNIT_CONVERSION_MISSING"],
@@ -789,7 +783,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "unavailable",
       calculation_quality: null,
       reflected_ingredient_count: 0,
@@ -901,7 +895,7 @@ describe("AI predecessor provenance", () => {
       food_product_id: "product-1", food_product_nutrition_version_id: "product-version-1" };
     const client = {
       ...serviceClient({ ingredients: [pin], nutritionLinks: [aiLink()] }),
-      rpc: vi.fn(async () => ({ data: [{ id: pin.id, product_predecessor: null }], error: null })),
+      rpc: vi.fn(async (name: string) => ({ data: name === "build_recipe_nutrition_input_guard" ? { recipe_ingredients: [] } : [{ id: pin.id, product_predecessor: null }], error: null })),
     };
     const prepared = await prepareRecipeNutritionSnapshot(client as never, "recipe-1");
     expect(prepared.inputGuard.recipe_ingredients[0]).toMatchObject({

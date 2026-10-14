@@ -1,5 +1,11 @@
 "use client";
 
+import { formatProductQuantity } from "@/lib/planner/product-planner-entry-presentation";
+import { scaleProductAmount } from "@/lib/nutrition/product-quantity";
+import { formatQuantityAmount } from "@/lib/quantity-input";
+import { recipeRawQuantityLabel } from "@/lib/recipe-quantity-input";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
+
 import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import { showActionConfirmation } from "@/stores/ui-store";
 
@@ -265,6 +271,7 @@ export function RecipeDetailScreen({
       setDetailErrorKind(null);
       const data = await fetchJson<RecipeDetail>(
         `/api/v1/recipes/${requestedRecipeId}`,
+        { headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION } },
       );
       if (
         requestSequence !== nutritionRequestSequenceRef.current ||
@@ -307,6 +314,7 @@ export function RecipeDetailScreen({
     try {
       const data = await fetchJson<RecipeDetail>(
         `/api/v1/recipes/${requestedRecipeId}`,
+        { headers: { [QUANTITY_CONTRACT_HEADER]: QUANTITY_INPUT_VERSION } },
       );
       if (
         requestSequence !== nutritionRequestSequenceRef.current ||
@@ -443,14 +451,21 @@ export function RecipeDetailScreen({
       return [];
     }
 
-    return recipe.ingredients.map((ingredient) => ({
-      ...ingredient,
-      scaledText: formatScaledIngredient(
-        ingredient,
-        recipe.base_servings,
-        selectedServings,
-      ),
-    }));
+    return recipe.ingredients.map((ingredient) => {
+      let scaledText = formatScaledIngredient(ingredient, recipe.base_servings, selectedServings);
+      if (ingredient.quantity_input && ingredient.amount !== null && ingredient.unit !== null) {
+        const amount = ingredient.scalable ? scaleProductAmount(ingredient.amount, selectedServings, recipe.base_servings) : ingredient.amount;
+        if (amount !== null) {
+          const unit = ingredient.unit;
+          const quantityText = ingredient.quantity_input.raw_unit === unit && (!ingredient.scalable || selectedServings === recipe.base_servings)
+            ? recipeRawQuantityLabel(ingredient.quantity_input)
+            : unit === "g" || unit === "ml" || unit === "serving" || unit === "package"
+              ? formatProductQuantity({ amount, unit }) : `${formatQuantityAmount(amount)}${unit}`;
+          scaledText = `${ingredient.standard_name} ${quantityText}`;
+        }
+      }
+      return { ...ingredient, scaledText };
+    });
   }, [recipe, selectedServings]);
 
   const updateRecipeLikeState = useCallback((result: RecipeLikeData) => {
@@ -1724,6 +1739,7 @@ export function RecipeDetailScreen({
                     </span>
                     <span className="text-sm text-[var(--text-2)]">
                       {quantityText}
+                      {ingredient.quantity_input ? <span className="mt-1 block text-xs">원입력 {recipeRawQuantityLabel(ingredient.quantity_input)}</span> : null}
                     </span>
                   </li>
                 </React.Fragment>
@@ -2119,6 +2135,7 @@ export function RecipeDetailScreen({
                       </span>
                       <span className="text-[14px] text-[var(--text-2)]">
                         {quantityText}
+                        {ingredient.quantity_input ? <span className="mt-1 block text-xs">원입력 {recipeRawQuantityLabel(ingredient.quantity_input)}</span> : null}
                       </span>
                     </li>
                   </React.Fragment>
@@ -2650,7 +2667,9 @@ function RecipeDetailWebView({
                               <span className="web-ingredient-badge">취향껏</span>
                             ) : null}
                           </span>
-                          <span className="web-ingredient-amount">{quantityText}</span>
+                          <span className="web-ingredient-amount">{quantityText}
+                            {ingredient.quantity_input ? <span className="mt-1 block text-xs">원입력 {recipeRawQuantityLabel(ingredient.quantity_input)}</span> : null}
+                          </span>
                         </li>
                       </React.Fragment>
                     );

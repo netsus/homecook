@@ -40,6 +40,9 @@ export function LoginGateModal() {
     if (!action) {
       return "";
     }
+    if (action.type === "recipe-fork" && action.resumeEditor?.source === "quantity") {
+      return "같은 계정으로 로그인하면 수량 초안을 다시 열어요. 수량 정보는 직접 다시 확인하며 자동 저장하지 않아요.";
+    }
     if (action.type === "recipe-fork" && action.resumeEditor) {
       return "같은 계정으로 다시 로그인하면 작성 중인 제품 선택으로 돌아가요. 자동으로 저장하지 않아요.";
     }

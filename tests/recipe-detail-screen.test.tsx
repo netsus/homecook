@@ -497,6 +497,7 @@ describe("recipe detail screen", () => {
     });
     expect(fetchJson).toHaveBeenLastCalledWith(
       `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`,
+      { headers: { "X-Homecook-Quantity-Contract": "quantity-v4" } },
     );
   }, 10_000);
 
@@ -1594,7 +1595,7 @@ describe("recipe detail screen", () => {
 
     const { rerender } = render(<RecipeDetailScreen recipeId={firstRecipeId} />);
     await waitFor(() => {
-      expect(fetchJson).toHaveBeenCalledWith(`/api/v1/recipes/${firstRecipeId}`);
+      expect(fetchJson).toHaveBeenCalledWith(`/api/v1/recipes/${firstRecipeId}`, { headers: { "X-Homecook-Quantity-Contract": "quantity-v4" } });
     });
 
     rerender(<RecipeDetailScreen recipeId={nextRecipeId} />);

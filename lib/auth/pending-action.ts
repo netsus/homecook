@@ -1,3 +1,4 @@
+import { isRecipeQuantityInputState } from "@/lib/recipe-quantity-input";
 import { isRecipeIngredientIdentityValid } from "@/lib/recipe-ingredient-source";
 import type { RecipeEditContext } from "@/types/recipe";
 
@@ -21,6 +22,7 @@ interface PendingRecipeActionBase {
 export interface RecipeEditorPantryResume {
   mode: "edit" | "fork";
   rowKey: string | null;
+  source?: "quantity";
 }
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
@@ -75,6 +77,7 @@ function isIngredientUsed(value: unknown) {
 function isIngredient(value: unknown) {
   if (!isRecord(value)) return false;
   const keys = ["ingredient_id", "amount", "unit", "ingredient_type", "display_text", "component_label", "scalable", "food_product_id", "food_product_nutrition_version_id"];
+  if (Object.hasOwn(value, "quantity_input")) keys.push("quantity_input");
   if (Object.hasOwn(value, "row_key")) keys.push("row_key");
   if (Object.hasOwn(value, "source_kind")) keys.push("source_kind");
   if (!hasExactKeys(value, keys) || !isNullableUuid(value.ingredient_id)
@@ -88,7 +91,9 @@ function isIngredient(value: unknown) {
   }) && isNullableNumber(value.amount) && isNullableString(value.unit)
     && (value.ingredient_type === "QUANT" || value.ingredient_type === "TO_TASTE")
     && isNullableString(value.display_text) && isNullableString(value.component_label)
-    && typeof value.scalable === "boolean";
+    && typeof value.scalable === "boolean"
+    && (value.quantity_input === undefined || isRecipeQuantityInputState(value.quantity_input, value.food_product_nutrition_version_id))
+    && (value.quantity_input !== null || value.ingredient_type === "TO_TASTE" && value.amount === null && value.unit === null);
 }
 
 function isStep(value: unknown) {
@@ -186,8 +191,9 @@ export function parsePendingAction(raw: string, now = Date.now()) {
       if (value.resumeEditor !== undefined) {
         const resume = value.resumeEditor;
         if (!value.editContext || !value.sourceOwnerUuid || !isPositiveInteger(value.sourceAccountGeneration)
-          || !isRecord(resume) || !hasExactKeys(resume, ["mode", "rowKey"])
-          || (resume.mode !== "edit" && resume.mode !== "fork") || !isNullableUuid(resume.rowKey)
+          || !isRecord(resume) || !hasExactKeys(resume, ["mode", "rowKey", ...(resume.source !== undefined ? ["source"] : [])])
+          || (resume.mode !== "edit" && resume.mode !== "fork")
+          || (resume.source !== undefined && (resume.source !== "quantity" || !isNullableUuid(resume.rowKey) || resume.rowKey === null)) || !isNullableUuid(resume.rowKey)
           || (resume.rowKey !== null && value.editContext.draft.ingredients.filter(row => row.row_key === resume.rowKey).length !== 1)) return null;
       }
       return value as PendingRecipeAction;

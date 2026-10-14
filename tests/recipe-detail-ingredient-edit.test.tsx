@@ -101,12 +101,13 @@ describe("recipe detail ingredient corrections", () => {
     await user.click(await screen.findByRole("checkbox", { name: "양송이버섯" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
     expect(screen.getByTestId("recipe-editor-ingredient-1").querySelector('[data-recipe-change="추가"]')).toBeTruthy();
+    await user.type(screen.getByRole("textbox", { name: "재료 1 수량" }), "100");
     await user.click(screen.getByRole("button", { name: "내 레시피로 저장" }));
     await waitFor(() => expect(createPersonalRecipeFromSource).toHaveBeenCalled());
     expect(vi.mocked(createPersonalRecipeFromSource).mock.calls[0][0].draft.steps[0].ingredients_used).toEqual([]);
   });
 
-  it("offers supported units without changing quantity and clears row markers when restored to its opening values", async () => {
+  it("keeps the original quantity and unit when density evidence is missing", async () => {
     const user = userEvent.setup();
     render(<RecipeDetailPersonalEditor editContext={context} ingredientNames={{ old: "버섯" }} mode="fork" recipeId="recipe" onClose={vi.fn()} onSaved={vi.fn()} />);
     const unit = screen.getByRole("combobox", { name: "재료 1 단위" });
@@ -115,7 +116,9 @@ describe("recipe detail ingredient corrections", () => {
     expect(row.querySelector("[data-recipe-change]")).toBeNull();
     await user.selectOptions(unit, "큰술");
     expect((amount as HTMLInputElement).value).toBe("200");
-    expect(row.querySelector('[data-recipe-change="수정"]')).toBeTruthy();
+    expect((unit as HTMLSelectElement).value).toBe("g");
+    expect(screen.getByRole("alert").textContent).toContain("기존 분량과 단위를 유지");
+    expect(row.querySelector("[data-recipe-change]")).toBeNull();
     await user.selectOptions(unit, "g");
     expect(row.querySelector("[data-recipe-change]")).toBeNull();
   });

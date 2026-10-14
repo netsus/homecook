@@ -1,5 +1,7 @@
 "use client";
 
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
+
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiResponse } from "@/types/api";
 import type { RecipeEditDraft } from "@/types/recipe";
@@ -63,12 +65,11 @@ export function createPersonalRecipeFromSource(
   input: PersonalRecipeCreateInput,
   idempotencyKey = crypto.randomUUID(),
 ) {
+  const headers: Record<string, string> = { "content-type": "application/json", "Idempotency-Key": idempotencyKey };
+  headers[QUANTITY_CONTRACT_HEADER] = QUANTITY_INPUT_VERSION;
   return request<PersonalRecipeCreateResult>("/api/v1/recipes", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "Idempotency-Key": idempotencyKey,
-    },
+    headers,
     body: JSON.stringify({
       origin_recipe_id: input.originRecipeId,
       base_recipe_revision: input.baseRecipeRevision,
