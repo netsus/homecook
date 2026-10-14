@@ -6,6 +6,7 @@ export type PendingRecipeActionType =
   | "like"
   | "save"
   | "planner"
+  | "cook"
   | "recipe-fork"
   | "recipe-delete"
   | "recipe-edit-save"
@@ -28,6 +29,7 @@ export interface RecipeEditorPantryResume {
 export type PendingRecipeAction = PendingRecipeActionBase & (
   | { type: "like" | "save" | "recipe-delete" }
   | { type: "planner"; plannedServings?: number }
+  | { type: "cook"; cookingServings: number; recipeRevision?: number }
   | { type: "recipe-fork"; editContext?: RecipeEditContext; resumeEditor?: RecipeEditorPantryResume }
   | { type: "recipe-edit-save" | "recipe-save-as-new"; editContext: RecipeEditContext }
 );
@@ -167,6 +169,16 @@ export function parsePendingAction(raw: string, now = Date.now()) {
       return null;
     }
 
+    if (value.type === "cook") {
+      return typeof value.recipeId === "string" && /^[A-Za-z0-9_-]{1,128}$/u.test(value.recipeId)
+        && value.redirectTo === `/recipe/${value.recipeId}`
+        && isPositiveInteger(value.cookingServings)
+        && (value.recipeRevision === undefined || isPositiveInteger(value.recipeRevision))
+        && hasExactKeys(value, ["type", "recipeId", "redirectTo", "createdAt", "cookingServings",
+          ...(value.recipeRevision === undefined ? [] : ["recipeRevision"])])
+        ? value as PendingRecipeAction : null;
+    }
+
     if (
       (value.type === "like"
         || value.type === "save"
@@ -226,6 +238,7 @@ export function savePendingAction(action: PendingRecipeAction) {
       createdAt: Date.now(),
     });
     if (raw.length > MAX_PENDING_ACTION_LENGTH) return false;
+    if (action.type === "cook" && !parsePendingAction(raw)) return false;
     clearPendingAction();
     window.sessionStorage.setItem(PENDING_ACTION_KEY, raw);
     return true;

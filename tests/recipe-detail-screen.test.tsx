@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { MOCK_RECIPE_DETAIL } from "@/lib/mock/recipes";
-import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
+import { PENDING_ACTION_KEY, savePendingAction } from "@/lib/auth/pending-action";
 import { ActionConfirmation } from "@/components/shared/action-confirmation";
 import { useActionConfirmationStore, useAuthGateStore } from "@/stores/ui-store";
 import type {
@@ -501,6 +501,46 @@ describe("recipe detail screen", () => {
     );
   }, 10_000);
 
+  it("opens a guest cook gate without a request and preserves selected servings on explicit login return", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    const guest = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "인분 늘리기" }));
+    await userEvent.click(screen.getByRole("button", { name: "요리하기" }));
+    const gate = await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" });
+    expect(within(gate).getByText("로그인하면 선택한 3인분으로 돌아가요. 요리하기를 다시 눌러 시작해 주세요.")).toBeTruthy();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+    const pending = useAuthGateStore.getState().action;
+    expect(pending).toMatchObject({ type: "cook", cookingServings: 3, recipeRevision: 12 });
+    if (!pending) throw new Error("Missing cook intent");
+    expect(savePendingAction(pending)).toBe(true);
+    guest.unmount(); useAuthGateStore.getState().close();
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    expect(await screen.findByText("로그인 완료. 선택한 3인분을 유지했어요. 요리하기를 다시 눌러 시작해 주세요.")).toBeTruthy();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+    createSnapshotV2CookingSession.mockResolvedValue({ session_id: "550e8400-e29b-41d4-a716-446655440099", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", content_summary: { recipe_id: MOCK_RECIPE_DETAIL.id, title: "레시피", cooking_servings: 3 } });
+    await userEvent.click(screen.getByRole("button", { name: "요리하기" }));
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledTimes(1));
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1);
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledWith({ mode: "standalone", recipe_id: MOCK_RECIPE_DETAIL.id, expected_recipe_revision: 12, cooking_servings: 3 });
+  });
+  it("cancels guest cook without an RPC or leftover pending intent", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" })).getByRole("button", { name: "취소" }));
+    expect(useAuthGateStore.getState().isOpen).toBe(false);
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+  });
+  it("announces a changed recipe after login without creating a session", async () => {
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({ type: "cook", recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`, createdAt: Date.now(), cookingServings: 3, recipeRevision: 11 }));
+    fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    expect(await screen.findByText("레시피가 변경됐어요. 선택한 3인분은 유지했어요. 현재 내용을 확인한 뒤 요리하기를 다시 눌러 주세요.")).toBeTruthy();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+  });
   it("replaces the existing standalone CTA in place while snapshot start is pending", async () => {
     const pending = createDeferred<{
       session_id: string;
@@ -513,6 +553,7 @@ describe("recipe detail screen", () => {
 
     fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
     render(<RecipeDetailScreen
+      initialAuthenticated
       recipeId={MOCK_RECIPE_DETAIL.id}
       recipeSnapshotUiMode="snapshot_v2"
     />);
@@ -534,7 +575,7 @@ describe("recipe detail screen", () => {
     const result = { session_id: "550e8400-e29b-41d4-a716-446655440099", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", content_summary: { recipe_id: MOCK_RECIPE_DETAIL.id, title: "레시피", cooking_servings: 2 } };
     createSnapshotV2CookingSession.mockResolvedValue(result);
     fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
-    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
     await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
     await waitFor(() => expect(mockRouterPush).toHaveBeenCalledTimes(1));
     await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
@@ -545,13 +586,91 @@ describe("recipe detail screen", () => {
   it("shows a cooking start conflict message and keeps retry available", async () => {
     createSnapshotV2CookingSession.mockRejectedValue({ status: 409, code: "RECIPE_REVISION_CONFLICT", message: "레시피가 수정됐어요. 새로고침해 주세요." });
     fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
-    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
     await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
     expect(await screen.findByText("레시피가 수정됐어요. 새로고침해 주세요.")).toBeTruthy();
     expect((screen.getByRole("button", { name: "요리하기" }) as HTMLButtonElement).disabled).toBe(false);
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
+  it.each([401, "ACCOUNT_SESSION_STALE", "ACCOUNT_GENERATION_STALE"])("keeps a failed authenticated cook as an explicit login intent for %s", async (kind) => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    createSnapshotV2CookingSession.mockRejectedValue({ status: typeof kind === "number" ? kind : 409,
+      code: typeof kind === "number" ? "UNAUTHORIZED" : kind, message: "다시 로그인해 주세요." });
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "인분 늘리기" }));
+    await userEvent.click(screen.getByRole("button", { name: "요리하기" }));
+    expect(await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" })).toBeTruthy();
+    expect(useAuthGateStore.getState().action).toMatchObject({ type: "cook", cookingServings: 3, recipeRevision: 12 });
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+  it.each([{ status: 500, code: "ACCOUNT_SESSION_STALE", message: "서버 오류" }, new Error("network")])("does not turn an unknown cook failure into auth retry %#", async (error) => {
+    fetchJson.mockResolvedValue(buildRecipeDetail()); createSnapshotV2CookingSession.mockRejectedValue(error);
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    await waitFor(() => expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1));
+    expect(useAuthGateStore.getState().isOpen).toBe(false);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(await screen.findByText(error instanceof Error ? "요리를 시작하지 못했어요. 다시 시도해 주세요." : "서버 오류")).toBeTruthy();
+  });
+  it.each(["unmount", "pathname"])("ignores a late cook success after leaving by %s", async (leaveBy) => {
+    fetchJson.mockResolvedValue(buildRecipeDetail()); const pending = createDeferred<unknown>();
+    createSnapshotV2CookingSession.mockReturnValue(pending.promise);
+    const view = render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    const button = await screen.findByRole("button", { name: "요리하기" });
+    await userEvent.dblClick(button); expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1);
+    const originalPath = window.location.pathname;
+    if (leaveBy === "unmount") view.unmount(); else window.history.pushState({}, "", "/other-surface");
+    await act(async () => { pending.resolve({ session_id: "550e8400-e29b-41d4-a716-446655440099", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress" }); });
+    expect(mockRouterPush).not.toHaveBeenCalled(); expect(useAuthGateStore.getState().isOpen).toBe(false);
+    window.history.replaceState({}, "", originalPath);
+  });
+  it("keeps the cook gate open without navigation or requests if pending storage fails", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    const gate = await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" });
+    const store = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked storage"); });
+    try {
+      await userEvent.click(within(gate).getByRole("button", { name: "로그인" }));
+      expect((await within(gate).findByRole("alert")).textContent).toContain("선택한 인분을 임시 보관하지 못했어요.");
+      expect(useAuthGateStore.getState().isOpen).toBe(true);
+      expect(createSnapshotV2CookingSession).not.toHaveBeenCalled(); expect(mockRouterPush).not.toHaveBeenCalled();
+    } finally { store.mockRestore(); }
+  });
+  it("does not consume a cook intent until the same authorized recipe loads", async () => {
+    const intent = { type: "cook", recipeId: MOCK_RECIPE_DETAIL.id, redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      cookingServings: 3, recipeRevision: 12, createdAt: Date.now() };
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify(intent));
+    fetchJson.mockRejectedValue({ status: 404, code: "NOT_FOUND", message: "레시피가 없어요." });
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await screen.findByRole("heading", { name: "이 레시피를 찾을 수 없어요" });
+    expect(JSON.parse(window.sessionStorage.getItem(PENDING_ACTION_KEY)!)).toEqual(intent);
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+  });
+  it("ignores a late auth failure after the recipe changes", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    const pending = createDeferred<unknown>();
+    createSnapshotV2CookingSession.mockReturnValue(pending.promise);
+    const view = render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    fetchJson.mockResolvedValue(buildRecipeDetail({ id: "other" }));
+    view.rerender(<RecipeDetailScreen initialAuthenticated recipeId="other" recipeSnapshotUiMode="snapshot_v2" />);
+    await act(async () => { pending.reject({ status: 401, code: "UNAUTHORIZED", message: "로그인이 필요해요." }); });
+    expect(useAuthGateStore.getState().isOpen).toBe(false);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+  it.each(["other-recipe", "expired", "invalid"])("does not restore or start a %s cook intent", async (kind) => {
+    const recipeId = kind === "other-recipe" ? "other" : MOCK_RECIPE_DETAIL.id;
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({ type: "cook", recipeId, redirectTo: `/recipe/${recipeId}`,
+      cookingServings: kind === "invalid" ? 0 : 3, recipeRevision: 12, createdAt: Date.now() - (kind === "expired" ? 15 * 60 * 1000 : 0) }));
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await screen.findByRole("button", { name: "요리하기" });
+    expect(screen.queryByText(/로그인 완료. 선택한/)).toBeNull(); expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+    if (kind !== "other-recipe") expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
   it("sends the owner-edited full draft unchanged from impact preview to PATCH", async () => {
     const draft: RecipeEditDraft = {
       title: "내 김치찌개",

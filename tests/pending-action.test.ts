@@ -85,6 +85,14 @@ describe("pending action", () => {
     },
   );
 
+  it("keeps a strict cook intent with selected servings and the viewed revision", () => {
+    const action = { type: "cook", recipeId: "recipe-1", redirectTo: "/recipe/recipe-1", createdAt: 123, cookingServings: 3, recipeRevision: 12 };
+    expect(parsePendingAction(JSON.stringify(action), 123)).toEqual(action);
+    for (const patch of [{ cookingServings: 0 }, { cookingServings: 1.5 }, { recipeRevision: 0 }, { recipeRevision: "12" },
+      { redirectTo: "https://external.invalid" }, { recipeId: "../other" }, { extra: "not-accepted" }, { createdAt: 123 - 15 * 60 * 1000 }]) {
+      expect(parsePendingAction(JSON.stringify({ ...action, ...patch }), 123)).toBeNull();
+    }
+  });
   it("returns null and removes invalid JSON", () => {
     window.sessionStorage.setItem(PENDING_ACTION_KEY, "{invalid");
 

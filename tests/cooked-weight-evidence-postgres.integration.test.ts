@@ -124,6 +124,31 @@ describe.runIf(enabled)("personal cooked weight evidence PostgreSQL", () => {
       insert into public.meal_plan_columns(id,user_id,name,sort_order) values('${column}','${owner}','fixture meal',0);
       select public.set_account_generation_internal_writer_marker('${cutover}',false);`, true, true);
   });
+  it("keeps the predecessor preview shape while OFF and preserves stored evidence after a later OFF", () => {
+    const batch = session(930);
+    service(`select public.complete_snapshot_v2_cooking_session(${args},'${batch}','${id(1930)}','{}','set_finished_weight',200,clock_timestamp());`);
+    const preview = () => JSON.parse(service(`select public.preview_meal_log_nutrition(${args},'cooked_batch','${batch}',100,'g');`).stdout.trim());
+    const before = digest(batch);
+    const legacy = preview();
+    expect(legacy.calories_kcal).toBe(500);
+    expect(legacy).not.toHaveProperty("weight_basis");
+    expect(legacy).not.toHaveProperty("weight_assumption_codes");
+    expect(digest(batch)).toBe(before);
+    sql("update private.cooked_batch_weight_evidence_control set enabled=true where singleton;");
+    try {
+      expect(preview().weight_basis).toMatchObject({ finished_weight_g: 200, source: "legacy_unknown" });
+      service(meal(batch, id(2930), id(3930)));
+      const frozen = mealNutrition(id(2930));
+      expect(frozen.weight_basis.finished_weight_g).toBe(200);
+      sql("update private.cooked_batch_weight_evidence_control set enabled=false where singleton;");
+      const stored = digest(batch);
+      expect(preview()).toEqual(legacy);
+      expect(mealNutrition(id(2930))).toEqual(frozen);
+      expect(digest(batch)).toBe(stored);
+    } finally {
+      sql("update private.cooked_batch_weight_evidence_control set enabled=false where singleton;");
+    }
+  });
   it("defaults OFF, denies fresh writes at either switch, and leaves completion atomic", () => {
     const batch = session(1); const before = digest(batch);
     expect(service(complete(batch, id(101)), false).stderr).toContain("COOKED_WEIGHT_EVIDENCE_DISABLED");
