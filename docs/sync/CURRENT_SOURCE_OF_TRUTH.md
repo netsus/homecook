@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-14 — C03·C01·C04 수량 편집 통합 후보 (로컬, 운영 미적용)
+
+독립 검토된 제품 계획 편집18파일을 고정 C03+첫 C04 checkpoint와 C01 OFF 보완에 순서대로 통합했다. 수량 원문·무게 근거의 응답 헤더를 독립 보존하고, 미리보기 분모와 OFF writer의 저장 근거를 구분한다. C04 catalog SQL은 cold 세션의 정상 pg_trgm 초기화 한 줄로 기존 설정·권한을 유지한다. 두 정책 ON 저장→OFF 후 날짜 이동/receipt replay의 원량·영양·당시 분모·과거 snapshot 보존을 격리 검사하며, recipe220000·worker223000은 별도 진행 범위다. [최신 계약과 정확 미적용 SQL hash](../engineering/ingredient-quantity-policy-v4-20261013.md#c03--c01--c04-편집-소비자의-로컬-통합--2026-10-14)를 따른다.
+
 ## 2026-10-14 — C04 단위 입력 첫 소비 묶음의 명시 v4 준비 (운영 미적용)
 
 기본 recipe-nutrition-v3·구 클라이언트 응답·과거 기록을 보존하면서 식사기록과 완제품 계획 신규 추가/재조회의 빈 최초 양, 검토된 단위 추천, 원량 보존 전환, 분수 원문, 고정 배치 인분을 별도 quantity-v4 계약으로 준비한다. 확인된 우유의 mL 기본 입력과 g↔mL 밀도 환산은 구분하며 영양 미상은 null로 유지한다. 제품은 C03 고정 영양 버전·자체 관계만 사용한다. 환경 true·새 요청 header·기본 OFF private DB 정책과 C03 converter가 모두 있어야 새 쓰기가 가능하다. 아직 운영 적용·활성화·권한 확대가 없고, 기존 완제품 계획 편집/원문 읽기는 별도 로컬 변경과 미적용213000 reader capability로 연결했고, recipe 편집/저장·worker predecessor 연결은 다음 독립 변경으로 남았다. 저장 당시 제품 version만 편집에 사용하며 OFF에서는 v4 원문 읽기만 허용한다. [계약·검증 범위·DDL 대상과 복구](../engineering/ingredient-quantity-policy-v4-20261013.md)를 따른다.

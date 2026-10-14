@@ -118,6 +118,10 @@ describe("explicit quantity v4 meal input", () => {
     api.cooked.mockResolvedValue({ items: [{ id: ingredient, recipe_id: ingredient, recipe_title: "고정 배치", recipe_thumbnail_url: null,
       cooked_at: "2026-10-14T00:00:00Z", status: "leftover", weight_status: "known", batch_status: "available",
       remaining_weight_g: 1000, cooking_servings: 4, finished_weight_g: 1000, revision: 1, weight_source: "estimated" }], has_next: false, next_cursor: null });
+    api.preview.mockResolvedValue({ nutrition: { calculation_status: "unavailable", calories_kcal: null, carbohydrate_g: null,
+      protein_g: null, fat_g: null, sodium_mg: null, weight_basis: { schema_version: "cooked-weight-basis-v1", batch_id: ingredient,
+        recipe_content_snapshot_id: ingredient, finished_weight_g: 1000, source: "historical_estimate", model_version: null,
+        prediction_id: null, observation_id: null, batch_revision: 1 } } });
     const user = userEvent.setup(); const save = open();
     await user.click(screen.getByRole("tab", { name: "요리한 음식" }));
     await user.click(await screen.findByRole("button", { name: /고정 배치/ }));
@@ -125,6 +129,7 @@ describe("explicit quantity v4 meal input", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "단위" }), "인분");
     await user.click(screen.getByRole("button", { name: "1/2" }));
     expect(screen.getByText("조리 당시 4인분 · 전체 1,000g 기준이에요.")).toBeTruthy();
+    expect(await screen.findByText("먹은 양은 입력한 인분 수량이에요. 영양 미리보기의 전체무게 기준은 1,000g이에요. 무게 근거: 이전 방식의 추정.")).toBeTruthy();
     await waitFor(() => expect(api.preview).toHaveBeenCalled());
     expect(api.preview.mock.calls.at(-1)?.[0]).toMatchObject({ quantity: { amount: 0.5, unit: "인분" },
       quantityInput: { raw_value: "1/2", raw_unit: "인분", expected_batch_revision: 1 } });

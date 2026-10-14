@@ -182,7 +182,12 @@ describe.runIf(enabled)("quantity v4 on owned schema-only PostgreSQL", () => {
     expect(sql(`select remaining_weight_g from public.leftover_dishes where id='${batch}';`).stdout.trim()).toBe("1000");
     const entry = json(mutation(6, payload)).data.entry;
     expect(entry.quantity).toEqual({ amount: 125, unit: "g" });
-    expect(entry.nutrition).toEqual(nutritionPreview);
+    const { weight_basis: previewWeightBasis, ...previewValues } = nutritionPreview;
+    expect(previewWeightBasis).toEqual({ schema_version: "cooked-weight-basis-v1", batch_id: batch,
+      recipe_content_snapshot_id: content, finished_weight_g: 1000, source: "historical_estimate", model_version: null,
+      prediction_id: null, observation_id: null, batch_revision: currentRevision });
+    expect(entry.nutrition).toEqual(previewValues);
+    expect(entry.nutrition.weight_basis).toBeUndefined();
     expect(entry.quantity_input).toMatchObject({ raw_value: "1/2", raw_unit: "인분", numerator: "1", denominator: "2",
       normalized: { amount: 125, unit: "g" }, batch_basis: { batch_id: batch, revision: currentRevision, cooking_servings: 4, finished_weight_g: 1000 } });
     expect(isQuantityInputSnapshot(entry.quantity_input)).toBe(true);
@@ -196,6 +201,33 @@ describe.runIf(enabled)("quantity v4 on owned schema-only PostgreSQL", () => {
     const deleted = json(mutation(6, {} as ReturnType<typeof body>, "delete", "1")).data.entry;
     expect(deleted.quantity_input).toEqual(entry.quantity_input);
     expect(Number(sql(`select remaining_weight_g from public.leftover_dishes where id='${batch}';`).stdout.trim())).toBe(1000);
+  });
+  it("preserves both frozen bases and historic snapshots through OFF date moves and receipt replay", () => {
+    sql("update private.quantity_input_v4_policy set enabled=true; update private.cooked_batch_weight_evidence_control set enabled=true;");
+    const historic = () => sql(`select md5(jsonb_build_object('recipe',(select to_jsonb(r) from public.recipes r where id='${recipe}'),
+      'content',(select to_jsonb(r) from public.recipe_content_snapshots r where id='${content}'))::text);`).stdout.trim();
+    const before = historic();
+    const revision = Number(sql(`select revision from public.leftover_dishes where id='${batch}';`).stdout.trim());
+    const payload = { ...body(0.5, "인분", "1/2"), source: { type: "cooked_batch", id: batch },
+      quantity_input: { ...body(0.5, "인분", "1/2").quantity_input, expected_batch_revision: revision } };
+    const previewNutrition = json(`begin; set local request.jwt.claim.role='service_role'; select public.preview_meal_log_nutrition(${args},'cooked_batch','${batch}',0.5,'인분','${JSON.stringify(payload.quantity_input)}'); commit;`);
+    const entry = json(mutation(41, payload)).data.entry;
+    expect(entry.quantity).toEqual({ amount: 125, unit: "g" });
+    expect(entry.nutrition).toEqual(previewNutrition);
+    expect(entry.nutrition.weight_basis).toMatchObject({ finished_weight_g: 1000, source: "historical_estimate", batch_revision: revision });
+    expect(entry.quantity_input).toMatchObject({ raw_value: "1/2", raw_unit: "인분", numerator: "1", denominator: "2",
+      normalized: { amount: 125, unit: "g" }, batch_basis: { batch_id: batch, revision, cooking_servings: 4, finished_weight_g: 1000 } });
+    sql("update private.quantity_input_v4_policy set enabled=false; update private.cooked_batch_weight_evidence_control set enabled=false;");
+    const movedPayload: Record<string, unknown> = { ...payload, consumed_local_date: "2026-10-15", quantity: entry.quantity };
+    delete movedPayload.quantity_input;
+    const moved = json(mutation(41, movedPayload, "patch", "1")).data.entry;
+    expect(moved.nutrition).toEqual(entry.nutrition);
+    expect(moved.quantity).toEqual(entry.quantity);
+    expect(moved.quantity_input).toEqual(entry.quantity_input);
+    expect(json(mutation(41, payload))).toEqual({ success: true, data: { entry }, error: null });
+    expect(sql(`select remaining_weight_g from public.leftover_dishes where id='${batch}';`).stdout.trim()).toBe("875");
+    expect(historic()).toBe(before);
+    sql("update private.quantity_input_v4_policy set enabled=true;");
   });
   it("hydrates only reviewed physical count/density rows and shares preview and writer conversions", () => {
     sql(`insert into public.nutrition_sources(id,provider_code,dataset_name,source_kind,source_version,fetched_at,freshness_checked_at,freshness_status,source_url,license_name,manifest_sha256,review_status,decision_reason,reviewed_by,reviewed_at,is_active)

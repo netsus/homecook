@@ -239,6 +239,7 @@ $function$;
 do $patch$
 declare v_name text; v_def text; v_old text:=$old$'default_unit', ingredient.default_unit$old$;
 begin
+  perform public.similarity('', ''); -- Register pg_trgm GUCs before replaying the existing function definition.
   foreach v_name in array array[
     'public.read_food_catalog_source(uuid,text,uuid)',
     'public.search_food_catalog_ranked(uuid,text,text[],text,integer,jsonb,text,integer)'

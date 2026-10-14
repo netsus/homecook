@@ -97,3 +97,16 @@ foundation calculator의 `amount/unit`은 원량이다. consumer는 화면 `quan
 첫 v4 원문 cup/스푼/통 회귀3개가 기존 계산에서 잘못 완전 영양으로 남는 실패를 확인한 뒤 정책 분기를 연결했다. 새 contract, 실제 명시 v4 calculator, source cup200/240·T/t, 계량 충돌, density/piece/가식부·상태·크기·원문 source 결속, 평균·중복·만료·양수·overflow를 집중 검사한다. 모든 숫자는 synthetic fixture이며 실제 음식 근거로 적재하지 않는다.
 
 SQL 검증은 독립 `/tmp/homecook-unit-v4-*`의 PostgreSQL15 UTF8·자체 Unix socket에서 실행한다. 함수 실제 실행과 JS 수량/quality/evidence 결과 parity, 기존 실제 v3 count 함수 의미, 고정 meal fixture 내용, runtime-role helper EXECUTE 거절을 확인한다. 이후 자신의 서버와 디렉터리는 종료·제거한다. 전체 운영 DB·모든 historical snapshot·실권한 API/화면 검증을 대신하지 않는다. 결과 수치와 최종 checks는 총괄 인계 기록에 별도로 남긴다.
+
+
+## C03 → C01 → C04 편집 소비자의 로컬 통합 · 2026-10-14
+
+독립 검토된 기존 제품 계획 편집18파일을 `1af8ff277`에 보존하고, 지정된 C03+첫 C04 checkpoint `5bbf3c291`과 C01 OFF 보완 `2b543cfd1`을 순서대로 병합했다. 진행 중인 recipe220000·worker bridge223000·C05의 미커밋 코드는 포함하지 않는다. 운영 적용 기록과 구분한다.
+
+식사 응답의 수량 원문과 무게 근거는 독립 요청 계약이다. 서버 `projectMealLogData(value, quantityV4, includeWeightEvidence)`에서 각 헤더를 별도로 전달하고, 새 클라이언트는 두 헤더를 함께 보낸다. C01 헤더만 보낸 구 탭에는 quantity_input/quantity_policy를 추가하지 않고, C04 헤더만 보냈을 때에는 weight_basis/가정을 추가하지 않는다. 아무 헤더가 없는 기존 DTO와 contains_ai_estimate의 기존 키 순서를 유지한다. 이 헤더는 정책 활성화·동의·쓰기 권위가 아니다.
+
+[C01 OFF 호환 계약](cooked-weight-evidence-integration-20261014.md#c01-off-호환-완료제어-경합-보완--2026-10-14)의 기존 preview는 `private.cooked_weight_meal_basis`를 읽어 당시 계산에 사용할 분모를 보여줄 수 있다. 제어 OFF의 신규 writer는 그 이유만으로 새 weight_basis를 저장하지 않는다. 미리보기의 읽기용 분모와 저장된 영양 근거를 동일하다고 약속하지 않는다. 화면 안내는 실제 선택한 g/인분 단위를 말하고 ‘영양 미리보기의 전체무게 기준’으로 구분한다. 기본 영양 수치의 정확 비교와 C04 raw/batch_basis 저장 검사는 유지한다.
+
+C04 `14200000`의 기존 catalog DO 시작에 `PERFORM public.similarity('', '');` 한 줄을 추가해 새 PostgreSQL 세션에서도 기존 pg_trgm GUC를 정상 등록한다. 새 세션의 비슈퍼유저 postgres에서 원 SQL의 search_food_catalog_ranked CREATE OR REPLACE가 실패하는 것을 재현한 뒤, harness의 선행 similarity 호출 없이 같은 actor·같은 권한·동일 GUC SET 정의로 통과했다. 권한/GRANT/role 속성·C03/C01 SQL·기존 함수 설정을 바꾸지 않는다. 실제 배포도 이 초기화가 포함된 정확 새 SQL bytes를 검토해야 하며, fixture의 사전 library load만으로 운영 적용을 보장하지 않는다.
+
+미적용 C04 SQL은 `010000` SHA `c66ee907de4130b2fe3b86bcdbe48b15021f228485e52fbe1aca5acfee5e7bfd`, `200000` SHA `9ec96a2a7bbf7192801b1f6dd43304ed8ba78ab73f934eac4c2c300e3ca85573`, `210000` SHA `e33a2110afd4a71a6042ce6d4d416f2bf189e107f4528e5b5ae2e440e180ad88`, `213000` SHA `acb0ec83aeabc91320a61b406c2a23dda258033592defbb09bd7f1bb8667399b`다. 위의 이전 `200000` hash·converter만 붙인 fixture 수치는 당시 근거다. 최신 통합은 schema-only218 자료 행0→정확219→전체 C03→C01→네 C04 SQL 순서로 검사한다. 두 정책 ON에서 저장한 원문/배치 분모/weight_basis/영양은 정책 OFF 후 동일 양의 날짜 이동·성공 receipt replay에도 불변이며, 과거 recipe/content snapshot digest도 유지한다. 전체 보안 inventory PASS나 실제 운영·외부 AI·worker 검증으로 확대하지 않는다.
