@@ -106,11 +106,14 @@ describe("meal log beta source selection", () => {
 
   it("does not invent a conversion for a no longer supported recent unit", async () => {
     mocks.recent.mockResolvedValue(page([recent("food_product", "product-1", "요거트", "개")]));
-    open(); await flush();
+    const onSave = open(); await flush();
     fireEvent.click(screen.getByRole("tab", { name: "최근" }));
     fireEvent.click(screen.getByRole("button", { name: /요거트/ })); await flush();
     expect(screen.queryByRole("button", { name: "기록 저장" })).toBeNull();
     expect(screen.getByRole("alert")).toBeTruthy();
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(mocks.preview).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it("searches paused Korean input after 250ms without compositionend or Enter", async () => {

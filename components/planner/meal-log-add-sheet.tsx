@@ -601,6 +601,10 @@ export function MealLogAddSheet({
         }
         const unitOptions = sourceUnitOptions(source, quantityV4Enabled);
         const available = unitOptions.includes(item.last_quantity.unit);
+        if (!quantityV4Enabled && !available) {
+          setError("이 음식의 현재 단위를 확인할 수 없어요. 제품·재료 검색에서 다시 찾아 주세요.");
+          return;
+        }
         const currentVersion = source.type === "food_product" ? source.nutrition_version_id : source.quantity_options?.profile_id;
         const changedVersion = item.source_version !== undefined && currentVersion !== undefined && item.source_version !== currentVersion;
         const nextSelection: MealLogSourceSelection = {
