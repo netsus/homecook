@@ -251,3 +251,18 @@ describe("prepared food planner safe auth return context", () => {
     });
   });
 });
+
+
+describe("meal entry raw quantity return", () => {
+  const quantityInput = { schema_version: "quantity-v4" as const, raw_value: "1/3", raw_unit: "package", expected_product_nutrition_version_id: "c8000000-0000-4000-8000-000000000801" };
+  const context = { version: 1 as const, kind: "meal-entry" as const, planDate: "2026-10-14", columnId: "column-1", slotName: "아침", entryId: "entry-1", action: "edit" as const, quantityAmount: "40", quantityUnit: "g" as const, quantityInput };
+  it("round trips the original fraction independently from the displayed amount", () => {
+    saveProductPlannerReturnContext(context);
+    expect(readProductPlannerReturnContext()).toEqual(context);
+    clearProductPlannerReturnContext();
+  });
+  it.each([{ quantityInput: { ...quantityInput, raw_value: "1/0" } }, { action: "delete" }, { quantityUnit: undefined }, { quantityInput: { ...quantityInput, expected_batch_revision: 1 } }])("rejects malformed or unrelated return metadata %j", (patch) => {
+    window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({ ...context, ...patch }));
+    expect(readProductPlannerReturnContext()).toBeNull();
+  });
+});

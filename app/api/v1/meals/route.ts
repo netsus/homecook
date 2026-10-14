@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import { readQaFixtureFaultsHeader } from "@/lib/mock/qa-fixture-overrides";
-import { quantityInputContractRequested } from "@/lib/server/quantity-input";
+import { quantityInputContractRequested, quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 import {
   createQaFixtureMeal,
   getQaFixtureMealsBySlot,
@@ -500,7 +500,7 @@ async function getMeals(request: NextRequest) {
   });
   const parsedProductEntries = productEntriesResult.error
     ? null
-    : parseProductPlannerEntries(productEntriesResult.data, quantityInputContractRequested(request));
+    : parseProductPlannerEntries(productEntriesResult.data, quantityInputContractRequested(request), quantityInputWriteEnabled(request));
   if (!parsedProductEntries) {
     const authorityError = createHybridAuthorityRouteError(productEntriesResult.error);
     if (authorityError) {

@@ -1,6 +1,6 @@
 # C04 단위 근거·첫 소비 묶음 — 명시 v4 준비
 
-상태: 별도 작업트리의 로컬 구현·fixture 검증. 운영 미적용·활성화 OFF. 기본 계산은 여전히 `recipe-nutrition-v3`다. 첫 소비 묶음은 식사기록과 완제품 계획 신규 추가/재조회에 `quantity-v4`를 연결한다. 기존 완제품 계획의 수량 편집 UI·원문 상세 표시와 recipe 편집/저장·worker predecessor 소비는 다음 독립 변경으로 남았다. C03 제품 resolver·nullable 제품 행·고정 영양 버전과 C01의 무게 근거는 최종 통합 경계다.
+상태: 별도 작업트리의 로컬 구현·fixture 검증. 운영 미적용·활성화 OFF. 기본 계산은 여전히 `recipe-nutrition-v3`다. 첫 소비 묶음은 식사기록과 완제품 계획 신규 추가/재조회에 `quantity-v4`를 연결한다. 기존 완제품 계획의 수량 편집 UI·원문 표시는 뒤의 별도 로컬 변경으로 연결했다. recipe 편집/저장·worker predecessor 소비는 다음 독립 변경으로 남았다. C03 제품 resolver·nullable 제품 행·고정 영양 버전과 C01의 무게 근거는 최종 통합 경계다.
 
 ## 2026-10-14 첫 소비 묶음
 
@@ -36,6 +36,20 @@ draft는 `schema_version`, `raw_value`, `raw_unit`과 목적에 맞는 `expected
 ### 검증 구분
 
 U0/U1 원 freeze는 독립 reviewer가164개를 확인했다. 이후 whitespace parity 수정과 소비 구현 검사는 이 문서 작성자의 자체 검증이며 별도 최종 독립 review를 대신하지 않는다. 최종 관련37suite452개, schema-only219+자기 소유 network-none 컨테이너의 실제 writer/preview/read9개, typecheck·선택52파일 ESLint·신규 anti-slop0을 확인했다. 원 lint 규칙의 설치 경로 shim을 사용했고 동일 관련 lint를 별도 통과한 뒤 fake QA env/v4 OFF로 `next build --no-lint`를 확인했다. 자기 컨테이너를 제거했다. 제품은 승인된 C03 frozen converter helper를 fixture에만 선행 소비했다. 실제 C03 전체·C01 최종 source/SQL과 OFF/legacy writer byte 계약은 통합 후 다시 확인해야 한다. Next fixture320/375/1440의30PNG는 API/데이터가 synthetic인 화면 검사이고 운영 검증이나 실제 근거 등록을 뜻하지 않는다. 테스트용 서버/브라우저는 종료했다.
+
+## 2026-10-14 기존 완제품 계획의 편집·원문 읽기 (별도 로컬 변경)
+
+저장된 제품 계획 카드와 수량 변경창에서 원문 분수/단위를 읽는다. 편집은 당시 저장한 `product_nutrition_version_id`와 `basis_relations`만 사용하며 최신 제품 조회로 환산 근거를 바꾸지 않는다. 1/3팩/40g은 단위 전환에도 같은 실제 양을 유지한다. 새 입력1/4팩을30g으로 전환해 저장하면 원문1/4팩과 저장 당시 version을 함께 보낸다. 새 물리량을 임의 반올림하거나 g↔mL 밀도를 추정하지 않는다. 지원하지 않는 기존 단위는 양/단위와 이유를 보존하고 변경을 중지한다.
+
+현재 활성화는 저장된 metadata의 존재로 판단하지 않는다. 새 미적용 `20261014213000_product_quantity_edit_capability.sql`은 기존 권한 아래 읽는 `public.product_planner_entry_payload(uuid,uuid)`와 `public.list_product_planner_entries(uuid,date,date,uuid)`의 JSON에 현재 private DB 정책의 nullable `quantity_policy`만 추가한다. 기존 owner/actor 필터·함수 소유자/ACL/security/search_path는 유지하고 새 RPC/grant/table/writer/기존행 재작성은 없다. API는 env/header 협상이 없으면 새 키를 제거하며, metadata 응답 협상은 OFF에서도 읽기만 허용한다. 실제 식사 목록의 슬롯 DTO에도 협상된 원문을 유지한다.
+
+OFF 뒤의 저장 원문이나 로그인 복귀 v4 draft는 읽되 새 단위 편집·저장은 막는다. DB policy가 편집 중 OFF로 바뀌어409를 돌려주어도 입력을 유지하고 읽기 상태로 전환한다. 해당 항목의 남아 있던 활성화 표시를 지워 취소 후 재열기도 읽기 상태를 유지한다. 구 payload·quantity_input 없는 과거 항목은 기존 숫자 입력/응답을 유지한다. legacy 단위 전환이 기존4자리 저장 정밀도에 정확히 맞지 않으면 양/단위를 보존하고 이유를 안내한다.
+
+`meal-entry` 로그인 복귀에 optional `quantityInput`을 결속한다. 표시량/단위와 원문은 별개이며 당시 version도 유지한다. 현재 소유 항목·고정 version·지원 단위를 다시 확인한 뒤 자동 PATCH 없이 명시 저장을 기다린다. 다른 version의 draft는 재해석하지 않고 편집을 중지한다. 취소/닫기는 저장된 수량을 바꾸지 않고 복귀 보조 상태만 지운다. pending 중 중복 PATCH/닫기는 기존 보호를 재사용하며 일반 실패는 같은 draft로 재시도한다. 브라우저 저장소가 v4 원입력을 보관하지 못한401은 숫자량을 원문으로 바꿔 복원하지 않는다. 원문/소유자 정보를 URL에 넣지 않고 정확한 비민감 `productQuantityResume=unavailable` 표시만 전달해 입력창 복원을 종료한다. stale 저장소를 재사용하지 않고 복귀query를 정리하며 원계획에서 명시적으로 다시 입력하도록 안내한다. 뒤로/새로고침에도 옛 draft를 자동 저장/복원하지 않는다. 저장소 삭제도 실패하면 표시를 유지해 stale draft 재사용을 막는다. 저장소 성공과 legacy 숫자 URL 복귀는 그대로다.
+
+213000은 기존210000 뒤, recipe220000/C05230000 앞이다. 복구는 새 편집 env/DB policy OFF와 저장 metadata 읽기 유지가 기본이다. reader JSON의 추가 키를 되돌릴 경우 정확 preimage의 reader2개만 검토하며 metadata·수량·고정 version을 삭제/재계산하지 않는다. 운영 적용/활성화 승인과 실제 C03/C01 전체 통합 검증은 아직 없다. 자체 unit/API·격리 SQL·Next fixture 결과와 독립 리뷰는 총괄 인계에서 구분한다.
+
+이 편집 변경의 자체 검증은 선택12suite182개, 실제 schema-only219+고정 C03 converter+미적용 C04 SQL4개의11개 검사, 타입·원 규칙 ESLint15파일·Anti Slop 전체3단계 신규0, fake QA env/v4 OFF 빌드다. Next320/375/1440의36PNG에서 원량 전환·취소/재열기·401 복귀 후 명시 저장·실패 재시도·OFF409/읽기·다른 version 입력 차단·legacy 정밀도 실패 보존을 확인했다. API는 synthetic이며 운영 검증이 아니다. 자기 서버/브라우저/격리 컨테이너를 종료·제거했다. 독립 최종 리뷰와 C03/C01 전체 통합 검증은 별도로 남는다.
 
 ## 작은 계약
 

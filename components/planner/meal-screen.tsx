@@ -22,6 +22,7 @@ import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ProductPlannerEntryCard } from "@/components/planner/product-planner-entry-card";
 import { usePlannerNutritionSummary } from "@/components/planner/use-planner-nutrition-summary";
 import { ModalHeader } from "@/components/shared/modal-header";
+import { DecimalInput } from "@/components/shared/decimal-input";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { AllPantryCompletionModal } from "@/components/shopping/all-pantry-completion-modal";
@@ -61,18 +62,25 @@ import {
   buildCompatibleFoodProductUnits,
   formatProductPlannerEntryErrorMessage,
   formatProductUnit,
+  formatProductRawQuantity,
   mergeMealScreenEntries,
 } from "@/lib/planner/product-planner-entry-presentation";
 import {
   clearProductPlannerReturnContext,
   readProductPlannerReturnContext,
   saveProductPlannerReturnContext,
+  type ProductMealEntryReturnContext,
 } from "@/lib/planner/product-planner-return-context";
+import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
+import { parseQuantityInput } from "@/lib/quantity-input";
+import { FOOD_PRODUCT_BASIS_UNITS } from "@/types/food-product";
+import { QUANTITY_INPUT_VERSION, type QuantityInputDraft } from "@/types/quantity-input";
 import type { MealListItemData } from "@/types/meal";
 import type { RecipeSnapshotUiMode } from "@/types/recipe";
 import type {
   MealProductPlannerEntryData,
   ProductPlannerEntryQuantity,
+  ProductPlannerEntryPatchBody,
 } from "@/types/product-planner-entry";
 import type {
   ShoppingListAllPantryCompletionSummary,
@@ -118,6 +126,7 @@ function buildProductEntryNextPath(
   entryId: string,
   action: "edit" | "delete",
   quantity?: ProductPlannerEntryQuantity,
+  quantityRecoveryUnavailable = false,
 ) {
   const params = new URLSearchParams();
   if (slotName) params.set("slot", slotName);
@@ -127,6 +136,7 @@ function buildProductEntryNextPath(
     params.set("productAmount", String(quantity.amount));
     params.set("productUnit", quantity.unit);
   }
+  if (quantityRecoveryUnavailable) params.set("productQuantityResume", "unavailable");
   return `/planner/${planDate}/${columnId}?${params.toString()}`;
 }
 
@@ -135,6 +145,7 @@ const PRODUCT_ENTRY_RETURN_QUERY_KEYS = [
   "productEntryId",
   "productAmount",
   "productUnit",
+  "productQuantityResume",
 ] as const;
 
 function buildProductEntryReturnClearedPath(
@@ -326,6 +337,39 @@ function CenterModal({ children, initialFocusRef, onClose, labelledBy }: CenterM
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+interface ProductQuantityEdit {
+  entry: MealProductPlannerEntryData;
+  amount: string;
+  unit: ProductPlannerEntryQuantity["unit"];
+  quantityInput?: QuantityInputDraft;
+  blockedReason: string | null;
+  error: string | null;
+}
+
+function buildProductQuantityEdit(entry: MealProductPlannerEntryData,
+  restored?: Pick<ProductMealEntryReturnContext, "quantityAmount" | "quantityUnit" | "quantityInput">): ProductQuantityEdit {
+  const v4 = entry.quantity_policy === QUANTITY_INPUT_VERSION;
+  const unit = restored?.quantityUnit ?? entry.quantity.unit;
+  const snapshot = entry.quantity_input;
+  const amount = restored?.quantityAmount ?? (v4 && snapshot?.raw_unit === unit ? snapshot.raw_value : String(entry.quantity.amount));
+  let quantityInput = restored?.quantityInput;
+  if (!quantityInput && !restored?.quantityAmount && snapshot) quantityInput = {
+    schema_version: QUANTITY_INPUT_VERSION, raw_value: snapshot.raw_value, raw_unit: snapshot.raw_unit,
+    expected_product_nutrition_version_id: entry.product_nutrition_version_id,
+  };
+  if (!quantityInput && v4) quantityInput = {
+    schema_version: QUANTITY_INPUT_VERSION, raw_value: amount, raw_unit: unit,
+    expected_product_nutrition_version_id: entry.product_nutrition_version_id,
+  };
+  const blockedReason = quantityInput?.expected_product_nutrition_version_id !== undefined
+    && quantityInput.expected_product_nutrition_version_id !== entry.product_nutrition_version_id
+    ? "저장된 제품의 영양 버전과 이전 입력이 달라요. 원래 입력은 보존했어요. 취소한 뒤 저장된 항목에서 다시 열어 주세요."
+    : quantityInput && !v4 ? "현재 새 단위 입력을 사용할 수 없어요. 원래 양과 단위를 보존했어요."
+    : !buildCompatibleFoodProductUnits(entry, v4).includes(unit)
+      ? "이전 단위의 환산 근거를 확인할 수 없어요. 원래 양과 단위를 보존했어요." : null;
+  return { entry, amount, unit, quantityInput, blockedReason, error: null };
+}
+
 export function MealScreen({
   planDate,
   columnId,
@@ -351,12 +395,7 @@ export function MealScreen({
   const [modal, setModal] = useState<ModalState | null>(null);
   const [pendingMealIds, setPendingMealIds] = useState<Set<string>>(new Set());
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
-  const [editingProduct, setEditingProduct] = useState<{
-    entry: MealProductPlannerEntryData;
-    amount: string;
-    unit: ProductPlannerEntryQuantity["unit"];
-    error: string | null;
-  } | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductQuantityEdit | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<MealProductPlannerEntryData | null>(null);
   const [deleteProductError, setDeleteProductError] = useState<string | null>(null);
   const [authReturnPath, setAuthReturnPath] = useState<string | null>(null);
@@ -502,9 +541,18 @@ export function MealScreen({
     [mergedEntries],
   );
 
+  const clearProductQuantityEditReturnState = useCallback(() => {
+    const contextCleared = clearProductPlannerReturnContext();
+    setAuthReturnPath(null);
+    if (!contextCleared && searchParams.get("productQuantityResume") === "unavailable") return;
+    const nextPath = buildProductEntryReturnClearedPath(planDate, columnId, searchParams);
+    if (nextPath) router.replace(nextPath);
+  }, [columnId, planDate, router, searchParams]);
+
   useEffect(() => {
     if (authState !== "authenticated" || restoredProductContextRef.current || screenState !== "ready") return;
-    const stored = readProductPlannerReturnContext();
+    const recoveryUnavailable = searchParams.get("productQuantityResume") === "unavailable" && searchParams.get("productAction") === "edit";
+    const stored = recoveryUnavailable ? null : readProductPlannerReturnContext();
     const storedEntry = stored?.kind === "meal-entry" &&
       stored.planDate === planDate && stored.columnId === columnId && stored.slotName === slotName
       ? stored
@@ -519,23 +567,21 @@ export function MealScreen({
       clearProductPlannerReturnContext();
       return;
     }
+    if (recoveryUnavailable) {
+      clearProductQuantityEditReturnState();
+      setFeedback({ message: "로그인 전 원입력을 보관하지 못했어요. 계획은 그대로예요. 수량 변경을 다시 열어 입력해 주세요.", tone: "error" });
+      return;
+    }
     if (action === "delete") {
       setDeleteProductError(null);
       setDeletingProduct(entry);
       return;
     }
-    const amount = storedEntry?.quantityAmount ?? searchParams.get("productAmount") ?? String(entry.quantity.amount);
-    const unit = storedEntry?.quantityUnit ?? searchParams.get("productUnit") ?? entry.quantity.unit;
-    const compatible = buildCompatibleFoodProductUnits(entry);
-    setEditingProduct({
-      entry,
-      amount,
-      unit: compatible.includes(unit as ProductPlannerEntryQuantity["unit"])
-        ? unit as ProductPlannerEntryQuantity["unit"]
-        : entry.quantity.unit,
-      error: null,
-    });
-  }, [authState, columnId, displayedProductEntries, planDate, screenState, searchParams, slotName]);
+    setEditingProduct(buildProductQuantityEdit(entry, storedEntry ?? {
+      quantityAmount: searchParams.get("productAmount") ?? undefined,
+      quantityUnit: FOOD_PRODUCT_BASIS_UNITS.find(unit => unit === searchParams.get("productUnit")),
+    }));
+  }, [authState, clearProductQuantityEditReturnState, columnId, displayedProductEntries, planDate, screenState, searchParams, slotName]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function clearConflictError(mealId: string) {
@@ -820,11 +866,33 @@ export function MealScreen({
   }
 
   function openProductQuantityEdit(entry: MealProductPlannerEntryData) {
-    setEditingProduct({
-      entry,
-      amount: String(entry.quantity.amount),
-      unit: entry.quantity.unit,
-      error: null,
+    setEditingProduct(buildProductQuantityEdit(entry));
+  }
+
+  function changeProductQuantityAmount(amount: string) {
+    setEditingProduct(current => {
+      if (!current || current.blockedReason) return current;
+      const next = { ...current, amount, error: null };
+      if (current.entry.quantity_policy === QUANTITY_INPUT_VERSION) next.quantityInput = {
+        schema_version: QUANTITY_INPUT_VERSION, raw_value: amount, raw_unit: current.unit,
+        expected_product_nutrition_version_id: current.entry.product_nutrition_version_id,
+      };
+      return next;
+    });
+  }
+
+  function changeProductQuantityUnit(value: string) {
+    setEditingProduct(current => {
+      if (!current || current.blockedReason) return current;
+      const v4 = current.entry.quantity_policy === QUANTITY_INPUT_VERSION;
+      const unit = buildCompatibleFoodProductUnits(current.entry, v4).find(candidate => candidate === value);
+      const amount = v4 ? parseQuantityInput(current.amount)?.amount ?? null : Number(current.amount);
+      const converted = unit && amount !== null ? convertProductQuantity(amount, current.unit, unit, current.entry.basis_relations) : null;
+      if (!unit || converted === null) return { ...current, error: "이 단위로 바꿀 환산 근거가 없어요. 원래 양과 단위를 유지했어요." };
+      if (!v4 && (Math.round(converted * 1e4) <= 0 || Math.abs(converted - Math.round(converted * 1e4) / 1e4) > Math.max(1, converted) * 1e-12)) {
+        return { ...current, error: "현재 입력 방식으로 이 양을 정확히 옮길 수 없어요. 원래 양과 단위를 유지했어요." };
+      }
+      return { ...current, unit, amount: converted.toLocaleString("en-US", { useGrouping: false, maximumSignificantDigits: 17 }), error: null };
     });
   }
 
@@ -834,12 +902,6 @@ export function MealScreen({
     setEditingProduct(null);
   }
 
-  function clearProductQuantityEditReturnState() {
-    clearProductPlannerReturnContext();
-    setAuthReturnPath(null);
-    const nextPath = buildProductEntryReturnClearedPath(planDate, columnId, searchParams);
-    if (nextPath) router.replace(nextPath);
-  }
 
   function openProductDelete(entry: MealProductPlannerEntryData) {
     setDeleteProductError(null);
@@ -854,11 +916,12 @@ export function MealScreen({
   }
 
   async function handleProductQuantityConfirm() {
-    if (!editingProduct) return;
-    const amount = Number(editingProduct.amount);
+    if (!editingProduct || editingProduct.blockedReason) return;
+    const v4 = editingProduct.entry.quantity_policy === QUANTITY_INPUT_VERSION;
+    const amount = v4 ? parseQuantityInput(editingProduct.amount)?.amount ?? null : Number(editingProduct.amount);
     if (
       editingProduct.amount.trim() === "" ||
-      !Number.isFinite(amount) ||
+      amount === null || !Number.isFinite(amount) ||
       amount <= 0
     ) {
       setEditingProduct((current) =>
@@ -872,9 +935,11 @@ export function MealScreen({
     pendingProductEditIdsRef.current.add(entryId);
     setPendingProductIds((current) => new Set([...current, entryId]));
     try {
-      const updated = await updateProductPlannerEntryQuantity(entryId, {
+      const body: ProductPlannerEntryPatchBody = {
         quantity: { amount, unit: editingProduct.unit },
-      });
+      };
+      if (v4 && editingProduct.quantityInput) body.quantity_input = editingProduct.quantityInput;
+      const updated = await updateProductPlannerEntryQuantity(entryId, body);
       setProductEntries((current) =>
         current.map((entry) => (entry.id === entryId ? updated : entry)),
       );
@@ -883,25 +948,28 @@ export function MealScreen({
       setEditingProduct(null);
     } catch (caught) {
       if (isProductPlannerEntryApiError(caught) && caught.status === 401) {
-        const context = {
-          version: 1 as const,
-          kind: "meal-entry" as const,
+        const context: ProductMealEntryReturnContext = {
+          version: 1,
+          kind: "meal-entry",
           planDate,
           columnId,
           slotName,
           entryId,
-          action: "edit" as const,
+          action: "edit",
           quantityAmount: editingProduct.amount,
           quantityUnit: editingProduct.unit,
         };
-        saveProductPlannerReturnContext(context);
+        if (v4 && editingProduct.quantityInput) context.quantityInput = editingProduct.quantityInput;
+        const contextStored = saveProductPlannerReturnContext(context);
+        const recoveryUnavailable = v4 && !contextStored;
         setAuthReturnPath(buildProductEntryNextPath(
           planDate,
           columnId,
           slotName,
           entryId,
           "edit",
-          { amount, unit: editingProduct.unit },
+          recoveryUnavailable ? undefined : { amount, unit: editingProduct.unit },
+          recoveryUnavailable,
         ));
         setEditingProduct(null);
         setAuthState("unauthorized");
@@ -910,8 +978,18 @@ export function MealScreen({
       const message = isProductPlannerEntryApiError(caught)
         ? formatProductPlannerEntryErrorMessage(caught)
         : "완제품 수량을 바꾸지 못했어요.";
+      const blocked = isProductPlannerEntryApiError(caught) &&
+        (caught.code === "UNIT_POLICY_INACTIVE" || caught.code === "NUTRITION_VERSION_CONFLICT");
+      if (isProductPlannerEntryApiError(caught) && caught.code === "UNIT_POLICY_INACTIVE") {
+        setProductEntries(current => current.map(entry => {
+          if (entry.id !== entryId) return entry;
+          const inactive = { ...entry };
+          delete inactive.quantity_policy;
+          return inactive;
+        }));
+      }
       setEditingProduct((current) =>
-        current ? { ...current, error: message } : null,
+        current ? { ...current, error: message, blockedReason: blocked ? message : current.blockedReason } : null,
       );
     } finally {
       pendingProductEditIdsRef.current.delete(entryId);
@@ -1197,48 +1275,41 @@ export function MealScreen({
           <div className="mt-4 grid grid-cols-[minmax(0,1fr)_112px] gap-2">
             <label className="grid gap-1 text-xs font-medium text-[var(--text-2)]">
               수량
-              <input
+              {editingProduct.entry.quantity_policy === QUANTITY_INPUT_VERSION ? <DecimalInput
+                allowFractions aria-label="완제품 변경 수량"
+                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-base outline-none"
+                disabled={pendingProductIds.has(editingProduct.entry.id) || Boolean(editingProduct.blockedReason)}
+                rawValue={editingProduct.amount} onRawValueChange={changeProductQuantityAmount} onValueChange={() => {}}
+                ref={productEditInputRef} value={parseQuantityInput(editingProduct.amount)?.amount ?? null}
+              /> : <input
                 aria-label="완제품 변경 수량"
                 className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-base outline-none"
-                disabled={pendingProductIds.has(editingProduct.entry.id)}
-                inputMode="decimal"
-                min={editingProduct.unit === "g" || editingProduct.unit === "ml" ? "1" : "0.01"}
-                onChange={(event) =>
-                  setEditingProduct((current) =>
-                    current ? { ...current, amount: event.target.value, error: null } : null,
-                  )
-                }
+                disabled={pendingProductIds.has(editingProduct.entry.id) || Boolean(editingProduct.blockedReason)}
+                inputMode="decimal" min={editingProduct.unit === "g" || editingProduct.unit === "ml" ? "1" : "0.01"}
+                onChange={event => changeProductQuantityAmount(event.target.value)}
                 step={editingProduct.unit === "g" || editingProduct.unit === "ml" ? "1" : "any"}
-                ref={productEditInputRef}
-                type="number"
-                value={editingProduct.amount}
-              />
+                ref={productEditInputRef} type="number" value={editingProduct.amount}
+              />}
             </label>
             <label className="grid gap-1 text-xs font-medium text-[var(--text-2)]">
               단위
               <select
                 aria-label="완제품 변경 수량 단위"
                 className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-base outline-none"
-                disabled={pendingProductIds.has(editingProduct.entry.id)}
-                onChange={(event) =>
-                  setEditingProduct((current) =>
-                    current
-                      ? {
-                          ...current,
-                          unit: event.target.value as ProductPlannerEntryQuantity["unit"],
-                          error: null,
-                        }
-                      : null,
-                  )
-                }
+                disabled={pendingProductIds.has(editingProduct.entry.id) || Boolean(editingProduct.blockedReason)}
+                onChange={event => changeProductQuantityUnit(event.target.value)}
                 value={editingProduct.unit}
               >
-                {buildCompatibleFoodProductUnits(editingProduct.entry).map((unit) => (
-                  <option key={unit} value={unit}>{formatProductUnit(unit)}</option>
+                {!buildCompatibleFoodProductUnits(editingProduct.entry, editingProduct.entry.quantity_policy === QUANTITY_INPUT_VERSION).includes(editingProduct.unit) ? <option value={editingProduct.unit}>{formatProductUnit(editingProduct.unit)} (이전 입력)</option> : null}
+                {buildCompatibleFoodProductUnits(editingProduct.entry, editingProduct.entry.quantity_policy === QUANTITY_INPUT_VERSION).map((unit) => (
+                  <option key={unit} value={unit}>{editingProduct.entry.quantity_policy === QUANTITY_INPUT_VERSION && unit === "serving" ? "제품 1회분" : formatProductUnit(unit)}</option>
                 ))}
               </select>
             </label>
           </div>
+          {editingProduct.quantityInput ? <p className="mt-2 break-words text-xs text-[var(--text-2)]">원입력 {formatProductRawQuantity(editingProduct.quantityInput)}</p> : null}
+          {editingProduct.blockedReason && editingProduct.blockedReason !== editingProduct.error ? <p className="mt-2 text-sm text-[var(--text-2)]" role="status">{editingProduct.blockedReason}</p> : null}
+          {editingProduct.entry.quantity_policy === QUANTITY_INPUT_VERSION ? <div className="mt-3 flex gap-2">{["1/2", "1/3", "1/4", "3/4"].map(value => <button className="min-h-11 flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] text-sm" disabled={pendingProductIds.has(editingProduct.entry.id) || Boolean(editingProduct.blockedReason)} key={value} onClick={() => changeProductQuantityAmount(value)} type="button">{value}</button>)}</div> : null}
           {editingProduct.error ? (
             <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-sm font-semibold text-[var(--danger)]" role="alert">
               {editingProduct.error}
@@ -1246,7 +1317,7 @@ export function MealScreen({
           ) : null}
           <div className="mt-5 grid grid-cols-2 gap-2">
             <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-medium disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={closeProductQuantityEdit} type="button">취소</button>
-            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={() => void handleProductQuantityConfirm()} type="button">수량 변경</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-medium text-[var(--text-inverse)] disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id) || Boolean(editingProduct.blockedReason) || (editingProduct.entry.quantity_policy === QUANTITY_INPUT_VERSION && !parseQuantityInput(editingProduct.amount))} onClick={() => void handleProductQuantityConfirm()} type="button">수량 변경</button>
           </div>
         </CenterModal>
       ) : null}

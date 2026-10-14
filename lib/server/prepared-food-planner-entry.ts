@@ -170,7 +170,7 @@ function parseProductNutrition(value: unknown): ProductNutrition | null {
   return nutrition;
 }
 
-function parseProductPlannerEntry(value: unknown, quantityV4 = false): ProductPlannerEntryData | null {
+function parseProductPlannerEntry(value: unknown, quantityV4 = false, quantityWriteEnabled = false): ProductPlannerEntryData | null {
   if (
     !isRecord(value)
     || value.entry_type !== "product"
@@ -191,6 +191,7 @@ function parseProductPlannerEntry(value: unknown, quantityV4 = false): ProductPl
   const nutrition = parseProductNutrition(value.nutrition);
   if (!quantity || !nutrition) return null;
   if (value.quantity_input !== undefined && value.quantity_input !== null && !isQuantityInputSnapshot(value.quantity_input, quantity)) return null;
+  if (value.quantity_policy !== undefined && value.quantity_policy !== null && value.quantity_policy !== "quantity-v4") return null;
 
   const basisRelations: FoodProductData["basis_relations"] = [];
   for (const relation of value.basis_relations) {
@@ -216,14 +217,15 @@ function parseProductPlannerEntry(value: unknown, quantityV4 = false): ProductPl
     nutrition,
   };
   if (quantityV4 && isQuantityInputSnapshot(value.quantity_input)) entry.quantity_input = value.quantity_input;
+  if (quantityV4 && quantityWriteEnabled && value.quantity_policy === "quantity-v4") entry.quantity_policy = value.quantity_policy;
   return entry;
 }
 
-export function parseProductPlannerEntries(value: unknown, quantityV4 = false): ProductPlannerEntryData[] | null {
+export function parseProductPlannerEntries(value: unknown, quantityV4 = false, quantityWriteEnabled = false): ProductPlannerEntryData[] | null {
   if (!Array.isArray(value)) return null;
   const entries: ProductPlannerEntryData[] = [];
   for (const entry of value) {
-    const parsedEntry = parseProductPlannerEntry(entry, quantityV4);
+    const parsedEntry = parseProductPlannerEntry(entry, quantityV4, quantityWriteEnabled);
     if (!parsedEntry) return null;
     entries.push(parsedEntry);
   }
@@ -413,7 +415,7 @@ export function dedupeProductPlannerEntries(entries: ProductPlannerEntryData[]) 
 export function toMealProductPlannerEntry(
   entry: ProductPlannerEntryData,
 ): MealProductPlannerEntryData {
-  return {
+  const mealEntry: MealProductPlannerEntryData = {
     entry_type: entry.entry_type,
     id: entry.id,
     product_id: entry.product_id,
@@ -425,4 +427,7 @@ export function toMealProductPlannerEntry(
     basis_relations: entry.basis_relations,
     nutrition: entry.nutrition,
   };
+  if (entry.quantity_input) mealEntry.quantity_input = entry.quantity_input;
+  if (entry.quantity_policy) mealEntry.quantity_policy = entry.quantity_policy;
+  return mealEntry;
 }

@@ -32,6 +32,7 @@ export interface ProductPlannerEntryData {
   column_id: string;
   quantity: ProductPlannerEntryQuantity;
   quantity_input?: QuantityInputSnapshot;
+  quantity_policy?: "quantity-v4";
   workflow_status: null;
   product_nutrition_version_id: string;
   basis_relations: FoodProductData["basis_relations"];

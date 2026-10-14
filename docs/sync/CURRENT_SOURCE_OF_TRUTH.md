@@ -2,7 +2,7 @@
 
 ## 2026-10-14 — C04 단위 입력 첫 소비 묶음의 명시 v4 준비 (운영 미적용)
 
-기본 recipe-nutrition-v3·구 클라이언트 응답·과거 기록을 보존하면서 식사기록과 완제품 계획 신규 추가/재조회의 빈 최초 양, 검토된 단위 추천, 원량 보존 전환, 분수 원문, 고정 배치 인분을 별도 quantity-v4 계약으로 준비한다. 확인된 우유의 mL 기본 입력과 g↔mL 밀도 환산은 구분하며 영양 미상은 null로 유지한다. 제품은 C03 고정 영양 버전·자체 관계만 사용한다. 환경 true·새 요청 header·기본 OFF private DB 정책과 C03 converter가 모두 있어야 새 쓰기가 가능하다. 아직 운영 적용·활성화·권한 확대가 없고, 기존 완제품 계획 편집/원문 상세와 recipe 편집/저장·worker predecessor 연결은 다음 독립 변경으로 남았다. [계약·검증 범위·DDL 대상과 복구](../engineering/ingredient-quantity-policy-v4-20261013.md)를 따른다.
+기본 recipe-nutrition-v3·구 클라이언트 응답·과거 기록을 보존하면서 식사기록과 완제품 계획 신규 추가/재조회의 빈 최초 양, 검토된 단위 추천, 원량 보존 전환, 분수 원문, 고정 배치 인분을 별도 quantity-v4 계약으로 준비한다. 확인된 우유의 mL 기본 입력과 g↔mL 밀도 환산은 구분하며 영양 미상은 null로 유지한다. 제품은 C03 고정 영양 버전·자체 관계만 사용한다. 환경 true·새 요청 header·기본 OFF private DB 정책과 C03 converter가 모두 있어야 새 쓰기가 가능하다. 아직 운영 적용·활성화·권한 확대가 없고, 기존 완제품 계획 편집/원문 읽기는 별도 로컬 변경과 미적용213000 reader capability로 연결했고, recipe 편집/저장·worker predecessor 연결은 다음 독립 변경으로 남았다. 저장 당시 제품 version만 편집에 사용하며 OFF에서는 v4 원문 읽기만 허용한다. [계약·검증 범위·DDL 대상과 복구](../engineering/ingredient-quantity-policy-v4-20261013.md)를 따른다.
 
 ## 2026-10-13 — 베타 v9 조리 원문 안내·데스크톱 폭·알림 순서 (운영 반영 전)
 
