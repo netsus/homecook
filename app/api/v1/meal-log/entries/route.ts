@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   const entryId = crypto.randomUUID();
   const payload = toMealLogRpcPayload(parsed.value);
   let rpcResult: { data: unknown; error: unknown } | null = null;
-  if (parsed.value.source.type === "cooked_batch") {
+  if (parsed.value.source.type === "cooked_batch" && parsed.value.quantityInput === undefined) {
     rpcResult = await authorized.client.rpc("create_legacy_leftover_meal_log_entry", {
       ...authorized.authorityArgs,
       p_entry_id: entryId,
