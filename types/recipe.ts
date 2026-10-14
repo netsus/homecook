@@ -134,7 +134,7 @@ export interface RecipeQuantityContextData {
 }
 
 export interface RecipeIngredient {
-  quantity_input?: RecipeQuantityInputSnapshot;
+  quantity_input?: RecipeQuantityInputSnapshot | QuantityInputSnapshot;
   quantity_context?: RecipeIngredientQuantityContext;
   source_kind?: RecipeIngredientSourceKind;
   row_key?: string;

@@ -1,6 +1,6 @@
 # C04 코드 통합 기록 · 2026-10-14
 
-상태: `codex/mumeok-c04-integrated`의 로컬 소스 통합. worker bridge와 저장 YouTube owner UI는 아직 이 브랜치에 합치지 않았다. 운영·DB·정책 활성화 기록이 아니다.
+상태: `codex/mumeok-c04-integrated`의 로컬 소스 통합. 아래 최종 후속에서 worker bridge와 저장 YouTube owner UI도 합쳤다. 운영·DB·정책 활성화 기록이 아니다.
 
 ## 통합 순서와 충돌 처리
 
@@ -27,3 +27,13 @@
 첫 merge의 관련11파일107검사와 타입 검사, master 통합 후 관련21파일301검사와 타입 검사를 각각 실패/skip0·exit0으로 확인했다. 후자는 pending·cook/quantity 로그인 복귀·C04 first/editor·recipe 원량/context·C01 응답/preview 호환과 source inventory 단위 검사를 포함한다. source inventory 단위 검사 통과는 실제 최종 DB의 전체 보안 inventory 통과를 뜻하지 않는다.
 
 worker 최종 코드와 저장 YouTube 원문 UI를 합친 뒤 최종 production build를 한 번 수행한다. C04의 추가 wrapper/helper/alias에 대한 정확한 최종 source/body/owner/ACL/config 보안 지문 등록·fresh schema 통합은 후속이다. 기존 지문 차이를 정상 baseline으로 새로 승인하지 않았다. 이 단계에서는 native·실제 OAuth·운영/default DB·실제 config/키·새 추출·P5·모델/외부 AI 호출·배포를 실행하지 않았다. 로컬 merge commit만 만들며 push·PR·master·운영은 총괄이 처리한다.
+
+## 최종 worker·저장 원문 UI 합침
+
+독립 검토된 backend16·saved UI4 파일의 source `23c1aa47c188ec4dcf2119e92ad1884ecde8272d`를 이어서 합쳤다. 충돌은 `types/recipe.ts`의 읽기 `RecipeIngredient.quantity_input` 한 곳뿐이다. 공통 `QuantityInputSnapshot`과 정상 `RecipeQuantityInputSnapshot`을 함께 받도록 했으며, 정상 alias의 필수 `context_sha256`, context 응답과 쓰기 draft validator는 원문 그대로다. worker context를 normal context hash로 만들거나 바꾸지 않았다. backend15파일과 saved UI4파일은 각 freeze 원문과 byte-identical이다. 위 C01/first/editor/recipe SQL, raw legacy dispatch, guest cook·수량 복귀도 그대로다.
+
+worker `20261014223000_youtube_quantity_input_bridge.sql` SHA는 `f586b27f2f5da5063a7eaa70278c7f00edab762aa27248b91a224411f436c750`이며, source13함수 manifest SHA는 `96380285501d6ee9cd81be8334ecebe4848446ac87c4420a3616e2553610fe1f`, catalog after는 `de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05`다. 이전 dd924/4101 후보를 되살리지 않았다. gate·legacy 숫자/응답과 원입력 보존, 정책 OFF 이후 writer 경합 보호는 해당 source의 계약이다.
+
+통합 후 관련28파일375검사·타입 검사·관련16개 TS/JS ESLint·Anti Slop728파일 신규0·공백/미해결 충돌0을 확인했다. 실사용자·HTTP JWT/OAuth·최종 native와 worker 설치는 실행하지 않았다. 운영 적용 전에는 격리한 source219→C03→C01(60b9)→C04 010000/200000/210000/213000/220000/223000 순서의 정확 before/post 지문과 실제 함수/정책/원량 통합 확인이 필요하다. worker13 source manifest 존재나 단위 검사만으로 전체 inventory 등록·통과를 주장하지 않는다.
+
+production build는 실제 `.env` 파일이 없는 것을 확인하고 환경을 비운 뒤 가짜 localhost65534 주소/가짜 검증 값·QA OFF·R2 false만 넣어 실행했다. compile·type·94개 정적 페이지·trace가 완료됐고 exit0이다. Next 내장 lint는 공유 pnpm 저장소에서 react-hooks plugin 경로를 찾지 못해 수행되지 않았으며 별도 기본 flat-config의 관련 lint는 통과했다. 이 재현은 소스/의존성을 바꾸지 않은 기존 설치 경로 문제로 기록한다. 이 `.next`는 가짜 공개 설정이 들어간 검사용 결과이며 운영 배포에 재사용하면 안 된다. 로그와 종료값은 `/tmp/mumeok-c04-integrated-production-build.log`와 `-result.json`에 둔다. lint 경로 보완은 수량 소스와 분리한 후속 변경이다.
