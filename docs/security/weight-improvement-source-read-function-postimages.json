@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "status": "local-review-draft",
+  "schema_archive_sha256": "5447e5ae08359feb9750676820968daf2edcf0ed57b64997e718ccc8d8dae790",
+  "password_free_roles_sha256": "a37b43865c14194ab8aae8758c7f596679cc50e93f425d0af52767f54b9145d3",
+  "source_ledger_count": 219,
+  "source_ledger_sha256": "4da770185bf35bc0ff7834a8284766c54d314b1638146bae830157da626c5204",
+  "predecessor_C03_sha256": "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75",
+  "predecessor_C01_sha256": "60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0",
+  "predecessor_C05_sha256": "bc263347ef51f7ffc86731b7c161618f3181b81cd00bf8f2ec57a01b989eeda8",
+  "migration": "supabase/migrations/20261014231000_weight_improvement_source_read.sql",
+  "migration_sha256": "5ee6c6ba4d03cafe80b7a2c0b5f7ac64c2715467f454cb293bc62e70d08b6889",
+  "application_rows_restored": 0,
+  "C04_integration_pending": true,
+  "whole_inventory_drift_not_waived": true,
+  "source_hash_algorithm": "MD5(btrim(prosrc, chr(10))), native source-derived and exact SQL checked",
+  "preserved_scope_predecessor": {
+    "before": {
+      "lookupSignature": "private.verify_full_local_internal_scope()",
+      "signature": "private.verify_full_local_internal_scope()",
+      "schema": "private",
+      "name": "verify_full_local_internal_scope",
+      "sourceHash": "b333ab0e7389a26a4864f86bd3fc5cb8",
+      "securityDefiner": true,
+      "owner": "postgres",
+      "searchPath": "pg_catalog,public,private,pg_temp",
+      "allowedAcl": "",
+      "volatility": "v",
+      "configuration": [
+        "search_path=pg_catalog, public, private, pg_temp"
+      ]
+    },
+    "renamed": {
+      "lookupSignature": "private.verify_scope_pre_weight_source_read_20261014()",
+      "signature": "private.verify_scope_pre_weight_source_read_20261014()",
+      "schema": "private",
+      "name": "verify_scope_pre_weight_source_read_20261014",
+      "sourceHash": "b333ab0e7389a26a4864f86bd3fc5cb8",
+      "rawSourceHash": "c3a76b53e7a39ccca55e1d81e89dccdd",
+      "securityDefiner": true,
+      "owner": "postgres",
+      "searchPath": "pg_catalog,public,private,pg_temp",
+      "allowedAcl": "",
+      "volatility": "v",
+      "configuration": [
+        "search_path=pg_catalog, public, private, pg_temp"
+      ]
+    },
+    "body_and_attributes_unchanged": true
+  },
+  "functions": [
+    {
+      "postimage": {
+        "lookupSignature": "private.project_weight_improvement_sample_source(uuid,bigint,uuid,uuid,bigint)",
+        "signature": "private.project_weight_improvement_sample_source(uuid,bigint,uuid,uuid,bigint)",
+        "schema": "private",
+        "name": "project_weight_improvement_sample_source",
+        "sourceHash": "0a564a1bf4e809645b488e9fff9b7692",
+        "rawSourceHash": "5fe2e160e72e3e3f7804c794d7af8d23",
+        "securityDefiner": false,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "s",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "postimage": {
+        "lookupSignature": "private.verify_full_local_internal_scope()",
+        "signature": "private.verify_full_local_internal_scope()",
+        "schema": "private",
+        "name": "verify_full_local_internal_scope",
+        "sourceHash": "4cec1a1496a336189fe8acb96f349c41",
+        "rawSourceHash": "bf99236451476ebe56d6a77c9e2ea6c7",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "preimage": {
+        "lookupSignature": "private.verify_full_local_internal_scope()",
+        "signature": "private.verify_full_local_internal_scope()",
+        "schema": "private",
+        "name": "verify_full_local_internal_scope",
+        "sourceHash": "b333ab0e7389a26a4864f86bd3fc5cb8",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "checkedInInventoryPreimageMd5": "b333ab0e7389a26a4864f86bd3fc5cb8"
+    },
+    {
+      "postimage": {
+        "lookupSignature": "private.verify_scope_pre_weight_source_read_20261014()",
+        "signature": "private.verify_scope_pre_weight_source_read_20261014()",
+        "schema": "private",
+        "name": "verify_scope_pre_weight_source_read_20261014",
+        "sourceHash": "b333ab0e7389a26a4864f86bd3fc5cb8",
+        "rawSourceHash": "c3a76b53e7a39ccca55e1d81e89dccdd",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "postimage": {
+        "lookupSignature": "public.read_weight_improvement_sample_source(uuid,timestamp with time zone,text,integer,timestamp with time zone,bigint,bigint,text,text,uuid,uuid,bigint)",
+        "signature": "public.read_weight_improvement_sample_source(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,bigint,bigint,text,text,uuid,uuid,bigint)",
+        "schema": "public",
+        "name": "read_weight_improvement_sample_source",
+        "sourceHash": "31e79b13c2709f86c611b42199c53e22",
+        "rawSourceHash": "63f3494a66f0fd89acf37bb5b731c037",
+        "securityDefiner": true,
+        "owner": "postgres",
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "allowedAcl": "service_role:EXECUTE:false",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    }
+  ]
+}

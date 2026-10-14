@@ -59,14 +59,14 @@ export interface WeightImprovementSourceRecords {
     readonly measurement_path: "completion" | "before_consumption" | null; readonly observed_at: string;
   };
   readonly prediction: StoredEvidenceIdentity & { readonly event_kind: "prediction"; readonly prediction_json: C01StoredSamplePrediction };
-  /** Future reader proof, not a current C01 column or authority established by this interface. */
+  /** Derived by the server receipt-bound reader, not a mutable C01 column. */
   readonly current_relation: (WeightImprovementSampleSourceLineage & {
     readonly state: "current" | "superseded" | "invalidated" | "unknown";
     readonly recipe_content_snapshot_id: string;
   }) | null;
 }
 
-/** Injected read-only boundary. No SQL client/RPC/production implementation exists. */
+/** Injected read-only boundary; the receipt-bound repository has no product caller. */
 export interface WeightImprovementSourceRepository {
   readSource(address: WeightImprovementSampleSourceLineage): Promise<WeightImprovementSourceRecords | null>;
 }

@@ -33,6 +33,9 @@ const WEIGHT_PARTICIPATION_POSTIMAGES_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/weight-improvement-participation-source-function-postimages.json",
 );
+const WEIGHT_SOURCE_READ_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT, "docs/security/weight-improvement-source-read-function-postimages.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -786,14 +789,91 @@ function withWeightParticipationContracts(contracts) {
   return result;
 }
 
+function weightSourceReadPostimages() {
+  const manifest = JSON.parse(readFileSync(WEIGHT_SOURCE_READ_POSTIMAGES_PATH, "utf8"));
+  const predecessor = weightParticipationPostimages();
+  const migration = readFileSync(join(REPOSITORY_ROOT, manifest.migration), "utf8");
+  if (manifest.schema_version !== 1 || manifest.status !== "local-review-draft"
+    || manifest.migration !== "supabase/migrations/20261014231000_weight_improvement_source_read.sql"
+    || manifest.migration_sha256 !== "5ee6c6ba4d03cafe80b7a2c0b5f7ac64c2715467f454cb293bc62e70d08b6889"
+    || createHash("sha256").update(migration).digest("hex") !== manifest.migration_sha256
+    || manifest.schema_archive_sha256 !== predecessor.schema_archive_sha256
+    || manifest.password_free_roles_sha256 !== predecessor.password_free_roles_sha256
+    || manifest.source_ledger_count !== 219 || manifest.source_ledger_sha256 !== predecessor.source_ledger_sha256
+    || manifest.predecessor_C03_sha256 !== predecessor.predecessor_C03_sha256
+    || manifest.predecessor_C01_sha256 !== predecessor.predecessor_C01_sha256
+    || manifest.predecessor_C05_sha256 !== predecessor.migration_sha256
+    || manifest.application_rows_restored !== 0 || manifest.C04_integration_pending !== true
+    || manifest.whole_inventory_drift_not_waived !== true || manifest.functions.length !== 4) {
+    throw new Error("weight source read postimage provenance drift");
+  }
+  const metadata = {
+    project_weight_improvement_sample_source: ["private.project_weight_improvement_sample_source(uuid,bigint,uuid,uuid,bigint)", false, "s"],
+    read_weight_improvement_sample_source: ["public.read_weight_improvement_sample_source(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,bigint,bigint,text,text,uuid,uuid,bigint)", true, "v"],
+    verify_scope_pre_weight_source_read_20261014: ["private.verify_scope_pre_weight_source_read_20261014()", true, "v"],
+    verify_full_local_internal_scope: ["private.verify_full_local_internal_scope()", true, "v"],
+  };
+  const names = new Set();
+  for (const { postimage, preimage } of manifest.functions) {
+    const expected = metadata[postimage.name];
+    const schema = postimage.name === "read_weight_improvement_sample_source" ? "public" : "private";
+    if (!expected || names.has(postimage.name) || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || postimage.signature !== expected[0] || postimage.schema !== schema || postimage.owner !== "postgres"
+      || postimage.securityDefiner !== expected[1] || postimage.volatility !== expected[2]
+      || postimage.searchPath !== "pg_catalog,public,private,pg_temp"
+      || postimage.allowedAcl !== (schema === "public" ? "service_role:EXECUTE:false" : "")
+      || JSON.stringify(postimage.configuration) !== JSON.stringify(["search_path=pg_catalog, public, private, pg_temp"])) {
+      throw new Error("weight source read function contract drift");
+    }
+    names.add(postimage.name);
+    if (postimage.name !== "verify_scope_pre_weight_source_read_20261014") {
+      const body = migration.match(new RegExp(`create function ${schema}\\.${postimage.name}\\([\\s\\S]*?\\$function\\$([\\s\\S]*?)\\$function\\$;`))?.[1];
+      if (!body || createHash("md5").update(body.replace(/^\n+|\n+$/gu, "")).digest("hex") !== postimage.sourceHash
+        || createHash("md5").update(body).digest("hex") !== postimage.rawSourceHash) throw new Error("weight source read exact source drift");
+    }
+    if (preimage && postimage.name !== "verify_full_local_internal_scope") throw new Error("unexpected weight source read preimage");
+  }
+  const original = predecessor.functions.find((entry) => entry.postimage.name === "verify_full_local_internal_scope")?.postimage;
+  const before = manifest.functions.find((entry) => entry.postimage.name === "verify_full_local_internal_scope")?.preimage;
+  const alias = manifest.functions.find((entry) => entry.postimage.name === "verify_scope_pre_weight_source_read_20261014")?.postimage;
+  if (!before || !alias || JSON.stringify(before) !== JSON.stringify(original)
+    || JSON.stringify(before) !== JSON.stringify(manifest.preserved_scope_predecessor.before)
+    || JSON.stringify(alias) !== JSON.stringify(manifest.preserved_scope_predecessor.renamed)
+    || manifest.preserved_scope_predecessor.body_and_attributes_unchanged !== true
+    || ["sourceHash", "owner", "securityDefiner", "searchPath", "allowedAcl", "volatility", "configuration"]
+      .some((field) => JSON.stringify(before[field]) !== JSON.stringify(alias[field]))) throw new Error("weight source read C05 predecessor drift");
+  return manifest;
+}
+
+function withWeightSourceReadContracts(contracts) {
+  const result = [...contracts];
+  for (const { postimage, preimage, checkedInInventoryPreimageMd5 } of weightSourceReadPostimages().functions) {
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index < 0) result.push(postimage);
+    else {
+      if (!preimage || checkedInInventoryPreimageMd5 !== result[index].sourceHash
+        || ["owner", "securityDefiner", "searchPath", "allowedAcl", "volatility", "configuration"]
+          .some((field) => JSON.stringify(preimage[field]) !== JSON.stringify(result[index][field]))) throw new Error("weight source read checked-in preimage drift");
+      result[index] = postimage;
+    }
+  }
+  return result;
+}
+
+function requireWeightSourceReadPredecessor(enabled, participation) {
+  if (enabled && !participation) throw new Error("weight source read inventory requires the participation predecessor contracts");
+}
+
 export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false,
-  includeWeightImprovementParticipationFunctions = false } = {}) {
+  includeWeightImprovementParticipationFunctions = false, includeWeightImprovementSourceReadFunctions = false } = {}) {
   if (includeWeightImprovementParticipationFunctions && !includeCookedWeightEvidenceFunctions) {
     throw new Error("weight participation inventory requires the cooked weight predecessor contracts");
   }
+  requireWeightSourceReadPredecessor(includeWeightImprovementSourceReadFunctions, includeWeightImprovementParticipationFunctions);
   const contracts = recipeProductPostimages().functions.map((entry) => entry.postimage);
   const functions = includeCookedWeightEvidenceFunctions ? withCookedWeightContracts(contracts) : contracts;
-  return buildSourceFunctionInventorySql(includeWeightImprovementParticipationFunctions ? withWeightParticipationContracts(functions) : functions,
+  const participation = includeWeightImprovementParticipationFunctions ? withWeightParticipationContracts(functions) : functions;
+  return buildSourceFunctionInventorySql(includeWeightImprovementSourceReadFunctions ? withWeightSourceReadContracts(participation) : participation,
     includeWeightImprovementParticipationFunctions);
 }
 
@@ -801,8 +881,22 @@ export function buildCookedWeightEvidenceSourceFunctionInventorySql() {
   return buildSourceFunctionInventorySql(cookedWeightPostimages().functions.map((entry) => entry.postimage));
 }
 
-export function buildWeightImprovementParticipationSourceFunctionInventorySql() {
-  return buildSourceFunctionInventorySql(weightParticipationPostimages().functions.map((entry) => entry.postimage), true);
+export function buildWeightImprovementParticipationSourceFunctionInventorySql({ includeWeightImprovementSourceReadFunctions = false } = {}) {
+  const functions = weightParticipationPostimages().functions.map((entry) => entry.postimage);
+  if (includeWeightImprovementSourceReadFunctions) {
+    const alias = weightSourceReadPostimages().preserved_scope_predecessor.renamed;
+    const index = functions.findIndex(entry => entry.name === "verify_full_local_internal_scope");
+    functions[index] = alias;
+  }
+  return buildSourceFunctionInventorySql(functions, true);
+}
+
+export function buildWeightImprovementSourceReadFunctionInventorySql() {
+  return buildSourceFunctionInventorySql(weightSourceReadPostimages().functions.map((entry) => entry.postimage), true);
+}
+
+export function assertWeightImprovementSourceReadFunctionInventoryResult(result) {
+  return assertSourceFunctionInventoryResult(result, 4, true);
 }
 
 function buildSourceFunctionInventorySql(functions, exactConfiguration = false) {
@@ -833,11 +927,12 @@ function buildSourceFunctionInventorySql(functions, exactConfiguration = false) 
 }
 
 export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false,
-  includeWeightImprovementParticipationFunctions = false } = {}) {
+  includeWeightImprovementParticipationFunctions = false, includeWeightImprovementSourceReadFunctions = false } = {}) {
   if (includeWeightImprovementParticipationFunctions && !includeCookedWeightEvidenceFunctions) {
     throw new Error("weight participation inventory requires the cooked weight predecessor contracts");
   }
-  return assertSourceFunctionInventoryResult(result, includeWeightImprovementParticipationFunctions ? 45 : includeCookedWeightEvidenceFunctions ? 38 : 24,
+  requireWeightSourceReadPredecessor(includeWeightImprovementSourceReadFunctions, includeWeightImprovementParticipationFunctions);
+  return assertSourceFunctionInventoryResult(result, includeWeightImprovementSourceReadFunctions ? 48 : includeWeightImprovementParticipationFunctions ? 45 : includeCookedWeightEvidenceFunctions ? 38 : 24,
     includeWeightImprovementParticipationFunctions);
 }
 
@@ -900,6 +995,7 @@ function buildSecurityInventoryExpression({
   includeRecipeProductFunctions,
   includeCookedWeightEvidenceFunctions,
   includeWeightImprovementParticipationFunctions,
+  includeWeightImprovementSourceReadFunctions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
@@ -927,8 +1023,10 @@ function buildSecurityInventoryExpression({
     ? withRecipeProductContracts(legacyFunctions) : legacyFunctions;
   const cookedWeightFunctions = includeCookedWeightEvidenceFunctions
     ? withCookedWeightContracts(productFunctions) : productFunctions;
-  const functions = includeWeightImprovementParticipationFunctions
+  requireWeightSourceReadPredecessor(includeWeightImprovementSourceReadFunctions, includeWeightImprovementParticipationFunctions);
+  const participationFunctions = includeWeightImprovementParticipationFunctions
     ? withWeightParticipationContracts(cookedWeightFunctions) : cookedWeightFunctions;
+  const functions = includeWeightImprovementSourceReadFunctions ? withWeightSourceReadContracts(participationFunctions) : participationFunctions;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -1311,6 +1409,7 @@ export function buildFullLocalSecurityInventoryExpression({
   includeRecipeProductFunctions = false,
   includeCookedWeightEvidenceFunctions = false,
   includeWeightImprovementParticipationFunctions = false,
+  includeWeightImprovementSourceReadFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeCookedBatchPolicyCutover,
@@ -1320,6 +1419,7 @@ export function buildFullLocalSecurityInventoryExpression({
     includeRecipeProductFunctions,
     includeCookedWeightEvidenceFunctions,
     includeWeightImprovementParticipationFunctions,
+  includeWeightImprovementSourceReadFunctions,
   });
 }
 
@@ -1339,10 +1439,16 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     includeRecipeProductFunctions = false,
     includeCookedWeightEvidenceFunctions = false,
     includeWeightImprovementParticipationFunctions = false,
+    includeWeightImprovementSourceReadFunctions = false,
   } = {},
 ) {
   if (includeWeightImprovementParticipationFunctions && !includeCookedWeightEvidenceFunctions) {
     throw new Error("weight participation inventory requires the cooked weight predecessor contracts");
+  }
+  requireWeightSourceReadPredecessor(includeWeightImprovementSourceReadFunctions, includeWeightImprovementParticipationFunctions);
+  if (includeWeightImprovementSourceReadFunctions && !(includeSnapshotTables && includePersonalRecipeFunctions
+    && includeRecipeFuturePropagationFunctions && includeRecipeProductFunctions && includeCookedWeightEvidenceFunctions)) {
+    throw new Error("weight source read inventory requires all predecessor contracts");
   }
   const baseFunctionCount = includeSnapshotTables
     ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
@@ -1354,7 +1460,8 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
       : 0)
     + (includeRecipeProductFunctions ? 19 : 0)
     + (includeCookedWeightEvidenceFunctions ? 14 : 0)
-    + (includeWeightImprovementParticipationFunctions ? 7 : 0);
+    + (includeWeightImprovementParticipationFunctions ? 7 : 0)
+    + (includeWeightImprovementSourceReadFunctions ? 3 : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;

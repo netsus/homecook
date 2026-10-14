@@ -545,6 +545,7 @@ export function createWeightImprovementParticipationInternalClient() {
   return {
     read: (args: Record<string, unknown>) => client.rpc("read_weight_improvement_participation", args),
     mutate: (args: Record<string, unknown>) => client.rpc("mutate_weight_improvement_participation", args),
+    readSource: (args: Record<string, unknown>) => client.rpc("read_weight_improvement_sample_source", args),
   };
 }
 

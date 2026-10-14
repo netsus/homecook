@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 export const C05_NATIVE_IMAGE = "public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a";
 export const C05_NATIVE_MIGRATIONS = [
   ["20261013190000_recipe_product_only_identity.sql", "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75"],
-  ["20261013233000_cooked_batch_weight_evidence.sql", "0c92fa9d4a83cfefa5313e7b8a13c610ac108555248d1db756d4bd7f2d8384af"],
+  ["20261013233000_cooked_batch_weight_evidence.sql", "60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0"],
   ["20261014230000_weight_improvement_participation.sql", "bc263347ef51f7ffc86731b7c161618f3181b81cd00bf8f2ec57a01b989eeda8"],
 ];
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");

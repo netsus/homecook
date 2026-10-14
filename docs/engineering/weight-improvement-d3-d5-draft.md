@@ -74,3 +74,7 @@ reader는 같은 owner/generation/batch/evidence/snapshot과 prediction 참조·
 ## 2026-10-14 · 표시 주체와 현재 인증 주체의 경합 방지
 
 C05 mutation의 `expected_subject={owner_uuid,account_generation}`는 화면에 표시된 주체를 고정하는 필수 기술 전제조건이다. 새 고객 입력칸이나 권한 근거가 아니다. owner·세대·session args는 계속 검증된 인증에서만 구하며, PATCH는 expected owner가 current verified owner와 다르면 `409 PARTICIPATION_SUBJECT_CHANGED`로 RPC 호출 전에 거절한다. SQL은 실제 authority가 계산한 generation을 expected generation과 비교하여 receipt 조회/replay·참여 쓰기 전에 같은409를 반환한다. 요청 hash에도 expected generation을 결속한다. 이전 계정/세대의 선택이나 동일 UUID가 현재 계정/세대에서 새 동의로 적용되지 않는다. 미적용 migration의 signature/fixtures를 함께 변경하며 collection OFF·정책/기간NULL·scope/권한은 유지한다.
+
+## 2026-10-14 · D3c 계정 원천 읽기 결속
+
+앞 D3b의 SQL reader 미연결 문장은 당시 준비 기록이다. [원천 읽기 결속](weight-improvement-source-read-20261014.md)에 최종 C0160b9 뒤의 bounded server-only repository/정확 내부 read RPC와 source-derived4함수 지문을 준비했다. exact observation과 성공 wrapper/core receipt·고정snapshot/session·현재 raw known/measured g으로 current 관계를 판정한다. 최신 관찰 또는 batch revision 등치를 사용하지 않고, source/권한/원문·시각·분모는 보존한다. 원측정 facts/planned/QA/expiry NULL과 실제 적격0은 그대로다. 실제 caller/registry/삭제/collector/D4 모델/기간 확정은 연결하지 않았다. C04 후속 순서와 정확 대상·복구·통합 검증은 별도다.
