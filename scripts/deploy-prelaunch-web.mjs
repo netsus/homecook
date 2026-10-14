@@ -888,8 +888,11 @@ process.exit(result.status ?? 1);`;
         closedLease.verify();
         if (protectedReader) {
           const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
+          if (hash(JSON.stringify(await base.inspect())) !== rollout.database.targetSha256) {
+            throw new DeploymentError("reader 잠금 대상이 승인된 운영 DB와 다릅니다.");
+          }
           readerFence = base.session(`protected-reader-${randomUUID()}`);
-          await readerFence.query("BEGIN; SET LOCAL lock_timeout='10s'; SET LOCAL idle_in_transaction_session_timeout='120s'; LOCK TABLE private.recipe_product_only_write_control IN SHARE MODE;");
+          await readerFence.query("BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL idle_in_transaction_session_timeout='120s'; LOCK TABLE private.recipe_product_only_write_control IN SHARE MODE;");
           if ((await readerFence.query("SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.recipe_product_only_write_control;")).trim() !== "t") {
             throw new DeploymentError("구 predecessor 보상은 모든 신형 쓰기 OFF가 잠긴 동안만 허용합니다.");
           }
