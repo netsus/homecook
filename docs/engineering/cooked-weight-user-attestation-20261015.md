@@ -1,5 +1,15 @@
 # 선택 개인 실측 확인 기록 — 2026-10-15
 
+## 2026-10-15 운영 반영 — 개인 확인만 활성화
+
+아래 로컬 후보/운영 미반영 문장은 준비 당시 기록이며 이 절이 최신 운영 상태다. 앱 #1704·도구 #1705·plist 결속 보완 #1706 이후 DB228과 웹 `af88126b44cf5abb6fa06f7c08f9eee23ca7de99`·build `prelaunch-af88126b44cf-f3IycH`를 확인했다. DB는 개인 writer OFF로 반영하고 reader 배포·영수증 결속 뒤 개인 writer ON으로 전환했다. 기존 C03/C01/C04 writer·worker48 ON을 유지했다. 새 개인 확인 ON은 C05 참여·자료 수집·물리 검증·W4 보정 ON이 아니다.
+
+운영 QA의 선택160g+개인 확인1건,30g 식사1건·130g 잔량을 확인했고, 철회는 revision1→2의 append event만 만들었다. 철회/새로고침 전후 원g/evidence 지문·식사 행 지문·고정160g 분모·130g 잔량이 같았다.375 취소/재열기·double click·완료 세션 reload,320 가로 넘침,1440 철회/reload·닫기 초점, 비로그인 공개 상세/로그인 안내·복귀 경로를 확인했다.160g는 사용자 보고 QA 값이며 `user_attested / physical_verification=not_verified / record_usage=qa_personal_record`, planned 원량을 유지한다. 실제 기기 품질·투입량이나 추정 정확도 검증으로 승격하지 않는다.
+
+reader 배포 검사1,418 PASS·선택 범위 밖133 skipped 및 배포 exit0·recoveryPending=false를 확인했다. 처음 한글 source 경로의 인코딩과 잘못된 준비 plist 지문은 guard가 거절했고, 정확 원본 경로/캡처 bytes로 교정한 #1706 이후 진행했다. 초기 실패·원 승인/영수증은 보존했으며 검사 기준·원 운영 plist를 바꾸지 않았다.
+
+C05 draft #1707·소스 `da65a96a2611918096295d7d42f7d4e0b27f1e5c`는 운영 미적용이고 수집 OFF·보유기간 미정이다. 실제 sample writer·삭제/복원·모델 영향 처리와 W4/W5/W6는 별도 미완료다. 새 실제 추출·모델/P5 평가·외부 AI0이며 전체 v9 완료가 아니다. 비공개 개인 operation의 DB/reader/writer·QA JSON과 철회 전후 행 지문을 [진행 장부](mumeok-beta-v9-progress-20261013.md#선택-개인-무게-확인-운영-반영원기록-보존--2026-10-15)에 연결했다. 기존 read/retract/성공 replay의 OFF 허용과 원기록 보존 계약은 아래 내용 그대로다.
+
 이 묶음은 C01의 새 `reported_measurement`와 선택 자기보고를 같은 DB transaction에서 저장하고, 소유자가 조회하거나 확인을 취소하는 **로컬 후보**다. 운영 반영이나 v9/W4 전체 완료를 뜻하지 않는다. 기존 C01 실측 입력은 계속 선택이며, 빈칸·건너뛰기·체크하지 않은 요청과 구 클라이언트는 기존 완료/나중 실측 RPC를 그대로 사용한다.
 
 ## 기록의 의미

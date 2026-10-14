@@ -1,5 +1,19 @@
 # 무먹 베타 v9 구현 진행 장부
 
+## 선택 개인 무게 확인 운영 반영·원기록 보존 — 2026-10-15
+
+이 절이 아래의 개인 확인 후보·운영 미적용 기록보다 최신이다. **개인 확인의 운영 표본을 확인한 단계이며, 추정 정확도 개선·C05 수집·전체 v9 완료는 아니다.**
+
+- 현재 운영: 앱 #1704·도구 #1705·plist 결속 보완 #1706을 병합하고 DB228, 웹 `af88126b44cf5abb6fa06f7c08f9eee23ca7de99`·build `prelaunch-af88126b44cf-f3IycH`, 개인 확인 writer ON을 확인했다. DB 반영은 writer OFF로 마치고 같은 새 reader의 배포·영수증 결속을 확인한 뒤 ON으로 전환했다. 기존 C03/C01/C04 writer와 worker48 ON을 유지했다. 원 승인·영수증·SQL과 기존 기록을 바꾸지 않았다.
+- 실제 QA: 모바일375에서 완료창 취소·재열기 시 빈 숫자/미선택 확인, 선택160g+개인 확인 저장의 double click 후1건, 완료 세션 새로고침을 확인했다.30g 식사1건 뒤 잔량130g이고,1440에서 확인 철회 double click 후 attested revision1→retracted revision2·event2건으로 남았다. 철회/새로고침 뒤 원 실측g/evidence 지문·식사 전체 행/행 지문·고정160g 분모·130g 잔량이 동일했다.320 가로 넘침 없음, 닫기 초점 복귀, 비로그인 공개 상세와 남은 요리 로그인 안내·복귀 경로 표본도 확인했다.
+- 검사 범위: 실제 reader 배포 검사1,418 PASS·선택 범위 밖133 skipped, deploy exit0·recoveryPending=false다. 위160g는 기능 QA의 사용자 보고값이며 저울·기기 정확도를 검증한 실험이 아니다. 기록의 `user_attested / not_verified / qa_personal_record`와 planned 원량을 유지하며 자동 보정·학습 정답으로 전환하지 않는다.
+- 초기 거절과 교정: Git의 사람이 읽는 경로 출력이 한글 문서명을 인코딩해 처음 source-pair 준비가 다섯 문서의 지문을 잃었고, guard가 비공개 증거 로딩·실행 전에 거절했다. NUL 경로 목록으로 정확 bytes를 다시 결속했다. 별도 준비의 잘못된 plist SHA도 거절됐으며, 원 캡처/current plist bytes가 같음을 확인하고 #1706에서 결속을 바로잡았다. 오기 교정 과정에서 검사 기준이나 운영 plist를 바꾸지 않았고 초기 실패 기록을 보존했다.
+- 남은 범위: C05 통합은 draft #1707·소스 `da65a96a2611918096295d7d42f7d4e0b27f1e5c`의 별도 로컬 준비이며 운영 미적용·개선 자료 수집 OFF·보유기간 미정이다. 새 빈 registry/13인자 overload는 추가하지 않았다. W0/W2 조건 근거·W4 실제 개인 보정·W5 정확도·W6/C05의 표본 저장·정정/삭제/복원·모델 생명주기와 T9 미확인 표본은 남았다. 새 실제 추출·P5/모델 평가·외부 AI 호출은 실행하지 않았다. GitHub Actions는 계속 비활성이다.
+
+브라우저 단계는 총괄의 실제 운영 관측이다. 독립 검토는 지정한 배포 metadata·화면·행 지문의 정합성을 대조했으며, 브라우저를 독립 재실행한 것은 아니다.
+
+비공개 개인 operation의 `database-committed-verification.json`, `reader-deployed-verification.json`, `writer-on-operating-verification.json`, `qa-browser-operating-summary.json` 및 철회 전후 QA JSON/화면 증거에 근거한다. [개인 확인 계약·운영 범위](cooked-weight-user-attestation-20261015.md), [배포·복구 경계](cooked-weight-attestation-successor-deployment-20261015.md)를 따른다. 이 문서 갱신 자체가 추가 운영 실행이나 표본 삭제·모델 활용을 뜻하지 않는다.
+
 ## C01 선택 개인 무게 확인 후보 — 2026-10-15
 
 **구현 후보이며 운영 미적용이다.** 운영 웹 `e00d5f1199fe`·DB227·C03/C01/C04 ON·worker48 ON은 유지한다. 같은 v9의 검증 후 반영은 최신 사용자 승인 범위에서 이어가며, 전체 v9 완료나 개선 자료 수집 시작을 뜻하지 않는다.
