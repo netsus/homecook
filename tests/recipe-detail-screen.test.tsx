@@ -322,6 +322,59 @@ describe("recipe detail screen", () => {
     hasSupabasePublicEnv.mockReturnValue(true);
   });
 
+  describe("B08 detail servings guidance", () => {
+    const guidance = "재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다";
+    it.each([
+      { desktop: false, product: false }, { desktop: true, product: false },
+      { desktop: false, product: true }, { desktop: true, product: true },
+    ])("keeps original quantities beside the scaled table (%j)", async ({ desktop, product }) => {
+      installMatchMedia(desktop);
+      const instruction = product ? "제품 0.125kg을 그릇에 담아 섞습니다." : "물 400ml를 넣고 10분간 끓입니다.";
+      const detail = buildRecipeDetail({
+        base_servings: 2, source_type: product ? "manual" : "system", visibility: "public",
+        ingredients: [{ ...MOCK_RECIPE_DETAIL.ingredients[0], standard_name: product ? "제품" : "물",
+          ingredient_id: product ? null : MOCK_RECIPE_DETAIL.ingredients[0].ingredient_id,
+          source_kind: product ? "food_product" : "ingredient", amount: product ? 0.125 : 400,
+          unit: product ? "kg" : "ml", scalable: true, display_text: null,
+          food_product_id: product ? "550e8400-e29b-41d4-a716-446655440091" : null,
+          food_product_nutrition_version_id: product ? "550e8400-e29b-41d4-a716-446655440092" : null }],
+        steps: [{ ...MOCK_RECIPE_DETAIL.steps[0], instruction, component_label: null }],
+      });
+      const before = JSON.stringify(detail);
+      fetchJson.mockResolvedValue(detail);
+      const { container } = render(<RecipeDetailScreen recipeId={detail.id} />);
+      await screen.findByRole("button", { name: "인분 늘리기" });
+      const servingSection = desktop ? container.querySelector(".web-recipe-nutrition-serving") : null;
+      await userEvent.click((servingSection ? within(servingSection as HTMLElement) : screen).getByRole("button", { name: "인분 늘리기" }));
+      expect(container.textContent).toContain(product ? "0.1875kg" : "600ml");
+      if (!desktop) await userEvent.click(screen.getByRole("tab", { name: "만들기" }));
+      const scope = desktop ? container.querySelector(".web-recipe-reading-grid") : container;
+      if (!scope) throw new Error("Missing detail reading view");
+      const note = within(scope as HTMLElement).getByText(guidance);
+      const step = within(scope as HTMLElement).getByText(instruction);
+      expect(note.compareDocumentPosition(step) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(within(scope as HTMLElement).queryByText(/조리법 원본:/)).toBeNull();
+      expect(JSON.stringify(detail)).toBe(before);
+      if (desktop) expect(screen.getByRole("heading", { name: "선택한 3인분 기준" })).toBeTruthy();
+    });
+
+    it("does not promote an extracted fallback serving count to a known original", async () => {
+      fetchJson.mockResolvedValue(buildRecipeDetail({ source_type: "youtube", base_servings: 1 }));
+      render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      await userEvent.click(await screen.findByRole("tab", { name: "만들기" }));
+      expect(screen.getByText(guidance)).toBeTruthy();
+      expect(screen.queryByText(/조리법 원본:/)).toBeNull();
+    });
+
+    it.each([0, Number.NaN])("does not guess an original serving count from invalid source %s", async base_servings => {
+      fetchJson.mockResolvedValue(buildRecipeDetail({ base_servings }));
+      render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      await userEvent.click(await screen.findByRole("tab", { name: "만들기" }));
+      expect(screen.getByText(guidance)).toBeTruthy();
+      expect(screen.queryByText(/조리법 원본:/)).toBeNull();
+    });
+  });
+
   describe("browser tab title", () => {
     let previousTitle: string;
 
