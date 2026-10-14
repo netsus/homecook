@@ -152,6 +152,55 @@ it("neutralizes already-bound web and worker authority before importing or spawn
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+describe("C04 T1 transaction evidence and later business activity", () => {
+  function preflightFixture() {
+    const { review } = fixture();
+    const record: Record<string, unknown> = { status: "committed", to: review.releaseSha,
+      normalDataSha256: sha("a"), rowsPreservedInTransaction: true, interstageDataContinuityAsserted: false };
+    const consumers = { review: { to: review.releaseSha, database: { targetSha256: review.targetSha256 } },
+      record, pointer: { path: "/owned-fixture/T1.json", sha256: sha("c") } };
+    const worker = { ...consumers, pointer: { path: "/owned-fixture/DB2.json", sha256: sha("d") } };
+    const observation = { target: { fixture: true }, normalDataSha256: sha("b") }, adapter = { fixture: true };
+    const observe = vi.fn(async ({ stage }: { stage: string }) => ({
+      authority: stage === "consumers" ? consumers : worker, observation, adapter,
+    }));
+    const load = vi.fn(() => consumers);
+    const source = readFileSync("scripts/youtube-v71-controlled-cutover.mjs", "utf8");
+    const start = source.indexOf('  async function preflight(stage, quantityWriterState = "off") {');
+    const end = source.indexOf("  async function observation(context, query) {", start);
+    if (start < 0 || end <= start) throw new Error("Exact C04 preflight boundary missing");
+    const call = new Function("c04Database", "c04Authority", "review", "ROOT", "check",
+      source.slice(start, end) + ";return preflight;")(
+      { observeQuantityV4WorkerBoundary: observe }, { loadQuantityV4DatabaseReceipt: load }, review,
+      "/owned-fixture", (ok: boolean, message: string) => { if (!ok) throw new Error(message); },
+    );
+    return { call, consumers, observation, observe, load, adapter };
+  }
+  it("preserves the original T1 receipt while accepting a separately verified current snapshot", async () => {
+    const f = preflightFixture(), original = structuredClone(f.consumers);
+    const context = await f.call("consumers");
+    expect(f.observe).toHaveBeenCalledExactlyOnceWith({ repositoryRoot: "/owned-fixture", stage: "consumers", quantityWriterState: "off" });
+    expect(context.consumersReceiptSha256).toBe(f.consumers.pointer.sha256);
+    expect(context.databaseReceiptSha256).toBeNull(); expect(context.adapter).toBe(f.adapter);
+    expect(f.observation.normalDataSha256).not.toBe(f.consumers.record.normalDataSha256);
+    expect(f.consumers).toEqual(original); expect(f.load).not.toHaveBeenCalled();
+  });
+  it.each([
+    { status: "unknown" }, { to: "f".repeat(40) }, { rowsPreservedInTransaction: false },
+    { rowsPreservedInTransaction: "true" }, { normalDataSha256: "not-a-sha" },
+    { interstageDataContinuityAsserted: true }, { interstageDataContinuityAsserted: undefined },
+  ])("rejects missing or invalid original transaction evidence: %j", async change => {
+    const f = preflightFixture(); f.observation.normalDataSha256 = sha("a");
+    Object.assign(f.consumers.record, change);
+    await expect(f.call("consumers")).rejects.toThrow("T1");
+  });
+  it("retains the separate T1 and DB2 pointers for the worker stage", async () => {
+    const f = preflightFixture(), result = await f.call("worker");
+    expect(f.load).toHaveBeenCalledExactlyOnceWith("/owned-fixture", "consumers");
+    expect(result.consumersReceiptSha256).toBe(sha("c")); expect(result.databaseReceiptSha256).toBe(sha("d"));
+  });
+});
+
 describe("fixed C04 worker cutover boundaries", () => {
   it("denies an unbound source/artifact/review before private operational I/O", () => {
     expect(YOUTUBE_C04_CUTOVER_REVIEW_PIN).toEqual({ path: null, sha256: null });

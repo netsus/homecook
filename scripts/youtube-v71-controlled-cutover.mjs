@@ -1390,9 +1390,12 @@ async function createC04Adapters(review, reviewSha256) {
     const { authority, observation, adapter } = result;
     check(authority.review.to === review.releaseSha && authority.review.database.targetSha256 === review.targetSha256, "foreign DB authority");
     const consumers = stage === "consumers" ? authority : c04Authority.loadQuantityV4DatabaseReceipt(ROOT, "consumers");
+    // T1 proves preservation inside its committed transaction, not a freeze of later business activity.
     check(consumers.record.status === "committed" && consumers.record.to === review.releaseSha
-      && (stage === "worker" || consumers.record.normalDataSha256 === observation.normalDataSha256),
-      "T1 data/source receipt differs");
+      && (stage === "worker" || (consumers.record.rowsPreservedInTransaction === true
+        && consumers.record.interstageDataContinuityAsserted === false
+        && typeof consumers.record.normalDataSha256 === "string" && /^[a-f0-9]{64}$/u.test(consumers.record.normalDataSha256))),
+      "T1 transaction/source receipt differs");
     return { authority, adapter, stage, quantityWriterState, target: observation.target, consumersReceiptSha256: consumers.pointer.sha256,
       databaseReceiptSha256: stage === "worker" ? authority.pointer.sha256 : null };
   }
