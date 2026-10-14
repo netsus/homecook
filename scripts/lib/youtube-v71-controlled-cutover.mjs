@@ -245,10 +245,10 @@ RESET ROLE;
 
 // This profile has independent immutable authority; it never retargets v71.
 export const YOUTUBE_C04_QUANTITY_PROFILE = "c04-quantity-v4";
-export const YOUTUBE_C04_CUTOVER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
-export const YOUTUBE_C04_RELEASE_SHA = null;
-export const YOUTUBE_C04_ARTIFACT_SHA256 = null;
-export const YOUTUBE_C04_OPERATION_ROOT = null;
+export const YOUTUBE_C04_CUTOVER_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/approved-worker-control-review.json","sha256":"63ba82001909c381a7cf1a61c32ec2209aca157c42607371ed46a74c331839b6"});
+export const YOUTUBE_C04_RELEASE_SHA = "6b610eb012da42b5d151b058531815dc12a8ca45";
+export const YOUTUBE_C04_ARTIFACT_SHA256 = "81325e9905d0d30f5e43e57434d8dfce71111ec422856d51f85c8876e22726d0";
+export const YOUTUBE_C04_OPERATION_ROOT = "/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/worker-control";
 export const YOUTUBE_C04_EXPECTED_SCHEMA_SHA256 = "2ea26b772e3f69e7bbf524d6303c5c40072b6c721028204a821dba0699822e20";
 export const YOUTUBE_C04_QUIESCE_CONFIRMATION = "LOCAL_FULL_PRODUCTION_YOUTUBE_C04_GEN48_QUIESCE";
 export const YOUTUBE_C04_CUTOVER_CONFIRMATION = "LOCAL_FULL_PRODUCTION_YOUTUBE_C04_GEN48_CUTOVER";

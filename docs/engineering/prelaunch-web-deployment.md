@@ -504,7 +504,7 @@ C01 DB만 committed이고 reader가 pending일 때 C03 안전 OFF를 먼저 실�
 
 ## C04 수량 정책의 보호 경로 준비 · 2026-10-14
 
-기존 `--reviewed-protected-rollout`에 `ingredient-quantity-v4`의 정확 5+1 단계만 준비한다. 현재 C04 source/review/writer/worker-control/protection PIN은 null이며 실제 설정·대상 접근 전에 거부한다. 이 준비가 운영 적용, worker 설치 또는 policy 활성화의 완료 기록은 아니다. F01/C03/C01 원 PIN과 권한·SQL을 바꾸지 않는다.
+기존 `--reviewed-protected-rollout`에 `ingredient-quantity-v4`의 정확 5+1 단계를 연결한다. 최초 준비의 C04 PIN은 모두 null이었다. 현재는 사용자의 v9 상시 승인 아래 검토한 웹 `6b610eb012da`, 첫 consumers DB 단계와 원 worker 제어 자료·데이터 비교식을 소스에 고정했다. worker DB 단계와 writer 승인은 실제 선행 영수증이 생기기 전까지 null로 유지하며, 임의 경로나 환경변수로 대신하지 않는다. 이 소스 결속은 운영 적용·worker 설치·policy 활성화의 완료 기록이 아니다. F01/C03/C01 원 PIN과 권한·SQL은 보존한다.
 
 - `database`/`database-retry`/`reconcile`: source227의 정확 first5 postgres payload·admin ledger만 실행하는 221→226 OFF 단계. reader floor나 ON을 게시하지 않는다.
 - `worker-database`/`worker-database-retry`/`worker-reconcile`: terminal226 출처와 worker quiesced checkpoint를 검증한 뒤 정확 f586 admin payload·원장1개를 실행하는 226→227 OFF 단계. 두 단계는 각각 같은 snapshot의 full archive decode/roles 백업·기존 데이터·원 원장 행·scope/ACL/control을 보존하며 unknown에서 자동 재실행하지 않는다.

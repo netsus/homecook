@@ -42,19 +42,20 @@ export const COOKED_WEIGHT_FEATURE = "cooked-weight-evidence";
 export const COOKED_WEIGHT_MIGRATION = "20261013233000_cooked_batch_weight_evidence.sql";
 export const COOKED_WEIGHT_ENVIRONMENT = "HOMECOOK_COOKED_WEIGHT_EVIDENCE";
 
-// C04 preparation only. Root binds exact source/evidence after the joined review.
+// C04 consumers and worker source bound under the standing v9 authorization after review.
+// Worker DB and writer authority remain unbound until their actual predecessor receipts exist.
 // No CLI/environment replacement and no inheritance of C03/C01 authority.
 export const QUANTITY_V4_FEATURE = "ingredient-quantity-v4";
 export const QUANTITY_V4_ENVIRONMENT = "MUMEOK_QUANTITY_V4_ENABLED";
-export const QUANTITY_V4_RELEASE_SHA = null;
-export const QUANTITY_V4_PROTECTION = null;
-export const QUANTITY_V4_CONSUMERS_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const QUANTITY_V4_RELEASE_SHA = "6b610eb012da42b5d151b058531815dc12a8ca45";
+export const QUANTITY_V4_PROTECTION = Object.freeze({"normalProjectionSha256":"ece6c7ccaf15312ae2b21cd34f8d1334eb80534a34af8e69970c9f3b23371ff3","postimageRegistrySha256":"365d277cdc0a62c3aee5973d51dfff363d76298946fa6e65c6be24de95d8daab"});
+export const QUANTITY_V4_CONSUMERS_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/approved-quantity-consumers-review.json","sha256":"7fe3e367c3b305b5ab6f79c98aa18701745fcf45eefd93e7b0cd75ef4414a1c9"});
 export const QUANTITY_V4_WORKER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
 export const QUANTITY_V4_WRITER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
 export const QUANTITY_V4_WORKER_BEFORE_PIN = Object.freeze({ path: null, sha256: null });
 export const QUANTITY_V4_WORKER_AFTER_PIN = Object.freeze({ path: null, sha256: null });
-export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
-export const QUANTITY_V4_WORKER_OPERATION_ROOT = null;
+export const QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/approved-worker-control-review.json","sha256":"63ba82001909c381a7cf1a61c32ec2209aca157c42607371ed46a74c331839b6"});
+export const QUANTITY_V4_WORKER_OPERATION_ROOT = "/Users/cwj/.homecook/operations/mumeok-beta-c04-20261014-Ej3Zvr/worker-control";
 export const QUANTITY_V4_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: "20261014010000_ingredient_quantity_policy_v4.sql", sha256: "c66ee907de4130b2fe3b86bcdbe48b15021f228485e52fbe1aca5acfee5e7bfd", actor: "postgres", prefix: "-- Additive v4 preparation only. No v3 function, record, or exposed RPC changes.\n" }),
   Object.freeze({ filename: "20261014200000_quantity_input_v4_consumers.sql", sha256: "9ec96a2a7bbf7192801b1f6dd43304ed8ba78ab73f934eac4c2c300e3ca85573", actor: "postgres", prefix: "-- Inactive preparation. No historical rows, review evidence or runtime grants\n-- are populated. Activation and reviewed metadata are separate operations.\n" }),
