@@ -10,6 +10,7 @@ import type { SnapshotV2CookModeData } from "@/types/cooking";
 interface SnapshotV2CookModeViewProps {
   cancelling?: boolean;
   preparingCompletion?: boolean;
+  completionButtonRef?: React.RefObject<HTMLButtonElement | null>;
   data: SnapshotV2CookModeData;
   onCancel: () => void;
   onComplete?: () => void;
@@ -19,6 +20,7 @@ interface SnapshotV2CookModeViewProps {
 export function SnapshotV2CookModeView({
   cancelling = false,
   preparingCompletion = false,
+  completionButtonRef,
   data,
   onCancel,
   onComplete,
@@ -89,6 +91,7 @@ export function SnapshotV2CookModeView({
               disabled={cancelling || preparingCompletion}
               aria-busy={preparingCompletion}
               onClick={onComplete}
+              ref={completionButtonRef}
               type="button"
             >
               요리 완료
