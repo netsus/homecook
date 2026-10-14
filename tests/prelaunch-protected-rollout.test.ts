@@ -49,16 +49,18 @@ function fixture() {
       if (sql.startsWith("BEGIN")) { stagedLedger = ledger; stagedCatalog = catalogSha256; }
       if (sql === "SELECT pg_export_snapshot();") return "00000003-00000004-1";
       if (sql === payload) stagedCatalog = review.database.afterCatalogSha256;
-      if (sql.startsWith("INSERT INTO homecook_deploy.migrations")) stagedLedger = after;
+      if (sql.includes("INSERT INTO homecook_deploy.migrations")) stagedLedger = after;
       if (sql === "COMMIT;") { ledger = stagedLedger; catalogSha256 = stagedCatalog; }
       if (sql === "ROLLBACK;") { stagedLedger = ledger; stagedCatalog = catalogSha256; }
       return "";
     }), close: vi.fn(async () => {}), stop: vi.fn(),
+    postgresContext: { searchPath: String.raw`"\$user", public, extensions`, timeZone: "UTC" },
   };
   const adapter = {
     observe: vi.fn(async (query?: (sql: string) => Promise<string>) => ({ ...observation(),
       ...(query ? { ledger: stagedLedger, catalogSha256: stagedCatalog } : {}) })),
     session: vi.fn(() => session),
+    migrationSession: vi.fn(() => session),
     backup: vi.fn(async ({ snapshot }: { snapshot: string }) => { calls.push("backup"); return { snapshot, target, sha256: sha("4"), rolesSha256: sha("5"), fullArchiveDecoded: true }; }),
     reloadSchema: vi.fn(async () => { calls.push("reload"); }),
   };
@@ -453,12 +455,14 @@ describe("protected DB atomic kernel with isolated adapter", () => {
     }));
     vi.doMock("node:child_process", async importOriginal => ({
       ...await importOriginal<typeof import("node:child_process")>(),
-      spawnSync: (command: string, args: string[]) => {
+      spawnSync: (command: string, args: string[], options: { input?: string } = {}) => {
         if (command !== "docker") throw new Error("Fixture rejects non-Docker dispatch");
         const output = args[0] === "ps" ? "owned-unit" : args[0] === "inspect"
           ? [{ Id: "owned-unit", Image: "fixture-image-id", Mounts: [{ Destination: "/var/lib/postgresql/data", Type: "volume", Name: "homecook-full-local-postgres", RW: true }] }]
           : args[0] === "volume" ? [{ Name: "homecook-full-local-postgres", Labels: {} }]
-          : args[0] === "image" ? [{ Id: "fixture-image-id" }] : args[0] === "exec" ? { systemIdentifier: "fixture-only" } : null;
+          : args[0] === "image" ? [{ Id: "fixture-image-id" }] : args[0] === "exec"
+            ? options.input?.includes("current_setting('search_path')")
+              ? { searchPath: String.raw`"\$user", public, extensions`, timeZone: "UTC" } : { systemIdentifier: "fixture-only" } : null;
         if (output === null) throw new Error("Fixture rejects unexpected Docker operation");
         return { status: 0, stdout: typeof output === "string" ? output : JSON.stringify(output) };
       },
@@ -485,6 +489,12 @@ describe("protected DB atomic kernel with isolated adapter", () => {
       await actual.inspect();
       await expect(actual.reloadSchema(undefined)).rejects.toThrow("Invalid reload operation");
       expect(spawned).not.toHaveBeenCalled();
+      const ordinary = actual.session("ordinary-fixture"), migration = actual.migrationSession("migration-fixture");
+      expect(migration.postgresContext).toEqual({ searchPath: String.raw`"\$user", public, extensions`, timeZone: "UTC" });
+      await ordinary.query("SELECT 1;"); await ordinary.close();
+      await migration.query("SELECT 1;"); await migration.close();
+      expect(spawned.mock.calls.map(([, args]) => args[args.indexOf("-U") + 1])).toEqual(["postgres", "supabase_admin"]);
+      sql.length = 0; spawned.mockClear();
       const input = fixture(), reload = vi.spyOn(actual, "reloadSchema");
       const engineFor = (value: ReturnType<typeof fixture>) => createProtectedPrelaunchDatabaseEngine({ review: value.review, reviewSha256: value.reviewSha256,
         operationId: value.operationId, readMigrations: value.readMigrations, adapter: { ...value.adapter, reloadSchema: actual.reloadSchema },
@@ -520,7 +530,7 @@ describe("protected DB atomic kernel with isolated adapter", () => {
       expect(await recoveringEngine.reconcile()).toMatchObject({ status: "committed", writerEnabled: false, readerReady: false });
       expect(reload.mock.calls).toEqual([[recovery.operationId], [recovery.operationId], [recovery.operationId]]);
       expect(recovery.calls.filter(call => call === recovery.payload)).toHaveLength(1);
-      expect(recovery.calls.filter(call => call.startsWith("INSERT INTO homecook_deploy"))).toHaveLength(1);
+      expect(recovery.calls.filter(call => call.includes("INSERT INTO homecook_deploy"))).toHaveLength(1);
       expect(recovery.calls.filter(call => call === "COMMIT;")).toHaveLength(1);
       expect(recovery.adapter.backup).toHaveBeenCalledTimes(1);
       expect(sql).toHaveLength(4); // All NOTIFY requests use only the mocked transport.
@@ -532,6 +542,33 @@ describe("protected DB atomic kernel with isolated adapter", () => {
       vi.resetModules(); rmSync(directory, { recursive: true, force: true });
     }
   });
+  it("uses only the fixed migration session and encodes postgres context locally around admin ledger writes", async () => {
+    const input = fixture();
+    input.session.postgresContext.searchPath = `"fixture'\"name", public`;
+    expect(await input.engine.apply()).toMatchObject({ status: "committed" });
+    expect(input.adapter.migrationSession).toHaveBeenCalledWith(`protected-c03-${input.operationId}`);
+    expect(input.adapter.session).not.toHaveBeenCalled();
+    const begin = input.calls.find(call => call.startsWith("BEGIN"))!;
+    expect(begin).toContain("SET LOCAL lock_timeout='5s';");
+    expect(begin).toContain("LOCK TABLE homecook_deploy.migrations IN SHARE ROW EXCLUSIVE MODE; SET LOCAL ROLE postgres;");
+    expect(begin).toContain(`set_config('search_path','"fixture''"name", public',true)`);
+    expect(begin).toContain("set_config('TimeZone','UTC',true)");
+    const ledger = input.calls.find(call => call.includes("INSERT INTO homecook_deploy.migrations"))!;
+    expect(ledger).toMatch(/^SET LOCAL ROLE supabase_admin; INSERT INTO homecook_deploy/u);
+    expect(ledger).toMatch(/; SET LOCAL ROLE postgres;$/u);
+    expect(input.calls.indexOf(ledger)).toBeGreaterThan(input.calls.indexOf(input.payload));
+    expect(input.calls.filter(call => call.includes("SET LOCAL ROLE supabase_admin"))).toEqual([ledger]);
+  });
+  it("does not fall back to the generic postgres session when the migration method is absent", async () => {
+    const input = fixture();
+    const { migrationSession: ignored, ...legacy } = input.adapter;
+    void ignored;
+    const engine = createProtectedPrelaunchDatabaseEngine({ review: input.review, reviewSha256: input.reviewSha256,
+      operationId: input.operationId, readMigrations: input.readMigrations, adapter: legacy, journal: input.journal, assertBoundary: input.assertBoundary });
+    await expect(engine.apply()).rejects.toThrow();
+    expect(input.adapter.session).not.toHaveBeenCalled();
+    expect(input.adapter.backup).not.toHaveBeenCalled();
+  });
   it("plans without backup/writes and applies SQL+ledger atomically after the full snapshot", async () => {
     const { engine, adapter, calls, payload, journal, review } = fixture();
     expect(await engine.plan()).toMatchObject({ mutationPerformed: false, pending: [review.database.migrations[0].filename] });
@@ -539,7 +576,7 @@ describe("protected DB atomic kernel with isolated adapter", () => {
     const receipt = await engine.apply();
     expect(receipt).toMatchObject({ status: "committed", writerEnabled: false, readerReady: false, backwardCompatible: false });
     expect(calls.indexOf("backup")).toBeLessThan(calls.indexOf(payload));
-    expect(calls.findIndex(call => call.startsWith("INSERT INTO homecook_deploy"))).toBeGreaterThan(calls.indexOf(payload));
+    expect(calls.findIndex(call => call.includes("INSERT INTO homecook_deploy"))).toBeGreaterThan(calls.indexOf(payload));
     expect(calls.indexOf("journal:commit_dispatch_guard")).toBeLessThan(calls.indexOf("COMMIT;"));
     expect(calls.indexOf("COMMIT;")).toBeLessThan(calls.indexOf("reload"));
     const backupCalls = adapter.backup.mock.calls.length;
@@ -553,7 +590,7 @@ describe("protected DB atomic kernel with isolated adapter", () => {
       immutable: { immutableSha256: sha("a") }, writer: { writerEnabled: true }, active: { active: true } };
     adapter.observe.mockResolvedValue({ ...before, ...changes[change] });
     await expect(engine.apply()).rejects.toThrow("observation");
-    expect(adapter.session).not.toHaveBeenCalled(); expect(adapter.backup).not.toHaveBeenCalled();
+    expect(adapter.migrationSession).not.toHaveBeenCalled(); expect(adapter.session).not.toHaveBeenCalled(); expect(adapter.backup).not.toHaveBeenCalled();
   });
   it("rolls back confirmed pre-commit failures and never switches or downgrades a web", async () => {
     const { engine, adapter, getAttempt, session } = fixture();
@@ -603,7 +640,7 @@ describe("protected DB atomic kernel with isolated adapter", () => {
   it("keeps the ledger at the original prefix after a payload/ledger transaction failure", async () => {
     const { engine, session, observation, review } = fixture();
     const query = session.query.getMockImplementation()!;
-    session.query.mockImplementation(async sql => { if (sql.startsWith("INSERT INTO")) throw new Error("ledger rejected"); return query(sql); });
+    session.query.mockImplementation(async sql => { if (sql.includes("INSERT INTO homecook_deploy")) throw new Error("ledger rejected"); return query(sql); });
     await expect(engine.apply()).rejects.toMatchObject({ databaseState: { outcome: "rolled_back_before_commit" } });
     expect(observation().ledger).toEqual(review.database.before);
     expect(session.query).not.toHaveBeenCalledWith("COMMIT;");

@@ -205,6 +205,8 @@ DB baseline/compatible/already-applied, 검증 생략은 이 경로에서 허용
 | `writer-on-reconcile` / `writer-off-reconcile` | control COMMIT 응답 유실도 자동 재실행하지 않는다. 별도 OFF가 이미 완료됐으면 이전 ON을 never-applied로 가장하지 않고 closed-after-unknown으로 기록한다. floor는 유지한다. |
 | `writer-on-retry` / `writer-off-retry` | 같은 source/DB/reader/control 승인에서 not-applied를 확인한 뒤의 명시 새 attempt다. OFF로 닫힌 같은 승인을 ON 재시도로 재활성화하지 않는다. |
 
+배포 DB transaction만 기존 `supabase_admin` 접속을 사용해 그 소유인 migration 이력을 잠그며, 최초 잠금 제한은5초다. 즉시 `SET LOCAL ROLE postgres`로 바꾸고 기존 고정 postgres 읽기 전용 조회의 `search_path`/`TimeZone` 두 설정을 안전한 SQL literal로 LOCAL 적용한다. exact payload·catalog 검사는 postgres이고 ledger INSERT 때만 admin으로 잠시 바꾼 뒤 postgres로 돌아온다. 이력과 SQL은 같은 transaction·exported snapshot/full backup·commit 검증을 유지한다. 원 권한/owner 변경과 CLI role override는 없으며 일반/R2/writer/reload 세션은 postgres 그대로다.
+
 `plan`은 소스·증거·대상·현재 phase를 읽기 전용으로 확인한다. 실행은 항상 사용자 승인 뒤
 root operator만 한다. 새 DB가 committed이지만 reader가 pending인 동안 status는 과거 DB219를
 현재 기준으로 표시하지 않으며 normal 웹 승계를 거부한다. unknown도 현재 ledger 수를 추정하지
