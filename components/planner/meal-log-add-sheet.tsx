@@ -3,6 +3,7 @@
 import { COOKED_BATCH_CHANGED_EVENT, readChangedCookedBatchId } from "@/lib/cooked-batch-events";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { COOKED_MIX_ASSUMPTION_TEXT, cookedWeightSourceLabel } from "@/lib/cooking/cooked-weight-summary";
 import { fetchMealLogNutritionPreview } from "@/lib/api/meal-log-preview";
 import { MealLogMacroBar } from "@/components/planner/meal-log-nutrition-chart";
 import { formatMealLogEnergy, formatMealLogNumber, MEAL_LOG_MACROS } from "@/lib/planner/meal-log-nutrition-presentation";
@@ -926,6 +927,8 @@ export function MealLogAddSheet({
             </div>
             {previewLoading ? <div aria-label="영양 미리보기 불러오는 중" className="mt-5 space-y-3" role="status"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4" /></div> : null}
             {preview ? <section aria-label="입력한 양의 영양 미리보기" className="my-5 space-y-3"><div className="flex items-center justify-between text-sm"><span>{amount}{quantityUnitLabel(selection.unit)} 기준</span><span className="text-xl">{formatMealLogEnergy(preview)}</span></div><MealLogMacroBar nutrition={preview} thin /><dl className="flex justify-between gap-3 text-sm">{MEAL_LOG_MACROS.map(macro => <div key={macro.key} className="flex gap-1"><dt aria-label={macro.label}>{macro.short}</dt><dd>{formatMealLogNumber(preview[macro.key])}{preview[macro.key] !== null ? "g" : ""}</dd></div>)}</dl></section> : null}
+            {preview?.weight_basis ? <p className="text-sm leading-5 text-[var(--text-2)]">먹은 양은 입력한 g이에요. 전체무게 기준{preview.weight_basis.finished_weight_g === null ? "은 미확인이에요" : `은 ${Math.round(preview.weight_basis.finished_weight_g).toLocaleString("ko-KR")}g이에요`}. 무게 근거: {cookedWeightSourceLabel(preview.weight_basis.source)}.</p> : null}
+            {preview?.weight_assumption_codes?.length ? <p className="text-sm leading-5 text-[var(--text-2)]">{COOKED_MIX_ASSUMPTION_TEXT}</p> : null}
             {previewError ? <div className="mt-4 flex items-center justify-between gap-2 text-sm"><span>영양 미리보기를 불러오지 못했어요.</span><button className="min-h-11 shrink-0 text-[var(--brand)]" onClick={() => setPreviewRetry(current => current + 1)} type="button">다시 확인</button></div> : null}
             {selection.maxAmount !== undefined && !amountInvalid && (amount ?? 0) <= selection.maxAmount ? <div className="mt-4 flex items-center justify-between text-sm"><span>기록 후 남을 양</span><span>{Math.round(selection.maxAmount - (amount ?? 0)).toLocaleString("ko-KR")}g</span></div> : null}
             {selection.maxAmount !== undefined ? <button className="mt-3 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)]" disabled={saving} onClick={() => { setInputEdited(true); setAmount(selection.maxAmount!); setSuggestionConfirmed(true); }} type="button">남은 양 전부</button> : null}

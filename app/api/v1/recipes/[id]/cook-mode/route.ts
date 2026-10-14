@@ -1,4 +1,4 @@
-import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
+import { readRecipeProductLabels, readPublicRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { fail, ok } from "@/lib/api/response";
 import {
   isUuid,
@@ -156,7 +156,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const user = (await routeClient.auth.getUser()).data.user;
-    const ingredientColumns = "ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)"
+    const ingredientColumns = "id, source_kind, ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)"
       + (user ? ", food_product_id, food_product_nutrition_version_id" : "");
     const ingredientsResult = await dbClient
       .from("recipe_ingredients")
@@ -170,7 +170,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     let productIngredients = user
       ? await readRecipeProductLabels(routeClient, ingredientsResult.data)
-      : ingredientsResult.data;
+      : await readPublicRecipeProductLabels(routeClient, recipeId, ingredientsResult.data);
 
     let stepsResult = await dbClient
       .from("recipe_steps")
@@ -214,6 +214,8 @@ export async function GET(request: Request, context: RouteContext) {
       if (projection) {
         productIngredients = projection.ingredients.map((ingredient) => ({
             ingredient_id: ingredient.ingredient_id,
+            row_key: ingredient.row_key, source_kind: ingredient.source_kind,
+            food_product_id: ingredient.food_product_id, food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id,
             amount: ingredient.amount,
             unit: ingredient.unit,
             display_text: ingredient.display_text,

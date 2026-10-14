@@ -60,7 +60,13 @@ export interface CookingMethodSummary {
 }
 
 export interface CookingModeIngredient {
-  ingredient_id: string;
+  row_key?: string;
+  source_kind?: "ingredient" | "food_product";
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+  food_product_name?: string | null;
+  food_product_brand?: string | null;
+  ingredient_id: string | null;
   standard_name: string;
   amount: number | null;
   unit: string | null;
@@ -114,11 +120,15 @@ export interface SnapshotV2CookModeData {
   status: CookingSessionStatus;
   recipe: CookingModeRecipe;
   pantry_candidates: SnapshotV2PantryCandidate[];
+  weight_evidence_enabled?: boolean;
+  weight_prediction?: CookedWeightSummary;
 }
 
 export interface SnapshotV2PantryCandidate {
+  row_key?: string;
+  source_kind?: "ingredient" | "food_product";
   pantry_item_id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   item_type: "ingredient" | "food_product";
   standard_name: string;
   food_product_id: string | null;
@@ -132,12 +142,21 @@ export type SnapshotV2CompleteBody =
       consumed_pantry_item_ids: string[];
       weight_action: "set_finished_weight";
       finished_weight_g: number;
+      weight_input_source?: "reported_measured";
     }
   | {
       consumed_pantry_item_ids: string[];
       weight_action: "weigh_later";
       finished_weight_g: null;
     };
+
+export interface CookedWeightSummary {
+  source: "conditional_estimate" | "unavailable" | "historical_estimate" | "reported_measured" | "manual_estimate" | "legacy_unknown";
+  predicted_g: number | null;
+  model_version: string | null;
+  reason_codes: string[];
+  assumption_codes?: string[];
+}
 
 export interface CookedBatchProjection {
   id: string;
@@ -151,6 +170,8 @@ export interface CookedBatchProjection {
   remaining_weight_g: number | null;
   weight_status: "known" | "missing" | "unrecoverable" | null;
   weight_source?: "estimated" | "measured" | null;
+  weight_evidence?: CookedWeightSummary;
+  weight_evidence_enabled?: boolean;
   batch_status: "available" | "depleted" | null;
   depleted_reason:
     | "consumed"

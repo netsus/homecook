@@ -1,7 +1,9 @@
+import { cookedWeightResponseHeaders } from "@/lib/cooking/cooked-weight-response-contract";
 import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
 import type { ApiError } from "@/types/api";
+import { isCookedWeightAssumptionCodes, isMealLogWeightBasis } from "@/lib/cooking/cooked-weight-summary";
 import type {
   MealLogDayData,
   MealLogEntry,
@@ -123,9 +125,14 @@ function isApiError(value: unknown): value is ApiError {
 
 function isNutrition(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  const keys = "contains_ai_estimate" in value ? [...NUTRITION_KEYS, "contains_ai_estimate"] : NUTRITION_KEYS;
+  const keys: string[] = [...NUTRITION_KEYS];
+  if ("contains_ai_estimate" in value) keys.push("contains_ai_estimate");
+  if ("weight_basis" in value) keys.push("weight_basis");
+  if ("weight_assumption_codes" in value) keys.push("weight_assumption_codes");
   if (!hasExactKeys(value, keys)
-    || ("contains_ai_estimate" in value && typeof value.contains_ai_estimate !== "boolean")) return false;
+    || ("contains_ai_estimate" in value && typeof value.contains_ai_estimate !== "boolean")
+    || ("weight_basis" in value && !isMealLogWeightBasis(value.weight_basis))
+    || ("weight_assumption_codes" in value && (!isCookedWeightAssumptionCodes(value.weight_assumption_codes) || !isMealLogWeightBasis(value.weight_basis) || value.weight_basis.source !== "conditional_estimate"))) return false;
   return NUTRITION_STATUSES.includes(value.calculation_status as never)
     && NUTRITION_KEYS.slice(1).every((key) => isNullableFiniteNumber(value[key]));
 }
@@ -163,6 +170,10 @@ function isMealLogEntry(value: unknown): value is MealLogEntry {
     "created_at",
     "updated_at",
   ])) return false;
+  if (isRecord(value.nutrition) && "weight_basis" in value.nutrition) {
+    if (!isMealLogWeightBasis(value.nutrition.weight_basis) || !isRecord(value.source)
+      || value.source.type !== "cooked_batch" || value.nutrition.weight_basis.batch_id !== value.source.id) return false;
+  }
   return isUuid(value.id)
     && isPositiveInteger(value.revision)
     && (value.consumed_at === null || isTimestamp(value.consumed_at))
@@ -289,7 +300,7 @@ async function requestMealLog<T>(
   validate: (value: unknown) => value is T,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, withE2EAuthOverrideHeaders(init));
+  const response = await fetch(input, withE2EAuthOverrideHeaders({ ...init, headers: cookedWeightResponseHeaders(init?.headers) }));
   let payload: unknown;
 
   try {

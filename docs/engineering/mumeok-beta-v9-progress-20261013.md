@@ -198,3 +198,15 @@
 - 실제 homeflow는 테스트용4응답→정적 레시피/계획/장보기/요리/식사 예시→신청 화면까지 확인했다. 모든 단계에 저장 없는 안내가 보이고 마지막 동의·신청은disabled, Turnstile iframe/script0이었다. 이메일 입력·제출·외부 영상 클릭·실제 추출0. reload는 첫 화면으로 돌아왔다. 이 예시는 실제 레시피 추출/식사 기록 저장의 검증이 아니다.
 - 화면 증거: `/tmp/mumeok-f01-production-ui`의 home320/375/1440과 homeflow-disabled375. 비공개 승인 operation에도0600 사본/해시·HTTP/UI 검증을 보존했다. 원준 Discord 단계 요약 HTTP204. 실제 OAuth·Safari·스크린리더·운영 장애 강제복구는 미실행이다. build 내부 ESLint plugin 해결 실패는 별도 candidate build/관련 lint 통과와 구분한다.
 - 추가 발견: 설치형 `homecook-deploy status`는 snapshot에 `lib/server/youtube-extraction-worker-timing.json`이 빠져 ERR_MODULE_NOT_FOUND. 저장소의 기존 `pnpm deploy:dev:status`는 위 운영 상태를 정상 확인했다. 웹 배포 실패가 아니며 설치 포장만 별도 최소 수정·실제 archive module load 검사로 보완 중이다. 일반 DB219 수동 rollback 제한을 우회하지 않는다.
+
+
+## C03 공공제품 운영 확인 — 2026-10-14
+
+- 사용자 정확 C03 전체 승인과 이후 검증된 v9 범위의 반복 승인 생략 지시를 기록했다. 앱 #1682·기존 배포 도구 #1683/#1685/#1686/#1687을 병합했고, 현재 웹은 `1c676f43c99f3268801e7ca4b1072859331503c8`/`prelaunch-1c676f43c99f-R8e0px`, DB220, 제품 새 형식 저장 ON이다. C01/C04/C05는 배포에 포함하지 않았다. Actions 비활성·R2 false/false·generation1 유지.
+- 최초 DB 시도는 admin 소유 이력표의 잠금 권한 문제로 SQL 실행 전에 끝났다. 기존 reconcile에서 not_applied를 확정하고 기록을 보존했다. 기존 admin 접속은 이력 잠금/INSERT에만 사용하고 기능 SQL은 원래 postgres 역할/설정으로 실행하는5파일 보완을 독립240검사 후 적용했다. 권한/owner 변경 없이 명시 database-retry로 성공했다.
+- DB 직전 백업117,576,419bytes와 전체 archive 해독 검사가 완료됐다. 적용 후 catalog `135d98c7…`, immutable `cf117590…`, 보존 행 해시가 기대값과 일치했다. 첫 웹 준비는1,369통과/133선택제외·build 후 전환 전에 중단됐으며 내부 stack은 공통 오류 처리에 남지 않았다. 확인된 reader adapter 초기화 누락은1파일5줄로 고치고 관련170/독립실행6검사를 통과했다. 같은 앱/SQL/PIN으로 웹을 재준비해 전환·운영 smoke·reader floor 확인 후 조건부 ON을 실행했다.
+- 실제 Chrome375/1440에서 기존 두부찌개3인분 계획669kcal·고정 재료450g/0.75개/600mL·조리 원문400mL를 확인했다. 계획 입력3인분·취소·원버튼 복귀, 제품 편집 취소/새로고침 후 원제목·원량 보존을 확인했다. 비로그인 HTTP 공개 레시피·홈·privacy200, R2 recording404.
+- 테스트 레시피 `fb869ab0-f3bd-497a-9d9c-fc12f6866413`은 대표 ingredient_id=null·공공제품 `fe43e586-4a19-49ee-9618-da7b983cbdca`·영양 버전 `7f1c13b3-6aaf-4c8c-ac79-322a43935aaa`·0.125kg를 공개 API에서 그대로 반환했다. 영양 기준100g/275kcal→125g/343.75kcal(표시344), 원 조리문 보존. 팬트리 선택도 같은 기존 버전/기준을 재조회하고 취소했다.
+- 테스트 계획 `8b84870a-3365-4fe6-bb2e-98cb4d944b72`(10/27 저녁2인분)과 장보기 `d5b049ee-76f4-4155-9a06-411be70073bf`를 남겼다. 같은 제품/버전의125g이며 보유 제외→되살리기→구매 체크→보유 제외 후 is_checked=false를 실제 읽기 전용 조회로 확인했다. 팬트리 반영 안 함으로 완료하고 새로고침 뒤 read-only를 확인했다. 기존 폰타나 보유 항목은 유지했다. 기록 삭제·g 재고 자동 차감 없음.
+- DB220 이후 worker readiness는 ready=true/catalog `81362d75…`·기존 만료2026-10-19T08:24:41Z를 확인했다. worker·credential·pre-request는 바꾸지 않았다. 실제 OAuth 재로그인·다른 사람 계정·새 추출/P5/모델 평가·운영 장애 강제복원은 미실행이다. 직접 비소유자/전체 보안 검증 완료로 확대하지 않는다.
+- 새 데이터 이후 이전 reader로 내리지 않는다. 문제 시 기존 안전 OFF 경로로 새 저장을 중지하고 현재 reader/floor를 유지한다. 전체 DB 복원은 자동 실행하지 않는다. 실패/완료 Discord 전송은 각 HTTP204 확인. 비공개 operation `/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX`와 `.omx/beta-v9/current-state.json`에 시도·검증·운영 화면·테스트 기록을 남겼다.

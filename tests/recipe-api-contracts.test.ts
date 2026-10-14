@@ -34,9 +34,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: async (...args: unknown[]) => {
     const routeClient = await createRouteHandlerClient(...args);
     const compatibilityClient = createServiceRoleClient();
-    return compatibilityClient
-      ? { ...compatibilityClient, ...routeClient }
-      : routeClient;
+    const client = compatibilityClient ? { ...compatibilityClient, ...routeClient } : routeClient;
+    return { ...client, rpc: (name: string, params: unknown) => {
+      // Generic detail fixtures have no product sources. Real SDK fixtures bind
+      // rpc explicitly so the production public-read gateway is still exercised.
+      if (name === "read_public_recipe_product_sources") return routeClient.rpc
+        ? routeClient.rpc(name, params) : Promise.resolve({ data: [], error: null });
+      return client.rpc(name, params);
+    } };
   },
   createServiceRoleClient,
 }));
@@ -305,6 +310,23 @@ describe("recipe API contracts", () => {
     delete process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK;
   });
 
+  it.each(["라벨제품","등록업체"])("finds public recipes by the selected product name or brand: %s",async(q)=>{
+    const recipeId="550e8400-e29b-41d4-a716-446655440022";
+    const matched=createQuery({data:[{id:recipeId,title:"제품 이름이 없는 제목",thumbnail_url:null,tags:[],base_servings:2,view_count:0,like_count:0,save_count:0,source_type:"system"}],error:null});
+    const empty=createQuery({data:[],error:null});let recipeReads=0;
+    const rpc=vi.fn(async(name:string,args:unknown)=>{
+      if(name==="find_public_recipe_ids_by_product_name"){expect(args).toEqual({p_q:q});return {data:[{recipe_id:recipeId}],error:null};}
+      expect(name).toBe("find_recipe_ids_by_public_tags");return {data:[],error:null};
+    });
+    createRouteHandlerClient.mockResolvedValue({auth:{getUser:async()=>({data:{user:null}})},rpc,
+      from:(table:string)=>table==="recipes"?(recipeReads++===0?empty:matched):empty});
+    const {GET}=await import("@/app/api/v1/recipes/route");const response=await GET(new NextRequest(`http://localhost/api/v1/recipes?q=${encodeURIComponent(q)}`));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.items.map((item:{id:string})=>item.id)).toEqual([recipeId]);
+    expect(matched.in).toHaveBeenCalledWith("id",[recipeId]);
+    expect(matched.eq).toHaveBeenCalledWith("visibility","public");
+    expect(rpc).toHaveBeenCalledWith("find_public_recipe_ids_by_product_name",{p_q:q});
+  });
   it("wraps recipe list responses in the API envelope", async () => {
     const listQuery = createQuery({
       data: [
@@ -2007,6 +2029,7 @@ describe("recipe API contracts", () => {
       });
       createRouteHandlerClient.mockResolvedValue({
         from: client.from.bind(client),
+        rpc: client.rpc.bind(client),
         auth: { getUser: async () => ({ data: { user: null }, error: null }) },
       });
 
@@ -2515,6 +2538,9 @@ describe("recipe API contracts", () => {
       p_ingredients: [
         {
           ingredient_id: ingredientId,
+          row_key: undefined,
+          source_kind: "ingredient",
+          component_label: null,
           amount: 1,
           unit: "개",
           ingredient_type: "QUANT",

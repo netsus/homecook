@@ -1,3 +1,4 @@
+import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
 import { createHash } from "node:crypto";
 import { pieceUnitFamily, pieceWeightMatchesIngredient } from "./ingredient-piece-units.mjs";
 
@@ -40,7 +41,7 @@ export interface RecipeNutritionInputValue {
 
 export interface RecipeNutritionIngredientInput {
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   amount: number | null;
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
@@ -55,7 +56,8 @@ export interface RecipeNutritionIngredientInput {
   }>;
 
   nutrition?: {
-    link: {
+    source_kind?: "food_product";
+    link?: {
       id: string;
       review_status: string;
       is_active: boolean;
@@ -90,6 +92,7 @@ export interface RecipeNutritionIngredientInput {
       is_active: boolean;
     };
     evidence?: {
+      id?: string;
       normalized_g_per_15ml?: number | null;
       review_status: string;
       is_active: boolean;
@@ -236,7 +239,7 @@ function canonicalInput(input: RecipeNutritionCalculatorInput) {
       input.rounding_policy_version ?? RECIPE_NUTRITION_ROUNDING_POLICY_VERSION,
     ingredients: [...input.ingredients].sort((left, right) =>
       compareUnicodeOrdinal(left.id, right.id) ||
-      compareUnicodeOrdinal(left.ingredient_id, right.ingredient_id)
+      compareUnicodeOrdinal(left.ingredient_id ?? "", right.ingredient_id ?? "")
     ),
   };
 }
@@ -301,26 +304,20 @@ function isPieceUnit(unit: string | null) {
 
 function isApprovedNutrition(ingredient: RecipeNutritionIngredientInput) {
   const nutrition = ingredient.nutrition;
-  return Boolean(
-    nutrition &&
-      (!(ingredient.food_product_id || ingredient.food_product_nutrition_version_id)
-        || Boolean(ingredient.food_product_id && ingredient.food_product_nutrition_version_id
-          && ingredient.product_basis_relations)) &&
-      nutrition.link.review_status === "approved" &&
-      nutrition.link.is_active &&
-      nutrition.link.is_primary &&
-      nutrition.link.preparation_state === ingredient.preparation_state &&
-      nutrition.profile.review_status === "approved" &&
-      // An immutable, approved label remains valid when a newer product
-      // version replaces it. Generic ingredient profiles still require active.
-      (nutrition.profile.is_active || Boolean(ingredient.food_product_id
-        && ingredient.food_product_nutrition_version_id && ingredient.product_basis_relations)) &&
-      nutrition.source.review_status === "approved" &&
-      nutrition.source.freshness_status === "current" &&
-      nutrition.source.is_active &&
-      Number.isFinite(nutrition.profile.basis_amount) &&
-      nutrition.profile.basis_amount > 0,
-  );
+  if (!nutrition) return false;
+  const product = Boolean(ingredient.food_product_id && ingredient.food_product_nutrition_version_id
+    && ingredient.product_basis_relations && (nutrition.source_kind === "food_product"
+      || Boolean(nutrition.link?.review_status === "approved" && nutrition.link.is_active && nutrition.link.is_primary)));
+  if (ingredient.food_product_id || ingredient.food_product_nutrition_version_id) {
+    if (!product) return false;
+  } else if (!nutrition.link || nutrition.link.review_status !== "approved"
+    || !nutrition.link.is_active || !nutrition.link.is_primary
+    || nutrition.link.preparation_state !== ingredient.preparation_state) return false;
+  return nutrition.profile.review_status === "approved"
+    && (nutrition.profile.is_active || product)
+    && nutrition.source.review_status === "approved"
+    && nutrition.source.freshness_status === "current" && nutrition.source.is_active
+    && Number.isFinite(nutrition.profile.basis_amount) && nutrition.profile.basis_amount > 0;
 }
 
 type UnitResolution = {
@@ -363,6 +360,12 @@ function ingredientWeightInGrams(
 
   const directMass = massInGrams(amount, ingredient.unit);
   if (directMass !== null) return directMass;
+
+  if (ingredient.food_product_id || ingredient.food_product_nutrition_version_id) {
+    if (!ingredient.food_product_id || !ingredient.food_product_nutrition_version_id || !ingredient.product_basis_relations) return null;
+    const volume = volumeInMilliliters(amount, ingredient.unit);
+    return convertProductQuantity(volume ?? amount, volume !== null ? "ml" : ingredient.unit ?? "", "g", ingredient.product_basis_relations);
+  }
 
   const milliliters = volumeInMilliliters(amount, ingredient.unit);
   const assignment = ingredient.conversion_assignment;
@@ -429,22 +432,9 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
     const milliliters = volumeInMilliliters(amount, ingredient.unit);
     const unit = grams !== null ? "g" : milliliters !== null ? "ml" : normalizedUnit(ingredient.unit);
     const quantity = grams ?? milliliters ?? amount;
-    let factor: number | null = unit === profile.basis_unit
-      ? quantity / profile.basis_amount : null;
-    if (factor === null) {
-      const relations = ingredient.product_basis_relations.filter((relation) =>
-        (relation.from.unit === unit && relation.to.unit === profile.basis_unit)
-        || (relation.to.unit === unit && relation.from.unit === profile.basis_unit)
-      );
-      if (relations.length !== 1) return null;
-      const relation = relations[0];
-      if (!Number.isFinite(relation.from.amount) || relation.from.amount <= 0
-        || !Number.isFinite(relation.to.amount) || relation.to.amount <= 0) return null;
-      factor = quantity / profile.basis_amount * (relation.from.unit === unit
-        ? relation.to.amount / relation.from.amount
-        : relation.from.amount / relation.to.amount);
-    }
-    return Number.isFinite(factor) && factor > 0
+    const basisQuantity = convertProductQuantity(quantity, unit ?? "", profile.basis_unit, ingredient.product_basis_relations);
+    const factor = basisQuantity === null ? null : basisQuantity / profile.basis_amount;
+    return factor !== null && Number.isFinite(factor) && factor > 0
       ? { factor, quality: "direct", warning: null, measurementSource: null }
       : null;
   }
@@ -619,7 +609,7 @@ export function calculateRecipeNutrition(
   const sources = new Map<string, RecipeNutritionSourceAttribution>();
   const sortedIngredients = [...input.ingredients].sort((left, right) =>
     compareUnicodeOrdinal(left.id, right.id) ||
-    compareUnicodeOrdinal(left.ingredient_id, right.ingredient_id)
+    compareUnicodeOrdinal(left.ingredient_id ?? "", right.ingredient_id ?? "")
   );
   let reflectedIngredientCount = 0;
   let targetIngredientCount = 0;

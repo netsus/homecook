@@ -214,6 +214,30 @@ describe("shopping stage2 backend", () => {
   });
 
   it.each([
+    { rows: [{amount:50,unit:"g",scalable:true},{amount:0.5,unit:"package",scalable:true}], base:2, shopping:2, expected:[{amount:50,unit:"g"},{amount:0.5,unit:"package"}], canonical:100, packageSize:100, purchase:1 },
+    { rows: [{amount:150,unit:"g",scalable:true}], base:2, shopping:2, expected:[{amount:150,unit:"g"}], canonical:150, packageSize:100, purchase:2 },
+    { rows: [{amount:30,unit:"g",scalable:false}], base:2, shopping:3, expected:[{amount:30,unit:"g"}], canonical:30, packageSize:100, purchase:1 },
+    { rows: [{amount:0.1,unit:"g",scalable:true}], base:1, shopping:3, expected:[{amount:0.3,unit:"g"}], canonical:0.3, packageSize:0.3, purchase:1 },
+    { rows: [{amount:0.3000001,unit:"g",scalable:true}], base:1, shopping:1, expected:[{amount:0.3000001,unit:"g"}], canonical:0.3000001, packageSize:0.3, purchase:2 },
+    { rows: Array.from({length:9},()=>({amount:0.01,unit:"g",scalable:true})), base:3, shopping:1, expected:Array.from({length:9},()=>({amount:0.0033333333333333335,unit:"g"})), canonical:0.030000000000000002, packageSize:0.03, purchase:1 },
+    { rows: Array.from({length:9},()=>({amount:0.010000001,unit:"g",scalable:true})), base:3, shopping:1, expected:Array.from({length:9},()=>({amount:0.0033333336666666665,unit:"g"})), canonical:0.030000003, packageSize:0.03, purchase:2 },
+  ])("keeps fixed product original quantities, scale and purchase hints separate: $canonical", async ({rows,base,shopping,expected,canonical,packageSize,purchase}) => {
+    const mealId="550e8400-e29b-41d4-a716-446655440001";
+    const product="550e8400-e29b-41d4-a716-446655440010",version="550e8400-e29b-41d4-a716-446655440011";
+    const source=rows.map((row)=>({...row,ingredient_id:null,food_product_id:product,food_product_nutrition_version_id:version,ingredient_type:"QUANT",display_text:"브랜드 100g 제품"}));
+    const from=vi.fn((table:string)=>({select:()=>createArraySelectQuery([{data:table==="meals"?[{id:mealId,user_id:"user-1",recipe_id:"recipe-1",recipe_content_snapshot_id:"snapshot-1",recipe_content_snapshots:{base_servings:base,ingredients_json:source},plan_date:"2026-10-14",column_id:"column-1",planned_servings:shopping,status:"registered",is_leftover:false,leftover_dish_id:null,shopping_list_id:null}]:[],error:null}])}));
+    const rpc=vi.fn(async(name:string,args:Record<string,unknown>)=>({data:name==="read_recipe_product_nutrition_predecessors"?(args.p_ingredients as Array<{id:string}>).map(({id})=>({id,unit_context:{basis:{amount:100,unit:"g"},basis_relations:[{from:{amount:1,unit:"package"},to:{amount:packageSize,unit:"g"}}]}})):{id:"list-1",created_at:"2026-10-14T00:00:00Z",items:[{...(args.p_item_rows as object[])[0],id:"item-1",amounts_json:[{amount:canonical,unit:"g"}],is_checked:false,added_to_pantry:false}]},error:null}));
+    createRouteHandlerClient.mockResolvedValue({auth:{getUser:async()=>({data:{user:{id:"user-1"}}})},from});
+    createServiceRoleClient.mockReturnValue({rpc});
+    const {POST}=await importListsRoute();
+    const response=await POST(new Request("http://localhost/api/v1/shopping/lists",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({meal_configs:[{meal_id:mealId,shopping_servings:shopping}],complete_without_list:false})}));
+    expect(response.status).toBe(201);
+    const sent=rpc.mock.calls.find(([name])=>name==="create_shopping_list_with_snapshot_authority")![1];
+    expect((sent.p_item_rows as Array<{amounts_json:unknown}>)[0].amounts_json).toEqual(expected);
+    expect((await response.json()).data.items[0]).toMatchObject({amounts_json:[{amount:canonical,unit:"g"}],purchase_suggestion:{amount:purchase,unit:"package"},food_product_id:product,food_product_nutrition_version_id:version});
+    expect(source).toEqual(rows.map((row)=>({...row,ingredient_id:null,food_product_id:product,food_product_nutrition_version_id:version,ingredient_type:"QUANT",display_text:"브랜드 100g 제품"})));
+  });
+  it.each([
     { rpcError: null, displayText: "플레인요거트 100g", toTaste: false, expectedDisplay: "플레인요거트 400g" },
     { rpcError: "database unavailable", displayText: "플레인요거트 100g", toTaste: false, expectedDisplay: "플레인요거트 400g" },
     { rpcError: "ACCOUNT_SESSION_STALE", displayText: "플레인요거트 100g", toTaste: false, expectedDisplay: "플레인요거트 400g" },

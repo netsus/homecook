@@ -65,37 +65,29 @@ function isNullableUuid(value: unknown): value is string | null {
 
 function isIngredientUsed(value: unknown) {
   return isRecord(value)
-    && hasExactKeys(value, ["ingredient_id", "amount", "unit", "cut_size"])
-    && isUuid(value.ingredient_id)
-    && isNullableNumber(value.amount)
-    && isNullableString(value.unit)
-    && isNullableString(value.cut_size);
+    && (hasExactKeys(value, ["ingredient_id", "amount", "unit", "cut_size"])
+      || hasExactKeys(value, ["ingredient_id", "row_key", "amount", "unit", "cut_size"]))
+    && isNullableUuid(value.ingredient_id)
+    && (value.row_key !== undefined ? isUuid(value.row_key) : isUuid(value.ingredient_id))
+    && isNullableNumber(value.amount) && isNullableString(value.unit) && isNullableString(value.cut_size);
 }
 
 function isIngredient(value: unknown): value is RecipeEditIngredientDraft {
-  return isRecord(value)
-    && hasExactKeys(value, [
-      "ingredient_id",
-      "amount",
-      "unit",
-      "ingredient_type",
-      "display_text",
-      "component_label",
-      "scalable",
-      "food_product_id",
-      "food_product_nutrition_version_id",
-    ])
-    && isUuid(value.ingredient_id)
-    && isNullableNumber(value.amount)
-    && isNullableString(value.unit)
+  if (!isRecord(value)) return false;
+  const keys = ["ingredient_id", "amount", "unit", "ingredient_type", "display_text", "component_label", "scalable", "food_product_id", "food_product_nutrition_version_id"];
+  if (value.source_kind !== undefined) keys.push("source_kind");
+  if (value.row_key !== undefined) keys.push("row_key");
+  return hasExactKeys(value, keys)
+    && isNullableUuid(value.ingredient_id)
+    && isNullableNumber(value.amount) && isNullableString(value.unit)
     && (value.ingredient_type === "QUANT" || value.ingredient_type === "TO_TASTE")
-    && isNullableString(value.display_text)
-    && isNullableString(value.component_label)
+    && isNullableString(value.display_text) && isNullableString(value.component_label)
     && typeof value.scalable === "boolean"
-    && isNullableUuid(value.food_product_id)
-    && isNullableUuid(value.food_product_nutrition_version_id)
-    && ((value.food_product_id === null) ===
-      (value.food_product_nutrition_version_id === null));
+    && isNullableUuid(value.food_product_id) && isNullableUuid(value.food_product_nutrition_version_id)
+    && ((value.food_product_id === null) === (value.food_product_nutrition_version_id === null))
+    && (value.food_product_id !== null || value.ingredient_id !== null)
+    && (value.row_key === undefined || isUuid(value.row_key))
+    && (value.source_kind === undefined || value.source_kind === (value.food_product_id ? "food_product" : "ingredient"));
 }
 
 function isStep(value: unknown): value is RecipeEditStepDraft {
