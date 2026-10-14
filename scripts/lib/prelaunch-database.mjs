@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { spawnSync } from "node:child_process";
 import { closeSync, openSync } from "node:fs";
 import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from "node:fs/promises";
@@ -289,7 +290,7 @@ export async function observeQuantityV4WorkerBoundary({ repositoryRoot, stage, q
   // Quiesce/CAS has its own original control review. Do not retarget consumer prestate to those later row timestamps.
   if (digest(JSON.stringify(observation.target)) !== review.database.targetSha256 || !same(observation.ledger, review.database.after)
     || observation.catalogSha256 !== review.database.afterCatalogSha256 || observation.immutableSha256 !== protectedImmutableSha256(review)
-    || !same(observation.scope, review.database.afterScope) || observation.ledgerAuthority !== true || observation.active !== false
+    || !isDeepStrictEqual(observation.scope, review.database.afterScope) || observation.ledgerAuthority !== true || observation.active !== false
     || observation.productWriterEnabled !== true || observation.cookedWeightWriterEnabled !== true || observation.writerEnabled !== (quantityWriterState === "on")
     || observation.normalProjectionSha256 !== review.database.normalProjectionSha256 || observation.postimageRegistrySha256 !== review.database.postimageRegistrySha256
     || !SHA.test(observation.normalDataSha256)) throw new Error("C04 worker current DB authority/target/catalog/scope/OFF/data differs");
@@ -694,7 +695,7 @@ export function assertProtectedPrelaunchObservation(review, observation, phase, 
   if (review.feature === QUANTITY_V4_FEATURE) {
     if (observation.productWriterEnabled !== true || observation.cookedWeightWriterEnabled !== true || observation.ledgerAuthority !== true
       || !SHA.test(observation.normalDataSha256) || observation.normalProjectionSha256 !== database.normalProjectionSha256
-      || observation.postimageRegistrySha256 !== database.postimageRegistrySha256 || !same(observation.scope, database[phase === "before" ? "beforeScope" : "afterScope"])
+      || observation.postimageRegistrySha256 !== database.postimageRegistrySha256 || !isDeepStrictEqual(observation.scope, database[phase === "before" ? "beforeScope" : "afterScope"])
       || observation.normalColumnsSha256 !== database[phase === "before" ? "beforeColumnsSha256" : "afterColumnsSha256"]
       || (!safeQuantityOff && observation.worker?.credentialActive !== true)
       || observation.worker?.catalogFingerprint !== database[phase === "before" ? "workerCatalogBefore" : "workerCatalogAfter"]) throw new Error("C04 C03/C01 ON/ledger authority/data projection/scope/catalog/credential differs");

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
+import { isDeepStrictEqual } from "node:util";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 // Only these nine C04 declarations are authority inputs in the disposable graph.
@@ -255,6 +256,22 @@ it("isolates all nine authority initializers even when the source is already bou
   expect(() => webFixtureSource(bound.replace(/^export const QUANTITY_V4_RELEASE_SHA = .*;$/mu, ""))).toThrow("exactly one");
   expect(() => webFixtureSource(`${bound}\nexport const QUANTITY_V4_RELEASE_SHA = null;`)).toThrow("exactly one");
   expect(() => webFixtureSource(bound.replace(/^export const QUANTITY_V4_RELEASE_SHA = .*;$/mu, "export const QUANTITY_V4_RELEASE_SHA =\n null;"))).toThrow("exactly one");
+});
+
+describe("C04 scope fingerprints", () => {
+  it.each(["before", "after"] as const)("compares exact fields without depending on JSON key order (%s)", phase => {
+    const f = fixture(), expected = f.review.database[phase === "before" ? "beforeScope" : "afterScope"];
+    const observed = { ...f.observation,
+      ...(phase === "after" ? { ledger: f.review.database.after, catalogSha256: f.review.database.afterCatalogSha256,
+        immutableSha256: f.review.database.afterImmutableSha256, normalColumnsSha256: f.review.database.afterColumnsSha256 } : {}),
+      scope: { aliasSha256: expected.aliasSha256, outerSha256: expected.outerSha256 },
+    };
+    expect(() => assertProtectedPrelaunchObservation(f.review, observed, phase)).not.toThrow();
+    for (const scope of [{ outerSha256: expected.outerSha256 }, { ...observed.scope, extra: "unreviewed" },
+      { ...observed.scope, aliasSha256: sha("e") }, { ...observed.scope, outerSha256: null }]) {
+      expect(() => assertProtectedPrelaunchObservation(f.review, { ...observed, scope }, phase)).toThrow("C04 C03/C01");
+    }
+  });
 });
 
 describe("C04 unbound authority and exact5+1 source projection", () => {
@@ -788,13 +805,22 @@ describe("C04 real durable producer and strict loader roundtrip", () => {
       const databaseSource=readFileSync(join(process.cwd(),"scripts/lib/prelaunch-database.mjs"),"utf8");
       const boundarySource=databaseSource.slice(databaseSource.indexOf("export async function observeQuantityV4WorkerBoundary("),databaseSource.indexOf("export async function createProtectedPrelaunchDatabase("));
       const open=vi.fn(async()=>worker.adapter);
-      const boundary=new Function("loadQuantityV4DatabaseReceipt","loadQuantityV4ReaderWriterReceipts","openProtectedPrelaunchTarget","digest","same","SHA","protectedImmutableSha256","path",
+      const boundary=new Function("loadQuantityV4DatabaseReceipt","loadQuantityV4ReaderWriterReceipts","openProtectedPrelaunchTarget","digest","same","isDeepStrictEqual","SHA","protectedImmutableSha256","path",
         boundarySource.replace("export async function","async function")+";return observeQuantityV4WorkerBoundary;")(
           loader.loadQuantityV4DatabaseReceipt,()=>{throw new Error("ON authority not exercised in OFF fixture");},open,hash,
-          (a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b),/^[a-f0-9]{64}$/u,deploy.protectedImmutableSha256,await import("node:path"));
+          (a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b),isDeepStrictEqual,/^[a-f0-9]{64}$/u,deploy.protectedImmutableSha256,await import("node:path"));
+      const reordered = structuredClone(worker.getCurrent());
+      reordered.scope = { aliasSha256: reordered.scope.aliasSha256, outerSha256: reordered.scope.outerSha256 }; worker.setCurrent(reordered);
       const connected=await boundary({repositoryRoot:process.cwd(),stage:"worker"});
       expect(connected.authority.pointer).toEqual(worker.pointer);expect(connected.observation.normalDataSha256).toBe(sha("9"));
       expect(open).toHaveBeenCalledTimes(1);
+      for (const scope of [{ outerSha256: reordered.scope.outerSha256 }, { ...reordered.scope, extra: "unreviewed" },
+        { ...reordered.scope, aliasSha256: sha("e") }]) {
+        // Simulate malformed transport data, outside the typed observation contract.
+        worker.setCurrent({ ...structuredClone(reordered), scope: scope as unknown as typeof reordered.scope });
+        await expect(boundary({ repositoryRoot: process.cwd(), stage: "worker" })).rejects.toThrow("DB authority/target/catalog/scope/OFF/data differs");
+      }
+      worker.setCurrent(reordered);
       const observed=structuredClone(worker.getCurrent());observed.catalogSha256=sha("f");worker.setCurrent(observed);
       await expect(boundary({repositoryRoot:process.cwd(),stage:"worker"})).rejects.toThrow("DB authority/target/catalog/scope/OFF/data differs");
       observed.catalogSha256=worker.review.database.afterCatalogSha256;worker.setCurrent(observed);
