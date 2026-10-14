@@ -187,6 +187,8 @@ F01 승인이나 과거 YouTube/R2 승인을 C03으로 전용하지 않는다.
 
 C03 전용 review는 기존 테스트의 source dependency인 `scripts/lib/full-local-security-inventory.mjs`와 공개 읽기 경계인 `lib/server/hybrid-auth/public-read-policy-runtime.mjs` 두 정확 경로만 기존 before/after SHA가 모두 있을 때 추가 검토한다. 일반 scripts 경로·기존 거부 대상인 다른 auth/R2 경로와 normal closed guard는 유지하며 이 로컬 준비가 실제 권한/운영 승인인 것은 아니다. 별도 source/security 검토에는 기존 `recipes` scope의 `find_public_recipe_ids_by_product_name`/`read_recipe_product_ingredient_classification`, `recipe-detail`·`recipe-cook-mode` scope의 `read_public_recipe_product_sources` 세 공개 RPC의 정확 POST body 경계와 고정 source_kind/id select를 포함한다.
 
+실제 plan 경로도 전체 source·SQL·증거·현재 닫힘 경계를 먼저 검증한 뒤 이 검사 모듈 한 파일을 support로 분류한다. 일반 분류기의 scripts 허용 목록은 넓히지 않는다. 계획 명령은 `pnpm deploy:dev:plan -- <공통 옵션>`, 적용 명령은 `pnpm deploy:dev -- <공통 옵션>`이다. 각 package script가 이미 plan/deploy를 포함하므로 명령을 중복 인수로 넣지 않는다.
+
 공통 입력은 `--reviewed-protected-rollout --reviewed-ref <APPROVED_EXACT_SHA>
 --db-config <APPROVED_PRIVATE_CONFIG> --test-script test:feedback-batch:web`다.
 `--protected-phase`에 다음 단계 하나를 지정한다. env patch, 다른 reviewed mode,

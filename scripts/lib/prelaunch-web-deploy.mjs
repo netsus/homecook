@@ -473,12 +473,13 @@ export function prelaunchChangedFiles(git, from, to) {
  * @param {string[]} files
  * @param {any} before
  * @param {any} after
- * @param {{reviewedYoutubeTrialSupport?: boolean, reviewedYoutubeResolutionSupport?: boolean, reviewedIntegratedFiles?: Set<string> | null}} [options]
+ * @param {{reviewedYoutubeTrialSupport?: boolean, reviewedYoutubeResolutionSupport?: boolean, reviewedIntegratedFiles?: Set<string> | null, reviewedProtectedInventorySupport?: boolean}} [options]
  */
 export function classifyPrelaunchScope(files, before, after, {
   reviewedYoutubeTrialSupport = false,
   reviewedYoutubeResolutionSupport = false,
   reviewedIntegratedFiles = null,
+  reviewedProtectedInventorySupport = false,
 } = {}) {
   const scope = { web: [], database: [], support: [], api: [] };
   const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/|\.claude\/|\.codex\/|\.opencode\/|\.workflow-v2\/)|^(?:AGENTS|CLAUDE|README)\.md$|^opencode\.json$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
@@ -536,7 +537,8 @@ export function classifyPrelaunchScope(files, before, after, {
   for (const file of files) {
     if (/^supabase\/migrations\/\d+_[^/]+\.sql$/u.test(file)) scope.database.push(file);
     else if (support.test(file) || exactSupport.has(file) || youtubeTrialSupport.has(file)
-      || youtubeResolutionSupport.has(file) || reviewedIntegratedFiles?.has(file)) scope.support.push(file);
+      || youtubeResolutionSupport.has(file) || reviewedIntegratedFiles?.has(file)
+      || (reviewedProtectedInventorySupport && file === "scripts/lib/full-local-security-inventory.mjs")) scope.support.push(file);
     else if (web.test(file) || file === "instrumentation.ts") scope.web.push(file);
     else denied.push(file);
   }
