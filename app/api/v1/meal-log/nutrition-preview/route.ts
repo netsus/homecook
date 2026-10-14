@@ -1,3 +1,4 @@
+import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { callMealLogRpc } from "@/lib/server/meal-log";
 import { authorizeMealLogRequest } from "@/lib/server/meal-log-route";
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     p_amount: quantity.amount, p_unit: quantity.unit,
   });
   if (!result.ok) return result.response;
-  const data = projectMealLogNutritionPreview(result.data, parsed.value);
+  const data = projectMealLogNutritionPreview(result.data, parsed.value, wantsCookedWeightEvidence(request));
   const response = data ? ok(data) : fail("INTERNAL_ERROR", "영양 정보를 불러오지 못했어요.", 500);
   response.headers.set("Cache-Control", "private, no-store");
   return response;

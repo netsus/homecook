@@ -131,7 +131,9 @@ export function CookedBatchActionSheet({
   const submit = () => {
     if (!formValid || pending || batch.revision === null) return;
     if (action === "set_finished_weight") {
-      onSubmit({ action, finished_weight_g: parsedAmount, expected_revision: batch.revision });
+      if (batch.weight_evidence_enabled) {
+        onSubmit({ action, finished_weight_g: parsedAmount, expected_revision: batch.revision, weight_input_source: "reported_measured" });
+      } else onSubmit({ action, finished_weight_g: parsedAmount, expected_revision: batch.revision });
     } else if (action === "mark_unrecoverable") {
       onSubmit({ action, expected_revision: batch.revision });
     } else if (action === "discard") {
@@ -200,10 +202,10 @@ export function CookedBatchActionSheet({
 
       {!isConfirmationStep && action === "set_finished_weight" ? (
         <>
-          <label className="block text-sm font-bold">음식만의 원래 전체 중량(g)
-            <input aria-describedby={amountInvalid ? ERROR_SUMMARY_ID : undefined} aria-invalid={amountInvalid || undefined} aria-label="음식만의 원래 전체 중량" className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base" disabled={pending} inputMode="decimal" min="0" onChange={(event) => setAmount(event.target.value)} type="number" value={amount} />
+          <label className="block text-sm font-bold">{batch.weight_evidence_enabled ? "저울로 잰 전체무게(g)" : "음식만의 원래 전체 중량(g)"}
+            <input aria-describedby={amountInvalid ? ERROR_SUMMARY_ID : undefined} aria-invalid={amountInvalid || undefined} aria-label={batch.weight_evidence_enabled ? "저울로 잰 전체무게" : "음식만의 원래 전체 중량"} className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base" disabled={pending} inputMode="decimal" min="0" onChange={(event) => setAmount(event.target.value)} type="number" value={amount} />
           </label>
-          <p className="text-sm leading-5 text-[var(--text-2)]">용기를 제외한, 먹기 전 전체 무게예요.</p>
+          <p className="text-sm leading-5 text-[var(--text-2)]">{batch.weight_evidence_enabled ? "먹거나 버리기 전 음식 전체를 재 주세요. 용기는 빼고 먹을 국물은 포함해 주세요. 남은 양이나 한 접시 무게는 입력하지 않아요." : "용기를 제외한, 먹기 전 전체 무게예요."}</p>
         </>
       ) : null}
       {!isConfirmationStep && (action === "discard" || action === "adjust") ? (

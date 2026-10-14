@@ -1,3 +1,4 @@
+import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import {
   callCookedBatchRpc,
@@ -19,6 +20,6 @@ export async function GET(request: Request) {
     p_cursor_id: query.value.cursor?.id ?? null,
   });
   if (!result.ok) return result.response;
-  const data = projectCookedBatchListData(result.data, query.value.availability);
+  const data = projectCookedBatchListData(result.data, query.value.availability, wantsCookedWeightEvidence(request));
   return data ? ok(data) : fail("INTERNAL_ERROR", "요리 목록을 불러오지 못했어요.", 500);
 }

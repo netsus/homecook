@@ -4,10 +4,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { ConsumedSelectionToolbar } from "@/components/cooking/consumed-ingredient-sheet";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
+import { COOKED_MIX_ASSUMPTION_TEXT } from "@/lib/cooking/cooked-weight-summary";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import type {
   SnapshotV2CompleteBody,
   SnapshotV2PantryCandidate,
+  CookedWeightSummary,
 } from "@/types/cooking";
 
 export interface CookedBatchCompletionError {
@@ -24,6 +26,8 @@ interface CookedBatchCompletionSheetProps {
   onSubmit: (body: SnapshotV2CompleteBody) => void;
   serverError: CookedBatchCompletionError | null;
   submitting: boolean;
+  weightEvidenceEnabled?: boolean;
+  weightPrediction?: CookedWeightSummary;
 }
 
 export function CookedBatchCompletionSheet({
@@ -33,8 +37,13 @@ export function CookedBatchCompletionSheet({
   onSubmit,
   serverError,
   submitting,
+  weightEvidenceEnabled = false,
+  weightPrediction,
 }: CookedBatchCompletionSheetProps) {
   const [selectedIds, setSelectedIds] = useState(() => new Set(initialSelection));
+  const [finishedWeight, setFinishedWeight] = useState("");
+  const [weightError, setWeightError] = useState<string | null>(null);
+  const weightRef = useRef<HTMLInputElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +99,19 @@ export function CookedBatchCompletionSheet({
 
   const handleSubmit = () => {
     if (submitting) return;
+    const provided = weightEvidenceEnabled && finishedWeight.trim() !== "";
+    const grams = Number(finishedWeight);
+    if (provided && (!Number.isFinite(grams) || grams <= 0)) {
+      setWeightError("0보다 큰 전체무게를 입력하거나 빈칸으로 건너뛰어 주세요.");
+      weightRef.current?.focus();
+      return;
+    }
+    setWeightError(null);
+    if (provided) {
+      onSubmit({ consumed_pantry_item_ids: validIds.filter((id) => selectedIds.has(id)),
+        weight_action: "set_finished_weight", finished_weight_g: grams, weight_input_source: "reported_measured" });
+      return;
+    }
     onSubmit({
       consumed_pantry_item_ids: validIds.filter((id) => selectedIds.has(id)),
       weight_action: "weigh_later",
@@ -139,6 +161,27 @@ export function CookedBatchCompletionSheet({
         >
           <strong className="block font-bold">{serverError.message}</strong>
         </div>
+      ) : null}
+
+      {weightEvidenceEnabled ? (
+        <section aria-labelledby="cooked-batch-weight-heading" className="space-y-3">
+          <h3 className="text-base font-bold" id="cooked-batch-weight-heading">완성 음식 전체무게</h3>
+          <p className="text-sm leading-5 text-[var(--text-2)]">
+            {weightPrediction?.source === "conditional_estimate" && weightPrediction.predicted_g !== null
+              ? `조건별 예상 무게는 약 ${Math.round(weightPrediction.predicted_g).toLocaleString("ko-KR")}g이에요. 실측값이 아니에요.`
+              : weightPrediction?.reason_codes.includes("quantity_conversion_missing") || weightPrediction?.reason_codes.includes("invalid_grams_evidence")
+                ? "일부 재료의 무게 환산 근거가 없어 전체무게를 추정하지 못했어요."
+                : "조리 조건을 확인할 근거가 부족해 전체무게를 추정하지 못했어요."}
+          </p>
+          {weightPrediction?.assumption_codes?.length ? <p className="text-sm leading-5 text-[var(--text-2)]">{COOKED_MIX_ASSUMPTION_TEXT}</p> : null}
+          <label className="block text-sm font-bold" htmlFor="cooked-batch-reported-weight">저울로 잰 전체무게 (선택, g)</label>
+          <input aria-describedby="cooked-batch-weight-help cooked-batch-weight-validation" aria-invalid={Boolean(weightError) || serverError?.fields.some(field => field.field === "finished_weight_g") || undefined}
+            className="h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base"
+            disabled={submitting} id="cooked-batch-reported-weight" inputMode="decimal" min="0" onChange={event => { setFinishedWeight(event.target.value); setWeightError(null); }}
+            ref={weightRef} step="any" type="number" value={finishedWeight} />
+          <p className="text-sm leading-5 text-[var(--text-2)]" id="cooked-batch-weight-help">먹거나 버리기 전 음식 전체를 재 주세요. 용기 무게를 빼고, 먹을 국물은 포함해 주세요. 남은 양이나 한 접시 무게는 입력하지 않아요. 빈칸으로 두어도 완료할 수 있어요.</p>
+          <p className="text-sm text-[var(--danger-strong)]" id="cooked-batch-weight-validation" role={weightError ? "alert" : undefined}>{weightError}</p>
+        </section>
       ) : null}
 
       <section aria-labelledby="cooked-batch-pantry-heading">

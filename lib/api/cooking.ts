@@ -1,8 +1,10 @@
+import { cookedWeightResponseHeaders } from "@/lib/cooking/cooked-weight-response-contract";
 import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
 import { canonicalizeLegacyConsumedIngredientIds } from "@/lib/cooking/legacy-completion-payload";
 import type { ApiError, ApiResponse } from "@/types/api";
+import { isCookedWeightSummary } from "@/lib/cooking/cooked-weight-summary";
 import type {
   CookingSessionCancelData,
   CookingSessionCompleteData,
@@ -31,7 +33,7 @@ export interface CookedBatchMutationData {
 }
 
 export type CookedBatchWeightBody =
-  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number }
+  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number; weight_input_source?: "reported_measured" }
   | { action: "mark_unrecoverable"; expected_revision: number };
 
 export interface CookedBatchDiscardBody {
@@ -203,7 +205,10 @@ function isPositiveInteger(value: unknown): value is number {
 }
 
 function isExactCookedBatchProjection(value: unknown): value is CookedBatchProjection {
-  if (!isRecord(value) || !hasExactKeys(value, [...COOKED_BATCH_KEYS, ...(Object.hasOwn(value, "weight_source") ? ["weight_source"] : [])])) return false;
+  if (!isRecord(value)) return false;
+  const keys = [...COOKED_BATCH_KEYS];
+  for (const key of ["weight_source", "weight_evidence", "weight_evidence_enabled"]) if (Object.hasOwn(value, key)) keys.push(key);
+  if (!hasExactKeys(value, keys)) return false;
   return typeof value.id === "string"
     && UUID_PATTERN.test(value.id)
     && typeof value.recipe_id === "string"
@@ -219,6 +224,8 @@ function isExactCookedBatchProjection(value: unknown): value is CookedBatchProje
     && isNullableFiniteNumber(value.remaining_weight_g)
     && (value.weight_status === null || ["known", "missing", "unrecoverable"].includes(String(value.weight_status)))
     && (value.weight_source === undefined || value.weight_source === null || ["estimated", "measured"].includes(String(value.weight_source)))
+    && (value.weight_evidence === undefined || isCookedWeightSummary(value.weight_evidence))
+    && (value.weight_evidence_enabled === undefined || typeof value.weight_evidence_enabled === "boolean")
     && (value.batch_status === null || ["available", "depleted"].includes(String(value.batch_status)))
     && (value.depleted_reason === null || ["consumed", "discarded", "mixed", "consumed_unweighed", "discarded_unweighed", "mixed_unweighed"].includes(String(value.depleted_reason)))
     && (value.revision === null || isPositiveInteger(value.revision))
@@ -284,6 +291,8 @@ function isExactSnapshotV2CompleteData(
     || !Number.isSafeInteger(batch.cooking_servings)
     || Number(batch.cooking_servings) <= 0
     || !hasRequestedInitialWeight
+    || (request.body.weight_action === "set_finished_weight" && request.body.weight_input_source === "reported_measured"
+      && batch.weight_evidence?.source !== "reported_measured")
     || batch.batch_status !== "available"
     || batch.depleted_reason !== null
     || !Number.isSafeInteger(batch.revision)
@@ -349,7 +358,8 @@ async function mutateCookedBatch(
     headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey },
     body: JSON.stringify(body),
   });
-  if (!isExactCookedBatchMutationData(data, expectedAction)) {
+  if (!isExactCookedBatchMutationData(data, expectedAction)
+    || (isRecord(body) && body.weight_input_source === "reported_measured" && data.batch.weight_evidence?.source !== "reported_measured")) {
     throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "중량·잔량 변경 결과를 확인하지 못했어요." });
   }
   notifyCookedBatchChanged(data.batch.id);
@@ -412,7 +422,7 @@ async function requestCooking<T>(
   input: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, withE2EAuthOverrideHeaders(init));
+  const response = await fetch(input, withE2EAuthOverrideHeaders({ ...init, headers: cookedWeightResponseHeaders(init?.headers) }));
 
   let payload: ApiResponse<T> | null = null;
 
