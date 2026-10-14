@@ -169,7 +169,16 @@ export const LEDGER_VALID_SQL = `SELECT (SELECT nspowner='postgres'::regrole FRO
 
 /** Real psql session: keep the exported snapshot and SHARE fence alive during pg_dump. */
 export function openRecordingSession(container, env, applicationName, database = "postgres") {
-  const child = spawn("docker",["exec","-i","-e",`PGAPPNAME=${applicationName}`,container,"psql","-h","/var/run/postgresql","-p","5432","-U","postgres","-d",database,"-XAtq","-v","ON_ERROR_STOP=1"],{env,stdio:["pipe","pipe","pipe"]});
+  return openDatabaseSession(container, env, applicationName, database, "postgres");
+}
+
+/** Only the protected migration engine uses the existing ledger owner's connection. */
+export function openProtectedMigrationSession(container, env, applicationName, database = "postgres") {
+  return openDatabaseSession(container, env, applicationName, database, "supabase_admin");
+}
+
+function openDatabaseSession(container, env, applicationName, database, role) {
+  const child = spawn("docker",["exec","-i","-e",`PGAPPNAME=${applicationName}`,container,"psql","-h","/var/run/postgresql","-p","5432","-U",role,"-d",database,"-XAtq","-v","ON_ERROR_STOP=1"],{env,stdio:["pipe","pipe","pipe"]});
   let pending; let buffer=""; let exited=false;
   const closed = new Promise(resolveClosed => {
     child.once("error",() => { exited=true; pending?.reject(new Error("Database session failed; output withheld")); resolveClosed(null); });
@@ -325,6 +334,10 @@ export async function createRecordingDockerAdapter({configPath,backupDirectory})
     },
     query:async sql=>query(sql),
     session:applicationName=>openRecordingSession(selected.postgresContainerId,env,applicationName),
+    migrationSession:applicationName=>{
+      const postgresContext=JSON.parse(query("SELECT jsonb_build_object('searchPath',current_setting('search_path'),'timeZone',current_setting('TimeZone'));"));
+      return {...openProtectedMigrationSession(selected.postgresContainerId,env,applicationName),postgresContext};
+    },
     backup:options=>backupRecordingSnapshot({...options,run,container:selected.postgresContainerId,directory:backupDirectory}),
     async reloadSchema(operationId){
       requireValue(UUID.test(operationId),"Invalid reload operation");
