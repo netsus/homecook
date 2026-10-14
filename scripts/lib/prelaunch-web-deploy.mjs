@@ -68,6 +68,13 @@ export const QUANTITY_V4_WORKER_CATALOG_BEFORE = "81362d758b5138a95b6cbe1d8d7c1f
 export const QUANTITY_V4_WORKER_CATALOG_AFTER = "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05";
 export const QUANTITY_V4_WORKER_SCHEMA_IDENTITY = "youtube-extraction-worker-schema-v2";
 
+// Separate, still-unbound personal attestation successor. Historical C04 authority is never retargeted.
+export const COOKED_WEIGHT_ATTESTATION_FEATURE = "cooked-weight-user-attestation";
+export const COOKED_WEIGHT_ATTESTATION_MIGRATION = "20261014224500_cooked_weight_user_attestation.sql";
+export const COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256 = "d334ebe8824db1d4e94f865bc0bbd692c46cdde2f6c2077e4cac9d9f8db8d146";
+export const COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-personal-weight-20261015-secrwkhy/approved-rollout-review.json", sha256: "987b39c80c5a786923a90ec88967b90961c0d105a03b1c1bae330f6e77cbf2d8" });
+export const COOKED_WEIGHT_ATTESTATION_WRITER_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-personal-weight-20261015-secrwkhy/approved-writer-review.json", sha256: "368f61eb5c65421aaf281983419f043581b5b3b1e4a6c391b59f86fd4d70ef6d" });
+
 export function quantityV4StageForPhase(phase) {
   if (["database", "database-retry", "reconcile"].includes(phase)) return "consumers";
   if (["worker-database", "worker-database-retry", "worker-reconcile", "reader", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry"].includes(phase)) return "worker";
@@ -75,6 +82,7 @@ export function quantityV4StageForPhase(phase) {
 }
 
 export function protectedRolloutPins(review) {
+  if (review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) return { rollout: COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN, writer: COOKED_WEIGHT_ATTESTATION_WRITER_REVIEW_PIN };
   if (review?.feature === QUANTITY_V4_FEATURE) {
     if (!["consumers", "worker"].includes(review.quantityStage)) throw new DeploymentError("Unknown exact C04 stage");
     return { rollout: review.quantityStage === "consumers" ? QUANTITY_V4_CONSUMERS_REVIEW_PIN : QUANTITY_V4_WORKER_REVIEW_PIN, writer: QUANTITY_V4_WRITER_REVIEW_PIN };
@@ -85,18 +93,22 @@ export function protectedRolloutPins(review) {
 }
 
 export function protectedRolloutPaths(root, review) {
-  const prefix = review?.feature === QUANTITY_V4_FEATURE ? `protected-quantity-v4-${review.quantityStage}` : review?.feature === COOKED_WEIGHT_FEATURE ? "protected-cooked-weight" : "protected";
+  const prefix = review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? "protected-cooked-weight-attestation" : review?.feature === QUANTITY_V4_FEATURE ? `protected-quantity-v4-${review.quantityStage}` : review?.feature === COOKED_WEIGHT_FEATURE ? "protected-cooked-weight" : "protected";
   protectedRolloutPins(review);
   return { databaseGuardPath: join(root, `${prefix}-database-guard.json`), readerReceiptPath: join(root, `${prefix}-reader-ready.json`),
     operationRoot: join(root, `${prefix}-operations`), writerPrefix: `${prefix}-writer` };
 }
 
 export function protectedImmutableSha256(review, phase = "after") {
-  return [COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE].includes(review?.feature) && phase === "after" ? review.database.afterImmutableSha256 : review.database.immutableSha256;
+  return [COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE].includes(review?.feature) && phase === "after" ? review.database.afterImmutableSha256 : review.database.immutableSha256;
 }
 
 export function protectedReaderFenceSql(review) {
   protectedRolloutPins(review);
+  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) return {
+    begin: "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL idle_in_transaction_session_timeout='120s'; SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE; SELECT singleton FROM private.cooked_batch_weight_evidence_control WHERE singleton FOR SHARE; SELECT singleton FROM private.quantity_input_v4_policy WHERE singleton FOR SHARE; LOCK TABLE private.cooked_weight_user_attestation_control IN SHARE MODE;",
+    check: "SELECT (SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.cooked_weight_user_attestation_control) AND (SELECT count(*)=1 AND bool_and(singleton) AND bool_or(enabled) FROM private.recipe_product_only_write_control) AND (SELECT count(*)=1 AND bool_and(singleton) AND bool_or(enabled) FROM private.cooked_batch_weight_evidence_control);",
+  };
   if (review.feature === QUANTITY_V4_FEATURE) return {
     begin: "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL idle_in_transaction_session_timeout='120s'; SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE; SELECT singleton FROM private.cooked_batch_weight_evidence_control WHERE singleton FOR SHARE; LOCK TABLE private.quantity_input_v4_policy IN SHARE MODE;",
     check: "SELECT (SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.quantity_input_v4_policy) AND (SELECT count(*)=1 AND bool_and(singleton) AND bool_or(enabled) FROM private.recipe_product_only_write_control) AND (SELECT count(*)=1 AND bool_and(singleton) AND bool_or(enabled) FROM private.cooked_batch_weight_evidence_control);",
@@ -187,7 +199,13 @@ function readProtectedRolloutPin(repositoryRoot, pin) {
 }
 
 export function loadProtectedRolloutReview(repositoryRoot, selector = {}) {
-  closedR2Require(!selector.feature || ["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE].includes(selector.feature), "No arbitrary protected feature selector");
+  closedR2Require(!selector.feature || ["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE].includes(selector.feature), "No arbitrary protected feature selector");
+  if (selector.feature === COOKED_WEIGHT_ATTESTATION_FEATURE || selector.phase?.startsWith("attestation-")
+    || (selector.reviewSha256 && selector.reviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256)) {
+    const review = readProtectedRolloutPin(repositoryRoot, COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN);
+    closedR2Require(review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE && (!selector.ref || selector.ref === review.to), "Personal attestation exact source authority differs");
+    return review;
+  }
   if (selector.feature === QUANTITY_V4_FEATURE || selector.phase?.startsWith("worker-")
     || (QUANTITY_V4_RELEASE_SHA && selector.ref === QUANTITY_V4_RELEASE_SHA)
     || (selector.reviewSha256 && [QUANTITY_V4_CONSUMERS_REVIEW_PIN.sha256, QUANTITY_V4_WORKER_REVIEW_PIN.sha256].includes(selector.reviewSha256))) {
@@ -246,10 +264,11 @@ export function assertProtectedWriterReview(approval, rollout, rolloutReviewSha2
 export function assertProtectedRolloutReview(review) {
   const cookedWeight = review?.feature === COOKED_WEIGHT_FEATURE;
   const quantity = review?.feature === QUANTITY_V4_FEATURE;
-  const exactC03Sources = new Set(quantity ? ["scripts/lib/full-local-security-inventory.mjs", "scripts/lib/youtube-extraction-worker-runtime.mjs",
+  const attestation = review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE;
+  const exactC03Sources = new Set(attestation ? ["scripts/lib/full-local-security-inventory.mjs", "scripts/lib/full-local-restore-cutover.mjs", "scripts/deploy-prelaunch-web.mjs", "scripts/lib/prelaunch-web-deploy.mjs", "scripts/lib/prelaunch-database.mjs"] : quantity ? ["scripts/lib/full-local-security-inventory.mjs", "scripts/lib/youtube-extraction-worker-runtime.mjs",
     "scripts/manifests/youtube-extraction-expected-schema.json", "scripts/deploy-prelaunch-web.mjs", "scripts/lib/prelaunch-web-deploy.mjs", "scripts/lib/prelaunch-database.mjs", "eslint.config.mjs"] : cookedWeight ? ["scripts/lib/full-local-security-inventory.mjs"]
     : ["scripts/lib/full-local-security-inventory.mjs", "lib/server/hybrid-auth/public-read-policy-runtime.mjs"]);
-  closedR2Require(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && ["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE].includes(review.feature)
+  closedR2Require(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && ["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE].includes(review.feature)
     && CLOSED_R2_REF.test(review.from ?? "") && CLOSED_R2_REF.test(review.to ?? "") && review.from !== review.to,
     "보호 전환의 정확한 source pair가 필요합니다.");
   closedR2Require(review.files && Object.keys(review.files).length > 0 && Object.entries(review.files).every(([path, pair]) =>
@@ -296,6 +315,7 @@ export function assertProtectedRolloutReview(review) {
       "Only the exact C01 server gate can be added at the verified reader stage");
   }
   if (quantity) assertQuantityV4Review(review);
+  if (attestation) assertCookedWeightAttestationReview(review);
   return review;
 }
 
@@ -334,6 +354,281 @@ function assertQuantityV4Review(review) {
     && review.workerAuthority && Object.keys(review.workerAuthority).sort().join() === "controlReviewSha256,operationId"
     && CLOSED_R2_SHA.test(review.workerAuthority.controlReviewSha256 ?? "")
     && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(review.workerAuthority.operationId ?? ""), "C04 worker requires terminal226 and its original controlled operation authority");
+}
+
+export function assertCookedWeightAttestationReview(review) {
+  const database = review.database, previous = review.predecessorQuantity;
+  closedR2Require(CLOSED_R2_SHA.test(COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256 ?? "")
+    && database?.before?.length === 227 && database.after?.length === 228
+    && isDeepStrictEqual(database.after.slice(0, 227), database.before)
+    && isDeepStrictEqual(database.before.slice(221), QUANTITY_V4_MIGRATIONS.map(({ filename, sha256 }) => ({ filename, sha256 })))
+    && database.before[220].filename === COOKED_WEIGHT_MIGRATION
+    && database.before[220].sha256 === "60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0"
+    && database.after[227].filename === COOKED_WEIGHT_ATTESTATION_MIGRATION
+    && database.after[227].sha256 === COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256
+    && database.migrations?.length === 1 && database.migrations[0].filename === COOKED_WEIGHT_ATTESTATION_MIGRATION
+    && database.migrations[0].rawSha256 === COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256,
+    "Personal attestation requires its fixed227 to228 source; the unbound draft cannot execute");
+  closedR2Require(previous?.reviewSha256 === QUANTITY_V4_WORKER_REVIEW_PIN.sha256
+    && previous.writerApprovalSha256 === QUANTITY_V4_WRITER_REVIEW_PIN.sha256
+    && previous.readerFloor === QUANTITY_V4_RELEASE_SHA
+    && ["databaseReceipt", "readerReceipt", "writerReceipt", "activationEvidence"].every(key =>
+      isAbsolute(previous[key]?.path ?? "") && CLOSED_R2_SHA.test(previous[key]?.sha256 ?? "")),
+    "Personal attestation retains the original C04 DB2/reader/writer/activation authority");
+  closedR2Require(["afterImmutableSha256", "normalProjectionSha256", "postimageRegistrySha256", "attestationPostimageRegistrySha256", "beforeColumnsSha256", "afterColumnsSha256"].every(key => CLOSED_R2_SHA.test(database[key] ?? ""))
+    && database.normalProjectionSha256 === QUANTITY_V4_PROTECTION?.normalProjectionSha256
+    && database.postimageRegistrySha256 === QUANTITY_V4_PROTECTION?.postimageRegistrySha256
+    && database.beforeColumnsSha256 === database.afterColumnsSha256
+    && database.beforeScope?.aliasSha256 === database.afterScope?.aliasSha256
+    && database.attestationScope?.beforeOuterSha256 === database.beforeScope?.outerSha256
+    && database.attestationScope?.afterOuterSha256 === database.afterScope?.outerSha256
+    && database.attestationScope?.afterAliasSha256 === database.beforeScope?.outerSha256
+    && database.attestationScope.afterOuterSha256 !== database.attestationScope.beforeOuterSha256
+    && database.beforeScope && Object.keys(database.beforeScope).sort().join() === "aliasSha256,outerSha256"
+    && Object.values(database.beforeScope).every(value => CLOSED_R2_SHA.test(value))
+    && database.workerCatalogBefore === QUANTITY_V4_WORKER_CATALOG_AFTER && database.workerCatalogAfter === QUANTITY_V4_WORKER_CATALOG_AFTER
+    && database.workerBaseline?.credentialGeneration === 48 && database.workerBaseline.workerReleaseSha === QUANTITY_V4_RELEASE_SHA
+    && database.workerBaseline.schemaIdentity === QUANTITY_V4_WORKER_SCHEMA_IDENTITY
+    && database.workerBaseline.workerPolicyEnabled === true
+    && ["credentialRowSha256", "policyRowSha256", "policyStableSha256", "snapshotDigest"].every(key => CLOSED_R2_SHA.test(database.workerBaseline[key] ?? ""))
+    && isDeepStrictEqual(review.readerEnvironment, {}), "Personal attestation cannot change C04 columns/scope/worker or add environment authority");
+  return review;
+}
+
+export function assertCookedWeightAttestationPredecessor(review, evidence) {
+  const original = evidence.authority.database.review;
+  assertQuantityV4ActiveWorkerContinuation(original, evidence);
+  const previous = review.predecessorQuantity;
+  closedR2Require(original.feature === QUANTITY_V4_FEATURE && original.quantityStage === "worker"
+    && evidence.authority.database.pointer.sha256 === previous.databaseReceipt.sha256
+    && evidence.authority.reader.pointer.sha256 === previous.readerReceipt.sha256
+    && evidence.authority.writer.pointer.sha256 === previous.writerReceipt.sha256
+    && isDeepStrictEqual(original.database.after, review.database.before)
+    && original.database.targetSha256 === review.database.targetSha256
+    && original.database.afterCatalogSha256 === review.database.beforeCatalogSha256
+    && original.database.afterImmutableSha256 === review.database.immutableSha256
+    && isDeepStrictEqual(original.database.afterScope, review.database.beforeScope), "Personal attestation predecessor227 image differs");
+  return evidence;
+}
+
+function readAttestationPredecessor(review, repositoryRoot) {
+  const original = loadProtectedRolloutReview(repositoryRoot, { feature: QUANTITY_V4_FEATURE, phase: "worker-database" });
+  const pointer = review.predecessorQuantity.activationEvidence;
+  const bytes = readClosedR2PrivateBytes(pointer.path, repositoryRoot, 524288);
+  closedR2Require(closedR2Hash(bytes) === pointer.sha256, "Personal attestation predecessor bytes differ");
+  const evidence = JSON.parse(bytes);
+  closedR2Require(isDeepStrictEqual(evidence.authority.database.review, original), "Personal attestation cannot substitute original C04 review");
+  for (const entry of [evidence.pre, evidence.post, evidence.verification, evidence.activation,
+    evidence.authority.database, evidence.authority.reader, evidence.authority.writer]) {
+    const raw = readClosedR2PrivateBytes(entry.pointer.path, repositoryRoot, 524288);
+    closedR2Require(closedR2Hash(raw) === entry.pointer.sha256 && isDeepStrictEqual(JSON.parse(raw), entry.record), "Personal attestation original receipt bytes differ");
+  }
+  const controlBytes = readClosedR2PrivateBytes(QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN.path, repositoryRoot, 524288);
+  closedR2Require(closedR2Hash(controlBytes) === QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN.sha256, "Personal attestation original worker control bytes differ");
+  const control = JSON.parse(controlBytes), directory = join(QUANTITY_V4_WORKER_OPERATION_ROOT, original.workerAuthority.operationId);
+  for (const [phase, entry] of [["before", evidence.pre], ["after", evidence.post]]) {
+    const raw = readClosedR2PrivateBytes(entry.origin.pointer.path, repositoryRoot, 524288);
+    closedR2Require(closedR2Hash(raw) === entry.origin.pointer.sha256 && isDeepStrictEqual(JSON.parse(raw), entry.origin.record), "Personal attestation immutable worker origin bytes differ");
+    assertQuantityV4WorkerAuthority(original, control, entry.origin.record, entry.record, phase, directory);
+  }
+  return assertCookedWeightAttestationPredecessor(review, evidence);
+}
+
+export function assertCookedWeightAttestationDatabaseReceipt(review, record) {
+  closedR2Require(record?.schema === "homecook.prelaunch-protected-db-attempt.v1" && record.feature === COOKED_WEIGHT_ATTESTATION_FEATURE
+    && record.status === "committed" && record.reviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256
+    && record.from === review.from && record.to === review.to && record.targetSha256 === review.database.targetSha256
+    && record.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: review.database.after, applied: review.database.after }))
+    && record.catalogSha256 === review.database.afterCatalogSha256 && record.immutableSha256 === review.database.afterImmutableSha256
+    && record.writerEnabled === false && record.readerReady === false && record.backwardCompatible === false
+    && record.productWriterEnabled === true && record.cookedWeightWriterEnabled === true && record.quantityWriterEnabled === true
+    && record.attestationRowsEmpty === true && record.rowsPreservedInTransaction === true
+    && CLOSED_R2_SHA.test(record.normalDataSha256 ?? "") && CLOSED_R2_SHA.test(record.preservedRowsSha256 ?? "")
+    && record.backup?.fullArchiveDecoded === true && CLOSED_R2_SHA.test(record.backup.sha256 ?? "") && CLOSED_R2_SHA.test(record.backup.rolesSha256 ?? "")
+    && closedR2Hash(JSON.stringify(record.backup.target)) === review.database.targetSha256
+    && isDeepStrictEqual(record.predecessorQuantity, review.predecessorQuantity), "Personal attestation terminal228 authority differs");
+  return record;
+}
+
+export function loadCookedWeightAttestationSuccessor(repositoryRoot) {
+  const guardPath = protectedRolloutPaths(prelaunchStateRoot(), { feature: COOKED_WEIGHT_ATTESTATION_FEATURE }).databaseGuardPath;
+  if (!existsSync(guardPath)) return null;
+  const review = loadProtectedRolloutReview(repositoryRoot, { feature: COOKED_WEIGHT_ATTESTATION_FEATURE });
+  const guardBytes = readClosedR2PrivateBytes(guardPath, repositoryRoot, 524288), record = JSON.parse(guardBytes);
+  const paths = protectedRolloutPaths(prelaunchStateRoot(), review);
+  closedR2Require(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(record.operationId ?? "")
+    && record.operationDirectory === join(paths.operationRoot, record.operationId), "Personal attestation fixed operation locator differs");
+  const pointer = { path: join(record.operationDirectory, "receipt.json"), sha256: closedR2Hash(guardBytes) };
+  const bytes = readClosedR2PrivateBytes(pointer.path, repositoryRoot, 524288);
+  closedR2Require(bytes.equals(guardBytes), "Personal attestation immutable terminal and guard differ");
+  assertCookedWeightAttestationDatabaseReceipt(review, record);
+  const predecessor = readAttestationPredecessor(review, repositoryRoot);
+  return { review, record, pointer, guardPointer: { path: guardPath, sha256: pointer.sha256 }, predecessor };
+}
+
+export function cookedWeightAttestationSuccessorBinding(successor) {
+  if (!successor) return null;
+  assertCookedWeightAttestationDatabaseReceipt(successor.review, successor.record);
+  closedR2Require(successor.pointer.sha256 === successor.guardPointer.sha256, "Personal attestation terminal raw bytes binding differs");
+  return { schema: "homecook.cooked-weight-attestation-successor.v1", reviewSha256: COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256,
+    receipt: successor.pointer, predecessorDatabaseReceiptSha256: successor.review.predecessorQuantity.databaseReceipt.sha256,
+    targetSha256: successor.review.database.targetSha256, ledgerCount: 228, migrationSha256: COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256 };
+}
+
+export function loadCookedWeightAttestationQuantityOff(repositoryRoot, successor) {
+  const original = successor.predecessor.authority.database.review;
+  const prefix = protectedRolloutPaths(prelaunchStateRoot(), original).writerPrefix;
+  const path = join(prelaunchStateRoot(), `${prefix}-${QUANTITY_V4_WRITER_REVIEW_PIN.sha256}-writer-off.json`);
+  if (!existsSync(path)) return null;
+  const record = JSON.parse(readClosedR2PrivateBytes(path, repositoryRoot, 524288));
+  closedR2Require(record.schema === "homecook.prelaunch-protected-writer-attempt.v1" && record.status === "committed" && record.feature === QUANTITY_V4_FEATURE
+    && record.action === "writer-off" && record.writerEnabled === false && record.reviewSha256 === successor.review.predecessorQuantity.reviewSha256
+    && record.approvalSha256 === successor.review.predecessorQuantity.writerApprovalSha256
+    && record.readerReceiptSha256 === successor.review.predecessorQuantity.readerReceipt.sha256
+    && record.readerFloor === original.to && record.from === original.from && record.to === original.to
+    && closedR2Hash(JSON.stringify(record.target)) === successor.review.database.targetSha256
+    && record.baselineReviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256
+    && record.baselineDatabasePlanSha256 === closedR2Hash(JSON.stringify({ source: successor.review.database.after, applied: successor.review.database.after }))
+    && isDeepStrictEqual(record.databaseSuccessor, cookedWeightAttestationSuccessorBinding(successor)), "Personal successor quantity OFF receipt differs");
+  return record;
+}
+
+export function assertCookedWeightAttestationWorkerTransition(successor, before, after, enabled, quantityOffReceipt = null) {
+  const baseline = successor.review.database.workerBaseline, binding = cookedWeightAttestationSuccessorBinding(successor);
+  for (const observation of [before, after]) closedR2Require(observation?.ledgerCount === 228
+    && isDeepStrictEqual(observation.databaseSuccessor, binding) && observation.targetSha256 === successor.review.database.targetSha256
+    && observation.catalogFingerprint === QUANTITY_V4_WORKER_CATALOG_AFTER && observation.credentialGeneration === 48
+    && observation.workerReleaseSha === QUANTITY_V4_RELEASE_SHA && observation.credentialRowSha256 === baseline.credentialRowSha256
+    && observation.schemaIdentity === baseline.schemaIdentity && observation.snapshotDigest === baseline.snapshotDigest
+    && observation.policyStableSha256 === baseline.policyStableSha256 && observation.productWriterEnabled === true
+    && observation.weightWriterEnabled === true && CLOSED_R2_SHA.test(observation.policyRowSha256 ?? ""), "Personal successor controlled worker observation differs");
+  const off = quantityOffReceipt;
+  const knownQuantityOff = enabled && after.quantityPolicyEnabled === false && off?.schema === "homecook.prelaunch-protected-writer-attempt.v1"
+    && off.status === "committed" && off.action === "writer-off" && off.writerEnabled === false && off.feature === QUANTITY_V4_FEATURE
+    && off.reviewSha256 === successor.review.predecessorQuantity.reviewSha256 && off.approvalSha256 === successor.review.predecessorQuantity.writerApprovalSha256
+    && off.readerReceiptSha256 === successor.review.predecessorQuantity.readerReceipt.sha256
+    && off.baselineReviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256
+    && isDeepStrictEqual(off.databaseSuccessor, binding);
+  closedR2Require(before.quantityPolicyEnabled === enabled && (after.quantityPolicyEnabled === enabled || knownQuantityOff), "Personal successor unreceipted quantity transition denied");
+  if (enabled) for (const observation of [before, after]) closedR2Require(observation.queued === 0 && observation.processing === 0
+    && observation.permitHeld === false && observation.activeEnqueueSessions === 0, "Personal successor positive activation is not quiescent");
+  closedR2Require(before.workerPolicyEnabled === !enabled && after.workerPolicyEnabled === enabled
+    && isDeepStrictEqual(after.policy, { ...before.policy, enabled }), "Personal successor changes only worker enabled/timestamp");
+  return after;
+}
+
+// Current policy is authorized by the fixed controlled journal and immutable receipts, never by a new PID or a row observed later.
+export function loadCookedWeightAttestationWorkerContinuation(successor, repositoryRoot) {
+  const historical = successor.predecessor, original = historical.authority.database.review;
+  const directory = join(QUANTITY_V4_WORKER_OPERATION_ROOT, original.workerAuthority.operationId);
+  const current = JSON.parse(readClosedR2PrivateBytes(join(directory, "cutover-journal.json"), repositoryRoot, 524288));
+  const binding = cookedWeightAttestationSuccessorBinding(successor);
+  const header = record => closedR2Require(record.reviewSha256 === original.workerAuthority.controlReviewSha256
+    && record.operationId === original.workerAuthority.operationId && record.operationDirectory === directory
+    && record.releaseSha === original.to && record.targetSha256 === original.database.targetSha256
+    && record.workerDatabaseReceiptSha256 === historical.authority.database.pointer.sha256, "Personal successor current worker operation differs");
+  header(current);
+  closedR2Require(current.schema === "homecook.youtube-c04-controlled-cutover-journal.v1", "Personal successor current journal schema differs");
+  const read = (pointer, kind) => { const value = readQuantityV4PolicyRepairFile(pointer, kind, directory, repositoryRoot); header(value.record); return value; };
+  const publication = /^verifications\/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\/post-worker-terminal\.json$/u;
+  function readPublication(postPointer, originPointer) {
+    closedR2Require([postPointer, originPointer].every(pointer => pointer && Object.keys(pointer).sort().join() === "path,sha256"
+      && CLOSED_R2_SHA.test(pointer.sha256 ?? "") && isAbsolute(pointer.path ?? "") && resolve(pointer.path) === pointer.path), "Personal successor publication pointer differs");
+    closedR2Require(postPointer && (isDeepStrictEqual(postPointer, historical.post.pointer)
+      || publication.test(relative(directory, postPointer.path))) && originPointer?.path === join(dirname(postPointer.path), "post-worker-origin.json"),
+      "Personal successor current worker publication locator differs");
+    const postBytes = readClosedR2PrivateBytes(postPointer.path, repositoryRoot, 524288), originBytes = readClosedR2PrivateBytes(originPointer.path, repositoryRoot, 524288);
+    closedR2Require(closedR2Hash(postBytes) === postPointer.sha256 && closedR2Hash(originBytes) === originPointer.sha256, "Personal successor current worker publication bytes differ");
+    const post = JSON.parse(postBytes), origin = JSON.parse(originBytes);
+    if (post.schema === "homecook.prelaunch-quantity-worker-after.v1") closedR2Require(isDeepStrictEqual(post, historical.post.record)
+      && isDeepStrictEqual(originPointer, historical.post.origin.pointer), "Personal successor historical worker checkpoint differs");
+    else {
+      closedR2Require(post.schema === "homecook.prelaunch-quantity-worker-after-successor.v1"
+        && Object.keys(post).sort().join() === [...Object.keys(historical.post.record), "databaseSuccessor", "predecessorRecord"].sort().join()
+        && post.ledgerCount === 228 && isDeepStrictEqual(post.databaseSuccessor, binding)
+        && isDeepStrictEqual(post.predecessorRecord, historical.post.record)
+        && isDeepStrictEqual(origin.databaseSuccessor, binding)
+        && isDeepStrictEqual(origin.successorPredecessorCheckpoint, historical.post.pointer)
+        && isDeepStrictEqual(origin.successorPredecessorOrigin, historical.post.origin.pointer), "Personal successor current checkpoint source differs");
+      for (const key of ["feature", "releaseSha", "targetSha256", "consumersReceiptSha256", "credentialGeneration", "workerReleaseSha", "schemaIdentity", "snapshotDigest",
+        "credentialRowSha256", "artifactSha256", "descriptorSha256", "credentialMetadataSha256", "plistSha256", "workerDatabaseReceiptSha256", "workerOperationId", "workerReviewSha256", "zeroActualAI"])
+        closedR2Require(isDeepStrictEqual(post[key], historical.post.record[key]), "Personal successor current checkpoint identity differs");
+      closedR2Require(post.quantityPolicyEnabled === false && post.workerPolicyEnabled === false && post.productWriterEnabled === true
+        && post.weightWriterEnabled === true && post.queued === 0 && post.processing === 0 && !post.permitHeld && post.activeEnqueueSessions === 0
+        && post.status === "committed" && post.catalogFingerprint === QUANTITY_V4_WORKER_CATALOG_AFTER
+        && post.serviceState === "running" && Number.isSafeInteger(post.pid) && post.pid > 0
+        && ["normalDataSha256", "policyRowSha256"].every(key => CLOSED_R2_SHA.test(post[key] ?? "")), "Personal successor current checkpoint positive state differs");
+    }
+    header(origin);
+    closedR2Require(origin.schema === "homecook.youtube-c04-controlled-cutover-journal.v1" && origin.state === "verified-policy-disabled", "Personal successor immutable publication state differs");
+    closedR2Require(isDeepStrictEqual(origin.postWorkerTerminal, postPointer)
+      && origin.policyStableSha256 === successor.review.database.workerBaseline.policyStableSha256, "Personal successor immutable worker origin differs");
+    return { record: post, pointer: postPointer, origin: { record: origin, pointer: originPointer } };
+  }
+  const publicationEvidence = readPublication(current.postWorkerTerminal, current.postWorkerOrigin);
+  const { record: post, origin: { record: origin } } = publicationEvidence;
+  const committed = (pointer, expectedPost = post, reconciliation = false) => {
+    const applied = read(pointer, reconciliation ? "reconciliation" : "activation");
+    closedR2Require(applied.record.status === "committed", "Personal successor worker activation is unresolved");
+    if (!reconciliation && applied.record.schema === "homecook.youtube-c04-activation-receipt.v1") {
+      closedR2Require(isDeepStrictEqual(applied.pointer, historical.activation.pointer)
+        && isDeepStrictEqual(applied.record, historical.activation.record), "Personal successor cannot adopt another historical activation");
+      return applied;
+    }
+    closedR2Require(applied.record.schema === (reconciliation ? "homecook.youtube-c04-activation-reconciliation-successor.v1" : "homecook.youtube-c04-activation-receipt-successor.v1")
+      && isDeepStrictEqual(applied.record.databaseSuccessor, binding), "Personal successor activation binding differs");
+    const verification = read(applied.record.activationVerification, "verification");
+    closedR2Require(isDeepStrictEqual(verification.record.post, expectedPost), "Personal successor activation checkpoint differs");
+    closedR2Require(isDeepStrictEqual(applied.record.beforeObservation, verification.record.observation)
+      && (reconciliation || isDeepStrictEqual(applied.record.database, applied.record.observation))
+      && (reconciliation ? verification.record.authority?.readerReceiptSha256 === historical.authority.reader.pointer.sha256
+        && verification.record.authority?.writerReceiptSha256 === historical.authority.writer.pointer.sha256
+        : applied.record.readerReceiptSha256 === historical.authority.reader.pointer.sha256
+        && applied.record.writerReceiptSha256 === historical.authority.writer.pointer.sha256)
+      && applied.record.zeroActualAI === true, "Personal successor activation publication differs");
+    if (!reconciliation && verification.record.schema === "homecook.youtube-c04-activation-verification.v1") {
+      closedR2Require(isDeepStrictEqual(verification.pointer, historical.verification.pointer)
+        && isDeepStrictEqual(applied.record.predecessorActivationReceipt, historical.activation.pointer)
+        && applied.record.observation.policyRowSha256 === historical.activation.record.observation.policyRowSha256,
+        "Personal successor historical activation readback differs");
+    } else {
+      closedR2Require(verification.record.schema === "homecook.youtube-c04-activation-verification-successor.v1"
+        && isDeepStrictEqual(verification.record.databaseSuccessor, binding), "Personal successor activation intent differs");
+      assertCookedWeightAttestationWorkerTransition(successor, verification.record.observation, applied.record.observation, true,
+        reconciliation && applied.record.observation.quantityPolicyEnabled === false ? loadCookedWeightAttestationQuantityOff(repositoryRoot, successor) : null);
+      if (reconciliation) closedR2Require(isDeepStrictEqual(applied.record.expectedAfter, {
+        workerPolicyEnabled: true, policyStableSha256: verification.record.observation.policyStableSha256,
+        credentialRowSha256: verification.record.observation.credentialRowSha256, credentialGeneration: 48, workerReleaseSha: original.to,
+        targetSha256: original.database.targetSha256, ledgerCount: 228, catalogFingerprint: QUANTITY_V4_WORKER_CATALOG_AFTER, databaseSuccessor: binding })
+        && CLOSED_R2_SHA.test(verification.record.observation.normalDataSha256 ?? "")
+        && verification.record.observation.normalDataSha256 === applied.record.observation.normalDataSha256,
+        "Personal successor committed reconciliation lacks exact same228 intent/normal preservation");
+    }
+    return applied;
+  };
+  if (current.state === "activation-committed") {
+    const activation = committed(current.activationReceipt);
+    closedR2Require(isDeepStrictEqual(current.activationVerification, activation.record.activationVerification), "Personal successor current activation pointer differs");
+    return { historical, current, post: publicationEvidence, activation, observation: activation.record.observation };
+  }
+  closedR2Require(["repair-quiesced", "repair-drain-pending", "verified-policy-disabled"].includes(current.state), "Personal successor pending/unknown worker state denied");
+  const pause = read(current.repairPause, "pause"), paused = pause.record;
+  closedR2Require(paused.schema === "homecook.youtube-c04-repair-pause-successor.v1"
+    && ["quiesced", "drain_pending"].includes(paused.status) && isDeepStrictEqual(paused.databaseSuccessor, binding)
+    && paused.zeroActualAI === true && Boolean(paused.activationReceipt) !== Boolean(paused.activationReconciliation), "Personal successor repair origin differs");
+  // Exactly one immutable predecessor, never a recursive history search.
+  const previous = readPublication(paused.previousPostWorkerTerminal, paused.previousPostWorkerOrigin);
+  closedR2Require(isDeepStrictEqual(paused.post, previous.record), "Personal successor repair predecessor bytes differ");
+  const activation = committed(paused.activationReceipt ?? paused.activationReconciliation, paused.post, !paused.activationReceipt);
+  closedR2Require(paused.beforeObservation.policyRowSha256 === activation.record.observation.policyRowSha256
+    && isDeepStrictEqual(paused.activationVerification, activation.record.activationVerification), "Personal successor repair is not the committed activation successor");
+  assertCookedWeightAttestationWorkerTransition(successor, paused.beforeObservation, paused.observation, false);
+  if (current.state === "verified-policy-disabled" && post.schema === "homecook.prelaunch-quantity-worker-after-successor.v1") closedR2Require(
+    post.policyRowSha256 === paused.observation.policyRowSha256 && isDeepStrictEqual(origin.repairPause, pause.pointer)
+    && isDeepStrictEqual(origin.previousPostWorkerTerminal, previous.pointer) && isDeepStrictEqual(origin.previousPostWorkerOrigin, previous.origin.pointer)
+    && isDeepStrictEqual(origin.activationVerification, paused.activationVerification)
+    && isDeepStrictEqual(origin.activationReceipt, paused.activationReceipt) && isDeepStrictEqual(origin.activationReconciliation, paused.activationReconciliation), "Personal successor latest OFF publication differs");
+  return { historical, current, post: publicationEvidence, activation, pause, observation: paused.observation };
 }
 
 export function assertQuantityV4Predecessor(review, c01, records) {
@@ -737,6 +1032,9 @@ export function verifyProtectedRolloutEvidence(review, repositoryRoot) {
     closedR2Require(closedR2Hash(bytes) === review[key].sha256, "보호 전환 증거 bytes가 바뀌었습니다.");
     result[key] = JSON.parse(bytes);
   }
+  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) {
+    result.predecessorQuantity = readAttestationPredecessor(review, repositoryRoot);
+  }
   const isolated = result.isolatedEvidence;
   closedR2Require(isolated.schema === "homecook.prelaunch-protected-isolated-evidence.v1" && isolated.from === review.from && isolated.to === review.to
     && isolated.passed === true && isolated.allNewShapesOff === true && isolated.legacyReaderCompatible === true
@@ -773,6 +1071,13 @@ export function verifyProtectedRolloutEvidence(review, repositoryRoot) {
       result.consumersReceipt = assertQuantityV4ConsumersReceipt(review, JSON.parse(bytes));
     }
   }
+  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) closedR2Require(isolated.feature === COOKED_WEIGHT_ATTESTATION_FEATURE
+    && isolated.productWriterEnabled === true && isolated.cookedWeightWriterEnabled === true && isolated.quantityWriterEnabled === true
+    && isolated.attestationRowsEmpty === true && isolated.afterImmutableSha256 === review.database.afterImmutableSha256
+    && isDeepStrictEqual(isolated.attestationScope, review.database.attestationScope)
+    && isolated.normalProjectionSha256 === review.database.normalProjectionSha256
+    && isolated.postimageRegistrySha256 === review.database.postimageRegistrySha256
+    && result.readerFlows.emptyFactsPredecessorCompatible === true, "Personal attestation exact source/alias/empty facts reader proof differs");
   return result;
 }
 
@@ -838,6 +1143,8 @@ export function assertProtectedRolloutEnvironment({ review, before, after, curre
       expected.EnvironmentVariables = { ...expected.EnvironmentVariables, [COOKED_WEIGHT_ENVIRONMENT]: "1" };
     } else closedR2Require([review.readerEnvironment[COOKED_WEIGHT_ENVIRONMENT][0], "1"].includes(actualGate), "C01 boundary cannot adopt an unreviewed gate");
   }
+  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) closedR2Require(before.EnvironmentVariables[COOKED_WEIGHT_ENVIRONMENT] === "1"
+    && before.EnvironmentVariables[QUANTITY_V4_ENVIRONMENT] === "true", "Personal attestation preserves C01/C04 reader gates without new environment");
   if (review.feature === QUANTITY_V4_FEATURE) {
     const actualGate = before.EnvironmentVariables[QUANTITY_V4_ENVIRONMENT] ?? null;
     closedR2Require(before.EnvironmentVariables[COOKED_WEIGHT_ENVIRONMENT] === "1", "C04 preserves the completed C01 reader gate");
@@ -872,6 +1179,10 @@ export function protectedRolloutReaderReceipt({ review, reviewSha256, databaseRe
       && databaseReceipt.immutableSha256 === protectedImmutableSha256(review) && databaseReceipt.stableImmutableSha256 === review.database.stableImmutableSha256
       && isDeepStrictEqual(databaseReceipt.predecessorProtected, review.predecessorProtected), "C01 DB receipt must retain the C03 predecessor");
     Object.assign(result, { feature: COOKED_WEIGHT_FEATURE, predecessorProtected: review.predecessorProtected });
+  }
+  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) {
+    assertCookedWeightAttestationDatabaseReceipt(review, databaseReceipt);
+    Object.assign(result, { feature: COOKED_WEIGHT_ATTESTATION_FEATURE, predecessorQuantity: review.predecessorQuantity, emptyFactsPredecessorCompatible: true });
   }
   if (review.feature === QUANTITY_V4_FEATURE) {
     assertQuantityV4WorkerCheckpoint(review, workerCheckpoint, "after");
@@ -923,6 +1234,9 @@ export function assertProtectedClosedR2Marker({ state, marker, markerSha256, liv
   if (rollout.feature === COOKED_WEIGHT_FEATURE) closedR2Require(isDeepStrictEqual(authority?.predecessorProtected, rollout.predecessorProtected)
     && isDeepStrictEqual(databaseReceipt.predecessorProtected, rollout.predecessorProtected)
     && isDeepStrictEqual(readerReceipt.predecessorProtected, rollout.predecessorProtected), "C01 marker cannot delete or retarget C03 authority");
+  if (rollout.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) closedR2Require(isDeepStrictEqual(authority?.predecessorQuantity, rollout.predecessorQuantity)
+    && isDeepStrictEqual(databaseReceipt.predecessorQuantity, rollout.predecessorQuantity)
+    && isDeepStrictEqual(readerReceipt.predecessorQuantity, rollout.predecessorQuantity), "Personal attestation marker retains original C04 authority");
   if (rollout.feature === QUANTITY_V4_FEATURE) closedR2Require(rollout.quantityStage === "worker"
     && isDeepStrictEqual(authority?.predecessorProtected, rollout.predecessorProtected)
     && isDeepStrictEqual(databaseReceipt.predecessorProtected, rollout.predecessorProtected)
@@ -1354,7 +1668,7 @@ export function parsePrelaunchOptions(args) {
   }
   if (options.reviewedProtectedRollout) {
     if (options.refOption !== "--reviewed-ref" || !CLOSED_R2_REF.test(options.ref) || !options.dbConfig
-      || options.testScript !== "test:feedback-batch:web" || !["database", "database-retry", "worker-database", "worker-database-retry", "worker-reconcile", "reader", "reconcile", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry"].includes(options.protectedPhase)
+      || options.testScript !== "test:feedback-batch:web" || !["database", "database-retry", "worker-database", "worker-database-retry", "worker-reconcile", "reader", "reconcile", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry", "attestation-database", "attestation-database-retry", "attestation-reconcile", "attestation-reader", "attestation-writer-on", "attestation-writer-off", "attestation-writer-on-reconcile", "attestation-writer-off-reconcile", "attestation-writer-on-retry", "attestation-writer-off-retry"].includes(options.protectedPhase)
       || options.envFile || options.dbBaseline || options.dbCompatible || options.alreadyAppliedDb || options.skipAutomatedTests || options.verifyScript
       || Object.entries(options).some(([key, value]) => key.startsWith("reviewed") && key !== "reviewedProtectedRollout" && value)) {
       throw new DeploymentError("보호 전환에는 정확한 reviewed-ref/DB/기존 test/phase만 허용합니다. 환경·기존 reviewed·자동 DB 옵션은 사용할 수 없습니다.");
