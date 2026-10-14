@@ -61,6 +61,62 @@ describe.skipIf(!contextPath)("C03 on offline archive schema-only rehearsal", ()
     const verify = readFileSync(join(process.cwd(), "tests/sql/recipe-product-only-verify.sql"), "utf8");
     expect(JSON.parse(psql(fixture + verify)).status).toBe("PASS");
   });
+  it("forks a nullable public-dataset product as verified B with exact V1 rows and unchanged public source", async () => {
+    const other = "79000000-0000-4000-8000-000000000002";
+    const forkFixture = `${fixture} insert into public.users(id,nickname,social_provider,social_id)
+      values('${other}','영양 제품 검증 B','google','product-nutrition-test-b');`;
+    const client = {
+      from: () => { throw new Error("public product fork must not query generic predecessors"); },
+      rpc: async (_name: string, args: Record<string, unknown>) => ({
+        data: JSON.parse(psql(`${forkFixture} select public.read_recipe_product_nutrition_predecessors('${other}',${literal(args.p_ingredients)}); rollback;`)),
+        error: null,
+      }),
+    };
+    const nutrition = await calculateRecipeDraftNutrition(client, {
+      recipeId: id(10), baseRecipeRevision: 1, draft, ownerUserId: other,
+    });
+    expect(nutrition.nutritionSnapshot.scalable_values.energy_kcal).toBe(300);
+    const result = JSON.parse(psql(`${forkFixture} set local homecook.personal_recipe_v2='on';
+      set local request.jwt.claims='{"role":"service_role","sub":"${other}"}';
+      do $fork$
+      declare v_subject jsonb; v_first jsonb; v_replay jsonb; v_recipe uuid; v_row uuid; v_source jsonb; v_before bigint;
+      begin
+        v_subject:=public.assert_full_local_session_authority('https://auth.product-only.invalid/auth/v1','${other}','2026-01-01',repeat('8',64),1,2,'2026-01-02');
+        if v_subject->>'binding_state'<>'active' or (v_subject->>'expected_account_generation')::integer<>1
+          or not exists(select 1 from public.user_account_lifecycles where owner_uuid='${other}' and account_generation=1 and status='active') then raise exception 'B_FORK_SUBJECT_UNVERIFIED';end if;
+        select jsonb_build_object('recipe',to_jsonb(r),
+          'rows',(select coalesce(jsonb_agg(to_jsonb(i) order by id),'[]') from public.recipe_ingredients i where recipe_id=r.id),
+          'steps',(select coalesce(jsonb_agg(to_jsonb(s) order by id),'[]') from public.recipe_steps s where recipe_id=r.id),
+          'content',(select coalesce(jsonb_agg(to_jsonb(s) order by id),'[]') from public.recipe_content_snapshots s where recipe_id=r.id),
+          'nutrition',(select coalesce(jsonb_agg(to_jsonb(s) order by id),'[]') from public.recipe_nutrition_snapshots s where recipe_id=r.id))
+          into v_source from public.recipes r where id='${id(10)}';
+        select count(*) into v_before from public.recipes;
+        v_first:=public.write_personal_recipe_core('${other}','2026-01-01',repeat('8',64),1,'2026-01-02','fork',null,'${id(10)}',1,${literal(draft)},${literal(nutrition.nutritionSnapshot)},null,null,0,'${id(90)}');
+        v_replay:=public.write_personal_recipe_core('${other}','2026-01-01',repeat('8',64),1,'2026-01-02','fork',null,'${id(10)}',1,${literal(draft)},${literal(nutrition.nutritionSnapshot)},null,null,0,'${id(90)}');
+        v_recipe:=(v_first->'data'->>'id')::uuid;
+        if v_first is distinct from v_replay or v_recipe='${id(10)}'::uuid or (select count(*) from public.recipes)<>v_before+1
+          or not exists(select 1 from public.recipes where id=v_recipe and created_by='${other}' and origin_recipe_id='${id(10)}') then raise exception 'B_FORK_IDENTITY_OR_REPLAY_CHANGED';end if;
+        select id into strict v_row from public.recipe_ingredients where recipe_id=v_recipe;
+        if v_row='${id(11)}'::uuid or not exists(select 1 from public.recipe_ingredients where id=v_row and ingredient_id is null
+          and source_kind='food_product' and food_product_id='${id(3)}' and food_product_nutrition_version_id='${id(4)}'
+          and amount=0.5 and unit='package' and display_text='0.5팩') then raise exception 'B_FORK_FIXED_PRODUCT_OR_RAW_CHANGED';end if;
+        if not exists(select 1 from public.recipe_steps where recipe_id=v_recipe and instruction='0.5팩을 넣고 섞습니다.'
+          and ingredients_used->0->>'row_key'=v_row::text and ingredients_used->0->'ingredient_id'='null'::jsonb)
+          or not exists(select 1 from public.recipe_content_snapshots where id=(v_first->'data'->>'content_snapshot_id')::uuid
+          and ingredients_json->0->>'row_key'=v_row::text and ingredients_json->0->'ingredient_id'='null'::jsonb
+          and ingredients_json->0->>'food_product_nutrition_version_id'='${id(4)}'
+          and steps_json->0->'ingredients_used'->0->>'row_key'=v_row::text) then raise exception 'B_FORK_ROW_REFERENCE_LOST';end if;
+        if v_source is distinct from (select jsonb_build_object('recipe',to_jsonb(r),
+          'rows',(select coalesce(jsonb_agg(to_jsonb(i) order by id),'[]') from public.recipe_ingredients i where recipe_id=r.id),
+          'steps',(select coalesce(jsonb_agg(to_jsonb(s) order by id),'[]') from public.recipe_steps s where recipe_id=r.id),
+          'content',(select coalesce(jsonb_agg(to_jsonb(s) order by id),'[]') from public.recipe_content_snapshots s where recipe_id=r.id),
+          'nutrition',(select coalesce(jsonb_agg(to_jsonb(s) order by id),'[]') from public.recipe_nutrition_snapshots s where recipe_id=r.id))
+          from public.recipes r where id='${id(10)}') then raise exception 'B_FORK_PUBLIC_SOURCE_MUTATED';end if;
+      end $fork$;
+      select jsonb_build_object('status','PASS','checks',array['verified_B_generation','new_owner_fork','fixed_product_V1','new_row_step_snapshot_mapping','public_source_unchanged','same_key_replay']);
+      rollback;`));
+    expect(result.status).toBe("PASS");
+  });
   it("allows only the exact public recipe projection for anon and B, and preserves the scope/path boundary", () => {
     for (const role of ["anon", "authenticated"]) {
       psql(`${fixture}

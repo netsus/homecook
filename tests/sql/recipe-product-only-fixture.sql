@@ -11,7 +11,9 @@ select public.set_account_generation_internal_writer_marker('79000000-0000-4000-
 insert into auth.users(id,created_at,email) values('78000000-0000-4000-8000-000000000001','2026-01-01','product-a@example.invalid'),('79000000-0000-4000-8000-000000000002','2026-01-01','product-b@example.invalid');
 insert into public.user_account_generation_watermarks(owner_uuid,last_account_generation) values('78000000-0000-4000-8000-000000000001',1),('79000000-0000-4000-8000-000000000002',1);
 insert into public.user_account_lifecycles(owner_uuid,account_generation,auth_identity_created_at_snapshot,origin,status,activated_at) values('78000000-0000-4000-8000-000000000001',1,'2026-01-01','runtime','active',now()),('79000000-0000-4000-8000-000000000002',1,'2026-01-01','runtime','active',now());
-insert into public.user_session_generation_bindings(session_key_hash,hmac_key_version,owner_uuid,expected_account_generation,auth_identity_created_at_snapshot,binding_state,auth_authority,local_issuer,local_verified_at,auth_cutover_epoch,session_issued_at,last_token_issued_at,binding_expires_at) values(repeat('7',64),1,'78000000-0000-4000-8000-000000000001',1,'2026-01-01','active','local','https://auth.product-only.invalid/auth/v1',now(),2,'2026-01-02','2026-01-02','2099-01-01');
+insert into public.user_session_generation_bindings(session_key_hash,hmac_key_version,owner_uuid,expected_account_generation,auth_identity_created_at_snapshot,binding_state,auth_authority,local_issuer,local_verified_at,auth_cutover_epoch,session_issued_at,last_token_issued_at,binding_expires_at) values
+  (repeat('7',64),1,'78000000-0000-4000-8000-000000000001',1,'2026-01-01','active','local','https://auth.product-only.invalid/auth/v1',now(),2,'2026-01-02','2026-01-02','2099-01-01'),
+  (repeat('8',64),1,'79000000-0000-4000-8000-000000000002',1,'2026-01-01','active','local','https://auth.product-only.invalid/auth/v1',now(),2,'2026-01-02','2026-01-02','2099-01-01');
 
 
   set local request.jwt.claim.role = 'service_role';
