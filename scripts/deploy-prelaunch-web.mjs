@@ -147,6 +147,8 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
       reviewedIntegratedFiles: integratedReview?.reviewedFiles,
+      // validateProtectedCandidate above already checked the complete exact byte pairs.
+      reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
       reviewedProtectedInventorySupport: Boolean(protectedCandidate), eslintConfigDigests });
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts, integratedReview };

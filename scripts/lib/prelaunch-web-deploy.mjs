@@ -1115,13 +1115,14 @@ export function prelaunchChangedFiles(git, from, to) {
  * @param {string[]} files
  * @param {any} before
  * @param {any} after
- * @param {{reviewedYoutubeTrialSupport?: boolean, reviewedYoutubeResolutionSupport?: boolean, reviewedIntegratedFiles?: Set<string> | null, reviewedProtectedInventorySupport?: boolean, eslintConfigDigests?: (string | null)[] | null}} [options]
+ * @param {{reviewedYoutubeTrialSupport?: boolean, reviewedYoutubeResolutionSupport?: boolean, reviewedIntegratedFiles?: Set<string> | null, reviewedProtectedInventorySupport?: boolean, reviewedQuantityWorkerSupport?: boolean, eslintConfigDigests?: (string | null)[] | null}} [options]
  */
 export function classifyPrelaunchScope(files, before, after, {
   reviewedYoutubeTrialSupport = false,
   reviewedYoutubeResolutionSupport = false,
   reviewedIntegratedFiles = null,
   reviewedProtectedInventorySupport = false,
+  reviewedQuantityWorkerSupport = false,
   eslintConfigDigests = null,
 } = {}) {
   const scope = { web: [], database: [], support: [], api: [] };
@@ -1186,6 +1187,7 @@ export function classifyPrelaunchScope(files, before, after, {
     if (/^supabase\/migrations\/\d+_[^/]+\.sql$/u.test(file)) scope.database.push(file);
     else if (support.test(file) || exactSupport.has(file) || youtubeTrialSupport.has(file)
       || youtubeResolutionSupport.has(file) || reviewedIntegratedFiles?.has(file)
+      || (reviewedQuantityWorkerSupport && ["scripts/lib/youtube-extraction-worker-runtime.mjs", "scripts/manifests/youtube-extraction-expected-schema.json"].includes(file))
       || (reviewedProtectedInventorySupport && file === "scripts/lib/full-local-security-inventory.mjs")) scope.support.push(file);
     else if (web.test(file) || file === "instrumentation.ts"
       || (file === "eslint.config.mjs" && reviewedEslintResolution)) scope.web.push(file);

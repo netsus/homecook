@@ -506,6 +506,8 @@ C01 DB만 committed이고 reader가 pending일 때 C03 안전 OFF를 먼저 실�
 
 기존 `--reviewed-protected-rollout`에 `ingredient-quantity-v4`의 정확 5+1 단계를 연결한다. 최초 준비의 C04 PIN은 모두 null이었다. 현재는 사용자의 v9 상시 승인 아래 검토한 웹 `6b610eb012da`, 첫 consumers DB 단계와 원 worker 제어 자료·데이터 비교식을 소스에 고정했다. worker DB 단계와 writer 승인은 실제 선행 영수증이 생기기 전까지 null로 유지하며, 임의 경로나 환경변수로 대신하지 않는다. 이 소스 결속은 운영 적용·worker 설치·policy 활성화의 완료 기록이 아니다. F01/C03/C01 원 PIN과 권한·SQL은 보존한다.
 
+계획 검사에서는 C04의 전체 변경 파일·전후 byte·선행 증거를 먼저 검증한 경우에만 `scripts/lib/youtube-extraction-worker-runtime.mjs`와 `scripts/manifests/youtube-extraction-expected-schema.json`을 지원 파일로 분류한다. 일반 웹 및 C03/C01 분류에는 이 예외가 없고, 다른 worker 명령·설정 파일은 계속 거부한다. 이 분류로 worker를 실행하거나 교체하지 않으며 실제 전환은 별도 고정 worker 경로가 담당한다.
+
 - `database`/`database-retry`/`reconcile`: source227의 정확 first5 postgres payload·admin ledger만 실행하는 221→226 OFF 단계. reader floor나 ON을 게시하지 않는다.
 - `worker-database`/`worker-database-retry`/`worker-reconcile`: terminal226 출처와 worker quiesced checkpoint를 검증한 뒤 정확 f586 admin payload·원장1개를 실행하는 226→227 OFF 단계. 두 단계는 각각 같은 snapshot의 full archive decode/roles 백업·기존 데이터·원 원장 행·scope/ACL/control을 보존하며 unknown에서 자동 재실행하지 않는다.
 - `reader`: 실제 terminal227 bytes와 새 sealed worker의 원 검토 자료·controlled journal·post terminal 및 fresh target/catalog/queue/credential/plist/PID를 검증한 뒤 정확 웹 source/build/plist/floor를 게시한다. C01의 committed DB/reader/floor/실제 writer ON과 C03 ON을 먼저 요구한다.
