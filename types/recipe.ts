@@ -104,11 +104,15 @@ export interface RecipeTagListData {
   items: RecipeTagItem[];
 }
 
+export type RecipeIngredientSourceKind = "ingredient" | "food_product";
+
 export interface RecipeIngredient {
+  source_kind?: RecipeIngredientSourceKind;
+  row_key?: string;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   standard_name: string;
   amount: number | null;
   unit: string | null;
@@ -136,7 +140,8 @@ export interface RecipeStep {
   cooking_method: RecipeStepCookingMethod | null;
   cooking_methods?: RecipeStepCookingMethod[];
   ingredients_used: Array<{
-    ingredient_id: string;
+    ingredient_id: string | null;
+    row_key?: string;
     amount: number | null;
     unit: string | null;
     cut_size?: string | null;
@@ -147,7 +152,9 @@ export interface RecipeStep {
 }
 
 export interface RecipeEditIngredientDraft {
-  ingredient_id: string;
+  source_kind?: RecipeIngredientSourceKind;
+  row_key?: string;
+  ingredient_id: string | null;
   amount: number | null;
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
@@ -164,7 +171,8 @@ export interface RecipeEditStepDraft {
   cooking_method_id: string;
   cooking_method_ids: string[];
   ingredients_used: Array<{
-    ingredient_id: string;
+    ingredient_id: string | null;
+    row_key?: string;
     amount: number | null;
     unit: string | null;
     cut_size: string | null;
@@ -241,9 +249,12 @@ export interface RecipeNutrition {
 }
 
 export interface ManualRecipeIngredientInput {
+  component_label?: string | null;
+  source_kind?: RecipeIngredientSourceKind;
+  row_key?: string;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
-  ingredient_id: string;
+  ingredient_id: string | null;
   standard_name: string;
   amount: number | null;
   unit: string | null;
@@ -254,13 +265,15 @@ export interface ManualRecipeIngredientInput {
 }
 
 export interface ManualRecipeStepIngredientUsedInput {
-  ingredient_id: string;
+  ingredient_id: string | null;
+  row_key?: string;
   amount: number | null;
   unit: string | null;
   cut_size?: string | null;
 }
 
 export interface ManualRecipeStepInput {
+  component_label?: string | null;
   step_number: number;
   instruction: string;
   cooking_method_id: string;
@@ -307,12 +320,14 @@ export type YoutubeQuantityConfirmationStatus =
   | "cleared_to_taste";
 
 export interface YoutubeRecipeRegisterIngredientInput extends ManualRecipeIngredientInput {
+  ingredient_id: string;
   component_label?: string | null;
   draft_ingredient_id: string;
   quantity_confirmation_status: YoutubeQuantityConfirmationStatus;
 }
 
 export interface YoutubeRecipeRegisterStepInput extends ManualRecipeStepInput {
+  ingredients_used: Array<ManualRecipeStepIngredientUsedInput & { ingredient_id: string }>;
   component_label?: string | null;
 }
 
@@ -359,6 +374,7 @@ export interface YoutubeIngredientCandidate {
 }
 
 export interface YoutubeExtractedIngredient extends ManualRecipeIngredientInput {
+  ingredient_id: string;
   draft_ingredient_id: string;
   confidence: number | null;
   resolution_status: YoutubeIngredientResolutionStatus;
@@ -624,6 +640,10 @@ export interface RecipeBookReaderRecipeData extends RecipeBookRecipeItem {
 export interface PantryMatchMissingIngredient {
   id: string;
   standard_name: string;
+  source_kind?: RecipeIngredientSourceKind;
+  row_key?: string;
+  food_product_id?: string;
+  food_product_nutrition_version_id?: string | null;
 }
 
 export interface PantryMatchRecipeItem {

@@ -113,6 +113,7 @@ export interface ShoppingListItemSummary {
   category?: string | null;
   display_text: string;
   amounts_json: Array<{ amount: number; unit: string }>;
+  purchase_suggestion?: { amount: number; unit: "package" } | null;
   is_checked: boolean;
   is_pantry_excluded: boolean;
   added_to_pantry: boolean;

@@ -1,3 +1,4 @@
+import { isRecipeIngredientIdentityValid } from "@/lib/recipe-ingredient-source";
 import type { RecipeEditContext } from "@/types/recipe";
 
 export type PendingRecipeActionType =
@@ -14,12 +15,18 @@ interface PendingRecipeActionBase {
   redirectTo: string;
   createdAt: number;
   sourceOwnerUuid?: string | null;
+  sourceAccountGeneration?: number;
+}
+
+export interface RecipeEditorPantryResume {
+  mode: "edit" | "fork";
+  rowKey: string | null;
 }
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
   | { type: "like" | "save" | "recipe-delete" }
   | { type: "planner"; plannedServings?: number }
-  | { type: "recipe-fork"; editContext?: RecipeEditContext }
+  | { type: "recipe-fork"; editContext?: RecipeEditContext; resumeEditor?: RecipeEditorPantryResume }
   | { type: "recipe-edit-save" | "recipe-save-as-new"; editContext: RecipeEditContext }
 );
 
@@ -58,39 +65,30 @@ function isNullableUuid(value: unknown): value is string | null {
 
 function isIngredientUsed(value: unknown) {
   return isRecord(value)
-    && hasExactKeys(value, ["ingredient_id", "amount", "unit", "cut_size"])
-    && typeof value.ingredient_id === "string"
-    && UUID_PATTERN.test(value.ingredient_id)
-    && isNullableNumber(value.amount)
-    && isNullableString(value.unit)
-    && isNullableString(value.cut_size);
+    && (hasExactKeys(value, ["ingredient_id", "amount", "unit", "cut_size"])
+      || hasExactKeys(value, ["ingredient_id", "row_key", "amount", "unit", "cut_size"]))
+    && isNullableUuid(value.ingredient_id)
+    && (value.row_key === undefined ? typeof value.ingredient_id === "string" : typeof value.row_key === "string" && UUID_PATTERN.test(value.row_key))
+    && isNullableNumber(value.amount) && isNullableString(value.unit) && isNullableString(value.cut_size);
 }
 
 function isIngredient(value: unknown) {
-  return isRecord(value)
-    && hasExactKeys(value, [
-      "ingredient_id",
-      "amount",
-      "unit",
-      "ingredient_type",
-      "display_text",
-      "component_label",
-      "scalable",
-      "food_product_id",
-      "food_product_nutrition_version_id",
-    ])
-    && typeof value.ingredient_id === "string"
-    && UUID_PATTERN.test(value.ingredient_id)
-    && isNullableNumber(value.amount)
-    && isNullableString(value.unit)
+  if (!isRecord(value)) return false;
+  const keys = ["ingredient_id", "amount", "unit", "ingredient_type", "display_text", "component_label", "scalable", "food_product_id", "food_product_nutrition_version_id"];
+  if (Object.hasOwn(value, "row_key")) keys.push("row_key");
+  if (Object.hasOwn(value, "source_kind")) keys.push("source_kind");
+  if (!hasExactKeys(value, keys) || !isNullableUuid(value.ingredient_id)
+    || !isNullableUuid(value.food_product_id) || !isNullableUuid(value.food_product_nutrition_version_id)
+    || (value.row_key !== undefined && (typeof value.row_key !== "string" || !UUID_PATTERN.test(value.row_key)))
+    || (value.source_kind !== undefined && value.source_kind !== "ingredient" && value.source_kind !== "food_product")) return false;
+  return isRecipeIngredientIdentityValid({
+    ingredient_id: value.ingredient_id, food_product_id: value.food_product_id,
+    food_product_nutrition_version_id: value.food_product_nutrition_version_id,
+    row_key: value.row_key, source_kind: value.source_kind,
+  }) && isNullableNumber(value.amount) && isNullableString(value.unit)
     && (value.ingredient_type === "QUANT" || value.ingredient_type === "TO_TASTE")
-    && isNullableString(value.display_text)
-    && isNullableString(value.component_label)
-    && typeof value.scalable === "boolean"
-    && isNullableUuid(value.food_product_id)
-    && isNullableUuid(value.food_product_nutrition_version_id)
-    && ((value.food_product_id === null) ===
-      (value.food_product_nutrition_version_id === null));
+    && isNullableString(value.display_text) && isNullableString(value.component_label)
+    && typeof value.scalable === "boolean";
 }
 
 function isStep(value: unknown) {
@@ -159,6 +157,7 @@ export function parsePendingAction(raw: string, now = Date.now()) {
       || value.createdAt > now
       || now - value.createdAt >= PENDING_ACTION_TTL_MS
       || (value.sourceOwnerUuid !== undefined && !isNullableUuid(value.sourceOwnerUuid))
+      || (value.sourceAccountGeneration !== undefined && !isPositiveInteger(value.sourceAccountGeneration))
     ) {
       return null;
     }
@@ -184,6 +183,13 @@ export function parsePendingAction(raw: string, now = Date.now()) {
       && typeof value.redirectTo === "string"
       && (value.editContext === undefined || isEditContext(value.editContext))
     ) {
+      if (value.resumeEditor !== undefined) {
+        const resume = value.resumeEditor;
+        if (!value.editContext || !value.sourceOwnerUuid || !isPositiveInteger(value.sourceAccountGeneration)
+          || !isRecord(resume) || !hasExactKeys(resume, ["mode", "rowKey"])
+          || (resume.mode !== "edit" && resume.mode !== "fork") || !isNullableUuid(resume.rowKey)
+          || (resume.rowKey !== null && value.editContext.draft.ingredients.filter(row => row.row_key === resume.rowKey).length !== 1)) return null;
+      }
       return value as PendingRecipeAction;
     }
 

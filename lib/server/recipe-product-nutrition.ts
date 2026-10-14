@@ -2,7 +2,7 @@ import type { RecipeNutritionIngredientInput } from "@/lib/nutrition/recipe-nutr
 
 interface ProductPin {
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
 }
@@ -63,7 +63,7 @@ export async function hydrateRecipeProductNutrition(
         ...ingredient,
         food_product_id: pin.food_product_id,
         food_product_nutrition_version_id: pin.food_product_nutrition_version_id,
-        preparation_state: product?.nutrition.link.preparation_state ?? null,
+        preparation_state: product ? "product_label" : null,
         nutrition: product?.nutrition,
         product_basis_relations: product?.basis_relations,
         conversion_assignment: null,

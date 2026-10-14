@@ -7,6 +7,8 @@ export interface UserSettingsData {
 }
 
 export interface UserProfileData extends UserSettingsData {
+  /** Verified current account generation for read-only draft return checks. */
+  account_generation?: number;
   id: string;
   nickname: string;
   email: string | null;

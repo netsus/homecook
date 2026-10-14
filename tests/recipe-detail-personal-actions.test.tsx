@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PersonalRecipeDeleteDialog } from "@/components/recipe/personal-recipe-delete-dialog";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
 
 describe("recipe detail personal actions", () => {
@@ -144,44 +145,25 @@ describe("recipe detail personal actions", () => {
     expect(source).toContain("const qaForkContext = useMemo(() => (");
   });
 
-  it("wires owner delete through a dedicated confirm dialog and stable request flow", () => {
-    const screenSource = readFileSync(
-      join(process.cwd(), "components/recipe/recipe-detail-screen.tsx"),
-      "utf8",
-    );
-    const dialogSource = readFileSync(
-      join(process.cwd(), "components/recipe/personal-recipe-delete-dialog.tsx"),
-      "utf8",
-    );
-    const apiSource = readFileSync(
-      join(process.cwd(), "lib/api/personal-recipe.ts"),
-      "utf8",
-    );
-
-    expect(screenSource).toContain("PersonalRecipeDeleteDialog");
-    expect(screenSource).toContain("deletePersonalRecipe");
-    expect(screenSource).toContain("const deleteKeyRef = React.useRef<string | null>(null)");
-    expect(screenSource).toContain("const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)");
-    expect(screenSource).toContain("const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false)");
-    expect(screenSource).toContain("const [deletePersonalRecipeError, setDeletePersonalRecipeError] = useState<string | null>(null)");
-    expect(screenSource).toContain("onDelete={openDeletePersonalRecipeDialog}");
-    expect(screenSource).not.toContain("onDelete={() => undefined}");
-    expect(screenSource).toContain("deleteKeyRef.current ?? crypto.randomUUID()");
-    expect(screenSource).toContain("router.refresh()");
-    expect(screenSource).toContain("setDetailErrorKind(\"not-found\")");
-
-    expect(dialogSource).toContain("AppConfirmDialog");
-    expect(dialogSource).toContain("AppModalFooterActions");
-    expect(dialogSource).toContain('backdropLayerClassName="z-[120]"');
-    expect(dialogSource).toContain("useDialogBoundary");
-    expect(dialogSource).toContain("정말 레시피를 삭제할까요?");
-    expect(dialogSource).toContain("기존 계획, 요리, 기록은 그대로 남아요.");
-    expect(dialogSource).toContain("role=\"alert\"");
-    expect(dialogSource).toContain('confirmLabel={submitting ? "삭제 중" : "삭제"}');
-    expect(dialogSource).toContain('confirmTone="danger"');
-
-    expect(apiSource).toContain("Idempotency-Key");
-    expect(apiSource).toContain("method: \"DELETE\"");
-    expect(apiSource).toContain("/api/v1/recipes/");
+  it("confirms deletion once and blocks close/repeated clicks while deletion is pending", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onConfirm = vi.fn(() => {
+      view.rerender(<PersonalRecipeDeleteDialog isOpen onClose={onClose} onConfirm={onConfirm} submitting />);
+    });
+    const view = render(<PersonalRecipeDeleteDialog isOpen onClose={onClose} onConfirm={onConfirm} />);
+    expect(screen.getByRole("dialog", { name: "정말 레시피를 삭제할까요?" }).textContent)
+      .toContain("기존 계획, 요리, 기록은 그대로 남아요.");
+    await user.dblClick(screen.getByRole("button", { name: "삭제" }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "삭제 중" }).hasAttribute("disabled")).toBe(true);
+    await user.click(screen.getByRole("button", { name: "취소" }));
+    await user.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+    view.rerender(<PersonalRecipeDeleteDialog isOpen onClose={onClose} onConfirm={onConfirm}
+      errorMessage="레시피를 삭제하지 못했어요." />);
+    expect(screen.getByRole("alert").textContent).toBe("레시피를 삭제하지 못했어요.");
+    await user.click(screen.getByRole("button", { name: "취소" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
