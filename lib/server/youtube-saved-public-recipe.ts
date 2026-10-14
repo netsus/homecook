@@ -3,6 +3,7 @@ import type {
   RecipeStep,
   RecipeStepCookingMethod,
 } from "@/types/recipe";
+import { isQuantityInputSnapshot } from "@/lib/quantity-input";
 
 export interface YoutubeSavedPublicRecipeProjection {
   ingredients: RecipeIngredient[];
@@ -70,7 +71,7 @@ function parseIngredient(value: unknown): RecipeIngredient | null {
     return null;
   }
 
-  return {
+  const ingredient: RecipeIngredient = {
     id: value.id,
     ingredient_id: value.ingredient_id,
     standard_name: value.standard_name,
@@ -82,6 +83,14 @@ function parseIngredient(value: unknown): RecipeIngredient | null {
     scalable: value.scalable,
     sort_order: sortOrder,
   };
+  if ("quantity_input" in value) {
+    if (amount === null || unit === null || !isQuantityInputSnapshot(value.quantity_input, { amount, unit })) return null;
+    const withQuantity = { ...ingredient, quantity_input: value.quantity_input,
+      display_text: value.ingredient_type === "QUANT"
+        ? `${value.standard_name} ${value.quantity_input.raw_value}${value.quantity_input.raw_unit}` : displayText };
+    return withQuantity;
+  }
+  return ingredient;
 }
 
 function parseStep(value: unknown): RecipeStep | null {

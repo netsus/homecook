@@ -1,5 +1,6 @@
 import type { ApiResponse } from "@/types/api";
 import type { IngredientCategory } from "@/lib/ingredient-categories";
+import type { QuantityInputSnapshot } from "@/types/quantity-input";
 
 export type RecipeSortKey =
   | "view_count"
@@ -107,6 +108,7 @@ export interface RecipeTagListData {
 export type RecipeIngredientSourceKind = "ingredient" | "food_product";
 
 export interface RecipeIngredient {
+  quantity_input?: QuantityInputSnapshot;
   source_kind?: RecipeIngredientSourceKind;
   row_key?: string;
   food_product_id?: string | null;
