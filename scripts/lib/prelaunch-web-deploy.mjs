@@ -12,9 +12,9 @@ export const CLOSED_R2_REVIEW_PIN = Object.freeze({
   path: "/Users/cwj/.homecook/operations/mumeok-beta-f01-closed-20261014-ifzuefgy/proposed-review.json",
   sha256: "cefb74c46ef6b1d23b2e449aa3255d854da6ecd74c35c8701095df964b9d2c29",
 });
-// No approved C03 source/SQL/authority bundle exists yet. Never accept a CLI/env override.
-export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
-export const PROTECTED_WRITER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+// Human-approved C03 DB/reader and conditional writer authority. No CLI/env overrides.
+export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-rollout-review.json", sha256: "0112e9ba64f6765a24fe64a891bd96fe2fb6edc19a314d398d0b5a7fbbdb2b6f" });
+export const PROTECTED_WRITER_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-writer-review.json", sha256: "87d989c6ca9c50da8cb93ec0c0da4af95d1f30941a9ed2255d67e3ccdea663c4" });
 const closedR2Hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const closedR2Require = (value, message) => { if (!value) throw new DeploymentError(`닫힌 R2 유지 배포: ${message}`); };
 const CLOSED_R2_SHA = /^[a-f0-9]{64}$/u;

@@ -175,13 +175,15 @@ recording 404, homeflow의 저장 없는 공개 안내, `/`·`/login`·`/privacy
 privacy 문구의 실제 표시나 홈 R2 진입 부재를 모두 증명하지 않는다. 이 항목들은 승인 후보의 별도 화면 확인이
 필요하며 로컬 fixture 통과를 실제 운영 검증으로 보고하지 않는다.
 
-### C03 보호 DB·reader·조건부 쓰기 전환 (두 승인 pin 미설정)
+### C03 보호 DB·reader·조건부 쓰기 전환
 
 기존 `pnpm deploy:dev`에 정확한 보호 전환을 연결한다. 새 독립 배포 CLI·일반 SQL scanner
-예외는 없다. `PROTECTED_ROLLOUT_REVIEW_PIN`과 `PROTECTED_WRITER_REVIEW_PIN`은 현재
-`null/null`이며 CLI/env로 덮어쓸 수 없다. 아래 단계는 최종 C03 source·SQL·권한·격리 증거,
+예외는 없다. `PROTECTED_ROLLOUT_REVIEW_PIN`과 `PROTECTED_WRITER_REVIEW_PIN`은 CLI/env로
+덮어쓸 수 없다. 아래 단계는 최종 C03 source·SQL·권한·격리 증거,
 실제 prestate와 별도 사용자 승인 파일이 고정되기 전에는 private state/env 조회 전에 거부된다.
 F01 승인이나 과거 YouTube/R2 승인을 C03으로 전용하지 않는다.
+
+2026-10-14 사용자가 DB219→220·웹87cd→1c676·백업 설정 승격·조건부 ON/안전 OFF를 포함한 C03 전체 적용을 명시 승인했다. DB/reader 자료 SHA `0112e9ba64f6765a24fe64a891bd96fe2fb6edc19a314d398d0b5a7fbbdb2b6f`, 별도 writer 자료 SHA `87d989c6ca9c50da8cb93ec0c0da4af95d1f30941a9ed2255d67e3ccdea663c4`를 비공개 파일과 코드에 고정했다. 이 기록은 아직 운영 적용 완료를 뜻하지 않는다. 빈 pin 거부는 임시 사본의 실제 CLI로 계속 검사하며 실제 승인 pin을 테스트가 덮어쓰지 않는다. 사용자는 이번 v9 계획의 후속 검증된 변경도 반복 승인 없이 적용하도록 지시했으며, 각 단위의 정확 대상·증거·복구와 운영 확인 기록은 계속 남긴다.
 
 C03 전용 review는 기존 테스트의 source dependency인 `scripts/lib/full-local-security-inventory.mjs`와 공개 읽기 경계인 `lib/server/hybrid-auth/public-read-policy-runtime.mjs` 두 정확 경로만 기존 before/after SHA가 모두 있을 때 추가 검토한다. 일반 scripts 경로·기존 거부 대상인 다른 auth/R2 경로와 normal closed guard는 유지하며 이 로컬 준비가 실제 권한/운영 승인인 것은 아니다. 별도 source/security 검토에는 기존 `recipes` scope의 `find_public_recipe_ids_by_product_name`/`read_recipe_product_ingredient_classification`, `recipe-detail`·`recipe-cook-mode` scope의 `read_public_recipe_product_sources` 세 공개 RPC의 정확 POST body 경계와 고정 source_kind/id select를 포함한다.
 

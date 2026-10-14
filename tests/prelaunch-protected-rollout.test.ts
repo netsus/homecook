@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { mkdtempSync, existsSync, readFileSync, writeFileSync, realpathSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, existsSync, readFileSync, writeFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -12,6 +12,8 @@ import { CLOSED_R2_REVIEW_PIN, PROTECTED_ROLLOUT_REVIEW_PIN, PROTECTED_WRITER_RE
   assertProtectedRolloutReview, assertProtectedRolloutSource, classifyPrelaunchScope, parsePrelaunchOptions, protectedRolloutReaderReceipt, protectedRolloutStatus, retargetPlist } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
+const approvedRolloutPin = { path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-rollout-review.json", sha256: "0112e9ba64f6765a24fe64a891bd96fe2fb6edc19a314d398d0b5a7fbbdb2b6f" };
+const approvedWriterPin = { path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-writer-review.json", sha256: "87d989c6ca9c50da8cb93ec0c0da4af95d1f30941a9ed2255d67e3ccdea663c4" };
 const ref = (character: string) => character.repeat(40);
 const sha = (character: string) => character.repeat(64);
 
@@ -74,7 +76,7 @@ function fixture() {
 }
 
 describe("protected rollout CLI authority", () => {
-  it("loads a copied private pinned review and rejects changed bytes without changing the real empty pin", async () => {
+  it("loads a copied private pinned review and rejects changed bytes without changing the approved pin", async () => {
     const root = mkdtempSync(join(realpathSync(tmpdir()), "protected-pin-"));
     try {
       const review = fixture().review, reviewPath = join(root, "review.json"), modulePath = join(root, "prelaunch-web-deploy.mjs");
@@ -88,26 +90,37 @@ describe("protected rollout CLI authority", () => {
       expect(copied.loadProtectedRolloutReview(process.cwd())).toEqual(review);
       writeFileSync(reviewPath, JSON.stringify({ ...review, to: ref("d") }));
       expect(() => copied.loadProtectedRolloutReview(process.cwd())).toThrow("bytes");
-      expect(PROTECTED_ROLLOUT_REVIEW_PIN).toEqual({ path: null, sha256: null });
+      expect(PROTECTED_ROLLOUT_REVIEW_PIN).toEqual(approvedRolloutPin);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
   it("denies an empty approval pin in the existing pnpm path before private state access", () => {
     const home = mkdtempSync(join(tmpdir(), "protected-cli-"));
     try {
+      const checkout = join(home, "checkout");
+      mkdirSync(join(checkout, "lib/server"), { recursive: true });
+      cpSync(join(process.cwd(), "scripts"), join(checkout, "scripts"), { recursive: true });
+      cpSync(join(process.cwd(), "lib/server/youtube-extraction-worker-timing.json"), join(checkout, "lib/server/youtube-extraction-worker-timing.json"));
+      const modulePath = join(checkout, "scripts/lib/prelaunch-web-deploy.mjs");
+      const source = readFileSync(modulePath, "utf8");
+      const pattern = /export const PROTECTED_ROLLOUT_REVIEW_PIN = Object\.freeze\(\{[^}]*\}\);/u;
+      expect(source.match(pattern)?.length).toBe(1);
+      writeFileSync(modulePath, source.replace(pattern, "export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });"));
+      const command = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")).scripts["deploy:dev"];
+      writeFileSync(join(checkout, "package.json"), JSON.stringify({ private: true, scripts: { "deploy:dev": command } }));
       const result = spawnSync("pnpm", ["deploy:dev", "--", "--reviewed-protected-rollout", "--protected-phase", "database",
         "--reviewed-ref", "b".repeat(40), "--db-config", "/private/not-a-real-config.env", "--test-script", "test:feedback-batch:web"], {
         // Shared, already installed dependencies are intentional in this fixture.
         // pnpm 11 otherwise attempts an unrelated install before invoking the CLI.
-        cwd: process.cwd(), encoding: "utf8", env: { ...process.env, HOME: home, pnpm_config_verify_deps_before_run: "false" },
+        cwd: checkout, encoding: "utf8", env: { ...process.env, HOME: home, HOMECOOK_DEPLOY_REPOSITORY: process.cwd(), pnpm_config_verify_deps_before_run: "false" },
       });
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("보호 전환 승인 핀이 비어");
       expect(existsSync(join(home, ".homecook"))).toBe(false);
     } finally { rmSync(home, { recursive: true, force: true }); }
   });
-  it("keeps the new pin empty and rejects competing modes or write-ON options", () => {
-    expect(PROTECTED_ROLLOUT_REVIEW_PIN).toEqual({ path: null, sha256: null });
-    expect(PROTECTED_WRITER_REVIEW_PIN).toEqual({ path: null, sha256: null });
+  it("keeps exact human-approved pins and rejects competing modes or write-ON options", () => {
+    expect(PROTECTED_ROLLOUT_REVIEW_PIN).toEqual(approvedRolloutPin);
+    expect(PROTECTED_WRITER_REVIEW_PIN).toEqual(approvedWriterPin);
     const args = ["--reviewed-protected-rollout", "--protected-phase", "database", "--reviewed-ref", ref("b"), "--db-config", "/private/no.env", "--test-script", "test:feedback-batch:web"];
     expect(parsePrelaunchOptions(args).reviewedProtectedRollout).toBe(true);
     for (const extra of [["--env-file", "/private/no.env"], ["--db-compatible"], ["--already-applied-db"], ["--skip-automated-tests"], ["--reviewed-r2-closed-maintenance"], ["--db-baseline", "/private/no.json"]]) {
