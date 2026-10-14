@@ -234,11 +234,19 @@ export function RecipeDetailScreen({
   const nutritionRequestSequenceRef = React.useRef(0);
   const currentRecipeIdRef = React.useRef(recipeId);
   const snapshotStartLatchRef = React.useRef(false);
+  const snapshotStartSequenceRef = React.useRef(0);
+  const resumedCookIntentRef = React.useRef<string | null>(null);
   const personalEditorOpenerRef = React.useRef<HTMLElement | null>(null);
   const plannerOpenerRef = React.useRef<HTMLElement | null>(null);
   const plannerRequestSequenceRef = React.useRef(0);
   const deleteKeyRef = React.useRef<string | null>(null);
   currentRecipeIdRef.current = recipeId;
+
+  useEffect(() => {
+    snapshotStartLatchRef.current = false;
+    setSnapshotStartState("idle");
+    return () => { snapshotStartSequenceRef.current += 1; };
+  }, [isAuthenticated, recipeId]);
 
   useEffect(() => () => {
     plannerOpenerRef.current = null;
@@ -1148,15 +1156,31 @@ export function RecipeDetailScreen({
 
     const pendingAction = readPendingAction();
 
-    if (!pendingAction || pendingAction.recipeId !== recipeId || !recipe) {
+    if (!pendingAction || pendingAction.recipeId !== recipeId || !recipe
+      || (pendingAction.type === "cook" && recipe.id !== recipeId)) {
       setPendingDraftVerification("idle");
       return;
     }
 
     let current = true;
     const resume = () => {
+      if (pendingAction.type === "cook") {
+        const intent = `${pendingAction.recipeId}:${pendingAction.createdAt}:${pendingAction.cookingServings}:${pendingAction.recipeRevision}`;
+        if (resumedCookIntentRef.current === intent) return;
+        resumedCookIntentRef.current = intent;
+      }
       setPendingDraftVerification("idle");
       clearPendingAction();
+
+      if (pendingAction.type === "cook") {
+        if (recipe.id !== recipeId || recipeSnapshotUiMode !== "snapshot_v2") return;
+        setSelectedServings(pendingAction.cookingServings);
+        const changed = pendingAction.recipeRevision !== undefined && pendingAction.recipeRevision !== recipe.revision;
+        setFeedback({ message: changed
+          ? `레시피가 변경됐어요. 선택한 ${pendingAction.cookingServings}인분은 유지했어요. 현재 내용을 확인한 뒤 요리하기를 다시 눌러 주세요.`
+          : `로그인 완료. 선택한 ${pendingAction.cookingServings}인분을 유지했어요. 요리하기를 다시 눌러 시작해 주세요.`, tone: "status" });
+        return;
+      }
 
       if (pendingAction.type === "recipe-edit-save") {
         if (serverProjectedPersonalEditContext) {
@@ -1441,13 +1465,29 @@ export function RecipeDetailScreen({
   );
   const cookActionLabel = snapshotStartState === "pending" ? "요리 세션 생성 중…" : "요리하기";
   async function handleCook() {
-    if (!recipe) return;
+    if (!recipe || recipe.id !== recipeId || detailState !== "ready") return;
     if (recipeSnapshotUiMode !== "snapshot_v2") {
       router.push(cookModeHref);
       return;
     }
+    if (!Number.isSafeInteger(selectedServings) || selectedServings < 1) {
+      setFeedback({ message: "선택한 인분을 다시 확인해 주세요.", tone: "error" });
+      return;
+    }
+    if (!isAuthenticated) {
+      openAuthGate({ recipeId, type: "cook", cookingServings: selectedServings, recipeRevision: recipe.revision });
+      return;
+    }
+    if (typeof recipe.revision !== "number" || !Number.isSafeInteger(recipe.revision) || recipe.revision < 1) {
+      setFeedback({ message: "레시피 버전과 선택한 인분을 다시 확인해 주세요.", tone: "error" });
+      return;
+    }
     if (snapshotStartLatchRef.current) return;
     snapshotStartLatchRef.current = true;
+    const requestSequence = ++snapshotStartSequenceRef.current;
+    const requestPath = window.location.pathname;
+    const isCurrent = () => requestSequence === snapshotStartSequenceRef.current
+      && currentRecipeIdRef.current === recipeId && window.location.pathname === requestPath;
     setSnapshotStartState("pending");
     try {
       const session = await createSnapshotV2CookingSession({
@@ -1456,16 +1496,25 @@ export function RecipeDetailScreen({
         expected_recipe_revision: recipe.revision,
         cooking_servings: selectedServings,
       });
+      if (!isCurrent()) return;
       router.push(buildReturnHref(getCookingSessionCookModeHref(session), {
         returnSurface: "recipe.detail",
         returnTo: recipeDetailReturnHref,
       }));
     } catch (error) {
+      if (!isCurrent()) return;
+      if ((isCookingApiError(error) || isApiFetchError(error)) && (error.status === 401
+        || (error.status === 409 && (error.code === "ACCOUNT_SESSION_STALE" || error.code === "ACCOUNT_GENERATION_STALE")))) {
+        openAuthGate({ recipeId, type: "cook", cookingServings: selectedServings, recipeRevision: recipe.revision });
+        return;
+      }
       setFeedback({ message: isCookingApiError(error) ? error.message : "요리를 시작하지 못했어요. 다시 시도해 주세요.", tone: "error" });
     } finally {
       // This page may be preserved when returning from cook mode.
-      snapshotStartLatchRef.current = false;
-      setSnapshotStartState("idle");
+      if (requestSequence === snapshotStartSequenceRef.current) {
+        snapshotStartLatchRef.current = false;
+        setSnapshotStartState("idle");
+      }
     }
   }
   const shouldRenderWebView = isDesktopViewport;
