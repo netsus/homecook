@@ -72,6 +72,31 @@ describe("existing snapshot weight mapping", () => {
     expect(run([null]).prediction.totalGrams).toBeNull();
     expect(run("invalid").prediction.totalGrams).toBeNull();
   });
+  it("accepts only identical ordered frozen method projections without inventing method IDs", () => {
+    const context = step();
+    const methods = [{ code: "MIX", label: "섞기", color_key: "green", category_code: null }];
+    const raw = { step_number: 1, instruction: "원문 125g을 섞는다", heat_level: null, cooking_methods: methods };
+    const projected = { ...context.projected, instruction: raw.instruction, cooking_methods: methods };
+    const run = (source: unknown[] = [raw], current: CookingModeStep[] = [projected]) => predictSnapshotWeight({
+      snapshotId, baseServings: 2, cookingServings: 4, ingredients: [ingredient()], snapshotSteps: source, cookingSteps: current });
+    const before = JSON.stringify(raw);
+    const result = run();
+    expect(result.prediction.totalGrams).toBe(200);
+    expect(result.methodSteps[0].methodIds).toEqual([]);
+    expect(result.methodSteps[0].status).toBe("inferred");
+    expect(result.methodSteps[0].evidenceRef).toBe(`snapshot:${snapshotId}:step:1:frozen-methods:${JSON.stringify([["MIX", "섞기", "green", null]])}`);
+    expect(run()).toEqual(result);
+    expect(JSON.stringify(raw)).toBe(before);
+    for (const source of [{ ...raw, cooking_methods: [] }, { ...raw, cooking_methods: undefined },
+      { ...raw, cooking_method_id: "invalid" }, { ...raw, cooking_method_ids: [null] },
+      { ...raw, heat_level: "low" }, { ...raw, instruction: "가열하며 섞는다" }]) expect(run([source]).prediction.totalGrams).toBeNull();
+    for (const changed of [{ code: "BOIL", label: "섞기", color_key: "green", category_code: null },
+      { ...methods[0], label: "다른 표기" }, { ...methods[0], color_key: "orange" }])
+      expect(run([raw], [{ ...projected, cooking_methods: [changed] }]).prediction.totalGrams).toBeNull();
+    const second = { code: "MIX", label: "혼합", color_key: "orange", category_code: null };
+    expect(run([{ ...raw, cooking_methods: [...methods, second] }], [{ ...projected, cooking_methods: [second, ...methods] }]).prediction.totalGrams).toBeNull();
+    expect(run([raw, { ...raw, step_number: 2 }], [{ ...projected, step_number: 2 }, projected]).prediction.totalGrams).toBeNull();
+  });
   it("does not return a partial total for unknown units or to-taste rows", () => {
     for (const second of [ingredient({ id: "row-2", amount: null, unit: null, ingredient_type: "TO_TASTE" }), ingredient({ id: "row-2", unit: "cup" })]) {
       expect(mapped([ingredient(), second]).prediction.totalGrams).toBeNull();
@@ -114,5 +139,31 @@ describe("existing snapshot weight mapping", () => {
     expect(mapped([product]).prediction.totalGrams).toBe(200);
     expect(mapped([product]).prediction.input?.rows[0].sourceVersion).toBe(product.food_product_nutrition_version_id);
     expect(mapped([{ ...product, unit: "mL" }]).prediction.totalGrams).toBeNull();
+  });
+  it("uses the measurement evidence ID, never its dataset source ID", () => {
+    const evidenceId = "550e8400-e29b-41d4-a716-446655440006";
+    const sourceId = "550e8400-e29b-41d4-a716-446655440007";
+    const conversion = {
+      id: "550e8400-e29b-41d4-a716-446655440008", ingredient_id: ingredientId,
+      preparation_state: "raw", review_status: "approved", is_active: true,
+      profile: { code: "fixture", basis_volume_ml: 15, representative_weight_g: 12, is_active: true },
+      evidence: {
+        id: evidenceId, normalized_g_per_15ml: 12, review_status: "approved", is_active: true,
+        source: { id: sourceId, review_status: "approved", freshness_status: "current", is_active: true,
+          provider: "synthetic", dataset: "fixture", source_version: "fixture-v1", data_basis_date: null,
+          license: "fixture", source_url: "https://example.invalid/fixture" },
+      },
+    };
+    const row = ingredient({ amount: 15, unit: "ml", preparation_state: "raw", conversion_assignment: conversion });
+    const result = mapped([row]);
+    expect(result.prediction.totalGrams).toBe(24);
+    expect(result.prediction.input?.rows[0].gramsEvidence).toEqual({ kind: "ingredient_conversion", status: "confirmed",
+      evidenceId, version: "fixture-v1", quality: "estimated" });
+    for (const id of [undefined, "not-an-evidence-id"]) {
+      const unresolved = mapped([{ ...row, conversion_assignment: { ...conversion, evidence: { ...conversion.evidence, id } } }]);
+      expect(unresolved.prediction.totalGrams).toBeNull();
+      expect(unresolved.prediction.input?.rows[0].gramsEvidence).toBeNull();
+      expect(unresolved.rawRows[0]).toEqual(result.rawRows[0]);
+    }
   });
 });

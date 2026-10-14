@@ -54,4 +54,30 @@ describe("server-owned pinned weight input", () => {
     const failure = new Error("READ_FAILED");
     await expect(readSnapshotWeightPrediction({ client: client(null, failure), weightClient: null, ownerId: owner, sessionId })).rejects.toBe(failure);
   });
+  it("keeps a nullable .125 product row, original step and saved-version mass proof through the actual hydrator", async () => {
+    const product = "550e8400-e29b-41d4-a716-446655440006";
+    const version = "550e8400-e29b-41d4-a716-446655440007";
+    const rowKey = "550e8400-e29b-41d4-a716-446655440008";
+    const raw = { ingredient_id: null, source_kind: "food_product", row_key: rowKey, food_product_id: product,
+      food_product_nutrition_version_id: version, amount: .125, unit: "package", scalable: false, ingredient_type: "QUANT" };
+    const original = { ...step, instruction: "0.125팩을 섞는다. 원문 그대로", ingredients_used: [{ row_key: rowKey, ingredient_id: null, amount: .125, unit: "package" }] };
+    const value = { ...source(), cooking_servings: 4, recipe_content_snapshots: { ...source().recipe_content_snapshots, ingredients_json: [raw], steps_json: [original] } };
+    const before = JSON.stringify(value);
+    const reader = client(value);
+    reader.rpc.mockResolvedValue({ data: [{ id: rowKey, product_predecessor: { nutrition: null,
+      basis_relations: [{ from: { amount: 1, unit: "package" }, to: { amount: 200, unit: "g" } }] } }], error: null });
+    const result = await readSnapshotWeightPrediction({ client: reader, weightClient: null, ownerId: owner, sessionId,
+      cookingSteps: [{ ...projectedStep, instruction: original.instruction }] });
+    expect(result?.prediction.totalGrams).toBe(25);
+    expect(result?.rawRows).toEqual([{ rowKey, amount: .125, unit: "package", scalable: false }]);
+    expect(result?.prediction.input?.rows[0]).toMatchObject({ rowKey, sourceKind: "food_product", sourceId: product, sourceVersion: version,
+      amount: .125, grams: 25, gramsEvidence: { evidenceId: version, version } });
+    expect(reader.rpc).toHaveBeenCalledExactlyOnceWith("read_recipe_product_nutrition_predecessors", { p_owner_uuid: owner,
+      p_ingredients: [{ id: rowKey, ingredient_id: null, food_product_id: product, food_product_nutrition_version_id: version }] });
+    expect(JSON.stringify(value)).toBe(before);
+    expect(loaders.load).not.toHaveBeenCalled();
+    reader.rpc.mockResolvedValue({ data: [{ id: rowKey, product_predecessor: null }], error: null });
+    expect((await readSnapshotWeightPrediction({ client: reader, weightClient: null, ownerId: owner, sessionId,
+      cookingSteps: [{ ...projectedStep, instruction: original.instruction }] }))?.prediction.totalGrams).toBeNull();
+  });
 });

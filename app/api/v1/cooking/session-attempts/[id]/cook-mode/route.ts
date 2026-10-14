@@ -3,6 +3,8 @@ import { fail, ok } from "@/lib/api/response";
 import { cookedWeightEvidenceEnabled, readSnapshotWeightPrediction, summarizeWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
 import { createRecipeMealWeightReadInternalClient } from "@/lib/supabase/server";
 import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
+import type { CookingWeightSessionClient } from "@/lib/server/cooked-batch-weight-estimate";
+import type { RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import type { SnapshotV2CookModeData } from "@/types/cooking";
 import { readVerifiedAccountGenerationSession } from
   "@/lib/server/account-generation/session-authority";
@@ -65,7 +67,21 @@ export async function GET(_request: Request, context: RouteContext) {
     && "weight_evidence_enabled" in result.data && result.data.weight_evidence_enabled === true) {
     metadata.weight_evidence_enabled = true;
     try {
-      const prediction = await readSnapshotWeightPrediction({ client: routeClient,
+      const sessionClient: CookingWeightSessionClient & RecipeProductNutritionClient = {
+        rpc: (name, params) => routeClient.rpc(name, params),
+        from: (table) => ({ select: (columns) => {
+          let query = routeClient.from(table).select(columns);
+          const reader = {
+            eq: (column: string, value: string) => { query = query.eq(column, value); return reader; },
+            maybeSingle: async () => {
+              const result = await query.maybeSingle();
+              return { data: result.data, error: result.error };
+            },
+          };
+          return reader;
+        } }),
+      };
+      const prediction = await readSnapshotWeightPrediction({ client: sessionClient,
         weightClient: createRecipeMealWeightReadInternalClient(), ownerId: user.id, sessionId, cookingSteps: data.recipe.steps });
       if (prediction) metadata.weight_prediction = summarizeWeightPrediction(prediction);
     } catch (error) {

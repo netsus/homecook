@@ -4,6 +4,7 @@ import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-
 import { createRecipeMealWeightReadInternalClient } from "@/lib/supabase/server";
 import { readCookedWeightEstimate, type CookingWeightSessionClient } from "@/lib/server/cooked-batch-weight-estimate";
 import { cookedWeightEvidenceEnabled, readSnapshotWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
+import type { RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import {
   callCookedBatchRpc,
   isUuid,
@@ -37,9 +38,23 @@ export async function POST(request: Request, context: RouteContext) {
     p_weight_action: parsed.value.weightAction, p_finished_weight_g: parsed.value.finishedWeightG,
   };
   try {
+    const sessionClient: CookingWeightSessionClient & RecipeProductNutritionClient = {
+      rpc: (name, params) => authorized.routeClient.rpc(name, params),
+      from: (table) => ({ select: (columns) => {
+        let query = authorized.routeClient.from(table).select(columns);
+        const reader = {
+          eq: (column: string, value: string) => { query = query.eq(column, value); return reader; },
+          maybeSingle: async () => {
+            const result = await query.maybeSingle();
+            return { data: result.data, error: result.error };
+          },
+        };
+        return reader;
+      } }),
+    };
     if (withEvidence) {
       args.p_prediction = await readSnapshotWeightPrediction({
-        client: authorized.routeClient, weightClient: createRecipeMealWeightReadInternalClient(),
+        client: sessionClient, weightClient: createRecipeMealWeightReadInternalClient(),
         ownerId: authorized.user.id, sessionId: id, methodClient: authorized.client, authorityArgs: authorized.authorityArgs,
       });
       args.p_weight_input_source = parsed.value.weightInputSource;
@@ -47,7 +62,7 @@ export async function POST(request: Request, context: RouteContext) {
     } else if (parsed.value.weightAction === "weigh_later") {
       args.p_weight_action = "estimate_from_ingredients";
       args.p_finished_weight_g = await readCookedWeightEstimate({
-        client: authorized.routeClient as unknown as CookingWeightSessionClient,
+        client: sessionClient,
         weightClient: createRecipeMealWeightReadInternalClient(), ownerId: authorized.user.id, sessionId: id,
       });
     }

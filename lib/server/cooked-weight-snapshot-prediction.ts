@@ -48,7 +48,20 @@ function mixInstructionConflicts(instruction: string): string[] {
   return conflicts;
 }
 
-/** Only authoritative cook-mode codes joined to nonempty pinned step IDs are used. */
+function frozenMethodProjection(value: unknown): Array<[string, string, string, string | null]> | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 20) return null;
+  const projection: Array<[string, string, string, string | null]> = [];
+  for (const method of value) {
+    if (!record(method) || typeof method.code !== "string" || !method.code.trim()
+      || typeof method.label !== "string" || !method.label.trim()
+      || typeof method.color_key !== "string" || !method.color_key.trim()
+      || (method.category_code !== undefined && method.category_code !== null && typeof method.category_code !== "string")) return null;
+    projection.push([method.code, method.label, method.color_key, method.category_code ?? null]);
+  }
+  return projection;
+}
+
+/** Called only with the owner-verified immutable snapshot and its cook-mode projection. */
 function methodSteps(snapshotId: string, raw: readonly unknown[], projected: readonly CookingModeStep[]): SnapshotWeightMethodStep[] {
   if (raw.length > 200 || projected.length !== raw.length) return [];
   const numbers = new Set<number>();
@@ -59,20 +72,29 @@ function methodSteps(snapshotId: string, raw: readonly unknown[], projected: rea
     const noPlural = plural === undefined || plural === null || (Array.isArray(plural) && plural.length === 0);
     const ids = Array.isArray(plural) && plural.length > 0 ? plural
       : noPlural && row && isUuid(row.cooking_method_id) ? [row.cooking_method_id] : [];
-    const matching = projected.find(step => step.step_number === stepNumber);
+    const matching = projected[index]?.step_number === stepNumber ? projected[index] : undefined;
     const methods = matching?.cooking_methods ?? (matching?.cooking_method ? [matching.cooking_method] : []);
     const codes = methods.map(method => typeof method.code === "string" ? method.code.toUpperCase() : "");
+    const frozen = frozenMethodProjection(row?.cooking_methods);
+    const current = frozenMethodProjection(methods);
+    // Newer server snapshots freeze method fields instead of IDs. Never replace
+    // malformed declared IDs or look up today's catalog to invent a missing ID.
+    const frozenRef = noPlural && (row?.cooking_method_id === undefined || row?.cooking_method_id === null)
+      && frozen && current && JSON.stringify(frozen) === JSON.stringify(current) ? JSON.stringify(frozen) : null;
+    const validMethods = ids.length > 0 && ids.length <= 20 && ids.every(isUuid)
+      && new Set(ids).size === ids.length && methods.length === ids.length;
     const heat = matching?.heat_level ?? null;
     const conflicts = row && typeof row.instruction === "string" && codes.every(code => code === "MIX") ? mixInstructionConflicts(row.instruction) : [];
     const complete = Boolean(row && row.step_number === index + 1 && stepNumber > 0 && !numbers.has(stepNumber)
-      && typeof row.instruction === "string" && row.instruction.trim().length > 0 && ids.length > 0 && ids.length <= 20
-      && ids.every(isUuid) && new Set(ids).size === ids.length && methods.length === ids.length
+      && typeof row.instruction === "string" && row.instruction.trim().length > 0 && row.instruction === matching?.instruction
+      && (validMethods || frozenRef !== null)
       && codes.every(code => code.length > 0) && conflicts.length === 0
       && Object.hasOwn(row, "heat_level") && row.heat_level === heat);
     numbers.add(stepNumber);
     return Object.freeze({ stepNumber, methodIds: Object.freeze(ids.filter(isUuid)), methodCodes: Object.freeze(codes),
       heatLevel: heat, durationSeconds: matching?.duration_seconds ?? null, conflicts: Object.freeze(conflicts), status: complete ? "inferred" : "unknown",
-      evidenceRef: complete ? `snapshot:${snapshotId}:step:${stepNumber}:methods:${ids.join(",")}:codes:${codes.join(",")}` : null });
+      evidenceRef: complete ? frozenRef !== null ? `snapshot:${snapshotId}:step:${stepNumber}:frozen-methods:${frozenRef}`
+        : `snapshot:${snapshotId}:step:${stepNumber}:methods:${ids.join(",")}:codes:${codes.join(",")}` : null });
   });
 }
 
@@ -105,9 +127,10 @@ function gramsEvidence(row: RecipeNutritionIngredientInput, grams: number | null
   const piece = row.piece_weight && pieceWeightMatchesIngredient(row.piece_weight, row) ? row.piece_weight : null;
   const evidence = piece?.evidence ?? assignment?.evidence;
   if (!evidence) return null;
-  const evidenceId = record(evidence) && typeof evidence.id === "string" ? evidence.id : null;
+  const evidenceId = piece?.evidence_id ?? evidence.id;
+  if (!isUuid(evidenceId)) return null;
   return { kind: "ingredient_conversion", status: "confirmed",
-    evidenceId: piece?.evidence_id ?? evidenceId,
+    evidenceId,
     version: evidence.source.source_version, quality: "estimated" };
 }
 

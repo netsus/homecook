@@ -1,6 +1,6 @@
 # C01 W1/W2/W3 · T8 무게 근거 로컬 통합 준비
 
-상태: **로컬 구현·fixture 검증 중, 운영 미반영**. C03 parser/제품 변환과 검토된 보안 postimage 기준을 최종 통합한 뒤 타입·빌드·독립 리뷰를 닫아야 한다. 기존 worktree의 parser를 복사하거나 수정하지 않았다. 이 기록은 추정 정확도 개선 완료나 운영 활성화 승인 근거가 아니다.
+상태: **C03 실제 통합·선택 로컬 검사 완료, 운영 미반영**. C03 parser/제품 변환을 같은 checkout에서 소비하며 타입·빌드·source postimage 및 격리 회귀를 확인했다. 독립 통합 리뷰와 운영 승인은 별도다. 아래 과거 checkpoint의 대기 문장은 당시 기록이며 최신 결과는 마지막 통합 마감 절을 따른다. 이 기록은 추정 정확도 개선 완료나 운영 활성화 승인 근거가 아니다.
 
 ## 계산과 실제 적용 범위
 
@@ -74,3 +74,23 @@ W1~W3 freeze 뒤 적격 synthetic fixture만 사용하는 pure/offline 후보는
 
 
 보안 source 후보는 운영 DB가 아니라 reviewed archive218/schema-only0행→정확219→현재 C01 SQL의 pre/post 정의에서 도출했다. `/tmp/mumeok-c01-source-postimage-candidate.json`의 raw MD5와 정의를 검증한 뒤 C03와 같은 MD5(btrim(prosrc, chr(10)))·signature·owner·ACL·search_path·volatility 형식으로 `/tmp/mumeok-c01-source-derived-postimage-preparation.json`을 준비했다. 기존6개 함수의 권한/owner/path/volatility 불변, 신규9개 signature, 이름만 바꾼 scope predecessor의 원 body/속성 불변을 확인했다. 이는 아직 등록/독립 승인되지 않은 후보이며 C03 migration/manifest 이후의 정확 source로 재산출해야 한다. 전체 inventory의 기존 drift를 면제하지 않았다.
+
+
+## C03 실제 통합 마감 · 2026-10-14
+
+최종 C03 `20261013190000_recipe_product_only_identity.sql` SHA `0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75`를 먼저 적용하고 C01 `20261013233000_cooked_batch_weight_evidence.sql` SHA `fa1c8edbc17eddd6d8fa9e4055a6d21ff9865170f0066b56a322c8b1eef46436`를 잇는 로컬 후보를 검사한다. 두 SQL 원문·C03 권한/쓰기 제어/정밀도/원문 계약은 통합 마감에서 변경하지 않았다. C05 수집·C04 단위 정책·W4 보정 세 파일은 수정하지 않는다.
+
+완료와 cook-mode에서 같은 인증된 route client의 좁은 `cooking_sessions` 조회 및 기존 product RPC를 명시 위임한다. SDK의 과도한 타입 확장을 피하며 기존 owner/session authority 및 내부 source client를 그대로 쓴다. 변환 evidence의 actual measurement UUID를 공유 타입에 optional로 표시한다. 누락/무효 ID는 unknown이며 dataset source ID를 대신 근거로 쓰지 않는다.
+
+실제 server builder는 method ID 대신 `cooking_methods`의 code/label/color/category projection을 snapshot에 고정한다. mapper는 owner 검증된 snapshot ID·정확 step/instruction·ordered frozen projection과 같은 cook-mode projection이 일치하는 경우만 기존 MIX 가정합을 inferred로 지원한다. 당시 ID가 있는 shape는 기존 ID 검증을 유지하고, malformed ID를 새 projection으로 구제하지 않는다. 원천 부재·빈 배열·다른 code/label/color·방법/단계 순서 불일치·heat·가열/배수/추가매체 충돌은 unknown이다. `evidenceRef`는 snapshot ID/step/고정 projection JSON으로 재현하며 현재 catalog 조회·합성 ID·자유문장 긍정 추론은 없다. 이 역시 실제 조리 경계나 사용량이 확인되었다는 주장이 아니다.
+
+actual 격리 fixture는 real C03 builder를 호출해 NULL 공공제품의 saved V1 `.125 package →25g`(current V2=300g/package 차용0) 및 일반 `300g →300g`를 정규화하고 실제 C01 완료 RPC로 이어간다. snapshot 생성 뒤 current method code를 BOIL로 바꾸어도 frozen MIX가 유지되며, 원 snapshot 전체 JSON/hash·원문 숫자/문장·고정 수량/버전과 같은 키 완료 replay가 보존되는지 검사한다. revoked/deleting/replaced-generation은 각각 기존 `ACCOUNT_SESSION_STALE`/`ACCOUNT_DELETING`/`ACCOUNT_GENERATION_STALE`로 receipt·session·batch·history·event 변경 없이 거절한다. frozen meal basis9키/가정·날짜 이동·잔량 보정·OFF reader·실측 승격 금지 회귀를 유지한다. legacy 성공 receipt를 새 operation scope로 처음 읽는 호환 경로에는 replay alias receipt 한 행만 생기며 원 receipt/result/state·history는 보존하고 이후 동일 요청 재생은 전체 불변이다.
+
+검토 지문은 `docs/security/cooked-weight-evidence-source-function-postimages.json`에 archive218 schema-only(자료 행0)→정확219→C03→C01의 source pre/post로 결속한다. 기존6 함수 owner/ACL/search_path/volatility/security-definer는 불변이며 새9 signature 중 public 쓰기 RPC2개만 service_role EXECUTE, private helper·scope alias는 API 역할 직접 권한0이다. ACL 문자열의 `EXECUTE:false`는 EXECUTE가 허용되며 GRANT OPTION이 없다는 뜻이다. scope predecessor alias는 변경 전 scope body/metadata를 그대로 보존한다.
+
+`includeCookedWeightEvidenceFunctions:true`는 기존 C03 opt-in과 함께 사용한다. whole inventory의 기존 read-cook-mode body 기대 한 곳만 검토된 C03→C01 postimage로 교체하고 나머지14 signature를 추가한다(required76→90). 기존 baseline의 source8/owner18/ACL16/search_path2/RLS-owner1/table-ACL2/unexpected-policy1/member8 drift는 모두 그대로 남으며 전체 보안 PASS가 아니다. 별도 C0115 함수와 C03+C01 combined38 함수의 exact body/owner/ACL/execution-context 검사와 기존 whole inventory 전후 동일성은 서로 다른 근거다. 관련 배포 도구의 opt-in/승인 결속은 root의 별도 보호 전환 범위이며 여기서 운영 실행하지 않는다.
+
+최신 실행 명령·종료값·파일 SHA와 남은 한계는 로컬 인계 기록에 고정한다. 과거 alias 검사와 C03 이전13 SQL은 실제 통합 근거로 대체한다. 운영 스키마/권한/제어 ON·실제 OAuth/개인 자료·C04 raw fraction 교차 통합·실제 산출률/정답·학습/외부 AI는 미실행이다. 새 자료 없이 정확도 개선 완료를 주장하지 않으며 reader 보존·DB OFF→web OFF 복구와 별도 운영 승인은 계속 필요하다.
+
+
+최신 통합 확인: 관련12파일112, 식사4파일50, 변경 없는 W4 보정1파일64, schema218 행0→219→C03→C01 fresh native1파일17, 합계18파일243 검사가 각각 실패/skip0·exit0이다. `pnpm typecheck`, 변경9개 TS/JS 파일 ESLint, `pnpm verify:anti-slop`(716파일·신규0·baseline 변경0), `git diff --check`, 최종 mapper 변경 후 `pnpm build` exit0을 확인했다. build에는 변경 밖 기존 경고4개가 남는다(플래너·팬트리·레시피북 useCallback과 YouTube bundle unused). 실제 private table2 owner postgres/API역할 grant0 및 C0115/combined38 지문·메타0을 확인했고, whole inventory 잔존 drift와 전체 보안 PASS를 구분한다. 실제 UI/OAuth/운영 DB 적용 및 C04 교차 검사는 이 명령들이 증명하지 않는다.

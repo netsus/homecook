@@ -1,6 +1,10 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { predictCookedWeight, type CookedWeightFact, type CookedWeightRow } from "@/lib/server/cooked-weight-prediction";
+import { readSnapshotWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
+import { assertCookedWeightEvidenceSourceFunctionInventoryResult, buildCookedWeightEvidenceSourceFunctionInventorySql,
+  assertRecipeProductSourceFunctionInventoryResult, buildRecipeProductSourceFunctionInventorySql } from "@/scripts/lib/full-local-security-inventory.mjs";
 
 const enabled = process.env.HOMECOOK_COOKED_WEIGHT_EVIDENCE_ISOLATED_PG === "1";
 const container = process.env.HOMECOOK_WEIGHT_EVIDENCE_TEST_CONTAINER ?? "";
@@ -82,6 +86,7 @@ function digest(batch: string) {
     'events',(select coalesce(jsonb_agg(to_jsonb(e) order by id),'[]') from public.cooked_batch_quantity_events e where cooked_batch_id='${batch}'),
     'meals',(select coalesce(jsonb_agg(to_jsonb(m) order by id),'[]') from public.meal_log_entries m where cooked_batch_id='${batch}'),
     'history',(select coalesce(jsonb_agg(to_jsonb(e) order by id),'[]') from private.cooked_batch_weight_evidence e where batch_id='${batch}'),
+    'receipts',(select coalesce(jsonb_agg(to_jsonb(r) order by id),'[]') from public.mutation_idempotency_keys r where owner_uuid='${owner}'),
     'recipe',(select to_jsonb(r) from public.recipes r where id='${recipe}'),
     'snapshot',(select to_jsonb(s) from public.recipe_content_snapshots s where id='${pin}'));`).stdout;
 }
@@ -142,6 +147,31 @@ describe.runIf(enabled)("personal cooked weight evidence PostgreSQL", () => {
       expect(service(verify.replace("snapshot-v2-session", "recipe-meal-weight"), false).status).not.toBe(0);
     }
   });
+  it("checks reviewed C03 to C01 function bodies and rejects a changed execution context", () => {
+    const inventory = buildCookedWeightEvidenceSourceFunctionInventorySql();
+    expect(assertCookedWeightEvidenceSourceFunctionInventoryResult(JSON.parse(sql(inventory).stdout))).toEqual({ required_functions: 15, missing: 0, body: 0, owner: 0, security: 0, search_path: 0, acl: 0, volatility: 0 });
+    expect(assertRecipeProductSourceFunctionInventoryResult(JSON.parse(sql(buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions: true })).stdout), { includeCookedWeightEvidenceFunctions: true }).required_functions).toBe(38);
+    const changed = JSON.parse(sql(`begin; alter function private.project_cooked_weight_evidence(uuid,uuid) set search_path=pg_catalog,public,pg_temp; ${inventory} rollback;`).stdout);
+    expect(changed.search_path).toBe(1);
+    expect(() => assertCookedWeightEvidenceSourceFunctionInventoryResult(changed)).toThrow("failed closed");
+    expect(assertCookedWeightEvidenceSourceFunctionInventoryResult(JSON.parse(sql(inventory).stdout)).search_path).toBe(0);
+  });
+  it("rejects revoked, deleting and replaced-generation authority before evidence, receipts or completion writes", () => {
+    const batch = session(30); const before = digest(batch);
+    const mutations = [
+      { error: "ACCOUNT_SESSION_STALE", sql: `update public.user_session_generation_bindings set binding_state='revoked',revoked_at=clock_timestamp() where session_key_hash='${hash}';` },
+      { error: "ACCOUNT_DELETING", sql: `update public.user_account_lifecycles set status='deleting' where owner_uuid='${owner}' and account_generation=1;` },
+      { error: "ACCOUNT_GENERATION_STALE", sql: `update public.user_account_lifecycles set status='complete' where owner_uuid='${owner}' and account_generation=1;
+       insert into public.user_account_lifecycles(owner_uuid,account_generation,auth_identity_created_at_snapshot,origin,status,activated_at)
+       values('${owner}',2,'${epoch}','runtime','active',clock_timestamp());` },
+    ];
+    for (const mutation of mutations) {
+      const result = sql(`begin; set local session_replication_role=replica; ${mutation.sql} set local session_replication_role=origin;
+        set session authorization postgres; set local request.jwt.claim.role='service_role'; ${complete(batch, id(130))} rollback;`, false, true);
+      expect(result.stderr).toContain(`ERROR:  ${mutation.error}`);
+      expect(digest(batch)).toBe(before);
+    }
+  });
   it("stores unknown once, leaves numeric weight missing, and replays the original model with no learning", () => {
     const batch = session(3); const key = id(103);
     const first = service(complete(batch, key)).stdout.split("\n").find(line => line.startsWith("{"));
@@ -187,8 +217,17 @@ describe.runIf(enabled)("personal cooked weight evidence PostgreSQL", () => {
   it("does not backfill evidence on legacy successful completion replay", () => {
     const batch = session(9); const key = id(109);
     service(`select public.complete_snapshot_v2_cooking_session(${args},'${batch}','${key}','{}','estimate_from_ingredients',225,clock_timestamp());`);
-    const before = digest(batch); service(complete(batch, key, prediction(999)));
-    expect(digest(batch)).toBe(before);
+    const before = JSON.parse(digest(batch)); service(complete(batch, key, prediction(999)));
+    const after = JSON.parse(digest(batch));
+    // The new operation scope records one replay alias, never a prediction/backfill.
+    const { receipts: beforeReceipts, ...beforeState } = before;
+    const { receipts: afterReceipts, ...afterState } = after;
+    expect(afterState).toEqual(beforeState);
+    expect(afterReceipts).toHaveLength(beforeReceipts.length + 1);
+    for (const receipt of beforeReceipts) expect(afterReceipts.find((entry: { id: string }) => entry.id === receipt.id)).toEqual(receipt);
+    expect(afterReceipts.filter((entry: { result_reference: string; operation_scope: string }) => entry.result_reference === batch
+      && entry.operation_scope === "snapshot_v2_complete_weight_evidence")).toHaveLength(1);
+    service(complete(batch, key, prediction(123))); expect(JSON.parse(digest(batch))).toEqual(after);
     expect(sql(`select private.project_cooked_weight_evidence('${batch}','${owner}')->>'source';`).stdout.trim()).toBe("historical_estimate");
   });
   it("freezes the reported denominator/source in the real preview and atomic meal writer", () => {
@@ -197,6 +236,7 @@ describe.runIf(enabled)("personal cooked weight evidence PostgreSQL", () => {
     const preview = JSON.parse(service(`select public.preview_meal_log_nutrition(${args},'cooked_batch','${batch}',100,'g');`).stdout.trim());
     expect(preview.calories_kcal).toBe(500);
     expect(preview.weight_basis).toMatchObject({ finished_weight_g: 200, source: "reported_measured", model_version: "bounded-weight-v2", batch_revision: 1 });
+    expect(Object.keys(preview.weight_basis).sort()).toEqual(["schema_version", "batch_id", "recipe_content_snapshot_id", "finished_weight_g", "source", "model_version", "prediction_id", "observation_id", "batch_revision"].sort());
     expect(digest(batch)).toBe(before);
     const entry = id(411); service(meal(batch, entry, id(511)));
     const frozen = mealNutrition(entry);
@@ -267,6 +307,67 @@ describe.runIf(enabled)("personal cooked weight evidence PostgreSQL", () => {
     expect(sql(`select count(*),count(*) filter(where event_kind='prediction') from private.cooked_batch_weight_evidence where batch_id='${batch}';`).stdout.trim()).toBe("1|0");
     service(meal(batch,id(418),id(518)));
     expect(mealNutrition(id(418)).weight_basis).toMatchObject({ finished_weight_g: 200, source: "reported_measured", model_version: null, prediction_id: null });
+  });
+  it.each(["food_product", "ingredient"])("carries actual C03 %s frozen MIX into C01 completion without changing the snapshot", async kind => {
+    const productOwner = "78000000-0000-4000-8000-000000000001";
+    const productRecipe = "78000000-0000-4000-8000-000000000010";
+    const productRow = "78000000-0000-4000-8000-000000000011";
+    const productPin = "c3000000-0000-4000-8000-000000000001";
+    const productSession = "c4000000-0000-4000-8000-000000000001";
+    const productOnly = kind === "food_product";
+    const amount = productOnly ? .125 : 300;
+    const unit = productOnly ? "package" : "g";
+    const grams = productOnly ? 25 : 300;
+    const ingredientIdentity = productOnly ? null : "78000000-0000-4000-8000-000000000002";
+    const instruction = productOnly ? "0.125팩을 섞습니다. 원문 그대로" : "300g을 섞습니다. 원문 그대로";
+    const reference = JSON.stringify([{ ingredient_id: ingredientIdentity, row_key: productRow, amount, unit, cut_size: null }]);
+    const authority = `'${productOwner}','2026-01-01',repeat('7',64),1,'2026-01-02'`;
+    const fixture = readFileSync("tests/sql/recipe-product-only-fixture.sql", "utf8").replace("'product-mix'", "'MIX'")
+      .replace("set local session_replication_role=origin;", "update public.account_generation_capability_state set activated_at='2026-01-01' where singleton; set local session_replication_role=origin;") + `
+      update private.full_local_auth_control set local_activated_at='2026-01-01' where singleton;
+      update private.cooked_batch_weight_evidence_control set enabled=true where singleton;
+      update public.recipe_ingredients set amount=${amount},unit='${unit}'${productOnly ? "" : `,ingredient_id='${ingredientIdentity}',food_product_id=null,food_product_nutrition_version_id=null,source_kind='ingredient'`} where id='${productRow}';
+      insert into public.recipe_steps(recipe_id,step_number,instruction,cooking_method_id,ingredients_used,heat_level)
+      values('${productRecipe}',1,'${instruction}','79000000-0000-4000-8000-000000000003','${reference}',null);
+      insert into public.recipe_content_snapshots(id,owner_user_id,recipe_id,title,base_servings,ingredients_json,steps_json,content_hash,schema_version)
+      select '${productPin}',owner_user_id,'${productRecipe}',title,base_servings,ingredients_json,steps_json,content_hash,1
+      from public.build_recipe_content_snapshot_input('${productRecipe}');
+      update public.cooking_methods set code='BOIL' where id='79000000-0000-4000-8000-000000000003';
+      insert into public.cooking_sessions(id,user_id,status,contract_version,session_kind,recipe_id,recipe_content_snapshot_id,cooking_servings,base_recipe_revision)
+      values('${productSession}','${productOwner}','in_progress','snapshot_v2','standalone','${productRecipe}','${productPin}',2,1);
+      select public.set_account_generation_internal_writer_marker('79000000-0000-4000-8000-000000000001',false);`;
+    const data = JSON.parse(sql(`${fixture}
+      select jsonb_build_object('session',to_jsonb(s)||jsonb_build_object('recipe_content_snapshots',to_jsonb(p)),
+        'mode',public.read_snapshot_v2_cook_mode(${authority},'${productSession}'),
+        'predecessors',public.read_recipe_product_nutrition_predecessors('${productOwner}',(select jsonb_agg(jsonb_build_object('id',item->'row_key',
+          'ingredient_id',item->'ingredient_id','food_product_id',item->'food_product_id','food_product_nutrition_version_id',item->'food_product_nutrition_version_id')) from jsonb_array_elements(p.ingredients_json) item)))
+      from public.cooking_sessions s join public.recipe_content_snapshots p on p.id=s.recipe_content_snapshot_id where s.id='${productSession}'; rollback;`, true, true).stdout.trim().split("\n").find(line => line.startsWith("{"))!);
+    const query = { eq: () => query, maybeSingle: async () => ({ data: data.session, error: null }) };
+    const actual = await readSnapshotWeightPrediction({ client: { from: () => ({ select: () => query }),
+      rpc: async (name) => ({ data: name === "read_recipe_product_nutrition_predecessors" ? data.predecessors : null, error: null }) },
+      weightClient: null, ownerId: productOwner, sessionId: productSession, cookingSteps: data.mode.data.recipe.steps });
+    expect(actual?.prediction.totalGrams).toBe(grams); // Pinned V1=200g/package; current V2=300g is never borrowed.
+    expect(actual?.rawRows).toEqual([{ rowKey: productRow, amount, unit, scalable: true }]);
+    expect(actual?.prediction.input?.rows[0].sourceVersion).toBe(productOnly ? "78000000-0000-4000-8000-000000000004" : null);
+    expect(data.mode.data.recipe.ingredients[0].amount).toBe(amount);
+    expect(data.mode.data.recipe.steps[0].instruction).toBe(instruction);
+    expect(data.session.recipe_content_snapshots.steps_json[0].cooking_methods).toEqual(data.mode.data.recipe.steps[0].cooking_methods);
+    expect(data.mode.data.recipe.steps[0].cooking_methods[0].code).toBe("MIX"); // The real builder froze this before catalog BOIL.
+    expect(actual?.methodSteps[0].methodIds).toEqual([]);
+    expect(actual?.methodSteps[0].status).toBe("inferred");
+    expect(actual?.prediction.assumptions).toHaveLength(3);
+    const payload = JSON.stringify(actual).replaceAll("'", "''");
+    const completeProduct = `public.complete_snapshot_v2_cooking_session_with_weight_evidence(${authority},'${productSession}',
+      'c5000000-0000-4000-8000-000000000001','{}','weigh_later',null,null,'${payload}'::jsonb,true)`;
+    expect(sql(`${fixture} do $verify$ declare before_snapshot jsonb; first_result jsonb; begin
+      select to_jsonb(s) into before_snapshot from public.recipe_content_snapshots s where id='${productPin}';
+      first_result:=${completeProduct};
+      if first_result is distinct from ${completeProduct}
+        or before_snapshot is distinct from (select to_jsonb(s) from public.recipe_content_snapshots s where id='${productPin}')
+        or (select (prediction_json->'rawRows'->0->>'amount')::numeric from private.cooked_batch_weight_evidence where batch_id='${productSession}')<>${amount}
+        or (select finished_weight_g from public.leftover_dishes where id='${productSession}')<>${grams}
+        then raise exception 'C03_C01_PRODUCT_SNAPSHOT_CHANGED'; end if;
+      end $verify$; rollback;`, true, true).status).toBe(0);
   });
   it("keeps immutable history/readers on OFF, replays successful writes, and prevents updates", () => {
     const batch = session(10); const key = id(110); service(complete(batch, key));
