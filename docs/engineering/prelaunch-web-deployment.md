@@ -175,6 +175,66 @@ recording 404, homeflow의 저장 없는 공개 안내, `/`·`/login`·`/privacy
 privacy 문구의 실제 표시나 홈 R2 진입 부재를 모두 증명하지 않는다. 이 항목들은 승인 후보의 별도 화면 확인이
 필요하며 로컬 fixture 통과를 실제 운영 검증으로 보고하지 않는다.
 
+### C03 보호 DB·reader·조건부 쓰기 전환
+
+기존 `pnpm deploy:dev`에 정확한 보호 전환을 연결한다. 새 독립 배포 CLI·일반 SQL scanner
+예외는 없다. `PROTECTED_ROLLOUT_REVIEW_PIN`과 `PROTECTED_WRITER_REVIEW_PIN`은 CLI/env로
+덮어쓸 수 없다. 아래 단계는 최종 C03 source·SQL·권한·격리 증거,
+실제 prestate와 별도 사용자 승인 파일이 고정되기 전에는 private state/env 조회 전에 거부된다.
+F01 승인이나 과거 YouTube/R2 승인을 C03으로 전용하지 않는다.
+
+2026-10-14 사용자가 DB219→220·웹87cd→1c676·백업 설정 승격·조건부 ON/안전 OFF를 포함한 C03 전체 적용을 명시 승인했다. DB/reader 자료 SHA `0112e9ba64f6765a24fe64a891bd96fe2fb6edc19a314d398d0b5a7fbbdb2b6f`, 별도 writer 자료 SHA `87d989c6ca9c50da8cb93ec0c0da4af95d1f30941a9ed2255d67e3ccdea663c4`를 비공개 파일과 코드에 고정했다. 이 기록은 아직 운영 적용 완료를 뜻하지 않는다. 빈 pin 거부는 임시 사본의 실제 CLI로 계속 검사하며 실제 승인 pin을 테스트가 덮어쓰지 않는다. 사용자는 이번 v9 계획의 후속 검증된 변경도 반복 승인 없이 적용하도록 지시했으며, 각 단위의 정확 대상·증거·복구와 운영 확인 기록은 계속 남긴다.
+
+C03 전용 review는 기존 테스트의 source dependency인 `scripts/lib/full-local-security-inventory.mjs`와 공개 읽기 경계인 `lib/server/hybrid-auth/public-read-policy-runtime.mjs` 두 정확 경로만 기존 before/after SHA가 모두 있을 때 추가 검토한다. 일반 scripts 경로·기존 거부 대상인 다른 auth/R2 경로와 normal closed guard는 유지하며 이 로컬 준비가 실제 권한/운영 승인인 것은 아니다. 별도 source/security 검토에는 기존 `recipes` scope의 `find_public_recipe_ids_by_product_name`/`read_recipe_product_ingredient_classification`, `recipe-detail`·`recipe-cook-mode` scope의 `read_public_recipe_product_sources` 세 공개 RPC의 정확 POST body 경계와 고정 source_kind/id select를 포함한다.
+
+공통 입력은 `--reviewed-protected-rollout --reviewed-ref <APPROVED_EXACT_SHA>
+--db-config <APPROVED_PRIVATE_CONFIG> --test-script test:feedback-batch:web`다.
+`--protected-phase`에 다음 단계 하나를 지정한다. env patch, 다른 reviewed mode,
+DB baseline/compatible/already-applied, 검증 생략은 이 경로에서 허용하지 않는다.
+
+| 단계 | 조건과 결과 |
+| --- | --- |
+| `database` | 실제 from/build/plist/closed artifact·전체 source diff·새 migration만 정확히 비교한다. config bytes와 별도의 실제 DB identity pin, 기존 인증된 platform/USB/restore readiness와 승인된 inventory bytes를 확인한다. 기존 controlled session의 serializable/advisory/ledger lock·exported snapshot·full archive decode/roles 백업 뒤 exact payload와 ledger를 같은 transaction에서 실행한다. writer는 OFF다. |
+| `reconcile` | unknown에서 migration SQL/apply/backup를 다시 실행하지 않는다. 자기 session 비활성·target/ledger/승인된 catalog/불변 권한을 관찰해 committed 또는 not-applied로 결속한다. mixed/active/foreign는 unknown을 유지한다. committed일 때만 같은 attempt의 schema 갱신 요청을 완료한 뒤 terminal receipt를 기록하며 실패하면 unknown guard를 보존한다; 이 요청 완료는 실제 reader API의 cache 전파 완료를 보증하지 않는다. |
+| `database-retry` | 같은 승인·source pair의 정확한 not-applied receipt 뒤에만 새 attempt를 명시 생성한다. 직전 guard와 receipt를 보존하며 미확정/committed/변조/다른 후보에서 재시도하지 않는다. |
+| `reader` | 새 DB commit receipt와 모든 신형 marker/rowref OFF의 legacy 호환 격리 증거가 필요하다. 기존 설치·test·build·preview·swap·실제 smoke/R2 검사 경로를 사용한다. 실제 reader 건강 확인 뒤 source/build/plist/DB/업무 흐름 receipt와 floor를 게시한다. metadata 완료만 중단됐으면 같은 actual target을 다시 검사해 서비스 교체 없는 forward 복구를 한다. |
+| `writer-on` | 첫 DB/reader 승인과 다른 writer 승인 파일을 읽는다. 실제 ready receipt↔live marker↔승인된 source/build/plist, DB after·reader 흐름·floor를 확인하고 기존 private boolean singleton에 고정 UPDATE만 실행한다. 자동 ON은 없다. |
+| `writer-off` | 같은 별도 승인에 포함된 안전 OFF다. 검증된 정상 UI 후손에서도 target/catalog/원 R2 history/floor를 보존해 새 쓰기를 닫는다. 현재 로컬 설계는 긴급 OFF에 새 USB backup 재인증을 요구하지 않고 기존 local-target/catalog/receipt 검사를 유지한다. 이 복구 조건 차이는 최종 사용자 승인 범위에 명시한다. |
+| `writer-on-reconcile` / `writer-off-reconcile` | control COMMIT 응답 유실도 자동 재실행하지 않는다. 별도 OFF가 이미 완료됐으면 이전 ON을 never-applied로 가장하지 않고 closed-after-unknown으로 기록한다. floor는 유지한다. |
+| `writer-on-retry` / `writer-off-retry` | 같은 source/DB/reader/control 승인에서 not-applied를 확인한 뒤의 명시 새 attempt다. OFF로 닫힌 같은 승인을 ON 재시도로 재활성화하지 않는다. |
+
+`plan`은 소스·증거·대상·현재 phase를 읽기 전용으로 확인한다. 실행은 항상 사용자 승인 뒤
+root operator만 한다. 새 DB가 committed이지만 reader가 pending인 동안 status는 과거 DB219를
+현재 기준으로 표시하지 않으며 normal 웹 승계를 거부한다. unknown도 현재 ledger 수를 추정하지
+않는다. 정상 UI 후속은 현재 승인된 DB receipt/after ledger/catalog와 기존 SQL0·protected source·
+env/read-only guard를 함께 확인한다. 최초 F01 review/원 proof9는 historical bytes로 그대로 보존한다.
+
+ON 승인 파일은 source/DB/reader-flow 증거를 고정한 명시 조건부 형태
+(`readerReceiptSha256: null`) 또는 실제 ready receipt bytes까지 고정한 형태를 지원한다.
+조건부 형태에서도 tool이 검증·게시한 ready receipt의 실제 source/build/plist/floor를 다시 확인하며
+live postimage를 승인 catalog로 학습하지 않는다. 두 승인 권위는 하나의 사용자 질문으로 설명할 수
+있지만 하나를 다른 권위로 자동 사용하지 않는다.
+
+고정 semantic catalog probe는 C03의 함수 정의·owner/ACL/config/security/volatility, 관계의
+column/constraint/index/trigger/RLS/policy·schema ACL과 역할 속성/멤버십을 비교한다. 원 R2·
+Auth 내부/bootstrap·YouTube 권한 catalog는 불변이다. Auth/R2/worker **행**은 migration의
+exported snapshot 안에서 SQL 전후 hash를 비교한다. 정상 로그인/worker 활동으로 바뀌는 행
+hash를 영구 baseline으로 고정해 다음 UI 배포를 막지 않는다. 모든 신형 marker/rowref OFF와
+legacy reader 호환은 source에 묶인 isolated 증거를 요구하며 nullable-only OFF를 인정하지 않는다.
+
+첫 reader 실패의 old predecessor 보상은 실제 OFF table lock을 유지하고, source/build/plist가
+captured predecessor 또는 prepared target일 때만 가능하다. 다른 웹을 덮지 않는다. ready/floor가
+게시된 뒤에는 old reader 보상을 거부하며 새 reader/DB를 유지한다. ON/OFF 후에도 floor를 내리지
+않고 COUNT 0으로 old reader를 허용하지 않는다. 기존 DB219 backwardCompatible=false와 통합
+rollback guard도 지우거나 true로 바꾸지 않는다. 웹 rollback은 DB를 역변환하지 않는다.
+
+현재 구현은 첫 C03의 고정 control 계약을 대상으로 한다. C01/C04/C05의 새 DB/권한/control은
+각자의 exact descriptor·실제 before/isolated after·별도 사용자 승인이 필요하다. 이 scaffold를
+범용 bootstrap/auth/R2 예외로 사용하지 않는다. 새 feature control을 runtime 입력의 임의 SQL/
+식별자로 선택하지 않고 기존 helper에 검토된 고정 계약만 추가한다. 최종 C03 migration과 UI
+source가 아직 변하므로 두 pin은 계속 비워 둔다. owned network-none PG의 원자/ack-loss/ON/OFF
+검증은 운영 SQL·실제 C03 UI·로그인 또는 prod permission 검증을 대신하지 않는다.
+
 ## DB 변경
 
 CREATE TABLE, 일반/UNIQUE INDEX, ALTER TABLE ADD COLUMN/CONSTRAINT를 지원한다.
