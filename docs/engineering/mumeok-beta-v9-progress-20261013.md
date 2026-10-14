@@ -264,3 +264,10 @@ PR #1692와 배포 도구 보완 #1693을 검증 후 병합하고 웹 `5be056499
 - 첫 plan은 `eslint.config.mjs`를 허용하지 않는 구성 변경으로 거부해 운영 변경 없이 중단됐다. 원 `pnpm deploy:dev:plan -- --reviewed-ref 5be05649968e261d83bfc216754f4540b1b0b636 --already-applied-db --db-config <고정 운영 설정> --test-script test:feedback-batch:web`와 원인은 비공개 `focus-web-plan.log`에 보존했다. 정확 Git 원문 SHA의 검토한 경로 수정3줄만 허용하는 보완을 독립211검사·실제 Git 원문/거절16조건·타입/lint로 검증했다. 새 우회 옵션이나 임의 설정 허용은 없다.
 - 기존 installer로 도구 `4385861d96a81bdf69a57e7240d7729cbb7835bd`를 설치하고 설치된 plan 재검증 후 배포했다. 최초 다른worktree config lint의 모듈 경로 충돌은 같은 검토 원문을 현재 폴더의 임시 config로 읽어 검증한 뒤 삭제해 해소했다. source 규칙·의존성은 바꾸지 않았다.
 - 실제 증거: 기존 C01 operation의 `focus-operating-verification.json`, `status-after-focus-deploy.json`, `focus-web-apply.log`, `focus-completion-return-375.png`, `focus-completion-return-1440.png`, `focus-late-measure-manager-375.png`. 배포 로그 `deploy-1791966537730.log`. 단계 Discord HTTP204 확인. C04/C05 운영이나 실제 정확도 평가 완료 주장이 아니다.
+
+## C04 DB227·새 웹·단위 저장 ON, worker 활성화 보완 — 2026-10-15
+
+- 기존 도구 PR #1696(`f8194a6784f1`)로 T1의 transaction 보존 증명과 이후 정상 활동을 구분했다. 원 T1/R을 보존한 prepare/quiesce 뒤 마지막 SQL1개를 적용했고 DB227 receipt의 기존 자료 보존을 확인했다. worker48 설치·인증·건강·기존 만료 감시 OK, 추출/외부AI0을 확인했다.
+- reader 웹 `6b610eb012da42b5d151b058531815dc12a8ca45`·build `prelaunch-6b610eb012da-aIib9L`를 배포했다. 관련1389PASS/133선택제외·빌드/타입/lint 확인 뒤 공개 응답과 기존30g/86kcal·200g/134kcal를 읽었다. 초기 세션 재확인 안내는 화면 재시도로 복구됐고 재로그인은 하지 않았다. C04 writer ON이 확정됐으며 C03/C01 ON·R2 OFF를 유지한다.
+- 별도 worker 활성화는 `locked service PID/plist changed`로 중단됐고 actual `activation-not-applied`·policy OFF를 확인했다. 동일 plist의 PID41975→69608, DB statement timeout 직후 claim 실패·자동 재시작 기록이 정합한다. 활성화만 동일4표의 SHARE ROW EXCLUSIVE로 빈 조회를 허용하고 쓰기 차단·PID/자료 보호를 유지하는 최소 보완을 격리 검증한다. 아직 worker 활성화 완료가 아니며 원 verification은 보존한다.
+- 운영375/1440에서 우유 빈mL·200mL→0.2L·밀도 없는 g 거절·0/음수/분모0 저장 차단을 확인했다. 허용 테스트 기록1개는1/3L→mL를 두 번 클릭해 저장해도1개이고 새로고침/상세에 원문1/3L·영양미상이 유지된다. preview/최근의 긴 소수 표시와 상세에서 추가창 취소 후 실제 호출버튼 초점 복귀는 별도 작은 UI 후속으로 남았다. 실제Safari/스크린리더·전체U-A/W/C05 완료로 확대하지 않는다.

@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-15 — C04 DB227·웹·단위 저장 운영 확인, worker 활성화 보완 중
+
+기존 보호 경로로 DB227·웹 `6b610eb012da`·build `prelaunch-6b610eb012da-aIib9L`와 C04 writer ON을 확인했다. worker48 설치·인증·건강·기존 만료 점검은 통과했으나, 별도 활성화는 DB timeout에 따른 PID 변경 보호로 중단돼 worker policy OFF다. 원 검증 기록을 보존하고 활성화에만 읽기를 허용하면서 동시 쓰기를 차단하는 잠금 보완을 격리 검증한다. 운영 우유 빈mL·원량 환산·분수 저장/재조회·과거 기록 보존 표본은 확인했으며 표시/초점 후속과 전체 C04·C05 완료는 남았다. [최신 진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#c04-db227새-웹단위-저장-on-worker-활성화-보완--2026-10-15)를 따른다. 아래 DB226 기록은 이전 단계다.
+
 ## 2026-10-14 — C04 DB 준비226 운영 확인·단위 기능 OFF
 
 PR #1694·도구 `6306f862552f`로 C04 first5를 실제 DB221→226에 반영하고 검사 대상 표의 자료 지문·원 권한·백업·웹/API 정상을 확인했다. C03/C01 ON과 기존 웹 `5be05649968e`·worker47은 유지하며 C04는 OFF다. 실제 T1 영수증에 worker DB 검토·조건부 writer 검토를 연결하는 다음 단계이며, worker48·새 웹·단위 기능 사용 흐름 완료로 확대하지 않는다. [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#c04-db-준비-단계-운영-확인--2026-10-14)를 따른다.
