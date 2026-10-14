@@ -107,3 +107,11 @@ C03 뒤 C01의 새 SQL SHA는 `0c92fa9d4a83cfefa5313e7b8a13c610ac108555248d1db75
 원 fa1c SQL의 자기 pinned-image/network-none/schema-only fixture에서 exact disabled 신호와 열린 완료 중 OFF 경합 두 회귀가 실패했고, 교정 후 fresh218→219→C03→C01의 native18 검사가 통과했다. 완료·무게·식사 transaction 중 OFF lock timeout과 plain/읽기 전용 projection 동시조회, commit 뒤 OFF 성공, 성공 receipt OFF 재생, failed wrapper 쓰기0 뒤 legacy 완료를 확인했다. 원 실패 로그·첫 Green의 테스트 receipt 필드 오인 실패·교정 로그를 `/tmp/mumeok-c01-off-lock-*.log`에 보존하며 자기 container는 정리했다. 실제 운영 DB·OAuth·개인 자료·UI 브라우저·build는 이번 보완에서 실행하지 않았다. 후속 배포의 정확 source/DB 대상과 reader/ON/floor는 총괄의 별도 적용 경계다.
 
 보완 최종 검사: 관련7파일71검사와 fresh native1파일18검사, 합계8파일89검사 PASS·skip0·exit0이다. 타입 검사·변경5개 TS ESLint·Anti Slop(716파일, 신규finding0, baseline 변경0)·diff 공백 검사도 exit0이다. 기본 ESLint 호출의 공유 pnpm plugin 탐색 실패는 규칙을 바꾸지 않은 `/tmp` config로 실제 plugin 위치만 지정해 검사했다. 추가 수동 완료 fixture의 잘못된 구 DTO source 값으로 실패한 로그도 보존하고 기존 `measured` 값으로 교정했다. 본문에 남은 이전 검사 수치는 당시 기록이다.
+
+## 독립 요리 로그인 복귀 후속 — 2026-10-14
+
+상태: 로컬 구현·검사 완료, 운영 미반영. 공개 snapshot-v2 상세의 비로그인 ‘요리하기’는 기존 auth gate를 열고 세션 RPC를 호출하지 않는다. 기존 pending action에 선택 인분/당시 revision을 strict key·같은 recipe redirect·15분 TTL로 보관한다. 로그인 후 현재 권한 확인 상세를 다시 읽고 인분만 복원한다. 현재 revision이 다르면 변경 안내를 제공하며, ‘요리하기를 다시 눌러 시작’하는 명시 동작만 기존 snapshot-v2 API를 호출한다. 자동 시작/완료 저장과 legacy cook URL 우회는 없다.
+
+정확401·ACCOUNT_SESSION_STALE/ACCOUNT_GENERATION_STALE409만 안내를 다시 열고 일반500/네트워크 실패는 오류로 유지한다. 취소/invalid/expired/다른 recipe·보관 실패·늦은 응답/화면 전환·반복 클릭을 검증한다. DB SQL·C01 예상구조·RLS/인증/권한·worker/모델/키 변경은0이다. 실제 OAuth/운영 계정 흐름은 로컬 fixture 결과와 구분한다. 다른 quantity-resume 묶음의 동일 pending/modal/detail 파일은 root가 후속 3-way 통합으로 보존한다.
+
+관련 Vitest3파일163검사·직접 TypeScript·변경 TS7파일 ESLint·기존 anti-slop3단계(신규 지적0)를 통과했다. 실제 Next의320/375/1440px local fixture3검사/6PNG에서 guest 요청0·로그인 복귀 자동 요청0·현재 revision13/선택3인분 명시 시작1을 확인했다. server는 소유 loopback fake Supabase의 공개 metadata/UI-mode만 응답했고 browser API는 전부 fixture·외부 origin 차단이다. 실제 OAuth/운영 DB/완료 저장 검증이 아니며, 최종 production build는 C01 SQL 호환 보완과 통합한 후보에서 root가 수행한다. 최초 화면 실행은 background gamification fixture 누락으로 실패했으며 기존 fixture 연결 뒤 같은3검사를 통과했다.

@@ -56,6 +56,10 @@ export function LoginGateModal() {
       return "다시 로그인하면 삭제 확인으로 돌아가요. 삭제는 마지막 확인 뒤에만 진행돼요.";
     }
 
+    if (action.type === "cook") {
+      return `로그인하면 선택한 ${action.cookingServings}인분으로 돌아가요. 요리하기를 다시 눌러 시작해 주세요.`;
+    }
+
     return "로그인하면 원래 하려던 작업으로 자동 이동해요.";
   }, [action]);
 
@@ -72,7 +76,9 @@ export function LoginGateModal() {
 
   const handleLogin = () => {
     if (!savePendingAction(action)) {
-      setStorageError("작업을 임시 보관하지 못했어요. 내용을 복사해 둔 뒤 다시 시도해 주세요.");
+      setStorageError(action.type === "cook"
+        ? "선택한 인분을 임시 보관하지 못했어요. 이 화면에서 다시 시도해 주세요."
+        : "작업을 임시 보관하지 못했어요. 내용을 복사해 둔 뒤 다시 시도해 주세요.");
       return;
     }
     document.cookie = createPostAuthNextCookie(action.redirectTo);
