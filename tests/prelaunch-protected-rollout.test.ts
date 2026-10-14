@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { createProtectedPrelaunchDatabaseEngine, createProtectedPrelaunchJournal, createProtectedPrelaunchWriter, planProtectedPrelaunchMigrations, validatePrelaunchMigrationSql } from "../scripts/lib/prelaunch-database.mjs";
 import { CLOSED_R2_REVIEW_PIN, PROTECTED_ROLLOUT_REVIEW_PIN, PROTECTED_WRITER_REVIEW_PIN, assertProtectedClosedR2Marker, assertProtectedWriterReview, assertProtectedReaderRollback, assertProtectedReaderCompensation, assertProtectedRolloutEnvironment,
-  assertProtectedRolloutReview, assertProtectedRolloutSource, parsePrelaunchOptions, protectedRolloutReaderReceipt, protectedRolloutStatus, retargetPlist } from "../scripts/lib/prelaunch-web-deploy.mjs";
+  assertProtectedRolloutReview, assertProtectedRolloutSource, classifyPrelaunchScope, parsePrelaunchOptions, protectedRolloutReaderReceipt, protectedRolloutStatus, retargetPlist } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const ref = (character: string) => character.repeat(40);
@@ -272,6 +272,81 @@ describe("exact protected source, environment and reader floor", () => {
     for (const path of ["app/api/v1/marketing/round2/route.ts", "lib/server/marketing-round2.ts", "lib/server/full-local-auth/scope.ts"]) {
       expect(() => assertProtectedRolloutReview({ ...review, files: { ...review.files, [path]: [sha("a"), sha("b")] } })).toThrow("runtime");
     }
+  });
+  it("checks the complete C03 candidate path fixture with only the two exact source exceptions", () => {
+    const { review, live } = fixture();
+    // Complete 87cd→1c676 candidate paths; byte hashes and authority are isolated fixture values.
+    const paths = [
+      "app/api/v1/cooking/sessions/route.ts", "app/api/v1/food-catalog/search/route.ts",
+      "app/api/v1/recipes/[id]/cook-mode/route.ts", "app/api/v1/recipes/[id]/route.ts",
+      "app/api/v1/recipes/pantry-match/route.ts", "app/api/v1/recipes/route.ts",
+      "app/api/v1/shopping/lists/[list_id]/route.ts", "app/api/v1/shopping/lists/route.ts",
+      "app/api/v1/users/me/route.ts", "components/auth/login-gate-modal.tsx",
+      "components/cooking/consumed-ingredient-sheet.tsx", "components/cooking/cook-mode-step-model.ts",
+      "components/cooking/cook-mode-whole-board.tsx", "components/recipe/manual-recipe-create-screen.tsx",
+      "components/recipe/personal-recipe-editor-shell.tsx", "components/recipe/recipe-detail-personal-editor.tsx",
+      "components/recipe/recipe-detail-screen.tsx", "components/recipe/recipe-food-catalog-picker.tsx",
+      "components/recipe/recipe-future-impact-dialog.tsx", "components/recipe/recipe-ingredient-add-modal.tsx",
+      "components/shopping/shopping-detail-screen.tsx", "docs/api문서-v1.2.43.md",
+      "docs/db설계-v1.3.38.md", "docs/engineering/mumeok-beta-product-contract-20261014.md",
+      "docs/security/recipe-product-source-function-postimages.json", "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.36.md", "docs/유저flow맵-v1.3.38.md",
+      "docs/화면정의서-v1.5.40.md", "lib/api/food-catalog-search.ts",
+      "lib/api/mypage.ts", "lib/auth/pending-action.ts",
+      "lib/nutrition/product-quantity.ts", "lib/nutrition/recipe-nutrition-calculator.ts",
+      "lib/recipe-detail.ts", "lib/recipe-editor-ingredients.ts",
+      "lib/recipe-ingredient-source.ts", "lib/recipe-ingredient-units.ts",
+      "lib/recipe.ts", "lib/server/account-generation/profile-subject.ts",
+      "lib/server/cooked-batch-weight-estimate.ts", "lib/server/cooking.ts",
+      "lib/server/food-catalog-pantry-source.ts", "lib/server/hybrid-auth/public-read-policy-runtime.mjs",
+      "lib/server/meal-recipe-snapshot.ts", "lib/server/recipe-content-snapshot-future-propagation.ts",
+      "lib/server/recipe-ingredient-search.ts", "lib/server/recipe-nutrition-service.ts",
+      "lib/server/recipe-product-labels.ts", "lib/server/recipe-product-nutrition.ts",
+      "lib/server/recipe-product-quantity.ts", "lib/server/recipe-snapshot-entrypoint.ts",
+      "lib/server/youtube-import.ts", "scripts/lib/full-local-security-inventory.mjs",
+      "stores/ui-store.ts", "supabase/migrations/20261013190000_recipe_product_only_identity.sql",
+      "tests/08b-pantry-match.backend.test.ts", "tests/cook-session-start.backend.test.ts",
+      "tests/cooked-batch-weight-estimate.test.ts", "tests/cooking-product-row-consumers.test.tsx",
+      "tests/e2e/helpers/recipe-product-ui-fixture.ts", "tests/e2e/recipe-pantry-product-selection-local.spec.ts",
+      "tests/e2e/recipe-product-ui-local.spec.ts", "tests/food-catalog-pantry-source-route.test.ts",
+      "tests/food-catalog-pantry-source.test.ts", "tests/food-catalog-search-client.test.tsx",
+      "tests/hybrid-public-read-policy.test.ts", "tests/meal-recipe-snapshot.test.ts",
+      "tests/pending-action.test.ts", "tests/profile-subject-route.test.ts",
+      "tests/profile-subject.test.ts", "tests/recipe-api-contracts.test.ts",
+      "tests/recipe-detail-ingredient-edit.test.tsx", "tests/recipe-detail-personal-actions.test.tsx",
+      "tests/recipe-detail-screen.test.tsx", "tests/recipe-editor-ingredients.test.ts",
+      "tests/recipe-food-catalog-picker.test.tsx", "tests/recipe-future-impact-dialog.test.tsx",
+      "tests/recipe-future-impact-flow.test.tsx", "tests/recipe-ingredient-search.test.ts",
+      "tests/recipe-manual-product-selection.test.tsx", "tests/recipe-product-display.test.ts",
+      "tests/recipe-product-only-contract.test.ts", "tests/recipe-product-only-postgres.integration.test.ts",
+      "tests/recipe-product-quantity.test.ts", "tests/recipe-product-source-security-inventory.test.ts",
+      "tests/recipe-public-product-boundary.test.ts", "tests/recipe-tags-search.test.ts",
+      "tests/shopping-detail.backend.test.ts", "tests/shopping-preview.backend.test.ts",
+      "tests/sql/recipe-product-only-fixture.sql", "tests/sql/recipe-product-only-verify.sql",
+      "types/cooking.ts", "types/food-product.ts",
+      "types/recipe.ts", "types/shopping.ts",
+      "types/user.ts",
+    ];
+    expect(paths).toHaveLength(97);
+    const files = Object.fromEntries(paths.map(path => [path, [path.startsWith("supabase/") ? null : sha("a"), sha("b")]]));
+    const actual = { ...review, files };
+    const input = { review: actual, live, releaseSha: actual.to, files: paths, digests: files, closedArtifactSha256: actual.closedArtifactSha256 };
+    expect(() => assertProtectedRolloutSource(input)).not.toThrow();
+    for (const path of ["scripts/lib/full-local-security-inventory.mjs", "lib/server/hybrid-auth/public-read-policy-runtime.mjs"]) {
+      for (const pair of [[null, sha("b")], [sha("a"), null], ["not-a-sha", sha("b")]]) {
+        expect(() => assertProtectedRolloutReview({ ...actual, files: { ...files, [path]: pair } })).toThrow();
+      }
+      expect(() => assertProtectedRolloutSource({ ...input, review: { ...actual, files: { ...files, [path]: [sha("a"), sha("c")] } } })).toThrow("전체 source");
+    }
+    for (const path of ["scripts/lib/full-local-security-inventory-other.mjs", "scripts/lib/sub/full-local-security-inventory.mjs",
+      "scripts/deploy-prelaunch-web.mjs", "lib/server/hybrid-auth/public-read-policy-runtime-copy.mjs",
+      "lib/server/hybrid-auth/session-authority.ts", "lib/server/full-local-auth/scope.ts", "lib/server/marketing-round2.ts",
+      "app/api/v1/marketing/round2/route.ts"]) {
+      expect(() => assertProtectedRolloutReview({ ...actual, files: { ...files, [path]: [sha("a"), sha("b")] } })).toThrow();
+    }
+    expect(() => assertProtectedRolloutReview({ ...actual, feature: "unapproved-feature" })).toThrow("source pair");
+    const manifest = { scripts: { build: "next build" } };
+    expect(() => classifyPrelaunchScope(["scripts/lib/full-local-security-inventory.mjs"], manifest, manifest)).toThrow("서버 구성");
   });
   it("preserves false flags, generation, original proofs and every runtime setting", () => {
     const { review, previous } = fixture();

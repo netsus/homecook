@@ -104,15 +104,19 @@ export function assertProtectedWriterReview(approval, rollout, rolloutReviewSha2
 }
 
 export function assertProtectedRolloutReview(review) {
+  const exactC03Sources = new Set(["scripts/lib/full-local-security-inventory.mjs", "lib/server/hybrid-auth/public-read-policy-runtime.mjs"]);
   closedR2Require(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && review.feature === "recipe-product-source"
     && CLOSED_R2_REF.test(review.from ?? "") && CLOSED_R2_REF.test(review.to ?? "") && review.from !== review.to,
     "보호 전환의 정확한 source pair가 필요합니다.");
   closedR2Require(review.files && Object.keys(review.files).length > 0 && Object.entries(review.files).every(([path, pair]) =>
-    /^(?:app|components|lib|stores|types|hooks|tests|docs|supabase\/migrations)\//u.test(path)
+    (/^(?:app|components|lib|stores|types|hooks|tests|docs|supabase\/migrations)\//u.test(path) || exactC03Sources.has(path))
     && !path.split("/").some(part => ["", ".", ".."].includes(part))
     && Array.isArray(pair) && pair.length === 2 && pair.every(value => value === null || CLOSED_R2_SHA.test(value))
     && pair[0] !== pair[1]), "보호 전환은 전체 변경 파일의 exact before/after bytes만 허용합니다.");
-  closedR2Require(!Object.keys(review.files).some(path => /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|components\/marketing\/|lib\/(?:marketing[./-]|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u.test(path)),
+  for (const path of exactC03Sources) {
+    closedR2Require(!Object.hasOwn(review.files, path) || review.files[path].every(value => CLOSED_R2_SHA.test(value)), "C03 두 source 파일은 모두 정확한 기존 before/after byte SHA가 필요합니다.");
+  }
+  closedR2Require(!Object.keys(review.files).some(path => !exactC03Sources.has(path) && /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|components\/marketing\/|lib\/(?:marketing[./-]|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u.test(path)),
     "C03 승인은 기존 R2/인증 runtime 보호 예외를 열지 않습니다.");
   closedR2Require(typeof review.predecessorBuildId === "string" && review.predecessorBuildId.length > 0
     && CLOSED_R2_SHA.test(review.predecessorPlistSha256 ?? "") && CLOSED_R2_SHA.test(review.closedArtifactSha256 ?? "")
