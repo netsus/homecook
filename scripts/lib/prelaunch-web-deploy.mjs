@@ -15,6 +15,48 @@ export const CLOSED_R2_REVIEW_PIN = Object.freeze({
 // Human-approved C03 DB/reader and conditional writer authority. No CLI/env overrides.
 export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-rollout-review.json", sha256: "0112e9ba64f6765a24fe64a891bd96fe2fb6edc19a314d398d0b5a7fbbdb2b6f" });
 export const PROTECTED_WRITER_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-c03-20261014-MeZKNX/approved-writer-review.json", sha256: "87d989c6ca9c50da8cb93ec0c0da4af95d1f30941a9ed2255d67e3ccdea663c4" });
+// C01 source/current220/isolated postimage authority is not yet pinned. Never borrow C03 approval.
+export const COOKED_WEIGHT_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const COOKED_WEIGHT_WRITER_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const COOKED_WEIGHT_FEATURE = "cooked-weight-evidence";
+export const COOKED_WEIGHT_MIGRATION = "20261013233000_cooked_batch_weight_evidence.sql";
+export const COOKED_WEIGHT_ENVIRONMENT = "HOMECOOK_COOKED_WEIGHT_EVIDENCE";
+
+export function protectedRolloutPins(review) {
+  if (review?.feature === COOKED_WEIGHT_FEATURE) return { rollout: COOKED_WEIGHT_ROLLOUT_REVIEW_PIN, writer: COOKED_WEIGHT_WRITER_REVIEW_PIN };
+  if (review?.feature === "recipe-product-source") return { rollout: PROTECTED_ROLLOUT_REVIEW_PIN, writer: PROTECTED_WRITER_REVIEW_PIN };
+  throw new DeploymentError("Unknown protected feature; no generic rollout authority");
+}
+
+export function protectedRolloutPaths(root, review) {
+  const prefix = review?.feature === COOKED_WEIGHT_FEATURE ? "protected-cooked-weight" : "protected";
+  protectedRolloutPins(review);
+  return { databaseGuardPath: join(root, `${prefix}-database-guard.json`), readerReceiptPath: join(root, `${prefix}-reader-ready.json`),
+    operationRoot: join(root, `${prefix}-operations`), writerPrefix: `${prefix}-writer` };
+}
+
+export function protectedImmutableSha256(review, phase = "after") {
+  return review?.feature === COOKED_WEIGHT_FEATURE && phase === "after" ? review.database.afterImmutableSha256 : review.database.immutableSha256;
+}
+
+export function protectedReaderFenceSql(review) {
+  protectedRolloutPins(review);
+  if (review.feature === COOKED_WEIGHT_FEATURE) return {
+    begin: "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL idle_in_transaction_session_timeout='120s'; SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE; LOCK TABLE private.cooked_batch_weight_evidence_control IN SHARE MODE;",
+    check: "SELECT (SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.cooked_batch_weight_evidence_control) AND (SELECT count(*)=1 AND bool_and(singleton) AND bool_or(enabled) FROM private.recipe_product_only_write_control);",
+  };
+  return {
+    begin: "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL idle_in_transaction_session_timeout='120s'; LOCK TABLE private.recipe_product_only_write_control IN SHARE MODE;",
+    check: "SELECT count(*)=1 AND bool_and(singleton) AND NOT bool_or(enabled) FROM private.recipe_product_only_write_control;",
+  };
+}
+
+export function protectedReaderPlist(review, before, checkout) {
+  protectedRolloutPins(review);
+  const next = retargetPlist(before, checkout);
+  if (review.feature === COOKED_WEIGHT_FEATURE) next.EnvironmentVariables = { ...before.EnvironmentVariables, [COOKED_WEIGHT_ENVIRONMENT]: "1" };
+  return next;
+}
 const closedR2Hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const closedR2Require = (value, message) => { if (!value) throw new DeploymentError(`닫힌 R2 유지 배포: ${message}`); };
 const CLOSED_R2_SHA = /^[a-f0-9]{64}$/u;
@@ -75,20 +117,39 @@ export function loadClosedR2Review(repositoryRoot) {
   return assertClosedR2Review(JSON.parse(bytes));
 }
 
-export function loadProtectedRolloutReview(repositoryRoot) {
-  closedR2Require(isAbsolute(PROTECTED_ROLLOUT_REVIEW_PIN.path ?? "") && CLOSED_R2_SHA.test(PROTECTED_ROLLOUT_REVIEW_PIN.sha256 ?? ""),
+function readProtectedRolloutPin(repositoryRoot, pin) {
+  closedR2Require(isAbsolute(pin.path ?? "") && CLOSED_R2_SHA.test(pin.sha256 ?? ""),
     "보호 전환 승인 핀이 비어 있어 실행할 수 없습니다.");
-  const bytes = readClosedR2PrivateBytes(PROTECTED_ROLLOUT_REVIEW_PIN.path, repositoryRoot, 524288);
-  closedR2Require(closedR2Hash(bytes) === PROTECTED_ROLLOUT_REVIEW_PIN.sha256, "보호 전환 승인 자료 bytes가 바뀌었습니다.");
+  const bytes = readClosedR2PrivateBytes(pin.path, repositoryRoot, 524288);
+  closedR2Require(closedR2Hash(bytes) === pin.sha256, "보호 전환 승인 자료 bytes가 바뀌었습니다.");
   return assertProtectedRolloutReview(JSON.parse(bytes));
 }
 
+export function loadProtectedRolloutReview(repositoryRoot, selector = {}) {
+  closedR2Require(!selector.feature || ["recipe-product-source", COOKED_WEIGHT_FEATURE].includes(selector.feature), "No arbitrary protected feature selector");
+  if (selector.feature === COOKED_WEIGHT_FEATURE || (selector.reviewSha256 && selector.reviewSha256 === COOKED_WEIGHT_ROLLOUT_REVIEW_PIN.sha256)) {
+    const review = readProtectedRolloutPin(repositoryRoot, COOKED_WEIGHT_ROLLOUT_REVIEW_PIN);
+    closedR2Require(review.feature === COOKED_WEIGHT_FEATURE, "C01 pin cannot use another feature's authority");
+    return review;
+  }
+  if (selector.reviewSha256) closedR2Require(selector.reviewSha256 === PROTECTED_ROLLOUT_REVIEW_PIN.sha256, "Unknown protected marker authority");
+  const review = readProtectedRolloutPin(repositoryRoot, PROTECTED_ROLLOUT_REVIEW_PIN);
+  closedR2Require(review.feature === "recipe-product-source", "C03 pin cannot be retargeted");
+  if (selector.ref && selector.ref !== review.to) {
+    const weight = readProtectedRolloutPin(repositoryRoot, COOKED_WEIGHT_ROLLOUT_REVIEW_PIN);
+    closedR2Require(weight.to === selector.ref, "Protected control selection requires its exact approved reader reference");
+    return weight;
+  }
+  return review;
+}
+
 export function loadProtectedWriterReview(repositoryRoot, rollout) {
-  closedR2Require(isAbsolute(PROTECTED_WRITER_REVIEW_PIN.path ?? "") && CLOSED_R2_SHA.test(PROTECTED_WRITER_REVIEW_PIN.sha256 ?? ""),
+  const pins = protectedRolloutPins(rollout);
+  closedR2Require(isAbsolute(pins.writer.path ?? "") && CLOSED_R2_SHA.test(pins.writer.sha256 ?? ""),
     "신형 쓰기 ON/OFF의 별도 승인 핀이 비어 있어 실행할 수 없습니다.");
-  const bytes = readClosedR2PrivateBytes(PROTECTED_WRITER_REVIEW_PIN.path, repositoryRoot, 65536);
-  closedR2Require(closedR2Hash(bytes) === PROTECTED_WRITER_REVIEW_PIN.sha256, "신형 쓰기 승인 자료 bytes가 바뀌었습니다.");
-  return assertProtectedWriterReview(JSON.parse(bytes), rollout, PROTECTED_ROLLOUT_REVIEW_PIN.sha256);
+  const bytes = readClosedR2PrivateBytes(pins.writer.path, repositoryRoot, 65536);
+  closedR2Require(closedR2Hash(bytes) === pins.writer.sha256, "신형 쓰기 승인 자료 bytes가 바뀌었습니다.");
+  return assertProtectedWriterReview(JSON.parse(bytes), rollout, pins.rollout.sha256);
 }
 
 export function assertProtectedWriterReview(approval, rollout, rolloutReviewSha256) {
@@ -104,8 +165,10 @@ export function assertProtectedWriterReview(approval, rollout, rolloutReviewSha2
 }
 
 export function assertProtectedRolloutReview(review) {
-  const exactC03Sources = new Set(["scripts/lib/full-local-security-inventory.mjs", "lib/server/hybrid-auth/public-read-policy-runtime.mjs"]);
-  closedR2Require(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && review.feature === "recipe-product-source"
+  const cookedWeight = review?.feature === COOKED_WEIGHT_FEATURE;
+  const exactC03Sources = new Set(cookedWeight ? ["scripts/lib/full-local-security-inventory.mjs"]
+    : ["scripts/lib/full-local-security-inventory.mjs", "lib/server/hybrid-auth/public-read-policy-runtime.mjs"]);
+  closedR2Require(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && ["recipe-product-source", COOKED_WEIGHT_FEATURE].includes(review.feature)
     && CLOSED_R2_REF.test(review.from ?? "") && CLOSED_R2_REF.test(review.to ?? "") && review.from !== review.to,
     "보호 전환의 정확한 source pair가 필요합니다.");
   closedR2Require(review.files && Object.keys(review.files).length > 0 && Object.entries(review.files).every(([path, pair]) =>
@@ -131,6 +194,25 @@ export function assertProtectedRolloutReview(review) {
   }
   closedR2Require(review.isolatedEvidence.sha256 === review.isolatedEvidenceSha256 && review.readerFlows.sha256 === review.readerFlowsSha256
     && isAbsolute(review.database?.configPath ?? "") && CLOSED_R2_SHA.test(review.database?.configSha256 ?? ""), "설정 bytes와 격리/reader 증거가 다릅니다.");
+  if (cookedWeight) {
+    const previous = review.predecessorProtected, database = review.database;
+    closedR2Require(previous?.reviewSha256 === PROTECTED_ROLLOUT_REVIEW_PIN.sha256 && previous.writerApprovalSha256 === PROTECTED_WRITER_REVIEW_PIN.sha256
+      && previous.writerEnabled === true && CLOSED_R2_REF.test(previous.readerFloor ?? "") && previous.readerFloor !== review.to
+      && ["databaseReceipt", "readerReceipt", "writerReceipt"].every(key => isAbsolute(previous[key]?.path ?? "") && CLOSED_R2_SHA.test(previous[key]?.sha256 ?? "")),
+      "C01 requires the unchanged C03 DB/ON/reader floor authority, not a retargeted C03 approval");
+    closedR2Require(Array.isArray(database.before) && database.before.length === 220 && database.after?.length === 221
+      && database.migrations?.length === 1 && database.migrations[0].filename === COOKED_WEIGHT_MIGRATION
+      && CLOSED_R2_SHA.test(database.afterImmutableSha256 ?? "") && CLOSED_R2_SHA.test(database.stableImmutableSha256 ?? "")
+      && CLOSED_R2_SHA.test(database.scopeTransition?.beforeOuterSha256 ?? "") && CLOSED_R2_SHA.test(database.scopeTransition?.afterOuterSha256 ?? "")
+      && database.scopeTransition.afterOuterSha256 !== database.scopeTransition.beforeOuterSha256
+      && database.scopeTransition.afterAliasSha256 === database.scopeTransition.beforeOuterSha256,
+      "C01 requires exact220/221, whole before/after immutable and the unchanged remainder plus preserved scope alias");
+    const environment = review.readerEnvironment;
+    closedR2Require(environment && Object.keys(environment).join() === COOKED_WEIGHT_ENVIRONMENT
+      && Array.isArray(environment[COOKED_WEIGHT_ENVIRONMENT]) && environment[COOKED_WEIGHT_ENVIRONMENT].length === 2
+      && [null, "0", "1"].includes(environment[COOKED_WEIGHT_ENVIRONMENT][0]) && environment[COOKED_WEIGHT_ENVIRONMENT][1] === "1",
+      "Only the exact C01 server gate can be added at the verified reader stage");
+  }
   return review;
 }
 
@@ -149,7 +231,56 @@ export function verifyProtectedRolloutEvidence(review, repositoryRoot) {
     && isolated.immutableSha256 === review.database.immutableSha256 && isDeepStrictEqual(isolated.migrations, review.database.migrations), "격리 증거는 승인한 source/SQL/전후 catalog/전체 OFF를 증명해야 합니다.");
   closedR2Require(result.readerFlows.schema === "homecook.prelaunch-protected-reader-flows.v1" && result.readerFlows.releaseSha === review.to
     && result.readerFlows.passed === true && result.readerFlows.testScript === review.testScript, "reader 흐름 증거는 정확한 후보 source에 묶여야 합니다.");
+  if (review.feature === COOKED_WEIGHT_FEATURE) {
+    closedR2Require(isolated.feature === COOKED_WEIGHT_FEATURE && isolated.productWriterEnabled === true
+      && isolated.afterImmutableSha256 === review.database.afterImmutableSha256 && isolated.stableImmutableSha256 === review.database.stableImmutableSha256
+      && isDeepStrictEqual(isolated.scopeTransition, review.database.scopeTransition), "C01 isolated proof must preserve C03 ON and the exact scope transition");
+    result.predecessorProtected = verifyCookedWeightPredecessor(review, repositoryRoot);
+  }
   return result;
+}
+
+export function verifyCookedWeightPredecessor(review, repositoryRoot) {
+  closedR2Require(review.feature === COOKED_WEIGHT_FEATURE, "C01 predecessor validation only");
+  const previous = review.predecessorProtected, c03 = loadProtectedRolloutReview(repositoryRoot), writer = loadProtectedWriterReview(repositoryRoot, c03);
+  const result = {};
+  for (const key of ["databaseReceipt", "readerReceipt", "writerReceipt"]) {
+    const bytes = readClosedR2PrivateBytes(previous[key].path, repositoryRoot, 524288);
+    closedR2Require(closedR2Hash(bytes) === previous[key].sha256, "Original C03 receipt bytes differ");
+    result[key] = JSON.parse(bytes);
+  }
+  const db = result.databaseReceipt, reader = result.readerReceipt, on = result.writerReceipt;
+  closedR2Require(db.schema === "homecook.prelaunch-protected-db-attempt.v1" && db.status === "committed" && db.reviewSha256 === PROTECTED_ROLLOUT_REVIEW_PIN.sha256
+    && db.from === c03.from && db.to === c03.to && db.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: review.database.before, applied: review.database.before }))
+    && isDeepStrictEqual(c03.database.after, review.database.before) && db.targetSha256 === review.database.targetSha256
+    && db.catalogSha256 === review.database.beforeCatalogSha256 && db.immutableSha256 === review.database.immutableSha256
+    && reader.schema === "homecook.prelaunch-protected-reader.v1" && reader.reviewSha256 === PROTECTED_ROLLOUT_REVIEW_PIN.sha256
+    && reader.releaseSha === c03.to && reader.readerFloor === c03.to && reader.readerFloor === previous.readerFloor
+    && reader.databasePlanSha256 === db.databasePlanSha256 && reader.verifiedFlowsSha256 === c03.readerFlowsSha256
+    && on.schema === "homecook.prelaunch-protected-writer-attempt.v1" && on.status === "committed" && on.action === "writer-on" && on.writerEnabled === true
+    && on.reviewSha256 === PROTECTED_ROLLOUT_REVIEW_PIN.sha256 && on.approvalSha256 === PROTECTED_WRITER_REVIEW_PIN.sha256
+    && on.readerFloor === previous.readerFloor && on.readerReceiptSha256 === previous.readerReceipt.sha256
+    && closedR2Hash(JSON.stringify(on.target)) === review.database.targetSha256 && writer.databasePlanSha256 === db.databasePlanSha256,
+    "C01 must retain the original committed C03 DB/reader/ON authority");
+  return result;
+}
+
+export function assertCookedWeightProductOff(receipt, review, reviewSha256) {
+  closedR2Require(review.feature === COOKED_WEIGHT_FEATURE && CLOSED_R2_SHA.test(reviewSha256 ?? "")
+    && receipt?.schema === "homecook.prelaunch-protected-writer-attempt.v1" && receipt.status === "committed"
+    && receipt.action === "writer-off" && receipt.writerEnabled === false
+    && receipt.reviewSha256 === PROTECTED_ROLLOUT_REVIEW_PIN.sha256 && receipt.approvalSha256 === PROTECTED_WRITER_REVIEW_PIN.sha256
+    && receipt.readerFloor === review.predecessorProtected.readerFloor && closedR2Hash(JSON.stringify(receipt.target)) === review.database.targetSha256
+    && receipt.baselineReviewSha256 === reviewSha256
+    && receipt.baselineDatabasePlanSha256 === closedR2Hash(JSON.stringify({ source: review.database.after, applied: review.database.after })),
+    "C03 OFF after C01 requires original OFF authority and the exact current C01 baseline");
+  return receipt;
+}
+
+export function assertCookedWeightFirstReader(review, productOffReceipt, reviewSha256) {
+  if (review.feature !== COOKED_WEIGHT_FEATURE || !productOffReceipt) return;
+  assertCookedWeightProductOff(productOffReceipt, review, reviewSha256);
+  throw new DeploymentError("C03 safe OFF is preserved. C01's first-reader proof assumes C03 ON; keep C01 OFF and the prior reader/floor until exact OFF-reader evidence is reviewed. Never automatically reopen C03.");
 }
 
 export function assertProtectedRolloutSource({ review, live, releaseSha, files, digests, closedArtifactSha256 }) {
@@ -161,9 +292,17 @@ export function assertProtectedRolloutSource({ review, live, releaseSha, files, 
     "보호 전환의 전체 source diff bytes가 다릅니다.");
 }
 
-export function assertProtectedRolloutEnvironment({ review, before, after, currentControlSha256, currentProofsSha256, currentGeneration }) {
+export function assertProtectedRolloutEnvironment({ review, before, after, currentControlSha256, currentProofsSha256, currentGeneration, readerActivation = false }) {
   assertProtectedRolloutReview(review);
-  closedR2Require(isDeepStrictEqual(after, retargetPlist(before, after.WorkingDirectory))
+  const expected = retargetPlist(before, after.WorkingDirectory);
+  if (review.feature === COOKED_WEIGHT_FEATURE) {
+    const actualGate = before.EnvironmentVariables[COOKED_WEIGHT_ENVIRONMENT] ?? null;
+    if (readerActivation) {
+      closedR2Require(actualGate === review.readerEnvironment[COOKED_WEIGHT_ENVIRONMENT][0], "C01 prior server gate differs");
+      expected.EnvironmentVariables = { ...expected.EnvironmentVariables, [COOKED_WEIGHT_ENVIRONMENT]: "1" };
+    } else closedR2Require([review.readerEnvironment[COOKED_WEIGHT_ENVIRONMENT][0], "1"].includes(actualGate), "C01 boundary cannot adopt an unreviewed gate");
+  }
+  closedR2Require(isDeepStrictEqual(after, expected)
     && CLOSED_R2_FLAGS.every(key => before.EnvironmentVariables[key] === "false" && after.EnvironmentVariables[key] === "false")
     && currentControlSha256 === review.controlSha256 && currentProofsSha256 === review.historicalProofsSha256
     && currentGeneration === review.consentGeneration, "보호 전환은 R2 false/control/gen/원 proof와 모든 환경을 보존해야 합니다.");
@@ -179,9 +318,16 @@ export function protectedRolloutReaderReceipt({ review, reviewSha256, databaseRe
     && live.ref === review.to && typeof live.buildId === "string" && live.buildId.length > 0
     && CLOSED_R2_SHA.test(verifiedFlowsSha256 ?? "") && verifiedFlowsSha256 === review.readerFlowsSha256,
     "승인된 DB receipt·실제 reader source/build·신구 흐름 검증이 필요합니다.");
-  return { schema: "homecook.prelaunch-protected-reader.v1", reviewSha256, databasePlanSha256: databaseReceipt.databasePlanSha256,
+  const result = { schema: "homecook.prelaunch-protected-reader.v1", reviewSha256, databasePlanSha256: databaseReceipt.databasePlanSha256,
     releaseSha: live.ref, buildId: live.buildId, plistSha256: closedR2Hash(live.bytes), verifiedFlowsSha256,
     readerFloor: live.ref, backwardCompatible: false };
+  if (review.feature === COOKED_WEIGHT_FEATURE) {
+    closedR2Require(databaseReceipt.feature === COOKED_WEIGHT_FEATURE && databaseReceipt.productWriterEnabled === true
+      && databaseReceipt.immutableSha256 === protectedImmutableSha256(review) && databaseReceipt.stableImmutableSha256 === review.database.stableImmutableSha256
+      && isDeepStrictEqual(databaseReceipt.predecessorProtected, review.predecessorProtected), "C01 DB receipt must retain the C03 predecessor");
+    Object.assign(result, { feature: COOKED_WEIGHT_FEATURE, predecessorProtected: review.predecessorProtected });
+  }
+  return result;
 }
 
 export function assertProtectedReaderRollback({ receipt, targetSha, isDescendant }) {
@@ -215,13 +361,16 @@ export function assertProtectedClosedR2Marker({ state, marker, markerSha256, liv
   assertProtectedRolloutReview(rollout);
   const { rolledBack, artifactSha256, ...recorded } = state.closedR2 ?? {};
   const authority = marker?.protectedRollout;
+  if (rollout.feature === COOKED_WEIGHT_FEATURE) closedR2Require(isDeepStrictEqual(authority?.predecessorProtected, rollout.predecessorProtected)
+    && isDeepStrictEqual(databaseReceipt.predecessorProtected, rollout.predecessorProtected)
+    && isDeepStrictEqual(readerReceipt.predecessorProtected, rollout.predecessorProtected), "C01 marker cannot delete or retarget C03 authority");
   closedR2Require(marker?.schema === "homecook.prelaunch-closed-r2-state.v1" && marker.activationAuthorized === false
     && ["protected-reader", "continuation"].includes(marker.kind) && rolledBack !== true && artifactSha256 === markerSha256
     && isDeepStrictEqual(marker, recorded) && authority?.reviewSha256 === reviewSha256
     && authority.databaseReceiptSha256 === databaseReceiptSha256 && authority.readerReceiptSha256 === readerReceiptSha256
     && databaseReceipt.status === "committed" && databaseReceipt.reviewSha256 === reviewSha256
     && databaseReceipt.from === rollout.from && databaseReceipt.to === rollout.to && databaseReceipt.targetSha256 === rollout.database.targetSha256
-    && databaseReceipt.catalogSha256 === rollout.database.afterCatalogSha256 && databaseReceipt.immutableSha256 === rollout.database.immutableSha256
+    && databaseReceipt.catalogSha256 === rollout.database.afterCatalogSha256 && databaseReceipt.immutableSha256 === protectedImmutableSha256(rollout)
     && databaseReceipt.writerEnabled === false && databaseReceipt.backwardCompatible === false
     && databaseReceipt.databasePlanSha256 === marker.databasePlanSha256
     && readerReceipt.reviewSha256 === reviewSha256 && readerReceipt.readerFloor === rollout.to && readerReceipt.backwardCompatible === false

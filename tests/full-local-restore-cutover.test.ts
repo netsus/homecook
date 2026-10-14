@@ -48,6 +48,25 @@ object-a\trecipe-images\tuser-a/a.jpg
 `;
 
 describe("full-local platform restore boundary", () => {
+  it("includes only exact C03/C01 controls and private personal weight evidence in the existing restore classification", () => {
+    const additions = `COPY private.recipe_product_only_write_control (singleton, enabled) FROM stdin;
+t\tt
+\\.
+COPY private.cooked_batch_weight_evidence_control (singleton, enabled) FROM stdin;
+t\tf
+\\.
+COPY private.cooked_batch_weight_evidence (id, owner_uuid, account_generation, event_kind, measured_g) FROM stdin;
+fixture-evidence\tfixture-owner\t1\treported_measurement\t225.00
+\\.
+`;
+    const result = buildSanitizedPlatformData(platformData + additions);
+    for (const relation of ["private.recipe_product_only_write_control", "private.cooked_batch_weight_evidence_control", "private.cooked_batch_weight_evidence"]) {
+      expect(result.manifest.relations).toContainEqual(expect.objectContaining({ relation, action: "include" }));
+    }
+    expect(result.sql).toContain("225.00");
+    expect(result.sql).toContain("fixture-owner");
+    expect(() => buildSanitizedPlatformData(platformData + additions.replaceAll("private.cooked_batch_weight_evidence", "private.other_weight_evidence"))).toThrow("Unclassified");
+  });
   it("binds clean restore evidence to the archive's exact sanitized DB/Auth data", () => {
     const sanitized = buildSanitizedPlatformData(platformData);
     const sourceDataSha256 = createHash("sha256").update(sanitized.sql).digest("hex");
