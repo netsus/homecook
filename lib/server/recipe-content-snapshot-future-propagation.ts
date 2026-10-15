@@ -835,6 +835,7 @@ function projectSnapshotV2CookModeIngredients(
     }
     rows.push({
       ingredient_id: item.ingredient_id,
+      quantity_input: item.quantity_input,
       row_key: typeof item.row_key === "string" ? item.row_key : undefined,
       food_product_id: item.food_product_id ?? null,
       food_product_nutrition_version_id: item.food_product_nutrition_version_id ?? null,

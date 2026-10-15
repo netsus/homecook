@@ -49,7 +49,10 @@ interface SessionRow {
       title: string;
       base_servings: number;
       ingredients_json: Array<{
-        ingredient_id: string;
+        ingredient_id: string | null;
+        row_key?: string;
+        source_kind?: "ingredient" | "food_product";
+        quantity_input?: unknown;
         amount: number | null;
         unit: string | null;
         display_text: string | null;
@@ -84,7 +87,10 @@ interface SessionRow {
       title: string;
       base_servings: number;
       ingredients_json: Array<{
-        ingredient_id: string;
+        ingredient_id: string | null;
+        row_key?: string;
+        source_kind?: "ingredient" | "food_product";
+        quantity_input?: unknown;
         amount: number | null;
         unit: string | null;
         display_text: string | null;
@@ -283,7 +289,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (session.contract_version === "snapshot_v2" && sessionContentSnapshot) {
     const ingredientIds = [
-      ...new Set((sessionContentSnapshot.ingredients_json ?? []).map((ingredient) => ingredient.ingredient_id)),
+      ...new Set((sessionContentSnapshot.ingredients_json ?? []).flatMap((ingredient) => ingredient.ingredient_id ? [ingredient.ingredient_id] : [])),
     ];
     const ingredientNameMap = new Map<string, string>();
 
@@ -312,6 +318,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           toCookingModeIngredient({
             row: {
               ingredient_id: row.ingredient_id,
+              row_key: row.row_key,
+              source_kind: row.source_kind,
+              quantity_input: row.quantity_input,
+              food_product_nutrition_version_id: row.food_product_nutrition_version_id ?? null,
               food_product_id: row.food_product_id ?? null,
               food_product_name: row.food_product_name ?? null,
               food_product_brand: row.food_product_brand ?? null,
@@ -322,7 +332,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
               ingredient_type: row.ingredient_type,
               scalable: row.scalable ?? true,
               sort_order: row.sort_order ?? null,
-              ingredients: { standard_name: ingredientNameMap.get(row.ingredient_id) ?? null },
+              ingredients: { standard_name: row.ingredient_id ? ingredientNameMap.get(row.ingredient_id) ?? null : null },
             },
             baseServings: sessionContentSnapshot.base_servings,
             cookingServings: session.cooking_servings ?? sessionMeal.cooking_servings,
@@ -362,7 +372,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   const ingredientsResult = await dbClient
     .from("recipe_ingredients")
-    .select("ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, food_product_id, food_product_nutrition_version_id, ingredients(standard_name)")
+    .select("ingredient_id, quantity_input, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, food_product_id, food_product_nutrition_version_id, ingredients(standard_name)")
     .eq("recipe_id", sessionMeal.recipe_id)
     .order("sort_order", { ascending: true });
 
