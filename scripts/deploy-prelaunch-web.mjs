@@ -2,7 +2,7 @@
 import {
   NUTRITION_VALIDATOR_FEATURE, NUTRITION_VALIDATOR_MIGRATION, loadNutritionValidatorMaintenance, nutritionValidatorMaintenanceBinding,
   readNutritionValidatorAttempt, nutritionValidatorPhaseStatus, assertNutritionValidatorReader,
-  assertNutritionValidatorMarker, verifyNutritionValidatorWriterAdmission, verifyNutritionValidatorPredecessor, assertProtectedWriterDatabaseBoundary, assertNutritionValidatorReaderCompensation,
+  assertNutritionValidatorMarker, verifyNutritionValidatorWriterAdmission, verifyNutritionValidatorPredecessor, assertProtectedWriterDatabaseBoundary, assertNutritionValidatorReaderCompensation, assertNutritionValidatorSourceHandoff,
 } from "./lib/prelaunch-web-deploy.mjs";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -1066,7 +1066,11 @@ async function deploy(options) {
     validateClosedR2Candidate(closedReview, live, selection, patch, options, closedContext);
     verifyClosedR2Control(closedReview, repository);
   }
-  if (closedReview && selection.scope.database.length && !protectedReader) throw new DeploymentError("닫힘 유지/승계에 SQL source 변경은 허용하지 않습니다.");
+  if (closedReview && selection.scope.database.length && !protectedReader) {
+    const handoff = options.alreadyAppliedDb === true ? nutritionSourceHandoff(live, selection) : null;
+    if (!handoff) throw new DeploymentError("닫힘 유지/승계에 SQL source 변경은 허용하지 않습니다.");
+    assertNutritionValidatorSourceHandoff(handoff);
+  }
   const needsDatabase = selection.scope.database.length > 0 || Boolean(options.dbConfig);
   if (needsDatabase && !options.dbConfig) throw new DeploymentError("DB 변경이 포함되어 있습니다. --db-config <비공개 full-local 설정 파일>을 지정하세요. 웹은 변경하지 않았습니다.");
   if (needsDatabase && !readOnlyDatabase && !options.dbCompatible
