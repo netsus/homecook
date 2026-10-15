@@ -1,3 +1,9 @@
+/**
+ * A+B source: HOMECOOK_RECIPE_PATCH_REPLAY_NATIVE=1 HOMECOOK_RECIPE_SAVE_INTEGRATION_NATIVE=1 pnpm exec vitest run tests/recipe-future-patch-http-replay.native.test.ts
+ * Original B-only source: HOMECOOK_RECIPE_PATCH_REPLAY_NATIVE=1 pnpm exec vitest run tests/recipe-future-patch-http-replay.native.test.ts
+ * B-only mode rejects A+B source. Never mock v5 down to v4 or infer extra SQL.
+ * This is synthetic application-SQL proof, not operator ledger/backup/recovery proof.
+ */
 import { createHash, randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -19,6 +25,8 @@ vi.mock("@/lib/server/account-generation/session-authority", () => ({
     sessionIssuedAt: "2026-01-02T00:00:00Z", sessionKeyHash: "7".repeat(64), hmacKeyVersion: 1 } }) }));
 
 const enabled = process.env.HOMECOOK_RECIPE_PATCH_REPLAY_NATIVE === "1";
+const integrated = process.env.HOMECOOK_RECIPE_SAVE_INTEGRATION_NATIVE === "1";
+if (integrated && !enabled) throw Error("Integration mode requires explicit native activation");
 const image = "public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a";
 const label = "homecook.recipe-patch-replay-native";
 const tag = randomUUID();
@@ -27,16 +35,24 @@ const milk = "78000000-0000-4000-8000-000000000002";
 const flour = "78000000-0000-4000-8000-000000000050";
 const method = "79000000-0000-4000-8000-000000000003";
 const key = "78000000-0000-4000-8000-000000000060";
-const output = `/tmp/mumeok-recipe-http-replay-native-${tag}`;
+const output = `/tmp/mumeok-recipe-${integrated ? "save-integration" : "http-replay"}-native-${tag}`;
 const migration = "supabase/migrations/20261014225300_recipe_future_patch_http_replay.sql";
+const identityMigration = "supabase/migrations/20261014225200_recipe_snapshot_reason_identity.sql";
 const baselineMigration = "supabase/migrations/20261014225000_recipe_nutrition_quantity_v4_warning_contract.sql";
 const env: NodeJS.ProcessEnv = { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "test", DOCKER_HOST: "unix:///var/run/docker.sock" };
 let cid = "";
 let body: Record<string, unknown>;
 let recipeId = "";
 const calls: Array<{ kind: string; name: string }> = [];
-const evidence: Record<string, unknown> = { application_data: "synthetic-only", image, tag, label };
+const evidence: Record<string, unknown> = { application_data: "synthetic-only", image, tag, label, mode: integrated ? "A+B" : "B-only-original-source" };
 const literal = (value: unknown) => "'" + String(value).replaceAll("'", "''") + "'";
+function approvedPayload(path: string, expected: string) {
+  const bytes = readFileSync(path);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(expected);
+  expect(bytes.subarray(0, 7).toString()).toBe("begin;\n");
+  expect(bytes.subarray(-8).toString()).toBe("commit;\n");
+  return bytes.subarray(7, -8).toString("utf8");
+}
 function command(args: string[], input?: string | Buffer) {
   const result = spawnSync("docker", args, { input, env, encoding: "utf8", maxBuffer: 40 * 1024 * 1024, timeout: 120000 });
   if (result.status !== 0) throw new Error(result.stderr);
@@ -123,6 +139,23 @@ let legacyPrepared: Record<string, unknown>;
 let legacyResult: unknown;
 let oldReceipts: Array<Record<string, unknown>>;
 let receiptBefore: unknown;
+let legacyId = "";
+let oldReceiptBytes = "";
+let protectedBefore = "";
+let criticalBefore = "";
+const pastMeal = "79000000-0000-4000-8000-000000000078";
+const criticalTables = ["private.recipe_product_only_write_control", "private.cooked_batch_weight_evidence_control", "private.quantity_input_v4_policy",
+  "private.cooked_weight_user_attestation_control", "private.youtube_extraction_current_policy", "private.youtube_extraction_worker_credentials",
+  "public.marketing_round2_participations", "public.marketing_round2_events", "public.marketing_round2_lead_requests"];
+const criticalRows = () => sql(`select jsonb_build_object(${criticalTables.map(table => `${literal(table)},(select jsonb_build_object('rows',count(*),'sha256',encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(r) order by to_jsonb(r)::text),'[]')::text,'UTF8')),'hex')) from ${table} r)`).join(",")});`);
+const protectedRows = () => sql(`select jsonb_build_object(
+  'ingredients',(select jsonb_agg(to_jsonb(r) order by id) from public.recipe_ingredients r where recipe_id='${legacyId}'),
+  'nutrition',(select jsonb_agg(to_jsonb(r) order by id) from public.recipe_nutrition_snapshots r where recipe_id='${legacyId}'),
+  'contents',(select jsonb_agg(to_jsonb(r) order by id) from public.recipe_content_snapshots r where recipe_id='${legacyId}'),
+  'past_meal',(select to_jsonb(r) from public.meals r where id='${pastMeal}'),
+  'sessions',(select jsonb_agg(to_jsonb(r) order by id) from public.cooking_sessions r where recipe_id='${legacyId}'),
+  'session_meals',(select jsonb_agg(to_jsonb(r) order by session_id,meal_id) from public.cooking_session_meals r where meal_id='${pastMeal}'),
+  'claims',(select jsonb_agg(to_jsonb(r) order by meal_id) from public.cooking_session_meal_claims r where meal_id='${pastMeal}'));`);
 function unwrap(value: unknown): Record<string, unknown> {
   if (!isRecord(value)) throw Error("Malformed fixture result");
   if ("success" in value) {
@@ -166,6 +199,31 @@ async function prepared(id: string, title = "정확 재시도", revision = 1) {
 const receiptMetadata = `select jsonb_build_object('rls',c.relrowsecurity,'force',c.relforcerowsecurity,'owner',pg_get_userbyid(c.relowner),'acl',c.relacl,
   'policies',(select coalesce(jsonb_agg(to_jsonb(p)),'[]') from pg_policies p where schemaname='public' and tablename='mutation_idempotency_keys'),
   'triggers',(select coalesce(jsonb_agg(pg_get_triggerdef(t.oid) order by t.tgname),'[]') from pg_trigger t where t.tgrelid=c.oid and not t.tgisinternal)) from pg_class c where c.oid='public.mutation_idempotency_keys'::regclass;`;
+async function seedPreservedIntegrationRows() {
+  sql(`begin;select public.set_account_generation_internal_writer_marker('79000000-0000-4000-8000-000000000001',true);
+    insert into public.meal_plan_columns(id,user_id,name,sort_order) values('79000000-0000-4000-8000-000000000077','${owner}','과거 보존',1);
+    insert into public.meals(id,user_id,recipe_id,plan_date,column_id,planned_servings,status) values('${pastMeal}','${owner}','${legacyId}',current_date-1,'79000000-0000-4000-8000-000000000077',2,'registered');
+    select public.set_account_generation_internal_writer_marker('79000000-0000-4000-8000-000000000001',false);
+    insert into private.cooked_batch_weight_evidence_control(singleton,enabled) values(true,false);
+    insert into private.cooked_weight_user_attestation_control(singleton,enabled) values(true,false);
+    insert into private.youtube_extraction_current_policy(policy_key,policy_version,extractor_mode,pipeline_identity,result_affecting_options,fingerprint_key_version,enabled)
+      values('primary',1,'synthetic-disabled','integration-preservation','{}','synthetic-hash-only',false);
+    insert into private.youtube_extraction_worker_credentials(credential_name,current_generation,current_jti_hash,expires_at,release_sha,schema_identity,allowed_snapshot_digest)
+      values('primary',1,repeat('a',64),'2000-01-01',repeat('b',40),'synthetic-only',repeat('c',64));
+    select set_config('homecook.r2_valid_until',(clock_timestamp()+interval '2 minutes')::text,true);
+    insert into public.marketing_round2_participations(id,topic,bootstrap_digest,first_channel,created_at,expires_at)
+      values('79000000-0000-4000-8000-000000000079','recording',decode(repeat('a',64),'hex'),'direct','2026-10-15T00:00:00Z','2026-10-31T15:00:00Z');
+    insert into public.marketing_round2_events(event_id,participation_id,action,activity,payload,payload_digest,applied,revision,example_state_at_event,recorded_at)
+      values('79000000-0000-4000-8000-000000000076','79000000-0000-4000-8000-000000000079','bootstrap','menu',
+        '{"first_channel":"direct","utm_source":null,"utm_medium":null,"utm_campaign":null,"utm_content":null}',decode(repeat('b',64),'hex'),true,1,'not_started','2026-10-15T00:00:00Z');commit;`);
+  const started = json(transaction(`select to_jsonb(public.start_snapshot_v2_cooking_session('${owner}','2026-01-01T00:00:00Z',repeat('7',64),1,'2026-01-02T00:00:00Z',
+    '${randomUUID()}','planner',array['${pastMeal}']::uuid[],jsonb_build_object('${pastMeal}',(select revision from public.meals where id='${pastMeal}')),null,null,null))`, "service_role"));
+  expect(unwrap(started).status).toBe("in_progress");
+  const state = JSON.parse(protectedRows());
+  for (const key of ["ingredients", "nutrition", "contents", "sessions", "session_meals", "claims"]) expect(state[key].length, key).toBeGreaterThan(0);
+  expect(state.ingredients.map((row: { quantity_input: { raw_value: string } }) => row.quantity_input.raw_value).sort()).toEqual(["1/3", "1/7"]);
+  evidence.integrationSeed = { state, controls: JSON.parse(criticalRows()), cook: started };
+}
 async function establishReplayFixtures() {
   const parsed = parseRecipeFuturePatchRequest({ base_recipe_revision: 1, draft: body, future_plan_strategy: "keep", impact_token: "fixture" });
   if (!parsed.ok) throw Error(JSON.stringify(parsed.fields));
@@ -175,16 +233,38 @@ async function establishReplayFixtures() {
     return row;
   }) };
   receiptBefore = json(receiptMetadata); evidence.actualReceiptMetadata = receiptBefore;
-  const legacyId = await freshRecipe(); const old = await prepared(legacyId, "구 writer 성공");
-  legacyPrepared = old.originalArgs; legacyResult = await checkedRpc("write_recipe_future_plan_change", legacyPrepared);
+  legacyId = await freshRecipe(); const old = await prepared(legacyId, "구 writer 성공");
+  if (!integrated && old.nutrition.nutritionSnapshot.calculation_version !== "recipe-nutrition-v4") throw Error("B-only fixture requires original B source; use explicit A+B integration mode");
+  // Only this DB229 legacy receipt seed uses the original v4 wire contract.
+  // The real v4 engine's values/guard stay unchanged; new HTTP writes use v5.
+  legacyPrepared = { ...old.originalArgs, p_nutrition_snapshot: { ...old.nutrition.nutritionSnapshot, calculation_version: "recipe-nutrition-v4" } };
+  legacyResult = await checkedRpc("write_recipe_future_plan_change", legacyPrepared);
+  expect(json(`select to_jsonb(calculation_version) from public.recipe_nutrition_snapshots where recipe_id='${legacyId}' and is_current;`)).toBe("recipe-nutrition-v4");
+  if (integrated) await seedPreservedIntegrationRows();
   oldReceipts = json("select coalesce(jsonb_agg(to_jsonb(r) order by id),'[]') from public.mutation_idempotency_keys r;");
+  oldReceiptBytes = sql("select coalesce(jsonb_agg(to_jsonb(r) order by id),'[]') from public.mutation_idempotency_keys r;");
   const preimageGuard = readFileSync(migration,"utf8").match(/do \$preimage\$[\s\S]*?\$preimage\$;/)?.[0];
   if (!preimageGuard) throw Error("Exact predecessor guard missing");
   sql(`begin;${preimageGuard}rollback;`);
   expect(() => sql(`begin;alter function private.verify_full_local_internal_scope() set search_path=pg_catalog;${preimageGuard}`))
     .toThrow(/RECIPE_FUTURE_HTTP_PREIMAGE_MISMATCH/);
   evidence.predecessorGuard = { exactPreimageAccepted:true, changedConfigurationRejected:true };
-  sql("set session authorization postgres;" + readFileSync(migration, "utf8"));
+  const bPayload = approvedPayload(migration,"aed773e0d27e6b6dd4af8e65fb933d73c89927faef1d1d36804eec8476fed9c7");
+  const aPayload = integrated ? approvedPayload(identityMigration,"b6050c12e60594267908b89ff02cff0c0344a52ccb79dc9a88d21e3c57e8fe66") : "";
+  if (integrated) {
+    const catalog = json(inventory);const domain = domainRows();const controls = criticalRows();
+    expect(() => sql(`set session authorization postgres;begin;${aPayload}
+      alter function private.verify_full_local_internal_scope() set search_path=pg_catalog;${bPayload}commit;`)).toThrow("RECIPE_FUTURE_HTTP_PREIMAGE_MISMATCH");
+    expect(json(inventory)).toEqual(catalog);expect(domainRows()).toBe(domain);expect(criticalRows()).toBe(controls);
+    expect(sql("select coalesce(to_regprocedure('private.map_recipe_nutrition_reasons_v5(uuid,jsonb,jsonb,jsonb)')::text,'absent');")).toBe("absent");
+    expect(json("select to_jsonb(count(*)) from pg_attribute where attrelid='public.mutation_idempotency_keys'::regclass and attname='recipe_future_http_request_fingerprint';")).toBe(0);
+    protectedBefore = protectedRows();criticalBefore = criticalRows();
+    evidence.atomicRollback = { bPreimageRejected: true, originalCatalogAndRowsExact: true, noAHelperOrBColumn: true };
+  }
+  sql(`set session authorization postgres;begin;${aPayload}${bPayload}commit;`);
+  evidence.migrationBundle = { order: integrated ? [identityMigration,migration] : [migration], outerTransactions:1,
+    bodySha256:createHash("sha256").update(aPayload+bPayload).digest("hex") };
+  if (integrated) { expect(protectedRows()).toBe(protectedBefore);expect(criticalRows()).toBe(criticalBefore); }
   recipeId = await freshRecipe();
   sql(`begin; select public.set_account_generation_internal_writer_marker('79000000-0000-4000-8000-000000000001',true);
     insert into public.meal_plan_columns(id,user_id,name,sort_order) values('79000000-0000-4000-8000-000000000080','${owner}','검증 끼니',0);
@@ -246,6 +326,7 @@ describe.runIf(enabled)("exact HTTP replay on an owned schema228 plus229", () =>
         execute format('select count(*) from %I.%I',t.nspname,t.relname) into n;insert into row_counts values(n);end loop;end $count$;
       select jsonb_build_object('tables',count(*),'rows',sum(n)) from row_counts;`);
     expect(evidence.beforeSeed).toMatchObject({ rows: 0 });
+    approvedPayload(baselineMigration,"a03d44504bc0c318bbcc399c9ef563d2cdcd7adc79ebdb0314846b981fd89bdd");
     sql("set session authorization postgres;" + readFileSync(baselineMigration, "utf8"));
     const before = json(inventory);
     evidence.beforeFunctions = before;
@@ -300,6 +381,7 @@ describe.runIf(enabled)("exact HTTP replay on an owned schema228 plus229", () =>
     expect(receiptBefore).toMatchObject({ rls: true, owner: "postgres", policies: [], triggers: [] });
     const ids = oldReceipts.map(r => literal(r.id)).join(",");
     expect(json(`select jsonb_agg(to_jsonb(r)-'recipe_future_http_request_fingerprint' order by id) from public.mutation_idempotency_keys r where id=any(array[${ids}]::uuid[]);`)).toEqual(oldReceipts);
+    expect(sql(`select jsonb_agg(to_jsonb(r)-'recipe_future_http_request_fingerprint' order by id) from public.mutation_idempotency_keys r where id=any(array[${ids}]::uuid[]);`)).toBe(oldReceiptBytes);
     expect(json(`select count(*) from public.mutation_idempotency_keys where id=any(array[${ids}]::uuid[]) and recipe_future_http_request_fingerprint is not null;`)).toBe(0);
     expect(json(`select jsonb_build_object('nullable',not attnotnull,'hasDefault',atthasdef,'type',format_type(atttypid,atttypmod)) from pg_attribute where attrelid='public.mutation_idempotency_keys'::regclass and attname='recipe_future_http_request_fingerprint';`)).toEqual({ nullable: true, hasDefault: false, type: "text" });
     expect(await checkedRpc("write_recipe_future_plan_change", legacyPrepared)).toEqual(legacyResult);
@@ -317,7 +399,16 @@ describe.runIf(enabled)("exact HTTP replay on an owned schema228 plus229", () =>
     const outer = before.find(x => x.signature === "private.verify_full_local_internal_scope()");
     const alias = after.find(x => x.signature === "private.verify_scope_pre_recipe_future_http_replay_20261014()");
     for (const key of ["owner", "acl", "configuration", "securityDefiner", "volatility", "sourceHash"]) expect(alias?.[key]).toEqual(outer?.[key]);
-    for (const existing of before.filter(x => x !== outer)) expect(after.find(x => x.signature === existing.signature)).toEqual(existing);
+    const identityNames = ["private.recipe_quantity_mode_metadata_v4", "validate_recipe_nutrition_snapshot_payload", "write_personal_recipe_core", "write_recipe_nutrition_snapshot"];
+    for (const existing of before.filter(x => x !== outer)) {
+      const successor = after.find(x => x.signature === existing.signature);
+      if (integrated && identityNames.includes(String(existing.signature).split("(")[0])) {
+        for (const field of ["owner","acl","configuration","securityDefiner","volatility"]) expect(successor?.[field]).toEqual(existing[field]);
+        expect(successor?.sourceHash).not.toBe(existing.sourceHash);
+      } else expect(successor).toEqual(existing);
+    }
+    if (integrated) expect(after.find(x => x.signature === "private.map_recipe_nutrition_reasons_v5(uuid,jsonb,jsonb,jsonb)"))
+      .toMatchObject({ owner:"postgres",acl:["postgres=X/postgres"],configuration:["search_path=pg_catalog, public, private, pg_temp"],securityDefiner:false,volatility:"v" });
     expect(after.filter(x => String(x.signature).startsWith("write_recipe_future_plan_change("))).toHaveLength(1);
     for (const prefix of ["read_recipe_future_patch_result(","write_recipe_future_plan_change_recoverable("]) {
       const functions = after.filter(x => String(x.signature).startsWith(prefix));
@@ -341,10 +432,34 @@ describe.runIf(enabled)("exact HTTP replay on an owned schema228 plus229", () =>
     const planAfter=json("select to_jsonb(m) from public.meals m where id='79000000-0000-4000-8000-000000000081';");
     expect(planAfter.recipe_content_snapshot_id).not.toBe(planBefore.recipe_content_snapshot_id);
     expect(planAfter.revision).toBe(planBefore.revision+1);
-    expect(json(`select to_jsonb(calculation_version) from public.recipe_nutrition_snapshots where recipe_id='${recipeId}' and is_current;`)).toBe("recipe-nutrition-v4");
+    expect(json(`select to_jsonb(calculation_version) from public.recipe_nutrition_snapshots where recipe_id='${recipeId}' and is_current;`)).toBe(integrated ? "recipe-nutrition-v5" : "recipe-nutrition-v4");
     expect(json(`select count(*) from public.mutation_idempotency_keys where operation_scope='recipe_future_patch' and recipe_future_http_request_fingerprint is not null;`)).toBe(1);
     evidence.httpSuccess = value;
   }, 30000);
+
+  if (integrated) it("forks through the real API, saves the exact body with a new key and replays without mutation", async () => {
+    const source = unwrap(await checkedRpc("read_recipe_snapshot_entrypoint_context", { ...authArgs,p_recipe_id:legacyId }));
+    const context = unwrap(source.edit_context);
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const fork = await POST(new Request("http://fixture.invalid/api/v1/recipes", { method:"POST",headers:{"content-type":"application/json","Idempotency-Key":randomUUID(),"X-Homecook-Quantity-Contract":"quantity-v4"},
+      body:JSON.stringify({origin_recipe_id:legacyId,base_recipe_revision:context.base_recipe_revision,draft:context.draft,image_object_id:null}) }));
+    expect(fork.status,JSON.stringify(await fork.clone().json())).toBe(201);const id=String(unwrap(await fork.json()).id);
+    const target = unwrap(unwrap(await checkedRpc("read_recipe_snapshot_entrypoint_context", { ...authArgs,p_recipe_id:id })).edit_context);
+    const preview = unwrap(await checkedRpc("preview_recipe_future_plan_impact",{ ...authArgs,p_recipe_id:id,p_base_recipe_revision:target.base_recipe_revision,p_draft:target.draft }));
+    const request = {base_recipe_revision:target.base_recipe_revision,draft:target.draft,future_plan_strategy:"keep",impact_token:preview.impact_token,image_object_id:null};
+    const snapshot = json(`select to_jsonb(n) from public.recipe_nutrition_snapshots n where recipe_id='${id}' and is_current;`);
+    const rows = sql(`select jsonb_agg(to_jsonb(r) order by sort_order,id) from public.recipe_ingredients r where recipe_id='${id}';`);
+    const requestKey=randomUUID();const first=await httpPatch(request,requestKey,id);
+    expect(first.status,JSON.stringify(await first.clone().json())).toBe(200);const value=await first.json();
+    expect(json(`select to_jsonb(n) from public.recipe_nutrition_snapshots n where recipe_id='${id}' and is_current;`)).toEqual(snapshot);
+    expect(sql(`select jsonb_agg(to_jsonb(r) order by sort_order,id) from public.recipe_ingredients r where recipe_id='${id}';`)).toBe(rows);
+    expect(snapshot.calculation_version).toBe("recipe-nutrition-v5");expect(snapshot.calculation_status).toBe("partial");expect(snapshot.warnings_json).toEqual(["DENSITY_REQUIRED"]);
+    const stable=domainRows();const before=calls.length;const replay=await httpPatch(request,requestKey,id);
+    expect(replay.status,JSON.stringify(await replay.clone().json())).toBe(200);expect(await replay.json()).toEqual(value);
+    expect(domainRows()).toBe(stable);expect(calls.slice(before).map(call=>call.name)).toEqual(["read_recipe_future_patch_result"]);
+    expect(protectedRows()).toBe(protectedBefore);expect(criticalRows()).toBe(criticalBefore);
+    evidence.integrationHttp={recipe:id,result:value,snapshot,originalRows:JSON.parse(rows),exactReplay:true,readerOnly:true,originalPastRowsExact:true};
+  },30000);
 
   it("keeps succeeded attempts/leases absent and bound request identity exact", async () => {
     for (const assignment of ["attempt_token=gen_random_uuid()", "lease_expires_at=clock_timestamp()+interval '1 minute'", "terminal_result=null", "durable_result='{}'::jsonb",
@@ -499,5 +614,6 @@ describe.runIf(enabled)("exact HTTP replay on an owned schema228 plus229", () =>
     sql("update public.ingredient_nutrition_profiles set review_status='revoked',is_active=false;");
     const afterSource = domainRows(); const sourceReplay = await httpPatch();
     expect(sourceReplay.status).toBe(200);expect(await sourceReplay.json()).toEqual(evidence.httpSuccess);expect(domainRows()).toBe(afterSource);
+    if(integrated){expect(protectedRows()).toBe(protectedBefore);expect(criticalRows()).toBe(criticalBefore);evidence.originalRowsPreservedAtEnd=true;}
   },30000);
 });

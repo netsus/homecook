@@ -37,8 +37,16 @@ receipt의 실제 owned baseline은 RLS=true·policy0·owner postgres·일반 �
 
 전용 [`HTTP 회귀`](../../tests/recipe-future-patch-http-replay.test.ts)는 reader 선행, 성공 후 mutable 준비0, OFF 재생, malformed/transport/다른 ID 거절과 uppercase URL을 검증한다. 기존 HTTP 권한·predecessor 오류·원 래퍼 단언은 새 absent reader/현재 mode 계약에 필요한 fixture만 동기화한다. 원 writer를 직접 호출하는 기존 SQL 테스트는 새 이름으로 치환하지 않는다.
 
-[`owned native`](../../tests/recipe-future-patch-http-replay.native.test.ts)는 opt-in `HOMECOOK_RECIPE_PATCH_REPLAY_NATIVE=1`에서 고정 SHA의 schema-only228과 비밀번호 없는 roles, DB229 SQL을 사용한다. 초기 application rows0 뒤 synthetic 자료만 넣고 고유 UUID/label/CID·pinned PG17.6·network none·host mount/port0·pull never·자기 정리를 확인한다. 실제 PATCH의 DB authority/quantity mode/영양 준비/preview/원 writer/신규 SQL을 연결한다. HTTP transport와 세션 발견만 synthetic 인증 fixture다.
+[`owned native`](../../tests/recipe-future-patch-http-replay.native.test.ts)의 B 단독 검사는 원 B 고정 소스에서 `HOMECOOK_RECIPE_PATCH_REPLAY_NATIVE=1`로 실행한다. 현재 A+B 통합 소스에서는 아래 두 플래그를 함께 지정한다. 단독 모드를 통합 소스에서 실행하면 소스 불일치로 거절하며 v4로 몰래 바꾸지 않는다. 고정 SHA의 schema-only228과 비밀번호 없는 roles, DB229 SQL을 사용한다. 초기 application rows0 뒤 synthetic 자료만 넣고 고유 UUID/label/CID·pinned PG17.6·network none·host mount/port0·pull never·자기 정리를 확인한다. 실제 PATCH의 DB authority/quantity mode/영양 준비/preview/원 writer/신규 SQL을 연결한다. HTTP transport와 세션 발견만 synthetic 인증 fixture다.
 
 첫200→같은 키200, 계획 변경 한 번, 기존 NULL/완료 형식/원 prepared 충돌, raw/context/product version 등 원 요청 변경, 동시 같은/다른 본문, read/write 사이 성공, 유효 새 세션, 현재 소유/삭제/역할·scope 경계, 새 binding 실패 전체 롤백과 OFF/출처 변경 후 성공 조회를 분리 검사한다. singleton 삭제·영양 immutable 값 변경을 이용한 잘못된 fixture는 원 보호 거절을 보존해 교정했으며 실패 로그도 남긴다. 미확인 capability 상태를 강제로 만드는 보호 우회는 하지 않는다.
 
-로컬 검사·native 성공은 운영 적용이나 실제 사용자 OAuth/UI 완료를 뜻하지 않는다. [A의 개인 영양 사유 v5](recipe-nutrition-semantic-reason-identity-v5.md)와 통합한 실제 fork→동일 본문 새 key 수정→같은 key HTTP 재생, 두 SQL 원자 배포·최종 source/postimage/reader 호환 검증은 root의 별도 통합 대상이다. A는 수치 엔진·기존 v4/과거 snapshot을 바꾸지 않는 개인 저장 사유 identity 보완이며 B의 HTTP 바인딩과 혼동하지 않는다. 운영 DB·키·실제 계정·worker·외부AI/추출은 실행하지 않는다.
+현재 통합 검사 명령:
+
+```bash
+HOMECOOK_RECIPE_PATCH_REPLAY_NATIVE=1 HOMECOOK_RECIPE_SAVE_INTEGRATION_NATIVE=1 pnpm exec vitest run tests/recipe-future-patch-http-replay.native.test.ts
+```
+
+[A의 개인 영양 사유 v5](recipe-nutrition-semantic-reason-identity-v5.md)와 통합한 격리 검사35개가 통과했다. 실제 API handler·SQL을 연결한 fork→동일 본문 새 key 수정→같은 key HTTP 재생, 두 SQL의 단일 transaction·중간 실패 전체 rollback, 합성 기존 식단/요리 세션/claim·원 수량/영양 snapshot·receipt 보존을 확인했다. 대조한 control9표 중8표는 각1행이며 lead_requests는0행이다. 같은 확장 검사 파일을 원 B 고정 소스에 연결한 단독34개도 별도로 통과했다. HTTP transport와 세션 발견은 합성 fixture이며 실제 OAuth/gateway 검증이 아니다.
+
+로컬 검사·native 성공은 운영 적용이나 실제 사용자 UI 완료를 뜻하지 않는다. 운영 도구의 ledger·백업·복원·정확 source/postimage 승계와 운영 확인은 별도다. A는 수치 엔진·기존 v4/과거 snapshot을 바꾸지 않는 개인 저장 사유 identity 보완이며 B의 HTTP 바인딩과 혼동하지 않는다. 운영 DB·키·실제 계정·worker·외부AI/추출은 실행하지 않는다.
