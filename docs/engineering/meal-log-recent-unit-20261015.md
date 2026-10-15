@@ -1,5 +1,15 @@
 # 새 식사 검색 선택의 최근 저장 단위 제안
 
+## 2026-10-15 운영 반영 — 최근 단위와 T9 식사 수정 표본
+
+#1714를 master `13495fdadb3785874c4a3457e6ce2d6e4ed3dbc7`에 병합하고 웹 `10cfaa6b245ef7cd9e74488b91cc33f1377aab49`·build `prelaunch-10cfaa6b245e-QkMzLR`를 반영했다. 배포 exit0·1,449 PASS·선택 범위 밖133 skipped, DB228·migration0이다. 아래 로컬/운영 반영 전 문장은 당시 기록이며 이 절이 최신이다.
+
+실제 우유 검색 선택에서 최근 L을 제안하되 양은 빈칸이었다.320/375/1440 가로 넘침 없음을 확인하고 새1/4L를250mL로 전환해 double click 저장 후 entry e941 한 건만 생겼다. 원1/4 L은 보존하고 `normalized=null`·`DENSITY_REQUIRED`·영양unavailable을 유지했다. 다음 선택은 저장된 mL·빈칸이고, 저장하지 않고 취소한 L은 기억하지 않았다. 기존 당일4행·원 batch/evidence/attestation은 같았다. guest는 예시 플래너·개인 QA 항목 비노출→점심 추가 로그인 안내·같은 날짜/segment next→계속 둘러보기 닫기까지 확인했으며 실제 OAuth 복귀는 미실행이다. 제품 version 불일치·다른 소비자의 최근 단위는 이 일반 우유 한 표본으로 완료 처리하지 않는다.
+
+앞선 T9에서는 수정 취소 후 원본이 같았고30→35g 저장 뒤 원실측160g·잔125g, 같은35g을 아침→점심 이동/reload 뒤75kcal·당일 표시157kcal를 확인했다. 양 변경 때 `weight_basis.batch_revision`1→3은 기존 SQL의 당시 근거 재캡처 계약이며 다른 원근거는 같았다. 최초 whole-basis 비교 실패는 보존한다. 같은 양 이동에서는 basis의 batch_revision을 포함한 영양객체 전체 exact equality를 유지했고 당일 다른3행·원 evidence/attestation도 같았다. 이 해석으로 모든 비교에서 revision을 빼지 않는다.
+
+수동 발행 #1712의 웹 dd399/NYuI8l 배포·1,449검사 통과와 실제 발행 성공은 다르다. 실제503/pending·원 recipe1/receipt1/nutrition0이 남았고 실제 prepare/payload 연결과 v4 사유5종·estimated 코드 누락을 후속 검증 중이며229는 미적용이다. C05 수집 OFF·기간 미정, 정확도/전체 v9 미완료·새 추출/외부 AI0을 유지한다. 근거는 비공개 `mumeok-beta-meal-recent-unit-20261015-mzwu0jz5`의 요약/원수량/화면·guest 기록, `mumeok-beta-t9-meal-edit-20261015-7cw_m0bl`의 전후 JSON/화면과 독립 weight_basis 검토다. root의 실제 실행과 제공 이미지 직접 읽기를 구분하며 문서 작업에서 운영·DB·브라우저를 재실행하지 않았다. [진행 장부](mumeok-beta-v9-progress-20261013.md#최근-저장-단위-운영-반영t9-식사-수정-확인--2026-10-15)를 따른다.
+
 2026-10-15 로컬 변경, 기준 master `66aea3564c18d431bc7e8f47acc639b96f2e6cf8`. 운영 반영 전이다. C04 U-A11 중 **식사기록의 제품·재료 새 검색 선택** 한 곳만 연결한다. 최근 기록 직접 선택의 원량 복원과 다른 입력 소비자의 U-A11을 새로 완료했다고 세지 않는다.
 
 ## 선택 규칙

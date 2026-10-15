@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-10-15 — 최근 저장 단위 운영 반영·T9 양/끼니 수정
+
+#1714·웹 `10cfaa6b245ef7cd9e74488b91cc33f1377aab49`·build `prelaunch-10cfaa6b245e-QkMzLR`, 배포 exit0·1,449 PASS·선택 범위 밖133 skipped·DB228이다. 실제 우유의 L 제안/빈 수량→1/4L를250mL로 저장1건→다음 mL/빈칸·취소 L 미기억과 raw/영양unknown,320/375/1440·기존4행 보존을 확인했다. 앞선 T9는 취소 불변·30→35g/잔125g·35g 점심 이동/당일 표시157kcal와 전체 영양/basis·다른3행/evidence/attestation 보존이다. 양 변경의 basis revision 재캡처와 이동의 basis batch_revision 포함 exact 기준은 [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#최근-저장-단위-운영-반영t9-식사-수정-확인--2026-10-15), [최근 단위 계약](../engineering/meal-log-recent-unit-20261015.md)을 따른다.
+
+guest 예시 플래너·로그인 안내/같은 날짜·segment 복귀 경로만 확인했고 실제 OAuth 복귀는 미실행이다. #1712 수동 publication은 웹 배포·검사 통과와 별개로 실제503/pending이 남아 있으며 후속 prepare/payload·SQL 사유/estimated 코드 검증 중,229 미적용이다. C05 수집 OFF·기간 미정·정확도/전체 v9 미완료와 새 추출·외부 AI0을 유지한다. 아래 이전 운영/준비 문장은 당시 기록이다.
+
 ## 2026-10-15 — 원수량 fidelity 운영 반영·읽기 표본
 
 #1711 소스 `40882b122812d9151e4a526b90be6627fcba06ef`→master `66aea3564c18d431bc7e8f47acc639b96f2e6cf8`를 웹 `6d8e6a7ad1acab59eac0e06a67cb4d9542000b29`·build `prelaunch-6d8e6a7ad1ac-Sc2Dlo`로 반영했다. 배포 exit0·1,431 PASS·선택 범위 밖133 skipped다. 동일 계획 원1/3L·1/7kg와3인분 session0.5L·0.214kg/조리 원문, 실제 계획·요리320/375/1440·reload/back·guest 복귀를 확인했다. READ ONLY에서 DB228·계획4행/재료2행/snapshot3행·recipe/session 전체 지문은 보존됐다. root 실제 관측과 로컬212·독립177·총괄40/모의 화면의 구분은 [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#원수량-fidelity-운영-반영읽기-표본--2026-10-15), [단위 계약](../engineering/cooking-quantity-fidelity-20261015.md)을 따른다.
