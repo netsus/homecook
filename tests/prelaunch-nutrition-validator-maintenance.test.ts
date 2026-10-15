@@ -303,3 +303,17 @@ it.each(["unknown","not_applied"])("does not fabricate OFF state for a nutrition
     expect(JSON.parse(output)).toMatchObject({status,readerReady:maintenance?null:false,writerEnabled:maintenance?null:false,automaticRetryAllowed:false});
   }
 });
+
+it.each(["before","after"])("compares the %s function image by exact values, independent of PG jsonb key order", phase => {
+  const review=fixture(),image=phase==="before"?review.database.functionBefore:review.database.functionAfter;
+  const current=observation(review,phase==="after");
+  // Review construction and PostgreSQL jsonb use different insertion orders for the same three keys.
+  const nativeOrder={sourceMd5:image.sourceMd5,metadataSha256:image.metadataSha256,definitionSha256:image.definitionSha256};
+  expect(JSON.stringify(nativeOrder)).not.toBe(JSON.stringify(image));
+  current.nutritionValidator=nativeOrder;
+  expect(()=>db.assertNutritionValidatorObservation(review,current,phase)).not.toThrow();
+  for(const changed of [{...nativeOrder,sourceMd5:"f".repeat(32)},{...nativeOrder,metadataSha256:sha("f")},
+    {...nativeOrder,definitionSha256:sha("f")},{...nativeOrder,extra:"foreign"}]){
+    expect(()=>db.assertNutritionValidatorObservation(review,{...current,nutritionValidator:changed},phase)).toThrow("observation differs");
+  }
+});

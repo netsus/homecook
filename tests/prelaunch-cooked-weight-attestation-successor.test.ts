@@ -625,3 +625,21 @@ describe("exact private attestation227→228 successor, synthetic transports onl
       worker: { ...f.afterObservation.worker, policyRowSha256: sha("f") } })).toThrow("policy");
   });
 });
+
+it.each(["B source handoff","current worker","safe OFF"])("keeps the exact current229 fingerprint values regardless of key order for %s", path => {
+  const f=publicationFixture(),maintenance=maintenanceFixture(f),image=maintenance.review.database.functionAfter;
+  const value={...f.afterObservation,ledger:maintenance.review.database.after,catalogSha256:maintenance.review.database.afterCatalogSha256,
+    stableImmutableSha256:maintenance.review.database.stableImmutableSha256,
+    nutritionValidator:{sourceMd5:image.sourceMd5,metadataSha256:image.metadataSha256,definitionSha256:image.definitionSha256},
+    attestationRowsEmpty:false,metadataNull:false,quantityWriterEnabled:path!=="safe OFF"};
+  const currentDatabaseBoundary={databaseMaintenance:maintenance,ddlOnly:false};
+  const check=(current:typeof value)=>path==="B source handoff"
+    ? db.assertProtectedPrelaunchObservation(f.review,current,"after",currentDatabaseBoundary)
+    : db.assertCookedWeightAttestationCurrentObservation(f.successor,current,{databaseMaintenance:maintenance,
+      quantityWriterState:path==="safe OFF"?undefined:"on",safeQuantityOff:path==="safe OFF",workerControlTransition:path==="current worker"});
+  expect(JSON.stringify(value.nutritionValidator)).not.toBe(JSON.stringify(image));
+  expect(()=>check(value)).not.toThrow();
+  for(const changed of [{...value.nutritionValidator,sourceMd5:"f".repeat(32)},{...value.nutritionValidator,metadataSha256:sha("f")},
+    {...value.nutritionValidator,definitionSha256:sha("f")},{...value.nutritionValidator,extra:"foreign"}])
+    expect(()=>check({...value,nutritionValidator:changed})).toThrow("postimage");
+});
