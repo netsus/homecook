@@ -1542,7 +1542,12 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     return c04Authority.cookedWeightAttestationSuccessorBinding(successor);
   }
   function currentMaintenance() {
-    return c04Authority.nutritionValidatorMaintenanceBinding(c04Authority.loadNutritionValidatorMaintenance(ROOT));
+    return c04Authority.nutritionValidatorMaintenanceBinding(c04Authority.loadCurrentDatabaseMaintenance(ROOT));
+  }
+  function currentMaintenanceMatches(binding) {
+    const current=currentMaintenance();
+    return isDeepStrictEqual(binding,current) || current?.schema === "homecook.recipe-save-recovery-maintenance.v1"
+      && isDeepStrictEqual(binding,current.predecessorMaintenance);
   }
   function checkpointOrigin(record, origin, phase, receiptSha256) {
     if (!record.databaseSuccessor) return assertC04QuantityCheckpointOrigin(review, record, origin, { phase, reviewSha256, receiptSha256 });
@@ -1555,7 +1560,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     assertC04QuantityJournal(review, origin, reviewSha256);
     check(isDeepStrictEqual(record.databaseSuccessor, currentSuccessor()) && isDeepStrictEqual(origin.databaseSuccessor, record.databaseSuccessor)
       && isDeepStrictEqual(origin.databaseMaintenance ?? null, record.databaseMaintenance ?? null)
-      && (!record.databaseMaintenance || isDeepStrictEqual(record.databaseMaintenance, currentMaintenance()))
+      && (!record.databaseMaintenance || currentMaintenanceMatches(record.databaseMaintenance))
       && origin.state === "verified-policy-disabled" && origin.postWorkerTerminal?.sha256 === receiptSha256
       && origin.workerDatabaseReceiptSha256 === record.workerDatabaseReceiptSha256, "current228 checkpoint origin differs");
     const predecessor = origin.successorPredecessorCheckpoint, predecessorOrigin = origin.successorPredecessorOrigin;
@@ -1692,11 +1697,11 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     const binding = currentSuccessor();
     assertC04WorkerSuccessorBinding(review, binding, record.workerDatabaseReceiptSha256);
     check(isDeepStrictEqual(record.databaseSuccessor, binding) && isDeepStrictEqual(observation?.databaseSuccessor, binding)
-      && observation.ledgerCount === (record.databaseMaintenance ? 229 : 228) && observation.catalogFingerprint === review.catalogAfter,
+      && observation.ledgerCount === (record.databaseMaintenance ? record.databaseMaintenance.ledgerCount : 228) && observation.catalogFingerprint === review.catalogAfter,
       "current successor receipt binding differs");
     if (record.databaseMaintenance) assertC04WorkerMaintenanceBinding(review, record.databaseMaintenance, binding);
     check(isDeepStrictEqual(observation?.databaseMaintenance ?? null, record.databaseMaintenance ?? null)
-      && (!record.databaseMaintenance || isDeepStrictEqual(record.databaseMaintenance, currentMaintenance())), "foreign current229 receipt/observation");
+      && (!record.databaseMaintenance || currentMaintenanceMatches(record.databaseMaintenance)), "foreign current229 receipt/observation");
     return binding;
   }
   function activationOrigin(current) {
@@ -1742,7 +1747,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       assertCurrentOrigin(saved);
       check(isDeepStrictEqual(saved.beforeObservation.databaseSuccessor ?? null, origin.databaseSuccessor ?? null)
         && isDeepStrictEqual(saved.expectedAfter.databaseSuccessor ?? null, origin.databaseSuccessor ?? null)
-        && saved.expectedAfter.ledgerCount === (origin.databaseMaintenance ? 229 : origin.databaseSuccessor ? 228 : 227)
+        && saved.expectedAfter.ledgerCount === (origin.databaseMaintenance ? origin.databaseMaintenance.ledgerCount : origin.databaseSuccessor ? 228 : 227)
         && saved.expectedAfter.catalogFingerprint === review.catalogAfter, "reconciliation expected successor differs");
       check(isDeepStrictEqual(saved.databaseMaintenance ?? null, origin.databaseMaintenance ?? null)
         && isDeepStrictEqual(saved.expectedAfter.databaseMaintenance ?? null, origin.databaseMaintenance ?? null)
@@ -1751,7 +1756,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       return pointer;
     }
     check(observation.credentialGeneration === 48 && observation.workerReleaseSha === review.releaseSha
-      && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (origin.databaseMaintenance ? 229 : origin.databaseSuccessor ? 228 : 227) && observation.catalogFingerprint === review.catalogAfter
+      && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (origin.databaseMaintenance ? origin.databaseMaintenance.ledgerCount : origin.databaseSuccessor ? 228 : 227) && observation.catalogFingerprint === review.catalogAfter
       && observation.credentialRowSha256 === origin.observation.credentialRowSha256
       && observation.policyStableSha256 === origin.observation.policyStableSha256
       && stableStringify(observation.policy) === stableStringify({ ...origin.observation.policy, enabled: observation.workerPolicyEnabled }), "reconciliation identity/semantic differs");
@@ -1833,7 +1838,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     check(database.workerPolicyEnabled === true && database.quantityPolicyEnabled === true
       && database.productWriterEnabled === true && database.weightWriterEnabled === true
       && database.credentialGeneration === 48 && database.workerReleaseSha === review.releaseSha
-      && database.targetSha256 === review.targetSha256 && database.ledgerCount === (context.databaseMaintenance ? 229 : context.successor ? 228 : 227) && database.catalogFingerprint === review.catalogAfter
+      && database.targetSha256 === review.targetSha256 && database.ledgerCount === (context.databaseMaintenance ? context.databaseMaintenance.ledgerCount : context.successor ? 228 : 227) && database.catalogFingerprint === review.catalogAfter
       && isDeepStrictEqual(database.databaseSuccessor ?? null, context.successor ?? null)
       && isDeepStrictEqual(database.databaseMaintenance ?? null, context.databaseMaintenance ?? null)
       && database.policyStableSha256 === verification.observation.policyStableSha256
@@ -1841,7 +1846,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       && service.loaded && service.state === "running" && service.pid === health.service.pid
       && sha256(readFileSync(PLIST)) === verification.service.plistSha256, "activation committed readback differs");
     let predecessorActivationReceipt = readJournal().activationReceipt ?? null;
-    if (context.databaseMaintenance && !verification.databaseMaintenance) {
+    if (context.databaseMaintenance && !isDeepStrictEqual(verification.databaseMaintenance ?? null,context.databaseMaintenance)) {
       check(readJournal().state === "activation-committed" && predecessorActivationReceipt, "current229 readback requires committed228 activation, never unknown intent");
       const priorBytes = readPrivate(predecessorActivationReceipt.path);
       check(sha256(priorBytes) === predecessorActivationReceipt.sha256, "predecessor activation bytes differ");
@@ -1849,7 +1854,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       check(prior.status === "committed" && prior.activationVerification?.sha256 === proof.sha256
         && prior.observation.policyRowSha256 === database.policyRowSha256 && prior.observation.policyStableSha256 === database.policyStableSha256
         && prior.observation.credentialRowSha256 === database.credentialRowSha256, "committed228 activation readback identity differs");
-      if (prior.databaseMaintenance) {
+      if (prior.databaseMaintenance && context.databaseMaintenance.schema !== "homecook.recipe-save-recovery-maintenance.v1") {
         check(isDeepStrictEqual(prior.databaseMaintenance, context.databaseMaintenance) && prior.predecessorActivationReceipt,
           "current229 activation history anchor differs");
         predecessorActivationReceipt = prior.predecessorActivationReceipt;

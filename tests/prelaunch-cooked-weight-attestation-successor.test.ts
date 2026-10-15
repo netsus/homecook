@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -15,6 +15,8 @@ let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8");
 source = source.replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,
   (_text, name: string) => `export const ${name} = Object.freeze({ path: null, sha256: null });`);
 for (const [name, value] of Object.entries({
+  RECIPE_SAVE_RECOVERY_RELEASE_SHA: JSON.stringify(ref("f")),
+  RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("6")}" })`,
   QUANTITY_V4_RELEASE_SHA: JSON.stringify(ref("b")), QUANTITY_V4_WORKER_OPERATION_ROOT: JSON.stringify(join(temp, "worker")),
   QUANTITY_V4_WORKER_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("2")}" })`,
   QUANTITY_V4_WRITER_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("3")}" })`,
@@ -39,6 +41,12 @@ export function setOwnedMaintenance(value) { ownedMaintenance = value; }
 export function loadNutritionValidatorMaintenance() { return ownedMaintenance; }
 
 ` + source.slice(loaderEnd);
+const recipeLoaderStart=source.indexOf("export function loadRecipeSaveRecoveryMaintenance(repositoryRoot) {"),recipeLoaderEnd=source.indexOf("export function loadCurrentDatabaseMaintenance",recipeLoaderStart);
+if(recipeLoaderStart<0||recipeLoaderEnd<=recipeLoaderStart)throw new Error("Recipe-save loader boundary changed");
+source=source.slice(0,recipeLoaderStart)+`let ownedRecipeMaintenance=null;
+export function setOwnedRecipeMaintenance(value){ownedRecipeMaintenance=value;}
+export function loadRecipeSaveRecoveryMaintenance(){return ownedRecipeMaintenance;}
+`+source.slice(recipeLoaderEnd);
 const webPath = join(temp, "web.mjs"); writeFileSync(webPath, source, { mode: 0o600 });
 const dbPath = join(temp, "database.mjs");
 const databaseSource = readFileSync("scripts/lib/prelaunch-database.mjs", "utf8").replace(/from "(\.\/[^"\n]+)"/gu,
@@ -47,8 +55,9 @@ writeFileSync(dbPath, databaseSource.replace('import("./full-local-security-inve
   () => `import(${JSON.stringify(pathToFileURL(join(process.cwd(), "scripts/lib/full-local-security-inventory.mjs")).href)})`)
   .replace('new URL("../../docs/security/cooked-weight-user-attestation-source-function-postimages.json", import.meta.url)',
     () => `new URL(${JSON.stringify(pathToFileURL(join(process.cwd(), "docs/security/cooked-weight-user-attestation-source-function-postimages.json")).href)})`), { mode: 0o600 });
-const web: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") & { setOwnedMaintenance(value: object | null): void } = await import(pathToFileURL(webPath).href);
+const web: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") & { setOwnedMaintenance(value: object | null): void; setOwnedRecipeMaintenance(value: object | null):void } = await import(pathToFileURL(webPath).href);
 const db: typeof import("../scripts/lib/prelaunch-database.mjs") = await import(pathToFileURL(dbPath).href);
+const runtimePostimages:Readonly<Record<string,string>>=web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES;
 const pointer = (name: string, key: string) => ({ path: join(temp, name), sha256: sha(key) });
 const operationId = "12345678-1234-4123-8123-123456789abc";
 function fixture() {
@@ -642,4 +651,132 @@ it.each(["B source handoff","current worker","safe OFF"])("keeps the exact curre
   for(const changed of [{...value.nutritionValidator,sourceMd5:"f".repeat(32)},{...value.nutritionValidator,metadataSha256:sha("f")},
     {...value.nutritionValidator,definitionSha256:sha("f")},{...value.nutritionValidator,extra:"foreign"}])
     expect(()=>check({...value,nutritionValidator:changed})).toThrow("postimage");
+});
+
+
+function recipeReviewFixture(f: ReturnType<typeof publicationFixture>, old: ReturnType<typeof maintenanceFixture>) {
+ const beforeImage=old.review.database.functionAfter,afterImage={definitionSha256:sha("e"),metadataSha256:beforeImage.metadataSha256,sourceMd5:"f".repeat(32)};
+ const fingerprints=(signatures:readonly string[],image:typeof afterImage)=>signatures.map(signature=>({signature,...image}));
+ return {...old.review,feature:web.RECIPE_SAVE_RECOVERY_FEATURE,from:old.review.to,to:ref("f"),sourceReaderRef:old.review.to,migrationSourceRef:ref("f"),readerSources:web.RECIPE_SAVE_RECOVERY_READER_SOURCES,
+  files:{...Object.fromEntries(web.RECIPE_SAVE_RECOVERY_MIGRATIONS.map(row=>[`supabase/migrations/${row.filename}`,[null,row.sha256]])),...Object.fromEntries(web.RECIPE_SAVE_RECOVERY_RUNTIME_PATHS.map(path=>[path,[sha("1"),runtimePostimages[path]]]))},
+  predecessorNutrition:{reviewSha256:sha("8"),databaseReceipt:old.pointer,readerFloor:old.review.sourceReaderRef},
+  database:{...old.review.database,before:old.review.database.after,after:[...old.review.database.after,...web.RECIPE_SAVE_RECOVERY_MIGRATIONS],
+   migrations:web.RECIPE_SAVE_RECOVERY_MIGRATIONS.map(row=>({filename:row.filename,rawSha256:row.sha256,payloadSha256:sha("1")})),
+   beforeCatalogSha256:old.review.database.afterCatalogSha256,afterCatalogSha256:sha("a"),beforeScope:old.review.database.afterScope,
+   afterScope:{...old.review.database.afterScope,outerSha256:sha("e")},attestationScope:{...old.review.database.attestationScope,beforeOuterSha256:old.review.database.afterScope.outerSha256,afterOuterSha256:sha("e")},
+   recipeScope:{beforeOuterSha256:old.review.database.afterScope.outerSha256,afterOuterSha256:sha("e"),afterAliasSha256:old.review.database.afterScope.outerSha256},
+   recipePostimageRegistrySha256:web.RECIPE_SAVE_RECOVERY_POSTIMAGES_SHA256,receiptColumnsBeforeSha256:sha("b"),receiptColumnsAfterSha256:sha("c"),
+   recipeFunctionsBefore:fingerprints(web.RECIPE_SAVE_RECOVERY_FUNCTIONS_BEFORE,beforeImage),recipeFunctionsAfter:fingerprints(web.RECIPE_SAVE_RECOVERY_FUNCTIONS_AFTER,afterImage),functionBefore:beforeImage,functionAfter:afterImage}};
+}
+
+it("reads a231 producer readback anchored to committed229 with its original227 verification unchanged",()=>{
+ const f=publicationFixture(),old=maintenanceFixture(f);
+ const r=recipeReviewFixture(f,old);
+ const record={...old.record,feature:web.RECIPE_SAVE_RECOVERY_FEATURE,reviewSha256:sha("6"),from:r.from,to:r.to,sourceReaderRef:r.from,readerFloor:r.from,
+  databasePlanSha256:hash(JSON.stringify({source:r.database.after,applied:r.database.after})),catalogSha256:r.database.afterCatalogSha256,immutableSha256:r.database.afterImmutableSha256,
+  predecessorNutrition:r.predecessorNutrition,recipeSaveRecoveryWritesEnabled:true,receiptColumnInitiallyNull:true,readerReady:true,writerEnabled:true,controlsSha256:sha("4")};
+ const terminal=pointer("recipe-save231","b"),maintenance={review:r,record,pointer:terminal,guardPointer:terminal,nutritionPredecessor:old,predecessor:old.predecessor};
+ web.setOwnedMaintenance(old);web.setOwnedRecipeMaintenance(maintenance);
+ try{
+  const binding=web.cookedWeightAttestationSuccessorBinding(f.successor),m229=web.nutritionValidatorMaintenanceBinding(old),m231=web.recipeSaveRecoveryBinding(maintenance);
+  const directory=join(f.directory,"activation-receipts/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");mkdirSync(directory,{recursive:true,mode:0o700});
+  const on228={...f.observation,ledgerCount:228,databaseSuccessor:binding,normalDataSha256:sha("9")};
+  const anchor=f.save(join(directory,"anchor228.json"),{...f.activation.record,schema:"homecook.youtube-c04-activation-receipt-successor.v1",databaseSuccessor:binding,predecessorActivationReceipt:f.activation.pointer,
+   beforeObservation:f.verification.record.observation,observation:on228,database:on228,readerReceiptSha256:f.review.predecessorQuantity.readerReceipt.sha256,writerReceiptSha256:f.review.predecessorQuantity.writerReceipt.sha256,zeroActualAI:true});
+  // Use only the producer's exact fixed activation-receipts/<UUID>/receipt.json locators.
+  const p228=f.save(join(directory,"receipt.json"),anchor.record);
+  const directory229=join(f.directory,"activation-receipts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");mkdirSync(directory229,{recursive:true,mode:0o700});
+  const on229={...on228,ledgerCount:229,databaseMaintenance:m229,normalDataSha256:sha("a")};
+  const p229=f.save(join(directory229,"receipt.json"),{...anchor.record,databaseMaintenance:m229,predecessorActivationReceipt:p228.pointer,observation:on229,database:on229});
+  const directory231=join(f.directory,"activation-receipts/cccccccc-cccc-4ccc-8ccc-cccccccccccc");mkdirSync(directory231,{recursive:true,mode:0o700});
+  const on231={...on229,ledgerCount:231,databaseMaintenance:m231,normalDataSha256:sha("b")};
+  const p231=f.save(join(directory231,"receipt.json"),{...p229.record,databaseMaintenance:m231,predecessorActivationReceipt:p229.pointer,observation:on231,database:on231});
+  f.save(f.currentPath,{...f.current,activationReceipt:p231.pointer});
+  const current=web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd());expect(current.observation).toEqual(on231);
+  expect(f.verification.record.observation.ledgerCount).toBe(227);expect(p229.record.observation.ledgerCount).toBe(229);
+  const foreign=f.save(p229.pointer.path,{...p229.record,status:"unknown"});
+  const mixed=f.save(p231.pointer.path,{...p231.record,predecessorActivationReceipt:foreign.pointer});f.save(f.currentPath,{...f.current,activationReceipt:mixed.pointer});
+  expect(()=>web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd())).toThrow();
+ }finally{web.setOwnedRecipeMaintenance(null);web.setOwnedMaintenance(null);}
+});
+
+async function recipeAdmissionFixture() {
+ const f=publicationFixture(),old=maintenanceFixture(f),review=recipeReviewFixture(f,old);
+ const id="dddddddd-dddd-4ddd-8ddd-dddddddddddd",directory=join(temp,"admission",randomUUID());
+ mkdirSync(directory,{recursive:true,mode:0o700});
+ const reviewPath=join(directory,"review.json"),reviewBytes=JSON.stringify(review);writeFileSync(reviewPath,reviewBytes,{mode:0o600});
+ const original=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8"),start=original.indexOf("export function loadRecipeSaveRecoveryMaintenance(repositoryRoot) {"),end=original.indexOf("export function loadCurrentDatabaseMaintenance",start);
+ const ownedSource=source.replace('export function loadRecipeSaveRecoveryMaintenance(){return ownedRecipeMaintenance;}',()=>original.slice(start,end))
+  .replace(/^export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = [^\r\n]*;$/gmu,()=>`export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = Object.freeze(${JSON.stringify({path:reviewPath,sha256:hash(reviewBytes)})});`);
+ const modulePath=join(directory,"web.mjs");writeFileSync(modulePath,ownedSource,{mode:0o600});
+ const owned:typeof web=await import(pathToFileURL(modulePath).href);owned.setOwnedMaintenance(old);
+ const paths=owned.protectedRolloutPaths(join(temp,"state"),review),operationDirectory=join(paths.operationRoot,id);
+ mkdirSync(operationDirectory,{recursive:true,mode:0o700});rmSync(paths.databaseGuardPath,{force:true});
+ const binding=owned.cookedWeightAttestationSuccessorBinding(f.successor),m229=owned.nutritionValidatorMaintenanceBinding(old);
+ const p228dir=join(f.directory,"activation-receipts/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");mkdirSync(p228dir,{recursive:true,mode:0o700});
+ const on228={...f.observation,ledgerCount:228,databaseSuccessor:binding,normalDataSha256:sha("9")};
+ const p228=f.save(join(p228dir,"receipt.json"),{...f.activation.record,schema:"homecook.youtube-c04-activation-receipt-successor.v1",databaseSuccessor:binding,predecessorActivationReceipt:f.activation.pointer,
+  beforeObservation:f.verification.record.observation,observation:on228,database:on228,readerReceiptSha256:f.review.predecessorQuantity.readerReceipt.sha256,writerReceiptSha256:f.review.predecessorQuantity.writerReceipt.sha256,zeroActualAI:true});
+ const p229dir=join(f.directory,"activation-receipts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");mkdirSync(p229dir,{recursive:true,mode:0o700});
+ const on229={...on228,ledgerCount:229,databaseMaintenance:m229};
+ const p229=f.save(join(p229dir,"receipt.json"),{...p228.record,databaseMaintenance:m229,predecessorActivationReceipt:p228.pointer,observation:on229,database:on229});
+ const current={...f.current,activationReceipt:p229.pointer};f.save(f.currentPath,current);
+ const guard={schema:"homecook.prelaunch-protected-db-attempt.v1",feature:owned.RECIPE_SAVE_RECOVERY_FEATURE,reviewSha256:hash(reviewBytes),
+  operationId:id,operationDirectory,from:review.from,to:review.to,sourceReaderRef:review.sourceReaderRef,readerFloor:review.sourceReaderRef,
+  journalFile:"attempt.json",predecessorNutrition:review.predecessorNutrition,target:f.target,status:"applying_precommit"};
+ const saveGuard=(record:object)=>{f.save(paths.databaseGuardPath,record);f.save(join(operationDirectory,"attempt.json"),record);};
+ return {...f,old,review,owned,id,paths,guard,saveGuard,current,p228,p229,on229};
+}
+
+it("admits exact current229 worker proof through its own pending231 boundary without opening ordinary current reads",async()=>{
+ const f=await recipeAdmissionFixture();
+ expect(f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd()).observation).toEqual(f.on229);
+ for(const status of ["applying_precommit","commit_dispatch_guard"]){
+  f.saveGuard({...f.guard,status});
+  expect(()=>f.owned.loadCurrentDatabaseMaintenance(process.cwd())).toThrow("unresolved");
+  expect(f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd(),f.id).observation).toEqual(f.on229);
+  expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd())).toThrow("same-operation");
+  expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd(),operationId)).toThrow("same-operation");
+ }
+ // The producer's original227 verification bytes remain the immutable historical anchor.
+ expect(f.p229.record.activationVerification).toEqual(f.verification.pointer);
+ expect(f.verification.record.observation.ledgerCount).toBe(227);
+ rmSync(f.paths.databaseGuardPath,{force:true});
+});
+
+it.each(["unknown","rolled_back_before_commit"])("denies new SQL admission for %s DB outcomes",async status=>{
+ const f=await recipeAdmissionFixture();f.saveGuard({...f.guard,status});
+ expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd(),f.id)).toThrow("unresolved");
+ rmSync(f.paths.databaseGuardPath,{force:true});
+});
+
+it("binds pending admission to pinned review, target, source reader, terminal and the same attempt bytes",async()=>{
+ const f=await recipeAdmissionFixture();
+ for(const drift of [{reviewSha256:sha("f")},{from:ref("f")},{to:ref("a")},{sourceReaderRef:ref("f")},{readerFloor:ref("f")},{target:{foreign:true}},{commitDispatched:true}]){
+  f.saveGuard({...f.guard,...drift});
+  expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd(),f.id)).toThrow();
+ }
+ f.saveGuard(f.guard);f.save(join(f.guard.operationDirectory,"attempt.json"),{...f.guard,status:"unknown"});
+ expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd(),f.id)).toThrow("same-operation");
+ f.saveGuard(f.guard);
+ expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission({...f.review,predecessorBuildId:"foreign"},process.cwd(),f.id)).toThrow("fixed PIN");
+ f.owned.setOwnedMaintenance({...f.old,pointer:pointer("foreign229","f")});
+ expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd(),f.id)).toThrow("predecessor");
+ rmSync(f.paths.databaseGuardPath,{force:true});
+});
+
+it.each(["activation-outcome-unknown","activation-dispatching","activation-verification-pending"])("rejects raw worker ON with %s journal",async state=>{
+ const f=await recipeAdmissionFixture();f.save(f.currentPath,{...f.current,state});
+ expect(f.on229.workerPolicyEnabled).toBe(true);
+ expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd())).toThrow("pending/unknown");
+});
+
+it("rejects standalone old227/228 activation and an unknown current229 receipt",async()=>{
+ const f=await recipeAdmissionFixture();
+ for(const activationReceipt of [f.activation.pointer,f.p228.pointer]){
+  f.save(f.currentPath,{...f.current,activationReceipt});
+  expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd())).toThrow("committed current229");
+ }
+ const unknown=f.save(f.p229.pointer.path,{...f.p229.record,status:"unknown"});f.save(f.currentPath,{...f.current,activationReceipt:unknown.pointer});
+ expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd())).toThrow("unresolved");
 });

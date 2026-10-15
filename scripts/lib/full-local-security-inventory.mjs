@@ -841,8 +841,45 @@ function withWeightAttestationContracts(contracts) {
   }
   return result;
 }
-export function buildCookedWeightAttestationSourceFunctionInventorySql() {
-  return buildSourceFunctionInventorySql(weightAttestationPostimages().functions.map(entry => entry.postimage), true);
+function recipeSaveRecoveryPostimages() {
+  const bytes = readFileSync(join(REPOSITORY_ROOT,"docs/security/recipe-save-recovery-source-function-postimages.json"));
+  const manifest = JSON.parse(bytes);
+  if (createHash("sha256").update(bytes).digest("hex") !== "4e908266cca5637fa8ebc1a6eeea8605bdebd7b26dc4a6a4bcfb0cd068aa6874"
+    || manifest.schema_version !== 1 || manifest.feature !== "recipe-save-recovery" || manifest.functions.length !== 10
+    || manifest.worker_catalog_unchanged !== "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05") throw new Error("recipe-save exact postimage registry drift");
+  for (const migration of manifest.migrations) if (createHash("sha256").update(readFileSync(join(REPOSITORY_ROOT,"supabase/migrations",migration.filename))).digest("hex") !== migration.sha256) throw new Error("recipe-save reviewed migration bytes drift");
+  for (const {preimage,postimage} of manifest.functions) {
+    if (postimage.signature !== normalizeSignature(postimage.lookupSignature) || !/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || !/^[a-f0-9]{64}$/u.test(postimage.definitionSha256)) throw new Error("recipe-save exact function identity drift");
+    if (preimage) for (const key of ["owner","allowedAcl","configuration","securityDefiner","volatility"])
+      if (JSON.stringify(preimage[key]) !== JSON.stringify(postimage[key])) throw new Error(`recipe-save preserved function authority drift: ${key}`);
+  }
+  const outer=manifest.functions.find(row=>row.postimage.name === "verify_full_local_internal_scope");
+  const alias=manifest.functions.find(row=>row.postimage.name === "verify_scope_pre_recipe_future_http_replay_20261014");
+  if (!outer?.preimage || !alias || ["owner","allowedAcl","configuration","securityDefiner","volatility","sourceHash"].some(key=>JSON.stringify(outer.preimage[key])!==JSON.stringify(alias.postimage[key]))) throw new Error("recipe-save original scope alias drift");
+  return manifest;
+}
+function withRecipeSaveRecoveryContracts(contracts) {
+  const result=[...contracts];
+  for (const {preimage,postimage} of recipeSaveRecoveryPostimages().functions) {
+    const index=result.findIndex(row=>row.signature===postimage.signature);
+    if (index < 0) result.push(postimage);
+    else {
+      if (!preimage || result[index].sourceHash !== preimage.sourceHash) throw new Error("recipe-save registered predecessor source drift");
+      result[index]=postimage;
+    }
+  }
+  return result;
+}
+export function buildRecipeSaveRecoverySourceFunctionInventorySql() {
+  const manifest=recipeSaveRecoveryPostimages();
+  return buildSourceFunctionInventorySql([...manifest.functions.map(row=>row.postimage),manifest.preserved_writer],true);
+}
+export function assertRecipeSaveRecoverySourceFunctionInventoryResult(result) { return assertSourceFunctionInventoryResult(result,11); }
+
+export function buildCookedWeightAttestationSourceFunctionInventorySql({includeRecipeSaveRecoveryFunctions = false} = {}) {
+  const contracts=weightAttestationPostimages().functions.map(entry => entry.postimage);
+  return buildSourceFunctionInventorySql(includeRecipeSaveRecoveryFunctions ? contracts.map(entry=>recipeSaveRecoveryPostimages().functions.find(row=>row.postimage.signature===entry.signature)?.postimage ?? entry) : contracts, true);
 }
 export function assertCookedWeightAttestationSourceFunctionInventoryResult(result) {
   return assertSourceFunctionInventoryResult(result, 10);
@@ -857,7 +894,7 @@ export function assertQuantityInputV4SourceFunctionInventoryResult(result) {
   return assertSourceFunctionInventoryResult(result, 63);
 }
 
-export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false, includeCookedWeightAttestationFunctions = false } = {}) {
+export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false, includeCookedWeightAttestationFunctions = false, includeRecipeSaveRecoveryFunctions = false } = {}) {
   const contracts = recipeProductPostimages().functions.map((entry) => entry.postimage);
   const weight = includeCookedWeightEvidenceFunctions ? withCookedWeightContracts(contracts) : contracts;
   if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
@@ -865,7 +902,9 @@ export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeig
   }
   const quantity = includeQuantityInputV4Functions ? withQuantityV4Contracts(weight) : weight;
   if (includeCookedWeightAttestationFunctions && !includeQuantityInputV4Functions) throw new Error("weight attestation requires quantity v4 predecessor contracts");
-  return buildSourceFunctionInventorySql(includeCookedWeightAttestationFunctions ? withWeightAttestationContracts(quantity) : quantity);
+  const personal=includeCookedWeightAttestationFunctions ? withWeightAttestationContracts(quantity) : quantity;
+  if (includeRecipeSaveRecoveryFunctions && !includeCookedWeightAttestationFunctions) throw new Error("recipe-save requires exact attestation predecessor contracts");
+  return buildSourceFunctionInventorySql(includeRecipeSaveRecoveryFunctions ? withRecipeSaveRecoveryContracts(personal) : personal);
 }
 
 export function buildCookedWeightEvidenceSourceFunctionInventorySql() {
@@ -901,7 +940,7 @@ function buildSourceFunctionInventorySql(functions, includeDefinitions = false) 
     'volatility',count(*) filter(where actual_volatility is distinct from volatility)) from actual;`;
 }
 
-export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false, includeCookedWeightAttestationFunctions = false } = {}) {
+export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false, includeCookedWeightAttestationFunctions = false, includeRecipeSaveRecoveryFunctions = false } = {}) {
   if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
     throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
   }
@@ -909,7 +948,9 @@ export function assertRecipeProductSourceFunctionInventoryResult(result, { inclu
     ? withQuantityV4Contracts(withCookedWeightContracts(recipeProductPostimages().functions.map((entry) => entry.postimage))).length
     : includeCookedWeightEvidenceFunctions ? 38 : 24;
   if (includeCookedWeightAttestationFunctions && !includeQuantityInputV4Functions) throw new Error("weight attestation requires quantity v4 predecessor contracts");
-  return assertSourceFunctionInventoryResult(result, count + (includeCookedWeightAttestationFunctions ? 9 : 0));
+  if (includeRecipeSaveRecoveryFunctions && !includeCookedWeightAttestationFunctions) throw new Error("recipe-save requires exact attestation predecessor contracts");
+  const contracts=includeRecipeSaveRecoveryFunctions ? withRecipeSaveRecoveryContracts(withWeightAttestationContracts(withQuantityV4Contracts(withCookedWeightContracts(recipeProductPostimages().functions.map(entry=>entry.postimage))))) : null;
+  return assertSourceFunctionInventoryResult(result,contracts?.length ?? count + (includeCookedWeightAttestationFunctions ? 9 : 0));
 }
 
 export function assertCookedWeightEvidenceSourceFunctionInventoryResult(result) {

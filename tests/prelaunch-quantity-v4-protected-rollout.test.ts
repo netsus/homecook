@@ -926,9 +926,9 @@ describe("C04 real durable producer and strict loader roundtrip", () => {
       const databaseSource=readFileSync(join(process.cwd(),"scripts/lib/prelaunch-database.mjs"),"utf8");
       const boundarySource=databaseSource.slice(databaseSource.indexOf("export async function observeQuantityV4WorkerBoundary("),databaseSource.indexOf("export async function createProtectedPrelaunchDatabase("));
       const open=vi.fn(async()=>worker.adapter);
-      const boundary=new Function("loadCookedWeightAttestationSuccessor","loadQuantityV4DatabaseReceipt","loadQuantityV4ReaderWriterReceipts","openProtectedPrelaunchTarget","digest","same","isDeepStrictEqual","SHA","protectedImmutableSha256","path",
+      const boundary=new Function("loadCurrentDatabaseMaintenance","loadCookedWeightAttestationSuccessor","loadQuantityV4DatabaseReceipt","loadQuantityV4ReaderWriterReceipts","openProtectedPrelaunchTarget","digest","same","isDeepStrictEqual","SHA","protectedImmutableSha256","path",
         boundarySource.replace("export async function","async function")+";return observeQuantityV4WorkerBoundary;")(
-          ()=>null,loader.loadQuantityV4DatabaseReceipt,()=>{throw new Error("ON authority not exercised in OFF fixture");},open,hash,
+          ()=>null,()=>null,loader.loadQuantityV4DatabaseReceipt,()=>{throw new Error("ON authority not exercised in OFF fixture");},open,hash,
           (a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b),isDeepStrictEqual,/^[a-f0-9]{64}$/u,deploy.protectedImmutableSha256,await import("node:path"));
       const reordered = structuredClone(worker.getCurrent());
       reordered.scope = { aliasSha256: reordered.scope.aliasSha256, outerSha256: reordered.scope.outerSha256 }; worker.setCurrent(reordered);

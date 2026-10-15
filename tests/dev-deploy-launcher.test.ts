@@ -17,6 +17,7 @@ const requiredRegistryFiles = [
   "docs/security/quantity-input-v4-source-function-postimages.json",
   "docs/security/youtube-worker-quantity-function-postimages.json",
   "docs/security/cooked-weight-user-attestation-source-function-postimages.json",
+  "docs/security/recipe-save-recovery-source-function-postimages.json",
 ];
 const hash = (value: Buffer) => createHash("sha256").update(value).digest("hex");
 
@@ -31,11 +32,11 @@ function snapshotRoot() {
 function ownedInstallerRepository(root: string) {
   const repository = join(root, "repo"), taskHome = join(root, "fixture-home"), current = process.cwd();
   mkdirSync(repository);
-  const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...new Set([...DEV_DEPLOY_SNAPSHOT_PATHS, "supabase/migrations", ...requiredRegistryFiles])],
+  const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...new Set([...DEV_DEPLOY_SNAPSHOT_PATHS, "supabase/migrations", ...requiredRegistryFiles].filter(path=>spawnSync("git",["cat-file","-e",`HEAD:${path}`],{cwd:current,stdio:"ignore"}).status===0))],
     { cwd: current, maxBuffer: 128 * 1024 * 1024 });
   execFileSync("/usr/bin/tar", ["-xf", "-", "-C", repository], { input: archive });
   for (const path of ["scripts/deploy-prelaunch-web.mjs", "scripts/lib/prelaunch-web-deploy.mjs", "scripts/lib/prelaunch-database.mjs",
-    "scripts/lib/full-local-restore-cutover.mjs", "scripts/lib/dev-deploy-launcher.mjs"]) {
+    "scripts/lib/full-local-restore-cutover.mjs", "scripts/lib/full-local-security-inventory.mjs", "scripts/lib/dev-deploy-launcher.mjs", ...requiredRegistryFiles]) {
     let bytes = readFileSync(join(current, path));
     if (path === "scripts/lib/prelaunch-web-deploy.mjs") bytes = Buffer.from(bytes.toString().replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,
       (_text, name: string) => `export const ${name} = Object.freeze({ path: null, sha256: null });`));
@@ -58,7 +59,7 @@ function ownedInstallerRepository(root: string) {
 
 it("loads the committed deployment import graph from its exact git archive", () => {
   const root = snapshotRoot(), repository = process.cwd();
-  const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...DEV_DEPLOY_SNAPSHOT_PATHS], { cwd: repository, maxBuffer: 128 * 1024 * 1024 });
+  const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...DEV_DEPLOY_SNAPSHOT_PATHS.filter(path=>spawnSync("git",["cat-file","-e",`HEAD:${path}`],{cwd:repository,stdio:"ignore"}).status===0)], { cwd: repository, maxBuffer: 128 * 1024 * 1024 });
   execFileSync("/usr/bin/tar", ["-xf", "-", "-C", root], { input: archive });
   expect(() => verifyDevDeployToolLoad({ entryPoint: join(root, "scripts/deploy-prelaunch-web.mjs"), repository, nodePath: process.execPath })).not.toThrow();
 });
@@ -90,14 +91,16 @@ it("installs the working tool and generates exact227/228/personal inventories fr
     const before=inventory.buildRecipeProductSourceFunctionInventorySql(base);
     const after=inventory.buildRecipeProductSourceFunctionInventorySql({...base,includeCookedWeightAttestationFunctions:true});
     const personal=inventory.buildCookedWeightAttestationSourceFunctionInventorySql();
-    const generated={before227:count(before),after228:count(after),personal:count(personal)};
-    assert.deepEqual(generated,{before227:94,after228:103,personal:10});
+    const latest=inventory.buildRecipeProductSourceFunctionInventorySql({...base,includeCookedWeightAttestationFunctions:true,includeRecipeSaveRecoveryFunctions:true});
+    const exact=inventory.buildRecipeSaveRecoverySourceFunctionInventorySql();
+    const generated={before227:count(before),after228:count(after),personal:count(personal),after231:count(latest),recipeSave:count(exact)};
+    assert.deepEqual(generated,{before227:94,after228:103,personal:10,after231:109,recipeSave:11});
     assert.ok(personal.includes('verify_scope_pre_weight_attestation_20261014'));
     console.log(JSON.stringify(generated));
   `;
   const loaded = spawnSync(process.execPath, ["--input-type=module", "-e", probe], { env, encoding: "utf8" });
   expect(loaded.status, loaded.stderr).toBe(0);
-  expect(JSON.parse(loaded.stdout)).toEqual({ before227: 94, after228: 103, personal: 10 });
+  expect(JSON.parse(loaded.stdout)).toEqual({ before227: 94, after228: 103, personal: 10, after231:109, recipeSave:11 });
 });
 
 it("rejects the former snapshot paths at the real registry import instead of silently dropping the guard", () => {
@@ -112,7 +115,7 @@ it("rejects the former snapshot paths at the real registry import instead of sil
 
 it("rejects the old archive that omits the required static JSON", () => {
   const root = snapshotRoot(), repository = process.cwd();
-  const oldPaths = DEV_DEPLOY_SNAPSHOT_PATHS.filter(path => path !== "lib/server/youtube-extraction-worker-timing.json");
+  const oldPaths = DEV_DEPLOY_SNAPSHOT_PATHS.filter(path => path !== "lib/server/youtube-extraction-worker-timing.json" && spawnSync("git",["cat-file","-e",`HEAD:${path}`],{cwd:repository,stdio:"ignore"}).status===0);
   const archive = execFileSync("git", ["archive", "--format=tar", "HEAD", ...oldPaths], { cwd: repository, maxBuffer: 128 * 1024 * 1024 });
   execFileSync("/usr/bin/tar", ["-xf", "-", "-C", root], { input: archive });
   expect(() => verifyDevDeployToolLoad({ entryPoint: join(root, "scripts/deploy-prelaunch-web.mjs"), repository, nodePath: process.execPath })).toThrow("load");

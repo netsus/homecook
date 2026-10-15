@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { resolve } from "node:path";
 
@@ -389,6 +390,21 @@ export function assertC04WorkerSuccessorBinding(review, binding, databaseReceipt
 }
 
 export function assertC04WorkerMaintenanceBinding(review, binding, successor) {
+  if (binding?.schema === "homecook.recipe-save-recovery-maintenance.v1") {
+    const prior=binding.predecessorMaintenance;
+    c04Check(prior?.schema === "homecook.recipe-nutrition-validator-maintenance.v1", "recipe-save requires original229 authority");
+    assertC04WorkerMaintenanceBinding(review,prior,successor);
+    const migrations=[{filename:"20261014225200_recipe_snapshot_reason_identity.sql",sha256:"b6050c12e60594267908b89ff02cff0c0344a52ccb79dc9a88d21e3c57e8fe66"},
+      {filename:"20261014225300_recipe_future_patch_http_replay.sql",sha256:"aed773e0d27e6b6dd4af8e65fb933d73c89927faef1d1d36804eec8476fed9c7"}];
+    c04Check(Object.keys(binding).sort().join() === "databasePlanSha256,ledgerCount,migrationSha256,predecessorDatabaseReceiptSha256,predecessorMaintenance,receipt,reviewSha256,schema,sourceReaderRef,targetSha256"
+      && binding.ledgerCount === 231 && binding.targetSha256 === review.targetSha256 && binding.predecessorDatabaseReceiptSha256 === prior.receipt.sha256
+      && binding.migrationSha256 === createHash("sha256").update(JSON.stringify(migrations)).digest("hex")
+      && [binding.reviewSha256,binding.predecessorDatabaseReceiptSha256,binding.databasePlanSha256,binding.receipt?.sha256].every(value=>SHA64.test(value??""))
+      && /^[a-f0-9]{40}$/u.test(binding.sourceReaderRef??"") && Object.keys(binding.receipt??{}).sort().join()==="path,sha256"
+      && typeof binding.receipt.path === "string" && binding.receipt.path.startsWith("/") && resolve(binding.receipt.path)===binding.receipt.path,
+      "unbound exact current231 recipe-save maintenance");
+    return binding;
+  }
   assertC04WorkerSuccessorBinding(review, successor, successor?.predecessorDatabaseReceiptSha256);
   c04Check(binding && Object.keys(binding).sort().join() === "databasePlanSha256,ledgerCount,migrationSha256,predecessorDatabaseReceiptSha256,receipt,reviewSha256,schema,sourceReaderRef,targetSha256"
     && binding.schema === "homecook.recipe-nutrition-validator-maintenance.v1" && binding.ledgerCount === 229
@@ -408,7 +424,7 @@ export function assertC04SuccessorCheckpoint(review, record, reviewSha256) {
   if (maintenance) assertC04WorkerMaintenanceBinding(review, maintenance, record.databaseSuccessor);
   c04Check(Object.keys(record).sort().join() === [...C04_RECEIPT_KEYS.split(","), "databaseSuccessor", "predecessorRecord", ...(maintenance ? ["databaseMaintenance"] : [])].sort().join()
     && record.schema === "homecook.prelaunch-quantity-worker-after-successor.v1" && record.status === "committed"
-    && record.ledgerCount === (maintenance ? 229 : 228) && record.catalogFingerprint === review.catalogAfter
+    && record.ledgerCount === (maintenance ? maintenance.ledgerCount : 228) && record.catalogFingerprint === review.catalogAfter
     && record.serviceState === "running" && Number.isSafeInteger(record.pid) && record.pid > 0,
   "current228 checkpoint shape differs");
   for (const key of ["feature", "releaseSha", "targetSha256", "consumersReceiptSha256", "credentialGeneration", "workerReleaseSha", "schemaIdentity", "snapshotDigest",
@@ -424,7 +440,7 @@ function c04Identity(review, observation, stage, generation, successor = null, m
   if (maintenance) assertC04WorkerMaintenanceBinding(review, maintenance, successor);
   c04Check(isDeepStrictEqual(observation?.databaseMaintenance ?? null, maintenance), "current229 maintenance/intent differs");
   c04Check(isDeepStrictEqual(observation?.databaseSuccessor ?? null, successor) && (!successor || stage === "worker" && generation === 48), "current successor/stage differs");
-  c04Check([47, 48].includes(generation) && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (maintenance ? 229 : successor ? 228 : stage === "consumers" ? 226 : 227)
+  c04Check([47, 48].includes(generation) && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (maintenance ? maintenance.ledgerCount : successor ? 228 : stage === "consumers" ? 226 : 227)
     && observation.catalogFingerprint === (stage === "consumers" ? review.catalogBefore : review.catalogAfter)
     && observation.credentialGeneration === generation
     && observation.workerReleaseSha === (generation === 47 ? YOUTUBE_V71_RELEASE_SHA : review.releaseSha)
@@ -674,7 +690,7 @@ export function createC04QuantityWorkerCutover({ review, reviewSha256, bindings,
     } catch (error) {
       const actual = await observe(context).catch(() => null);
       const known = actual?.credentialRowSha256 === fresh.credentialRowSha256 && actual?.targetSha256 === review.targetSha256
-        && actual?.ledgerCount === (context.databaseMaintenance ? 229 : context.successor ? 228 : 227) && actual?.catalogFingerprint === review.catalogAfter
+        && actual?.ledgerCount === (context.databaseMaintenance ? context.databaseMaintenance.ledgerCount : context.successor ? 228 : 227) && actual?.catalogFingerprint === review.catalogAfter
         && isDeepStrictEqual(actual?.databaseSuccessor ?? null, context.successor ?? null)
         && isDeepStrictEqual(actual?.databaseMaintenance ?? null, context.databaseMaintenance ?? null);
       await adapters.journal(known && actual.workerPolicyEnabled === false ? "activation-not-applied" : "activation-outcome-unknown", { activationVerification: proof });
