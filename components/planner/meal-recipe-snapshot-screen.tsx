@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatIngredientAmountOnly } from "@/components/cooking/cook-mode-step-model";
 import { ContentState } from "@/components/shared/content-state";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +43,8 @@ export function MealRecipeSnapshotScreen({ mealId }: { mealId: string }) {
         <section aria-labelledby="planned-ingredients" className="mt-7">
           <h2 id="planned-ingredients" className="mb-2 text-lg font-bold">재료</h2>
           <ul>{data.ingredients.map((ingredient, index) => {
-            const quantity = `${ingredient.amount ?? ""}${ingredient.unit ?? ""}`;
+            const quantity = ingredient.quantity_input ? formatIngredientAmountOnly(ingredient)
+              : `${ingredient.amount ?? ""}${ingredient.unit ?? ""}`;
             const needsQuantity = ingredient.ingredient_type !== "TO_TASTE" && (ingredient.amount === null || !ingredient.unit?.trim());
             return <li key={`${ingredient.ingredient_id}:${index}`} className="flex items-start justify-between gap-4 border-b border-[var(--line)] py-3">
               <div className="min-w-0 break-words">{ingredient.component_label ? <span className="mr-2 text-xs text-[var(--text-2)]">{ingredient.component_label}</span> : null}{ingredient.standard_name}</div>

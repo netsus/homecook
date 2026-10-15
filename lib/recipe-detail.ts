@@ -1,4 +1,4 @@
-import { isQuantityInputSnapshot } from "@/lib/quantity-input";
+import { readRecipeQuantityInputSnapshot } from "@/lib/recipe-quantity-input";
 import { recipeProductLabel } from "@/lib/server/recipe-product-labels";
 import type {
   RecipeIngredient,
@@ -107,18 +107,7 @@ export function normalizeRecipeIngredients(
       }
 
       if (item.quantity_input !== null && item.quantity_input !== undefined) {
-        if (typeof item.quantity_input !== "object" || Array.isArray(item.quantity_input) || !("context_sha256" in item.quantity_input)
-          || typeof item.quantity_input.context_sha256 !== "string" || !/^[0-9a-f]{64}$/u.test(item.quantity_input.context_sha256)) {
-          throw new Error("INVALID_RECIPE_QUANTITY_SNAPSHOT");
-        }
-        const { context_sha256, ...snapshot } = item.quantity_input;
-        if (!isQuantityInputSnapshot(snapshot, typeof ingredient.amount === "number" && ingredient.unit
-          ? { amount: ingredient.amount, unit: ingredient.unit } : undefined)
-          || snapshot.batch_basis !== null
-          || ingredient.food_product_id && (snapshot.source_versions.length !== 1 || snapshot.source_versions[0] !== ingredient.food_product_nutrition_version_id)) {
-          throw new Error("INVALID_RECIPE_QUANTITY_SNAPSHOT");
-        }
-        ingredient.quantity_input = { ...snapshot, context_sha256 };
+        ingredient.quantity_input = readRecipeQuantityInputSnapshot(item.quantity_input, ingredient);
         ingredient.row_key = item.id;
       }
       return ingredient;
