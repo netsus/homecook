@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-10-15 — 레시피 저장 복구 운영 확인·DB232
+
+앱 #1723/#1726과 기존 도구 #1724/#1725/#1727을 반영해 웹 `0ae67d66c5ab`·build `prelaunch-0ae67d66c5ab-DexI9I`·DB232를 운영 확인했다. 원수량을 가진 개인 레시피 재저장·반복 클릭·새로고침·모바일/데스크톱·취소/뒤로가기·비로그인 차단과 기존 비교 기록 보존을 통과했다. 실제 PATCH409는 JSON 역할 정보를 누락한 새 접근 검사 경계였으며232 단일 함수 수정으로 해결했다. [실제 결과·검증 한계·실패 이력](../engineering/recipe-save-recovery-operating-20261015.md)이 아래 DB229 준비/운영 상태보다 최신이다.
+
+사용자 지시에 따라2번 단위 기억과4번 정확도 개선 참여 추가 작업을 보류한다. 기존 기능을 유지하며3번 완성 무게 추정→5번 네이버 일반 사용자 가입→6번 최종 통합/추출 품질 검증 순서로 진행한다. R2/C05 수집OFF, 영상 정답 검토·추가 추출/AI/P5 별도 승인 조건은 유지한다. 전체v9 완료 선언은 아니다.
+
 ## 2026-10-15 — 영양 수량 사유 DB229와 수동 발행 복구
 
 앱 #1715와 기존 배포 도구 #1717/#1718/#1719를 반영해 DB229·웹 B `aad3135bca56870eb8f2da5ccce7be9d63d0fb29`·build `prelaunch-aad3135bca56-MMohRN`를 운영 확인했다. 배포 exit0·1,450 PASS·선택 범위 밖133 skipped, loaded=true·recoveryPending=false·source/applied229·pending0이다. 아래 DB228·publication pending/후보 미적용 문단은 당시 기록이며 이 절이 최신이다.
