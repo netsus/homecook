@@ -1,6 +1,6 @@
 # 레시피 요청 역할: 기존 도구의231→232 준비
 
-현재는 기존 보호 engine/CLI에232 고정 분기를 추가한 로컬 준비다. 새 `RECIPE_REQUEST_ROLE_RELEASE_SHA`와 `RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN`은 null이며 운영 실행을 거절한다. 총괄이 확인한 현재 reader는 `0ae67d…`·DB231·worker48/ON이다. 웹 runtime 변경과 이 보정만을 위한 웹 재배포는 없다. 원231 SQL·review/PIN/receipt와227/229 이력은 보존한다.
+현재는 기존 보호 engine/CLI의232 고정 분기와 owned native 검증을 마치고, 총괄이 release `5a3926e5a188d48a0642317805ef5bca38958a30`과 `approved-recipe-role-review.json`의 PIN `2532d389a187907d649fc5a9cffae4cb8a8c9e38fdad80c1a74d010a41be6f0e`를 결속한 상태다. 실제232 적용은 아직 실행하지 않았다. 총괄이 확인한 현재 reader는 `0ae67d…`·DB231·worker48/ON이다. 웹 runtime 변경과 이 보정만을 위한 웹 재배포는 없다. 원15 PIN과231 SQL·review/receipt 및227/229 이력은 보존한다.
 
 ## 고정 범위
 
@@ -22,4 +22,8 @@ SQL은 `20261015100000_recipe_future_request_role.sql` 하나이며 SHA256은 `2
 
 합성 authority의 engine 회귀는 단일 payload/ledger commit, SQL 실패 rollback, 행 지문 drift 거절, ACK unknown과 동일 intent reconcile, 같은 operation pending 입장과 실제 CLI의 reader/worker 재검사를 확인한다. 실제 worker producer→consumer 함수 회귀는231→232·232 반복·잘못된 이력 거절과 발급/정책변경/재시작0을 확인한다. 설치 snapshot에는 새 JSON 하나를 추가하고 원 registry를 유지한다.
 
-SQL/native 요청 경계 재현과 총괄의 운영 metadata READ ONLY 투영은 별도 증거다. 총괄 actual231 전체 catalog는 `80fbf73b…`, outer 하나만 투영한 expected232는 `440554c06775d1c9408f9bd8f16704aa7694489c5e08c4168432a4d245d23424`다. 실제232 AFTER 관측이 아니다. 비어 있지 않은 raw quantity/개인 fact/receipt fingerprint의 owned engine native는 코드 동결 뒤 다음 검증이며, 합성 hash만으로 실제 행 보존을 증명했다고 주장하지 않는다. 이 준비에서 실DB·key·AI·운영 적용은0이다.
+SQL/native 요청 경계 재현과 총괄의 운영 metadata READ ONLY 투영은 별도 증거다. 총괄 actual231 전체 catalog는 `80fbf73b…`, outer 하나만 투영한 expected232는 `440554c06775d1c9408f9bd8f16704aa7694489c5e08c4168432a4d245d23424`다. 실제232 AFTER 관측이 아니다.
+
+Owned engine native는 실제232 SQL/ledger 원자 commit, 실제 DDL 뒤 강제 실패의 전체 rollback, 전체 백업 decode·231 복원, COMMIT ACK unknown 뒤 동일 intent read-only reconcile을 통과했다. 비어 있지 않은 개인 확인 사실3건(확인2·철회1), meal raw `1/2`·recipe raw `1/3kg`, NONNULL HTTP fingerprint receipt1행의19열 전체와 control/worker 지문을 보존했다. 원109/전용11 함수 중 outer 정의 하나만 달라졌고 소유 컨테이너4개는 모두 삭제했다. 초기3회 runner fixture 실패 원문과 기존 source/native 동결 증거는 보존한다.
+
+이 native의 PIN/권위는 소유 사본의 합성 marker와 정확한 새 review bytes 결속이며, 실제 운영 승인 chain·원15 PIN 검증을 대신하지 않는다. 정확4표 metadata bootstrap과 origin 복귀를 검증했으나 인증 bootstrap은 검증하지 않았다. 정상 receipt seed는 기존 native의 legacy GUC 지원 요청을 사용했고,232 뒤 JSON-only dispatcher의 정상 tuple receipt 조회를 확인했다. 실제 운영 JSON-only PATCH 저장 성공으로 확대하지 않는다. 이 준비에서 실DB·key·AI·운영 적용은0이다.

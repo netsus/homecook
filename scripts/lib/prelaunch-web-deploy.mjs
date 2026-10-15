@@ -60,8 +60,8 @@ export function recipeSaveRecoveryRuntimeContract(file, bytes) {
 
 // Separate metadata-only successor; no operational authority until root binds both constants.
 export const RECIPE_REQUEST_ROLE_FEATURE = "recipe-future-request-role";
-export const RECIPE_REQUEST_ROLE_RELEASE_SHA = null;
-export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const RECIPE_REQUEST_ROLE_RELEASE_SHA = "5a3926e5a188d48a0642317805ef5bca38958a30";
+export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-recipe-snapshot-20261015-lry0fhvq/role-forward-repair/approved-recipe-role-review.json", sha256: "2532d389a187907d649fc5a9cffae4cb8a8c9e38fdad80c1a74d010a41be6f0e" });
 export const RECIPE_REQUEST_ROLE_MIGRATION = Object.freeze({ filename: "20261015100000_recipe_future_request_role.sql", sha256: "2322ccf737382e9738aa2c3d5cb50531c769c1a7902e2f621c8d378f9ce1505e" });
 export const RECIPE_REQUEST_ROLE_POSTIMAGE_SHA256 = "8cb39f32a50a85a713798049459500ce3eecf1ff33171e55b742a9ff9fd0bde2";
 

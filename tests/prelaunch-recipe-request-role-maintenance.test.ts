@@ -10,7 +10,7 @@ const temp=mkdtempSync(join(realpathSync("/tmp"),"recipe-request-role-owned-"));
 afterAll(()=>rmSync(temp,{recursive:true,force:true}));
 const source=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8")
   .replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,(_text,name:string)=>`export const ${name} = Object.freeze({path:null,sha256:"${sha(name==="RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN"?"8":"1")}"});`)
-  .replace('export const RECIPE_REQUEST_ROLE_RELEASE_SHA = null;',()=>`export const RECIPE_REQUEST_ROLE_RELEASE_SHA = "${ref("b")}";`)
+  .replace(/^export const RECIPE_REQUEST_ROLE_RELEASE_SHA = [^\r\n]*;$/gmu,()=>`export const RECIPE_REQUEST_ROLE_RELEASE_SHA = "${ref("b")}";`)
   .replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',()=>`function prelaunchStateRoot() { return ${JSON.stringify(join(temp,"state"))}; }`);
 const webPath=join(temp,"web.mjs");writeFileSync(webPath,source,{mode:0o600});
 const web:typeof import("../scripts/lib/prelaunch-web-deploy.mjs")=await import(pathToFileURL(webPath).href);
@@ -76,10 +76,14 @@ function engineFixture({ackLost=false,sqlFails=false,drift=false}={}) {
 }
 
 describe("fixed metadata-only231 to232 maintenance",()=>{
-  it("remains operationally unbound and uses current whole rows including receipt19",async()=>{
-    const actual=await import("../scripts/lib/prelaunch-web-deploy.mjs");
-    expect(actual.RECIPE_REQUEST_ROLE_RELEASE_SHA).toBeNull();expect(actual.RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN).toEqual({path:null,sha256:null});
-    expect(()=>actual.loadProtectedRolloutReview(temp,{feature:web.RECIPE_REQUEST_ROLE_FEATURE})).toThrow(/비어/u);
+  it("denies an unbound owned copy before private authority I/O and preserves current whole rows including receipt19",async()=>{
+    const unboundSource=source
+      .replace(/^export const RECIPE_REQUEST_ROLE_RELEASE_SHA = [^\r\n]*;$/gmu,()=>"export const RECIPE_REQUEST_ROLE_RELEASE_SHA = null;")
+      .replace(/^export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = [^\r\n]*;$/gmu,()=>"export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = Object.freeze({path:null,sha256:null});");
+    const unboundPath=join(temp,"unbound-web.mjs");writeFileSync(unboundPath,unboundSource,{mode:0o600});
+    const unbound:typeof import("../scripts/lib/prelaunch-web-deploy.mjs")=await import(pathToFileURL(unboundPath).href);
+    expect(unbound.RECIPE_REQUEST_ROLE_RELEASE_SHA).toBeNull();expect(unbound.RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN).toEqual({path:null,sha256:null});
+    expect(()=>unbound.loadProtectedRolloutReview(temp,{feature:web.RECIPE_REQUEST_ROLE_FEATURE})).toThrow(/비어/u);
     expect(db.RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL).toContain("FROM public.mutation_idempotency_keys");
     expect(db.RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL).not.toContain(db.RECIPE_SAVE_RECEIPT_COLUMNS.join(","));
   });
