@@ -586,6 +586,16 @@ async function readRecipeMutationAuthority(
   };
 }
 
+function decodeRecipePatchReplay(value: unknown, recipeId: string) {
+  if (!isRecord(value) || Object.keys(value).length !== 2) return null;
+  if (value.state === "absent" && value.result === null) return { state: "absent" as const };
+  if (value.state !== "succeeded" || !isRecord(value.result)
+    || Object.keys(value.result).length !== 3 || value.result.success !== true || value.result.error !== null
+    || !isRecord(value.result.data) || Object.keys(value.result.data).length !== 2) return null;
+  const data = projectRecipePatchData(value.result.data);
+  return data?.id === recipeId ? { state: "succeeded" as const, data } : null;
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
@@ -599,10 +609,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     return idempotency.response;
   }
 
-  const { id: recipeId } = await context.params;
-  if (!isUuid(recipeId)) {
+  const { id: requestedRecipeId } = await context.params;
+  if (!isUuid(requestedRecipeId)) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
+  const recipeId = requestedRecipeId.toLowerCase();
 
   let body: unknown;
   try {
@@ -622,9 +633,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const quantityFailure = recipeQuantityWriteFailure(request, parsed.value.draft.ingredients);
-  if (quantityFailure) return quantityFailure;
-
   const authority = await readRecipeMutationAuthority(routeClient, user);
   if (!authority.ok) {
     return authority.response;
@@ -633,6 +641,29 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500);
   }
+
+  const requestBody = {
+    base_recipe_revision: parsed.value.baseRecipeRevision,
+    draft: { ...parsed.value.draft, description: parsed.value.draft.description ?? null },
+    future_plan_strategy: parsed.value.futurePlanStrategy,
+    impact_token: parsed.value.impactToken,
+    image_object_id: parsed.value.imageObjectId,
+  };
+  const replayArgs = {
+    ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
+    p_recipe_id: recipeId,
+    p_request_body: requestBody,
+    p_quantity_contract: quantityInputContractRequested(request) ? "quantity-v4" : null,
+    p_idempotency_key: idempotency.key,
+  };
+  const read = await callFuturePropagationRpc(serviceClient, "read_recipe_future_patch_result", replayArgs);
+  if (!read.ok) return read.response;
+  const replay = decodeRecipePatchReplay(read.data, recipeId);
+  if (!replay) return fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500);
+  if (replay.state === "succeeded") return ok(replay.data);
+
+  const quantityFailure = recipeQuantityWriteFailure(request, parsed.value.draft.ingredients);
+  if (quantityFailure) return quantityFailure;
 
   let nutrition;
   try {
@@ -660,19 +691,12 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const result = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
-    "write_recipe_future_plan_change",
+    serviceClient,
+    "write_recipe_future_plan_change_recoverable",
     {
-      ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
-      p_recipe_id: recipeId,
-      p_base_recipe_revision: parsed.value.baseRecipeRevision,
-      p_draft: parsed.value.draft,
+      ...replayArgs,
       p_nutrition_snapshot: nutrition.nutritionSnapshot,
       p_nutrition_predecessor_guard: nutrition.predecessorGuard,
-      p_future_plan_strategy: parsed.value.futurePlanStrategy,
-      p_impact_token: parsed.value.impactToken,
-      p_image_object_id: parsed.value.imageObjectId,
-      p_idempotency_key: idempotency.key,
     },
   );
   if (!result.ok) {

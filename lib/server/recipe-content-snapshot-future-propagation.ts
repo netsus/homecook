@@ -653,7 +653,8 @@ export async function calculateRecipeDraftNutrition(
 
   return {
     nutritionSnapshot: {
-      calculation_version: calculation.calculation_version,
+      // Only the personal write contract changes; calculation values/order stay v4.
+      calculation_version: quantityV4 ? "recipe-nutrition-v5" : calculation.calculation_version,
       scalable_values: calculation.scalable_values,
       fixed_values: calculation.fixed_values,
       nutrient_status: calculation.values,

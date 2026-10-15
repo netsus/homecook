@@ -20,7 +20,7 @@ function migration() {
 }
 
 describe("personal recipe customization write core", () => {
-  it("keeps the generation-bound core behind the exact Stage 2 successor route", () => {
+  it("keeps the generation-bound core behind the recipe route and replay writer", () => {
     const sql = migration();
 
     expect(sql).toMatch(/create or replace function public\.write_personal_recipe_core/i);
@@ -37,8 +37,15 @@ describe("personal recipe customization write core", () => {
     expect(recipeDetailRoute).toContain("export async function PATCH");
     expect(recipeDetailRoute).toContain("export async function DELETE");
     expect(recipeDetailRoute).toContain("readVerifiedAccountGenerationSession");
-    expect(recipeDetailRoute).toContain('"write_recipe_future_plan_change"');
+    expect(recipeDetailRoute).toContain('"read_recipe_future_patch_result"');
+    expect(recipeDetailRoute).toContain('"write_recipe_future_plan_change_recoverable"');
     expect(recipeDetailRoute).toContain('"write_personal_recipe_core"');
+    const replaySql = readFileSync(
+      join(process.cwd(), "supabase/migrations/20261014225300_recipe_future_patch_http_replay.sql"),
+      "utf8",
+    );
+    expect(replaySql).toContain("authority := public.assert_recipe_future_session_authority(");
+    expect(replaySql).toContain("result := public.write_recipe_future_plan_change(");
   });
 
   it("supports create, immutable public fork, same-ID update, and explicit save-as-new", () => {

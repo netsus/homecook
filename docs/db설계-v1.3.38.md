@@ -3608,3 +3608,13 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 `20261014225000_recipe_nutrition_quantity_v4_warning_contract.sql`은 기존 `public.validate_recipe_nutrition_snapshot_payload(jsonb)` 한 함수의 정확한 사유 검증만 보완한다. `recipe-nutrition-v4`에서 추가 허용하는 경고는 `UNIT_DEFINITION_REQUIRED`, `UNIT_DEFINITION_CONFLICT`, `PIECE_IDENTITY_REQUIRED`, `DENSITY_REQUIRED`, `AMBIGUOUS_EVIDENCE`, `UNIT_MEASUREMENT_ESTIMATE_USED`다. 앞의 5개만 행 ID가 붙은 `missing_reasons`로 허용하며, 평균 측정 경고는 기존 estimated/mixed 검증에 연결하고 direct를 거절한다.
 
 새 테이블·열·RPC·grant는 없다. 기존 owner·ACL·security·search_path와 실제 input guard/source 비교, 원자 공개·receipt·과거 snapshot 불변성을 유지한다. 다른 계산 version의 새 코드·미등록 문자열·중복·잘못된 영양 상태/벡터/출처는 계속 거절한다. 기존 운영 행을 UPDATE하거나 자동 재계산하지 않는다.
+
+## 2026-10-15 — 개인 레시피 HTTP 성공 영수증 결속 (로컬·운영 미적용)
+
+`20261014225300_recipe_future_patch_http_replay.sql`은 기존 `public.mutation_idempotency_keys`에 nullable text `recipe_future_http_request_fingerprint` 한 컬럼을 추가한다. default/backfill0이며 기존 모든 행의 새 값은NULL이다. 기존 컬럼 전체·prepared payload_hash·원 성공 결과·unique/index·RLS/ACL은 보존한다. CHECK는NULL 또는 정확 `recipe_future_patch` scope의 `recipe-future-patch-http-v1:<64hex>`만 허용한다. 새 NULL 필드가 추가된 전체 행 JSON을 과거와 같은 shape/hash라고 주장하지 않는다.
+
+private immutable digest helper1개와 service-only SECURITY DEFINER RPC `read_recipe_future_patch_result`/`write_recipe_future_plan_change_recoverable`을 추가한다. 현재 owner/gen/session·본인 private/nondeleted recipe·원 lock으로 검증하고, 성공은 terminal succeeded·attempt/lease NULL·정확 결과를 요구한다. 신규 원 writer 성공과 지문 UPDATE는 한 transaction이며 연결이 한 건으로 확정되지 않으면 recipe/plan/snapshot/receipt 모두 롤백한다. 기존 NULL 성공에 현재 요청을 소급 연결하지 않으며 원 15인자 writer의 body/signature/prepared hash·직접 재생 계약은 변경하지 않는다.
+
+정확한 DB229 predecessor definition/source/권한 metadata를 먼저 확인한 뒤 원 scope verifier를 alias로 보존하고 `recipe-future-propagation`의 정확2개 POST RPC 경로만 추가한다. 일반/API 역할에 표 접근·private helper 실행 권한을 추가하지 않는다. actual baseline의 broad 표 ACL과 RLS=true/policy0는 그대로 보존하며 source 선언만으로 권한 없음이라 단정하지 않는다. [결속·실제 metadata·격리 검사·배포 한계](engineering/recipe-future-patch-http-replay-20261015.md)를 따른다.
+
+관련 `20261014225200_recipe_snapshot_reason_identity.sql`은 [개인 영양 사유 v5](engineering/recipe-nutrition-semantic-reason-identity-v5.md)의 별도 변경이다. 개인 사유 identity를 보완하되 기존 v4 수치·과거 snapshot은 재작성하지 않는다. 두 SQL의 통합·운영 적용과 새 lineage 이후 복구는 별도 검증 대상이다.
