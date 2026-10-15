@@ -10,6 +10,7 @@ import { createRecordingDockerAdapter, durableJson } from "./marketing-round2-co
 import { assertProtectedWriterReview, assertProtectedRolloutReview, assertCookedWeightProductOff, readClosedR2PrivateBytes, COOKED_WEIGHT_FEATURE, COOKED_WEIGHT_MIGRATION, protectedImmutableSha256,
   QUANTITY_V4_FEATURE, QUANTITY_V4_MIGRATIONS, QUANTITY_V4_PROTECTION, QUANTITY_V4_WORKER_CATALOG_AFTER, assertQuantityV4WorkerCheckpoint, assertQuantityV4WorkerPublicationPair, assertQuantityV4ActiveWorkerContinuation, COOKED_WEIGHT_ATTESTATION_FEATURE, COOKED_WEIGHT_ATTESTATION_MIGRATION, COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256,
   assertCookedWeightAttestationReview, assertCookedWeightAttestationPredecessor, loadCookedWeightAttestationSuccessor, cookedWeightAttestationSuccessorBinding,
+  RECIPE_REQUEST_ROLE_FEATURE, RECIPE_REQUEST_ROLE_MIGRATION, RECIPE_REQUEST_ROLE_POSTIMAGE_SHA256, RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN, assertRecipeRequestRoleReview,
   RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_SAVE_RECOVERY_FUNCTIONS_AFTER, RECIPE_SAVE_RECOVERY_MIGRATIONS, RECIPE_SAVE_RECOVERY_POSTIMAGES_SHA256, RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN, assertRecipeSaveRecoveryReview, loadCurrentDatabaseMaintenance,
   NUTRITION_VALIDATOR_FEATURE, NUTRITION_VALIDATOR_MIGRATION, NUTRITION_VALIDATOR_MIGRATION_SHA256, NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN,
   assertNutritionValidatorReview, nutritionValidatorMaintenanceBinding, assertProtectedWriterDatabaseBoundary } from "./prelaunch-web-deploy.mjs";
@@ -107,6 +108,11 @@ export const RECIPE_SAVE_NORMAL_DATA_SQL = catalogDigest(`jsonb_build_array(${[
   ...QUANTITY_V4_WHOLE_DATA_TABLES.map(table => `jsonb_build_array(${literal(table)},${quantityRowDigest(table === "public.mutation_idempotency_keys"
     ? `(SELECT ${RECIPE_SAVE_RECEIPT_COLUMNS.join(",")} FROM public.mutation_idempotency_keys)` : table)})`),
 ].join(",")})`);
+// Metadata-only232 changes no row shape: preserve every current column, including receipt19 and raw quantities.
+export const RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL = catalogDigest(`jsonb_build_array(${[
+  ...QUANTITY_V4_NORMAL_COLUMNS.map(row => `jsonb_build_array(${literal(row.table)},${quantityRowDigest(row.table)})`),
+  ...QUANTITY_V4_WHOLE_DATA_TABLES.map(table => `jsonb_build_array(${literal(table)},${quantityRowDigest(table)})`),
+].join(",")})`);
 export const RECIPE_SAVE_RECEIPT_METADATA_SQL = `SELECT encode(sha256(convert_to(jsonb_build_array(
  (SELECT jsonb_agg(jsonb_build_array(a.attname,format_type(a.atttypid,a.atttypmod),a.attnotnull,pg_get_expr(d.adbin,d.adrelid)) ORDER BY a.attnum)
   FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
@@ -141,9 +147,9 @@ function assertQuantityV4ColumnSet(metadata, present) {
   return metadata;
 }
 function assertAttestationColumns(metadata, ledgerCount, review, databaseMaintenance) {
-  const maintenance = [NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(review.feature) ? review : databaseMaintenance?.review;
+  const maintenance = [NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature) ? review : databaseMaintenance?.review;
   if (maintenance) assertProtectedRolloutReview(maintenance); else assertCookedWeightAttestationReview(review);
-  if (!(maintenance?.feature === RECIPE_SAVE_RECOVERY_FEATURE ? [229,231] : maintenance ? [228,229] : [227,228]).includes(ledgerCount) || !Array.isArray(metadata) || metadata.length !== 5
+  if (!(maintenance?.feature === RECIPE_REQUEST_ROLE_FEATURE ? [231,232] : maintenance?.feature === RECIPE_SAVE_RECOVERY_FEATURE ? [229,231] : maintenance ? [228,229] : [227,228]).includes(ledgerCount) || !Array.isArray(metadata) || metadata.length !== 5
     || new Set(metadata.map(row => row.table)).size !== 5) throw new Error("Personal attestation exact current columns/ledger differs");
   return assertQuantityV4ColumnSet(metadata, true);
 }
@@ -152,7 +158,7 @@ export function assertQuantityV4ProtectionPrepared(review) {
   if (typeof QUANTITY_V4_NORMAL_DATA_SQL !== "string" || !QUANTITY_V4_NORMAL_DATA_SQL.trim()
     || !SHA.test(QUANTITY_V4_PROTECTION?.normalProjectionSha256 ?? "") || !SHA.test(QUANTITY_V4_PROTECTION?.postimageRegistrySha256 ?? "")
     || digest(QUANTITY_V4_NORMAL_DATA_SQL) !== QUANTITY_V4_PROTECTION.normalProjectionSha256
-    || review.database.normalProjectionSha256 !== (review.feature === RECIPE_SAVE_RECOVERY_FEATURE ? digest(RECIPE_SAVE_NORMAL_DATA_SQL) : QUANTITY_V4_PROTECTION.normalProjectionSha256)
+    || review.database.normalProjectionSha256 !== (review.feature === RECIPE_REQUEST_ROLE_FEATURE ? digest(RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL) : review.feature === RECIPE_SAVE_RECOVERY_FEATURE ? digest(RECIPE_SAVE_NORMAL_DATA_SQL) : QUANTITY_V4_PROTECTION.normalProjectionSha256)
     || review.database.postimageRegistrySha256 !== QUANTITY_V4_PROTECTION.postimageRegistrySha256) {
     throw new Error("C04 fixed normal-data projection/postimage registry is unbound; no target/config I/O permitted");
   }
@@ -194,12 +200,13 @@ export const RECIPE_SAVE_FUNCTIONS_SQL = `SELECT coalesce(jsonb_agg(jsonb_build_
  FROM unnest(ARRAY[${RECIPE_SAVE_FUNCTION_SIGNATURES.map(literal).join(",")}]) s(signature) JOIN pg_proc p ON p.oid=to_regprocedure(s.signature);`;
 
 export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-source", review = /** @type {Record<string, any> | undefined} */ (undefined), databaseMaintenance = /** @type {ReturnType<typeof loadNutritionValidatorMaintenance> | undefined} */ (undefined)) {
-  if (!["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(feature)) throw new Error("Unknown protected adapter feature");
-  if ([QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(feature)) assertQuantityV4ProtectionPrepared(review);
+  if (!["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature)) throw new Error("Unknown protected adapter feature");
+  if ([QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature)) assertQuantityV4ProtectionPrepared(review);
   const observationReview = databaseMaintenance?.review ?? review;
   if (databaseMaintenance) assertQuantityV4ProtectionPrepared(observationReview);
-  const recipeSave = feature === RECIPE_SAVE_RECOVERY_FEATURE || databaseMaintenance?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE;
-  const normalProjection = recipeSave ? RECIPE_SAVE_NORMAL_DATA_SQL : QUANTITY_V4_NORMAL_DATA_SQL;
+  const requestRole = feature === RECIPE_REQUEST_ROLE_FEATURE || databaseMaintenance?.review.feature === RECIPE_REQUEST_ROLE_FEATURE;
+  const recipeSave = requestRole || feature === RECIPE_SAVE_RECOVERY_FEATURE || databaseMaintenance?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE;
+  const normalProjection = requestRole ? RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL : recipeSave ? RECIPE_SAVE_NORMAL_DATA_SQL : QUANTITY_V4_NORMAL_DATA_SQL;
   return {
     ...base,
     async observe(sessionQuery, applicationName) {
@@ -224,7 +231,7 @@ export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-
         Object.assign(result, { productWriterEnabled: result.writerEnabled, writerEnabled: weightControl === "true",
           stableImmutableSha256: (await query(COOKED_WEIGHT_STABLE_IMMUTABLE_SQL)).trim(), scope: JSON.parse((await query(COOKED_WEIGHT_SCOPE_SQL)).trim()) });
       }
-      if ([QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(feature)) {
+      if ([QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature)) {
         const exists = (await query("SELECT to_regclass('private.quantity_input_v4_policy') IS NOT NULL;")).trim() === "t";
         const quantity = exists ? (await query(QUANTITY_V4_WRITER_SQL)).trim() : "false";
         const weight = (await query(COOKED_WEIGHT_WRITER_SQL)).trim();
@@ -244,13 +251,13 @@ export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-
         const normalDataSha256 = normalData.trim();
         if (!SHA.test(normalDataSha256)) throw new Error("C04 normal historical-column projection invalid");
         const metadata = JSON.parse((await query(QUANTITY_V4_COLUMNS_SQL)).trim());
-        const columns = [COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(feature)
+        const columns = [COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature)
           ? assertAttestationColumns(metadata, result.ledger.length, observationReview, databaseMaintenance) : assertQuantityV4Columns(metadata, result.ledger.length);
         let metadataNull = true;
         if (result.ledger.length !== 221) for (const spec of QUANTITY_V4_NORMAL_COLUMNS) {
           metadataNull = (await query(`SELECT NOT EXISTS(SELECT 1 FROM ${spec.table} WHERE ${spec.added} IS NOT NULL);`)).trim() === "t" && metadataNull;
         }
-        const ledgerCutoff = recipeSave ? NUTRITION_VALIDATOR_MIGRATION : feature === NUTRITION_VALIDATOR_FEATURE || databaseMaintenance ? COOKED_WEIGHT_ATTESTATION_MIGRATION
+        const ledgerCutoff = requestRole ? RECIPE_SAVE_RECOVERY_MIGRATIONS[1].filename : recipeSave ? NUTRITION_VALIDATOR_MIGRATION : feature === NUTRITION_VALIDATOR_FEATURE || databaseMaintenance ? COOKED_WEIGHT_ATTESTATION_MIGRATION
           : review.quantityStage === "consumers" ? COOKED_WEIGHT_MIGRATION : QUANTITY_V4_MIGRATIONS[4].filename;
         const ledgerPreservedRowsSha256 = (await query(`SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY filename),'[]'::jsonb)::text,'UTF8')),'hex') FROM homecook_deploy.migrations t WHERE filename<=${literal(ledgerCutoff)};`)).trim();
         if (!SHA.test(ledgerPreservedRowsSha256)) throw new Error("C04 original deployment ledger rows invalid");
@@ -261,7 +268,7 @@ export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-
           normalProjectionSha256: observationReview.database.normalProjectionSha256, postimageRegistrySha256: observationReview.database.postimageRegistrySha256,
           scope: JSON.parse((await query(COOKED_WEIGHT_SCOPE_SQL)).trim()), worker: JSON.parse((await query(QUANTITY_V4_WORKER_STATE_SQL)).trim()) });
       }
-      if ([COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(feature)) {
+      if ([COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature)) {
         const exists = (await query("SELECT to_regclass('private.cooked_weight_user_attestation_control') IS NOT NULL;")).trim() === "t";
         const enabled = exists ? (await query("SELECT CASE WHEN count(*)=1 AND bool_and(singleton) THEN bool_or(enabled)::text ELSE 'invalid' END FROM private.cooked_weight_user_attestation_control;")).trim() : "false";
         if (!["true", "false"].includes(enabled)) throw new Error("Personal attestation control singleton differs");
@@ -271,18 +278,18 @@ export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-
         const registry = await readFile(new URL("../../docs/security/cooked-weight-user-attestation-source-function-postimages.json", import.meta.url));
         if (digest(registry) !== observationReview.database.attestationPostimageRegistrySha256) throw new Error("Personal attestation exact source registry bytes differ");
         const inventory = await import("./full-local-security-inventory.mjs");
-        const options = { includeCookedWeightEvidenceFunctions: true, includeQuantityInputV4Functions: true, includeCookedWeightAttestationFunctions: result.ledger.length === 228 || [229,231].includes(result.ledger.length) && ([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE].includes(feature) || Boolean(databaseMaintenance)), includeRecipeSaveRecoveryFunctions: recipeSave && result.ledger.length === 231 };
+        const options = { includeCookedWeightEvidenceFunctions: true, includeQuantityInputV4Functions: true, includeCookedWeightAttestationFunctions: result.ledger.length === 228 || [229,231,232].includes(result.ledger.length) && ([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature) || Boolean(databaseMaintenance)), includeRecipeSaveRecoveryFunctions: recipeSave && [231,232].includes(result.ledger.length), includeRecipeRequestRoleFunctions: requestRole && result.ledger.length === 232 };
         inventory.assertRecipeProductSourceFunctionInventoryResult(JSON.parse((await query(inventory.buildRecipeProductSourceFunctionInventorySql(options))).trim()), options);
         if (options.includeCookedWeightAttestationFunctions) {
           if (typeof inventory.buildCookedWeightAttestationSourceFunctionInventorySql !== "function"
             || typeof inventory.assertCookedWeightAttestationSourceFunctionInventoryResult !== "function") throw new Error("Personal attestation reviewed source registry dependency is not installed");
-          inventory.assertCookedWeightAttestationSourceFunctionInventoryResult(JSON.parse((await query(inventory.buildCookedWeightAttestationSourceFunctionInventorySql({includeRecipeSaveRecoveryFunctions: options.includeRecipeSaveRecoveryFunctions}))).trim()));
+          inventory.assertCookedWeightAttestationSourceFunctionInventoryResult(JSON.parse((await query(inventory.buildCookedWeightAttestationSourceFunctionInventorySql({includeRecipeSaveRecoveryFunctions: options.includeRecipeSaveRecoveryFunctions, includeRecipeRequestRoleFunctions: options.includeRecipeRequestRoleFunctions}))).trim()));
         }
         Object.assign(result, { quantityWriterEnabled: result.writerEnabled, writerEnabled: enabled === "true",
           attestationPostimageRegistrySha256: digest(registry), attestationWriterEnabled: enabled === "true", attestationRowsSha256: facts, attestationRowsEmpty: empty, attestationTablesPresent: exists && factsExist,
           attestationScope: JSON.parse((await query(COOKED_WEIGHT_ATTESTATION_SCOPE_SQL)).trim()) });
       }
-      if ([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE].includes(feature) || databaseMaintenance) {
+      if ([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature) || databaseMaintenance) {
         result.nutritionValidator = JSON.parse((await query(NUTRITION_VALIDATOR_FUNCTION_SQL)).trim());
         result.controlsSha256 = (await query(NUTRITION_VALIDATOR_CONTROLS_SQL)).trim();
         result.stableImmutableSha256 = (await query(COOKED_WEIGHT_STABLE_IMMUTABLE_SQL)).trim();
@@ -295,6 +302,11 @@ export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-
         result.receiptColumnInitiallyNull = result.ledger.length === 231 ? (await query(RECIPE_SAVE_RECEIPT_NULL_SQL)).trim() === "t" : null;
         result.recipeScope = JSON.parse((await query(RECIPE_SAVE_SCOPE_SQL)).trim());
         result.recipePostimageRegistrySha256 = digest(registry);
+        if (requestRole) {
+          const requestRegistry = await readFile(new URL("../../docs/security/recipe-future-request-role-source-function-postimage.json", import.meta.url));
+          if (digest(requestRegistry) !== RECIPE_REQUEST_ROLE_POSTIMAGE_SHA256 || observationReview.database.requestRolePostimageRegistrySha256 !== digest(requestRegistry)) throw new Error("Recipe request-role exact postimage bytes differ");
+          result.requestRolePostimageRegistrySha256 = digest(requestRegistry);
+        }
       }
       return result;
     },
@@ -307,7 +319,7 @@ export function createProtectedPrelaunchJournal({ repositoryRoot, operationDirec
   const read = () => {
     try {
       const record = JSON.parse(readClosedR2PrivateBytes(guardPath, repositoryRoot, 524288));
-      if (record.schema === "homecook.prelaunch-protected-db-attempt.v1" && [QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(record.feature)
+      if (record.schema === "homecook.prelaunch-protected-db-attempt.v1" && [QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(record.feature)
         && record.journalFile !== "attempt.json") throw new Error("C04 durable DB journal locator differs");
       return record;
     }
@@ -322,7 +334,7 @@ export function createProtectedPrelaunchJournal({ repositoryRoot, operationDirec
     },
     async write(value, exclusive = false) {
       if (value.operationId !== operationId) throw new Error("Protected durable attempt operation differs");
-      if (value.schema === "homecook.prelaunch-protected-db-attempt.v1" && [QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(value.feature)
+      if (value.schema === "homecook.prelaunch-protected-db-attempt.v1" && [QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(value.feature)
         && value.journalFile !== "attempt.json") throw new Error("C04 durable DB journal locator differs");
       const bound = { ...value, operationDirectory };
       if (!exclusive) {
@@ -352,10 +364,11 @@ export function createProtectedPrelaunchJournal({ repositoryRoot, operationDirec
 }
 
 export async function openProtectedPrelaunchTarget({ repositoryRoot, configPath, backupDirectory, review }) {
-  if ([QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(review.feature)) assertQuantityV4ProtectionPrepared(review);
+  if ([QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature)) assertQuantityV4ProtectionPrepared(review);
   if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) assertCookedWeightAttestationReview(review);
   if (review.feature === NUTRITION_VALIDATOR_FEATURE) assertNutritionValidatorReview(review);
   if (review.feature === RECIPE_SAVE_RECOVERY_FEATURE) assertRecipeSaveRecoveryReview(review);
+  if (review.feature === RECIPE_REQUEST_ROLE_FEATURE) assertRecipeRequestRoleReview(review);
   const configBytes = readClosedR2PrivateBytes(configPath, repositoryRoot, 65536);
   if (configPath !== review.database.configPath || digest(configBytes) !== review.database.configSha256) throw new Error("Protected database config path/bytes differ from approval");
   const config = parseFullLocalProductionConfig(configBytes.toString("utf8"));
@@ -774,7 +787,7 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
   const before = review?.database?.before;
   const after = review?.database?.after;
   const specs = review?.database?.migrations;
-  const quantity = review.feature === QUANTITY_V4_FEATURE, attestation = review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE, maintenance = [NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE].includes(review.feature);
+  const quantity = review.feature === QUANTITY_V4_FEATURE, attestation = review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE, maintenance = [NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature);
   if (quantity || attestation || maintenance) assertProtectedRolloutReview(review);
   const source = quantity ? review.database.source : after;
   const validRows = rows => Array.isArray(rows) && rows.length > 0
@@ -797,6 +810,8 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
     const cookedWeight = review.feature === COOKED_WEIGHT_FEATURE;
     if (review.feature === NUTRITION_VALIDATOR_FEATURE && (before.length !== 228 || after.length !== 229 || specs.length !== 1
       || migration.filename !== NUTRITION_VALIDATOR_MIGRATION || spec.rawSha256 !== NUTRITION_VALIDATOR_MIGRATION_SHA256)) throw new Error("Nutrition validator only accepts exact228 to229 source");
+    if (review.feature === RECIPE_REQUEST_ROLE_FEATURE && (before.length !== 231 || after.length !== 232 || specs.length !== 1
+      || migration.filename !== RECIPE_REQUEST_ROLE_MIGRATION.filename || spec.rawSha256 !== RECIPE_REQUEST_ROLE_MIGRATION.sha256)) throw new Error("Recipe request-role only accepts exact231 to232 single source");
     if (review.feature === RECIPE_SAVE_RECOVERY_FEATURE && (before.length !== 229 || after.length !== 231 || specs.length !== 2
       || migration.filename !== RECIPE_SAVE_RECOVERY_MIGRATIONS[index].filename || spec.rawSha256 !== RECIPE_SAVE_RECOVERY_MIGRATIONS[index].sha256)) throw new Error("Recipe-save only accepts exact229 to231 ordered pair");
     if (attestation && (before.length !== 227 || after.length !== 228 || specs.length !== 1
@@ -818,6 +833,7 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
 export function assertProtectedPrelaunchObservation(review, observation, phase, independent = {}) {
   const { productOffReceipt = null, reviewSha256, workerCheckpoint, ddlOnly = false, safeQuantityOff = false, activeWorkerContinuation } = independent;
   if (review?.feature === NUTRITION_VALIDATOR_FEATURE) return assertNutritionValidatorObservation(review, observation, phase);
+  if (review?.feature === RECIPE_REQUEST_ROLE_FEATURE) return assertRecipeRequestRoleObservation(review, observation, phase);
   if (review?.feature === RECIPE_SAVE_RECOVERY_FEATURE) return assertRecipeSaveRecoveryObservation(review, observation, phase);
   if (independent.databaseMaintenance && review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE && phase === "after" && !ddlOnly) {
     return assertCookedWeightAttestationCurrentObservation(independent.databaseMaintenance.predecessor, observation,
@@ -930,6 +946,7 @@ export function assertCookedWeightAttestationCurrentObservation(successor, obser
   if (databaseMaintenance && (observation.stableImmutableSha256 !== database.stableImmutableSha256
     || !isDeepStrictEqual(observation.nutritionValidator, database.functionAfter))) throw new Error("Nutrition current229 exact function postimage differs");
   if (databaseMaintenance?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE) assertRecipeSaveRecoveryCurrentFields(databaseMaintenance.review,observation);
+  if (databaseMaintenance?.review.feature === RECIPE_REQUEST_ROLE_FEATURE) assertRecipeRequestRoleCurrentFields(databaseMaintenance.review,observation);
   const quantity = observation.quantityWriterEnabled ?? observation.writerEnabled;
   if (typeof quantity !== "boolean" || (quantityWriterState && quantity !== (quantityWriterState === "on"))) throw new Error("Personal attestation current quantity state differs");
   assertAttestationWorker(review, observation.worker, safeQuantityOff || workerControlTransition, workerControlTransition, approvedWorkerPolicy);
@@ -963,17 +980,18 @@ export function classifyProtectedPrelaunchOutcome(review, observation, independe
 // Existing controlled-adapter/session/backup boundaries are supplied explicitly for isolated fixtures.
 // This is not an arbitrary SQL/path/catalog runner: expected images and source bytes precede all I/O.
 export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, operationId, readMigrations, adapter, journal, assertBoundary, checkCancelled = () => {}, workerCheckpoint = /** @type {Record<string, unknown> | undefined} */ (undefined) }) {
+  const requestRole = review?.feature === RECIPE_REQUEST_ROLE_FEATURE;
   const recipeSave = review?.feature === RECIPE_SAVE_RECOVERY_FEATURE;
-  const maintenance = recipeSave || review?.feature === NUTRITION_VALIDATOR_FEATURE;
+  const maintenance = requestRole || recipeSave || review?.feature === NUTRITION_VALIDATOR_FEATURE;
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(operationId ?? "")
     || !SHA.test(reviewSha256) || review?.schema !== "homecook.prelaunch-protected-rollout-review.v1"
-    || !["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(review.feature) || review.approved?.database !== true || review.approved.writerOn !== false
-    || (maintenance ? review.readerPrecedesDatabase !== true || reviewSha256 !== (recipeSave ? RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN : NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN).sha256
+    || !["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature) || review.approved?.database !== true || review.approved.writerOn !== false
+    || (maintenance ? review.readerPrecedesDatabase !== true || reviewSha256 !== (requestRole ? RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN : recipeSave ? RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN : NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN).sha256
       : review.allNewShapesOff !== true || review.legacyReaderCompatible !== true) || !SHA.test(review.isolatedEvidenceSha256)) {
     throw new Error("Protected database exact approval/OFF/legacy compatibility evidence required");
   }
   // Neither the caller nor later observations may replace the reviewed expectations.
-  if ([COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(review.feature)) assertProtectedRolloutReview(review);
+  if ([COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature)) assertProtectedRolloutReview(review);
   review = structuredClone(review);
   workerCheckpoint = structuredClone(workerCheckpoint);
   const quantity = review.feature === QUANTITY_V4_FEATURE, attestation = review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE;
@@ -991,7 +1009,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
   const binding = () => ({ schema: "homecook.prelaunch-protected-db-attempt.v1", reviewSha256, operationId, applicationName, from: review.from, to: review.to,
     ...(quantity ? { feature: QUANTITY_V4_FEATURE, quantityStage: review.quantityStage, journalFile: "attempt.json" } : {}),
     ...(attestation ? { feature: COOKED_WEIGHT_ATTESTATION_FEATURE, journalFile: "attempt.json", predecessorQuantity: review.predecessorQuantity } : {}),
-    ...(maintenance ? { feature: review.feature, journalFile: "attempt.json", ...(recipeSave ? {predecessorNutrition:review.predecessorNutrition} : {predecessorAttestation: review.predecessorAttestation}),
+    ...(maintenance ? { feature: review.feature, journalFile: "attempt.json", ...(requestRole ? {predecessorRecipeSave:review.predecessorRecipeSave} : recipeSave ? {predecessorNutrition:review.predecessorNutrition} : {predecessorAttestation: review.predecessorAttestation}),
       sourceReaderRef: review.sourceReaderRef, readerFloor: review.sourceReaderRef } : {}) });
   const receipt = (backup, preservedRowsSha256, normalDataSha256, attestationRowsSha256, controlsSha256) => {
     const result = { ...binding(), status: "committed", targetSha256: review.database.targetSha256,
@@ -1003,9 +1021,10 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
     if (attestation) Object.assign(result, { feature: COOKED_WEIGHT_ATTESTATION_FEATURE, productWriterEnabled: true, cookedWeightWriterEnabled: true,
       quantityWriterEnabled: true, predecessorQuantity: review.predecessorQuantity, normalDataSha256, attestationRowsEmpty: true, rowsPreservedInTransaction: true });
     if (recipeSave) Object.assign(result,{receiptColumnInitiallyNull:true,predecessorNutrition:review.predecessorNutrition});
+    if (requestRole) Object.assign(result,{requestRoleCorrected:true,predecessorRecipeSave:review.predecessorRecipeSave});
     if (maintenance) Object.assign(result, { writerEnabled: true, readerReady: true, sourceReaderRef: review.sourceReaderRef,
-      readerFloor: review.sourceReaderRef, ...(recipeSave ? {recipeSaveRecoveryWritesEnabled:true} : {validatorV4WritesEnabled:true}), productWriterEnabled: true, cookedWeightWriterEnabled: true,
-      quantityWriterEnabled: true, attestationWriterEnabled: true, workerPolicyEnabled: true, ...(recipeSave ? {} : {predecessorAttestation: review.predecessorAttestation}),
+      readerFloor: review.sourceReaderRef, ...(requestRole ? {} : recipeSave ? {recipeSaveRecoveryWritesEnabled:true} : {validatorV4WritesEnabled:true}), productWriterEnabled: true, cookedWeightWriterEnabled: true,
+      quantityWriterEnabled: true, attestationWriterEnabled: true, workerPolicyEnabled: true, ...(recipeSave || requestRole ? {} : {predecessorAttestation: review.predecessorAttestation}),
       normalDataSha256, attestationRowsSha256, controlsSha256, controlsPreservedInTransaction: true });
     if (quantity) Object.assign(result, { productWriterEnabled: true, cookedWeightWriterEnabled: true, predecessorProtected: review.predecessorProtected,
       normalDataSha256, metadataNull: true, interstageDataContinuityAsserted: false,
@@ -1040,7 +1059,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         const { searchPath, timeZone } = session.postgresContext ?? {};
         if (typeof searchPath !== "string" || typeof timeZone !== "string") throw new Error("Protected migration postgres context unavailable");
         await session.query(`BEGIN ISOLATION LEVEL SERIALIZABLE; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='180s'; SET LOCAL idle_in_transaction_session_timeout='180s'; SET LOCAL standard_conforming_strings=on; SELECT pg_advisory_xact_lock(104230921,77101); LOCK TABLE homecook_deploy.migrations IN SHARE ROW EXCLUSIVE MODE; SET LOCAL ROLE postgres; SELECT set_config('search_path',${literal(searchPath)},true),set_config('TimeZone',${literal(timeZone)},true);`);
-        if ([COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE].includes(review.feature)) await session.query("SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE;");
+        if ([COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature)) await session.query("SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE;");
         if (quantity || attestation || maintenance) {
           await session.query("SELECT singleton FROM private.cooked_batch_weight_evidence_control WHERE singleton FOR SHARE;");
           if (attestation || maintenance || review.quantityStage === "worker") {
@@ -1121,7 +1140,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
       planProtectedPrelaunchMigrations(review, await readMigrations());
       await assertBoundary();
       if (maintenance && (attempt.feature !== review.feature || attempt.sourceReaderRef !== review.sourceReaderRef
-        || !same(recipeSave ? attempt.predecessorNutrition : attempt.predecessorAttestation, recipeSave ? review.predecessorNutrition : review.predecessorAttestation))) throw new Error("Nutrition reconcile original source/228 intent differs");
+        || !same(requestRole ? attempt.predecessorRecipeSave : recipeSave ? attempt.predecessorNutrition : attempt.predecessorAttestation, requestRole ? review.predecessorRecipeSave : recipeSave ? review.predecessorNutrition : review.predecessorAttestation))) throw new Error("Nutrition reconcile original source/228 intent differs");
       if (attestation && (attempt.feature !== COOKED_WEIGHT_ATTESTATION_FEATURE || !isDeepStrictEqual(attempt.predecessorQuantity, review.predecessorQuantity))) throw new Error("Personal attestation reconcile original predecessor differs");
       if (quantity && (attempt.feature !== QUANTITY_V4_FEATURE || attempt.quantityStage !== review.quantityStage)) throw new Error("C04 reconcile stage differs");
       if ((quantity || attestation || maintenance) && attempt.journalFile !== "attempt.json") throw new Error("C04 reconcile journal locator differs");
@@ -1304,5 +1323,32 @@ export function assertRecipeSaveRecoveryObservation(review,observation,phase) {
     || !["productWriterEnabled","cookedWeightWriterEnabled","quantityWriterEnabled","attestationWriterEnabled","writerEnabled","attestationTablesPresent"].every(key=>observation[key]===true)
     || !["normalDataSha256","preservedRowsSha256","attestationRowsSha256","controlsSha256"].every(key=>SHA.test(observation[key]??""))) throw new Error("Recipe-save exact229/231 observation differs");
   if (!before) assertRecipeSaveRecoveryCurrentFields(review,observation);
+  assertAttestationWorker(review,observation.worker);return observation;
+}
+
+export function assertRecipeRequestRoleCurrentFields(review,observation) {
+  const db=review.database;
+  if (observation.requestRolePostimageRegistrySha256!==RECIPE_REQUEST_ROLE_POSTIMAGE_SHA256
+    || observation.recipePostimageRegistrySha256!==RECIPE_SAVE_RECOVERY_POSTIMAGES_SHA256
+    || !isDeepStrictEqual(observation.recipeFunctions,db.recipeFunctionsAfter) || observation.receiptColumnsSha256!==db.receiptColumnsAfterSha256
+    || !isDeepStrictEqual(observation.recipeScope,{outerSha256:db.recipeScope.afterOuterSha256,aliasSha256:db.recipeScope.afterAliasSha256})) throw new Error("Recipe request-role current232 exact function/receipt/scope differs");
+}
+export function assertRecipeRequestRoleObservation(review,observation,phase) {
+  assertRecipeRequestRoleReview(review);const db=review.database,before=phase==="before";
+  if (!["before","after"].includes(phase) || digest(JSON.stringify(observation?.target))!==db.targetSha256
+    || !isDeepStrictEqual(observation.ledger,db[phase]) || observation.catalogSha256!==db[before?"beforeCatalogSha256":"afterCatalogSha256"]
+    || observation.immutableSha256!==db[before?"immutableSha256":"afterImmutableSha256"] || observation.stableImmutableSha256!==db.stableImmutableSha256
+    || !isDeepStrictEqual(observation.scope,db[before?"beforeScope":"afterScope"]) || observation.ledgerAuthority!==true || observation.active!==false
+    || observation.attestationScope?.outerSha256!==db[before?"beforeScope":"afterScope"].outerSha256
+    || observation.attestationScope?.aliasSha256!==db.attestationScope.afterAliasSha256
+    || !isDeepStrictEqual(observation.recipeScope,{outerSha256:db[before?"beforeScope":"afterScope"].outerSha256,aliasSha256:db.recipeScope.afterAliasSha256})
+    || observation.normalColumnsSha256!==db.afterColumnsSha256 || observation.normalProjectionSha256!==db.normalProjectionSha256
+    || observation.postimageRegistrySha256!==db.postimageRegistrySha256 || observation.attestationPostimageRegistrySha256!==db.attestationPostimageRegistrySha256
+    || observation.requestRolePostimageRegistrySha256!==RECIPE_REQUEST_ROLE_POSTIMAGE_SHA256 || observation.recipePostimageRegistrySha256!==RECIPE_SAVE_RECOVERY_POSTIMAGES_SHA256
+    || !isDeepStrictEqual(observation.recipeFunctions,db[before?"recipeFunctionsBefore":"recipeFunctionsAfter"])
+    || !isDeepStrictEqual(observation.nutritionValidator,db.functionAfter) || observation.receiptColumnsSha256!==db.receiptColumnsAfterSha256
+    || !["productWriterEnabled","cookedWeightWriterEnabled","quantityWriterEnabled","attestationWriterEnabled","writerEnabled","attestationTablesPresent"].every(key=>observation[key]===true)
+    || !["normalDataSha256","preservedRowsSha256","attestationRowsSha256","controlsSha256"].every(key=>SHA.test(observation[key]??""))) throw new Error("Recipe request-role exact231/232 observation differs");
+  if (!before) assertRecipeRequestRoleCurrentFields(review,observation);
   assertAttestationWorker(review,observation.worker);return observation;
 }

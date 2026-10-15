@@ -194,7 +194,7 @@ it("accepts the actual reviewed A+B operator payloads, not merely synthetic SQL"
  writeFileSync(realDbPath,readFileSync("scripts/lib/prelaunch-database.mjs","utf8").replace(/from "(\.\/[^"\n]+)"/gu,
    (_text,relative:string)=>`from "${pathToFileURL(relative==="./prelaunch-web-deploy.mjs"?realWebPath:join(process.cwd(),"scripts/lib",relative)).href}"`),{mode:0o600});
  const exact:typeof import("../scripts/lib/prelaunch-database.mjs")=await import(pathToFileURL(realDbPath).href),r=fixture();
- const migrations=readdirSync("supabase/migrations").filter(name=>name.endsWith(".sql")).sort().map(filename=>{const bytes=readFileSync(join("supabase/migrations",filename));return{filename,sha256:hash(bytes),bytes};});
+ const migrations=readdirSync("supabase/migrations").filter(name=>name.endsWith(".sql")).sort().slice(0,231).map(filename=>{const bytes=readFileSync(join("supabase/migrations",filename));return{filename,sha256:hash(bytes),bytes};});
  r.database.before=migrations.slice(0,229).map(({filename,sha256})=>({filename,sha256}));r.database.after=migrations.map(({filename,sha256})=>({filename,sha256}));
  r.database.migrations=migrations.slice(229).map(row=>({filename:row.filename,rawSha256:row.sha256,payloadSha256:hash(row.bytes.toString().replace(/^begin;\r?\n/iu,"").replace(/\r?\ncommit;\r?\n$/iu,""))}));
  for(const row of migrations.slice(229))r.files[`supabase/migrations/${row.filename}`]=[null,row.sha256];
@@ -207,8 +207,8 @@ it("accepts the actual reviewed A+B operator payloads, not merely synthetic SQL"
 it("never falls back to229 if the new durable loader reports an unresolved231 guard",()=>{
  const text=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8"),start=text.indexOf("export function loadCurrentDatabaseMaintenance("),end=text.indexOf("\nexport function recipeSaveRecoveryPhaseStatus",start);
  if(start<0||end<=start)throw Error("Current maintenance loader boundary moved");let oldCalls=0;
- const load=new Function("loadRecipeSaveRecoveryMaintenance","loadNutritionValidatorMaintenance",text.slice(start,end).replace("export function","function")+";return loadCurrentDatabaseMaintenance;")(
-   ()=>{throw Error("owned231 outcome unresolved");},()=>{oldCalls++;return {ledgerCount:229};});
+ const load=new Function("loadRecipeRequestRoleMaintenance","loadRecipeSaveRecoveryMaintenance","loadNutritionValidatorMaintenance",text.slice(start,end).replace("export function","function")+";return loadCurrentDatabaseMaintenance;")(
+   ()=>null,()=>{throw Error("owned231 outcome unresolved");},()=>{oldCalls++;return {ledgerCount:229};});
  expect(()=>load(temp)).toThrow("231 outcome unresolved");expect(oldCalls).toBe(0);
 });
 it("does not reconcile a foreign229 predecessor intent as a committed231 operation",async()=>{
@@ -229,9 +229,9 @@ it("the actual source helper sends partial runtime-only variants to the exact231
  if(start<0||end<=start)throw Error("Actual source helper moved");
  const route="app/api/v1/recipes/[id]/route.ts",serializer="lib/server/recipe-content-snapshot-future-propagation.ts";
  let current:typeof maintenance|null=maintenance,fullAlreadyLive=false;
- const invoke=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync",cli.slice(start,end)+";return nutritionSourceHandoff;")(
+ const invoke=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync","RECIPE_REQUEST_ROLE_MIGRATION","RECIPE_REQUEST_ROLE_FEATURE",cli.slice(start,end)+";return nutritionSourceHandoff;")(
    web.recipeSaveRecoveryRuntimeContract,web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,web.RECIPE_SAVE_RECOVERY_FEATURE,web.RECIPE_SAVE_RECOVERY_MIGRATIONS,web.NUTRITION_VALIDATOR_MIGRATION,()=>current,temp,web.DeploymentError,hash,()=>"owned blob",
-   (_program:string,args:string[])=>args.at(-1)!.endsWith(serializer)?Buffer.from('"recipe-nutrition-v5" // whitespace-only variant'):Buffer.from('"read_recipe_future_patch_result" // comment'),()=>({status:fullAlreadyLive?0:1}));
+   (_program:string,args:string[])=>args.at(-1)!.endsWith(serializer)?Buffer.from('"recipe-nutrition-v5" // whitespace-only variant'):Buffer.from('"read_recipe_future_patch_result" // comment'),()=>({status:fullAlreadyLive?0:1}),web.RECIPE_REQUEST_ROLE_MIGRATION,web.RECIPE_REQUEST_ROLE_FEATURE);
  const live={ref:review.from,buildId:review.predecessorBuildId,plistSha256:review.predecessorPlistSha256,bytes:Buffer.from("owned plist")};
  for(const files of [[route],[serializer],[route,serializer],[route,`supabase/migrations/${fixedMigrations[0].filename}`]]){
    const handoff=invoke(live,{target:review.to,files});expect(handoff).toBeTruthy();expect(()=>web.assertRecipeSaveRecoverySourceHandoff(handoff)).toThrow();
@@ -249,7 +249,7 @@ function databaseCliFixture(phase:string,denyWorker=false) {
   reconcile:async()=>{await assertBoundary();return {status:"not_applied"};}}));
  const guard={operationId:"12345678-1234-4123-8123-123456789abc",operationDirectory:join(temp,"operations","12345678-1234-4123-8123-123456789abc"),status:phase==="reconcile"?"unknown":"not_applied",
   reviewSha256:sha("8"),from:review.from,to:review.to,targetSha256:review.database.targetSha256};
- const deps={root:temp,repository:temp,RECIPE_SAVE_RECOVERY_FEATURE:web.RECIPE_SAVE_RECOVERY_FEATURE,NUTRITION_VALIDATOR_FEATURE:web.NUTRITION_VALIDATOR_FEATURE,QUANTITY_V4_FEATURE:web.QUANTITY_V4_FEATURE,
+ const deps={root:temp,repository:temp,RECIPE_REQUEST_ROLE_FEATURE:web.RECIPE_REQUEST_ROLE_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE:web.RECIPE_SAVE_RECOVERY_FEATURE,NUTRITION_VALIDATOR_FEATURE:web.NUTRITION_VALIDATOR_FEATURE,QUANTITY_V4_FEATURE:web.QUANTITY_V4_FEATURE,
   current:()=>({ref:review.from,cwd:temp,buildId:review.predecessorBuildId,bytes:Buffer.from("owned plist")}),requireClosedR2Mode:()=>({}),smoke:vi.fn(async()=>{}),
   assertRecipeSaveRecoveryReader:verifyReader,verifyRecipeSaveRecoveryPredecessor:()=>({predecessor:{}}),verifyNutritionValidatorWriterAdmission:writerAdmission,nutritionValidatorMaintenanceBinding:()=>({ledgerCount:229}),
   verifyRecipeSaveRecoveryWorkerAdmission:admission,protectedRolloutPaths:()=>({databaseGuardPath:join(temp,"guard.json"),operationRoot:join(temp,"operations")}),

@@ -20,6 +20,7 @@ export const DEV_DEPLOY_SNAPSHOT_PATHS = Object.freeze([
   "docs/security/youtube-worker-quantity-function-postimages.json",
   "docs/security/cooked-weight-user-attestation-source-function-postimages.json",
   "docs/security/recipe-save-recovery-source-function-postimages.json",
+  "docs/security/recipe-future-request-role-source-function-postimage.json",
 ]);
 
 export function verifyDevDeployToolLoad({ entryPoint, repository, nodePath }) {

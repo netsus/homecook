@@ -239,10 +239,10 @@ it("uses the real CLI unresolved fence, while allowing only its read-only reconc
   if(start<0 || end<=start) throw new Error("CLI closed mode boundary changed");
   const review=fixture(), attempt={review,record:{status:"unknown"}};
   const run=new Function("readRecipeSaveRecoveryAttempt","RECIPE_SAVE_RECOVERY_FEATURE","readNutritionValidatorAttempt","currentProtectedPhase","NUTRITION_VALIDATOR_FEATURE","repository","current","DeploymentError",
-    "existsSync","recoveryPath","statePath","join","dirname","closedR2ArtifactName","loadProtectedRolloutReview","loadCurrentDatabaseMaintenance",
+    "existsSync","recoveryPath","statePath","join","dirname","closedR2ArtifactName","loadProtectedRolloutReview","loadCurrentDatabaseMaintenance","readRecipeRequestRoleAttempt","RECIPE_REQUEST_ROLE_FEATURE",
     `${cli.slice(start,end)};return requireClosedR2Mode;`)(()=>null,web.RECIPE_SAVE_RECOVERY_FEATURE,()=>attempt,()=>web.nutritionValidatorPhaseStatus(attempt,true),web.NUTRITION_VALIDATOR_FEATURE,
       process.cwd(),()=>({ref:review.from,cwd:temp}),web.DeploymentError,()=>false,"/owned/recovery","/owned/state",join,()=>temp,"marker",()=>review,
-      ()=>{throw new Error("unresolved cannot load committed");});
+      ()=>{throw new Error("unresolved cannot load committed");},()=>null,web.RECIPE_REQUEST_ROLE_FEATURE);
   expect(()=>run({})).toThrow("unresolved");
   expect(()=>run({reviewedProtectedRollout:true,protectedFeature:web.NUTRITION_VALIDATOR_FEATURE,protectedPhase:"database"})).toThrow("unresolved");
   expect(run({reviewedProtectedRollout:true,protectedFeature:web.NUTRITION_VALIDATOR_FEATURE,protectedPhase:"reconcile"})).toBeNull();
@@ -332,10 +332,10 @@ async function handoffDeployEntryFixture() {
   const entryStart=cli.indexOf("async function deploy(options) {"),entryEnd=cli.indexOf("  const release = mkdtempSync",entryStart);
   if(helperStart<0||helperEnd<=helperStart||entryStart<0||entryEnd<=entryStart)throw new Error("Exact deploy prebuild/source helper boundary changed");
   const sourceHandoff=(candidateLive=live,candidateSelection=selection,current:typeof maintenance|null=maintenance)=>{
-    const run=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync",
+    const run=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync","RECIPE_REQUEST_ROLE_MIGRATION","RECIPE_REQUEST_ROLE_FEATURE",
       `${cli.slice(helperStart,helperEnd)};return nutritionSourceHandoff;`)(web.recipeSaveRecoveryRuntimeContract,web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,web.RECIPE_SAVE_RECOVERY_FEATURE,web.RECIPE_SAVE_RECOVERY_MIGRATIONS,web.NUTRITION_VALIDATOR_MIGRATION,()=>current,process.cwd(),web.DeploymentError,hash,
         (args:string[])=>args[0]==="ls-tree"&&args[1]===candidateSelection.target?"owned blob":"",
-        (_program:string,args:string[])=>content[args.at(-1)!.slice(41)]??Buffer.from("foreign unreviewed file"));
+        (_program:string,args:string[])=>content[args.at(-1)!.slice(41)]??Buffer.from("foreign unreviewed file"),()=>({status:0}),web.RECIPE_REQUEST_ROLE_MIGRATION,web.RECIPE_REQUEST_ROLE_FEATURE);
     return run(candidateLive,candidateSelection);
   };
   const entry=(options:object={},candidateSelection=selection,current:typeof maintenance|null=maintenance,candidateLive=live)=>{
