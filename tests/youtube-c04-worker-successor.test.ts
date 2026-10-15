@@ -553,3 +553,35 @@ it.each([false,true])("classifies failed activation OFF only with the same229 pr
   await expect(f.engine.activate()).rejects.toThrow("owned failed activation dispatch");
   expect(f.journal.state).toBe(foreign?"activation-outcome-unknown":"activation-not-applied");
 });
+
+
+function recipeSaveBinding(prior:MaintenanceBinding) {
+  const migrations=[{filename:"20261014225200_recipe_snapshot_reason_identity.sql",sha256:"b6050c12e60594267908b89ff02cff0c0344a52ccb79dc9a88d21e3c57e8fe66"},
+    {filename:"20261014225300_recipe_future_patch_http_replay.sql",sha256:"aed773e0d27e6b6dd4af8e65fb933d73c89927faef1d1d36804eec8476fed9c7"}];
+  return {...prior,schema:"homecook.recipe-save-recovery-maintenance.v1",ledgerCount:231,reviewSha256:sha("6"),receipt:{path:"/owned-fixture/recipe-save231.json",sha256:sha("7")},
+    predecessorDatabaseReceiptSha256:prior.receipt.sha256,migrationSha256:createHash("sha256").update(JSON.stringify(migrations)).digest("hex"),predecessorMaintenance:prior};
+}
+async function active231() {
+  const f=await active229();await f.engine.activate();const maintenance=recipeSaveBinding(f.maintenance),prior=f.adapters.preflight.getMockImplementation()!;
+  f.adapters.preflight.mockImplementation(async(...args)=>{
+    const context=await prior(...args);f.current.ledgerCount=231;f.current.databaseMaintenance=maintenance;return {...context,databaseMaintenance:maintenance};
+  });return Object.assign(f,{maintenance});
+}
+describe("exact recipe-save231 worker current proof",()=>{
+  it("preserves original48 credential/source and supports explicit same231 pause/repair/readback",async()=>{
+    const f=await active231();await f.engine.activate();f.current.quantityPolicyEnabled=false;
+    const paused=await f.engine.pauseForRepair();expect(paused.observation).toMatchObject({ledgerCount:231,databaseMaintenance:f.maintenance});
+    const resumed=await f.engine.resume();expect(resumed).toMatchObject({ledgerCount:231,databaseMaintenance:f.maintenance});
+    expect(f.calls.filter(value=>value==="CAS48")).toHaveLength(1);expect(f.adapters.issueCredentials).toHaveBeenCalledTimes(1);
+  });
+  it.each(["activation-commit-intent","activation-outcome-unknown"])("does not carry old229 %s into231",async status=>{
+    const f=await active231();f.journal.state=status;f.journal.activationReceipt=null;f.journal.activationReconciliation=null;
+    const count=f.adapters.transaction.mock.calls.length;
+    await expect(f.engine.activate()).rejects.toThrow();expect(f.adapters.transaction).toHaveBeenCalledTimes(count);
+  });
+  it.each(["migrationSha256","predecessorDatabaseReceiptSha256","ledgerCount"])("rejects foreign231 %s before mutable work",async key=>{
+    const f=await active231();const prior=f.adapters.preflight.getMockImplementation()!;
+    f.adapters.preflight.mockImplementation(async(...args)=>{const context=await prior(...args);return {...context,databaseMaintenance:{...f.maintenance,[key]:key==="ledgerCount"?230:sha("f")}};});
+    const count=f.adapters.transaction.mock.calls.length;await expect(f.engine.activate()).rejects.toThrow();expect(f.adapters.transaction).toHaveBeenCalledTimes(count);
+  });
+});

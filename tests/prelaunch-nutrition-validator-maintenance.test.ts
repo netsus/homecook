@@ -238,9 +238,9 @@ it("uses the real CLI unresolved fence, while allowing only its read-only reconc
   const cli=readFileSync("scripts/deploy-prelaunch-web.mjs","utf8"), start=cli.indexOf("function requireClosedR2Mode("), end=cli.indexOf("\nasync function ",start);
   if(start<0 || end<=start) throw new Error("CLI closed mode boundary changed");
   const review=fixture(), attempt={review,record:{status:"unknown"}};
-  const run=new Function("readNutritionValidatorAttempt","currentProtectedPhase","NUTRITION_VALIDATOR_FEATURE","repository","current","DeploymentError",
-    "existsSync","recoveryPath","statePath","join","dirname","closedR2ArtifactName","loadProtectedRolloutReview","loadNutritionValidatorMaintenance",
-    `${cli.slice(start,end)};return requireClosedR2Mode;`)(()=>attempt,()=>web.nutritionValidatorPhaseStatus(attempt,true),web.NUTRITION_VALIDATOR_FEATURE,
+  const run=new Function("readRecipeSaveRecoveryAttempt","RECIPE_SAVE_RECOVERY_FEATURE","readNutritionValidatorAttempt","currentProtectedPhase","NUTRITION_VALIDATOR_FEATURE","repository","current","DeploymentError",
+    "existsSync","recoveryPath","statePath","join","dirname","closedR2ArtifactName","loadProtectedRolloutReview","loadCurrentDatabaseMaintenance",
+    `${cli.slice(start,end)};return requireClosedR2Mode;`)(()=>null,web.RECIPE_SAVE_RECOVERY_FEATURE,()=>attempt,()=>web.nutritionValidatorPhaseStatus(attempt,true),web.NUTRITION_VALIDATOR_FEATURE,
       process.cwd(),()=>({ref:review.from,cwd:temp}),web.DeploymentError,()=>false,"/owned/recovery","/owned/state",join,()=>temp,"marker",()=>review,
       ()=>{throw new Error("unresolved cannot load committed");});
   expect(()=>run({})).toThrow("unresolved");
@@ -255,7 +255,7 @@ it("verifies B's229 source before real CLI compensation to the original A plist"
   const end=cli.indexOf('\n      }\n      await switchWeb',start);
   if(start<0 || end<=start) throw new Error("Exact compensation boundary changed");
   const calls:string[]=[];
-  const build=(databaseFails=false)=>new Function("rollout","protectedReader","loadNutritionValidatorMaintenance","repository","state","live",
+  const build=(databaseFails=false)=>new Function("rollout","protectedReader","loadCurrentDatabaseMaintenance","repository","state","live",
     "assertNutritionValidatorReaderCompensation","hash","readFileSync","join","verifyAppliedDatabase","options","verifyProtectedBaseline",
     "readClosedR2PrivateBytes","protectedReaderReceiptPath","git","spawnSync","assertProtectedReaderRollback",`return(async()=>{${cli.slice(start,end)}})();`)(
       {feature:web.COOKED_WEIGHT_ATTESTATION_FEATURE},false,()=>maintenance,process.cwd(),
@@ -332,8 +332,8 @@ async function handoffDeployEntryFixture() {
   const entryStart=cli.indexOf("async function deploy(options) {"),entryEnd=cli.indexOf("  const release = mkdtempSync",entryStart);
   if(helperStart<0||helperEnd<=helperStart||entryStart<0||entryEnd<=entryStart)throw new Error("Exact deploy prebuild/source helper boundary changed");
   const sourceHandoff=(candidateLive=live,candidateSelection=selection,current:typeof maintenance|null=maintenance)=>{
-    const run=new Function("NUTRITION_VALIDATOR_MIGRATION","loadNutritionValidatorMaintenance","repository","DeploymentError","hash","git","execFileSync",
-      `${cli.slice(helperStart,helperEnd)};return nutritionSourceHandoff;`)(web.NUTRITION_VALIDATOR_MIGRATION,()=>current,process.cwd(),web.DeploymentError,hash,
+    const run=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync",
+      `${cli.slice(helperStart,helperEnd)};return nutritionSourceHandoff;`)(web.recipeSaveRecoveryRuntimeContract,web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,web.RECIPE_SAVE_RECOVERY_FEATURE,web.RECIPE_SAVE_RECOVERY_MIGRATIONS,web.NUTRITION_VALIDATOR_MIGRATION,()=>current,process.cwd(),web.DeploymentError,hash,
         (args:string[])=>args[0]==="ls-tree"&&args[1]===candidateSelection.target?"owned blob":"",
         (_program:string,args:string[])=>content[args.at(-1)!.slice(41)]??Buffer.from("foreign unreviewed file"));
     return run(candidateLive,candidateSelection);

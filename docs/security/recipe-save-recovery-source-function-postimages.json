@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "feature": "recipe-save-recovery",
+  "status": "source-only-unbound",
+  "migrations": [
+    {
+      "filename": "20261014225200_recipe_snapshot_reason_identity.sql",
+      "sha256": "b6050c12e60594267908b89ff02cff0c0344a52ccb79dc9a88d21e3c57e8fe66"
+    },
+    {
+      "filename": "20261014225300_recipe_future_patch_http_replay.sql",
+      "sha256": "aed773e0d27e6b6dd4af8e65fb933d73c89927faef1d1d36804eec8476fed9c7"
+    }
+  ],
+  "worker_catalog_unchanged": "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05",
+  "functions": [
+    {
+      "preimage": {
+        "signature": "private.recipe_quantity_mode_metadata_v4(uuid)",
+        "lookupSignature": "private.recipe_quantity_mode_metadata_v4(uuid)",
+        "name": "recipe_quantity_mode_metadata_v4",
+        "schema": "private",
+        "owner": "postgres",
+        "allowedAcl": "",
+        "sourceHash": "c18ae940baf179fbb9281bfb789e8a72",
+        "definitionSha256": "26b6939a354997fa39c4c0e3ef1d423943b94c13967c387150499ac224055826",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "volatility": "s",
+        "securityDefiner": false
+      },
+      "postimage": {
+        "signature": "private.recipe_quantity_mode_metadata_v4(uuid)",
+        "lookupSignature": "private.recipe_quantity_mode_metadata_v4(uuid)",
+        "name": "recipe_quantity_mode_metadata_v4",
+        "schema": "private",
+        "owner": "postgres",
+        "allowedAcl": "",
+        "sourceHash": "59f927406b51e626dcbe3830e42eeb0c",
+        "definitionSha256": "9c4841a855598ea3869e37e86b0f3a5e0e913e88097f957a75781a09e4e9923d",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "volatility": "s",
+        "securityDefiner": false
+      }
+    },
+    {
+      "preimage": {
+        "signature": "public.validate_recipe_nutrition_snapshot_payload(jsonb)",
+        "lookupSignature": "public.validate_recipe_nutrition_snapshot_payload(jsonb)",
+        "name": "validate_recipe_nutrition_snapshot_payload",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "anon:EXECUTE:false,authenticated:EXECUTE:false,service_role:EXECUTE:false",
+        "sourceHash": "25806c0e6081cb90ff234114f8ef4bb6",
+        "definitionSha256": "40be1d8a0f50d589c9298c5eacafc8b54d0354e66ef683b18212d842641d649e",
+        "configuration": [
+          "search_path=pg_catalog, public"
+        ],
+        "searchPath": "pg_catalog,public",
+        "volatility": "v",
+        "securityDefiner": false
+      },
+      "postimage": {
+        "signature": "public.validate_recipe_nutrition_snapshot_payload(jsonb)",
+        "lookupSignature": "public.validate_recipe_nutrition_snapshot_payload(jsonb)",
+        "name": "validate_recipe_nutrition_snapshot_payload",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "anon:EXECUTE:false,authenticated:EXECUTE:false,service_role:EXECUTE:false",
+        "sourceHash": "9baedf5b35315f1160869f58730905f3",
+        "definitionSha256": "f71ea1ace931b4878a09c9a000c03fef8a55fa5157ecc5d54b24d6602bc0b715",
+        "configuration": [
+          "search_path=pg_catalog, public"
+        ],
+        "searchPath": "pg_catalog,public",
+        "volatility": "v",
+        "securityDefiner": false
+      }
+    },
+    {
+      "preimage": {
+        "signature": "public.write_personal_recipe_core(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestampwithtimezone)",
+        "lookupSignature": "public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,timestamp with time zone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone)",
+        "name": "write_personal_recipe_core",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "service_role:EXECUTE:false",
+        "sourceHash": "38dcdca8bbc22679b9c0d5e54a317d85",
+        "definitionSha256": "3519f333e7550d7de49213579d28ace8ac0392f42d628899de8e7fb10a303067",
+        "configuration": [
+          "search_path=pg_catalog, public, extensions, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,extensions,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      },
+      "postimage": {
+        "signature": "public.write_personal_recipe_core(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestampwithtimezone)",
+        "lookupSignature": "public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,timestamp with time zone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone)",
+        "name": "write_personal_recipe_core",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "service_role:EXECUTE:false",
+        "sourceHash": "30271590dc44da3a33a926987f6cbde1",
+        "definitionSha256": "93ae8925517409f8dd01c92e2ee224295b88890d5cd2b378d642c4f84095bbc3",
+        "configuration": [
+          "search_path=pg_catalog, public, extensions, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,extensions,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      }
+    },
+    {
+      "preimage": {
+        "signature": "public.write_recipe_nutrition_snapshot(uuid,jsonb,timestampwithtimezone,jsonb)",
+        "lookupSignature": "public.write_recipe_nutrition_snapshot(uuid,jsonb,timestamp with time zone,jsonb)",
+        "name": "write_recipe_nutrition_snapshot",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "anon:EXECUTE:false,authenticated:EXECUTE:false,service_role:EXECUTE:false",
+        "sourceHash": "712c3d5eed4329062794cacdf0623b47",
+        "definitionSha256": "00826f10f3aa7f085a8cb638d42c8bab84abd51239ad836e9f3f8714d5767ea0",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      },
+      "postimage": {
+        "signature": "public.write_recipe_nutrition_snapshot(uuid,jsonb,timestampwithtimezone,jsonb)",
+        "lookupSignature": "public.write_recipe_nutrition_snapshot(uuid,jsonb,timestamp with time zone,jsonb)",
+        "name": "write_recipe_nutrition_snapshot",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "anon:EXECUTE:false,authenticated:EXECUTE:false,service_role:EXECUTE:false",
+        "sourceHash": "479e7d14a3248b6bbe757de40af748ca",
+        "definitionSha256": "8136655f890dc15f03d87dde397590b79495c9502242257844e72561ead02dc2",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "signature": "private.map_recipe_nutrition_reasons_v5(uuid,jsonb,jsonb,jsonb)",
+        "lookupSignature": "private.map_recipe_nutrition_reasons_v5(uuid,jsonb,jsonb,jsonb)",
+        "name": "map_recipe_nutrition_reasons_v5",
+        "schema": "private",
+        "owner": "postgres",
+        "allowedAcl": "",
+        "sourceHash": "2f91c9d7e8e4ffa14577779e3c0f1e76",
+        "definitionSha256": "cea2e4d981569beabe77c039dd1379f1a3a761d2833f7759b0d5fc1dd2e41288",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "volatility": "v",
+        "securityDefiner": false
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "signature": "private.recipe_future_http_request_fingerprint(uuid,jsonb,text)",
+        "lookupSignature": "private.recipe_future_http_request_fingerprint(uuid,jsonb,text)",
+        "name": "recipe_future_http_request_fingerprint",
+        "schema": "private",
+        "owner": "postgres",
+        "allowedAcl": "",
+        "sourceHash": "33ef80cefcb94b74af004d2b4a365a12",
+        "definitionSha256": "45821c54be42751a0b61ae19bbb6e6e3bb71579a61f494b09b120a62b650a71b",
+        "configuration": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,extensions,pg_temp",
+        "volatility": "i",
+        "securityDefiner": true
+      }
+    },
+    {
+      "preimage": {
+        "signature": "private.verify_full_local_internal_scope()",
+        "lookupSignature": "private.verify_full_local_internal_scope()",
+        "name": "verify_full_local_internal_scope",
+        "schema": "private",
+        "owner": "postgres",
+        "allowedAcl": "",
+        "sourceHash": "8e7b1121eb12adcd9b63ee384840c8f6",
+        "definitionSha256": "45f513ec806fa57dfde08db696ad4794f84a42bd69ca798f833434ec060ef77c",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      },
+      "postimage": {
+        "signature": "private.verify_full_local_internal_scope()",
+        "lookupSignature": "private.verify_full_local_internal_scope()",
+        "name": "verify_full_local_internal_scope",
+        "schema": "private",
+        "owner": "postgres",
+        "allowedAcl": "",
+        "sourceHash": "cdba05648213ef145555dfc02fd234c8",
+        "definitionSha256": "59cd9173efa0be26485d26e8c94ff49b816459c6f915b8bf41ade64838526ee4",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "signature": "private.verify_scope_pre_recipe_future_http_replay_20261014()",
+        "lookupSignature": "private.verify_scope_pre_recipe_future_http_replay_20261014()",
+        "name": "verify_scope_pre_recipe_future_http_replay_20261014",
+        "schema": "private",
+        "owner": "postgres",
+        "allowedAcl": "",
+        "sourceHash": "8e7b1121eb12adcd9b63ee384840c8f6",
+        "definitionSha256": "7b237731c306cb9895b7134d481577153b8afb24de8075f90a88ec5cf59e3c6a",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "signature": "public.read_recipe_future_patch_result(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,uuid,jsonb,text,uuid)",
+        "lookupSignature": "public.read_recipe_future_patch_result(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,jsonb,text,uuid)",
+        "name": "read_recipe_future_patch_result",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "service_role:EXECUTE:false",
+        "sourceHash": "81c810af68a24a729d04a84299745fde",
+        "definitionSha256": "a3f863d3af472a419778d85a9321f7b0283d359688059e8184117d97ec39af35",
+        "configuration": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,extensions,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "signature": "public.write_recipe_future_plan_change_recoverable(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,uuid,jsonb,text,uuid,jsonb,jsonb,timestampwithtimezone)",
+        "lookupSignature": "public.write_recipe_future_plan_change_recoverable(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,jsonb,text,uuid,jsonb,jsonb,timestamp with time zone)",
+        "name": "write_recipe_future_plan_change_recoverable",
+        "schema": "public",
+        "owner": "postgres",
+        "allowedAcl": "service_role:EXECUTE:false",
+        "sourceHash": "04d7d73a2c1fb5eb2b2c0e4a8f0a1599",
+        "definitionSha256": "6e68a54079a8c29c70c96ae36d33dd10625c537264538df115210a9e9ce8192b",
+        "configuration": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "searchPath": "pg_catalog,public,private,extensions,pg_temp",
+        "volatility": "v",
+        "securityDefiner": true
+      }
+    }
+  ],
+  "preserved_writer": {
+    "signature": "public.write_recipe_future_plan_change(uuid,timestampwithtimezone,text,integer,timestampwithtimezone,uuid,bigint,jsonb,jsonb,jsonb,text,text,uuid,uuid,timestampwithtimezone)",
+    "lookupSignature": "public.write_recipe_future_plan_change(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,bigint,jsonb,jsonb,jsonb,text,text,uuid,uuid,timestamp with time zone)",
+    "name": "write_recipe_future_plan_change",
+    "schema": "public",
+    "owner": "postgres",
+    "allowedAcl": "service_role:EXECUTE:false",
+    "sourceHash": "eac6b3d081dea2e392fac820b5b6d09f",
+    "definitionSha256": "141ddfcf66a750dbe98682cc3c2647c6f72fc62a66a9aaef1645dc9bbf73ed9d",
+    "configuration": [
+      "search_path=pg_catalog, public, extensions, pg_temp"
+    ],
+    "searchPath": "pg_catalog,public,extensions,pg_temp",
+    "volatility": "v",
+    "securityDefiner": true
+  }
+}
