@@ -890,7 +890,7 @@ export function assertCookedWeightAttestationCurrentObservation(successor, obser
     || observation.attestationTablesPresent !== true || !SHA.test(observation.attestationRowsSha256)
     || typeof observation.attestationWriterEnabled !== "boolean") throw new Error("Personal attestation checked current228 target/catalog/source/facts differs");
   if (databaseMaintenance && (observation.stableImmutableSha256 !== database.stableImmutableSha256
-    || !same(observation.nutritionValidator, database.functionAfter))) throw new Error("Nutrition current229 exact function postimage differs");
+    || !isDeepStrictEqual(observation.nutritionValidator, database.functionAfter))) throw new Error("Nutrition current229 exact function postimage differs");
   const quantity = observation.quantityWriterEnabled ?? observation.writerEnabled;
   if (typeof quantity !== "boolean" || (quantityWriterState && quantity !== (quantityWriterState === "on"))) throw new Error("Personal attestation current quantity state differs");
   assertAttestationWorker(review, observation.worker, safeQuantityOff || workerControlTransition, workerControlTransition, approvedWorkerPolicy);
@@ -907,7 +907,7 @@ export function assertNutritionValidatorObservation(review, observation, phase) 
     || observation.attestationScope?.aliasSha256 !== db.attestationScope.afterAliasSha256
     || observation.normalColumnsSha256 !== db.afterColumnsSha256 || observation.normalProjectionSha256 !== db.normalProjectionSha256
     || observation.postimageRegistrySha256 !== db.postimageRegistrySha256 || observation.attestationPostimageRegistrySha256 !== db.attestationPostimageRegistrySha256
-    || !same(observation.nutritionValidator, db[phase === "before" ? "functionBefore" : "functionAfter"])
+    || !isDeepStrictEqual(observation.nutritionValidator, db[phase === "before" ? "functionBefore" : "functionAfter"])
     || ![observation.productWriterEnabled, observation.cookedWeightWriterEnabled, observation.quantityWriterEnabled, observation.attestationWriterEnabled, observation.writerEnabled, observation.attestationTablesPresent].every(value => value === true)
     || !["normalDataSha256", "preservedRowsSha256", "attestationRowsSha256", "controlsSha256"].every(key => SHA.test(observation[key] ?? ""))) {
     throw new Error("Nutrition exact current228/229 function/data/all-controls-ON observation differs");
