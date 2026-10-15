@@ -317,3 +317,56 @@ it.each(["before","after"])("compares the %s function image by exact values, ind
     expect(()=>db.assertNutritionValidatorObservation(review,{...current,nutritionValidator:changed},phase)).toThrow("observation differs");
   }
 });
+
+async function handoffDeployEntryFixture() {
+  const maintenance=await committedMaintenance(),review=maintenance.review,bytes=Buffer.from("owned readerA plist");
+  review.predecessorPlistSha256=hash(bytes);
+  const content:Record<string,Buffer>={[`supabase/migrations/${filename}`]:raw,"tests/owned-warning.test.ts":Buffer.from("owned warning test"),
+    "docs/engineering/owned-warning.md":Buffer.from("owned warning doc")};
+  Object.assign(review.files,Object.fromEntries(Object.entries(content).map(([file,value])=>[file,[null,hash(value)]])));
+  const plist={Label:"com.homecook.production",WorkingDirectory:"/owned/readerA",ProgramArguments:["/owned/node","/owned/readerA/scripts/start-production.mjs","-H","127.0.0.1","-p","3100"],
+    EnvironmentVariables:{MUMEOK_ROUND2_ENABLED:"false",MUMEOK_ROUND2_LEADS_ENABLED:"false"}};
+  const live={ref:review.from,buildId:review.predecessorBuildId,bytes,cwd:plist.WorkingDirectory,plist};
+  const selection={target:review.to,files:Object.keys(content),scope:{database:[`supabase/migrations/${filename}`]}};
+  const cli=readFileSync("scripts/deploy-prelaunch-web.mjs","utf8"),helperStart=cli.indexOf("function nutritionSourceHandoff("),helperEnd=cli.indexOf("\nasync function stageRound2Readiness",helperStart);
+  const entryStart=cli.indexOf("async function deploy(options) {"),entryEnd=cli.indexOf("  const release = mkdtempSync",entryStart);
+  if(helperStart<0||helperEnd<=helperStart||entryStart<0||entryEnd<=entryStart)throw new Error("Exact deploy prebuild/source helper boundary changed");
+  const sourceHandoff=(candidateLive=live,candidateSelection=selection,current:typeof maintenance|null=maintenance)=>{
+    const run=new Function("NUTRITION_VALIDATOR_MIGRATION","loadNutritionValidatorMaintenance","repository","DeploymentError","hash","git","execFileSync",
+      `${cli.slice(helperStart,helperEnd)};return nutritionSourceHandoff;`)(web.NUTRITION_VALIDATOR_MIGRATION,()=>current,process.cwd(),web.DeploymentError,hash,
+        (args:string[])=>args[0]==="ls-tree"&&args[1]===candidateSelection.target?"owned blob":"",
+        (_program:string,args:string[])=>content[args.at(-1)!.slice(41)]??Buffer.from("foreign unreviewed file"));
+    return run(candidateLive,candidateSelection);
+  };
+  const entry=(options:object={},candidateSelection=selection,current:typeof maintenance|null=maintenance,candidateLive=live)=>{
+    const run=new Function("current","requireClosedR2Mode","join","root","repository","existsSync","recoveryPath","plan","readEnvironmentPatch",
+      "DeploymentError","nutritionSourceHandoff","assertNutritionValidatorSourceHandoff",
+      `${cli.slice(entryStart,entryEnd)}return {readOnlyDatabase,files:selection.files};}\nreturn deploy;`)(
+        ()=>candidateLive,()=>({review:{closed:true}}),join,temp,process.cwd(),()=>false,join(temp,"no-recovery"),()=>candidateSelection,()=>({}),web.DeploymentError,
+        (reader:typeof live,chosen:typeof selection)=>sourceHandoff(reader,chosen,current),web.assertNutritionValidatorSourceHandoff);
+    return run({ref:candidateSelection.target,alreadyAppliedDb:true,dbConfig:join(temp,"unread-config"),...options});
+  };
+  return {maintenance,review,content,live,selection,sourceHandoff,entry};
+}
+
+it("lets the exact already-applied229 handoff pass both existing plan scope and actual deploy prebuild entry", async()=>{
+  const f=await handoffDeployEntryFixture();
+  const planBoundary={previous:f.live.plist,next:f.live.plist,files:f.selection.files,databaseDeployment:true,
+    nutritionMaintenanceHandoff:f.sourceHandoff()};
+  expect(()=>web.assertRound2InheritanceBoundaries(planBoundary)).not.toThrow();
+  await expect(f.entry()).resolves.toMatchObject({readOnlyDatabase:true,files:f.selection.files});
+});
+
+it("keeps deploy prebuild closed for missing proof, other source/SQL, mixed/tampered/partial files or unknown outcome",async()=>{
+  const f=await handoffDeployEntryFixture();
+  await expect(f.entry({alreadyAppliedDb:false})).rejects.toThrow();
+  await expect(f.entry({alreadyAppliedDb:undefined})).rejects.toThrow();
+  await expect(f.entry({},f.selection,null)).rejects.toThrow();
+  await expect(f.entry({},f.selection,{...f.maintenance,record:{...f.maintenance.record,status:"unknown"}})).rejects.toThrow();
+  await expect(f.entry({},f.selection,f.maintenance,{...f.live,ref:ref("f")})).rejects.toThrow();
+  await expect(f.entry({},{...f.selection,target:ref("e")})).rejects.toThrow();
+  for(const files of [f.selection.files.slice(0,-1),[...f.selection.files,"app/extra.ts"],[...f.selection.files,"tests/extra.test.ts"],
+    [...f.selection.files,"supabase/migrations/20261014225100_foreign.sql"],["supabase/migrations/20261014225100_foreign.sql"]])
+    await expect(f.entry({},{...f.selection,files})).rejects.toThrow();
+  f.content[`supabase/migrations/${filename}`]=Buffer.from("tampered fixed SQL path");await expect(f.entry()).rejects.toThrow();
+});

@@ -48,3 +48,6 @@ V1의 facts0 native 보고서는 역사 근거로 보존한다. V2는 별도 own
 
 
 운영 첫 DB 시도는 백업 decode 뒤 COMMIT dispatch 전에 rollback됐으며 root의 읽기 전용 reconcile은 not_applied/DB228과 원 normal·facts·control 지문 보존을 확인했다. 당시 하위 Error 메시지가 저장되지 않아 운영 실패 원인을 이 문서에서 단정하지 않는다. 별도 순수 재현에서는 검토서의 함수 지문과 PostgreSQL jsonb의 동일한 세 값이 키 삽입 순서만 달라 JSON 문자열 비교에서 거절되는 결함을 확인했다. DB 적용·현재229의 동일한 nutrition validator 함수 지문 비교 두 곳만 구조적 동등 비교로 바꿨다. DB before/after와 B source handoff·worker 관측·safe OFF 현재229 경로의 순서 차이는 허용하지만 세 지문 중 어느 값이 달라지거나 키가 추가되면 계속 거절하며, 다른 same 비교·PIN·권한·SQL·보호 기준은 바꾸지 않았다. 이 소스 교정은 운영 재시도나 실제229 적용의 증거가 아니다.
+
+
+B source 인계의 배포 진입부도 계획과 같은 exact 증명을 소비한다. 닫힘 상태의 SQL source 차이는 `alreadyAppliedDb===true`이고 기존 committed229 terminal·정확 live A/ref/build/plist·B3 전체 파일과 bytes 검증을 통과할 때만 prebuild 단계로 진입한다. 증명 없음·unknown·다른 SQL/ref·mixed/partial/tampered 파일은 계속 거부한다. 이 분기는 SQL을 실행하지 않으며 stageRound2Readiness, source/applied229 읽기 검사, preview 뒤 재확인, marker의 원228 plan+별도229 binding 및 기존 웹 보상을 그대로 유지한다. 실제 deploy 함수의 prebuild 진입부를 실행하는 회귀로 계획 통과 뒤 별도 무조건 SQL 거절이 발생하던 차이를 검사한다.
