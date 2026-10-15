@@ -33,6 +33,12 @@ const WARNING_MESSAGES: Record<string, string> = {
   RECIPE_NUTRITION_SNAPSHOT_MISSING: "일부 레시피의 영양 정보가 아직 준비되지 않았어요.",
   TO_TASTE_EXCLUDED: "기호에 따라 넣는 재료는 원본이 0인 영양소만 반영했어요.",
   UNIT_CONVERSION_MISSING: "일부 재료나 단위의 영양값을 계산하지 못했어요.",
+  UNIT_DEFINITION_REQUIRED: "일부 재료의 단위 정의를 확인하지 못해 영양을 계산하지 않았어요.",
+  UNIT_DEFINITION_CONFLICT: "일부 재료의 단위 근거가 서로 달라 영양을 계산하지 않았어요.",
+  PIECE_IDENTITY_REQUIRED: "일부 재료의 개수·크기에 맞는 무게 근거가 없어 영양을 계산하지 않았어요.",
+  DENSITY_REQUIRED: "무게와 부피를 바꿀 밀도 근거가 없어 일부 영양을 계산하지 않았어요.",
+  AMBIGUOUS_EVIDENCE: "사용할 환산 근거를 하나로 정할 수 없어 일부 영양을 계산하지 않았어요.",
+  UNIT_MEASUREMENT_ESTIMATE_USED: "검토된 평균 측정값으로 환산한 예상 영양이 포함돼요.",
 };
 
 function formatAmount(amount: number, wholeNumber: boolean) {

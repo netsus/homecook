@@ -90,6 +90,12 @@ function renderCard(
 }
 
 describe("recipe nutrition display", () => {
+  it("explains reviewed average measurements without showing the internal warning code", async () => {
+    renderCard(buildNutrition({ calculation_quality: "estimated", warnings: ["UNIT_MEASUREMENT_ESTIMATE_USED"] }));
+    await userEvent.setup().click(screen.getByText("영양성분 더 보기"));
+    expect(screen.getByText("검토된 평균 측정값을 사용해 환산했어요. 실제 무게·부피와 다를 수 있어요.")).toBeTruthy();
+    expect(screen.queryByText("UNIT_MEASUREMENT_ESTIMATE_USED")).toBeNull();
+  });
   it.each(["app", "web"] as const)("omits missing or partial optional nutrients without an incomplete notice in %s", async (variant) => {
     for (const status of ["partial", "unavailable"] as const) {
       renderCard(buildNutrition({
