@@ -5846,3 +5846,11 @@ record는 id/revision/status(`attested`1 또는 `retracted`2), statement version
 `recipe-nutrition-v4` 계산의 `warnings[]`는 기존 코드에 더해 `UNIT_DEFINITION_REQUIRED`, `UNIT_DEFINITION_CONFLICT`, `PIECE_IDENTITY_REQUIRED`, `DENSITY_REQUIRED`, `AMBIGUOUS_EVIDENCE`, `UNIT_MEASUREMENT_ESTIMATE_USED`만 정확히 허용한다. 앞의 5개는 `<code>:<ingredient-row-id>` 누락 사유도 보존하며, 마지막 코드는 검토된 평균 측정값이 실제 계산에 기여했다는 추정 경고다. 이 경고를 직접값이나 AI 추정으로 해석하지 않는다. unknown은 null/partial/minimum으로 유지한다.
 
 새 쓰기의 JS·SQL 검증은 정확한 `recipe-nutrition-v4`에만 이 추가 코드를 허용한다. 저장된 snapshot 읽기는 기존 조회 필드로 알려진 코드만 해석하며 가짜 projection version을 쓰기 권위로 사용하지 않는다. 경고·누락 사유·벡터·출처의 보존과 기존 v3, 상태·권한·멱등성 계약은 유지한다. 원문 수량의 상세 `quantity_input.reason`을 상위 사유로 치환하지 않는다.
+
+## 2026-10-15 — 개인 레시피 수정 성공 재시도 (로컬·운영 미적용)
+
+기존 `PATCH /api/v1/recipes/{id}` 요청/성공 `{success:true,data:{id,revision},error:null}`와 오류 래퍼를 유지한다. 현재 검증 세션·소유자·세대와 본인 private/nondeleted 대상을 확인한 뒤 같은 UUID 키·정규화된 원 요청 전체에 결속된 성공을 먼저 읽는다. URL UUID의 대소문자는 동일 대상을 뜻한다. 성공 결과는 현재 revision/영양 근거/미리보기 소비 또는 quantity OFF 뒤에도 새 저장 없이 반환하며, 없는 요청만 기존 revision·수량/영양 준비·쓰기 보호를 통과한다.
+
+같은 키의 다른 본문·header 계약, legacy NULL 바인딩·비성공/불완전 영수증은 `409 IDEMPOTENCY_KEY_REUSED`다. reader 오류를 없는 요청으로 처리하지 않으며 미로그인401·없거나 타인 대상404·기존409/422/500과 권한 검사를 유지한다. 새 endpoint·client digest·자동 재시도는 없다. 내부 서비스 전용 POST RPC 두 개는 `read_recipe_future_patch_result`, `write_recipe_future_plan_change_recoverable`이며 기존 writer는 그대로다. [정확한 결속·검사·통합 한계](engineering/recipe-future-patch-http-replay-20261015.md)를 따른다.
+
+같은 릴리즈로 검토하는 [개인 영양 사유 v5](engineering/recipe-nutrition-semantic-reason-identity-v5.md)는 개인 quantity 저장의 사유 identity만 보완한다. 계산 엔진 수치·기존 v4 요청·과거 snapshot은 보존한다. 신규 SQL `20261014225200`과 HTTP 재시도 `20261014225300`의 통합·운영 반영은 별도이며 이 addendum은 적용 완료 기록이 아니다.
