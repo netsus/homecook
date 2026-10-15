@@ -1,5 +1,18 @@
 # 무먹 베타 v9 구현 진행 장부
 
+## 계획 snapshot 조회·안내 운영 반영과 T9 표본 — 2026-10-15
+
+이 절이 아래 개인 확인 단계의 웹 af881와 계획 조회 실패/수정 준비 기록보다 최신이다. **계획 조회·안내와 지정한 실제 여정의 확인이며, 원분수 전체·정확도·C05 수집·전체 v9 완료는 아니다.**
+
+- 현재 운영: #1709 merged master `02ed02214e16372fdc316f19ecb0318f0e7d3450`, 웹 후보 `4057885ff771065551d9200dec188dbd2ec7064e`·build `prelaunch-4057885ff771-hSgqOv`. 배포 exit0·recoveryPending=false, 검사1,429 PASS·선택 범위 밖133 skipped다. DB228은 READ ONLY로 대조했고 이번 웹 배포의 SQL/schema/config 변경0이다. 기존 개인 확인·C03/C01/C04 writer/worker 상태를 바꾸는 배포가 아니다.
+- 실제 계획 조회: 이전에 실패한 동일 제품 계획6065를 열어3인분0.1875kg와 조리 원문0.125kg·B08 지정 안내를 확인했다. 기존 YouTube 계획7d595의 모르는 양은 ‘분량 확인 필요’로 보인다.320/375 가로 넘침 없음·1440/reload와 guest 본문 비노출/로그인 안내·같은 계획 next를 확인했다. 제품 계획6065·be0c 두 행의 전체 지문이 같고, 제품 snapshot의 재료·조리법·기본 인분도 동일했다. 독립 source23검사·모의 API6화면/18PNG와 총괄 CUA의 실제 운영 화면을 분리한다. 직접 브라우저 JSON API 탐색의 blockedByClient는 우회하지 않았다.
+- 앞선 T9 여정: 공공제품3인분 계획·고정 버전→187.5g 장보기→팬트리 반영 없음/보유g 자동차감 없음→registered→shopping_done→cook_done·빈 무게/개인 확인 미선택 완료→나중190g/확인 미선택→30g 식사·190g 분모·160g 잔량을 확인했다. 같은 본문의 명시 새 계획은 별도 생성됐고 독립 요리 전후 이미 있던 두 계획의 전체 행 지문은 유지됐다. 기존 YouTube 저장 결과→새2인분 계획은 source/editable/revision3 불변이며 새 추출0이다. 이는 의도적 QA 업무자료 쓰기이며 웹 배포의 READ ONLY 대조와 혼동하지 않는다.
+- 미실행 구분: 자기 소유 원본이어서 실제 UI fork variant 없음, 팬트리 제품1개라 다른 version/substitute 표본 없음, legacy8키 결과라 v4 원분수 variant 미실행이다. 기존 native/fixture의 통과를 이 실제 여정의 빈 표본에 채우지 않는다.
+- 추가 finding: pure fixture에서 plan/cooking generic mapper의 `toFixed(2)` DTO 축소와 `quantity_input` 미전달을 확인했다. 원1/3L→0.33L·1/7kg의2→3인분→0.21kg 사례다. 저장 DB 손실을 확인한 것이 아니고 #1709에 포함된 교정도 아니다. 차기 원분수 조회·표시 보완 중으로 유지한다.
+- 남은 범위: C05 draft #1707·소스 `da65a96a2611918096295d7d42f7d4e0b27f1e5c`는 운영 미적용·수집 OFF·기간 미정이다. W0/W2 조건 근거·W4 실제 개인 보정·W5 정확도·W6 및 실제 표본 저장/정정/삭제/복원/모델 생명주기·T9 미확인 variant가 남았다. 새 실제 추출·P5/모델 평가·외부 AI를 실행하지 않았다.
+
+증거는 비공개 계획 operation의 `operating-verification.json`·`browser-operating-verification.json`·실제 화면 text/PNG·독립 source review와, 개인 operation의 `t9-operating-journeys-summary.json`이다. [단위 계약·실제 확인·한계](plan-snapshot-clarity-20261015.md)를 따른다. 문서 작업에서 운영이나 브라우저를 새로 실행하지 않았다.
+
 ## 선택 개인 무게 확인 운영 반영·원기록 보존 — 2026-10-15
 
 이 절이 아래의 개인 확인 후보·운영 미적용 기록보다 최신이다. **개인 확인의 운영 표본을 확인한 단계이며, 추정 정확도 개선·C05 수집·전체 v9 완료는 아니다.**
