@@ -53,3 +53,21 @@ it("places exact B08 guidance with the unchanged stored instructions without cla
   expect(screen.getByText("이 계획에 저장한 내용 · 3인분")).toBeTruthy();
   expect(screen.queryByText(/원본.*인분/u)).toBeNull(); expect(screen.queryByRole("spinbutton")).toBeNull();
 });
+
+it.each([
+  { amount: 1 / 3, unit: "L", display: "1/3L" },
+  { amount: 3 / 14, unit: "kg", display: "0.214kg" },
+])("uses the projected v4 quantity label without exposing a long decimal: $display", async ({ amount, unit, display }) => {
+  const row = { ...quantityRow, standard_name: "고정 재료", amount, unit, display_text: `고정 재료 ${display}`,
+    quantity_input: { schema_version: "quantity-v4", raw_value: "1/3", raw_unit: "L", numerator: "1", denominator: "3",
+      normalized: { amount: 1000 / 3, unit: "ml" }, display_quantity: { amount: 1 / 3, unit: "L" }, quality: "direct", reason: null,
+      evidence_ids: [], source_versions: [], batch_basis: null, context_sha256: "a".repeat(64) } };
+  mocks.fetch.mockResolvedValue({ meal_id: "meal", recipe_id: "recipe", snapshot_id: "pin", title: "원량 유지", planned_servings: 3,
+    ingredients: [row], steps: [] });
+  render(<MealRecipeSnapshotScreen mealId="meal" />);
+  await screen.findByRole("heading", { name: "원량 유지" });
+  const ingredients = screen.getByRole("region", { name: "재료" });
+  expect(within(ingredients).getByText(display, { exact: true })).toBeTruthy();
+  expect(ingredients.textContent).not.toContain(String(amount));
+  expect(ingredients.textContent).not.toContain(`${unit}${unit}`);
+});

@@ -1,10 +1,10 @@
 import { formatProductUnit } from "@/lib/planner/product-planner-entry-presentation";
 import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
 import { convertIngredientInputAmount } from "@/lib/planner/food-quantity-input";
-import { parseQuantityInput } from "@/lib/quantity-input";
+import { isQuantityInputSnapshot, parseQuantityInput } from "@/lib/quantity-input";
 import type { FoodProductData } from "@/types/food-product";
 import { FOOD_PRODUCT_BASIS_UNITS } from "@/types/food-product";
-import type { RecipeIngredientQuantityContext, RecipeQuantityInputDraft } from "@/types/recipe";
+import type { RecipeIngredientQuantityContext, RecipeQuantityInputDraft, RecipeQuantityInputSnapshot } from "@/types/recipe";
 import { QUANTITY_INPUT_VERSION, type IngredientQuantityOptions } from "@/types/quantity-input";
 
 interface RecipeQuantityRow {
@@ -13,6 +13,26 @@ interface RecipeQuantityRow {
   quantity_input?: RecipeQuantityInputDraft | null;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
+}
+
+/** Read the saved recipe proof only; never resolve it against current evidence. */
+export function readRecipeQuantityInputSnapshot(
+  value: unknown,
+  row: Pick<RecipeQuantityRow, "amount" | "unit" | "food_product_id" | "food_product_nutrition_version_id">,
+): RecipeQuantityInputSnapshot | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== "object" || Array.isArray(value) || !("context_sha256" in value)
+    || typeof value.context_sha256 !== "string" || !/^[0-9a-f]{64}$/u.test(value.context_sha256)) {
+    throw new Error("INVALID_RECIPE_QUANTITY_SNAPSHOT");
+  }
+  const { context_sha256, ...snapshot } = value;
+  if (!isQuantityInputSnapshot(snapshot, typeof row.amount === "number" && row.unit
+    ? { amount: row.amount, unit: row.unit } : undefined)
+    || snapshot.batch_basis !== null
+    || row.food_product_id && (snapshot.source_versions.length !== 1 || snapshot.source_versions[0] !== row.food_product_nutrition_version_id)) {
+    throw new Error("INVALID_RECIPE_QUANTITY_SNAPSHOT");
+  }
+  return { ...snapshot, context_sha256 };
 }
 
 function inputFor(row: RecipeQuantityRow, text: string, contextSha256?: string): RecipeQuantityInputDraft {

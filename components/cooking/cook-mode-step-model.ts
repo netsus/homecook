@@ -15,7 +15,7 @@ export function formatIngredientAmountOnly(
     return "적당량";
   }
 
-  if (ingredient.ingredient_type === "QUANT" && ingredient.food_product_id && ingredient.food_product_nutrition_version_id
+  if (!ingredient.quantity_input && ingredient.ingredient_type === "QUANT" && ingredient.food_product_id && ingredient.food_product_nutrition_version_id
     && ingredient.amount !== null && Number.isFinite(ingredient.amount) && ingredient.amount > 0
     && ingredient.unit?.trim()) {
     return `${formatNumber(ingredient.amount)}${ingredient.unit}`;

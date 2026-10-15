@@ -178,10 +178,12 @@ describe("15b cook standalone complete backend", () => {
       },
     ]);
 
+    const publicProductSources = vi.fn(async () => ({ data: [], error: null }));
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({ data: { user: null } })),
       },
+      rpc: publicProductSources,
       from: vi.fn((table: string) => {
         if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
         if (table === "recipe_ingredients") return { select: vi.fn(() => ingredientsQuery) };
@@ -197,6 +199,7 @@ describe("15b cook standalone complete backend", () => {
     );
     const body = await response.json();
 
+    expect(publicProductSources).toHaveBeenCalledExactlyOnceWith("read_public_recipe_product_sources", { p_recipe_id: recipeId });
     expect(response.status).toBe(200);
     expect(body).toEqual({
       success: true,

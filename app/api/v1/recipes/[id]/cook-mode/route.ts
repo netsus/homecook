@@ -157,7 +157,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const user = (await routeClient.auth.getUser()).data.user;
     const ingredientColumns = "id, source_kind, ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)"
-      + (user ? ", food_product_id, food_product_nutrition_version_id" : "");
+      + (user ? ", food_product_id, food_product_nutrition_version_id, quantity_input" : "");
     const ingredientsResult = await dbClient
       .from("recipe_ingredients")
       .select(ingredientColumns)
@@ -217,6 +217,7 @@ export async function GET(request: Request, context: RouteContext) {
             row_key: ingredient.row_key, source_kind: ingredient.source_kind,
             food_product_id: ingredient.food_product_id, food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id,
             amount: ingredient.amount,
+            quantity_input: ingredient.quantity_input,
             unit: ingredient.unit,
             display_text: ingredient.display_text,
             component_label: ingredient.component_label,

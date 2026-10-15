@@ -1,4 +1,5 @@
 import type { WeightAttestationInput, WeightAttestationRecord } from "@/types/cooked-weight-attestation";
+import type { RecipeIngredient } from "@/types/recipe";
 import type { ApiResponse } from "@/types/api";
 
 export type CookingSessionStatus = "in_progress" | "completed" | "cancelled";
@@ -61,6 +62,8 @@ export interface CookingMethodSummary {
 }
 
 export interface CookingModeIngredient {
+  /** Original base-row proof, not a newly scaled conversion snapshot. */
+  quantity_input?: RecipeIngredient["quantity_input"];
   row_key?: string;
   source_kind?: "ingredient" | "food_product";
   food_product_id?: string | null;

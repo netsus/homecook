@@ -107,3 +107,39 @@ describe("server-owned pinned weight input", () => {
     }
   });
 });
+
+
+it.each([undefined, { schema_version: "quantity-v4", raw_value: "broken", context_sha256: "not-a-hash" }])(
+  "keeps frozen prediction inputs and MIX method when optional raw metadata is invalid: %j", async quantity_input => {
+    const value = source();
+    const before = JSON.stringify(value);
+    const metadataRow = { ...value.recipe_content_snapshots.ingredients_json[0], row_key: ingredient,
+      standard_name: "재료", quantity_input };
+    const methods = { rpc: vi.fn().mockResolvedValue({ data: { session_id: sessionId, contract_version: "snapshot_v2", mode: "standalone", status: "in_progress",
+      recipe: { id: ingredient, title: "요리", base_servings: 2, cooking_servings: 2, ingredients: [metadataRow],
+        steps: [{ ...projectedStep, cooking_methods: [projectedStep.cooking_method] }] }, pantry_candidates: [] }, error: null }) };
+    const result = await readSnapshotWeightPrediction({ client: client(value), weightClient: { from: () => null }, ownerId: owner, sessionId,
+      methodClient: methods, authorityArgs: { p_owner_uuid: owner } });
+    expect(result?.prediction.totalGrams).toBe(300);
+    expect(result?.rawRows).toEqual([{ rowKey: "fixed-row", amount: 300, unit: "g", scalable: true }]);
+    expect(result?.prediction.input?.rows[0]).toMatchObject({ amount: 300, grams: 300, quantityOrigin: "planned" });
+    expect(JSON.stringify(value)).toBe(before);
+  },
+);
+
+it("does not turn malformed frozen proof into a legacy mass input or lose structured methods", async () => {
+  const value = source();
+  const frozen = { ...value.recipe_content_snapshots.ingredients_json[0], quantity_input: { schema_version: "quantity-v4", raw_value: "broken" } };
+  const input = { ...value, recipe_content_snapshots: { ...value.recipe_content_snapshots, ingredients_json: [frozen] } };
+  const before = JSON.stringify(input);
+  const methods = { rpc: vi.fn().mockResolvedValue({ data: { session_id: sessionId, contract_version: "snapshot_v2", mode: "standalone", status: "in_progress",
+    recipe: { id: ingredient, title: "요리", base_servings: 2, cooking_servings: 2,
+      ingredients: [{ ...frozen, row_key: ingredient, standard_name: "재료" }],
+      steps: [{ ...projectedStep, cooking_methods: [projectedStep.cooking_method] }] }, pantry_candidates: [] }, error: null }) };
+  const direct = await readSnapshotWeightPrediction({ client: client(input), weightClient: null, ownerId: owner, sessionId, cookingSteps: [projectedStep] });
+  const projected = await readSnapshotWeightPrediction({ client: client(input), weightClient: null, ownerId: owner, sessionId,
+    methodClient: methods, authorityArgs: { p_owner_uuid: owner } });
+  expect(projected).toEqual(direct);
+  expect(projected?.prediction.totalGrams).toBeNull();
+  expect(JSON.stringify(input)).toBe(before);
+});
