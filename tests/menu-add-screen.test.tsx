@@ -616,6 +616,7 @@ describe("MenuAddScreen", () => {
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
       EXTRACTION_IDS.default,
       expect.stringMatching(UUID_PATTERN),
+      true,
     );
     expect(vi.mocked(youtubeApi.validateYoutubeUrl).mock.invocationCallOrder[0])
       .toBeLessThan(vi.mocked(youtubeApi.extractYoutubeRecipe).mock.invocationCallOrder[0]);
@@ -875,10 +876,12 @@ describe("MenuAddScreen", () => {
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
       EXTRACTION_IDS.multiChild,
       expect.stringMatching(UUID_PATTERN),
+      true,
     );
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).not.toHaveBeenCalledWith(
       EXTRACTION_IDS.multiParent,
       expect.anything(),
+      true,
     );
   });
 
@@ -1043,6 +1046,7 @@ describe("MenuAddScreen", () => {
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
       EXTRACTION_IDS.legacyUnresolved,
       expect.stringMatching(UUID_PATTERN),
+      true,
     );
     expect(youtubeApi.registerYoutubeIngredient).not.toHaveBeenCalled();
   });
@@ -1300,6 +1304,7 @@ describe("MenuAddScreen", () => {
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
       EXTRACTION_IDS.caption,
       expect.stringMatching(UUID_PATTERN),
+      true,
     );
   });
 
@@ -1370,6 +1375,7 @@ describe("MenuAddScreen", () => {
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
       EXTRACTION_IDS.authorComment,
       expect.stringMatching(UUID_PATTERN),
+      true,
     );
   });
 
@@ -1441,6 +1447,7 @@ describe("MenuAddScreen", () => {
     expect(savedRecipeApi.ensureYoutubeSavedRecipe).toHaveBeenCalledWith(
       EXTRACTION_IDS.partial,
       expect.stringMatching(UUID_PATTERN),
+      true,
     );
     expect(screen.queryByRole("button", { name: "변경사항 저장" })).toBeNull();
 
