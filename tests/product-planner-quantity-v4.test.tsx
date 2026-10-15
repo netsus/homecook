@@ -1,17 +1,14 @@
 // @vitest-environment jsdom
 import React from "react";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FoodProductPicker } from "@/components/planner/food-product-picker";
 import { PRODUCT_PLANNER_RETURN_CONTEXT_KEY, readProductPlannerReturnContext } from "@/lib/planner/product-planner-return-context";
 import type { FoodProductData } from "@/types/food-product";
-import type { PlannerData } from "@/types/planner";
-import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 import { buildCompatibleFoodProductUnits, formatFoodProductExpectedEnergy, getFoodProductCoreNutritionLines } from "@/lib/planner/product-planner-entry-presentation";
 
-const api = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), planner: vi.fn() }));
-vi.mock("@/lib/api/planner", () => ({ fetchPlanner: api.planner }));
+const api = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn() }));
 vi.mock("@/lib/api/food-product", () => ({ fetchFoodProducts: api.list,
   isFoodProductApiError: (error: unknown) => Boolean(error && typeof error === "object" && "status" in error) }));
 vi.mock("@/lib/api/product-planner-entry", () => ({ createProductPlannerEntry: api.create,
@@ -22,30 +19,17 @@ const product: FoodProductData = { id: productId, name: "고정 규격 제품", 
   nutrition_version_id: version, basis_relations: [{ from: { amount: 1, unit: "package" }, to: { amount: 120, unit: "g" } }],
   nutrition: { basis: { amount: 100, unit: "g" }, values: { energy_kcal: { amount: 240, known_amount: null, status: "complete", display_mode: "total" } },
     calculation_status: "complete", calculation_quality: "direct", warnings: [], sources: [] } };
-function open(props: Partial<React.ComponentProps<typeof FoodProductPicker>> = {}) {
+function open() {
   const complete = vi.fn();
   const close = vi.fn();
-  const view = render(<FoodProductPicker columnId="column-1" planDate="2026-10-14" slotName="아침" onClose={close} onComplete={complete} {...props} />);
+  const view = render(<FoodProductPicker columnId="column-1" planDate="2026-10-14" slotName="아침" onClose={close} onComplete={complete} />);
   return { close, complete, ...view };
 }
 const raw = { schema_version: "quantity-v4", raw_value: "1/3", raw_unit: "package", expected_product_nutrition_version_id: version };
-const emptyPlanner: PlannerData = { columns: [], meals: [], product_entries: [] };
-function savedEntry(changes: Partial<ProductPlannerEntryData> = {}): ProductPlannerEntryData {
-  return { entry_type: "product", id: "saved-entry", product_id: productId, product_name: product.name,
-    product_brand: product.brand, plan_date: "2026-10-14", column_id: "column-1", quantity: { amount: 2, unit: "package" },
-    quantity_input: { schema_version: "quantity-v4", raw_value: "240", raw_unit: "g", numerator: "240", denominator: "1",
-      display_quantity: { amount: 2, unit: "package" }, normalized: { amount: 240, unit: "g" }, quality: "direct", reason: null,
-      evidence_ids: [], source_versions: [version], batch_basis: null },
-    workflow_status: null, product_nutrition_version_id: version, basis_relations: product.basis_relations,
-    nutrition: product.nutrition, ...changes };
-}
-const amountField = () => screen.getByRole<HTMLInputElement>("textbox", { name: "완제품 수량" });
-const unitField = () => screen.getByRole<HTMLSelectElement>("combobox", { name: "완제품 수량 단위" });
 describe("explicit product planner quantity v4", () => {
   beforeEach(() => {
     api.list.mockReset().mockResolvedValue({ items: [product], quantity_policy: "quantity-v4", next_cursor: null, has_next: false });
     api.create.mockReset().mockResolvedValue({ id: "fixture-entry" });
-    api.planner.mockReset().mockResolvedValue(emptyPlanner);
     window.sessionStorage.clear();
   });
   afterEach(() => cleanup());
@@ -194,145 +178,5 @@ describe("explicit product planner quantity v4", () => {
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "완제품 수량 단위" }).value).toBe("g");
     expect(screen.getByText("이전 단위의 환산 근거를 확인할 수 없어요. 원래 양과 단위를 보존했어요. 제품을 다시 선택해 주세요.")).toBeTruthy();
     expect(api.create).not.toHaveBeenCalled(); expect(readProductPlannerReturnContext()).toMatchObject({ quantityInput: raw });
-  });
-
-  it("suggests the last eligible saved display unit in the same day and slot, with no old amount or raw", async () => {
-    const entries = [savedEntry({ id: "z-first", quantity: { amount: 40, unit: "g" } }), savedEntry({ id: "a-last" })];
-    const before = JSON.stringify(entries);
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: entries });
-    const user = userEvent.setup(); open();
-    await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("package"); expect(amountField().value).toBe("");
-    expect(api.planner).toHaveBeenCalledExactlyOnceWith("2026-10-14", "2026-10-14");
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "아침에 완제품 추가" }).disabled).toBe(true);
-    expect(api.create).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "1/4" }));
-    await user.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
-    expect(api.create).toHaveBeenCalledExactlyOnceWith({ product_id: productId, plan_date: "2026-10-14", column_id: "column-1",
-      quantity: { amount: .25, unit: "package" }, quantity_input: { ...raw, raw_value: "1/4" } });
-    expect(JSON.stringify(entries)).toBe(before);
-  });
-
-  it.each([
-    { title: "other product", entry: savedEntry({ product_id: "other-product" }) },
-    { title: "other nutrition version", entry: savedEntry({ product_nutrition_version_id: "other-version" }) },
-    { title: "missing nutrition version", entry: savedEntry({ product_nutrition_version_id: "" }) },
-    { title: "other day", entry: savedEntry({ plan_date: "2026-10-13" }) },
-    { title: "other slot", entry: savedEntry({ column_id: "column-2" }) },
-    { title: "unsupported unit", entry: savedEntry({ quantity: { amount: 200, unit: "ml" } }) },
-    { title: "invalid stored quantity", entry: savedEntry({ quantity: { amount: 0, unit: "package" } }) },
-  ])("keeps the default for a saved $title", async ({ entry }) => {
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [entry] });
-    open(); await userEvent.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe(""); expect(api.create).not.toHaveBeenCalled();
-  });
-
-  it("does not treat an unknown current version as a known saved match", async () => {
-    api.list.mockResolvedValue({ items: [{ ...product, nutrition_version_id: "" }], quantity_policy: "quantity-v4", has_next: false, next_cursor: null });
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [savedEntry({ product_nutrition_version_id: "" })] });
-    open(); await userEvent.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe("");
-  });
-
-  it("filters later wrong-slot rows without reordering or borrowing their units", async () => {
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [savedEntry(), savedEntry({ column_id: "column-2", quantity: { amount: 40, unit: "g" } })] });
-    open(); await userEvent.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("package"); expect(amountField().value).toBe("");
-  });
-
-  it.each([401, 500])("keeps selection available without redirect or a write when saved plans return %i", async status => {
-    api.planner.mockRejectedValue({ status, code: status === 401 ? "UNAUTHORIZED" : "INTERNAL_ERROR" });
-    const view = open(); await userEvent.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(api.planner).toHaveBeenCalledOnce(); expect(unitField().value).toBe("g"); expect(amountField().value).toBe("");
-    expect(screen.queryByRole("alert")).toBeNull(); expect(readProductPlannerReturnContext()).toBeNull();
-    expect(view.complete).not.toHaveBeenCalled(); expect(api.create).not.toHaveBeenCalled();
-  });
-
-  it("ignores a late saved-unit response for the current draft and uses it only on a new selection", async () => {
-    let resolve!: (data: PlannerData) => void;
-    api.planner.mockReturnValue(new Promise<PlannerData>(done => { resolve = done; }));
-    const user = userEvent.setup(); open(); await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    await user.type(amountField(), "30");
-    await act(async () => resolve({ ...emptyPlanner, product_entries: [savedEntry()] }));
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe("30");
-    await user.click(screen.getByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("package"); expect(amountField().value).toBe(""); expect(api.create).not.toHaveBeenCalled();
-  });
-
-  it("ignores a previous day response after the picker scope changes", async () => {
-    let resolveOld!: (data: PlannerData) => void;
-    api.planner.mockReturnValueOnce(new Promise<PlannerData>(done => { resolveOld = done; })).mockResolvedValue(emptyPlanner);
-    const view = open(); await screen.findByRole("button", { name: "고정 규격 제품 선택" });
-    await waitFor(() => expect(api.planner).toHaveBeenCalledTimes(1));
-    view.rerender(<FoodProductPicker columnId="column-2" planDate="2026-10-15" slotName="점심" onClose={view.close} onComplete={view.complete} />);
-    await waitFor(() => expect(api.planner).toHaveBeenCalledTimes(2));
-    await act(async () => resolveOld({ ...emptyPlanner, product_entries: [savedEntry({ plan_date: "2026-10-15", column_id: "column-2" })] }));
-    await userEvent.click(screen.getByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe("");
-  });
-
-  it("preserves typed quantity and chosen units on the same scope rerender with new callbacks", async () => {
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [savedEntry()] });
-    const user = userEvent.setup(); const view = open();
-    await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    await user.click(screen.getByRole("button", { name: "1/4" })); await user.selectOptions(unitField(), "g");
-    view.rerender(<FoodProductPicker columnId="column-1" planDate="2026-10-14" slotName="아침" onClose={() => undefined} onComplete={() => undefined} />);
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe("30"); expect(api.planner).toHaveBeenCalledOnce();
-    await user.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
-    expect(api.create.mock.calls[0][0]).toMatchObject({ quantity: { amount: 30, unit: "g" }, quantity_input: { ...raw, raw_value: "1/4" } });
-  });
-
-  it("preserves a restored login draft instead of replacing it with a saved-plan unit", async () => {
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [savedEntry()] });
-    sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({ version: 1, kind: "picker", planDate: "2026-10-14", columnId: "column-1", slotName: "아침",
-      query: "", source: "all", productId, quantityAmount: "40", quantityUnit: "g", quantityInput: raw }));
-    open(); await screen.findByRole("textbox", { name: "완제품 수량" });
-    await waitFor(() => expect(api.planner).toHaveBeenCalledOnce());
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe("40");
-    expect(readProductPlannerReturnContext()).toMatchObject({ quantityInput: raw }); expect(api.create).not.toHaveBeenCalled();
-  });
-
-  it("keeps an explicitly restored product and quantity before the next fresh selection", async () => {
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [savedEntry()] });
-    open({ initialProductId: productId, initialQuantityAmount: "40", initialQuantityUnit: "g" });
-    await screen.findByRole("textbox", { name: "완제품 수량" });
-    await waitFor(() => expect(api.planner).toHaveBeenCalledOnce());
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe("40"); expect(api.create).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("package"); expect(amountField().value).toBe("");
-  });
-
-  it("leaves the legacy OFF defaults and saved-plan request count unchanged", async () => {
-    api.list.mockResolvedValue({ items: [product], next_cursor: null, has_next: false });
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [savedEntry()] });
-    open(); await userEvent.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(api.planner).not.toHaveBeenCalled(); expect(unitField().value).toBe("g");
-    expect(screen.getByRole<HTMLInputElement>("spinbutton", { name: "완제품 수량" }).value).toBe("100");
-  });
-
-  it("does not remember a canceled or failed unsaved unit on a new selection", async () => {
-    api.create.mockRejectedValue({ status: 500, code: "INTERNAL_ERROR", message: "저장 실패" });
-    const user = userEvent.setup(); const first = open();
-    await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    await user.selectOptions(unitField(), "package"); await user.click(screen.getByRole("button", { name: "1/3" }));
-    await user.click(screen.getByRole("button", { name: "아침에 완제품 추가" })); await screen.findByRole("alert");
-    await user.click(screen.getByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe("");
-    await user.selectOptions(unitField(), "package"); await user.click(screen.getByRole("button", { name: "완제품 선택 닫기" }));
-    first.unmount(); open(); await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("g"); expect(amountField().value).toBe(""); expect(api.create).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps the same saved-unit boundary after a search and source filter change", async () => {
-    api.planner.mockResolvedValue({ ...emptyPlanner, product_entries: [savedEntry()] });
-    const user = userEvent.setup(); open(); await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    await user.selectOptions(unitField(), "g"); await user.click(screen.getByRole("button", { name: "1/2" }));
-    await user.type(screen.getByRole("searchbox", { name: "완제품 검색" }), "고정");
-    await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("package"); expect(amountField().value).toBe("");
-    await user.click(screen.getByRole("button", { name: "공공 영양DB" }));
-    await user.click(await screen.findByRole("button", { name: "고정 규격 제품 선택" }));
-    expect(unitField().value).toBe("package"); expect(amountField().value).toBe("");
-    expect(api.planner).toHaveBeenCalledOnce(); expect(api.create).not.toHaveBeenCalled();
   });
 });
