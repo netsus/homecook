@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { MealRecipeSnapshotScreen } from "@/components/planner/meal-recipe-snapshot-screen";
+import type { CookingModeIngredient } from "@/types/cooking";
 
 const mocks = vi.hoisted(() => ({ fetch: vi.fn() }));
 vi.mock("@/lib/api/fetch-json", () => ({ fetchJson: mocks.fetch, isApiFetchError: () => false }));
@@ -16,4 +17,39 @@ it("keeps separately stored heat and duration visible in the saved recipe", asyn
   expect(await screen.findByText("중불 · 10분")).toBeTruthy();
   expect(screen.getByRole("link", { name: "최신 레시피 보기" }).getAttribute("href")).toBe("/recipe/recipe");
   expect(screen.queryByRole("button", { name: "편집" })).toBeNull();
+});
+
+const quantityRow: CookingModeIngredient = { ingredient_id: "salt", standard_name: "소금", amount: null, unit: null,
+  ingredient_type: "QUANT", scalable: true, display_text: null };
+it.each([
+  { row: quantityRow, known: null, unknown: true },
+  { row: { ...quantityRow, amount: 0, unit: "g" }, known: "0g", unknown: false },
+  { row: { ...quantityRow, amount: 2 }, known: "2", unknown: true },
+  { row: { ...quantityRow, unit: "g" }, known: "g", unknown: true },
+  { row: { ...quantityRow, component_label: "고명" }, known: null, unknown: true },
+  { row: { ...quantityRow, amount: 1, unit: "g", scalable: false, component_label: "고명" }, known: "1g", unknown: false },
+  { row: { ...quantityRow, ingredient_type: "TO_TASTE" as const, component_label: "고명" }, known: "적당량", unknown: false },
+])("shows only incomplete quantities as unconfirmed: $known", async ({ row, known, unknown }) => {
+  mocks.fetch.mockResolvedValue({ meal_id: "meal", recipe_id: "recipe", snapshot_id: "pin", title: "저장한 재료 확인", planned_servings: 3,
+    ingredients: [row], steps: [] });
+  render(<MealRecipeSnapshotScreen mealId="meal" />);
+  await screen.findByRole("heading", { name: "저장한 재료 확인" });
+  const ingredients = within(screen.getByRole("region", { name: "재료" }));
+  if (known !== null) expect(ingredients.getByText(known, { exact: true })).toBeTruthy();
+  expect(Boolean(ingredients.queryByText("분량 확인 필요"))).toBe(unknown);
+});
+
+it("places exact B08 guidance with the unchanged stored instructions without claiming original servings", async () => {
+  const instruction = "물 400mL를 넣고 180도에서 10분 동안 2번 나눠 조리해요.";
+  mocks.fetch.mockResolvedValue({ meal_id: "meal", recipe_id: "recipe", snapshot_id: "pin", title: "저장한 조리법 확인", planned_servings: 3,
+    ingredients: [{ ...quantityRow, amount: 600, unit: "mL", standard_name: "물" }],
+    steps: [{ step_number: 1, instruction, heat_level: null, duration_text: null, duration_seconds: null, component_label: null }] });
+  render(<MealRecipeSnapshotScreen mealId="meal" />);
+  await screen.findByRole("heading", { name: "저장한 조리법 확인" });
+  const steps = within(screen.getByRole("region", { name: "만들기" }));
+  expect(steps.getByText("재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다")).toBeTruthy();
+  expect(steps.getByText(instruction, { exact: true })).toBeTruthy();
+  expect(screen.getByText("600mL", { exact: true })).toBeTruthy();
+  expect(screen.getByText("이 계획에 저장한 내용 · 3인분")).toBeTruthy();
+  expect(screen.queryByText(/원본.*인분/u)).toBeNull(); expect(screen.queryByRole("spinbutton")).toBeNull();
 });
