@@ -27,6 +27,12 @@ export function acquirePrelaunchDeployLock() {
   } };
 }
 
+// Unbound until the exact reader-first/one-function229 evidence is reviewed. No runtime override.
+export const NUTRITION_VALIDATOR_FEATURE = "recipe-nutrition-v4-validator";
+export const NUTRITION_VALIDATOR_MIGRATION = "20261014225000_recipe_nutrition_quantity_v4_warning_contract.sql";
+export const NUTRITION_VALIDATOR_MIGRATION_SHA256 = "a03d44504bc0c318bbcc399c9ef563d2cdcd7adc79ebdb0314846b981fd89bdd";
+export const NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-nutrition-validator-20261015-uq1hcgt6/approved-nutrition-validator-review.json", sha256: "7260854b2b072543379cebc8e75c3159c81c4f043da1feeaafe6e445bc2e325a" });
+
 // Human-approved F01 source and pause receipt. CLI and environment cannot override these pins.
 export const CLOSED_R2_REVIEW_PIN = Object.freeze({
   path: "/Users/cwj/.homecook/operations/mumeok-beta-f01-closed-20261014-ifzuefgy/proposed-review.json",
@@ -82,6 +88,7 @@ export function quantityV4StageForPhase(phase) {
 }
 
 export function protectedRolloutPins(review) {
+  if (review?.feature === NUTRITION_VALIDATOR_FEATURE) return { rollout: NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN, writer: { path: null, sha256: null } };
   if (review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) return { rollout: COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN, writer: COOKED_WEIGHT_ATTESTATION_WRITER_REVIEW_PIN };
   if (review?.feature === QUANTITY_V4_FEATURE) {
     if (!["consumers", "worker"].includes(review.quantityStage)) throw new DeploymentError("Unknown exact C04 stage");
@@ -93,7 +100,7 @@ export function protectedRolloutPins(review) {
 }
 
 export function protectedRolloutPaths(root, review) {
-  const prefix = review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? "protected-cooked-weight-attestation" : review?.feature === QUANTITY_V4_FEATURE ? `protected-quantity-v4-${review.quantityStage}` : review?.feature === COOKED_WEIGHT_FEATURE ? "protected-cooked-weight" : "protected";
+  const prefix = review?.feature === NUTRITION_VALIDATOR_FEATURE ? "protected-nutrition-validator" : review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? "protected-cooked-weight-attestation" : review?.feature === QUANTITY_V4_FEATURE ? `protected-quantity-v4-${review.quantityStage}` : review?.feature === COOKED_WEIGHT_FEATURE ? "protected-cooked-weight" : "protected";
   protectedRolloutPins(review);
   return { databaseGuardPath: join(root, `${prefix}-database-guard.json`), readerReceiptPath: join(root, `${prefix}-reader-ready.json`),
     operationRoot: join(root, `${prefix}-operations`), writerPrefix: `${prefix}-writer` };
@@ -199,6 +206,13 @@ function readProtectedRolloutPin(repositoryRoot, pin) {
 }
 
 export function loadProtectedRolloutReview(repositoryRoot, selector = {}) {
+  if (selector.feature === NUTRITION_VALIDATOR_FEATURE || selector.phase?.startsWith("nutrition-")
+    || selector.reviewSha256 && selector.reviewSha256 === NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN.sha256) {
+    const review = readProtectedRolloutPin(repositoryRoot, NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN);
+    assertNutritionValidatorReview(review);
+    closedR2Require(!selector.ref || selector.ref === review.to, "Nutrition maintenance exact source differs");
+    return review;
+  }
   closedR2Require(!selector.feature || ["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE].includes(selector.feature), "No arbitrary protected feature selector");
   if (selector.feature === COOKED_WEIGHT_ATTESTATION_FEATURE || selector.phase?.startsWith("attestation-")
     || (selector.reviewSha256 && selector.reviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256)) {
@@ -262,6 +276,7 @@ export function assertProtectedWriterReview(approval, rollout, rolloutReviewSha2
 }
 
 export function assertProtectedRolloutReview(review) {
+  if (review?.feature === NUTRITION_VALIDATOR_FEATURE) return assertNutritionValidatorReview(review);
   const cookedWeight = review?.feature === COOKED_WEIGHT_FEATURE;
   const quantity = review?.feature === QUANTITY_V4_FEATURE;
   const attestation = review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE;
@@ -354,6 +369,220 @@ function assertQuantityV4Review(review) {
     && review.workerAuthority && Object.keys(review.workerAuthority).sort().join() === "controlReviewSha256,operationId"
     && CLOSED_R2_SHA.test(review.workerAuthority.controlReviewSha256 ?? "")
     && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(review.workerAuthority.operationId ?? ""), "C04 worker requires terminal226 and its original controlled operation authority");
+}
+
+export function assertNutritionValidatorReview(review) {
+  const db = review?.database, image = value => value && Object.keys(value).sort().join() === "definitionSha256,metadataSha256,sourceMd5"
+    && CLOSED_R2_SHA.test(value.definitionSha256) && CLOSED_R2_SHA.test(value.metadataSha256) && /^[a-f0-9]{32}$/u.test(value.sourceMd5);
+  closedR2Require(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && review.feature === NUTRITION_VALIDATOR_FEATURE
+    && CLOSED_R2_SHA.test(NUTRITION_VALIDATOR_MIGRATION_SHA256 ?? "")
+    && CLOSED_R2_REF.test(review.from ?? "") && CLOSED_R2_REF.test(review.to ?? "") && review.from !== review.to
+    && review.sourceReaderRef === review.from && review.migrationSourceRef === review.to && CLOSED_R2_SHA.test(review.readerValidatorSha256 ?? "")
+    && review.readerPrecedesDatabase === true && isDeepStrictEqual(review.approved, { database: true, reader: false, writerOn: false })
+    && review.testScript === "test:feedback-batch:web" && isDeepStrictEqual(review.readerEnvironment, {}), "Nutrition validator exact reader-first authority is unbound or differs");
+  closedR2Require(typeof review.predecessorBuildId === "string" && review.predecessorBuildId.length > 0
+    && ["predecessorPlistSha256", "closedArtifactSha256", "controlSha256", "historicalProofsSha256", "isolatedEvidenceSha256", "readerFlowsSha256"].every(key => CLOSED_R2_SHA.test(review[key] ?? ""))
+    && review.closedReviewSha256 === CLOSED_R2_REVIEW_PIN.sha256 && review.consentGeneration === 1
+    && ["isolatedEvidence", "readerFlows", "platformInventory", "backupReadiness"].every(key => isAbsolute(review[key]?.path ?? "") && CLOSED_R2_SHA.test(review[key]?.sha256 ?? ""))
+    && review.isolatedEvidence.sha256 === review.isolatedEvidenceSha256 && review.readerFlows.sha256 === review.readerFlowsSha256,
+    "Nutrition validator reader/closed history/evidence binding differs");
+  const migrationPath = `supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}`;
+  closedR2Require(review.files && isDeepStrictEqual(review.files[migrationPath], [null, NUTRITION_VALIDATOR_MIGRATION_SHA256])
+    && Object.entries(review.files).every(([file, pair]) => (file === migrationPath || /^(?:tests|docs)\//u.test(file))
+      && !file.split("/").some(part => ["", ".", ".."].includes(part)) && Array.isArray(pair) && pair.length === 2
+      && pair.every(value => value === null || CLOSED_R2_SHA.test(value)) && pair[0] !== pair[1]), "Nutrition maintenance cannot change the already-installed reader or another SQL");
+  closedR2Require(db?.before?.length === 228 && db.after?.length === 229 && isDeepStrictEqual(db.after.slice(0, 228), db.before)
+    && db.before[227].filename === COOKED_WEIGHT_ATTESTATION_MIGRATION && db.before[227].sha256 === COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256
+    && db.after[228].filename === NUTRITION_VALIDATOR_MIGRATION && db.after[228].sha256 === NUTRITION_VALIDATOR_MIGRATION_SHA256
+    && db.migrations?.length === 1 && db.migrations[0].filename === NUTRITION_VALIDATOR_MIGRATION
+    && db.migrations[0].rawSha256 === NUTRITION_VALIDATOR_MIGRATION_SHA256 && CLOSED_R2_SHA.test(db.migrations[0].payloadSha256 ?? "")
+    && isAbsolute(db.configPath ?? "") && CLOSED_R2_SHA.test(db.configSha256 ?? "")
+    && ["targetSha256", "beforeCatalogSha256", "afterCatalogSha256", "immutableSha256", "stableImmutableSha256", "normalProjectionSha256", "postimageRegistrySha256", "attestationPostimageRegistrySha256", "beforeColumnsSha256"].every(key => CLOSED_R2_SHA.test(db[key] ?? ""))
+    && db.normalProjectionSha256 === QUANTITY_V4_PROTECTION?.normalProjectionSha256
+    && db.postimageRegistrySha256 === QUANTITY_V4_PROTECTION?.postimageRegistrySha256
+    && db.afterImmutableSha256 === db.immutableSha256 && db.afterColumnsSha256 === db.beforeColumnsSha256
+    && isDeepStrictEqual(db.beforeScope, db.afterScope) && Object.values(db.beforeScope ?? {}).length === 2
+    && Object.values(db.beforeScope).every(value => CLOSED_R2_SHA.test(value))
+    && db.attestationScope?.beforeOuterSha256 === db.attestationScope?.afterOuterSha256
+    && db.attestationScope.afterOuterSha256 === db.afterScope.outerSha256 && CLOSED_R2_SHA.test(db.attestationScope.afterAliasSha256 ?? "")
+    && db.workerCatalogBefore === QUANTITY_V4_WORKER_CATALOG_AFTER && db.workerCatalogAfter === QUANTITY_V4_WORKER_CATALOG_AFTER
+    && db.functionSignature === "public.validate_recipe_nutrition_snapshot_payload(jsonb)" && image(db.functionBefore) && image(db.functionAfter)
+    && db.functionBefore.metadataSha256 === db.functionAfter.metadataSha256
+    && db.functionBefore.definitionSha256 !== db.functionAfter.definitionSha256 && db.functionBefore.sourceMd5 !== db.functionAfter.sourceMd5,
+    "Nutrition validator exact228/229/function/catalog/unchanged authority image differs");
+  closedR2Require(review.predecessorAttestation?.reviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256
+    && CLOSED_R2_REF.test(review.predecessorAttestation.readerFloor ?? "")
+    && ["databaseReceipt", "readerReceipt", "writerReceipt"].every(key => isAbsolute(review.predecessorAttestation[key]?.path ?? "") && CLOSED_R2_SHA.test(review.predecessorAttestation[key]?.sha256 ?? ""))
+    && db.workerBaseline?.credentialGeneration === 48 && db.workerBaseline.workerReleaseSha === QUANTITY_V4_RELEASE_SHA
+    && db.workerBaseline.schemaIdentity === QUANTITY_V4_WORKER_SCHEMA_IDENTITY && db.workerBaseline.workerPolicyEnabled === true
+    && ["credentialRowSha256", "policyRowSha256", "policyStableSha256", "snapshotDigest"].every(key => CLOSED_R2_SHA.test(db.workerBaseline[key] ?? "")),
+    "Nutrition validator preserves personal/C04 current48 authority");
+  return review;
+}
+
+export function assertNutritionValidatorReader(review, live) {
+  assertNutritionValidatorReview(review);
+  closedR2Require(live?.ref === review.sourceReaderRef && live.buildId === review.predecessorBuildId
+    && live.plistSha256 === review.predecessorPlistSha256 && live.validatorSha256 === review.readerValidatorSha256 && live.healthy === true,
+    "Nutrition SQL requires the exact healthy228-compatible reader before dispatch and COMMIT");
+  return live;
+}
+
+export function assertNutritionValidatorDatabaseReceipt(review, record) {
+  assertNutritionValidatorReview(review);
+  closedR2Require(record?.schema === "homecook.prelaunch-protected-db-attempt.v1" && record.feature === NUTRITION_VALIDATOR_FEATURE
+    && record.status === "committed" && record.reviewSha256 === NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN.sha256
+    && record.from === review.from && record.to === review.to && record.sourceReaderRef === review.sourceReaderRef
+    && record.readerFloor === review.sourceReaderRef && record.targetSha256 === review.database.targetSha256
+    && record.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: review.database.after, applied: review.database.after }))
+    && record.catalogSha256 === review.database.afterCatalogSha256 && record.immutableSha256 === review.database.immutableSha256
+    && record.rowsPreservedInTransaction === true && record.controlsPreservedInTransaction === true
+    && record.productWriterEnabled === true && record.cookedWeightWriterEnabled === true && record.quantityWriterEnabled === true
+    && record.attestationWriterEnabled === true && record.workerPolicyEnabled === true && record.backwardCompatible === false
+    && ["normalDataSha256", "preservedRowsSha256", "attestationRowsSha256"].every(key => CLOSED_R2_SHA.test(record[key] ?? ""))
+    && record.backup?.fullArchiveDecoded === true && CLOSED_R2_SHA.test(record.backup.sha256 ?? "") && CLOSED_R2_SHA.test(record.backup.rolesSha256 ?? "")
+    && closedR2Hash(JSON.stringify(record.backup.target)) === review.database.targetSha256
+    && isDeepStrictEqual(record.predecessorAttestation, review.predecessorAttestation), "Nutrition validator immutable229 terminal differs");
+  return record;
+}
+
+export function nutritionValidatorMaintenanceBinding(maintenance) {
+  if (!maintenance) return null;
+  assertNutritionValidatorDatabaseReceipt(maintenance.review, maintenance.record);
+  closedR2Require(maintenance.pointer?.sha256 === maintenance.guardPointer?.sha256 && isAbsolute(maintenance.pointer?.path ?? "")
+    && CLOSED_R2_SHA.test(maintenance.pointer.sha256), "Nutrition terminal bytes binding differs");
+  return { schema: "homecook.recipe-nutrition-validator-maintenance.v1", reviewSha256: NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN.sha256,
+    receipt: maintenance.pointer, predecessorDatabaseReceiptSha256: maintenance.review.predecessorAttestation.databaseReceipt.sha256,
+    targetSha256: maintenance.review.database.targetSha256, ledgerCount: 229, migrationSha256: NUTRITION_VALIDATOR_MIGRATION_SHA256,
+    sourceReaderRef: maintenance.review.sourceReaderRef, databasePlanSha256: maintenance.record.databasePlanSha256 };
+}
+
+export function readNutritionValidatorAttempt(repositoryRoot) {
+  const paths = protectedRolloutPaths(prelaunchStateRoot(), { feature: NUTRITION_VALIDATOR_FEATURE });
+  if (!existsSync(paths.databaseGuardPath)) return null;
+  const review = loadProtectedRolloutReview(repositoryRoot, { feature: NUTRITION_VALIDATOR_FEATURE });
+  const bytes = readClosedR2PrivateBytes(paths.databaseGuardPath, repositoryRoot, 524288), record = JSON.parse(bytes);
+  closedR2Require(record?.schema === "homecook.prelaunch-protected-db-attempt.v1" && record.feature === NUTRITION_VALIDATOR_FEATURE
+    && record.reviewSha256 === NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN.sha256 && record.from === review.from && record.to === review.to
+    && record.journalFile === "attempt.json" && record.sourceReaderRef === review.sourceReaderRef
+    && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(record.operationId ?? "")
+    && record.operationDirectory === join(paths.operationRoot, record.operationId)
+    && ["applying_precommit", "commit_dispatch_guard", "unknown", "rolled_back_before_commit", "committed", "not_applied"].includes(record.status),
+    "Nutrition maintenance unresolved/foreign guard cannot fall back to228");
+  closedR2Require(["committed", "not_applied"].includes(record.status) ? record.targetSha256 === review.database.targetSha256
+    : closedR2Hash(JSON.stringify(record.target)) === review.database.targetSha256, "Nutrition attempt target differs");
+  return { review, record, bytes, paths };
+}
+
+export function nutritionValidatorPhaseStatus(attempt, readerCompatible = false) {
+  const { review, record } = attempt;
+  assertNutritionValidatorReview(review);
+  const committed = record.status === "committed", unapplied = record.status === "not_applied";
+  if (committed) assertNutritionValidatorDatabaseReceipt(review, record);
+  return { feature: NUTRITION_VALIDATOR_FEATURE, phase: record.status,
+    databasePlanSha256: committed ? record.databasePlanSha256 : unapplied ? closedR2Hash(JSON.stringify({ source: review.database.before, applied: review.database.before })) : null,
+    appliedLedgerCount: committed ? 229 : unapplied ? 228 : null, readerFloor: committed ? review.sourceReaderRef : null,
+    readerPending: committed && !readerCompatible, normalDeploymentAllowed: (committed || unapplied) && readerCompatible,
+    backwardCompatible: false, recordedWriterEnabled: committed ? true : null };
+}
+
+export function assertProtectedWriterDatabaseBoundary(attempt, maintenance) {
+  closedR2Require(isDeepStrictEqual(attempt?.databaseMaintenance ?? null, nutritionValidatorMaintenanceBinding(maintenance)),
+    "Writer intent cannot reconcile or retry across the228/229 boundary");
+  return attempt;
+}
+
+export function assertNutritionValidatorWriterAttempts(records, maintenance = null) {
+  for (const { record, reviewSha256, approvalSha256 } of records) {
+    closedR2Require(record?.schema === "homecook.prelaunch-protected-writer-attempt.v1"
+      && record.reviewSha256 === reviewSha256 && record.approvalSha256 === approvalSha256
+      && ["committed", "not_applied", "closed_after_unknown"].includes(record.status),
+      "Nutrition maintenance cannot cross an unresolved protected writer intent");
+    closedR2Require(!record.databaseMaintenance || isDeepStrictEqual(record.databaseMaintenance, maintenance),
+      "Protected writer belongs to a different database maintenance boundary");
+  }
+  return records;
+}
+
+export function verifyNutritionValidatorWriterAdmission(repositoryRoot) {
+  const records = [];
+  for (const selector of [{}, { feature: COOKED_WEIGHT_FEATURE }, { feature: QUANTITY_V4_FEATURE, phase: "worker-database" }, { feature: COOKED_WEIGHT_ATTESTATION_FEATURE }]) {
+    const review = loadProtectedRolloutReview(repositoryRoot, selector), pins = protectedRolloutPins(review);
+    const paths = protectedRolloutPaths(prelaunchStateRoot(), review);
+    for (const action of ["writer-on", "writer-off"]) {
+      const path = join(prelaunchStateRoot(), `${paths.writerPrefix}-${pins.writer.sha256}-${action}.json`);
+      if (existsSync(path)) records.push({ record: JSON.parse(readClosedR2PrivateBytes(path, repositoryRoot, 524288)), reviewSha256: pins.rollout.sha256, approvalSha256: pins.writer.sha256 });
+    }
+  }
+  return assertNutritionValidatorWriterAttempts(records);
+}
+
+export function verifyNutritionValidatorPredecessor(review, repositoryRoot) {
+  assertNutritionValidatorReview(review);
+  const predecessor = loadCookedWeightAttestationSuccessor(repositoryRoot), previous = review.predecessorAttestation;
+  closedR2Require(predecessor && predecessor.pointer.path === previous.databaseReceipt.path && predecessor.pointer.sha256 === previous.databaseReceipt.sha256
+    && predecessor.review.to === previous.readerFloor && isDeepStrictEqual(predecessor.review.database.after, review.database.before)
+    && predecessor.review.database.afterCatalogSha256 === review.database.beforeCatalogSha256
+    && predecessor.review.database.afterImmutableSha256 === review.database.immutableSha256
+    && isDeepStrictEqual(predecessor.review.database.afterScope, review.database.beforeScope)
+    && predecessor.review.database.attestationScope.afterOuterSha256 === review.database.attestationScope.beforeOuterSha256
+    && predecessor.review.database.attestationScope.afterAliasSha256 === review.database.attestationScope.afterAliasSha256,
+    "Nutrition maintenance exact personal228 predecessor differs");
+  const paths = protectedRolloutPaths(prelaunchStateRoot(), predecessor.review), pins = protectedRolloutPins(predecessor.review);
+  closedR2Require(previous.readerReceipt.path === paths.readerReceiptPath
+    && previous.writerReceipt.path === join(prelaunchStateRoot(), `${paths.writerPrefix}-${pins.writer.sha256}-writer-on.json`), "Nutrition maintenance original reader/writer locator differs");
+  const readerBytes = readClosedR2PrivateBytes(previous.readerReceipt.path, repositoryRoot, 524288);
+  const writerBytes = readClosedR2PrivateBytes(previous.writerReceipt.path, repositoryRoot, 524288);
+  const reader = JSON.parse(readerBytes), writer = JSON.parse(writerBytes);
+  closedR2Require(closedR2Hash(readerBytes) === previous.readerReceipt.sha256 && closedR2Hash(writerBytes) === previous.writerReceipt.sha256
+    && reader.schema === "homecook.prelaunch-protected-reader.v1" && reader.reviewSha256 === pins.rollout.sha256
+    && reader.readerFloor === predecessor.review.to && reader.backwardCompatible === false && reader.databasePlanSha256 === predecessor.record.databasePlanSha256
+    && writer.status === "committed" && writer.writerEnabled === true && writer.reviewSha256 === pins.rollout.sha256
+    && writer.approvalSha256 === pins.writer.sha256 && writer.readerReceiptSha256 === previous.readerReceipt.sha256,
+    "Nutrition maintenance original committed personal reader/writer bytes differ");
+  return predecessor;
+}
+
+export function assertNutritionValidatorSourceHandoff({ maintenance, from, to, live, files, digests }) {
+  nutritionValidatorMaintenanceBinding(maintenance);
+  const review = maintenance.review;
+  closedR2Require(from === review.sourceReaderRef && to === review.migrationSourceRef
+    && live?.ref === from && live.buildId === review.predecessorBuildId && live.plistSha256 === review.predecessorPlistSha256
+    && isDeepStrictEqual([...files].sort(), Object.keys(review.files).sort()) && isDeepStrictEqual(digests, review.files),
+    "Only the committed exact228-reader to full229-source handoff may carry its already-applied SQL");
+  return true;
+}
+
+export function assertNutritionValidatorReaderCompensation(maintenance, before, targetRef) {
+  nutritionValidatorMaintenanceBinding(maintenance);
+  const review = maintenance.review;
+  closedR2Require(targetRef === review.migrationSourceRef && before.ref === review.sourceReaderRef
+    && before.buildId === review.predecessorBuildId && before.plistSha256 === review.predecessorPlistSha256
+    && before.validatorSha256 === review.readerValidatorSha256,
+    "Full229 handoff may compensate only to its exact compatible readerA, never the pre-fix reader");
+  return before;
+}
+
+export function assertNutritionValidatorMarker(maintenance, marker, sourceReaderMarker = false) {
+  const binding = nutritionValidatorMaintenanceBinding(maintenance);
+  closedR2Require(marker && (isDeepStrictEqual(marker.databaseMaintenance, binding)
+    || sourceReaderMarker && marker.databaseMaintenance === undefined), "Current229 marker is missing or has foreign maintenance authority");
+  closedR2Require(marker.databasePlanSha256 === maintenance.predecessor.record.databasePlanSha256,
+    "Historical228 marker plan must not be retargeted to229");
+  return marker;
+}
+
+export function loadNutritionValidatorMaintenance(repositoryRoot) {
+  const attempt = readNutritionValidatorAttempt(repositoryRoot);
+  if (!attempt) return null;
+  const { review, record, bytes, paths } = attempt;
+  closedR2Require(["committed", "not_applied"].includes(record.status), "Nutrition maintenance outcome unresolved; retain229 fence");
+  const pointer = { path: join(record.operationDirectory, "receipt.json"), sha256: closedR2Hash(bytes) };
+  closedR2Require(readClosedR2PrivateBytes(pointer.path, repositoryRoot, 524288).equals(bytes), "Nutrition terminal and guard bytes differ");
+  if (record.status === "not_applied") return null;
+  assertNutritionValidatorDatabaseReceipt(review, record);
+  const predecessor = verifyNutritionValidatorPredecessor(review, repositoryRoot);
+  return { review, record, pointer, guardPointer: { path: paths.databaseGuardPath, sha256: pointer.sha256 }, predecessor };
 }
 
 export function assertCookedWeightAttestationReview(review) {
@@ -490,12 +719,17 @@ export function loadCookedWeightAttestationQuantityOff(repositoryRoot, successor
     && record.baselineReviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256
     && record.baselineDatabasePlanSha256 === closedR2Hash(JSON.stringify({ source: successor.review.database.after, applied: successor.review.database.after }))
     && isDeepStrictEqual(record.databaseSuccessor, cookedWeightAttestationSuccessorBinding(successor)), "Personal successor quantity OFF receipt differs");
+  const maintenance = loadNutritionValidatorMaintenance(repositoryRoot);
+  closedR2Require(isDeepStrictEqual(record.databaseMaintenance ?? null, nutritionValidatorMaintenanceBinding(maintenance)),
+    "Quantity OFF receipt belongs to a different current database boundary");
   return record;
 }
 
-export function assertCookedWeightAttestationWorkerTransition(successor, before, after, enabled, quantityOffReceipt = null) {
+export function assertCookedWeightAttestationWorkerTransition(successor, before, after, enabled, quantityOffReceipt = null, maintenance = null) {
   const baseline = successor.review.database.workerBaseline, binding = cookedWeightAttestationSuccessorBinding(successor);
-  for (const observation of [before, after]) closedR2Require(observation?.ledgerCount === 228
+  const maintenanceBinding = nutritionValidatorMaintenanceBinding(maintenance);
+  for (const observation of [before, after]) closedR2Require(observation?.ledgerCount === (maintenanceBinding ? 229 : 228)
+    && isDeepStrictEqual(observation.databaseMaintenance ?? null, maintenanceBinding)
     && isDeepStrictEqual(observation.databaseSuccessor, binding) && observation.targetSha256 === successor.review.database.targetSha256
     && observation.catalogFingerprint === QUANTITY_V4_WORKER_CATALOG_AFTER && observation.credentialGeneration === 48
     && observation.workerReleaseSha === QUANTITY_V4_RELEASE_SHA && observation.credentialRowSha256 === baseline.credentialRowSha256
@@ -508,7 +742,7 @@ export function assertCookedWeightAttestationWorkerTransition(successor, before,
     && off.reviewSha256 === successor.review.predecessorQuantity.reviewSha256 && off.approvalSha256 === successor.review.predecessorQuantity.writerApprovalSha256
     && off.readerReceiptSha256 === successor.review.predecessorQuantity.readerReceipt.sha256
     && off.baselineReviewSha256 === COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN.sha256
-    && isDeepStrictEqual(off.databaseSuccessor, binding);
+    && isDeepStrictEqual(off.databaseSuccessor, binding) && isDeepStrictEqual(off.databaseMaintenance ?? null, maintenanceBinding);
   closedR2Require(before.quantityPolicyEnabled === enabled && (after.quantityPolicyEnabled === enabled || knownQuantityOff), "Personal successor unreceipted quantity transition denied");
   if (enabled) for (const observation of [before, after]) closedR2Require(observation.queued === 0 && observation.processing === 0
     && observation.permitHeld === false && observation.activeEnqueueSessions === 0, "Personal successor positive activation is not quiescent");
@@ -523,6 +757,12 @@ export function loadCookedWeightAttestationWorkerContinuation(successor, reposit
   const directory = join(QUANTITY_V4_WORKER_OPERATION_ROOT, original.workerAuthority.operationId);
   const current = JSON.parse(readClosedR2PrivateBytes(join(directory, "cutover-journal.json"), repositoryRoot, 524288));
   const binding = cookedWeightAttestationSuccessorBinding(successor);
+  const maintenance = loadNutritionValidatorMaintenance(repositoryRoot), maintenanceBinding = nutritionValidatorMaintenanceBinding(maintenance);
+  const checkedMaintenance = record => {
+    const value = record.databaseMaintenance ?? null;
+    closedR2Require(!value || maintenanceBinding && isDeepStrictEqual(value, maintenanceBinding), "Worker receipt has foreign current229 authority");
+    return value;
+  };
   const header = record => closedR2Require(record.reviewSha256 === original.workerAuthority.controlReviewSha256
     && record.operationId === original.workerAuthority.operationId && record.operationDirectory === directory
     && record.releaseSha === original.to && record.targetSha256 === original.database.targetSha256
@@ -543,9 +783,11 @@ export function loadCookedWeightAttestationWorkerContinuation(successor, reposit
     if (post.schema === "homecook.prelaunch-quantity-worker-after.v1") closedR2Require(isDeepStrictEqual(post, historical.post.record)
       && isDeepStrictEqual(originPointer, historical.post.origin.pointer), "Personal successor historical worker checkpoint differs");
     else {
+      const postMaintenance = checkedMaintenance(post);
+      closedR2Require(isDeepStrictEqual(origin.databaseMaintenance ?? null, postMaintenance), "Worker publication maintenance origin differs");
       closedR2Require(post.schema === "homecook.prelaunch-quantity-worker-after-successor.v1"
-        && Object.keys(post).sort().join() === [...Object.keys(historical.post.record), "databaseSuccessor", "predecessorRecord"].sort().join()
-        && post.ledgerCount === 228 && isDeepStrictEqual(post.databaseSuccessor, binding)
+        && Object.keys(post).sort().join() === [...Object.keys(historical.post.record), "databaseSuccessor", "predecessorRecord", ...(postMaintenance ? ["databaseMaintenance"] : [])].sort().join()
+        && post.ledgerCount === (postMaintenance ? 229 : 228) && isDeepStrictEqual(post.databaseSuccessor, binding)
         && isDeepStrictEqual(post.predecessorRecord, historical.post.record)
         && isDeepStrictEqual(origin.databaseSuccessor, binding)
         && isDeepStrictEqual(origin.successorPredecessorCheckpoint, historical.post.pointer)
@@ -577,6 +819,9 @@ export function loadCookedWeightAttestationWorkerContinuation(successor, reposit
     }
     closedR2Require(applied.record.schema === (reconciliation ? "homecook.youtube-c04-activation-reconciliation-successor.v1" : "homecook.youtube-c04-activation-receipt-successor.v1")
       && isDeepStrictEqual(applied.record.databaseSuccessor, binding), "Personal successor activation binding differs");
+    const appliedMaintenance = checkedMaintenance(applied.record);
+    closedR2Require(isDeepStrictEqual(applied.record.observation?.databaseMaintenance ?? null, appliedMaintenance)
+      && applied.record.observation?.ledgerCount === (appliedMaintenance ? 229 : 228), "Worker activation current database differs");
     const verification = read(applied.record.activationVerification, "verification");
     closedR2Require(isDeepStrictEqual(verification.record.post, expectedPost), "Personal successor activation checkpoint differs");
     closedR2Require(isDeepStrictEqual(applied.record.beforeObservation, verification.record.observation)
@@ -586,20 +831,34 @@ export function loadCookedWeightAttestationWorkerContinuation(successor, reposit
         : applied.record.readerReceiptSha256 === historical.authority.reader.pointer.sha256
         && applied.record.writerReceiptSha256 === historical.authority.writer.pointer.sha256)
       && applied.record.zeroActualAI === true, "Personal successor activation publication differs");
-    if (!reconciliation && verification.record.schema === "homecook.youtube-c04-activation-verification.v1") {
+    if (appliedMaintenance && !verification.record.databaseMaintenance) {
+      closedR2Require(!reconciliation && applied.record.predecessorActivationReceipt, "Historical228 unknown intent cannot reconcile as229");
+      const predecessor = read(applied.record.predecessorActivationReceipt, "activation");
+      closedR2Require(!predecessor.record.databaseMaintenance && predecessor.record.status === "committed"
+        && predecessor.record.activationVerification?.sha256 === verification.pointer.sha256, "Current229 readback needs original committed228 receipt");
+      committed(predecessor.pointer, expectedPost); // One old committed anchor only; no recursive successor search.
+      closedR2Require(applied.record.observation.workerPolicyEnabled === true
+        && applied.record.observation.policyRowSha256 === predecessor.record.observation.policyRowSha256
+        && applied.record.observation.policyStableSha256 === predecessor.record.observation.policyStableSha256
+        && applied.record.observation.credentialRowSha256 === predecessor.record.observation.credentialRowSha256,
+        "Current229 readback changed historical policy/credential");
+    } else if (!reconciliation && verification.record.schema === "homecook.youtube-c04-activation-verification.v1") {
       closedR2Require(isDeepStrictEqual(verification.pointer, historical.verification.pointer)
         && isDeepStrictEqual(applied.record.predecessorActivationReceipt, historical.activation.pointer)
         && applied.record.observation.policyRowSha256 === historical.activation.record.observation.policyRowSha256,
         "Personal successor historical activation readback differs");
     } else {
       closedR2Require(verification.record.schema === "homecook.youtube-c04-activation-verification-successor.v1"
-        && isDeepStrictEqual(verification.record.databaseSuccessor, binding), "Personal successor activation intent differs");
+        && isDeepStrictEqual(verification.record.databaseSuccessor, binding)
+        && isDeepStrictEqual(verification.record.databaseMaintenance ?? null, appliedMaintenance), "Personal successor activation intent differs");
       assertCookedWeightAttestationWorkerTransition(successor, verification.record.observation, applied.record.observation, true,
-        reconciliation && applied.record.observation.quantityPolicyEnabled === false ? loadCookedWeightAttestationQuantityOff(repositoryRoot, successor) : null);
+        reconciliation && applied.record.observation.quantityPolicyEnabled === false ? loadCookedWeightAttestationQuantityOff(repositoryRoot, successor) : null,
+        appliedMaintenance ? maintenance : null);
       if (reconciliation) closedR2Require(isDeepStrictEqual(applied.record.expectedAfter, {
         workerPolicyEnabled: true, policyStableSha256: verification.record.observation.policyStableSha256,
         credentialRowSha256: verification.record.observation.credentialRowSha256, credentialGeneration: 48, workerReleaseSha: original.to,
-        targetSha256: original.database.targetSha256, ledgerCount: 228, catalogFingerprint: QUANTITY_V4_WORKER_CATALOG_AFTER, databaseSuccessor: binding })
+        targetSha256: original.database.targetSha256, ledgerCount: appliedMaintenance ? 229 : 228, catalogFingerprint: QUANTITY_V4_WORKER_CATALOG_AFTER, databaseSuccessor: binding,
+        ...(appliedMaintenance ? { databaseMaintenance: appliedMaintenance } : {}) })
         && CLOSED_R2_SHA.test(verification.record.observation.normalDataSha256 ?? "")
         && verification.record.observation.normalDataSha256 === applied.record.observation.normalDataSha256,
         "Personal successor committed reconciliation lacks exact same228 intent/normal preservation");
@@ -622,7 +881,8 @@ export function loadCookedWeightAttestationWorkerContinuation(successor, reposit
   const activation = committed(paused.activationReceipt ?? paused.activationReconciliation, paused.post, !paused.activationReceipt);
   closedR2Require(paused.beforeObservation.policyRowSha256 === activation.record.observation.policyRowSha256
     && isDeepStrictEqual(paused.activationVerification, activation.record.activationVerification), "Personal successor repair is not the committed activation successor");
-  assertCookedWeightAttestationWorkerTransition(successor, paused.beforeObservation, paused.observation, false);
+  const pauseMaintenance = checkedMaintenance(paused);
+  assertCookedWeightAttestationWorkerTransition(successor, paused.beforeObservation, paused.observation, false, null, pauseMaintenance ? maintenance : null);
   if (current.state === "verified-policy-disabled" && post.schema === "homecook.prelaunch-quantity-worker-after-successor.v1") closedR2Require(
     post.policyRowSha256 === paused.observation.policyRowSha256 && isDeepStrictEqual(origin.repairPause, pause.pointer)
     && isDeepStrictEqual(origin.previousPostWorkerTerminal, previous.pointer) && isDeepStrictEqual(origin.previousPostWorkerOrigin, previous.origin.pointer)
@@ -1032,6 +1292,21 @@ export function verifyProtectedRolloutEvidence(review, repositoryRoot) {
     closedR2Require(closedR2Hash(bytes) === review[key].sha256, "보호 전환 증거 bytes가 바뀌었습니다.");
     result[key] = JSON.parse(bytes);
   }
+  if (review.feature === NUTRITION_VALIDATOR_FEATURE) {
+    result.predecessorAttestation = verifyNutritionValidatorPredecessor(review, repositoryRoot);
+    const isolated = result.isolatedEvidence, flows = result.readerFlows;
+    closedR2Require(isolated.schema === "homecook.prelaunch-nutrition-validator-isolated.v1" && isolated.passed === true
+      && isolated.sourceReaderRef === review.sourceReaderRef && isolated.migrationSourceRef === review.migrationSourceRef
+      && isolated.functionOnlyDelta === true && isolated.rowsPreserved === true && isolated.controlsPreserved === true && isolated.nonemptyFactsPreserved === true
+      && isolated.beforeCatalogSha256 === review.database.beforeCatalogSha256 && isolated.afterCatalogSha256 === review.database.afterCatalogSha256
+      && isolated.immutableSha256 === review.database.immutableSha256 && isolated.workerCatalogSha256 === QUANTITY_V4_WORKER_CATALOG_AFTER
+      && isDeepStrictEqual(isolated.functionBefore, review.database.functionBefore) && isDeepStrictEqual(isolated.functionAfter, review.database.functionAfter)
+      && isDeepStrictEqual(isolated.migrations, review.database.migrations), "Nutrition isolated evidence requires exact one-function/data/control/worker preservation");
+    closedR2Require(flows.schema === "homecook.prelaunch-protected-reader-flows.v1" && flows.releaseSha === review.sourceReaderRef
+      && flows.passed === true && flows.testScript === review.testScript && flows.legacyPayloadCompatible === true
+      && flows.quantityWarningPayloadCompatible === true, "Nutrition reader must accept old and new payloads before SQL enablement");
+    return result;
+  }
   if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) {
     result.predecessorQuantity = readAttestationPredecessor(review, repositoryRoot);
   }
@@ -1143,7 +1418,7 @@ export function assertProtectedRolloutEnvironment({ review, before, after, curre
       expected.EnvironmentVariables = { ...expected.EnvironmentVariables, [COOKED_WEIGHT_ENVIRONMENT]: "1" };
     } else closedR2Require([review.readerEnvironment[COOKED_WEIGHT_ENVIRONMENT][0], "1"].includes(actualGate), "C01 boundary cannot adopt an unreviewed gate");
   }
-  if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) closedR2Require(before.EnvironmentVariables[COOKED_WEIGHT_ENVIRONMENT] === "1"
+  if ([COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE].includes(review.feature)) closedR2Require(before.EnvironmentVariables[COOKED_WEIGHT_ENVIRONMENT] === "1"
     && before.EnvironmentVariables[QUANTITY_V4_ENVIRONMENT] === "true", "Personal attestation preserves C01/C04 reader gates without new environment");
   if (review.feature === QUANTITY_V4_FEATURE) {
     const actualGate = before.EnvironmentVariables[QUANTITY_V4_ENVIRONMENT] ?? null;
@@ -1668,7 +1943,7 @@ export function parsePrelaunchOptions(args) {
   }
   if (options.reviewedProtectedRollout) {
     if (options.refOption !== "--reviewed-ref" || !CLOSED_R2_REF.test(options.ref) || !options.dbConfig
-      || options.testScript !== "test:feedback-batch:web" || !["database", "database-retry", "worker-database", "worker-database-retry", "worker-reconcile", "reader", "reconcile", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry", "attestation-database", "attestation-database-retry", "attestation-reconcile", "attestation-reader", "attestation-writer-on", "attestation-writer-off", "attestation-writer-on-reconcile", "attestation-writer-off-reconcile", "attestation-writer-on-retry", "attestation-writer-off-retry"].includes(options.protectedPhase)
+      || options.testScript !== "test:feedback-batch:web" || !["database", "database-retry", "worker-database", "worker-database-retry", "worker-reconcile", "reader", "reconcile", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry", "nutrition-database", "nutrition-database-retry", "nutrition-reconcile", "attestation-database", "attestation-database-retry", "attestation-reconcile", "attestation-reader", "attestation-writer-on", "attestation-writer-off", "attestation-writer-on-reconcile", "attestation-writer-off-reconcile", "attestation-writer-on-retry", "attestation-writer-off-retry"].includes(options.protectedPhase)
       || options.envFile || options.dbBaseline || options.dbCompatible || options.alreadyAppliedDb || options.skipAutomatedTests || options.verifyScript
       || Object.entries(options).some(([key, value]) => key.startsWith("reviewed") && key !== "reviewedProtectedRollout" && value)) {
       throw new DeploymentError("보호 전환에는 정확한 reviewed-ref/DB/기존 test/phase만 허용합니다. 환경·기존 reviewed·자동 DB 옵션은 사용할 수 없습니다.");
@@ -1803,7 +2078,7 @@ export function inheritRound2Readiness({ readiness, previous, next, liveSha, rel
 }
 
 /** @param {{previous: any, next: any, files: string[], databaseDeployment?: boolean, quantityPublicReadDigests?: (string | null)[] | null}} input */
-export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false, quantityPublicReadDigests = null }) {
+export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false, quantityPublicReadDigests = null, nutritionMaintenanceHandoff = undefined }) {
   const before = previous.EnvironmentVariables ?? {}, after = next.EnvironmentVariables ?? {};
   // Only the reviewed guest quantity projection, with R2 still closed on both sides.
   const reviewedQuantityPublicRead = CLOSED_R2_FLAGS.every(key => before[key] === "false" && after[key] === "false")
@@ -1812,13 +2087,15 @@ export function assertRound2InheritanceBoundaries({ previous, next, files, datab
       "e0d54ee86c56eeae6df11cd7ddf7346e744c72323d098599dc62425c006ac37e",
     ]);
   // Existing active and closed inheritance share the same protected source/environment boundaries.
+  const reviewedNutrition = nutritionMaintenanceHandoff ? assertNutritionValidatorSourceHandoff(nutritionMaintenanceHandoff) : false;
   const protectedSources = [
     /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|app\/(?:layout\.|globals\.css$)|components\/marketing\/|lib\/(?:marketing[./-]|supabase\/|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u,
     /^(?:supabase\/|infra\/|scripts\/sql\/|scripts\/(?:start-production\.mjs|lib\/(?:start-production-runtime|production-data-quality|full-local-|marketing-round2)))/u,
     /^(?:middleware\.|proxy\.|next\.config\.|tsconfig\.json$|package\.json$|pnpm-lock\.yaml$|\.env(?:\.|$))/u,
   ];
-  if (databaseDeployment || !Array.isArray(files) || files.some(file => protectedSources.some(pattern => pattern.test(file))
-    && !(reviewedQuantityPublicRead && file === "lib/server/hybrid-auth/public-read-policy-runtime.mjs"))) {
+  if (databaseDeployment && !reviewedNutrition || !Array.isArray(files) || files.some(file => protectedSources.some(pattern => pattern.test(file))
+    && !(reviewedQuantityPublicRead && file === "lib/server/hybrid-auth/public-read-policy-runtime.mjs")
+    && !(reviewedNutrition && file === `supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}`))) {
     throw new DeploymentError("R2 보호 코드·SQL·동의·라우팅 변경은 기존 readiness를 승계할 수 없습니다.");
   }
   const protectedEnvironment = /^(?:(?:NEXT_PUBLIC_)?(?:MUMEOK_|MARKETING_|SUPABASE_|TURNSTILE_)|(?:DATA|LOCAL)_SUPABASE_|HOMECOOK_(?:AUTH|DATA|FULL_LOCAL|SESSION)|NEXT_PUBLIC_SITE_URL$|NODE_ENV$)/u;
