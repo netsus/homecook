@@ -357,3 +357,7 @@ PR #1692와 배포 도구 보완 #1693을 검증 후 병합하고 웹 `5be056499
 - reader 웹 `6b610eb012da42b5d151b058531815dc12a8ca45`·build `prelaunch-6b610eb012da-aIib9L`를 배포했다. 관련1389PASS/133선택제외·빌드/타입/lint 확인 뒤 공개 응답과 기존30g/86kcal·200g/134kcal를 읽었다. 초기 세션 재확인 안내는 화면 재시도로 복구됐고 재로그인은 하지 않았다. C04 writer ON이 확정됐으며 C03/C01 ON·R2 OFF를 유지한다.
 - 별도 worker 활성화는 `locked service PID/plist changed`로 중단됐고 actual `activation-not-applied`·policy OFF를 확인했다. 동일 plist의 PID41975→69608, DB statement timeout 직후 claim 실패·자동 재시작 기록이 정합한다. 활성화만 동일4표의 SHARE ROW EXCLUSIVE로 빈 조회를 허용하고 쓰기 차단·PID/자료 보호를 유지하는 최소 보완을 격리 검증한다. 아직 worker 활성화 완료가 아니며 원 verification은 보존한다.
 - 운영375/1440에서 우유 빈mL·200mL→0.2L·밀도 없는 g 거절·0/음수/분모0 저장 차단을 확인했다. 허용 테스트 기록1개는1/3L→mL를 두 번 클릭해 저장해도1개이고 새로고침/상세에 원문1/3L·영양미상이 유지된다. preview/최근의 긴 소수 표시와 상세에서 추가창 취소 후 실제 호출버튼 초점 복귀는 별도 작은 UI 후속으로 남았다. 실제Safari/스크린리더·전체U-A/W/C05 완료로 확대하지 않는다.
+
+## 레시피 저장 복구 운영 확인·우선순위 변경 — 2026-10-15
+
+웹0ae67d66c5ab·DB232·worker48 current232를 실제 확인했고 재저장 오류를 해결했다. [운영 결과·검증·남은 범위](recipe-save-recovery-operating-20261015.md)를 따른다. 2번 단위 기억·4번 참여 추가 작업은 사용자 요청으로 보류하며 기존 기능은 유지한다. 다음 순서는3번 무게 추정→5번 네이버 일반 가입→6번 통합/추출 품질 검증이다. 필요한 정답 검토·별도 평가 승인은 유지한다.
