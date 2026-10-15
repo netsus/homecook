@@ -47,4 +47,42 @@ describe("owned plan snapshot route", () => {
     client(null, { id: "owner" }, { publicCode: "ACCOUNT_LIFECYCLE_MAINTENANCE", publicStatus: 503 });
     expect((await GET(request, context)).status).toBe(503);
   });
+  const product = { ingredient_id: null, row_key: "00000000-0000-4000-8000-000000000010", source_kind: "food_product", food_product_id: "00000000-0000-4000-8000-000000000011",
+    food_product_nutrition_version_id: "00000000-0000-4000-8000-000000000012", food_product_name: "원래 제품", food_product_brand: "등록업체",
+    amount: 0.125, unit: "kg", ingredient_type: "QUANT", display_text: "원문 그대로", scalable: true, sort_order: 0 };
+  function ingredientsClient(ingredients: object[], owner = "owner") {
+    const row = { ...meal, planned_servings: 3, recipe_content_snapshots: { ...meal.recipe_content_snapshots, owner_user_id: owner, ingredients_json: ingredients } };
+    const { instance, query } = client(row);
+    const labels = { select: vi.fn().mockReturnThis(), in: vi.fn(async (_field: string, ids: Array<string | null>) => ids.includes(null)
+      ? { data: null, error: { code: "22P02", message: "owned fixture null UUID rejected" } }
+      : { data: ids.map(id => ({ id, standard_name: "두부" })), error: null }) };
+    instance.from.mockImplementation(table => {
+      if (table === "meals") return query;
+      if (table === "ingredients") return labels;
+      throw new Error("Unexpected current recipe/product lookup");
+    });
+    return { instance, query, labels };
+  }
+  it("skips label lookup for product-only snapshots and preserves the exact fixed product/version and scaled quantity", async () => {
+    const { instance, labels } = ingredientsClient([product]);
+    const response = await GET(request, context);
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.ingredients[0]).toMatchObject({ ingredient_id: null, source_kind: "food_product",
+      food_product_id: product.food_product_id, food_product_nutrition_version_id: product.food_product_nutrition_version_id, amount: 0.1875, unit: "kg" });
+    expect(instance.from).toHaveBeenCalledExactlyOnceWith("meals"); expect(labels.in).not.toHaveBeenCalled();
+  });
+  it("requests only distinct non-null ingredient IDs in a mixed saved snapshot", async () => {
+    const general = { ingredient_id: "00000000-0000-4000-8000-000000000020", amount: 100, unit: "g", ingredient_type: "QUANT", scalable: true, sort_order: 1 };
+    const { instance, labels } = ingredientsClient([product, general, general]);
+    const response = await GET(request, context);
+    expect(response.status).toBe(200);
+    expect(labels.in).toHaveBeenCalledExactlyOnceWith("id", [general.ingredient_id]);
+    expect(instance.from.mock.calls.map(([name]) => name)).toEqual(["meals", "ingredients"]);
+    expect((await response.json()).data.ingredients[1]).toMatchObject({ ingredient_id: general.ingredient_id, standard_name: "두부", amount: 150, unit: "g" });
+  });
+  it("still rejects a foreign private snapshot before looking up any labels", async () => {
+    const { instance, labels } = ingredientsClient([product], "foreign-owner");
+    expect((await GET(request, context)).status).toBe(409);
+    expect(instance.from).toHaveBeenCalledExactlyOnceWith("meals"); expect(labels.in).not.toHaveBeenCalled();
+  });
 });

@@ -23,7 +23,7 @@ export const GET = withHybridAuthorityRouteError("계획에 저장된 레시피�
   // Validate ownership and the pin before reading any ingredient labels.
   const initial = projectMealRecipeSnapshot(row, user.id, names);
   if (!initial) return fail("SNAPSHOT_UNAVAILABLE", "이 계획에 저장된 레시피 내용을 확인할 수 없어요.", 409);
-  const ids = [...new Set(initial.ingredients.map((item) => item.ingredient_id))];
+  const ids = [...new Set(initial.ingredients.map((item) => item.ingredient_id).filter((id): id is string => id !== null))];
   if (ids.length) {
     const labels = await client.from("ingredients").select("id, standard_name").in("id", ids);
     if (labels.error) return createHybridAuthorityRouteError(labels.error) ?? fail("INTERNAL_ERROR", "재료를 불러오지 못했어요.", 500);
