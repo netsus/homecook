@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {
+  RECIPE_REQUEST_ROLE_FEATURE, RECIPE_REQUEST_ROLE_MIGRATION, readRecipeRequestRoleAttempt, recipeRequestRolePhaseStatus, assertRecipeRequestRoleReader, verifyRecipeRequestRolePredecessor, verifyRecipeRequestRoleWorkerAdmission, loadRecipeSaveRecoveryMaintenance,
   RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_SAVE_RECOVERY_MIGRATIONS, RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES, recipeSaveRecoveryRuntimeContract, loadCurrentDatabaseMaintenance, readRecipeSaveRecoveryAttempt, recipeSaveRecoveryPhaseStatus, assertRecipeSaveRecoveryReader, verifyRecipeSaveRecoveryPredecessor, verifyRecipeSaveRecoveryWorkerAdmission,
   NUTRITION_VALIDATOR_FEATURE, NUTRITION_VALIDATOR_MIGRATION, loadNutritionValidatorMaintenance, nutritionValidatorMaintenanceBinding,
   readNutritionValidatorAttempt, nutritionValidatorPhaseStatus, assertNutritionValidatorReader,
@@ -158,7 +159,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
     git(["ls-tree", sha, "--", "eslint.config.mjs"]).length
       ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:eslint.config.mjs`],
         { maxBuffer: 65536, stdio: ["ignore", "pipe", "pipe"] })) : null) : null;
-  const recipeSaveHandoff = !protectedCandidate && (RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`))
+  const recipeSaveHandoff = !protectedCandidate && (files.includes(`supabase/migrations/${RECIPE_REQUEST_ROLE_MIGRATION.filename}`) || RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`))
     || files.some(file=>Object.hasOwn(RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,file)))
     ? nutritionSourceHandoff(live,{target,files}) : null;
   if (recipeSaveHandoff) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
@@ -167,7 +168,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
       reviewedIntegratedFiles: integratedReview?.reviewedFiles,
       // validateProtectedCandidate above already checked the complete exact byte pairs.
       reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
-      reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: protectedCandidate?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE || Boolean(recipeSaveHandoff), eslintConfigDigests });
+      reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff), eslintConfigDigests });
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts, integratedReview };
 }
@@ -208,18 +209,20 @@ function quantityPublicReadDigests(live, selection, closedContext) {
 }
 
 function nutritionSourceHandoff(live, selection) {
+  const roleSql = selection.files.includes(`supabase/migrations/${RECIPE_REQUEST_ROLE_MIGRATION.filename}`);
   const recipeSql = RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row => selection.files.includes(`supabase/migrations/${row.filename}`));
   const recipeRuntime = selection.files.some(file => Object.hasOwn(RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,file)
     && recipeSaveRecoveryRuntimeContract(file,execFileSync("git",["-C",repository,"show",`${selection.target}:${file}`],{maxBuffer:32*1024*1024,stdio:["ignore","pipe","pipe"]})));
-  if (!selection.files.includes(`supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}`) && !recipeSql && !recipeRuntime) return undefined;
+  if (!selection.files.includes(`supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}`) && !recipeSql && !recipeRuntime && !roleSql) return undefined;
   const maintenance = loadCurrentDatabaseMaintenance(repository);
-  if (!maintenance || (recipeSql || recipeRuntime) && maintenance.review.feature !== RECIPE_SAVE_RECOVERY_FEATURE) throw new DeploymentError("Exact nutrition/recipe-save source is not already committed under its separate authority");
-  if (recipeRuntime && !recipeSql && !selection.files.some(file=>file.startsWith("supabase/")) && maintenance.review.feature === RECIPE_SAVE_RECOVERY_FEATURE
+  if (!maintenance || roleSql && maintenance.review.feature !== RECIPE_REQUEST_ROLE_FEATURE || (recipeSql || recipeRuntime) && ![RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(maintenance.review.feature)) throw new DeploymentError("Exact nutrition/recipe-save source is not already committed under its separate authority");
+  if (recipeRuntime && !recipeSql && !roleSql && !selection.files.some(file=>file.startsWith("supabase/")) && [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(maintenance.review.feature)
     && spawnSync("git",["-C",repository,"merge-base","--is-ancestor",maintenance.review.to,live.ref],{stdio:"ignore"}).status===0) return undefined;
   const digests = Object.fromEntries(selection.files.map(file => [file, [live.ref, selection.target].map(sha =>
     git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`],
       { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null)]));
-  return { maintenance, from: live.ref, to: selection.target, live: { ref: live.ref, buildId: live.buildId, plistSha256: hash(live.bytes) }, files: selection.files, digests };
+  return { maintenance, from: live.ref, to: selection.target, live: { ref: live.ref, buildId: live.buildId, plistSha256: hash(live.bytes) }, files: selection.files, digests,
+    reviewedSourceAncestor: spawnSync("git",["-C",repository,"merge-base","--is-ancestor",maintenance.review.to,selection.target],{stdio:"ignore"}).status===0 };
 }
 async function stageRound2Readiness(plist, release, live, selection, databaseDeployment, options, databasePlan, closedContext) {
   if (options.reviewedClosedR2Maintenance || closedContext) {
@@ -358,6 +361,11 @@ function recordedProtectedPhase(review, live) {
     readerCompatible: spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", review.to, live.ref]).status === 0 });
 }
 function currentProtectedPhase(live = current()) {
+  const role = readRecipeRequestRoleAttempt(repository);
+  if (role) {
+    if (role.record.status === "committed") loadCurrentDatabaseMaintenance(repository);
+    return recipeRequestRolePhaseStatus(role,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",role.review.sourceReaderRef,live.ref]).status===0);
+  }
   const recipeSave = readRecipeSaveRecoveryAttempt(repository);
   if (recipeSave) {
     if (recipeSave.record.status === "committed") loadCurrentDatabaseMaintenance(repository);
@@ -544,8 +552,8 @@ function validateProtectedCandidate(review, live, selection, context) {
   if (!context || selection.target !== review.to) throw new DeploymentError("보호 전환은 실제 닫힘 predecessor에서만 시작합니다.");
   const digests = Object.fromEntries(Object.keys(review.files).map(file => [file, [review.from, review.to].map(sha =>
     git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`], { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null)]));
-  if (review.feature === RECIPE_SAVE_RECOVERY_FEATURE) {
-    git(["merge-base", "--is-ancestor", review.predecessorNutrition.readerFloor, live.ref]);
+  if ([RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature)) {
+    git(["merge-base", "--is-ancestor", (review.predecessorRecipeSave ?? review.predecessorNutrition).readerFloor, live.ref]);
     git(["merge-base", "--is-ancestor", live.ref, selection.target]);
   }
   if (review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE) {
@@ -679,20 +687,21 @@ async function verifyProtectedBaseline(review, plan, options) {
 async function runProtectedDatabasePhase(options, action, review) {
   const { databaseGuardPath: protectedDatabaseGuardPath, operationRoot: protectedOperationRoot } = protectedRolloutPaths(root, review);
   const live = current(), context = requireClosedR2Mode(options, live);
-  const maintenance = [NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE].includes(review.feature);
+  const maintenance = [NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature);
   const reconcile = ["reconcile", "worker-reconcile"].includes(options.protectedPhase);
   let operationId, operationDirectory, previousNotAppliedSha256;
   const verifyReader = async () => {
     if (!maintenance) return;
     const actual = current();
     await smoke(3100, actual.cwd, actual.buildId);
-    if (review.feature === RECIPE_SAVE_RECOVERY_FEATURE) {
+    if ([RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature)) {
       const readerSources=Object.fromEntries(Object.keys(review.readerSources).map(file=>[file,hash(readFileSync(join(actual.cwd,file)))]));
-      assertRecipeSaveRecoveryReader(review,{ref:actual.ref,buildId:actual.buildId,plistSha256:hash(actual.bytes),readerSources,healthy:true});
-      const previous = verifyRecipeSaveRecoveryPredecessor(review,repository);
+      const requestRole=review.feature===RECIPE_REQUEST_ROLE_FEATURE;
+      (requestRole?assertRecipeRequestRoleReader:assertRecipeSaveRecoveryReader)(review,{ref:actual.ref,buildId:actual.buildId,plistSha256:hash(actual.bytes),readerSources,healthy:true});
+      const previous = (requestRole?verifyRecipeRequestRolePredecessor:verifyRecipeSaveRecoveryPredecessor)(review,repository);
       verifyNutritionValidatorWriterAdmission(repository,nutritionValidatorMaintenanceBinding(previous));
       // Reconcile only observes the existing intent; it must remain usable for unknown DB outcomes.
-      if (!reconcile) verifyRecipeSaveRecoveryWorkerAdmission(review, repository, operationId);
+      if (!reconcile) (requestRole?verifyRecipeRequestRoleWorkerAdmission:verifyRecipeSaveRecoveryWorkerAdmission)(review, repository, operationId);
     } else assertNutritionValidatorReader(review, { ref: actual.ref, buildId: actual.buildId, plistSha256: hash(actual.bytes),
       validatorSha256: hash(readFileSync(join(actual.cwd, "lib/server/recipe-nutrition-snapshot.ts"))), healthy: true });
     if (review.feature === NUTRITION_VALIDATOR_FEATURE) verifyNutritionValidatorPredecessor(review, repository);
@@ -888,9 +897,9 @@ function validateClosedR2Candidate(review, live, selection, patch, options, clos
     envPatchSha256: hash(readClosedR2PrivateBytes(options.envFile, repository)) });
 }
 function requireClosedR2Mode(options, live = current(), rollback = false) {
-  const maintenanceAttempt = readRecipeSaveRecoveryAttempt(repository) ?? readNutritionValidatorAttempt(repository);
+  const maintenanceAttempt = readRecipeRequestRoleAttempt(repository) ?? readRecipeSaveRecoveryAttempt(repository) ?? readNutritionValidatorAttempt(repository);
   if (maintenanceAttempt && !["committed", "not_applied"].includes(maintenanceAttempt.record.status)
-    && !([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE].includes(options.protectedFeature) && options.protectedPhase === "reconcile")) {
+    && !([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(options.protectedFeature) && options.protectedPhase === "reconcile")) {
     throw new DeploymentError("Nutrition229 outcome unresolved; historical228 cannot authorize another deployment or writer");
   }
   const protectedPhase = currentProtectedPhase(live);
@@ -923,7 +932,8 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
     assertProtectedClosedR2Marker({ ...recorded, marker, markerSha256: hash(bytes), live: { ...live, plistHash: hash(live.bytes) },
       closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout) });
     git(["merge-base", "--is-ancestor", rollout.to, live.ref]);
-    const maintenance = maintenanceAttempt?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE && maintenanceAttempt.record.status !== "committed"
+    const maintenance = maintenanceAttempt?.review.feature === RECIPE_REQUEST_ROLE_FEATURE && maintenanceAttempt.record.status !== "committed"
+      ? loadRecipeSaveRecoveryMaintenance(repository) : maintenanceAttempt?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE && maintenanceAttempt.record.status !== "committed"
       ? loadNutritionValidatorMaintenance(repository) : maintenanceAttempt?.record.status === "committed" ? loadCurrentDatabaseMaintenance(repository) : null;
     if (maintenance) {
       git(["merge-base", "--is-ancestor", maintenance.review.sourceReaderRef, live.ref]);
@@ -1500,6 +1510,7 @@ async function main() {
   const { action, args } = parsePrelaunchArgs(process.argv.slice(2));
   if (action === "help" || action === "--help") {
     say("--reviewed-protected-rollout --protected-phase database|database-retry|reader|reconcile|writer-on|writer-off|writer-on-reconcile|writer-off-reconcile|writer-on-retry|writer-off-retry: 정확한 보호 DB/reader 승인과 별도 ON/OFF 승인 경로. 코드에 고정된 승인 자료와 정확히 일치해야 실행할 수 있습니다.");
+    say("레시피 요청 역할 metadata-only exact231→232: 기존 nutrition-* phase, 별도 fixed PIN/ref와 current231 terminal이 필요하며 웹 runtime은 교체하지 않습니다.");
     say("레시피 수정 저장·재시도 exact229→231: 같은 nutrition-* phase와 별도 코드 고정 ref/review가 필요합니다. 미결속 PIN에서는 거절하며 두 SQL commit 뒤에만 exact full-source를 반영합니다.");
     say("영양 validator exact228→229: --protected-phase nutrition-database|nutrition-database-retry|nutrition-reconcile. 원228 권위와 별도 PIN이 필요하며 sourceReaderRef를 먼저 실제 반영해야 합니다.");
     say("개인 실측 exact227→228: --protected-phase attestation-database|attestation-reconcile|attestation-reader|attestation-writer-on|attestation-writer-off 및 고정 retry/reconcile 단계. 별도 개인 successor/writer PIN이 필요하며 원 C04 권위는 유지합니다.");

@@ -390,6 +390,19 @@ export function assertC04WorkerSuccessorBinding(review, binding, databaseReceipt
 }
 
 export function assertC04WorkerMaintenanceBinding(review, binding, successor) {
+  if (binding?.schema === "homecook.recipe-request-role-maintenance.v1") {
+    const prior=binding.predecessorMaintenance;
+    c04Check(prior?.schema === "homecook.recipe-save-recovery-maintenance.v1", "request-role requires original231 authority");
+    assertC04WorkerMaintenanceBinding(review,prior,successor);
+    c04Check(Object.keys(binding).sort().join() === "databasePlanSha256,ledgerCount,migrationSha256,predecessorDatabaseReceiptSha256,predecessorMaintenance,receipt,reviewSha256,schema,sourceReaderRef,targetSha256"
+      && binding.ledgerCount === 232 && binding.targetSha256 === review.targetSha256 && binding.predecessorDatabaseReceiptSha256 === prior.receipt.sha256
+      && binding.migrationSha256 === "2322ccf737382e9738aa2c3d5cb50531c769c1a7902e2f621c8d378f9ce1505e"
+      && [binding.reviewSha256,binding.predecessorDatabaseReceiptSha256,binding.databasePlanSha256,binding.receipt?.sha256].every(value=>SHA64.test(value??""))
+      && /^[a-f0-9]{40}$/u.test(binding.sourceReaderRef??"") && Object.keys(binding.receipt??{}).sort().join()==="path,sha256"
+      && typeof binding.receipt.path === "string" && binding.receipt.path.startsWith("/") && resolve(binding.receipt.path)===binding.receipt.path,
+      "unbound exact current232 request-role maintenance");
+    return binding;
+  }
   if (binding?.schema === "homecook.recipe-save-recovery-maintenance.v1") {
     const prior=binding.predecessorMaintenance;
     c04Check(prior?.schema === "homecook.recipe-nutrition-validator-maintenance.v1", "recipe-save requires original229 authority");

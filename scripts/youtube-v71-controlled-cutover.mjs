@@ -1546,8 +1546,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
   }
   function currentMaintenanceMatches(binding) {
     const current=currentMaintenance();
-    return isDeepStrictEqual(binding,current) || current?.schema === "homecook.recipe-save-recovery-maintenance.v1"
-      && isDeepStrictEqual(binding,current.predecessorMaintenance);
+    return c04Authority.matchesDatabaseMaintenanceBinding(binding,current);
   }
   function checkpointOrigin(record, origin, phase, receiptSha256) {
     if (!record.databaseSuccessor) return assertC04QuantityCheckpointOrigin(review, record, origin, { phase, reviewSha256, receiptSha256 });
@@ -1854,7 +1853,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       check(prior.status === "committed" && prior.activationVerification?.sha256 === proof.sha256
         && prior.observation.policyRowSha256 === database.policyRowSha256 && prior.observation.policyStableSha256 === database.policyStableSha256
         && prior.observation.credentialRowSha256 === database.credentialRowSha256, "committed228 activation readback identity differs");
-      if (prior.databaseMaintenance && context.databaseMaintenance.schema !== "homecook.recipe-save-recovery-maintenance.v1") {
+      if (prior.databaseMaintenance && !["homecook.recipe-save-recovery-maintenance.v1", "homecook.recipe-request-role-maintenance.v1"].includes(context.databaseMaintenance.schema)) {
         check(isDeepStrictEqual(prior.databaseMaintenance, context.databaseMaintenance) && prior.predecessorActivationReceipt,
           "current229 activation history anchor differs");
         predecessorActivationReceipt = prior.predecessorActivationReceipt;
@@ -1930,11 +1929,11 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
         && stableStringify(database.policy) === stableStringify({ ...original.observation.policy, enabled: true })
         && health.service.plistSha256 === post.plistSha256, "activation current policy/credential differs");
       assertCurrentOrigin(record, record.database);
-      if (context.databaseMaintenance?.schema === "homecook.recipe-save-recovery-maintenance.v1"
+      if (["homecook.recipe-save-recovery-maintenance.v1", "homecook.recipe-request-role-maintenance.v1"].includes(context.databaseMaintenance?.schema)
         && !isDeepStrictEqual(record.databaseMaintenance ?? null, context.databaseMaintenance)) {
         check(isDeepStrictEqual(record.databaseSuccessor, context.successor)
           && isDeepStrictEqual(record.databaseMaintenance, context.databaseMaintenance.predecessorMaintenance),
-        "current231 readback requires exact committed229 predecessor");
+        "current231/232 readback requires exact committed229/231 predecessor");
         return publishActivationReceipt(context, current.activationVerification, authority);
       }
       if (context.successor && !record.databaseSuccessor) return publishActivationReceipt(context, current.activationVerification, authority);

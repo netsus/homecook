@@ -21,6 +21,8 @@ source = source.replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu
   (_text, name: string) => `export const ${name} = Object.freeze({ path: null, sha256: null });`);
 for (const [name, value] of Object.entries({
   RECIPE_SAVE_RECOVERY_RELEASE_SHA: JSON.stringify(ref("f")),
+  RECIPE_REQUEST_ROLE_RELEASE_SHA: JSON.stringify(ref("e")),
+  RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("7")}" })`,
   RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("6")}" })`,
   QUANTITY_V4_RELEASE_SHA: JSON.stringify(ref("b")), QUANTITY_V4_WORKER_OPERATION_ROOT: JSON.stringify(join(temp, "worker")),
   QUANTITY_V4_WORKER_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("2")}" })`,
@@ -52,6 +54,12 @@ source=source.slice(0,recipeLoaderStart)+`let ownedRecipeMaintenance=null;
 export function setOwnedRecipeMaintenance(value){ownedRecipeMaintenance=value;}
 export function loadRecipeSaveRecoveryMaintenance(){return ownedRecipeMaintenance;}
 `+source.slice(recipeLoaderEnd);
+const roleLoaderStart=source.indexOf("export function loadRecipeRequestRoleMaintenance(repositoryRoot) {"),roleLoaderEnd=source.indexOf("export function recipeRequestRolePhaseStatus",roleLoaderStart);
+if(roleLoaderStart<0||roleLoaderEnd<=roleLoaderStart)throw new Error("Request-role loader boundary changed");
+source=source.slice(0,roleLoaderStart)+`let ownedRoleMaintenance=null;
+export function setOwnedRoleMaintenance(value){ownedRoleMaintenance=value;}
+export function loadRecipeRequestRoleMaintenance(){return ownedRoleMaintenance;}
+`+source.slice(roleLoaderEnd);
 const webPath = join(temp, "web.mjs"); writeFileSync(webPath, source, { mode: 0o600 });
 const dbPath = join(temp, "database.mjs");
 const databaseSource = readFileSync("scripts/lib/prelaunch-database.mjs", "utf8").replace(/from "(\.\/[^"\n]+)"/gu,
@@ -60,7 +68,7 @@ writeFileSync(dbPath, databaseSource.replace('import("./full-local-security-inve
   () => `import(${JSON.stringify(pathToFileURL(join(process.cwd(), "scripts/lib/full-local-security-inventory.mjs")).href)})`)
   .replace('new URL("../../docs/security/cooked-weight-user-attestation-source-function-postimages.json", import.meta.url)',
     () => `new URL(${JSON.stringify(pathToFileURL(join(process.cwd(), "docs/security/cooked-weight-user-attestation-source-function-postimages.json")).href)})`), { mode: 0o600 });
-const web: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") & { setOwnedMaintenance(value: object | null): void; setOwnedRecipeMaintenance(value: object | null):void } = await import(pathToFileURL(webPath).href);
+const web: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") & { setOwnedMaintenance(value: object | null): void; setOwnedRecipeMaintenance(value: object | null):void; setOwnedRoleMaintenance(value: object | null):void } = await import(pathToFileURL(webPath).href);
 const db: typeof import("../scripts/lib/prelaunch-database.mjs") = await import(pathToFileURL(dbPath).href);
 const runtimePostimages:Readonly<Record<string,string>>=web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES;
 const pointer = (name: string, key: string) => ({ path: join(temp, name), sha256: sha(key) });
@@ -786,6 +794,23 @@ it("rejects standalone old227/228 activation and an unknown current229 receipt",
  expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd())).toThrow("unresolved");
 });
 
+function requestRoleReviewFixture(previous: {review: ReturnType<typeof recipeReviewFixture>;pointer:{path:string;sha256:string}}) {
+ const prior=previous.review,d=prior.database,outer="private.verify_full_local_internal_scope()";
+ const row=d.recipeFunctionsAfter.find(row=>row.signature===outer)!;
+ Object.assign(row,{definitionSha256:"59cd9173efa0be26485d26e8c94ff49b816459c6f915b8bf41ade64838526ee4",sourceMd5:"cdba05648213ef145555dfc02fd234c8"});
+ const raw=readFileSync(`supabase/migrations/${web.RECIPE_REQUEST_ROLE_MIGRATION.filename}`);
+ return {...prior,feature:web.RECIPE_REQUEST_ROLE_FEATURE,from:prior.to,to:ref("e"),sourceReaderRef:prior.to,migrationSourceRef:ref("e"),
+  files:{[`supabase/migrations/${web.RECIPE_REQUEST_ROLE_MIGRATION.filename}`]:[null,hash(raw)]},
+  predecessorRecipeSave:{reviewSha256:sha("6"),databaseReceipt:previous.pointer,readerFloor:prior.sourceReaderRef},
+  database:{...d,before:d.after,after:[...d.after,web.RECIPE_REQUEST_ROLE_MIGRATION],migrations:[{filename:web.RECIPE_REQUEST_ROLE_MIGRATION.filename,rawSha256:hash(raw),payloadSha256:hash(raw.toString().replace(/^begin;\n/u,"").replace(/\ncommit;\n$/u,""))}],
+   beforeCatalogSha256:d.afterCatalogSha256,afterCatalogSha256:sha("f"),immutableSha256:d.afterImmutableSha256,afterImmutableSha256:sha("e"),
+   beforeScope:d.afterScope,afterScope:{...d.afterScope,outerSha256:sha("f")},
+   attestationScope:{...d.attestationScope,beforeOuterSha256:d.afterScope.outerSha256,afterOuterSha256:sha("f")},
+   recipeScope:{...d.recipeScope,beforeOuterSha256:d.afterScope.outerSha256,afterOuterSha256:sha("f")},
+   normalProjectionSha256:hash(db.RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL),requestRolePostimageRegistrySha256:web.RECIPE_REQUEST_ROLE_POSTIMAGE_SHA256,
+   receiptColumnsBeforeSha256:d.receiptColumnsAfterSha256,recipeFunctionsBefore:d.recipeFunctionsAfter,
+   recipeFunctionsAfter:d.recipeFunctionsAfter.map(row=>row.signature===outer?{...row,definitionSha256:"3b5f09838ffee6b4a2844bc3eebe86cd6eb75601b8ab7fc4703feb8ddeae1320",sourceMd5:"e6eb35af2e77538b72d655b16f408967"}:{...row}),functionBefore:d.functionAfter}};
+}
 function actualWorkerReadbackFixture() {
  const f=publicationFixture(),plist="owned readback plist",policy={version:3,model:"same-model",extractorMode:DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE,
   pipelineIdentity:YOUTUBE_V71_PIPELINE_IDENTITY,snapshotDigest:YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,resultAffectingOptions:DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,enabled:true};
@@ -803,8 +828,14 @@ function actualWorkerReadbackFixture() {
   databasePlanSha256:hash(JSON.stringify({source:r.database.after,applied:r.database.after})),catalogSha256:r.database.afterCatalogSha256,immutableSha256:r.database.afterImmutableSha256,
   predecessorNutrition:r.predecessorNutrition,recipeSaveRecoveryWritesEnabled:true,receiptColumnInitiallyNull:true,readerReady:true,writerEnabled:true,controlsSha256:sha("4")};
  const terminal=pointer("producer-owned231","b"),next={review:r,record,pointer:terminal,guardPointer:terminal,nutritionPredecessor:old,predecessor:successor};
+ const roleReview=requestRoleReviewFixture(next),roleRecord={...record,feature:web.RECIPE_REQUEST_ROLE_FEATURE,reviewSha256:sha("7"),from:roleReview.from,to:roleReview.to,
+  sourceReaderRef:roleReview.sourceReaderRef,readerFloor:roleReview.sourceReaderRef,predecessorRecipeSave:roleReview.predecessorRecipeSave,
+  catalogSha256:roleReview.database.afterCatalogSha256,immutableSha256:roleReview.database.afterImmutableSha256,
+  databasePlanSha256:hash(JSON.stringify({source:roleReview.database.after,applied:roleReview.database.after})),requestRoleCorrected:true};
+ const roleTerminal=pointer("producer-owned232","c"),roleNext={review:roleReview,record:roleRecord,pointer:roleTerminal,guardPointer:roleTerminal,recipeSavePredecessor:next,nutritionPredecessor:old,predecessor:successor};
+ const roleBinding=web.recipeRequestRoleBinding(roleNext);
  const binding=web.cookedWeightAttestationSuccessorBinding(successor),oldBinding=web.nutritionValidatorMaintenanceBinding(old)!,nextBinding=web.recipeSaveRecoveryBinding(next);
- let maintenance:typeof oldBinding|typeof nextBinding=oldBinding;
+ let maintenance:typeof oldBinding|typeof nextBinding|typeof roleBinding=oldBinding;
  let current={...f.current,postWorkerTerminal:post.pointer,postWorkerOrigin:origin.pointer,activationVerification:verification.pointer,activationReceipt:activation.pointer};
  f.save(f.currentPath,current);
  const service={loaded:true,state:"running",pid:200,plistSha256:hash(plist)};
@@ -824,7 +855,7 @@ function actualWorkerReadbackFixture() {
  const check=(condition:unknown,message:string)=>{if(!condition)throw Error(message);};
  const readPrivate=(path:string)=>{check(path.startsWith(f.directory+"/"),"unowned producer file");return readFileSync(path);};
  const currentMaintenanceMatches=extract('  function currentMaintenanceMatches(', '  function checkpointOrigin(', 'currentMaintenanceMatches',{
-  currentMaintenance:()=>maintenance,isDeepStrictEqual});
+  currentMaintenance:()=>maintenance,isDeepStrictEqual,c04Authority:web});
  const assertCurrentOrigin=extract('  function assertCurrentOrigin(', '  function activationOrigin(', 'assertCurrentOrigin',{
   currentSuccessor:()=>binding,assertC04WorkerSuccessorBinding,assertC04WorkerMaintenanceBinding,currentMaintenanceMatches,check,review,isDeepStrictEqual});
  const paths={activationVerification:verification.pointer.path,activationReceipt:activation.pointer.path};
@@ -849,14 +880,15 @@ function actualWorkerReadbackFixture() {
   readJournal:async()=>current,verifyCandidate:vi.fn(async()=>{}),readCheckpoint:async()=>post.record,preflight:async()=>context(),existingCredentials:async()=>({metadata:{jti_sha256:on.jtiHash}}),
   readerWriterAuthority:async()=>authority,observe:async()=>observed(),verifyActivationReceipt,activationOrigin,finalizeActivation,
   publishActivationReceipt,issueCredentials,issueManager,installAndVerify,transaction,stopInstalled}});
- web.setOwnedMaintenance(old);web.setOwnedRecipeMaintenance(null);
- return {engine,successor,old,next,verification,activation,post,origin,currentPath:f.currentPath,service,forbidden:[issueCredentials,issueManager,installAndVerify,transaction,stopInstalled,finalizeActivation],
+ web.setOwnedMaintenance(old);web.setOwnedRecipeMaintenance(null);web.setOwnedRoleMaintenance(null);
+ return {engine,successor,old,next,roleNext,save:f.save,verification,activation,post,origin,currentPath:f.currentPath,service,forbidden:[issueCredentials,issueManager,installAndVerify,transaction,stopInstalled,finalizeActivation],
   durablePrivateJson,journal,publishActivationReceipt,verifyInstalled,readPrivate,getCurrent:()=>current,
   setState:(state:string)=>{current={...current,state};f.save(f.currentPath,current);},
   driftObservation:(changes:Partial<typeof on>)=>Object.assign(on,changes),
   switchTo231:()=>{maintenance=nextBinding;web.setOwnedRecipeMaintenance(next);},
+  switchTo232:()=>{maintenance=roleBinding;web.setOwnedRoleMaintenance(roleNext);},
   replaceCurrentReceipt:(changes:object)=>{const prior=JSON.parse(readPrivate(current.activationReceipt.path).toString());const updated=f.save(current.activationReceipt.path,{...prior,...changes});current={...current,activationReceipt:updated.pointer};f.save(f.currentPath,current);},
-  cleanup:()=>{web.setOwnedRecipeMaintenance(null);web.setOwnedMaintenance(null);}};
+  cleanup:()=>{web.setOwnedRoleMaintenance(null);web.setOwnedRecipeMaintenance(null);web.setOwnedMaintenance(null);}};
 }
 
 it("runs actual already-ON activation verify→publish→consumer for227→229→231 and repeats231 without new mutation",async()=>{
@@ -904,5 +936,79 @@ it.each(["credentialRowSha256","policyRowSha256"] as const)("actual231 producer 
  const f=actualWorkerReadbackFixture();try{await f.engine.activate();f.switchTo231();f.driftObservation({[field]:sha("f")});
   const writes=f.durablePrivateJson.mock.calls.length;await expect(f.engine.activate()).rejects.toThrow();expect(f.durablePrivateJson).toHaveBeenCalledTimes(writes);
   for(const operation of f.forbidden)expect(operation).not.toHaveBeenCalled();
+ }finally{f.cleanup();}
+});
+
+it("runs actual231→232 already-ON producer and consumer, preserves old receipts and repeats232 without mutation",async()=>{
+ const f=actualWorkerReadbackFixture();try{
+  await f.engine.activate();f.switchTo231();await f.engine.activate();
+  const p231=f.getCurrent().activationReceipt,bytes231=f.readPrivate(p231.path),verification=f.readPrivate(f.verification.pointer.path);
+  f.switchTo232();const r232=await f.engine.activate();
+  expect(r232).toMatchObject({status:"committed",observation:{ledgerCount:232},databaseMaintenance:{schema:"homecook.recipe-request-role-maintenance.v1"}});
+  expect(r232.predecessorActivationReceipt).toEqual(p231);expect(r232.activationVerification).toEqual(f.verification.pointer);
+  expect(web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd()).observation.ledgerCount).toBe(232);
+  const p232=f.getCurrent().activationReceipt;await expect(f.engine.activate()).resolves.toEqual(r232);expect(f.getCurrent().activationReceipt).toEqual(p232);
+  expect(f.durablePrivateJson).toHaveBeenCalledTimes(3);expect(f.journal).toHaveBeenCalledTimes(3);
+  expect(f.readPrivate(p231.path)).toEqual(bytes231);expect(f.readPrivate(f.verification.pointer.path)).toEqual(verification);
+  for(const operation of f.forbidden)expect(operation).not.toHaveBeenCalled();
+ }finally{f.cleanup();}
+});
+it.each(["skip231","foreign231","unknown231","activation-outcome-unknown"])("actual232 producer rejects %s before publication",async drift=>{
+ const f=actualWorkerReadbackFixture();try{
+  await f.engine.activate();if(drift!=="skip231"){f.switchTo231();await f.engine.activate();}f.switchTo232();
+  if(drift==="foreign231")f.replaceCurrentReceipt({databaseMaintenance:{schema:"foreign"}});
+  if(drift==="unknown231")f.replaceCurrentReceipt({status:"unknown"});
+  if(drift==="activation-outcome-unknown")f.setState(drift);
+  const writes=f.durablePrivateJson.mock.calls.length;await expect(f.engine.activate()).rejects.toThrow();expect(f.durablePrivateJson).toHaveBeenCalledTimes(writes);
+  for(const operation of f.forbidden)expect(operation).not.toHaveBeenCalled();
+ }finally{f.cleanup();}
+});
+
+async function requestRoleAdmissionFixture() {
+ const f=actualWorkerReadbackFixture();await f.engine.activate();f.switchTo231();await f.engine.activate();
+ const review=f.roleNext.review,id="eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",directory=join(temp,"role-admission",randomUUID());mkdirSync(directory,{recursive:true,mode:0o700});
+ const reviewPath=join(directory,"review.json"),reviewBytes=JSON.stringify(review);writeFileSync(reviewPath,reviewBytes,{mode:0o600});
+ const original=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8"),start=original.indexOf("export function loadRecipeRequestRoleMaintenance(repositoryRoot) {"),end=original.indexOf("export function recipeRequestRolePhaseStatus",start);
+ const ownedSource=source.replace('export function loadRecipeRequestRoleMaintenance(){return ownedRoleMaintenance;}',()=>original.slice(start,end))
+  .replace(/^export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = [^\r\n]*;$/gmu,()=>`export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = Object.freeze(${JSON.stringify({path:reviewPath,sha256:hash(reviewBytes)})});`);
+ const modulePath=join(directory,"web.mjs");writeFileSync(modulePath,ownedSource,{mode:0o600});
+ const owned:typeof web=await import(pathToFileURL(modulePath).href);owned.setOwnedMaintenance(f.old);owned.setOwnedRecipeMaintenance(f.next);
+ const paths=owned.protectedRolloutPaths(join(temp,"state"),review),operationDirectory=join(paths.operationRoot,id);mkdirSync(operationDirectory,{recursive:true,mode:0o700});rmSync(paths.databaseGuardPath,{force:true});
+ const guard={schema:"homecook.prelaunch-protected-db-attempt.v1",feature:owned.RECIPE_REQUEST_ROLE_FEATURE,reviewSha256:hash(reviewBytes),operationId:id,operationDirectory,
+  from:review.from,to:review.to,sourceReaderRef:review.sourceReaderRef,readerFloor:review.sourceReaderRef,journalFile:"attempt.json",predecessorRecipeSave:review.predecessorRecipeSave,
+  target:f.old.record.backup.target,status:"applying_precommit"};
+ const saveGuard=(record:object)=>{f.save(paths.databaseGuardPath,record);f.save(join(operationDirectory,"attempt.json"),record);};
+ return {...f,review,owned,id,paths,guard,saveGuard,cleanup:()=>{rmSync(paths.databaseGuardPath,{force:true});f.cleanup();}};
+}
+it("admits only the same pending232 operation against its exact231 terminal and committed worker receipt",async()=>{
+ const f=await requestRoleAdmissionFixture();try{
+  expect(f.owned.verifyRecipeRequestRoleWorkerAdmission(f.review,process.cwd()).observation.ledgerCount).toBe(231);
+  for(const status of ["applying_precommit","commit_dispatch_guard"]){f.saveGuard({...f.guard,status});
+   expect(()=>f.owned.loadCurrentDatabaseMaintenance(process.cwd())).toThrow("unresolved");
+   expect(f.owned.verifyRecipeRequestRoleWorkerAdmission(f.review,process.cwd(),f.id).observation.ledgerCount).toBe(231);
+   expect(()=>f.owned.verifyRecipeRequestRoleWorkerAdmission(f.review,process.cwd())).toThrow("same-operation");
+   expect(()=>f.owned.verifyRecipeRequestRoleWorkerAdmission(f.review,process.cwd(),operationId)).toThrow("same-operation");
+  }
+  for(const drift of [{status:"unknown"},{status:"rolled_back_before_commit"},{from:ref("a")},{target:{foreign:true}},{sourceReaderRef:ref("a")},{readerFloor:ref("a")},{commitDispatched:true}]){
+   f.saveGuard({...f.guard,...drift});expect(()=>f.owned.verifyRecipeRequestRoleWorkerAdmission(f.review,process.cwd(),f.id)).toThrow();
+  }
+  f.saveGuard(f.guard);f.save(join(f.guard.operationDirectory,"attempt.json"),{...f.guard,status:"unknown"});
+  expect(()=>f.owned.verifyRecipeRequestRoleWorkerAdmission(f.review,process.cwd(),f.id)).toThrow("same-operation");
+ }finally{f.cleanup();}
+});
+it.each(["activation-outcome-unknown","activation-dispatching","activation-verification-pending"])("new232 SQL rejects raw ON with worker %s",async state=>{
+ const f=await requestRoleAdmissionFixture();try{
+  const current=JSON.parse(f.readPrivate(f.currentPath).toString());f.save(f.currentPath,{...current,state});
+  expect(()=>f.owned.verifyRecipeRequestRoleWorkerAdmission(f.review,process.cwd())).toThrow("pending/unknown");
+ }finally{f.cleanup();}
+});
+
+it("carries only exact already-committed232 SQL with reviewed source ancestry in a later normal deployment",()=>{
+ const f=actualWorkerReadbackFixture();try{
+  const file=`supabase/migrations/${web.RECIPE_REQUEST_ROLE_MIGRATION.filename}`,from=f.roleNext.review.sourceReaderRef;
+  const handoff={maintenance:f.roleNext,from,to:ref("e"),live:{ref:from},files:[file,"app/recipes/page.tsx"],digests:{[file]:[null,web.RECIPE_REQUEST_ROLE_MIGRATION.sha256],"app/recipes/page.tsx":[sha("a"),sha("b")]},reviewedSourceAncestor:true};
+  expect(()=>web.assertNutritionValidatorSourceHandoff(handoff)).not.toThrow();
+  for(const bad of [{...handoff,reviewedSourceAncestor:false},{...handoff,files:handoff.files.slice(1)},{...handoff,digests:{...handoff.digests,[file]:[null,sha("f")]}},
+   {...handoff,files:[...handoff.files,"supabase/migrations/20261015100100_foreign.sql"],digests:{...handoff.digests,"supabase/migrations/20261015100100_foreign.sql":[null,sha("a")]}}])expect(()=>web.assertNutritionValidatorSourceHandoff(bad)).toThrow();
  }finally{f.cleanup();}
 });

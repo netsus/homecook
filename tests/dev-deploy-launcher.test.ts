@@ -18,6 +18,7 @@ const requiredRegistryFiles = [
   "docs/security/youtube-worker-quantity-function-postimages.json",
   "docs/security/cooked-weight-user-attestation-source-function-postimages.json",
   "docs/security/recipe-save-recovery-source-function-postimages.json",
+  "docs/security/recipe-future-request-role-source-function-postimage.json",
 ];
 const hash = (value: Buffer) => createHash("sha256").update(value).digest("hex");
 
@@ -93,14 +94,17 @@ it("installs the working tool and generates exact227/228/personal inventories fr
     const personal=inventory.buildCookedWeightAttestationSourceFunctionInventorySql();
     const latest=inventory.buildRecipeProductSourceFunctionInventorySql({...base,includeCookedWeightAttestationFunctions:true,includeRecipeSaveRecoveryFunctions:true});
     const exact=inventory.buildRecipeSaveRecoverySourceFunctionInventorySql();
-    const generated={before227:count(before),after228:count(after),personal:count(personal),after231:count(latest),recipeSave:count(exact)};
-    assert.deepEqual(generated,{before227:94,after228:103,personal:10,after231:109,recipeSave:11});
+    const role=inventory.buildRecipeProductSourceFunctionInventorySql({...base,includeCookedWeightAttestationFunctions:true,includeRecipeSaveRecoveryFunctions:true,includeRecipeRequestRoleFunctions:true});
+    const roleExact=inventory.buildRecipeSaveRecoverySourceFunctionInventorySql({includeRecipeRequestRoleFunctions:true});
+    assert.ok(role.includes('e6eb35af2e77538b72d655b16f408967'));
+    const generated={before227:count(before),after228:count(after),personal:count(personal),after231:count(latest),recipeSave:count(exact),after232:count(role),requestRole:count(roleExact)};
+    assert.deepEqual(generated,{before227:94,after228:103,personal:10,after231:109,recipeSave:11,after232:109,requestRole:11});
     assert.ok(personal.includes('verify_scope_pre_weight_attestation_20261014'));
     console.log(JSON.stringify(generated));
   `;
   const loaded = spawnSync(process.execPath, ["--input-type=module", "-e", probe], { env, encoding: "utf8" });
   expect(loaded.status, loaded.stderr).toBe(0);
-  expect(JSON.parse(loaded.stdout)).toEqual({ before227: 94, after228: 103, personal: 10, after231:109, recipeSave:11 });
+  expect(JSON.parse(loaded.stdout)).toEqual({ before227: 94, after228: 103, personal: 10, after231:109, recipeSave:11, after232:109, requestRole:11 });
 });
 
 it("rejects the former snapshot paths at the real registry import instead of silently dropping the guard", () => {
