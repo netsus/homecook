@@ -1,5 +1,15 @@
 # 무먹 베타 v9 구현 진행 장부
 
+## 최근 저장 단위 운영 반영·T9 식사 수정 확인 — 2026-10-15
+
+#1714·master `13495fdadb3785874c4a3457e6ce2d6e4ed3dbc7`를 웹 `10cfaa6b245ef7cd9e74488b91cc33f1377aab49`·build `prelaunch-10cfaa6b245e-QkMzLR`로 반영했다. 배포 exit0·1,449 PASS·선택 범위 밖133 skipped, DB228·migration0이다. 아래 원수량/수동 발행 준비 기록보다 최신이며 **최근 단위·지정 T9 표본 확인이지 전체 v9 완료는 아니다.**
+
+- 최근 단위: 실제 우유 새 검색 선택은 최근 L만 제안하고 양은 빈칸이다.1/4L→250mL 저장을 반복 클릭해 entry e941 한 건, raw1/4 L·normalized NULL/밀도 필요·영양unavailable을 보존했다. 저장 뒤 mL·빈칸을 제안하고 취소한 L은 기억하지 않았다.320/375/1440 가로 넘침 없음과 기존 당일4행/batch/evidence/attestation 동일을 확인했다. 일반 우유 한 source이며 다른 version/substitute·다른 최근 단위 소비자는 별도다. guest의 예시 플래너·QA 항목 비노출/점심 추가 로그인 안내·같은 날짜/segment next/계속 둘러보기 닫기는 확인했지만 실제 OAuth 복귀는 미실행이다.
+- 앞선 T9 양/끼니 수정: 취소 불변,30→35g·원실측160g/잔125g,35g 아침→점심 이동·reload와75kcal/당일 표시157kcal를 확인했다. 양 변경의 `weight_basis.batch_revision`1→3은 기존 재캡처 계약임을 독립 source 검토했다. 최초 whole-basis 실패 비교는 보존하고, 이동에서는 basis의 batch_revision 포함 whole nutrition exact를 통과했다. 다른3행·evidence/attestation도 동일하며 양 변경 해석을 이동 기준 완화로 전용하지 않는다.
+- 별도 미완료: #1712 웹 dd399/NYuI8l·1,449검사 배포 후에도 수동 publication은503/pending·원 recipe1/receipt1/nutrition0이다. 실제 prepare→payload와 v4 사유5종·estimated 코드 누락을 후속 검증 중이며 DB229는 아직 미적용이다. 배포 성공을 기능 성공으로 세지 않는다. C05 수집 OFF·기간 미정·정확도/개인 보정/나머지 T9는 남았고 새 추출·모델 평가·외부 AI0이다.
+
+비공개 `mumeok-beta-meal-recent-unit-20261015-mzwu0jz5`·`mumeok-beta-t9-meal-edit-20261015-7cw_m0bl`의 요약/전후 JSON/화면과 독립 weight_basis 판정에 근거한다. root 실제 실행·제공 이미지 직접 읽기·기존 로컬 fixture를 구분하며 재실행하지 않았다. [단위 계약·주요 수치·한계](meal-log-recent-unit-20261015.md)를 따른다.
+
 ## 원수량 fidelity 운영 반영·읽기 표본 — 2026-10-15
 
 이 절이 아래405/hSgqOv의 원분수 후속 준비 기록보다 최신이다. #1711 소스 `40882b122812d9151e4a526b90be6627fcba06ef`→master `66aea3564c18d431bc7e8f47acc639b96f2e6cf8`를 웹 `6d8e6a7ad1acab59eac0e06a67cb4d9542000b29`·build `prelaunch-6d8e6a7ad1ac-Sc2Dlo`로 반영했다. 배포 exit0·1,431 PASS·선택 범위 밖133 skipped다. **지정 원수량 읽기·표시의 확인이며, 완료 저장 전체·정확도·C05 수집·전체 v9 완료는 아니다.**
