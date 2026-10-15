@@ -3602,3 +3602,9 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 - 당시g는 원 `reported_measurement` evidence를 읽고 고정 재료행/입력/제품version·인분과 함께 보존한다. `quantity_origin=planned`와 원 prediction/meals/무게·영양을 덮어쓰지 않는다. C05 표본/모델/새 보유기간이 아니며 물리 검증을 선언하지 않는다.
 - 신규 RPC4: `public.read_cooked_weight_attestation`, `public.complete_snapshot_v2_cooking_session_with_attestation`, `public.mutate_cooked_batch_weight_with_attestation`, `public.retract_cooked_weight_attestation`. public/anon/authenticated EXECUTE는 제거하고 service_role의 검증된 서버 경로만 사용한다. 두 private 표 직접 권한과 private helper는 service_role까지 REVOKE하며 RLS/owner 보호를 유지한다.
 - 기존 `private.verify_full_local_internal_scope()`는 `private.verify_scope_pre_weight_attestation_20261014()`로 보존하고 새 wrapper는 `snapshot-v2-session` scope의 정확4개 POST RPC 경로만 먼저 처리한다. 나머지는 원 alias로 위임하며 R2·C03/C01/worker scope를 일반화하지 않는다. 기본OFF·reader 준비·조건 충족 새 저장과 복구 검증은 후속 배포 경계다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
+
+### 2026-10-15 C04 영양 snapshot 사유 검증 보완
+
+`20261014225000_recipe_nutrition_quantity_v4_warning_contract.sql`은 기존 `public.validate_recipe_nutrition_snapshot_payload(jsonb)` 한 함수의 정확한 사유 검증만 보완한다. `recipe-nutrition-v4`에서 추가 허용하는 경고는 `UNIT_DEFINITION_REQUIRED`, `UNIT_DEFINITION_CONFLICT`, `PIECE_IDENTITY_REQUIRED`, `DENSITY_REQUIRED`, `AMBIGUOUS_EVIDENCE`, `UNIT_MEASUREMENT_ESTIMATE_USED`다. 앞의 5개만 행 ID가 붙은 `missing_reasons`로 허용하며, 평균 측정 경고는 기존 estimated/mixed 검증에 연결하고 direct를 거절한다.
+
+새 테이블·열·RPC·grant는 없다. 기존 owner·ACL·security·search_path와 실제 input guard/source 비교, 원자 공개·receipt·과거 snapshot 불변성을 유지한다. 다른 계산 version의 새 코드·미등록 문자열·중복·잘못된 영양 상태/벡터/출처는 계속 거절한다. 기존 운영 행을 UPDATE하거나 자동 재계산하지 않는다.
