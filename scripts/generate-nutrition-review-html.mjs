@@ -40,7 +40,12 @@ const REVIEW_SQL = `
 with current_reasons as (
   select
     split_part(reason.value, ':', 1) as issue_code,
-    substring(reason.value from '^[^:]+:([0-9a-f-]{36})')::uuid as recipe_ingredient_id,
+    snapshot.recipe_id,
+    snapshot.calculation_version,
+    split_part(reason.value, ':', 2) as reason_ref,
+    case when snapshot.calculation_version is distinct from 'recipe-nutrition-v5'
+      then substring(reason.value from '^[^:]+:([0-9a-f-]{36})')::uuid
+      else null end as recipe_ingredient_id,
     case
       when split_part(reason.value, ':', 1) = 'NUTRIENT_VALUE_MISSING'
       then split_part(reason.value, ':', 3)
@@ -60,7 +65,17 @@ with current_reasons as (
     ) as missing_nutrients
   from current_reasons
   join public.recipe_ingredients recipe_ingredient
-    on recipe_ingredient.id = current_reasons.recipe_ingredient_id
+    on ((current_reasons.calculation_version is distinct from 'recipe-nutrition-v5'
+        and recipe_ingredient.id = current_reasons.recipe_ingredient_id)
+      or (current_reasons.calculation_version = 'recipe-nutrition-v5'
+        and recipe_ingredient.recipe_id = current_reasons.recipe_id
+        and current_reasons.reason_ref ~ '^row-v1-[0-9a-f]{64}$'
+        and current_reasons.reason_ref = 'row-v1-' || encode(sha256(convert_to(jsonb_build_array(
+          case when recipe_ingredient.food_product_id is null then 'ingredient' else 'food_product' end,
+          coalesce(recipe_ingredient.food_product_id,recipe_ingredient.ingredient_id)::text,
+          recipe_ingredient.food_product_nutrition_version_id::text,
+          nullif(btrim(recipe_ingredient.component_label),'')
+        )::text,'UTF8')),'hex')))
   join public.ingredients ingredient
     on ingredient.id = recipe_ingredient.ingredient_id
   where current_reasons.issue_code <> 'TO_TASTE_EXCLUDED'

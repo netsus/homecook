@@ -130,7 +130,10 @@ describe.runIf(enabled)("recipe quantity v4 on owned schema-only PostgreSQL", ()
       return { data: JSON.parse(sql(`${fixture}select public.read_recipe_product_nutrition_predecessors('${owner}',${literal(args.p_ingredients)});rollback;`)), error: null };
     } };
     const prepared = await calculateRecipeDraftNutrition(client, { recipeId: id(10), baseRecipeRevision: 1, draft, ownerUserId: owner });
-    expect(prepared.nutritionSnapshot.calculation_version).toBe("recipe-nutrition-v4");
+    expect(prepared.nutritionSnapshot.calculation_version).toBe("recipe-nutrition-v5");
+    // This original C04 fixture exercises the legacy v4 SQL contract. The new
+    // v5 serializer -> row map -> writer is exercised by reason-identity.native.
+    const legacyV4Snapshot = { ...prepared.nutritionSnapshot, calculation_version: "recipe-nutrition-v4" };
     expect(prepared.nutritionSnapshot.scalable_values.energy_kcal).toBeCloseTo(200, 9);
     const guard = JSON.parse(sql(`${fixture}select public.build_recipe_draft_nutrition_predecessor_guard(${literal(draft)});rollback;`));
     expect(prepared.predecessorGuard).toEqual(guard);
@@ -154,13 +157,13 @@ describe.runIf(enabled)("recipe quantity v4 on owned schema-only PostgreSQL", ()
     } }] };
     sql(`${fixture}set local homecook.personal_recipe_v2='on';update private.quantity_input_v4_policy set enabled=true;
       do $t$ declare a jsonb;b jsonb;r uuid;past jsonb;v_to jsonb;v_read jsonb;v_ns uuid;v_row uuid;begin
-      a:=public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','create',null,null,1,${literal(stampedDraft)},${literal(prepared.nutritionSnapshot)},null,null,0,'${id(70)}');
+      a:=public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','create',null,null,1,${literal(stampedDraft)},${literal(legacyV4Snapshot)},null,null,0,'${id(70)}');
       r:=(a->'data'->>'id')::uuid;
       select jsonb_agg(to_jsonb(s) order by s.id) into past from public.recipe_content_snapshots s;
       update private.quantity_input_v4_policy set enabled=false;
-      b:=public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','create',null,null,1,${literal(stampedDraft)},${literal(prepared.nutritionSnapshot)},null,null,0,'${id(70)}');
+      b:=public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','create',null,null,1,${literal(stampedDraft)},${literal(legacyV4Snapshot)},null,null,0,'${id(70)}');
       if a is distinct from b or past is distinct from (select jsonb_agg(to_jsonb(s) order by s.id) from public.recipe_content_snapshots s) then raise exception 'OFF_RECEIPT_OR_PAST_CHANGED';end if;
-      begin perform public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','create',null,null,1,${literal(stampedDraft)},${literal(prepared.nutritionSnapshot)},null,null,0,'${id(71)}');raise exception 'OFF_NEW_WRITE_ACCEPTED';
+      begin perform public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','create',null,null,1,${literal(stampedDraft)},${literal(legacyV4Snapshot)},null,null,0,'${id(71)}');raise exception 'OFF_NEW_WRITE_ACCEPTED';
       exception when sqlstate '55000' then if sqlerrm<>'UNIT_POLICY_INACTIVE' then raise;end if;end;
       begin perform public.preview_recipe_future_plan_impact('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02',r,1,${literal(stampedDraft)});raise exception 'OFF_PREVIEW_WRITE_ACCEPTED';
       exception when sqlstate '55000' then if sqlerrm<>'UNIT_POLICY_INACTIVE' then raise;end if;end;
@@ -168,13 +171,13 @@ describe.runIf(enabled)("recipe quantity v4 on owned schema-only PostgreSQL", ()
       update private.quantity_input_v4_policy set enabled=true;
       select id into v_row from public.recipe_ingredients where recipe_id=r;
       v_to:=jsonb_set(${literal(toTasteDraft)},'{ingredients,0,row_key}',to_jsonb(v_row::text));
-      perform public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','update',r,null,1,v_to,${literal(toTasteNutrition.nutritionSnapshot)},null,null,0,'${id(72)}');
+      perform public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','update',r,null,1,v_to,${literal({ ...toTasteNutrition.nutritionSnapshot, calculation_version: "recipe-nutrition-v4" })},null,null,0,'${id(72)}');
       if exists(select 1 from public.recipe_ingredients where recipe_id=r and quantity_input is not null)
         or private.recipe_quantity_mode_metadata_v4(r)->>'quantity_policy_version'<>'quantity-v4' then raise exception 'LAST_QUANTITY_REMOVAL_DOWNGRADED';end if;
       v_read:=public.read_recipe_snapshot_entrypoint_context('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02',r);
       if v_read->>'quantity_policy_version'<>'quantity-v4' or v_read#>>'{edit_context,draft,ingredients,0,row_key}'<>v_row::text then raise exception 'REOPEN_MODE_OR_ROW_LOST';end if;
       select id into v_ns from public.recipe_nutrition_snapshots where recipe_id=r and is_current;
-      perform public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','update',r,null,2,v_read#>'{edit_context,draft}',${literal(toTasteNutrition.nutritionSnapshot)},null,null,0,'${id(73)}');
+      perform public.write_personal_recipe_core('${owner}','2026-01-01',repeat('7',64),1,'2026-01-02','update',r,null,2,v_read#>'{edit_context,draft}',${literal({ ...toTasteNutrition.nutritionSnapshot, calculation_version: "recipe-nutrition-v4" })},null,null,0,'${id(73)}');
       if not exists(select 1 from public.recipe_nutrition_snapshots where id=v_ns and is_current and calculation_version='recipe-nutrition-v4') then raise exception 'UNCHANGED_SAVE_DOWNGRADED';end if;
       if exists(select 1 from jsonb_array_elements(past) p where not exists(select 1 from public.recipe_content_snapshots s where to_jsonb(s)=p)) then raise exception 'PAST_SNAPSHOT_REWRITTEN';end if;
       -- A stale current nutrition pointer is explicitly unverified, never v3.
