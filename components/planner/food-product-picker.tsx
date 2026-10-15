@@ -19,6 +19,7 @@ import {
   createProductPlannerEntry,
   isProductPlannerEntryApiError,
 } from "@/lib/api/product-planner-entry";
+import { fetchPlanner } from "@/lib/api/planner";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import {
   buildCompatibleFoodProductUnits,
@@ -260,6 +261,11 @@ export function FoodProductPicker({
   const [selectedProduct, setSelectedProduct] = useState<FoodProductData | null>(null);
   const [quantityAmount, setQuantityAmount] = useState(pickerReturn?.quantityAmount ?? initialQuantityAmount);
   const [quantityV4Enabled, setQuantityV4Enabled] = useState(false);
+  const [savedPlans, setSavedPlans] = useState<{
+    planDate: string;
+    columnId: string;
+    entries: ProductPlannerEntryData[];
+  } | null>(null);
   const originalQuantityRef = useRef<QuantityInputDraft | undefined>(pickerReturn?.quantityInput);
   const [quantityUnit, setQuantityUnit] = useState<FoodProductBasisUnit | null>(pickerReturn?.quantityUnit ?? initialQuantityUnit);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -445,6 +451,19 @@ export function FoodProductPicker({
   useEffect(() => () => clearDebounceTimer(), []);
 
   useEffect(() => {
+    let stale = false;
+    setSavedPlans(null);
+    if (quantityV4Enabled) {
+      void fetchPlanner(planDate, planDate).then(data => {
+        if (!stale) setSavedPlans({ planDate, columnId, entries: data.product_entries });
+      }).catch(() => {
+        // Saved units are optional; guest/error responses keep the catalog default.
+      });
+    }
+    return () => { stale = true; };
+  }, [columnId, planDate, quantityV4Enabled]);
+
+  useEffect(() => {
     if (!isCreating && isDesktopViewport) searchInputRef.current?.focus({ preventScroll: true });
   }, [isCreating, isDesktopViewport]);
 
@@ -502,11 +521,22 @@ export function FoodProductPicker({
     setSelectedProduct({ ...product });
     originalQuantityRef.current = undefined;
     setQuantityAmount(quantityV4Enabled ? "" : defaults.amount);
-    setQuantityUnit(
-      buildCompatibleFoodProductUnits(product, quantityV4Enabled).includes(defaults.unit)
-        ? defaults.unit
-        : buildCompatibleFoodProductUnits(product, quantityV4Enabled)[0] ?? product.nutrition.basis.unit,
-    );
+    const units = buildCompatibleFoodProductUnits(product, quantityV4Enabled);
+    let unit = units.includes(defaults.unit) ? defaults.unit : units[0] ?? product.nutrition.basis.unit;
+    if (quantityV4Enabled && product.nutrition_version_id.trim()
+      && savedPlans?.planDate === planDate && savedPlans.columnId === columnId) {
+      // The API orders by plan_date/column/created_at/id, not last edit or use.
+      for (let index = savedPlans.entries.length - 1; index >= 0; index -= 1) {
+        const entry = savedPlans.entries[index];
+        if (entry.plan_date === planDate && entry.column_id === columnId && entry.product_id === product.id
+          && entry.product_nutrition_version_id === product.nutrition_version_id
+          && Number.isFinite(entry.quantity.amount) && entry.quantity.amount > 0 && units.includes(entry.quantity.unit)) {
+          unit = entry.quantity.unit;
+          break;
+        }
+      }
+    }
+    setQuantityUnit(unit);
     setEntryError(null);
     setHasNutritionConflict(false);
     setRequiresProductReselection(false);
