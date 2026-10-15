@@ -704,19 +704,30 @@ export function MealLogAddSheet({
   function chooseCatalog(item: FoodCatalogSearchItem) {
     setAmountStep(true);
     cancelPendingSelection();
+    const unitOptions = sourceUnitOptions(item, quantityV4Enabled);
+    const currentVersion = item.type === "food_product" ? item.nutrition_version_id : item.quantity_options?.profile_id;
+    const recentUnit = quantityV4Enabled && currentVersion?.trim()
+      ? recent.find(saved => saved.source.type === item.type && saved.source.id === item.id
+        && saved.source_version === currentVersion && unitOptions.includes(saved.last_quantity.unit))?.last_quantity.unit
+      : undefined;
     const nextSelection: MealLogSourceSelection = {
       amount: quantityV4Enabled ? null : item.type === "food_product" ? item.nutrition.basis.amount : 1,
       brand: sourceBrand(item),
       id: item.id,
       name: sourceName(item),
       type: item.type,
-      unit: sourceUnit(item, quantityV4Enabled),
-      unitOptions: sourceUnitOptions(item, quantityV4Enabled),
+      unit: recentUnit ?? sourceUnit(item, quantityV4Enabled),
+      unitOptions,
       basisRelations: item.type === "food_product" ? item.basis_relations : undefined,
       basisUnit: item.type === "food_product" ? item.nutrition.basis.unit : undefined,
       productNutritionVersionId: item.type === "food_product" ? item.nutrition_version_id : undefined,
       ingredientOptions: item.type === "ingredient" ? item.quantity_options : undefined,
     };
+    if (quantityV4Enabled) {
+      setAmount(null);
+      setRawValue("");
+      originalInputRef.current = undefined;
+    }
     if (quantityV4Enabled && item.type === "ingredient" && !item.quantity_options) nextSelection.quantityUnavailableReason = "이 음식의 검토된 단위·영양 근거를 아직 확인하지 못했어요. 원래 양과 단위는 보존했어요.";
     setSelection(nextSelection);
     setSuggestionConfirmed(true);
