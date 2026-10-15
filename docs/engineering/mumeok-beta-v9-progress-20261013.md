@@ -1,5 +1,17 @@
 # 무먹 베타 v9 구현 진행 장부
 
+## 영양 수량 사유 DB229와 수동 발행 복구 운영 확인 — 2026-10-15
+
+앱 #1715·도구 #1717/#1718/#1719의 영양 사유 호환과 실제 pending 발행 복구를 확인했다. 아래 #1712의503/pending·DB229 미적용은 당시 실패 기록이며, **이번 지정 요청의 복구이지 전체 v9·추정 정확도·C05 수집 완료가 아니다.**
+
+- 최종 운영: DB229·웹 B `aad3135bca56870eb8f2da5ccce7be9d63d0fb29`·build `prelaunch-aad3135bca56-MMohRN`, 배포 exit0·1,450 PASS·선택 범위 밖133 skipped·loaded=true·recoveryPending=false다. 영양 단위11경로 source 일치와 source/applied229·pending0을 확인했다. 기존 C03/C01/C04·개인 확인 writer와 worker policy 유지, R2 두 flag false다.
+- 실제 복구: reader A `f0ae89064202fa63c5f13907dcfbd860494d65f8`+229에서 같은 pending 요청으로 원 recipe1/receipt1·public·영양 snapshot1을 확인했다. 정확 v4 partial·반영1/2와 밀도 누락 `DENSITY_REQUIRED`, 원1/3L·1/7kg를 유지했다. 소유자320/375/1440의3인분0.5L·0.214kg·조리 원문과 guest 공개 읽기/같은 상세 login next를 확인했고, 최신 총괄 기록은 B 배포 후 소유자/guest 재조회까지 확인한다. 실제 OAuth·성공 후 별도 fresh 중복 요청은 미실행이다.
+- 원기록: 전후 JSON의 기존 계획4행·재료2행·content snapshot3행·진행 세션은 ID/행 지문/상태가 동일했다. 공개 전환 대상 recipe의 전체 지문은 달라졌으므로 ‘모든 recipe 행 불변’으로 넓히지 않는다. 과거 식단·원량 재계산으로 설명하지 않는다.
+- 초기 실패와 교정: 사전 READ ONLY 기대구조 투영 P1은 적용 전에 교정했다. 첫 DB 시도는 COMMIT dispatch 전 rollback·ledger228/보존 지문 동일·`not_applied` 확정 뒤 멈췄고 자동 재시도0이다. 동등한 fingerprint 값의 객체 key 순서를 비교하던 기존2곳을 #1718에서 최소 교정한 뒤 명시 재시도로229 commit을 확인했다. 첫 실제 예외 원문은 저장되지 않아 그 예외 원인을 단정하지 않는다. 이어 웹 인계 entry gate를 #1719로 보완한 뒤 같은 B 배포를 완료했다.
+- 범위 정정/다음: #1720은 병합됐으나 공식 요구사항·화면에서 제외된 신규 완제품 계획을 대상으로 삼은 제안·구현의 범위 판단 오류로, 배포 없이 #1721·master `4153669618b82025530cdeb35155e8f4c1ffa091`에서 철회 완료됐다. 원3경로를 복원하고 구 menu-add 모형의 명시 옵션을 보완했으며 철회 묶음87 PASS·타입/lint·Anti Slop 신규0은 영양 배포1,450검사와 별개다. 복원된 FoodProductPicker의 master/live bytes가 같고 운영 B·DB229는 그대로다. 이 단위의 운영 신규 진입·실제 완제품 계획 데이터·신규 테스트 쓰기는0이며 기존 조사·검사·리뷰의 실패 이력은 보존한다. 후속 U-A11은 실제 허용된 레시피 재료 입력을 대상으로 한다. C05 draft #1707·수집 OFF·기간 미정, W0/W2·실제 개인 보정·정확도/나머지 T9는 남았다. 새 추출·외부 AI/P5 실행0이며 기존 사용자 승인 범위의 검증 후 순차 반영과 미정 정책 결정은 구분한다.
+
+비공개 `mumeok-beta-nutrition-validator-20261015-uq1hcgt6`의 `progress.json` 최신절, 최종 deploy/source 결속, DB commit·실제 복구·영양·전후 지문·첫 실패 요약에 근거한다. A 단계 복구 요약에 남은 B 인계 차단 문구는 최종 status/source 결속·최신절이 후속 성공을 증명한다. [계약과 운영 경계](recipe-nutrition-quantity-v4-warning-contract-20261015.md#2026-10-15-운영-반영--db229와-같은-요청-발행-복구)를 따르며 문서 작성자가 브라우저·DB·운영을 독립 재실행한 결과는 아니다.
+
 ## 최근 저장 단위 운영 반영·T9 식사 수정 확인 — 2026-10-15
 
 #1714·master `13495fdadb3785874c4a3457e6ce2d6e4ed3dbc7`를 웹 `10cfaa6b245ef7cd9e74488b91cc33f1377aab49`·build `prelaunch-10cfaa6b245e-QkMzLR`로 반영했다. 배포 exit0·1,449 PASS·선택 범위 밖133 skipped, DB228·migration0이다. 아래 원수량/수동 발행 준비 기록보다 최신이며 **최근 단위·지정 T9 표본 확인이지 전체 v9 완료는 아니다.**

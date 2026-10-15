@@ -1,5 +1,17 @@
 # C04 영양 snapshot의 정확한 수량 사유 호환
 
+## 2026-10-15 운영 반영 — DB229와 같은 요청 발행 복구
+
+앱 #1715·기존 배포 도구 #1717/#1718/#1719로 DB228→229와 최종 웹 B `aad3135bca56870eb8f2da5ccce7be9d63d0fb29`·build `prelaunch-aad3135bca56-MMohRN`를 운영 확인했다. 배포 exit0·1,450 PASS·선택 범위 밖133 skipped, loaded=true·recoveryPending=false·source/applied229·pending0이다. 이 단위11경로는 배포 source와 일치한다. 아래 후보/미적용/실제 복구 대기 문장은 당시 기록이며 이 절이 최신이다. 원 SQL SHA `a03d44504bc0c318bbcc399c9ef563d2cdcd7adc79ebdb0314846b981fd89bdd`와 단일 validator·권한 보존 계약은 그대로다.
+
+실제 같은 pending 요청은 호환 reader A `f0ae89064202fa63c5f13907dcfbd860494d65f8`+DB229에서 원 recipe1/receipt1·public·영양 snapshot1로 복구됐다. `recipe-nutrition-v4` partial·반영1/2·`DENSITY_REQUIRED`와 원1/3L·1/7kg를 유지했다. 실제 소유자320/375/1440의3인분0.5L·0.214kg·조리 원문, guest 공개 읽기/같은 상세 login next와 최종 B의 소유자/guest 재조회를 총괄이 확인했다. 성공 후 별도 fresh 중복 요청과 실제 OAuth는 실행하지 않았으며 격리 replay 검사로 이 빈 운영 표본을 채우지 않는다.
+
+전후 지문의 기존4계획·2재료·3content snapshot·진행 세션은 동일하다. 공개 전환 대상 recipe 전체 지문은 달라졌으며 모든 recipe 행 불변이나 과거 영양 재계산을 주장하지 않는다. DB commit 요약의 보존 행/control 검사와 최종 source 결속에서 기존 C03/C01/C04·개인 확인 writer/worker policy 유지·R2 false를 확인했다.
+
+실패 기록도 보존한다. 사전 READ ONLY 기대구조 투영 P1은 적용 전에 교정했다. 첫 DB 실행은 COMMIT dispatch 전 rollback 후 ledger228·원 보존 지문 동일과 `not_applied`를 확정했고 자동 재시도는0이었다. 첫 실제 예외 원문은 미보존이므로 원인을 확정하지 않는다. 순수 재현으로 확인한 동등 fingerprint 객체의 key 순서 비교2곳만 #1718에서 교정해 같은 필드/값 검사를 유지했고, 명시 재시도에서229 commit을 확인했다. 웹 인계 entry gate #1719 보완 뒤 B 배포를 마쳤다. A 복구 요약의 당시 ‘B 차단’ 한계는 최종 deploy/source 결속과 `progress.json.resume_latest`의 후속 확인으로 구분한다.
+
+근거는 비공개 `mumeok-beta-nutrition-validator-20261015-uq1hcgt6`의 최신 진행·최종 status/source 결속·DB commit·실제 복구/영양·전후 history·첫 실패 요약이다. [최신 운영 장부](mumeok-beta-v9-progress-20261013.md#영양-수량-사유-db229와-수동-발행-복구-운영-확인--2026-10-15)를 따른다. 문서 작성에서는 지정 JSON만 대조했고 운영 명령·DB·브라우저를 재실행하지 않았다. backup/roles/env 원본·키를 열람하지 않았다. #1720은 병합됐으나 공식 범위에서 제외된 신규 완제품 계획을 대상으로 삼은 제안·구현의 범위 판단 오류로, 배포 없이 #1721에서 철회 완료됐다. 별도 비공개 `mumeok-beta-product-planner-unit-20261015-8ksf_me9`의 `withdrawal-complete.json`은 철회 source `ddfe55029a398094328879ff026bb9f324be6f7c`·master `4153669618b82025530cdeb35155e8f4c1ffa091`, 철회87 PASS·타입/lint·Anti Slop 신규0과 복원 FoodProductPicker의 운영 bytes 일치를 기록한다. 이는 영양 배포1,450검사와 별개이며 운영 B·DB229와 이 단위의 운영 신규 진입·실제 완제품 계획 데이터·신규 테스트 쓰기0은 그대로다. 기존 조사·검사·리뷰의 실패 이력은 보존하고 후속 U-A11은 실제 허용된 레시피 재료 입력을 대상으로 한다. C05는 운영 미적용·수집 OFF·기간 미정이며 새 AI/추출/P5·정확도 평가·전체 v9 완료가 아니다.
+
 상태: `0bcf0133c7e9bd450897a7d6a10b46d39f211a34` 기반 `codex/mumeok-nutrition-v4-reasons`의 별도 후보다. 기존 #1712/97b 수동 공개 컨텍스트 수정과 수량 조회 묶음은 보존했다. 실제 운영 DB·키·브라우저·AI·worker는 변경하지 않았다.
 
 ## 확인한 실패와 변경
