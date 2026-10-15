@@ -1,5 +1,13 @@
 # Current Source of Truth
 
+## 2026-10-15 — 영양 수량 사유 DB229와 수동 발행 복구
+
+앱 #1715와 기존 배포 도구 #1717/#1718/#1719를 반영해 DB229·웹 B `aad3135bca56870eb8f2da5ccce7be9d63d0fb29`·build `prelaunch-aad3135bca56-MMohRN`를 운영 확인했다. 배포 exit0·1,450 PASS·선택 범위 밖133 skipped, loaded=true·recoveryPending=false·source/applied229·pending0이다. 아래 DB228·publication pending/후보 미적용 문단은 당시 기록이며 이 절이 최신이다.
+
+같은 pending 요청은 호환 reader A+DB229에서 원 recipe1/receipt1을 유지한 채 public·영양 snapshot1로 복구됐다. `recipe-nutrition-v4`의 partial·반영1/2·`DENSITY_REQUIRED`와 원1/3L·1/7kg를 보존했고 기존4계획·2재료·3content snapshot·진행 세션 지문은 동일했다. 공개 전환 대상 recipe의 전체 지문 불변을 뜻하지 않는다. 최종 B의 소유자/guest 재조회도 총괄이 확인했다. 초기 사전 투영 교정·COMMIT 전 실패/미적용 확정·도구 최소 교정과 첫 예외 원문 미보존 한계는 [최신 장부](../engineering/mumeok-beta-v9-progress-20261013.md#영양-수량-사유-db229와-수동-발행-복구-운영-확인--2026-10-15), [단위 계약](../engineering/recipe-nutrition-quantity-v4-warning-contract-20261015.md#2026-10-15-운영-반영--db229와-같은-요청-발행-복구)을 따른다.
+
+기존 C03/C01/C04·개인 확인 writer와 worker policy를 유지하고 R2 두 flag는 false다. C05 draft #1707은 운영 미적용·수집 OFF·기간 미정이다. #1720은 병합됐으나 공식 범위에서 제외된 신규 완제품 계획을 대상으로 삼은 제안·구현의 범위 판단 오류로, 배포 없이 #1721에서 철회 완료됐다. 철회 묶음87 PASS는 영양 배포1,450 PASS와 별개이며 운영 B·DB229는 그대로다. 이 단위의 운영 신규 진입·실제 완제품 계획 데이터·신규 테스트 쓰기는0이다. 후속 U-A11은 실제 허용된 레시피 재료 입력을 대상으로 한다. 기존 조사·검사·리뷰의 실패 이력은 보존한다. 실제 OAuth·새 추출·외부 AI/P5/정확도 평가를 실행한 단계나 전체 v9 완료가 아니다. 문서 작업은 지정된 총괄 증거를 대조했으며 운영·DB·브라우저를 재실행하지 않았다.
+
 ## 2026-10-15 — 최근 저장 단위 운영 반영·T9 양/끼니 수정
 
 #1714·웹 `10cfaa6b245ef7cd9e74488b91cc33f1377aab49`·build `prelaunch-10cfaa6b245e-QkMzLR`, 배포 exit0·1,449 PASS·선택 범위 밖133 skipped·DB228이다. 실제 우유의 L 제안/빈 수량→1/4L를250mL로 저장1건→다음 mL/빈칸·취소 L 미기억과 raw/영양unknown,320/375/1440·기존4행 보존을 확인했다. 앞선 T9는 취소 불변·30→35g/잔125g·35g 점심 이동/당일 표시157kcal와 전체 영양/basis·다른3행/evidence/attestation 보존이다. 양 변경의 basis revision 재캡처와 이동의 basis batch_revision 포함 exact 기준은 [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#최근-저장-단위-운영-반영t9-식사-수정-확인--2026-10-15), [최근 단위 계약](../engineering/meal-log-recent-unit-20261015.md)을 따른다.
