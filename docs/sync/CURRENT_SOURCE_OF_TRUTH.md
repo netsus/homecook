@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-10-15 — 계획 snapshot 조회·안내 운영 반영과 T9 범위
+
+#1709 merged master `02ed02214e16372fdc316f19ecb0318f0e7d3450`의 runtime을 웹 `4057885ff771065551d9200dec188dbd2ec7064e`·build `prelaunch-4057885ff771-hSgqOv`로 반영했다. 배포 exit0·recoveryPending=false,1,429 PASS·선택 범위 밖133 skipped이며 DB228 READ ONLY 대조·SQL/schema/config 변경0이다. 기존 제품 계획6065의 조회 실패가 해소되고3인분0.1875kg/조리 원문0.125kg·B08, 기존 YouTube 계획7d595의 미확인 분량 안내를320/375/1440·reload·guest 안내/같은 계획 next로 확인했다. 제품 계획6065·be0c 두 행 지문과 제품 snapshot의 재료·조리법·기본 인분을 보존했다. 아래 af881 운영 문단은 앞 단계의 기록이다.
+
+앞선 T9의 제품3인분→187.5g 장보기/팬트리 미반영→계획 빈 무게 완료→나중190g/개인 확인 미선택→30g 식사·잔160g과 기존 원기록 보존은 지정한 실제 QA 표본이다. native/모의 API/실제 CUA 증거와 fork·다른 제품 version/substitute·v4 원분수 미실행은 [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#계획-snapshot-조회안내-운영-반영과-t9-표본--2026-10-15), [단위 계약](../engineering/plan-snapshot-clarity-20261015.md)을 따른다. 직접 브라우저 API 탐색 차단은 우회하지 않았다. 별도 pure fixture의 generic DTO 소수2자리 축소/원 `quantity_input` 미전달은 차기 원분수 조회·표시 보완 중이며 저장 DB 손실이나 #1709 해결로 주장하지 않는다. C05 draft #1707·da65는 운영 미적용·수집 OFF·기간 미정, 실측 정확도 개선·전체 v9 완료는 미완료다. 새 실제 추출·P5/모델 평가·외부 AI0이다.
+
 ## 2026-10-15 — 선택 개인 무게 확인 운영 반영·원기록 보존
 
 앱 #1704·도구 #1705·plist 결속 보완 #1706으로 DB228·웹 `af88126b44cf5abb6fa06f7c08f9eee23ca7de99`·build `prelaunch-af88126b44cf-f3IycH`·개인 확인 writer ON을 확인했다. 개인 writer OFF로 DB 반영→새 reader→개인 writer ON 순서를 지켰으며 C03/C01/C04 writer·worker48 ON과 원 기록을 유지했다. 운영 QA의 선택160g/확인1건·30g 식사1건·130g 잔량, 철회 revision2 뒤 원g/evidence·식사 행 지문 보존,375/320/1440의 취소·재열기·reload·반복 클릭과 guest 표본을 확인했다. 사용자 보고 QA를 물리 검증·정확도 개선·학습 적격으로 승격하지 않는다.
