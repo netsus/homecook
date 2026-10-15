@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-10-15 — 원수량 fidelity 운영 반영·읽기 표본
+
+#1711 소스 `40882b122812d9151e4a526b90be6627fcba06ef`→master `66aea3564c18d431bc7e8f47acc639b96f2e6cf8`를 웹 `6d8e6a7ad1acab59eac0e06a67cb4d9542000b29`·build `prelaunch-6d8e6a7ad1ac-Sc2Dlo`로 반영했다. 배포 exit0·1,431 PASS·선택 범위 밖133 skipped다. 동일 계획 원1/3L·1/7kg와3인분 session0.5L·0.214kg/조리 원문, 실제 계획·요리320/375/1440·reload/back·guest 복귀를 확인했다. READ ONLY에서 DB228·계획4행/재료2행/snapshot3행·recipe/session 전체 지문은 보존됐다. root 실제 관측과 로컬212·독립177·총괄40/모의 화면의 구분은 [진행 장부](../engineering/mumeok-beta-v9-progress-20261013.md#원수량-fidelity-운영-반영읽기-표본--2026-10-15), [단위 계약](../engineering/cooking-quantity-fidelity-20261015.md)을 따른다.
+
+첫 완료 준비 cook-mode 재조회409는 정상 새로고침200으로 회복했고 선택 무게 빈칸·밀도unknown·준비창 닫기 초점만 확인해 저장하지 않았다. 원인 미확정인 일시 실패이며 ‘현재 항상 실패’나 ‘표시 패치가 원인을 고침’으로 단정하지 않는다. 최초 요리 폭1496 시도는 보존하고 새 탭의 정확 폭 검증과 구분했다. 수동 draft publication은 별도 최종 리뷰 통과·운영 미적용으로 publication/recent 후속 단위다. C05 draft #1707·da65는 운영 미적용·수집 OFF·기간 미정이며 저장 DB 손실·정확도 개선·전체 v9 완료는 주장하지 않는다. 새 실제 추출·P5/모델 평가·외부 AI0이다.
+
 ## 2026-10-15 — 계획 snapshot 조회·안내 운영 반영과 T9 범위
 
 #1709 merged master `02ed02214e16372fdc316f19ecb0318f0e7d3450`의 runtime을 웹 `4057885ff771065551d9200dec188dbd2ec7064e`·build `prelaunch-4057885ff771-hSgqOv`로 반영했다. 배포 exit0·recoveryPending=false,1,429 PASS·선택 범위 밖133 skipped이며 DB228 READ ONLY 대조·SQL/schema/config 변경0이다. 기존 제품 계획6065의 조회 실패가 해소되고3인분0.1875kg/조리 원문0.125kg·B08, 기존 YouTube 계획7d595의 미확인 분량 안내를320/375/1440·reload·guest 안내/같은 계획 next로 확인했다. 제품 계획6065·be0c 두 행 지문과 제품 snapshot의 재료·조리법·기본 인분을 보존했다. 아래 af881 운영 문단은 앞 단계의 기록이다.
