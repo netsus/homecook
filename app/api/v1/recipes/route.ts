@@ -1193,7 +1193,7 @@ async function finishManualRecipePublication(
   if (!row.id || row.created_by !== authority.ownerUuid || row.source_type !== "manual") {
     throw new Error("Invalid manual recipe receipt");
   }
-  const prepared = await prepareRecipeNutritionSnapshot(dbClient, row.id, rpcClient as unknown as RecipeNutritionServiceClient);
+  const prepared = await prepareRecipeNutritionSnapshot(dbClient, row.id, rpcClient as unknown as RecipeNutritionServiceClient, authority);
   const storageClient = createRecipeImageInternalClient();
   if (!storageClient) throw new Error("Recipe image publication is unavailable");
   const published = await publishManualRecipe({
@@ -1211,6 +1211,7 @@ async function finishManualRecipePublication(
 }
 
 function manualRecipePreparationFailure(error: unknown) {
+  if (error instanceof RecipeQuantityModeError) return fail(error.code, error.message, error.status);
   const authorityError = createHybridAuthorityRouteError(error);
   if (authorityError) return authorityError;
   return fail("RECIPE_PREPARATION_PENDING", "레시피가 저장됐지만 공개와 요리 준비를 마치지 못했어요. 입력 내용은 유지했으니 다시 시도해 주세요.", 503);

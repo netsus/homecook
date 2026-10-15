@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
 
 const mocks = vi.hoisted(() => ({
   route: vi.fn(), rpc: vi.fn(), prepare: vi.fn(), publish: vi.fn(), recalculate: vi.fn(),
@@ -84,7 +85,8 @@ describe("manual publication readiness", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("create_manual_recipe_recoverable", expect.objectContaining({ p_idempotency_key: key }));
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ recipeId, idempotencyKey: key, nutritionSnapshot: { calculation_status: "unavailable" } }));
     expect(mocks.prepare.mock.invocationCallOrder[0]).toBeLessThan(mocks.publish.mock.invocationCallOrder[0]);
-    expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({ auth: expect.any(Object) }), recipeId, expect.objectContaining({ rpc: mocks.rpc }));
+    expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({ auth: expect.any(Object) }), recipeId,
+      expect.objectContaining({ rpc: mocks.rpc }), expect.objectContaining({ ownerUuid: owner }));
     expect(mocks.recalculate).not.toHaveBeenCalled();
   });
 
@@ -94,6 +96,57 @@ describe("manual publication readiness", () => {
     const response = await POST(new Request("http://localhost/api/v1/recipes", { method: "POST", headers, body: JSON.stringify(body) }));
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ success: false, error: { code: "RECIPE_PREPARATION_PENDING" } });
+    expect(mocks.publish).not.toHaveBeenCalled();
+  });
+
+  it.each(["ACCOUNT_SESSION_STALE", "RESOURCE_NOT_FOUND", "RECIPE_REVISION_CONFLICT", "UNIT_CONTEXT_STALE"] as const)("retains signed preparation error %s after create", async code => {
+    const error = new RecipeQuantityModeError(code);
+    mocks.prepare.mockRejectedValueOnce(error);
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", { method: "POST", headers, body: JSON.stringify(body) }));
+    expect(response.status).toBe(error.status);
+    expect(await response.json()).toEqual({ success: false, data: null,
+      error: { code, message: error.message, fields: [] } });
+    expect(mocks.publish).not.toHaveBeenCalled();
+    expect(row.visibility).toBe("private");
+  });
+
+  it("retries preparation with the same recipe receipt, body and key after a pending result", async () => {
+    mocks.prepare.mockRejectedValueOnce(new Error("context temporarily unavailable"));
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const save = () => POST(new Request("http://localhost/api/v1/recipes", { method: "POST", headers, body: JSON.stringify(body) }));
+    expect((await save()).status).toBe(503);
+    expect(mocks.publish).not.toHaveBeenCalled();
+    expect(row.visibility).toBe("private");
+    expect((await save()).status).toBe(201);
+    expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual(["create_manual_recipe_recoverable", "create_manual_recipe_recoverable"]);
+    expect(mocks.rpc.mock.calls[1][1]).toEqual(mocks.rpc.mock.calls[0][1]);
+    expect(mocks.prepare.mock.calls.map(([, id]) => id)).toEqual([recipeId, recipeId]);
+    expect(mocks.publish).toHaveBeenCalledOnce();
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ recipeId, idempotencyKey: key }));
+  });
+
+  it("does not publish while nutrition preparation is still pending", async () => {
+    let finish!: () => void;
+    const ready = new Promise<void>(resolve => { finish = resolve; });
+    mocks.prepare.mockImplementationOnce(async () => {
+      await ready;
+      return { calculation: { calculation_status: "unavailable" }, expectedRecipeVersion: "2026-09-27T00:00:00Z", inputGuard: {} };
+    });
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = POST(new Request("http://localhost/api/v1/recipes", { method: "POST", headers, body: JSON.stringify(body) }));
+    await vi.waitFor(() => expect(mocks.prepare).toHaveBeenCalledOnce());
+    expect(mocks.publish).not.toHaveBeenCalled();
+    finish();
+    expect((await response).status).toBe(201);
+  });
+
+  it("rejects another owner's create receipt before preparation or publication", async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: { ...row, created_by: key }, error: null });
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", { method: "POST", headers, body: JSON.stringify(body) }));
+    expect(response.status).toBe(500);
+    expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.publish).not.toHaveBeenCalled();
   });
 
