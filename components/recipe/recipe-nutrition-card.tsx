@@ -102,6 +102,9 @@ export function RecipeNutritionCard({
         {nutrition.warnings.some(warning => warning === "PIECE_WEIGHT_CONVERSION_USED" || warning === "REPRESENTATIVE_VOLUME_CONVERSION_USED") ? (
           <p className="leading-5">개수·부피로 입력한 재료는 승인된 대표 중량으로 환산했어요. 실제 무게와 다를 수 있어요.</p>
         ) : null}
+        {nutrition.warnings.includes("UNIT_MEASUREMENT_ESTIMATE_USED") ? (
+          <p className="leading-5">검토된 평균 측정값을 사용해 환산했어요. 실제 무게·부피와 다를 수 있어요.</p>
+        ) : null}
         {hasIncompleteNutrition ? (
           <p className="leading-5">
             {display.aiEstimateText
