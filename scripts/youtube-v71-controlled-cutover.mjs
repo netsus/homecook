@@ -82,7 +82,7 @@ import * as c04Authority from "./lib/prelaunch-web-deploy.mjs";
 import * as c04Database from "./lib/prelaunch-database.mjs";
 import {
   YOUTUBE_C04_ARTIFACT_SHA256, YOUTUBE_C04_CUTOVER_REVIEW_PIN, YOUTUBE_C04_OPERATION_ROOT, YOUTUBE_C04_RELEASE_SHA,
-  assertC04SuccessorCheckpoint, assertC04WorkerSuccessorBinding,
+  assertC04SuccessorCheckpoint, assertC04WorkerSuccessorBinding, assertC04WorkerMaintenanceBinding,
   assertC04QuantityCheckpointOrigin, assertC04QuantityControlReview, assertC04QuantityJournal, assertC04QuantityWorkerCredential,
   buildC04QuantityCredentialTransitionSql, createC04QuantityWorkerCutover, parseC04QuantityCutoverArguments,
 } from "./lib/youtube-v71-controlled-cutover.mjs";
@@ -1392,6 +1392,8 @@ async function createC04Adapters(review, reviewSha256) {
     const result = await c04Database.observeQuantityV4WorkerBoundary({ repositoryRoot: ROOT, stage, quantityWriterState });
     const { authority, observation, adapter } = result;
     const successor = result.successor ? c04Authority.cookedWeightAttestationSuccessorBinding(result.successor) : null;
+    const databaseMaintenance = result.maintenanceBinding ?? null;
+    if (databaseMaintenance) assertC04WorkerMaintenanceBinding(review, databaseMaintenance, successor);
     if (successor) {
       check(stage === "worker", "current228 cannot authorize consumers/quiesce47");
       assertC04WorkerSuccessorBinding(review, successor, authority.pointer.sha256);
@@ -1408,7 +1410,7 @@ async function createC04Adapters(review, reviewSha256) {
     if (successor) check(postgresContext.currentUser === "postgres" && postgresContext.sessionUser === "postgres"
       && ["none", "postgres"].includes(postgresContext.roleSetting) && typeof postgresContext.searchPath === "string"
       && postgresContext.searchPath.length > 0 && postgresContext.timeZone === "UTC", "current228 original postgres context differs");
-    return { authority, adapter, stage, quantityWriterState, successor, ...(successor ? { postgresContext } : {}), target: observation.target, consumersReceiptSha256: consumers.pointer.sha256,
+    return { authority, adapter, stage, quantityWriterState, successor, databaseMaintenance, ...(successor ? { postgresContext } : {}), target: observation.target, consumersReceiptSha256: consumers.pointer.sha256,
       databaseReceiptSha256: stage === "worker" ? authority.pointer.sha256 : null };
   }
   async function observation(context, query) {
@@ -1419,7 +1421,8 @@ async function createC04Adapters(review, reviewSha256) {
       const worker = boundary.worker;
       const policyStableSha256 = lastLine(query ? await query(C04_POLICY_STABLE_SQL) : await context.adapter.query(C04_POLICY_STABLE_SQL));
       check(/^[a-f0-9]{64}$/u.test(policyStableSha256), "full stable policy hash required");
-      return { ...worker, ...model, ...(context.successor ? { databaseSuccessor: context.successor } : {}), policyStableSha256, targetSha256: sha256(JSON.stringify(boundary.target)), ledgerCount: boundary.ledger.length,
+      return { ...worker, ...model, ...(context.successor ? { databaseSuccessor: context.successor } : {}),
+        ...(context.databaseMaintenance ? { databaseMaintenance: context.databaseMaintenance } : {}), policyStableSha256, targetSha256: sha256(JSON.stringify(boundary.target)), ledgerCount: boundary.ledger.length,
         normalDataSha256: boundary.normalDataSha256, quantityPolicyEnabled: boundary.writerEnabled,
         productWriterEnabled: boundary.productWriterEnabled, weightWriterEnabled: boundary.cookedWeightWriterEnabled,
         workerPolicyEnabled: worker.workerPolicyEnabled, credentialGeneration: worker.credentialGeneration,
@@ -1538,6 +1541,9 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     check(successor, "current228 successor authority missing");
     return c04Authority.cookedWeightAttestationSuccessorBinding(successor);
   }
+  function currentMaintenance() {
+    return c04Authority.nutritionValidatorMaintenanceBinding(c04Authority.loadNutritionValidatorMaintenance(ROOT));
+  }
   function checkpointOrigin(record, origin, phase, receiptSha256) {
     if (!record.databaseSuccessor) return assertC04QuantityCheckpointOrigin(review, record, origin, { phase, reviewSha256, receiptSha256 });
     check(phase === "after" && review.postReceiptSha256 === null, "successor cannot replace pinned historical checkpoint");
@@ -1548,6 +1554,8 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       "foreign current228 checkpoint path");
     assertC04QuantityJournal(review, origin, reviewSha256);
     check(isDeepStrictEqual(record.databaseSuccessor, currentSuccessor()) && isDeepStrictEqual(origin.databaseSuccessor, record.databaseSuccessor)
+      && isDeepStrictEqual(origin.databaseMaintenance ?? null, record.databaseMaintenance ?? null)
+      && (!record.databaseMaintenance || isDeepStrictEqual(record.databaseMaintenance, currentMaintenance()))
       && origin.state === "verified-policy-disabled" && origin.postWorkerTerminal?.sha256 === receiptSha256
       && origin.workerDatabaseReceiptSha256 === record.workerDatabaseReceiptSha256, "current228 checkpoint origin differs");
     const predecessor = origin.successorPredecessorCheckpoint, predecessorOrigin = origin.successorPredecessorOrigin;
@@ -1591,6 +1599,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     const pauseBasis = phase === "after" && previous.repairPause ? readRepairPause(previous) : null;
     const oldOrigin = record.databaseSuccessor ? JSON.parse(readPrivate(previous.postWorkerOrigin.path)) : null;
     const origin = { ...previous,
+      ...(record.databaseMaintenance ? { databaseMaintenance: record.databaseMaintenance } : {}),
       ...(record.databaseSuccessor ? { databaseSuccessor: record.databaseSuccessor,
         successorPredecessorCheckpoint: oldOrigin.successorPredecessorCheckpoint ?? previous.postWorkerTerminal,
         successorPredecessorOrigin: oldOrigin.successorPredecessorOrigin ?? previous.postWorkerOrigin } : {}),
@@ -1683,7 +1692,11 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     const binding = currentSuccessor();
     assertC04WorkerSuccessorBinding(review, binding, record.workerDatabaseReceiptSha256);
     check(isDeepStrictEqual(record.databaseSuccessor, binding) && isDeepStrictEqual(observation?.databaseSuccessor, binding)
-      && observation.ledgerCount === 228 && observation.catalogFingerprint === review.catalogAfter, "current228 receipt binding differs");
+      && observation.ledgerCount === (record.databaseMaintenance ? 229 : 228) && observation.catalogFingerprint === review.catalogAfter,
+      "current successor receipt binding differs");
+    if (record.databaseMaintenance) assertC04WorkerMaintenanceBinding(review, record.databaseMaintenance, binding);
+    check(isDeepStrictEqual(observation?.databaseMaintenance ?? null, record.databaseMaintenance ?? null)
+      && (!record.databaseMaintenance || isDeepStrictEqual(record.databaseMaintenance, currentMaintenance())), "foreign current229 receipt/observation");
     return binding;
   }
   function activationOrigin(current) {
@@ -1704,6 +1717,8 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
   }
   async function reconcileActivation(current, observation, post) {
     const origin = activationOrigin(current);
+    check(isDeepStrictEqual(origin.databaseMaintenance ?? null, observation.databaseMaintenance ?? null),
+      "activation unknown intent cannot cross228/229");
     check(isDeepStrictEqual(origin.databaseSuccessor ?? null, observation.databaseSuccessor ?? null), "reconciliation successor intent differs");
     if (current.activationReconciliation) {
       const pointer = current.activationReconciliation;
@@ -1727,13 +1742,16 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       assertCurrentOrigin(saved);
       check(isDeepStrictEqual(saved.beforeObservation.databaseSuccessor ?? null, origin.databaseSuccessor ?? null)
         && isDeepStrictEqual(saved.expectedAfter.databaseSuccessor ?? null, origin.databaseSuccessor ?? null)
-        && saved.expectedAfter.ledgerCount === (origin.databaseSuccessor ? 228 : 227)
+        && saved.expectedAfter.ledgerCount === (origin.databaseMaintenance ? 229 : origin.databaseSuccessor ? 228 : 227)
         && saved.expectedAfter.catalogFingerprint === review.catalogAfter, "reconciliation expected successor differs");
-      check(isDeepStrictEqual(saved.databaseSuccessor ?? null, origin.databaseSuccessor ?? null), "saved reconciliation successor differs");
+      check(isDeepStrictEqual(saved.databaseMaintenance ?? null, origin.databaseMaintenance ?? null)
+        && isDeepStrictEqual(saved.expectedAfter.databaseMaintenance ?? null, origin.databaseMaintenance ?? null)
+        && isDeepStrictEqual(saved.beforeObservation.databaseMaintenance ?? null, origin.databaseMaintenance ?? null)
+        && isDeepStrictEqual(saved.databaseSuccessor ?? null, origin.databaseSuccessor ?? null), "saved reconciliation successor differs");
       return pointer;
     }
     check(observation.credentialGeneration === 48 && observation.workerReleaseSha === review.releaseSha
-      && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (origin.databaseSuccessor ? 228 : 227) && observation.catalogFingerprint === review.catalogAfter
+      && observation.targetSha256 === review.targetSha256 && observation.ledgerCount === (origin.databaseMaintenance ? 229 : origin.databaseSuccessor ? 228 : 227) && observation.catalogFingerprint === review.catalogAfter
       && observation.credentialRowSha256 === origin.observation.credentialRowSha256
       && observation.policyStableSha256 === origin.observation.policyStableSha256
       && stableStringify(observation.policy) === stableStringify({ ...origin.observation.policy, enabled: observation.workerPolicyEnabled }), "reconciliation identity/semantic differs");
@@ -1741,13 +1759,15 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     check(status === "committed" || observation.policyRowSha256 === origin.observation.policyRowSha256, "unknown OFF whole row; no positive reconciliation");
     const record = { ...baseJournal, schema: origin.databaseSuccessor ? "homecook.youtube-c04-activation-reconciliation-successor.v1" : "homecook.youtube-c04-activation-reconciliation.v1", status,
       ...(origin.databaseSuccessor ? { databaseSuccessor: origin.databaseSuccessor } : {}),
+      ...(origin.databaseMaintenance ? { databaseMaintenance: origin.databaseMaintenance } : {}),
       workerDatabaseReceiptSha256: post.workerDatabaseReceiptSha256, activationVerification: current.activationVerification,
       previousPostWorkerTerminal: current.postWorkerTerminal, previousPostWorkerOrigin: current.postWorkerOrigin,
       beforeObservation: origin.observation,
       expectedAfter: { workerPolicyEnabled: true, policyStableSha256: origin.observation.policyStableSha256,
         credentialRowSha256: origin.observation.credentialRowSha256, credentialGeneration: 48, workerReleaseSha: review.releaseSha,
         targetSha256: review.targetSha256, ledgerCount: observation.ledgerCount, catalogFingerprint: review.catalogAfter,
-        ...(origin.databaseSuccessor ? { databaseSuccessor: origin.databaseSuccessor } : {}) },
+        ...(origin.databaseSuccessor ? { databaseSuccessor: origin.databaseSuccessor } : {}),
+        ...(origin.databaseMaintenance ? { databaseMaintenance: origin.databaseMaintenance } : {}) },
       observation, zeroActualAI: true };
     const parent = privateDirectory(join(directory, "activation-reconciliations"));
     const file = join(privateDirectory(join(parent, randomUUID())), "receipt.json");
@@ -1760,6 +1780,7 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     const current = readJournal();
     const record = { ...baseJournal, schema: value.observation.databaseSuccessor ? "homecook.youtube-c04-repair-pause-successor.v1" : "homecook.youtube-c04-repair-pause.v1", ...value,
       ...(value.observation.databaseSuccessor ? { databaseSuccessor: value.observation.databaseSuccessor } : {}),
+      ...(value.observation.databaseMaintenance ? { databaseMaintenance: value.observation.databaseMaintenance } : {}),
       workerDatabaseReceiptSha256: current.workerDatabaseReceiptSha256, activationVerification: current.activationVerification,
       activationReceipt: current.activationReceipt ?? null, activationReconciliation: current.activationReconciliation ?? null, previousPostWorkerTerminal: current.postWorkerTerminal,
       previousPostWorkerOrigin: current.postWorkerOrigin, zeroActualAI: true };
@@ -1782,12 +1803,14 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
       && record.beforeObservation.policyStableSha256 === current.policyStableSha256
       && !record.service.loaded && record.zeroActualAI === true, "repair pause origin differs");
     assertCurrentOrigin(record);
-    if (record.databaseSuccessor) check(isDeepStrictEqual(record.beforeObservation.databaseSuccessor, record.databaseSuccessor), "repair intent successor differs");
+    if (record.databaseSuccessor) check(isDeepStrictEqual(record.beforeObservation.databaseSuccessor, record.databaseSuccessor)
+      && isDeepStrictEqual(record.beforeObservation.databaseMaintenance ?? null, record.databaseMaintenance ?? null), "repair intent successor differs");
     return record;
   }
   async function publishActivationVerification(value) {
     const record = { ...baseJournal, schema: value.observation.databaseSuccessor ? "homecook.youtube-c04-activation-verification-successor.v1" : "homecook.youtube-c04-activation-verification.v1", workerDatabaseReceiptSha256: value.post.workerDatabaseReceiptSha256, ...value,
-      ...(value.observation.databaseSuccessor ? { databaseSuccessor: value.observation.databaseSuccessor } : {}), zeroActualAI: true };
+      ...(value.observation.databaseSuccessor ? { databaseSuccessor: value.observation.databaseSuccessor } : {}),
+      ...(value.observation.databaseMaintenance ? { databaseMaintenance: value.observation.databaseMaintenance } : {}), zeroActualAI: true };
     const bytes = `${JSON.stringify(record, null, 2)}\n`;
     let file = paths.activationVerification;
     if (existsSync(file) && sha256(readPrivate(file)) !== sha256(bytes)) {
@@ -1810,26 +1833,45 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
     check(database.workerPolicyEnabled === true && database.quantityPolicyEnabled === true
       && database.productWriterEnabled === true && database.weightWriterEnabled === true
       && database.credentialGeneration === 48 && database.workerReleaseSha === review.releaseSha
-      && database.targetSha256 === review.targetSha256 && database.ledgerCount === (context.successor ? 228 : 227) && database.catalogFingerprint === review.catalogAfter
+      && database.targetSha256 === review.targetSha256 && database.ledgerCount === (context.databaseMaintenance ? 229 : context.successor ? 228 : 227) && database.catalogFingerprint === review.catalogAfter
       && isDeepStrictEqual(database.databaseSuccessor ?? null, context.successor ?? null)
+      && isDeepStrictEqual(database.databaseMaintenance ?? null, context.databaseMaintenance ?? null)
       && database.policyStableSha256 === verification.observation.policyStableSha256
       && stableStringify(database.policy) === stableStringify({ ...verification.observation.policy, enabled: true }) && database.credentialRowSha256 === verification.observation.credentialRowSha256
       && service.loaded && service.state === "running" && service.pid === health.service.pid
       && sha256(readFileSync(PLIST)) === verification.service.plistSha256, "activation committed readback differs");
+    let predecessorActivationReceipt = readJournal().activationReceipt ?? null;
+    if (context.databaseMaintenance && !verification.databaseMaintenance) {
+      check(readJournal().state === "activation-committed" && predecessorActivationReceipt, "current229 readback requires committed228 activation, never unknown intent");
+      const priorBytes = readPrivate(predecessorActivationReceipt.path);
+      check(sha256(priorBytes) === predecessorActivationReceipt.sha256, "predecessor activation bytes differ");
+      const prior = JSON.parse(priorBytes); assertCurrentOrigin(prior);
+      check(prior.status === "committed" && prior.activationVerification?.sha256 === proof.sha256
+        && prior.observation.policyRowSha256 === database.policyRowSha256 && prior.observation.policyStableSha256 === database.policyStableSha256
+        && prior.observation.credentialRowSha256 === database.credentialRowSha256, "committed228 activation readback identity differs");
+      if (prior.databaseMaintenance) {
+        check(isDeepStrictEqual(prior.databaseMaintenance, context.databaseMaintenance) && prior.predecessorActivationReceipt,
+          "current229 activation history anchor differs");
+        predecessorActivationReceipt = prior.predecessorActivationReceipt;
+      }
+    }
     const record = { ...baseJournal, schema: context.successor ? "homecook.youtube-c04-activation-receipt-successor.v1" : "homecook.youtube-c04-activation-receipt.v1", status: "committed",
-      ...(context.successor ? { databaseSuccessor: context.successor, predecessorActivationReceipt: readJournal().activationReceipt ?? null } : {}),
+      ...(context.successor ? { databaseSuccessor: context.successor, predecessorActivationReceipt } : {}),
+      ...(context.databaseMaintenance ? { databaseMaintenance: context.databaseMaintenance } : {}),
       workerDatabaseReceiptSha256: context.databaseReceiptSha256, activationVerification: proof, ...authority,
       beforeObservation: verification.observation, observation: database, database, service: { ...service, plistSha256: sha256(readFileSync(PLIST)) }, zeroActualAI: true };
     let file = paths.activationReceipt;
     if (existsSync(file) && (JSON.parse(readPrivate(file)).activationVerification?.sha256 !== proof.sha256
-      || !isDeepStrictEqual(JSON.parse(readPrivate(file)).databaseSuccessor ?? null, context.successor ?? null))) {
+      || !isDeepStrictEqual(JSON.parse(readPrivate(file)).databaseSuccessor ?? null, context.successor ?? null)
+      || !isDeepStrictEqual(JSON.parse(readPrivate(file)).databaseMaintenance ?? null, context.databaseMaintenance ?? null))) {
       const parent = privateDirectory(join(directory, "activation-receipts"));
       file = join(privateDirectory(join(parent, randomUUID())), "receipt.json");
     }
     if (!existsSync(file)) durablePrivateJson(file, record);
     const saved = JSON.parse(readPrivate(file));
     check(saved.reviewSha256 === reviewSha256 && saved.activationVerification?.sha256 === proof.sha256
-      && isDeepStrictEqual(saved.databaseSuccessor ?? null, context.successor ?? null), "activation receipt already differs");
+      && isDeepStrictEqual(saved.databaseSuccessor ?? null, context.successor ?? null)
+      && isDeepStrictEqual(saved.databaseMaintenance ?? null, context.databaseMaintenance ?? null), "activation receipt already differs");
     assertCurrentOrigin(saved);
     await journal("activation-committed", { activationReceipt: { path: file, sha256: sha256(readPrivate(file)) } });
     return saved;

@@ -20,6 +20,8 @@ for (const [name, value] of Object.entries({
   QUANTITY_V4_WRITER_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("3")}" })`,
   QUANTITY_V4_WORKER_CONTROL_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("d")}" })`,
   COOKED_WEIGHT_ATTESTATION_MIGRATION_SHA256: JSON.stringify(hash(raw)),
+  NUTRITION_VALIDATOR_MIGRATION_SHA256: JSON.stringify(sha("9")),
+  NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("8")}" })`,
   COOKED_WEIGHT_ATTESTATION_ROLLOUT_REVIEW_PIN: `Object.freeze({ path: null, sha256: "${sha("4")}" })`,
 })) {
   const declaration = new RegExp(`^export const ${name} = [^\\r\\n]*;$`, "gmu");
@@ -28,6 +30,15 @@ for (const [name, value] of Object.entries({
 }
 source = source.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',
   () => `function prelaunchStateRoot() { return ${JSON.stringify(join(temp, "state"))}; }`);
+// Only the fixed DB-authority I/O is injected; the worker receipt parser below is unchanged.
+const loaderStart = source.indexOf("export function loadNutritionValidatorMaintenance(repositoryRoot) {");
+const loaderEnd = source.indexOf("export function assertCookedWeightAttestationReview", loaderStart);
+if (loaderStart < 0 || loaderEnd <= loaderStart) throw new Error("Maintenance loader boundary changed");
+source = source.slice(0, loaderStart) + `let ownedMaintenance = null;
+export function setOwnedMaintenance(value) { ownedMaintenance = value; }
+export function loadNutritionValidatorMaintenance() { return ownedMaintenance; }
+
+` + source.slice(loaderEnd);
 const webPath = join(temp, "web.mjs"); writeFileSync(webPath, source, { mode: 0o600 });
 const dbPath = join(temp, "database.mjs");
 const databaseSource = readFileSync("scripts/lib/prelaunch-database.mjs", "utf8").replace(/from "(\.\/[^"\n]+)"/gu,
@@ -36,7 +47,7 @@ writeFileSync(dbPath, databaseSource.replace('import("./full-local-security-inve
   () => `import(${JSON.stringify(pathToFileURL(join(process.cwd(), "scripts/lib/full-local-security-inventory.mjs")).href)})`)
   .replace('new URL("../../docs/security/cooked-weight-user-attestation-source-function-postimages.json", import.meta.url)',
     () => `new URL(${JSON.stringify(pathToFileURL(join(process.cwd(), "docs/security/cooked-weight-user-attestation-source-function-postimages.json")).href)})`), { mode: 0o600 });
-const web: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") = await import(pathToFileURL(webPath).href);
+const web: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") & { setOwnedMaintenance(value: object | null): void } = await import(pathToFileURL(webPath).href);
 const db: typeof import("../scripts/lib/prelaunch-database.mjs") = await import(pathToFileURL(dbPath).href);
 const pointer = (name: string, key: string) => ({ path: join(temp, name), sha256: sha(key) });
 const operationId = "12345678-1234-4123-8123-123456789abc";
@@ -101,10 +112,14 @@ function engineFixture(commitAckLost = false) {
   return { ...f, calls, session, adapter, journal, engine };
 }
 
-function writerFixture(action: "writer-on" | "writer-off", injectFact = false, withQuantityOff = false) {
+function writerFixture(action: "writer-on" | "writer-off", injectFact = false, withQuantityOff = false, on229 = false) {
   const f = fixture(), calls: string[] = [];
   let current = { ...structuredClone(f.afterObservation), quantityWriterEnabled: !withQuantityOff,
     writerEnabled: action === "writer-off", attestationWriterEnabled: action === "writer-off" };
+  const maintenance = on229 ? maintenanceFixture(publicationFixture()) : undefined;
+  if (maintenance) Object.assign(current, {ledger:maintenance.review.database.after,catalogSha256:maintenance.review.database.afterCatalogSha256,
+    stableImmutableSha256:maintenance.review.database.stableImmutableSha256,nutritionValidator:maintenance.review.database.functionAfter,
+    attestationRowsEmpty:false,metadataNull:false});
   let staged = structuredClone(current), actor = "supabase_admin", attempt: Record<string, unknown> | null = null;
   const session = { postgresContext: { searchPath: '"$user", public, extensions', timeZone: "UTC" }, query: vi.fn(async (sql: string) => {
     calls.push(sql); const role = /SET LOCAL ROLE (postgres|supabase_admin);/u.exec(sql)?.[1]; if (role) actor = role;
@@ -130,9 +145,9 @@ function writerFixture(action: "writer-on" | "writer-off", injectFact = false, w
     status: "committed", action: "writer-off", writerEnabled: false, reviewSha256: f.review.predecessorQuantity.reviewSha256,
     approvalSha256: f.review.predecessorQuantity.writerApprovalSha256, readerReceiptSha256: f.review.predecessorQuantity.readerReceipt.sha256,
     baselineReviewSha256: sha("4"), baselineDatabasePlanSha256: hash(JSON.stringify({ source: f.review.database.after, applied: f.review.database.after })) } : null;
-  const engine = db.createProtectedPrelaunchWriter({ review: f.review, reviewSha256: sha("4"), approval, approvalSha256: sha("5"),
+  const engine = db.createProtectedPrelaunchWriter({ review: f.review, databaseMaintenance: maintenance, reviewSha256: sha("4"), approval, approvalSha256: sha("5"),
     readerReceipt: reader, readerReceiptSha256: sha("6"), operationId, action, adapter, journal, quantityOffReceipt, assertBoundary: vi.fn(async () => {}) });
-  return { ...f, engine, calls, session, journal, quantityOffReceipt, current: () => current };
+  return { ...f, engine, calls, session, journal, quantityOffReceipt, maintenance, current: () => current };
 }
 
 function personalWriterPlan(phase: string, observation: object, blockOverride?: string) {
@@ -148,7 +163,7 @@ function personalWriterPlan(phase: string, observation: object, blockOverride?: 
     return (async () => {
       const action="plan", options={protectedPhase:phase}, reader={readerFloor:review.to}, baselineReview=review;
       const quantityCloseOnAttestation=false, productCloseOnWeightBaseline=false, quantityOff=false;
-      const workerCheckpoint=undefined, successor=undefined, workerContinuation=null;
+      const workerCheckpoint=undefined, successor=undefined, workerContinuation=null, databaseMaintenance=undefined;
       const cookedWeightProductOffReceipt=()=>null;
       ${block}
     })();`);
@@ -199,6 +214,28 @@ function publicationFixture() {
     activationVerification: verification.pointer, activationReceipt: activation.pointer };
   const currentPath = join(directory, "cutover-journal.json"); save(currentPath, current);
   return { ...f, directory, record, successor, current, currentPath, save, observation, post, origin, verification, activation };
+}
+
+function maintenanceFixture(f: ReturnType<typeof publicationFixture>) {
+  const review = { ...f.review, feature: web.NUTRITION_VALIDATOR_FEATURE, to: ref("e"), sourceReaderRef: f.review.from, migrationSourceRef: ref("e"),
+    readerValidatorSha256: sha("1"), readerPrecedesDatabase: true, approved: { database: true, reader: false, writerOn: false },
+    files: { [`supabase/migrations/${web.NUTRITION_VALIDATOR_MIGRATION}`]: [null, sha("9")] },
+    predecessorAttestation: { reviewSha256: sha("4"), databaseReceipt: f.successor.pointer, readerReceipt: pointer("personal-reader", "5"),
+      writerReceipt: pointer("personal-writer", "6"), readerFloor: f.review.to },
+    database: { ...f.review.database, before: f.review.database.after, after: [...f.review.database.after, {filename: web.NUTRITION_VALIDATOR_MIGRATION, sha256: sha("9")}],
+      migrations: [{filename: web.NUTRITION_VALIDATOR_MIGRATION, rawSha256: sha("9"), payloadSha256: sha("9")}],
+      beforeCatalogSha256: f.review.database.afterCatalogSha256, afterCatalogSha256: sha("f"), immutableSha256: f.review.database.afterImmutableSha256,
+      stableImmutableSha256: sha("1"), beforeScope: f.review.database.afterScope,
+      attestationScope: {...f.review.database.attestationScope, beforeOuterSha256: f.review.database.attestationScope.afterOuterSha256},
+      functionSignature: "public.validate_recipe_nutrition_snapshot_payload(jsonb)",
+      functionBefore: {definitionSha256: sha("a"), sourceMd5: "b".repeat(32), metadataSha256: sha("c")},
+      functionAfter: {definitionSha256: sha("d"), sourceMd5: "e".repeat(32), metadataSha256: sha("c")} } };
+  const record = {...f.record, feature: web.NUTRITION_VALIDATOR_FEATURE, reviewSha256: sha("8"), from: review.from, to: review.to,
+    sourceReaderRef: review.from, readerFloor: review.from, databasePlanSha256: hash(JSON.stringify({source: review.database.after, applied: review.database.after})),
+    catalogSha256: review.database.afterCatalogSha256, controlsPreservedInTransaction: true, attestationWriterEnabled: true, workerPolicyEnabled: true,
+    attestationRowsSha256: sha("9"), predecessorAttestation: review.predecessorAttestation};
+  const receipt = pointer("nutrition229.json", "1");
+  return {review, record, pointer: receipt, guardPointer: receipt, predecessor: f.successor};
 }
 
 describe("exact private attestation227→228 successor, synthetic transports only", () => {
@@ -451,6 +488,81 @@ describe("exact private attestation227→228 successor, synthetic transports onl
     expect(f.activation.record.observation.ledgerCount).toBe(227); expect(f.post.record.ledgerCount).toBe(227);
     f.save(next.pointer.path, { ...next.record, databaseSuccessor: { ...binding, migrationSha256: sha("0") } });
     expect(() => web.loadCookedWeightAttestationWorkerContinuation(f.successor, process.cwd())).toThrow("bytes");
+  });
+  it("reads the producer229 committed readback then pause/resume chain without relabeling its228 anchor", () => {
+    const f = publicationFixture(), maintenance = maintenanceFixture(f);
+    web.setOwnedMaintenance(maintenance);
+    try {
+      const binding = web.cookedWeightAttestationSuccessorBinding(f.successor), databaseMaintenance = web.nutritionValidatorMaintenanceBinding(maintenance);
+      const directory = (name: string) => {const path=join(f.directory,name);mkdirSync(path,{recursive:true,mode:0o700});return path;};
+      const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", id2 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+      const on228 = {...f.observation, ledgerCount:228, databaseSuccessor:binding, normalDataSha256:sha("9")};
+      const anchor=f.save(join(directory(`activation-receipts/${id}`),"receipt.json"),{...f.activation.record,
+        schema:"homecook.youtube-c04-activation-receipt-successor.v1",databaseSuccessor:binding,predecessorActivationReceipt:f.activation.pointer,
+        beforeObservation:f.verification.record.observation,observation:on228,database:on228,
+        readerReceiptSha256:f.review.predecessorQuantity.readerReceipt.sha256,writerReceiptSha256:f.review.predecessorQuantity.writerReceipt.sha256,zeroActualAI:true});
+      const on={...on228,ledgerCount:229,databaseMaintenance,normalDataSha256:sha("a")};
+      const readback=f.save(join(directory(`activation-receipts/${id2}`),"receipt.json"),{...anchor.record,databaseMaintenance,
+        predecessorActivationReceipt:anchor.pointer,observation:on,database:on});
+      f.save(f.currentPath,{...f.current,activationReceipt:readback.pointer});
+      expect(web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd()).observation).toEqual(on);
+      const off={...on,quantityPolicyEnabled:false,workerPolicyEnabled:false,policyRowSha256:sha("e"),policy:{...on.policy,enabled:false}};
+      const pause=f.save(join(directory("repair-pauses"),`${id}.json`),{...f.current,schema:"homecook.youtube-c04-repair-pause-successor.v1",
+        status:"quiesced",databaseSuccessor:binding,databaseMaintenance,activationVerification:f.verification.pointer,
+        activationReceipt:readback.pointer,activationReconciliation:null,beforeObservation:{...on,quantityPolicyEnabled:false},observation:off,
+        post:f.post.record,previousPostWorkerTerminal:f.post.pointer,previousPostWorkerOrigin:f.origin.pointer,zeroActualAI:true});
+      const p2=f.save(join(directory(`verifications/${id}`),"post-worker-terminal.json"),{...f.post.record,
+        schema:"homecook.prelaunch-quantity-worker-after-successor.v1",databaseSuccessor:binding,databaseMaintenance,predecessorRecord:f.post.record,
+        ledgerCount:229,policyRowSha256:off.policyRowSha256,pid:200});
+      const origin=f.save(join(directory(`verifications/${id}`),"post-worker-origin.json"),{...f.origin.record,postWorkerTerminal:p2.pointer,
+        databaseSuccessor:binding,databaseMaintenance,successorPredecessorCheckpoint:f.post.pointer,successorPredecessorOrigin:f.origin.pointer,
+        repairPause:pause.pointer,previousPostWorkerTerminal:f.post.pointer,previousPostWorkerOrigin:f.origin.pointer,
+        activationVerification:f.verification.pointer,activationReceipt:readback.pointer,activationReconciliation:null});
+      f.save(f.currentPath,{...f.current,state:"verified-policy-disabled",postWorkerTerminal:p2.pointer,postWorkerOrigin:origin.pointer,repairPause:pause.pointer});
+      expect(web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd()).observation.policyRowSha256).toBe(sha("e"));
+      const intent={...off,quantityPolicyEnabled:true,normalDataSha256:sha("b")};
+      const verification=f.save(join(directory(`activation-verifications/${id2}`),"verification.json"),{...f.current,
+        schema:"homecook.youtube-c04-activation-verification-successor.v1",databaseSuccessor:binding,databaseMaintenance,post:p2.record,observation:intent,
+        authority:{readerReceiptSha256:f.review.predecessorQuantity.readerReceipt.sha256,writerReceiptSha256:f.review.predecessorQuantity.writerReceipt.sha256},zeroActualAI:true});
+      const applied={...intent,workerPolicyEnabled:true,policyRowSha256:sha("f"),policy:{...intent.policy,enabled:true}};
+      const reconciled=f.save(join(directory(`activation-reconciliations/${id2}`),"receipt.json"),{...f.current,
+        schema:"homecook.youtube-c04-activation-reconciliation-successor.v1",status:"committed",databaseSuccessor:binding,databaseMaintenance,
+        activationVerification:verification.pointer,beforeObservation:intent,observation:applied,zeroActualAI:true,
+        expectedAfter:{workerPolicyEnabled:true,policyStableSha256:intent.policyStableSha256,credentialRowSha256:intent.credentialRowSha256,
+          credentialGeneration:48,workerReleaseSha:ref("b"),targetSha256:f.review.database.targetSha256,ledgerCount:229,
+          catalogFingerprint:web.QUANTITY_V4_WORKER_CATALOG_AFTER,databaseSuccessor:binding,databaseMaintenance}});
+      const pause2=f.save(join(directory("repair-pauses"),`${id2}.json`),{...pause.record,activationVerification:verification.pointer,
+        activationReceipt:null,activationReconciliation:reconciled.pointer,post:p2.record,previousPostWorkerTerminal:p2.pointer,previousPostWorkerOrigin:origin.pointer,
+        beforeObservation:{...applied,quantityPolicyEnabled:false},observation:{...applied,quantityPolicyEnabled:false,workerPolicyEnabled:false,
+          policyRowSha256:sha("7"),policy:{...applied.policy,enabled:false}}});
+      f.save(f.currentPath,{...f.current,state:"repair-quiesced",postWorkerTerminal:p2.pointer,postWorkerOrigin:origin.pointer,repairPause:pause2.pointer});
+      expect(web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd()).observation.policyRowSha256).toBe(sha("7"));
+      const foreignReconcile=f.save(reconciled.pointer.path,{...reconciled.record,databaseMaintenance:{...databaseMaintenance,reviewSha256:sha("f")}});
+      const foreignPause=f.save(pause2.pointer.path,{...pause2.record,activationReconciliation:foreignReconcile.pointer});
+      f.save(f.currentPath,{...f.current,state:"repair-quiesced",postWorkerTerminal:p2.pointer,postWorkerOrigin:origin.pointer,repairPause:foreignPause.pointer});
+      expect(()=>web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd())).toThrow("current229");
+      const foreign=f.save(origin.pointer.path,{...origin.record,databaseMaintenance:{...databaseMaintenance,receipt:pointer("foreign","f")}});
+      f.save(f.currentPath,{...f.current,state:"verified-policy-disabled",postWorkerTerminal:p2.pointer,postWorkerOrigin:foreign.pointer,repairPause:pause.pointer});
+      expect(()=>web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd())).toThrow("origin");
+      expect(f.activation.record.observation.ledgerCount).toBe(227); expect(anchor.record.observation.ledgerCount).toBe(228);
+    } finally {web.setOwnedMaintenance(null);}
+  });
+  it("keeps native-shaped229 current data/facts readable without freezing the old snapshot hash", () => {
+    const f=publicationFixture(), maintenance=maintenanceFixture(f), value={...f.afterObservation,
+      ledger:maintenance.review.database.after,catalogSha256:maintenance.review.database.afterCatalogSha256,
+      nutritionValidator:maintenance.review.database.functionAfter,stableImmutableSha256:maintenance.review.database.stableImmutableSha256,
+      normalDataSha256:sha("f"),attestationRowsSha256:sha("e"),attestationRowsEmpty:false,metadataNull:false};
+    expect(db.assertCookedWeightAttestationCurrentObservation(f.successor,value,{databaseMaintenance:maintenance,quantityWriterState:"on"})).toBe(value);
+    expect(()=>db.assertCookedWeightAttestationCurrentObservation(f.successor,{...value,nutritionValidator:maintenance.review.database.functionBefore},{databaseMaintenance:maintenance})).toThrow("postimage");
+  });
+  it("binds real229 writer intents and rejects old228 unknown before observation or mutation", async () => {
+    const f=writerFixture("writer-off",false,false,true);
+    const result=await f.engine.apply(); expect(result.databaseMaintenance).toEqual(web.nutritionValidatorMaintenanceBinding(f.maintenance));
+    await f.journal.write({...result,status:"unknown",databaseMaintenance:undefined});
+    f.calls.splice(0); await expect(f.engine.reconcile()).rejects.toThrow("binding");expect(f.calls).toEqual([]);
+    await f.journal.write({...result,status:"unknown"});
+    await expect(f.engine.reconcile()).resolves.toMatchObject({status:"committed",writerEnabled:false,databaseMaintenance:result.databaseMaintenance});
+    expect(f.calls.some(sql=>sql.startsWith("UPDATE"))).toBe(false);
   });
   it("uses the unchanged C04 OFF authority on228 and preserves the separate personal control", async () => {
     const f = publicationFixture();

@@ -7,6 +7,7 @@ import { DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS, DEFAULT_YOUTUBE_EXTRA
 import { createC04QuantityWorkerCutover, assertC04QuantityCheckpoint, assertC04QuantityCheckpointOrigin, assertC04QuantityJournal, assertC04SuccessorCheckpoint, assertC04WorkerSuccessorBinding,
   YOUTUBE_C04_CATALOG_AFTER, YOUTUBE_C04_CATALOG_BEFORE, YOUTUBE_C04_EXPECTED_SCHEMA_SHA256 } from "../scripts/lib/youtube-v71-controlled-cutover.mjs";
 const sha = (n: string) => n.repeat(64);
+type MaintenanceBinding = { schema: string; reviewSha256: string; receipt: {path: string; sha256: string}; predecessorDatabaseReceiptSha256: string; targetSha256: string; ledgerCount: number; migrationSha256: string; sourceReaderRef: string; databasePlanSha256: string };
 const bindings = { releaseSha: "d".repeat(40), artifactSha256: sha("a"), operationRoot: "/private/tmp/c04-successor-fixture" };
 function fixture() {
   const review = { schema: "homecook.youtube-c04-controlled-cutover-review.v1", releaseSha: bindings.releaseSha,
@@ -38,7 +39,7 @@ function fixture() {
 function simulated() {
   const { review, record, journal: originalJournal } = fixture();
   let journal = { ...originalJournal, state: "prepared" } as typeof originalJournal & { credentials?: { metadataSha256: string }; activationVerification?: { path: string; sha256: string }; installationRepairBasis?: { path: string; sha256: string } | null; activationReceipt?: { sha256: string } | null; activationReconciliation?: { sha256: string } | null; repairPause?: { sha256: string }; repairBeforeObservation?: { policyStableSha256: string; credentialRowSha256: string } };
-  let current = { ...record, databaseSuccessor: undefined as ReturnType<typeof successorBinding> | undefined, policyStableSha256: sha("6"), workerPolicyEnabled: true, jtiHash: sha("1"),
+  let current = { ...record, databaseMaintenance: undefined as MaintenanceBinding | undefined, databaseSuccessor: undefined as ReturnType<typeof successorBinding> | undefined, policyStableSha256: sha("6"), workerPolicyEnabled: true, jtiHash: sha("1"),
     policy: { version: 3, extractorMode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE, pipelineIdentity: "85fbf4877e6f2894841bfd160f2d9a63894eb709fd63e897483efe71fd4016cd",
       snapshotDigest: review.snapshotDigest, resultAffectingOptions: DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,
       fingerprintKeyVersion: "key-kept", previousFingerprintKeyVersion: "old-kept", previousFingerprintValidUntil: "2099-01-01T00:00:00Z", enabled: true } };
@@ -115,6 +116,57 @@ async function active228() {
   });
   return Object.assign(f, { original, originalPre, binding });
 }
+function maintenanceBinding(binding: ReturnType<typeof successorBinding>): MaintenanceBinding {
+  return { schema: "homecook.recipe-nutrition-validator-maintenance.v1", reviewSha256: sha("1"),
+    receipt: { path: "/owned-fixture/validator229.json", sha256: sha("2") }, predecessorDatabaseReceiptSha256: binding.receipt.sha256,
+    targetSha256: binding.targetSha256, ledgerCount: 229, migrationSha256: sha("3"), sourceReaderRef: "e".repeat(40), databasePlanSha256: sha("4") };
+}
+async function active229() {
+  const f = await active228(), maintenance = maintenanceBinding(f.binding);
+  const preflight = f.adapters.preflight.getMockImplementation()!;
+  f.adapters.preflight.mockImplementation(async (...args) => {
+    const context = await preflight(...args); f.current.ledgerCount = 229; f.current.databaseMaintenance = maintenance;
+    return { ...context, databaseMaintenance: maintenance };
+  });
+  return Object.assign(f, { maintenance });
+}
+describe("fixed validator229 worker maintenance", () => {
+  it("retains same48/CAS1 across committed readback, pause, install repair and fresh activation", async () => {
+    const f = await active229(); await f.engine.activate();
+    f.current.quantityPolicyEnabled = false;
+    const paused = await f.engine.pauseForRepair(); expect(paused.observation.ledgerCount).toBe(229);
+    const repaired = await f.engine.resume(); expect(repaired.ledgerCount).toBe(229);
+    expect(repaired.databaseMaintenance).toEqual(f.maintenance);
+    expect(() => assertC04SuccessorCheckpoint(f.review, repaired, sha("5"))).not.toThrow();
+    f.current.quantityPolicyEnabled = true; await f.engine.activate();
+    expect(f.calls.filter(x => x === "CAS48")).toHaveLength(1); expect(f.adapters.issueCredentials).toHaveBeenCalledTimes(1);
+    expect(f.original?.ledgerCount).toBe(227); expect(f.originalPre.ledgerCount).toBe(226);
+  });
+  it.each(["activation-commit-intent", "activation-outcome-unknown"])("does not adopt old228 %s at229", async state => {
+    const f = await active228(); f.current.quantityPolicyEnabled = false; await f.engine.pauseForRepair(); await f.engine.resume();
+    f.current.quantityPolicyEnabled = true;
+    f.adapters.transaction.mockImplementationOnce(async () => { throw new Error("old228 before commit"); });
+    await expect(f.engine.activate()).rejects.toThrow(); f.journal.state = state;
+    const maintenance = maintenanceBinding(f.binding), old = f.adapters.preflight.getMockImplementation()!;
+    f.adapters.preflight.mockImplementation(async (...args) => {
+      const context = await old(...args); f.current.ledgerCount = 229; f.current.databaseMaintenance = maintenance;
+      return { ...context, databaseMaintenance: maintenance };
+    });
+    const count = f.calls.filter(x => x === "ON").length;
+    await expect(f.engine.activate()).rejects.toThrow(); expect(f.calls.filter(x => x === "ON")).toHaveLength(count);
+    expect(f.adapters.finalizeActivation).not.toHaveBeenCalled();
+  });
+  it("rejects changed locked maintenance binding before policy writes", async () => {
+    const f = await active229(); await f.engine.activate(); f.current.quantityPolicyEnabled = false;
+    await f.engine.pauseForRepair(); await f.engine.resume(); f.current.quantityPolicyEnabled = true;
+    const transaction = f.adapters.transaction.getMockImplementation()!;
+    f.adapters.transaction.mockImplementationOnce(async (ctx, callback) => transaction(ctx, async (tx: { observe: () => Promise<typeof f.current> }) => callback({ ...tx,
+      observe: async () => ({ ...await tx.observe(), databaseMaintenance: { ...f.maintenance, receipt: { ...f.maintenance.receipt, sha256: sha("f") } } }) })));
+    const count = f.calls.filter(x => x === "ON").length;
+    await expect(f.engine.activate()).rejects.toThrow(); expect(f.calls.filter(x => x === "ON")).toHaveLength(count);
+  });
+});
+
 describe("fixed attestation228 worker successor", () => {
   it("keeps historical227 validators exact and verifies current228 separately", async () => {
     const f = await active228();
@@ -489,4 +541,15 @@ describe("current228 uses original postgres context inside the same admin lock s
     expect(f.adapter.observe).toHaveBeenCalledWith(f.query, expect.any(String));
     expect(f.calls).toEqual(["owned model", "owned stable"]); expect(f.current).toEqual(f.admin);
   });
+});
+
+it.each([false,true])("classifies failed activation OFF only with the same229 proof (foreign=%s)", async foreign => {
+  const f=await active229();await f.engine.activate();
+  f.current.quantityPolicyEnabled=false;await f.engine.pauseForRepair();await f.engine.resume();f.current.quantityPolicyEnabled=true;
+  f.adapters.transaction.mockImplementationOnce(async()=>{
+    if(foreign)f.current.databaseMaintenance={...f.maintenance,receipt:{...f.maintenance.receipt,sha256:sha("f")}};
+    throw new Error("owned failed activation dispatch");
+  });
+  await expect(f.engine.activate()).rejects.toThrow("owned failed activation dispatch");
+  expect(f.journal.state).toBe(foreign?"activation-outcome-unknown":"activation-not-applied");
 });
