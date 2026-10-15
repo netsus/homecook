@@ -5840,3 +5840,9 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 record는 id/revision/status(`attested`1 또는 `retracted`2), statement version, measurement_evidence_id/measurement_original_revision, measured_g, recipe_content_snapshot_id, 저장 context_fingerprint, observed_at, row_count와 `provenance=user_attested`, `physical_verification=not_verified`, `record_usage=qa_personal_record`를 제공한다. 새 확인 응답의 지문/측정g는 요청과 저장 결과에 일치해야 한다. C05 동의·수집·기간·모델 적격을 포함하지 않는다.
 
 미로그인401과 없는/타인 target404를 유지한다. 신규 조회의 id/target 형식 오류는422, 철회 본문의 형식/추가필드 오류는422이며 기존 완료·무게 API의 id404/본문422 계약은 유지한다. 새409는 `WEIGHT_ATTESTATION_DISABLED`, `WEIGHT_ATTESTATION_SUBJECT_CHANGED`, `WEIGHT_ATTESTATION_CONTEXT_CHANGED`, `WEIGHT_ATTESTATION_REVISION_CONFLICT`, `WEIGHT_ATTESTATION_OLD_RECEIPT`이며 기존 세대/세션/멱등409·정비503도 유지한다. 잘못된 결과는 서버500 INVALID_RESPONSE/INTERNAL_ERROR 또는 client502 INVALID_RESPONSE로 성공 처리하지 않는다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
+
+### 2026-10-15 C04 영양 snapshot 사유 호환 보완
+
+`recipe-nutrition-v4` 계산의 `warnings[]`는 기존 코드에 더해 `UNIT_DEFINITION_REQUIRED`, `UNIT_DEFINITION_CONFLICT`, `PIECE_IDENTITY_REQUIRED`, `DENSITY_REQUIRED`, `AMBIGUOUS_EVIDENCE`, `UNIT_MEASUREMENT_ESTIMATE_USED`만 정확히 허용한다. 앞의 5개는 `<code>:<ingredient-row-id>` 누락 사유도 보존하며, 마지막 코드는 검토된 평균 측정값이 실제 계산에 기여했다는 추정 경고다. 이 경고를 직접값이나 AI 추정으로 해석하지 않는다. unknown은 null/partial/minimum으로 유지한다.
+
+새 쓰기의 JS·SQL 검증은 정확한 `recipe-nutrition-v4`에만 이 추가 코드를 허용한다. 저장된 snapshot 읽기는 기존 조회 필드로 알려진 코드만 해석하며 가짜 projection version을 쓰기 권위로 사용하지 않는다. 경고·누락 사유·벡터·출처의 보존과 기존 v3, 상태·권한·멱등성 계약은 유지한다. 원문 수량의 상세 `quantity_input.reason`을 상위 사유로 치환하지 않는다.
