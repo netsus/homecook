@@ -1,6 +1,6 @@
 # 레시피 수정 저장·재시도: 기존 배포 도구의 229→231 준비
 
-현재 상태는 **도구 source·새 review 결속 완료, DB231·새 웹 운영 미반영**이다. 총괄이 release `0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7`과 `approved-recipe-save-review.json`의 새 PIN `0add1b4d75327a87417a3b3cad1b521f9d1327096e69cc0d753162e0d178cdfc`를 결속했다. 이는 실제 DDL 적용 증거가 아니다. 원14 PIN과 영양 validator 228→229·개인 227→228·C04의 원 receipt/verification은 보존한다.
+현재 상태는 **도구 source·새 review 결속 완료, DB231·새 웹 운영 미반영**이다. 총괄이 release `0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7`과 `approved-recipe-save-review-v2.json`의 새 PIN `f183afd8e429668f6c77b11302cf00ba044c38438c5f409296a02b21c8e17358`를 결속했다. 이는 실제 DDL 적용 증거가 아니다. 원14 PIN과 영양 validator 228→229·개인 227→228·C04의 원 receipt/verification은 보존한다.
 
 ## 고정 범위와 순서
 
@@ -50,3 +50,5 @@ V2 owned native는 실제 두 SQL/ledger의 원자231 commit·전체 백업 deco
 운영 before의 변경 대상만 투영한 예상 전체 catalog `80fbf73bd83091e9ef8c500cb406bae71764197b55de16f33e23638aa12483b4`는 READ ONLY 계산과 독립 검토를 마쳤다. 이는 실제231 AFTER 관측이 아니다. 격리 restore의 나머지 ACL·열 번호·CHECK 표현으로 운영 메타데이터를 덮거나 정상화하지 않았다.
 
 총괄은 설치646의 기존 sealed artifact/descriptor staging 후 기존 `--activate`로 current229 worker receipt를 발행했다. 원227/verification·현재 PID·plist·기존 credential/secret·policy row를 보존했고 실제 AI·DDL·재시작은0이다. DB231과 새 웹 release의 운영 반영, 새231 worker readback 및 그 실제 결과 확인은 아직 남았다. 과거 앱 native나 기존229 native를 새 운영 반영 성공으로 합산하지 않으며 모든 운영 단계는 총괄이 담당한다.
+
+실제 운영 plan에서 최초 review가 원229 전환 전 marker를 가리킨 것을 발견해 DDL 시작 전에 중단했다. 새 review v2는 현재 웹 aad313의 marker `fb009dde900f4f743e56e68244dfaf3b76bd0507ce294855989c4a0b8fb057e4`에 결속한다. 원229 review·receipt·marker와 최초 recipe review 원문은 보존하며, SQL·source·권한·검증 조건은 바꾸지 않았다.
