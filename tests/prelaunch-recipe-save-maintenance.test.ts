@@ -10,7 +10,7 @@ afterAll(() => rmSync(temp, {recursive:true,force:true}));
 let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8").replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,
   (_text,name:string)=>`export const ${name} = Object.freeze({path:null,sha256:null});`);
 source=source.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',()=>`function prelaunchStateRoot() { return ${JSON.stringify(join(temp,"state"))}; }`);
-source=source.replace('export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = null;',()=>`export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = "${ref("b")}";`)
+source=source.replace(/^export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = [^\r\n]*;$/gmu,()=>`export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = "${ref("b")}";`)
   .replace('export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = Object.freeze({path:null,sha256:null});',()=>`export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = Object.freeze({path:null,sha256:"${sha("8")}"});`);
 const raw = [Buffer.from("begin;\nSELECT 1;\ncommit;\n"),Buffer.from("begin;\nSELECT 2;\ncommit;\n")];
 const fixedMigrations=[{filename:"20261014225200_recipe_snapshot_reason_identity.sql",sha256:hash(raw[0])},{filename:"20261014225300_recipe_future_patch_http_replay.sql",sha256:hash(raw[1])}];

@@ -35,8 +35,8 @@ export const NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Us
 
 // Exact reviewed A+B successor. Unbound until the integrated source/native proof is sealed.
 export const RECIPE_SAVE_RECOVERY_FEATURE = "recipe-save-recovery";
-export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = null;
-export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = "0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7";
+export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/mumeok-beta-recipe-snapshot-20261015-lry0fhvq/approved-recipe-save-review.json", sha256: "0add1b4d75327a87417a3b3cad1b521f9d1327096e69cc0d753162e0d178cdfc" });
 export const RECIPE_SAVE_RECOVERY_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: "20261014225200_recipe_snapshot_reason_identity.sql", sha256: "b6050c12e60594267908b89ff02cff0c0344a52ccb79dc9a88d21e3c57e8fe66" }),
   Object.freeze({ filename: "20261014225300_recipe_future_patch_http_replay.sql", sha256: "aed773e0d27e6b6dd4af8e65fb933d73c89927faef1d1d36804eec8476fed9c7" }),

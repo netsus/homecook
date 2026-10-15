@@ -1930,6 +1930,13 @@ LOCK TABLE public.youtube_extractor_permits IN ${workerLockMode} MODE;`);
         && stableStringify(database.policy) === stableStringify({ ...original.observation.policy, enabled: true })
         && health.service.plistSha256 === post.plistSha256, "activation current policy/credential differs");
       assertCurrentOrigin(record, record.database);
+      if (context.databaseMaintenance?.schema === "homecook.recipe-save-recovery-maintenance.v1"
+        && !isDeepStrictEqual(record.databaseMaintenance ?? null, context.databaseMaintenance)) {
+        check(isDeepStrictEqual(record.databaseSuccessor, context.successor)
+          && isDeepStrictEqual(record.databaseMaintenance, context.databaseMaintenance.predecessorMaintenance),
+        "current231 readback requires exact committed229 predecessor");
+        return publishActivationReceipt(context, current.activationVerification, authority);
+      }
       if (context.successor && !record.databaseSuccessor) return publishActivationReceipt(context, current.activationVerification, authority);
       check(isDeepStrictEqual(record.databaseSuccessor ?? null, context.successor ?? null), "activation current successor differs");
       return record;

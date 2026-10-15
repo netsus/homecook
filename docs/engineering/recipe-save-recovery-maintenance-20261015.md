@@ -1,6 +1,6 @@
 # 레시피 수정 저장·재시도: 기존 배포 도구의 229→231 준비
 
-현재 상태는 **source 준비, 운영 미적용**이다. 총괄의 앱 release 후보는 `0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7`이며, 이것은 운영 review/PIN 또는 운영 적용 증거가 아니다. 별도 `recipe-save-recovery` review PIN과 최종 release SHA는 null이다. 원 영양 validator 228→229 PIN/receipt·개인 227→228·C04 R/T1/T2/P1/reader/writer/activation을 다시 작성하지 않는다.
+현재 상태는 **도구 source·새 review 결속 완료, DB231·새 웹 운영 미반영**이다. 총괄이 release `0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7`과 `approved-recipe-save-review.json`의 새 PIN `0add1b4d75327a87417a3b3cad1b521f9d1327096e69cc0d753162e0d178cdfc`를 결속했다. 이는 실제 DDL 적용 증거가 아니다. 원14 PIN과 영양 validator 228→229·개인 227→228·C04의 원 receipt/verification은 보존한다.
 
 ## 고정 범위와 순서
 
@@ -19,7 +19,7 @@
 
 초기 진입에서 두 SQL뿐 아니라 해당 serializer의 명시 `recipe-nutrition-v5` 계약과 PATCH의 두 새 RPC 식별자도 고정된 두 파일에서 확인한다. 따라서 공백/주석만 바꾼 미동결 runtime이나 SQL0/1개·runtime한쪽만 들어간 부분 후보도 committed231 및 exact 전체 diff 없이는 통과하지 못한다. 이미 승인한 full-source가 실제 live ref의 조상인 이후 일반 편집은 기존 current231 증명을 재검증한다. 이 검사는 일반 JavaScript 의미 분석기가 아니며, 선언한 계약 식별자·고정 source closure와 독립 source 리뷰의 경계다.
 
-새 engine/CLI/테이블을 만든 것이 아니다. 앱 SQL의 신규 private helper·service-only RPC·scope delegate·nullable receipt 열은 앱 단위의 별도 검토 대상이며 도구가 그 권한을 확대하지 않는다. 실제 release/PIN/expected catalog는 통합 native와 독립 리뷰 이후 총괄이 별도로 결속한다.
+새 engine/CLI/테이블을 만든 것이 아니다. 앱 SQL의 신규 private helper·service-only RPC·scope delegate·nullable receipt 열은 앱 단위의 별도 검토 대상이며 도구가 그 권한을 확대하지 않는다. 총괄은 격리 native와 독립 검토를 거쳐 새 release/PIN 및 예상 메타데이터를 결속했으며, 실제 반영 결과는 별도로 확인한다.
 
 ## 함수·receipt·카탈로그 증거
 
@@ -33,14 +33,20 @@ DDL transaction의 postimage에는 새 열 allNULL이 필수다. 이후 실제 P
 
 기존 worker current-proof의 `databaseMaintenance`에 새231 binding을 넣고 원229 binding은 `predecessorMaintenance`로 보존한다. 새 guard/terminal/source/target와 원 개인228 successor 및 worker48 권위가 연결돼야 한다. 원229의 committed activation만 새231 current readback의 역사 근거로 사용하며 unknown/pending intent는 경계를 넘겨 재활성화하지 않는다. 새 issue/renew/CAS/재시작이나 실제 job/AI 검증을 추가하지 않는다. 기존 pause/resume/activation 명령이 실행될 때도 fresh catalog·source/credential·whole/stable policy·queue/permit/enqueue·서비스 검사는 유지한다.
 
+이미 ON인 상태의 기존 `--activate`는 정확한 committed229 predecessor를231 receipt로 새로 발행하고, 같은231 반복은 기존 receipt를 반환한다. 원227 verification과229 receipt 원문은 보존한다. 발급·정책 ON·설치·재시작 없이 실제 함수의 engine→verify→publisher→consumer 연결 회귀로 확인했다. 서비스 검사는 현재 health와 현재 안정 PID의 일치를 확인하며 과거 post/verification PID와 같을 필요는 없다. 이231 readback의 실제 운영 실행은 아직 남았다.
+
 SQL/COMMIT 경계의 자기 pending231 guard는 새 review PIN, 원229 terminal, operationId/from/to/target/sourceReader와 operation의 attempt 원문이 같은 `applying_precommit` 또는 `commit_dispatch_guard`일 때만 원229 worker 근거를 검사할 수 있다. 일반 current loader는 계속 pending/unknown을 거절하며 범용 우회 옵션은 없다. 이 worker admission은 새 SQL 실행에만 적용한다. 기존 read-only reconcile은 unknown DB 결과를 정확한231/229 관측으로 확정하는 경로를 유지하고 새 SQL을 재실행하지 않는다.
 
 이번 full-source는 runtime이 바뀌므로 이전229의 runtime 동일 A/B 웹 보상 예외를 재사용하지 않는다. 새231 full-source 교체 실패는 자동 구 writer/DB rollback이 아닌 forward repair로 처리한다. 빌드/준비 실패로 아직 교체하지 않은 reader는 그대로 남는다. 원 228→229 exact A 보상 규칙은 유지한다.
 
 ## 검증과 남은 단계
 
-현재 도구 검사는 소유 임시 사본에서 모든 운영 PIN을 중립화하고, 새 release/PIN은 합성 fixture 값으로만 주입한다. 실제 root/config/credential을 읽는 옵션을 추가하지 않는다. 정상 검증 진입점은 기존 `createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, operationId, readMigrations, adapter, journal, assertBoundary })`다. 배포 소스의 null PIN에서는 양성 운영 실행이 불가능하다.
+단위·owned native 검사는 소유 임시 사본의 합성 PIN/권위를 사용하며 실제 운영 승인 chain·설치·reader/worker 검증을 대신하지 않는다. 정상 engine 검증 진입점은 기존 `createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, operationId, readMigrations, adapter, journal, assertBoundary })`다. 테스트는 운영 release/PIN 결속 후에도 합성 값으로 격리하고 실제 root/config/credential을 읽지 않는다. 운영 소스의 새 release/PIN은 위 값으로 결속돼 있다.
 
 확인 대상은 두 payload 순서·두 번째 SQL 실패 전체 rollback·reader 손실·ACK/terminal unknown·exact intent reconcile·실제 deploy prebuild entry·부분/foreign SQL 거절·source handoff·기존229 경로·현재231 worker와 old229 unknown 거절·정확 설치 snapshot import다. packaging은 기존 정적 경로에 새 registry JSON 한 경로만 추가한다. SQL은 기존 migrations 디렉터리 closure로 포함한다.
 
-통합 owned native의 최종 expected projection·nonempty facts/quantity 원문·백업 복원·실제 함수/column metadata 검증, 독립 리뷰, 최종 운영 PIN·release ref, 실제 설치/DB/web/worker 검사는 아직 미실행이다. 과거 A16/B34/native 또는 기존229 native 결과를 새 전체 도구의 통과로 합산하지 않는다. 모든 운영 단계는 총괄이 담당한다.
+V2 owned native는 실제 두 SQL/ledger의 원자231 commit·전체 백업 decode와229 복원·두 번째 SQL dispatch 실패 전체 rollback·COMMIT ACK 유실 후 같은 intent의 read-only reconcile을 통과했다. 합성 개인 확인2/철회1과 원1/2·기존 receipt18열/행을 보존했고 source109/전용11 함수와 열 메타데이터를 검사했다. 합성 권위 및 정확4표 metadata bootstrap의 한계는 유지하며 실제 승인 chain을 검증한 결과로 확대하지 않는다.
+
+운영 before의 변경 대상만 투영한 예상 전체 catalog `80fbf73bd83091e9ef8c500cb406bae71764197b55de16f33e23638aa12483b4`는 READ ONLY 계산과 독립 검토를 마쳤다. 이는 실제231 AFTER 관측이 아니다. 격리 restore의 나머지 ACL·열 번호·CHECK 표현으로 운영 메타데이터를 덮거나 정상화하지 않았다.
+
+총괄은 설치646의 기존 sealed artifact/descriptor staging 후 기존 `--activate`로 current229 worker receipt를 발행했다. 원227/verification·현재 PID·plist·기존 credential/secret·policy row를 보존했고 실제 AI·DDL·재시작은0이다. DB231과 새 웹 release의 운영 반영, 새231 worker readback 및 그 실제 결과 확인은 아직 남았다. 과거 앱 native나 기존229 native를 새 운영 반영 성공으로 합산하지 않으며 모든 운영 단계는 총괄이 담당한다.

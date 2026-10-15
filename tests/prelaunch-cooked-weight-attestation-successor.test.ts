@@ -2,7 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { createC04QuantityWorkerCutover, assertC04WorkerSuccessorBinding, assertC04WorkerMaintenanceBinding,
+  YOUTUBE_C04_CATALOG_BEFORE, YOUTUBE_C04_CATALOG_AFTER, YOUTUBE_C04_EXPECTED_SCHEMA_SHA256 } from "../scripts/lib/youtube-v71-controlled-cutover.mjs";
+import { DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE, DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
+import { YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST, YOUTUBE_V71_PIPELINE_IDENTITY } from "../scripts/lib/youtube-v71-worker-preparation.mjs";
 
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const sha = (c: string) => c.repeat(64), ref = (c: string) => c.repeat(40);
@@ -779,4 +784,125 @@ it("rejects standalone old227/228 activation and an unknown current229 receipt",
  }
  const unknown=f.save(f.p229.pointer.path,{...f.p229.record,status:"unknown"});f.save(f.currentPath,{...f.current,activationReceipt:unknown.pointer});
  expect(()=>f.owned.verifyRecipeSaveRecoveryWorkerAdmission(f.review,process.cwd())).toThrow("unresolved");
+});
+
+function actualWorkerReadbackFixture() {
+ const f=publicationFixture(),plist="owned readback plist",policy={version:3,model:"same-model",extractorMode:DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE,
+  pipelineIdentity:YOUTUBE_V71_PIPELINE_IDENTITY,snapshotDigest:YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,resultAffectingOptions:DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,enabled:true};
+ f.review.database.workerBaseline.snapshotDigest=YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST;
+ const authority={readerReceiptSha256:f.review.predecessorQuantity.readerReceipt.sha256,writerReceiptSha256:f.review.predecessorQuantity.writerReceipt.sha256};
+ const post=f.save(f.post.pointer.path,{...f.post.record,snapshotDigest:YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,plistSha256:hash(plist)});
+ const origin=f.save(f.origin.pointer.path,{...f.origin.record,postWorkerTerminal:post.pointer});
+ const on={...f.observation,snapshotDigest:YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,jtiHash:sha("1"),policy};
+ const verification=f.save(f.verification.pointer.path,{...f.verification.record,post:post.record,authority,zeroActualAI:true,
+  service:{pid:300,plistSha256:hash(plist)},observation:{...on,workerPolicyEnabled:false,policyRowSha256:sha("8"),policy:{...policy,enabled:false}}});
+ const activation=f.save(f.activation.pointer.path,{...f.activation.record,...authority,activationVerification:verification.pointer,observation:on,database:on});
+ const successor={...f.successor,predecessor:{...f.successor.predecessor,post:{...post,origin},verification,activation}};
+ const old=maintenanceFixture({...f,successor}),r=recipeReviewFixture({...f,successor},old);
+ const record={...old.record,feature:web.RECIPE_SAVE_RECOVERY_FEATURE,reviewSha256:sha("6"),from:r.from,to:r.to,sourceReaderRef:r.from,readerFloor:r.from,
+  databasePlanSha256:hash(JSON.stringify({source:r.database.after,applied:r.database.after})),catalogSha256:r.database.afterCatalogSha256,immutableSha256:r.database.afterImmutableSha256,
+  predecessorNutrition:r.predecessorNutrition,recipeSaveRecoveryWritesEnabled:true,receiptColumnInitiallyNull:true,readerReady:true,writerEnabled:true,controlsSha256:sha("4")};
+ const terminal=pointer("producer-owned231","b"),next={review:r,record,pointer:terminal,guardPointer:terminal,nutritionPredecessor:old,predecessor:successor};
+ const binding=web.cookedWeightAttestationSuccessorBinding(successor),oldBinding=web.nutritionValidatorMaintenanceBinding(old)!,nextBinding=web.recipeSaveRecoveryBinding(next);
+ let maintenance:typeof oldBinding|typeof nextBinding=oldBinding;
+ let current={...f.current,postWorkerTerminal:post.pointer,postWorkerOrigin:origin.pointer,activationVerification:verification.pointer,activationReceipt:activation.pointer};
+ f.save(f.currentPath,current);
+ const service={loaded:true,state:"running",pid:200,plistSha256:hash(plist)};
+ const review={schema:"homecook.youtube-c04-controlled-cutover-review.v1",releaseSha:ref("b"),targetSha256:f.review.database.targetSha256,
+  operationId,operationRoot:join(temp,"worker"),generationBefore:47,generationAfter:48,ledgerBefore:226,ledgerAfter:227,
+  catalogBefore:YOUTUBE_C04_CATALOG_BEFORE,catalogAfter:YOUTUBE_C04_CATALOG_AFTER,migrationSha256:"f586b27f2f5da5063a7eaa70278c7f00edab762aa27248b91a224411f436c750",
+  schemaIdentity:web.QUANTITY_V4_WORKER_SCHEMA_IDENTITY,artifactSha256:sha("a"),descriptorSha256:sha("c"),expectedSchemaSha256:YOUTUBE_C04_EXPECTED_SCHEMA_SHA256,
+  snapshotDigest:YOUTUBE_V71_POLICY_SNAPSHOT_DIGEST,preReceiptSha256:null,postReceiptSha256:null};
+ const context=()=>({successor:binding,databaseMaintenance:maintenance,databaseReceiptSha256:f.review.predecessorQuantity.databaseReceipt.sha256,
+  consumersReceiptSha256:post.record.consumersReceiptSha256});
+ const observed=()=>({...on,ledgerCount:maintenance.ledgerCount,databaseSuccessor:binding,databaseMaintenance:maintenance,normalDataSha256:sha("9")});
+ const cli=readFileSync("scripts/youtube-v71-controlled-cutover.mjs","utf8");
+ function extract(startText:string,endText:string,name:string,dependencies:Record<string,unknown>){
+  const start=cli.indexOf(startText),end=cli.indexOf(endText,start);if(start<0||end<=start)throw Error("Actual worker producer boundary moved");
+  return new Function(...Object.keys(dependencies),cli.slice(start,end)+`;return ${name};`)(...Object.values(dependencies));
+ }
+ const check=(condition:unknown,message:string)=>{if(!condition)throw Error(message);};
+ const readPrivate=(path:string)=>{check(path.startsWith(f.directory+"/"),"unowned producer file");return readFileSync(path);};
+ const currentMaintenanceMatches=extract('  function currentMaintenanceMatches(', '  function checkpointOrigin(', 'currentMaintenanceMatches',{
+  currentMaintenance:()=>maintenance,isDeepStrictEqual});
+ const assertCurrentOrigin=extract('  function assertCurrentOrigin(', '  function activationOrigin(', 'assertCurrentOrigin',{
+  currentSuccessor:()=>binding,assertC04WorkerSuccessorBinding,assertC04WorkerMaintenanceBinding,currentMaintenanceMatches,check,review,isDeepStrictEqual});
+ const paths={activationVerification:verification.pointer.path,activationReceipt:activation.pointer.path};
+ const activationOrigin=extract('  function activationOrigin(', '  async function reconcileActivation(', 'activationOrigin',{
+  directory:f.directory,paths,readPrivate,sha256:hash,check,review,reviewSha256:sha("d"),assertCurrentOrigin});
+ const forbidden=()=>vi.fn(async()=>{throw Error("unrequested worker mutation");});
+ const issueCredentials=forbidden(),issueManager=forbidden(),installAndVerify=forbidden(),transaction=forbidden(),stopInstalled=forbidden(),finalizeActivation=forbidden();
+ const durablePrivateJson=vi.fn((path:string,value:object)=>{expect(()=>readFileSync(path)).toThrow();f.save(path,value);});
+ const journal=vi.fn(async(state:string,fields:object)=>{current={...current,...fields,state};f.save(f.currentPath,current);});
+ const verifyInstalled=vi.fn(async()=>({service}));
+ const publisher=extract('  async function publishActivationReceipt(', '  return { verifyCandidate:', 'publishActivationReceipt',{
+  readPrivate,sha256:hash,assertCurrentOrigin,isDeepStrictEqual,check,review,reviewSha256:sha("d"),verifyInstalled,existingCredentials:()=>({}),readJournal:()=>current,
+  observation:async()=>observed(),readLaunchStatus:()=>service,PLIST:join(f.directory,"owned.plist"),readFileSync:()=>plist,stableStringify:JSON.stringify,
+  baseJournal:{schema:"homecook.youtube-c04-controlled-cutover-journal.v1",reviewSha256:sha("d"),operationId,operationDirectory:f.directory,releaseSha:ref("b"),targetSha256:review.targetSha256},
+  paths,directory:f.directory,existsSync:(path:string)=>{try{readFileSync(path);return true;}catch{return false;}},
+  privateDirectory:(path:string)=>{mkdirSync(path,{recursive:true,mode:0o700});return path;},join,randomUUID,durablePrivateJson,journal});
+ const publishActivationReceipt=vi.fn(publisher);
+ const verifyStart=cli.indexOf('    verifyActivationReceipt: '),verifyEnd=cli.indexOf(',\n    currentService:',verifyStart);if(verifyStart<0||verifyEnd<=verifyStart)throw Error("Actual verification callback moved");
+ const verifyActivationReceipt=new Function("deps",`const {directory,paths,sha256,readPrivate,check,reviewSha256,verifyInstalled,observation,activationOrigin,stableStringify,assertCurrentOrigin,isDeepStrictEqual,publishActivationReceipt}=deps;return (${cli.slice(verifyStart+'    verifyActivationReceipt: '.length,verifyEnd)});`)({
+  directory:f.directory,paths,sha256:hash,readPrivate,check,reviewSha256:sha("d"),verifyInstalled,observation:async()=>observed(),activationOrigin,stableStringify:JSON.stringify,assertCurrentOrigin,isDeepStrictEqual,publishActivationReceipt});
+ const engine=createC04QuantityWorkerCutover({review,bindings:{releaseSha:ref("b"),artifactSha256:sha("a"),operationRoot:join(temp,"worker")},reviewSha256:sha("d"),adapters:{
+  readJournal:async()=>current,verifyCandidate:vi.fn(async()=>{}),readCheckpoint:async()=>post.record,preflight:async()=>context(),existingCredentials:async()=>({metadata:{jti_sha256:on.jtiHash}}),
+  readerWriterAuthority:async()=>authority,observe:async()=>observed(),verifyActivationReceipt,activationOrigin,finalizeActivation,
+  publishActivationReceipt,issueCredentials,issueManager,installAndVerify,transaction,stopInstalled}});
+ web.setOwnedMaintenance(old);web.setOwnedRecipeMaintenance(null);
+ return {engine,successor,old,next,verification,activation,post,origin,currentPath:f.currentPath,service,forbidden:[issueCredentials,issueManager,installAndVerify,transaction,stopInstalled,finalizeActivation],
+  durablePrivateJson,journal,publishActivationReceipt,verifyInstalled,readPrivate,getCurrent:()=>current,
+  setState:(state:string)=>{current={...current,state};f.save(f.currentPath,current);},
+  driftObservation:(changes:Partial<typeof on>)=>Object.assign(on,changes),
+  switchTo231:()=>{maintenance=nextBinding;web.setOwnedRecipeMaintenance(next);},
+  replaceCurrentReceipt:(changes:object)=>{const prior=JSON.parse(readPrivate(current.activationReceipt.path).toString());const updated=f.save(current.activationReceipt.path,{...prior,...changes});current={...current,activationReceipt:updated.pointer};f.save(f.currentPath,current);},
+  cleanup:()=>{web.setOwnedRecipeMaintenance(null);web.setOwnedMaintenance(null);}};
+}
+
+it("runs actual already-ON activation verify→publish→consumer for227→229→231 and repeats231 without new mutation",async()=>{
+ const f=actualWorkerReadbackFixture();try{
+  const originalActivation=f.readPrivate(f.activation.pointer.path),originalVerification=f.readPrivate(f.verification.pointer.path),originalPost=f.readPrivate(f.post.pointer.path);
+  const r229=await f.engine.activate();expect(r229).toMatchObject({status:"committed",observation:{ledgerCount:229}});
+  const p229=f.getCurrent().activationReceipt,bytes229=f.readPrivate(p229.path);
+  expect(r229.predecessorActivationReceipt).toEqual(f.activation.pointer);
+  expect(web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd()).observation.ledgerCount).toBe(229);
+  f.switchTo231();const r231=await f.engine.activate();expect(r231).toMatchObject({status:"committed",observation:{ledgerCount:231}});
+  expect(r231.predecessorActivationReceipt).toEqual(p229);expect(r231.activationVerification).toEqual(f.verification.pointer);
+  expect(r231.service.pid).toBe(200);expect(f.post.record.pid).toBe(100);expect(f.verification.record.service.pid).toBe(300);
+  expect(web.loadCookedWeightAttestationWorkerContinuation(f.successor,process.cwd()).observation.ledgerCount).toBe(231);
+  const p231=f.getCurrent().activationReceipt;await expect(f.engine.activate()).resolves.toEqual(r231);expect(f.getCurrent().activationReceipt).toEqual(p231);
+  expect(f.durablePrivateJson).toHaveBeenCalledTimes(2);expect(f.publishActivationReceipt).toHaveBeenCalledTimes(2);expect(f.journal).toHaveBeenCalledTimes(2);
+  expect(f.readPrivate(p229.path)).toEqual(bytes229);expect(f.readPrivate(f.activation.pointer.path)).toEqual(originalActivation);
+  expect(f.readPrivate(f.verification.pointer.path)).toEqual(originalVerification);expect(f.readPrivate(f.post.pointer.path)).toEqual(originalPost);
+  for(const operation of f.forbidden)expect(operation).not.toHaveBeenCalled();
+ }finally{f.cleanup();}
+});
+
+it.each(["activation-commit-intent","activation-outcome-unknown"])("actual already-ON producer rejects old229 %s at231 before mutation",async state=>{
+ const f=actualWorkerReadbackFixture();try{await f.engine.activate();f.switchTo231();f.setState(state);const writes=f.durablePrivateJson.mock.calls.length;
+  await expect(f.engine.activate()).rejects.toThrow();expect(f.durablePrivateJson).toHaveBeenCalledTimes(writes);
+  for(const operation of f.forbidden)expect(operation).not.toHaveBeenCalled();
+ }finally{f.cleanup();}
+});
+
+it.each(["legacy227","missing229","foreign229","unknown229"])("actual231 producer rejects %s history without publishing a new receipt",async drift=>{
+ const f=actualWorkerReadbackFixture();try{
+  if(drift!=="legacy227")await f.engine.activate();f.switchTo231();
+  if(drift==="missing229"){
+   const prior=JSON.parse(f.readPrivate(f.getCurrent().activationReceipt.path).toString());
+   const old228={...prior.observation,ledgerCount:228,databaseMaintenance:undefined};
+   f.replaceCurrentReceipt({databaseMaintenance:undefined,observation:old228,database:old228});
+  }
+  if(drift==="foreign229")f.replaceCurrentReceipt({databaseMaintenance:{...web.nutritionValidatorMaintenanceBinding(f.old),receipt:pointer("foreign-worker229","f")}});
+  if(drift==="unknown229")f.replaceCurrentReceipt({status:"unknown"});
+  const writes=f.durablePrivateJson.mock.calls.length;await expect(f.engine.activate()).rejects.toThrow();expect(f.durablePrivateJson).toHaveBeenCalledTimes(writes);
+  for(const operation of f.forbidden)expect(operation).not.toHaveBeenCalled();
+ }finally{f.cleanup();}
+});
+
+it.each(["credentialRowSha256","policyRowSha256"] as const)("actual231 producer refuses changed %s with issuance/policy/restart calls0",async field=>{
+ const f=actualWorkerReadbackFixture();try{await f.engine.activate();f.switchTo231();f.driftObservation({[field]:sha("f")});
+  const writes=f.durablePrivateJson.mock.calls.length;await expect(f.engine.activate()).rejects.toThrow();expect(f.durablePrivateJson).toHaveBeenCalledTimes(writes);
+  for(const operation of f.forbidden)expect(operation).not.toHaveBeenCalled();
+ }finally{f.cleanup();}
 });
