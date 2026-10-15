@@ -75,9 +75,10 @@ describe("job-scoped AI recipe refresh", () => {
 
   it("keeps an unavailable product pin instead of falling back to generic AI", async () => {
     const input = bundle();
-    const pins = { food_product_id: "product-1", food_product_nutrition_version_id: "version-1" };
+    const pins = { ingredient_id: null, food_product_id: "product-1", food_product_nutrition_version_id: "version-1" };
     Object.assign(input.recipe_ingredients[0], pins);
-    Object.assign(input.input_guard.recipe_ingredients[0], pins, { product_predecessor: null });
+    Object.assign(input.input_guard.recipe_ingredients[0], pins, { product_predecessor: null,
+      nutrition_candidates: [], selected_nutrition_link_id: null });
     input.product_predecessors = [{ id: "ri-1", product_predecessor: null }];
     const client = rpcClient(input);
     await refreshIngredientAiRecipeNutrition(client, options);
