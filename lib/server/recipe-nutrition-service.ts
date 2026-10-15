@@ -5,6 +5,8 @@ import {
   calculateRecipeNutrition,
 } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { writeRecipeNutritionSnapshot } from "@/lib/server/recipe-nutrition-snapshot";
+import type { AccountGenerationBootstrapSessionAuthority } from "@/lib/server/account-generation/session-authority";
+import { readRecipeQuantityMode } from "@/lib/server/recipe-snapshot-entrypoint";
 import {
   buildRecipeNutritionInputGuard,
   hydrateRecipeNutritionIngredients,
@@ -117,6 +119,7 @@ export async function prepareRecipeNutritionSnapshot(
   dbClient: RecipeNutritionServiceClient,
   recipeId: string,
   predecessorClient: Pick<RecipeNutritionServiceClient, "from"> & RecipeProductNutritionClient = dbClient,
+  sessionAuthority?: AccountGenerationBootstrapSessionAuthority,
 ) {
   if (!isNonEmptyText(recipeId)) {
     throw new RecipeNutritionServiceError("INVALID_RECIPE_NUTRITION_INPUT");
@@ -168,18 +171,37 @@ export async function prepareRecipeNutritionSnapshot(
   } catch {
     throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
   }
-  // The recipe read above has already passed its existing RLS/ownership path.
-  // Reuse the existing service-only input guard, not a catalog reader.
-  const modeRead = await predecessorClient.rpc("build_recipe_nutrition_input_guard", { p_recipe_id: recipeId });
-  const mode = modeRead.data;
-  if (modeRead.error || !mode || typeof mode !== "object" || !("recipe_ingredients" in mode)
-    || !Array.isArray(mode.recipe_ingredients)) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
-  const quantityV4 = "quantity_policy_version" in mode;
+  let quantityV4: boolean;
+  let quantityRecipeRevision: number | undefined;
+  if (sessionAuthority) {
+    if (recipeResult.data.created_by !== sessionAuthority.ownerUuid) {
+      throw new RecipeNutritionServiceError("RESOURCE_NOT_FOUND");
+    }
+    const revision = recipeResult.data.revision;
+    if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision <= 0) {
+      throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
+    }
+    // Publication's existing scope permits this owner/gen/session reader.
+    // The service-only guard builder has no HTTP path in that scope.
+    quantityV4 = await readRecipeQuantityMode({ client: predecessorClient,
+      sessionAuthority, recipeId, expectedRevision: revision });
+    if (quantityV4) quantityRecipeRevision = revision;
+  } else {
+    const modeRead = await predecessorClient.rpc("build_recipe_nutrition_input_guard", { p_recipe_id: recipeId });
+    const mode = modeRead.data;
+    if (modeRead.error || !mode || typeof mode !== "object" || !("recipe_ingredients" in mode)
+      || !Array.isArray(mode.recipe_ingredients)) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
+    quantityV4 = false;
+    if ("quantity_policy_version" in mode) {
+      if (!("quantity_recipe_revision" in mode) || mode.quantity_policy_version !== "quantity-v4"
+        || mode.quantity_recipe_revision !== recipeResult.data.revision) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
+      quantityRecipeRevision = recipeResult.data.revision;
+      quantityV4 = true;
+    }
+  }
   if (!quantityV4 && ingredientsResult.data.some(row => row.quantity_input !== null && row.quantity_input !== undefined)) {
     throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
   }
-  if (quantityV4 && (!("quantity_recipe_revision" in mode) || mode.quantity_policy_version !== "quantity-v4"
-    || mode.quantity_recipe_revision !== recipeResult.data.revision)) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
   let quantityHydration;
   try {
     quantityHydration = quantityV4 ? await hydrateRecipeQuantityNutrition(predecessorClient, ingredientsResult.data,
@@ -195,8 +217,8 @@ export async function prepareRecipeNutritionSnapshot(
 
   const guard = addRecipeProductNutritionGuard(
     buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors), ingredientsResult.data, productHydration.predecessors);
-  if (quantityHydration && "quantity_recipe_revision" in mode) {
-    Object.assign(guard, { quantity_policy_version: "quantity-v4", quantity_recipe_revision: mode.quantity_recipe_revision });
+  if (quantityHydration) {
+    Object.assign(guard, { quantity_policy_version: "quantity-v4", quantity_recipe_revision: quantityRecipeRevision });
   }
   if (quantityHydration && Array.isArray(guard.recipe_ingredients)) {
     guard.recipe_ingredients = guard.recipe_ingredients.map(row => ({ ...row,
