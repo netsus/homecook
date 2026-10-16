@@ -156,16 +156,17 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 기존 scope·로그인·RPC 인수·검증·성공/오류 응답/빈 목록 처리는 유지한다. 단발 identity 함수 삭제이므로 전체 emitted JS byte-identical 주장은 하지 않는다. 운영·DB·보안설정 변경0, 전체 build·화면·실DB 미실행이다. 기존10실패·49원본 미확인은 별도다.
 - 최종 제품 코드에서 기존 실패5 suite를 재실행해127건=117 PASS/같은10 FAIL/skip0, exit1을 확인했다. 실패제목은 기존 목록과 같고 성공27건과 합쳐 전체통과로 표현하지 않는다. 권한 검사 완화·기대값 교체0이다.
 
-## 현재 배치: 잔여 원본 ID별 판단 고정
+## 현재 배치: [#1772](https://github.com/netsus/homecook/pull/1772) 잔여 원본 ID별 판단 고정
 
 - 제품157건을 없앤 것이 아니라 inventory의 미검토53건을 분류했다. 원본163 ID/file/rule/hash/occurrence/checkpoint위치/snippet은 불변이고 해결6+잔여157을 유지한다. 별도49건 원본은 여전히 미확인이다.
 - 독립 조사자는 clean063f8a226의 전체 TypeScript 진단0 확인 후 미검토 연쇄 단언45건을 각1개씩 메모리에서 직접대입으로 바꿨다. 직접성공4/TS2589 30/구조불일치11이었다. 제품 파일을 수정하지 않았다. 실패 probe는 변경 파일의 semantic diagnostics 분리이며 성공4와 nutrition predecessor 계약 개선은 전체 program0도 확인했다.
 - 성공4 중 POST2와 complete1은 #1767/#1769에 반영했다. 구조불일치11 중 실제 predecessor 계약2는 #1768로 해결했다. 남은39는 TS2589 30+구조불일치9이며 **단순삭제 불가이지 전체 리팩토링 불가가 아니다**. 각 ID의 holdReason/review에 query 단계·row shape·누락 capability 및 probe 한계를 남겼다.
 - 구조9의 실제 경계는 bundle generic Row의 recipe 필수필드 미보장1, progress/growth→gamification capability 누락2, standalone cook-mode generated projection 불일치1, detail ingredients normalized-row 검증/타입 경계1, manual nutrition caller3, publish owner read1이다. 검증 없이 generated row·조인 형태를 단정하거나 adapter/새cast로 숨기지 않는다. 후속은 해당 consumer의 실제 read/row 계약을 먼저 확정하는 원인 수준 작업이다.
 - 직접성공 나머지1은 session-attempts cook-mode로, 병행 무게 호환 경로다. 확인한 weight worktree에 현재 target diff는 없었지만 미래 겹침까지 증명하지 못한다. 부모에 중간 통지를 시도했으나 thread not found였으므로 owner 조율 전에는 보존한다. 기술 실패로 위장하지 않는다.
-- prototype8은 production bundle이 아니라 고정 visual reference/디자인 handoff다. Wave1 참고 README는 승인된 refreeze만 허용하고 screenshot capture 때는 실제 실행된다. 따라서 죽은 코드라 삭제하거나 Anti 수치만 줄이려고 고치지 않는다.
-- production 체인1(dedupeRecipeIds)은 실제 검색 RPC 중복ID 제거와 회귀 책임이 있고 크기/latency 문제 증거가 없다. filter(Boolean) 방어를 없애거나 loop로 바꾸지 않는다. 선택 product projection4는 부재/own-undefined/null·독립 조건·키순서 의미를 보존해야 하며 typed 임시객체+무조건spread로 바꾸는 방식은 실제 단순성/할당 개선 근거가 없다. 이5건은 해결이 아닌 근거 없음 유지다.
-- 현 배치에서 원본163 ID·hash/위치 불변·baseline count 대조·집계·모든 해결PR/보류근거 존재·diff를 기계 검증했다. master4a9da2702 통합 관련21 suite310 PASS, 전체 typecheck·이번 연속 변경15파일 ESLint PASS, Anti Slop157/baseline207/신규0을 확인했다. 063f8a226 이후 checker/baseline/save route/내부factory 파일 diff0이다. 독립 장부 검토는 확인 중이다. 운영·DB·권한·보안설정·배포 변경0이다.
+- prototype8은 production bundle이 아니라 고정 visual reference/디자인 handoff다. 이 중260505 Wave1의7건은 참고 README가 승인된 refreeze만 허용하며 screenshot capture 때 실제 실행되는 참조물이다. 나머지260512 desktop modal1건은 별도 디자인 handoff이며 같은 capture로 실행된다고 주장하지 않는다. 죽은 코드라 삭제하거나 Anti 수치만 줄이려고 고치지 않는다.
+- production 체인1(dedupeRecipeIds)은 실제 검색 RPC 중복ID 제거와 회귀 책임이 있고 크기/latency 문제 증거가 없다. filter(Boolean) 방어를 없애거나 loop로 바꾸지 않는다. product projection4의 의미는 다르다: normalize366/368은 각 값이 문자열일 때만 trim한 키를 넣고 부재/null/undefined/비문자열은 모두 생략한다. payload1367은 food_product_id가 truthy일 때 두 키를 함께 넣으며 version은 그 안에서 own undefined/null일 수 있다. snapshot641만 hasOwn으로 부재와 own undefined/null을 구분한다. 각각의 키순서/조건을 보존하려고 typed 임시객체+무조건spread로 바꾸는 방식은 실제 단순성/할당 개선 근거가 없다. 이5건은 해결이 아닌 근거 없음 유지다.
+- 독립 장부 검토의 첫 verdict는 REQUEST CHANGES였다. projection4에 동일한 own-key 사유를 붙인 MEDIUM 정확성 문제와 prototype7+1의 capture 문구 LOW를 수용해 항목별 실제 조건으로 바로잡았다. 수정 전 실패 판단을 숨기지 않으며 재검토에서 모두 해결된 것으로 APPROVE를 받았다.
+- 현 배치에서 원본163 ID·hash/위치 불변·baseline count 대조·집계·모든 해결PR/보류근거 존재·diff를 기계 검증했다. master4a9da2702 통합 관련21 suite310 PASS, 전체 typecheck·이번 연속 변경15파일 ESLint PASS, Anti Slop157/baseline207/신규0을 확인했다. 063f8a226 이후 checker/baseline/save route/내부factory 파일 diff0이다. 독립 장부 검토 APPROVE: 실제 조건·원본identity·집계·30+9·제품diff0·diff-check를 직접 재확인했다. 통합310/type/lint/Anti는 부모 실행 결과와 구분한다. 운영·DB·권한·보안설정·배포 변경0이다.
 
 ## 보류·기술적 경계
 

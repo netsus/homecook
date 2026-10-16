@@ -1256,7 +1256,7 @@
       "column": 5,
       "snippet": "...(typeof row.food_product_id === \"string\" ? { food_product_id: row.food_product_id.trim() } : {})",
       "state": "retained-no-improvement-evidence",
-      "holdReason": "Optional product keys deliberately distinguish absence, own-undefined/null and independent conditions. Preserving key order via another temporary object/unconditional spread does not establish simpler code or fewer allocations; no metric-only rewrite.",
+      "holdReason": "This key is independently emitted only for a string source value (trimmed, including empty strings). Absent/null/undefined/non-string values all omit it. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
@@ -1274,7 +1274,7 @@
       "column": 5,
       "snippet": "...(typeof row.food_product_nutrition_version_id === \"string\" ? { food_product_nutrition_version_id: row.food_product_nutrition_version_id.trim() } : {})",
       "state": "retained-no-improvement-evidence",
-      "holdReason": "Optional product keys deliberately distinguish absence, own-undefined/null and independent conditions. Preserving key order via another temporary object/unconditional spread does not establish simpler code or fewer allocations; no metric-only rewrite.",
+      "holdReason": "This key is independently emitted only for a string source value (trimmed, including empty strings). Absent/null/undefined/non-string values all omit it. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
@@ -1309,7 +1309,7 @@
       "column": 7,
       "snippet": "...(ingredient.food_product_id ? { food_product_id: ingredient.food_product_id, food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id, } : {})",
       "state": "retained-no-improvement-evidence",
-      "holdReason": "Optional product keys deliberately distinguish absence, own-undefined/null and independent conditions. Preserving key order via another temporary object/unconditional spread does not establish simpler code or fewer allocations; no metric-only rewrite.",
+      "holdReason": "The two product keys are jointly emitted only when food_product_id is truthy; the nutrition-version value may remain an own undefined/null value inside that branch. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
@@ -1893,7 +1893,7 @@
       "column": 9,
       "snippet": "...(Object.hasOwn(guard, \"product_predecessor\") ? { product_predecessor: guard.product_predecessor } : {})",
       "state": "retained-no-improvement-evidence",
-      "holdReason": "Optional product keys deliberately distinguish absence, own-undefined/null and independent conditions. Preserving key order via another temporary object/unconditional spread does not establish simpler code or fewer allocations; no metric-only rewrite.",
+      "holdReason": "Object.hasOwn deliberately distinguishes an absent product_predecessor key from an own undefined/null value. Preserving this and key order via a temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
