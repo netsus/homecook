@@ -683,29 +683,32 @@ export function isUserProgressRepeatCapExceeded(
     return false;
   }
 
-  const repeatEvents = existingEvents.filter((event) => {
-    if (event.event_type !== eventType) {
-      return false;
-    }
-
-    return normalizeSourceMeta(event.source_meta_json).xp_kind === "repeat";
+  const repeatEvents: Array<{ occurredAt: string; meta: ReturnType<typeof normalizeSourceMeta> }> = [];
+  existingEvents.forEach((event) => {
+    if (event.event_type !== eventType) return;
+    const meta = normalizeSourceMeta(event.source_meta_json);
+    if (meta.xp_kind === "repeat") repeatEvents.push({ occurredAt: event.occurred_at, meta });
   });
 
   if (caps.daily && sourceMeta.cap_day_key) {
-    const dailyCount = repeatEvents.filter((event) =>
-      normalizeSourceMeta(event.source_meta_json).cap_day_key === sourceMeta.cap_day_key
-        || getKstDateKey(event.occurred_at) === sourceMeta.cap_day_key
-    ).length;
+    let dailyCount = 0;
+    for (const { occurredAt, meta } of repeatEvents) {
+      if (meta.cap_day_key === sourceMeta.cap_day_key || getKstDateKey(occurredAt) === sourceMeta.cap_day_key) {
+        dailyCount += 1;
+      }
+    }
     if (dailyCount >= caps.daily) {
       return true;
     }
   }
 
   if (caps.weekly && sourceMeta.cap_week_key) {
-    const weeklyCount = repeatEvents.filter((event) =>
-      normalizeSourceMeta(event.source_meta_json).cap_week_key === sourceMeta.cap_week_key
-        || getKstIsoWeekKey(event.occurred_at) === sourceMeta.cap_week_key
-    ).length;
+    let weeklyCount = 0;
+    for (const { occurredAt, meta } of repeatEvents) {
+      if (meta.cap_week_key === sourceMeta.cap_week_key || getKstIsoWeekKey(occurredAt) === sourceMeta.cap_week_key) {
+        weeklyCount += 1;
+      }
+    }
     if (weeklyCount >= caps.weekly) {
       return true;
     }
