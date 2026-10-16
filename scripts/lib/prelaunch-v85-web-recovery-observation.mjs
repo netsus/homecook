@@ -8,7 +8,7 @@ import { loadCookedWeightAttestationSuccessor,loadCurrentDatabaseMaintenance,loa
 import { assertV74WorkerSuccessor,V74_ACTIVATION_SHA256,V74_OPERATION_DIRECTORY } from './prelaunch-youtube-v74-cutover.mjs';
 import { readFingerprintRecoveryAuthority } from './youtube-fingerprint-recovery-authority.mjs';
 import { openDedicatedAdminSession } from '../youtube-resolution-controlled-db.mjs';
-import { assertRecoveryDatabase,recoveryCheck } from './prelaunch-v85-web-recovery.mjs';
+import { assertRecoveryDatabase,recoveryCheck,recoveryHistoricalJobHashes } from './prelaunch-v85-web-recovery.mjs';
 import { verifyOperatingYoutubeEnqueueRuntime } from './youtube-enqueue-runtime-preflight-ops.mjs';
 const hash=x=>createHash('sha256').update(x).digest('hex');
 
@@ -27,9 +27,8 @@ export async function createV85WebRecoveryObserver(repository) {
   recoveryCheck(target.database.systemIdentifier==='7669475895419854882'&&target.database.major===17,'fixed local PostgreSQL17');
   const adapter=createProtectedPrelaunchAdapter(base,maintenance.review.feature,maintenance.review,maintenance);
   return {proof,maintenance,async verifyHistoricalKey(plist,readiness){
-    const ids=Object.keys(fingerprintRecovery.receipt.before.originalJobs);
-    recoveryCheck(ids.length===41&&ids.every(id=>/^[a-f0-9-]{36}$/u.test(id)),'original fingerprint history IDs');
-    const rows=JSON.parse(await base.query(`SELECT coalesce(json_agg(json_build_object('user_id',user_id,'youtube_video_id',youtube_video_id,'extractor_mode',extractor_mode,'pipeline_identity',pipeline_identity,'policy_version',policy_version,'result_affecting_options',result_affecting_options,'fingerprint',request_fingerprint) ORDER BY id),'[]'::json) FROM public.youtube_extraction_jobs WHERE request_fingerprint_key_version='2' AND id IN (${ids.map(id=>`'${id}'::uuid`).join(',')});`));
+    const ids=recoveryHistoricalJobHashes(fingerprintRecovery.receipt);
+    const rows=JSON.parse(await base.query(`SELECT coalesce(json_agg(json_build_object('user_id',user_id,'youtube_video_id',youtube_video_id,'extractor_mode',extractor_mode,'pipeline_identity',pipeline_identity,'policy_version',policy_version,'result_affecting_options',result_affecting_options,'fingerprint',request_fingerprint) ORDER BY id),'[]'::json) FROM public.youtube_extraction_jobs WHERE request_fingerprint_key_version='2' AND encode(sha256(convert_to(id::text,'UTF8')),'hex') IN (${ids.map(id=>`'${id}'`).join(',')});`));
     const result=verifyOperatingYoutubeEnqueueRuntime({codeRoot:plist.WorkingDirectory,plist,readiness,rows});
     recoveryCheck(result.compared===33&&result.matched===33&&result.secretDisclosed===false,'original V2 HMAC reproduced');
     return result;

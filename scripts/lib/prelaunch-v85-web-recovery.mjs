@@ -55,6 +55,13 @@ export function assertRecoveryPreserved(before,after) {
   recoveryCheck(same(before,after), 'fresh before/after DB, controls, jobs, worker, guards or authority changed');
 }
 
+export function recoveryHistoricalJobHashes(receipt) {
+  // The historical privacy-preserving map is keyed by sha256(id), never raw UUID.
+  const ids=Object.keys(receipt.before.originalJobs);
+  recoveryCheck(ids.length===41&&ids.every(id=>/^[a-f0-9]{64}$/u.test(id)),'original fingerprint history hashes');
+  return ids;
+}
+
 export function assertRecoveryWebProcess({loaded,listener,uid,cwd,expectedPid}) {
   recoveryCheck(loaded.loaded&&loaded.state==='running'&&loaded.pid>0
     &&(expectedPid===undefined||loaded.pid===expectedPid),'actual loaded web PID');

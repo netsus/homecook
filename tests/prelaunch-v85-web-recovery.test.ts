@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {V85_WEB_RECOVERY as P,assertRecoveryBinding,assertRecoveryDatabase,assertRecoveryPreserved,assertRecoveryWebProcess,assertRecoveredEnqueue,runV85WebRecovery} from '../scripts/lib/prelaunch-v85-web-recovery.mjs';
+import {V85_WEB_RECOVERY as P,assertRecoveryBinding,assertRecoveryDatabase,assertRecoveryPreserved,assertRecoveryWebProcess,assertRecoveredEnqueue,runV85WebRecovery,recoveryHistoricalJobHashes} from '../scripts/lib/prelaunch-v85-web-recovery.mjs';
 import {v74MetadataPatch} from '../scripts/lib/prelaunch-youtube-v74-cutover.mjs';
 import {v85MetadataPatch} from '../scripts/lib/youtube-v85-cutover.mjs';
 import {loadRecoveredReadiness} from '../scripts/lib/prelaunch-v85-recovered-readiness.mjs';
@@ -15,6 +15,7 @@ function binding(){
 }
 function db(){return {ledger:Array(232).fill({sha256:h}),worker:{credentialGeneration:49,workerReleaseSha:String(P.workerRelease),credentialActive:true,workerPolicyEnabled:true,queued:0,processing:0,permitHeld:false,activeEnqueueSessions:0},fingerprintPolicy:{enabled:true,fingerprint_key_version:'2',previous_fingerprint_key_version:null,previous_fingerprint_valid_until:null}};}
 describe('exact existing web recovery authority',()=>{
+ it('uses the original hashed history IDs rather than treating them as UUIDs',()=>{const ids=Object.fromEntries(Array.from({length:41},(_,i)=>[i.toString(16).padStart(64,'0'),h]));expect(recoveryHistoricalJobHashes({before:{originalJobs:ids}})).toHaveLength(41);const invalid={...ids};delete invalid[Object.keys(invalid)[0]];expect(()=>recoveryHistoricalJobHashes({before:{originalJobs:invalid}})).toThrow();});
  it('accepts only the observed current and prior web with the original three metadata paths',()=>expect(()=>assertRecoveryBinding(binding())).not.toThrow());
  it.each(['from','to','fromBuild','toBuild','fromHash','toHash','stateHash','priorStateHash','env','argument','uid','r2','metadata','previousPath'])('rejects changed %s',field=>{
   const f=binding();
