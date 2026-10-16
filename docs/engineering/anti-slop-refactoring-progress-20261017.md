@@ -225,7 +225,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 리뷰 APPROVE: 같은25건·전체type/lint/diff·migration 열/nullability/RPC를 재확인했다. private 타입의 select("id")가 정확 {id:string}[]|null, 두RPC가 정확 {recipe_id:string}[]|null임을 메모리 전용 assertion을 넣은 전체 compiler program diagnostics0으로 확인했다. 괄호를 제외한 emitted JS AST도 동일하다. Anti Slop은 부모 결과와 구분한다.
 - 보호99·기존 보류5·조율1·유지13, 기존10실패·49원본미확인·1745/1749/444는 유지한다. 진행/활동 capability 후속안은 제품 편집0이며, 메모리 probe에서 기존 award fixture13개의 축소 타입 단언을 추가 확인했다. 그 fixture를 완전한 projection 증거로 쓰지 않으며 실제 성공/실패 경로 보강 후 별도 진행한다. 운영·DB 쓰기·권한·제품정책·전체 build/화면/실DB 검증0이다.
 
-### 현재 배치: 진행/활동 writer의 실제 projection capability 계약
+### 현재 배치: [#1777](https://github.com/netsus/homecook/pull/1777) 진행/활동 writer의 실제 projection capability 계약
 
 - 원본ID는 `lib/server/user-progress.ts::anti-slop(no-chained-type-assertions)::a2c5fd4bd48d3ce5683f88b76fd735a69e7b35408f4dfb83886844dddfa6b4bf#1` (checkpoint431), `lib/server/user-growth-activity.ts::anti-slop(no-chained-type-assertions)::4d0a30d6891165e87b8ad349dc6c268b125b55a22ae06cd50835576b733680ab#1` (checkpoint164)이다.
 - award 인수에 이미 호출하는 gamification 계약을 명시하되 core progress 읽기 계약은 그대로 둔다. growth 기록 client에는 기존 부가 progress/gamification 소비 계약을 함께 선언한다. 내부 재단언2개와 book 생성의 불필요 축소 단일단언만 제거한다. 외부 factory/공통 bootstrap 경계 단언은 남으며 이 배치가 그 경계까지 해결한 것은 아니다.

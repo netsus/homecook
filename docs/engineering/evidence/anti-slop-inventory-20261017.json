@@ -607,7 +607,7 @@
       },
       "resolution": {
         "reason": "Declare the progress/gamification capabilities already consumed by the existing writer and pass the same object without reassertion. Core progress reads remain narrow; original factory assertions and SDK compatibility debt remain.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1777",
         "verification": "Before: 7 existing suites51/runtime full-path7 PASS; capability type2 TS2344. After: 8 suites58/type/lint/diff/verify:anti-slop PASS; typed full fixture without casts, success writes and failure/duplicate preservation. Anti151→149/new0; product3 emitted JS byte-identical. Not an SDK/DB/RLS proof."
       }
     },
@@ -912,7 +912,7 @@
       },
       "resolution": {
         "reason": "Declare the progress/gamification capabilities already consumed by the existing writer and pass the same object without reassertion. Core progress reads remain narrow; original factory assertions and SDK compatibility debt remain.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1777",
         "verification": "Before: 7 existing suites51/runtime full-path7 PASS; capability type2 TS2344. After: 8 suites58/type/lint/diff/verify:anti-slop PASS; typed full fixture without casts, success writes and failure/duplicate preservation. Anti151→149/new0; product3 emitted JS byte-identical. Not an SDK/DB/RLS proof."
       }
     },
