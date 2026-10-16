@@ -462,8 +462,7 @@ export async function GET(request: Request) {
         .in("source_type", ["youtube", "manual"]),
       resolveRecipeBookCoverUrls({
         books: booksResult.data,
-        client: routeClient as unknown as
-          RecipeBookImageReadRpcClient & RecipeImageReadStorageClient,
+        client: routeClient,
         expectedOwnerUuid: user.id,
       }),
     ] as const).catch(() => null);
