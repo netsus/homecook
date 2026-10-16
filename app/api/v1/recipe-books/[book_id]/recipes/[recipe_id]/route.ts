@@ -10,6 +10,7 @@ import {
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
+import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -87,7 +88,11 @@ interface RecipeReaderRow {
 
 interface RecipeIngredientRow {
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
+  source_kind?: "ingredient" | "food_product" | null;
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+  quantity_input?: unknown;
   amount: number | string | null;
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
@@ -440,7 +445,7 @@ async function readReaderIngredients(
   const result = await dbClient
     .from("recipe_ingredients")
     .select(
-      "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)",
+      "id, source_kind, ingredient_id, food_product_id, food_product_nutrition_version_id, quantity_input, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)",
     )
     .eq("recipe_id", recipeId)
     .order("sort_order", { ascending: true });
@@ -452,10 +457,12 @@ async function readReaderIngredients(
     };
   }
 
-  return {
-    data: normalizeRecipeIngredients(result.data),
-    error: null,
-  };
+  try {
+    const rows = await readRecipeProductLabels(dbClient, result.data);
+    return { data: normalizeRecipeIngredients(rows), error: null };
+  } catch {
+    return { data: null, error: { message: "invalid ingredient projection" } };
+  }
 }
 
 async function readReaderSteps(

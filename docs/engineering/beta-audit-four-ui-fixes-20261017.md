@@ -1,4 +1,14 @@
-# 베타 감사 후 UI 4건 수정 — 로컬 후보
+# 베타 감사 후 UI 4건 수정 — 후보와 운영 확인 기록
+
+## 2026-10-17 운영 재검증과 F01 조회 보완
+
+사용자 묶음 반영 요청으로 PR [#1731](https://github.com/netsus/homecook/pull/1731)이 master `96fb4cb5f48083b765dc9e21b3a8231712d17509`에 머지됐고 공식 `homecook-deploy` 경로로 웹 build `prelaunch-96fb4cb5f480-MG8UqZ`가 반영됐다. 배포 선택 검사 1451 PASS / 133 SKIP 및 typecheck/build 성공. DB232와 추출 worker `3e58467499c63ba20c3b3191d9dd7dec77a7aa44`(v74/verifier47, gen49)는 유지했다.
+
+운영 Chrome 375px에서 장보기 메뉴 `보기`, 단일 하단 탭을 확인했으나 **F01 원분수 표시는 여전히 실패했다.** 실제 레시피북 상세 GET의 재료 SELECT가 `quantity_input`을 누락했다. 앞선 후보 화면 fixture에는 metadata가 들어 있어 이 연결 누락을 검출하지 못했다. 아래 로컬 후보 확인 기록을 운영 성공 근거로 읽으면 안 된다.
+
+이번 후속 보완은 레시피북 조회에 원수량·출처·제품/영양 버전 필드를 포함하고 기존 authenticated `readRecipeProductLabels`와 수량 snapshot 검증을 적용한다. 제품 표시명 누락도 같은 projection 경로에서 회복한다. 계정·북 소유권·멤버십·YouTube 특수 경로는 유지하고, 보이지 않는 제품과 잘못된 수량 근거는 기존 API 오류 래퍼로 차단한다. DB/권한/worker 변경은 없다. 실제 SELECT 열만 반환하는 회귀 fixture에서 수정 전 4 FAIL / 3 PASS, 수정 후 7 PASS 및 관련 기존 12검사 PASS. **이 후속 보완의 운영 성공 여부는 재배포 후 실제 Chrome으로 별도 확인해야 한다.**
+
+## 최초 로컬 후보 기록
 
 기준 master `67e6d0c2be2eeef3831b45855755d9dada4925f4`. 운영 웹은 감사 때와 같은 `3e58467499c63ba20c3b3191d9dd7dec77a7aa44` / build `prelaunch-3e58467499c6-zl8qD7`, DB232다. 이번 변경은 미배포이며 기존 감사 Library `libfile_0d907661feb081918ef1f45b9dc0f176`의 확인 결함 4건만 다룬다.
 
