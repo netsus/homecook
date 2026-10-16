@@ -30,7 +30,6 @@ import {
 } from "@/lib/server/recipe-image-upload";
 import {
   runLegacyExternalWrite,
-  type ExternalWriteRpcClient,
 } from "@/lib/server/account-generation/external-write";
 import {
   createRecipeImageInternalClient,
@@ -40,25 +39,6 @@ import {
 const MANAGED_READ_URL_TTL_SECONDS = 300;
 const MANAGED_TAKEOVER_READ_TIMEOUT_MS = 10_000;
 
-interface StorageBucket {
-  upload(
-    path: string,
-    file: File,
-    options: { contentType: string; upsert: false },
-  ): PromiseLike<{
-    data: { path?: string } | null;
-    error: { message: string } | null;
-  }>;
-  getPublicUrl(path: string): { data: { publicUrl: string } };
-}
-
-interface StorageClient {
-  storage: {
-    from(bucket: typeof RECIPE_IMAGE_BUCKET): StorageBucket;
-  };
-}
-
-type ServiceRoleStorageClient = StorageClient & ExternalWriteRpcClient;
 type ManagedServiceRoleClient = ManagedRecipeImageRpcClient
   & ManagedRecipeImageStorageClient;
 
@@ -207,8 +187,7 @@ export async function POST(request: Request) {
     return runManagedUpload({
       request,
       routeClient,
-      serviceRoleClient:
-        serviceRoleClient as unknown as ManagedServiceRoleClient,
+      serviceRoleClient,
       userId: user.id,
     });
   }
@@ -249,9 +228,7 @@ export async function POST(request: Request) {
   }
 
   const objectPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
-  const legacyServiceRoleClient =
-    serviceRoleClient as unknown as ServiceRoleStorageClient;
-  const bucket = legacyServiceRoleClient.storage.from(RECIPE_IMAGE_BUCKET);
+  const bucket = serviceRoleClient.storage.from(RECIPE_IMAGE_BUCKET);
   const upload = async () => {
     const uploadResult = await bucket.upload(objectPath, image, {
       contentType: image.type,
@@ -266,7 +243,7 @@ export async function POST(request: Request) {
   };
 
   const guardedWrite = await runLegacyExternalWrite({
-    client: legacyServiceRoleClient,
+    client: serviceRoleClient,
     objectPath,
     ownerUuid: user.id,
     write: upload,
