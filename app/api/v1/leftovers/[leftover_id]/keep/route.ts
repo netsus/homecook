@@ -1,7 +1,7 @@
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { isQaFixtureModeEnabled, keepQaFixtureLeftover } from "@/lib/mock/recipes";
-import { isUuid } from "@/lib/server/leftovers";
+import { isUuid, parseLegacyLeftoverMutation } from "@/lib/server/leftovers";
 import { callCookedBatchRpc } from "@/lib/server/cooked-batches";
 import { authorizeCookedBatchRequest } from "@/lib/server/cooked-batch-route";
 import {
@@ -10,7 +10,6 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import type { LeftoverKeepData } from "@/types/leftover";
 
 interface RouteContext {
   params: Promise<{
@@ -70,12 +69,10 @@ export async function POST(request: Request, context: RouteContext) {
     },
   );
   if (!mutationResult.ok) return mutationResult.response;
-  if (!mutationResult.data || typeof mutationResult.data !== "object") {
+  const mutationData = parseLegacyLeftoverMutation(mutationResult.data, "keep");
+  if (!mutationData) {
     return fail("INTERNAL_ERROR", "계속 보관으로 표시하지 못했어요.", 500);
   }
-  const mutationData = mutationResult.data as
-    | (LeftoverKeepData & { transitioned: boolean })
-    | { error_code: "RESOURCE_NOT_FOUND" | "FORBIDDEN" | "CONFLICT" };
   if ("error_code" in mutationData) {
     if (mutationData.error_code === "RESOURCE_NOT_FOUND") {
       return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
@@ -86,9 +83,5 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("CONFLICT", "이미 다먹음 처리된 남은 요리는 계속 보관할 수 없어요.", 409);
   }
 
-  return ok({
-    id: mutationData.id,
-    status: mutationData.status,
-    stale_reviewed_at: mutationData.stale_reviewed_at,
-  });
+  return ok(mutationData);
 }
