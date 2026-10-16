@@ -134,6 +134,25 @@ describe("YouTube i031 exact runtime", () => {
     expect(env).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
   });
 
+  it("accepts zero frames only for a completed and evidenced text-only path", () => {
+    const step = "김치를 썬다.";
+    const output = { ...exactWorkerOutput, recipe: { ...exactWorkerOutput.recipe, steps: [step],
+      stepEvidence: [{ stepIndex: 0, evidence: [{ id: "S1", sourceMethod: "description", quote: step }] }] },
+      meta: { ...exactWorkerOutput.meta, modelCallCount: 1, frameCount: 0, selectedFrameCount: 0,
+        textFirst: { route: "text-only", textModelCalls: 1, visionModelCalls: 0, collectionFailed: false, textMs: 10, visionMs: null,
+          finalCompleteness: { ingredients: true, quantities: true, steps: true }, reviewRequired: false,
+          sourceCollection: { description: { status: "present", reason: null }, authorComments: { status: "empty", reason: null } } } } };
+    expect(parseYoutubeI031WorkerOutput(output).meta).toMatchObject({ frameCount: 0, textFirst: { route: "text-only", sourceCollection: output.meta.textFirst.sourceCollection } });
+    expect(() => parseYoutubeI031WorkerOutput({ ...output, recipe: { ...output.recipe, stepEvidence: [] } })).toThrow();
+    expect(() => parseYoutubeI031WorkerOutput({ ...output, meta: { ...output.meta, textFirst: { ...output.meta.textFirst, collectionFailed: true } } })).toThrow();
+    expect(() => parseYoutubeI031WorkerOutput({ ...output, meta: { ...output.meta, textFirst: undefined } })).toThrow();
+    const partial = { ...output, meta: { ...output.meta, frameCount: 1, selectedFrameCount: 1,
+      textFirst: { ...output.meta.textFirst, route: "steps", visionModelCalls: 1, rejectedStepCount: 1,
+        finalCompleteness: { ingredients: true, quantities: true, steps: false }, reviewRequired: true, stepGroundingFailure: "JUDGE_FAILED" } } };
+    expect(parseYoutubeI031WorkerOutput(partial).meta).toMatchObject({ textFirst: { reviewRequired: true,
+      rejectedStepCount: 1, stepGroundingFailure: "JUDGE_FAILED", finalCompleteness: { steps: false } } });
+  });
+
   it("preserves bounded source priority evidence at the web parsing boundary", () => {
     const ingredient = exactWorkerOutput.recipe.ingredients[0];
     const selection = { policy: "authored-source-priority-v1", selectedEvidenceId: "S0001", correctionTargetEvidenceId: null,
@@ -406,7 +425,7 @@ describe("YouTube i031 exact runtime", () => {
         expect(worker).toMatch(/sourceMode:\s*"source-text"/u);
         expect(worker).toMatch(/recipeMode:\s*"single"/u);
         expect(worker).toMatch(/publicSourceBundle:\s*null/u);
-        expect(Object.keys(manifest.files)).toHaveLength(22);
+        expect(Object.keys(manifest.files)).toHaveLength(23);
         const copiedFiles = (await readdir(workspace, { recursive: true, withFileTypes: true }))
           .filter((entry) => entry.isFile())
           .map((entry) => path.relative(workspace, path.join(entry.parentPath, entry.name)))
@@ -451,11 +470,11 @@ describe("YouTube i031 exact runtime", () => {
     const runtimeSource = snapshotSource.slice(snapshotStart);
     expect(runtimeSource.indexOf("await onVideoMetadata(video)"))
       .toBeLessThan(runtimeSource.indexOf("fetchAuthorComments(apiKey"));
-    const fallbackStart = runtimeSource.indexOf(
+    const captionSource = snapshotSource.slice(snapshotSource.indexOf("export async function collectVideoCaptions("), snapshotStart);
+    const fallbackStart = captionSource.indexOf(
       "if (!captions.available && useApifyFallback",
     );
-    const fallbackEnd = runtimeSource.indexOf("const source = {", fallbackStart);
-    const fallbackSource = runtimeSource.slice(fallbackStart, fallbackEnd);
+    const fallbackSource = captionSource.slice(fallbackStart);
     expect(fallbackSource.indexOf("reserveQuota(\"external_transcript_api\", 1)"))
       .toBeLessThan(fallbackSource.indexOf("fetchApifyCaptions(env, videoId, signal)"));
     expect(workerSource).toContain("workerRpcClient.resolveMethods(methodLabels(");
