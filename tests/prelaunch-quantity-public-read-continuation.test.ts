@@ -103,6 +103,7 @@ describe("CLI Git evidence and continuation wiring", () => {
     const options = { ref: f.selection.target, refOption: "--reviewed-ref", alreadyAppliedDb: true };
     const common = { ...f.bindings, RECIPE_REQUEST_ROLE_MIGRATION, RECIPE_SAVE_RECOVERY_MIGRATIONS, RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES, NUTRITION_VALIDATOR_MIGRATION, V74_WEB_PREDECESSOR, V74_RELEASE, assertRound2InheritanceBoundaries: boundary, retargetPlist, isDeepStrictEqual,
       DeploymentError: Error, verifyProtectedBaseline: verifyBaseline, verifyClosedR2Control: vi.fn(),
+      fingerprintSourceHandoff:()=>null,v85SourceHandoff:()=>null,nutritionSourceHandoff:()=>undefined,
       loadClosedR2Review: () => f.context.review, readEnvironmentPatch: () => ({}), assertClosedR2ContinuationOptions: vi.fn() };
     if (phase === "stage") {
       const start = f.source.indexOf("async function stageRound2Readiness("), end = f.source.indexOf("function copyEnvironment(", start);

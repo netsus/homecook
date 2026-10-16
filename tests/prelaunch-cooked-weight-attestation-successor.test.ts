@@ -16,6 +16,7 @@ afterAll(() => rmSync(temp, { recursive: true, force: true }));
 const raw = readFileSync("supabase/migrations/20261014224500_cooked_weight_user_attestation.sql");
 const payload = raw.toString("utf8").replace(/^begin;\n/u, "").replace(/\ncommit;\n$/u, "");
 let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8")
+  .replace('from "./youtube-v85-cutover.mjs"',`from "${pathToFileURL(join(process.cwd(),"scripts/lib/youtube-v85-cutover.mjs")).href}"`)
   .replace('from "./youtube-fingerprint-recovery-authority.mjs"',`from "${pathToFileURL(join(process.cwd(),"scripts/lib/youtube-fingerprint-recovery-authority.mjs")).href}"`);
 // Neutralize every web authority in the disposable copy before import. No live HOME/ROOT lookup.
 source = source.replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,

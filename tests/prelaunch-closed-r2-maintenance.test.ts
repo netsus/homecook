@@ -62,7 +62,8 @@ describe("closed R2 F01 review boundary", () => {
       writeFileSync(join(root,name),readFileSync(join(repository,"scripts/lib",name)));
     }
     const libraryPath = join(root, "prelaunch-web-deploy.mjs");
-    const library = readFileSync(join(repository, "scripts/lib/prelaunch-web-deploy.mjs"), "utf8");
+    const library = readFileSync(join(repository, "scripts/lib/prelaunch-web-deploy.mjs"), "utf8")
+      .replace('from "./youtube-v85-cutover.mjs"',`from "${pathToFileURL(join(repository,"scripts/lib/youtube-v85-cutover.mjs")).href}"`);
     const pinPattern = /export const CLOSED_R2_REVIEW_PIN = Object\.freeze\(\{[\s\S]*?\}\);/u;
     expect(library.match(pinPattern)?.length).toBe(1);
     writeFileSync(libraryPath, library.replace(pinPattern,

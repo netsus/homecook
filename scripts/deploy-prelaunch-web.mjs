@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readV85Authority, assertV85Source, assertV85MetadataHandoff, v85Paths } from "./lib/youtube-v85-cutover.mjs";
 import {
   RECIPE_REQUEST_ROLE_FEATURE, RECIPE_REQUEST_ROLE_MIGRATION, readRecipeRequestRoleAttempt, recipeRequestRolePhaseStatus, assertRecipeRequestRoleReader, verifyRecipeRequestRolePredecessor, verifyRecipeRequestRoleWorkerAdmission, loadRecipeSaveRecoveryMaintenance,
   RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_SAVE_RECOVERY_MIGRATIONS, RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES, recipeSaveRecoveryRuntimeContract, loadCurrentDatabaseMaintenance, readRecipeSaveRecoveryAttempt, recipeSaveRecoveryPhaseStatus, assertRecipeSaveRecoveryReader, verifyRecipeSaveRecoveryPredecessor, verifyRecipeSaveRecoveryWorkerAdmission,
@@ -150,6 +151,17 @@ function approvedSourceAncestor(ancestor,descendant) {
   return spawnSync("git",["-C",repository,"merge-base","--is-ancestor",ancestor,V74_WEB_PREDECESSOR],{stdio:"ignore"}).status===0
     &&spawnSync("git",["-C",repository,"merge-base","--is-ancestor",V74_RELEASE,descendant],{stdio:"ignore"}).status===0;
 }
+function v85Authority() {return readV85Authority(file=>readClosedR2PrivateBytes(file,repository,524288));}
+function v85SourceHandoff(from,to,files) {
+  const authority=v85Authority();if(!authority||from!=='06a3369f5c5e1c3ca49045f370f0ce12f049c805'||to!==authority.plan.webRef)return null;
+  const digests=Object.fromEntries([...files].sort().map(file=>[file,[from,to].map(ref=>git(['ls-tree',ref,'--',file]).length
+    ?hash(execFileSync('git',['-C',repository,'show',`${ref}:${file}`],{maxBuffer:64*1024*1024,stdio:['ignore','pipe','pipe']})):null)]));
+  return {plan:authority.plan,from,to,digests};
+}
+function metadataHandoff(input) {
+  const authority=v85Authority();return authority&&input.options.ref===authority.plan.webRef
+    ?assertV85MetadataHandoff({...input,plan:authority.plan}):assertV74MetadataHandoff(input);
+}
 function fingerprintSourceHandoff(from,to,files) {
   const recovery=readFingerprintRecoveryAuthority(file=>readClosedR2PrivateBytes(file,repository,524288));
   if (!recovery || from!==recovery.plan.from || to!==recovery.plan.candidate) return null;
@@ -166,6 +178,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   const v74Support = option === "--reviewed-ref" && live.ref === V74_WEB_PREDECESSOR && target === V74_RELEASE ? verifiedV74Source() : null;
   const fingerprintHandoff = fingerprintSourceHandoff(live.ref,target,files);
   const fingerprintSupport = fingerprintHandoff ? assertFingerprintSource(fingerprintHandoff) : null;
+  const v85Handoff=v85SourceHandoff(live.ref,target,files),v85Support=v85Handoff?assertV85Source(v85Handoff):null;
   if (!v74Support) git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
   if (protectedCandidate) validateProtectedCandidate(protectedCandidate.review, live, { target, files }, protectedCandidate.context);
   if (youtubeTrialReview) {
@@ -198,7 +211,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   if (recipeSaveHandoff) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
-      reviewedIntegratedFiles: integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport,
+      reviewedIntegratedFiles: integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport ?? v85Support,
       // validateProtectedCandidate above already checked the complete exact byte pairs.
       reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
       reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff), eslintConfigDigests });
@@ -274,11 +287,12 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
       assertClosedR2Environment({ review, previous: live.plist, next: plist, patch,
         envPatchSha256: hash(readClosedR2PrivateBytes(options.envFile, repository)) });
     } else {
-      const continuationOptions = options.envFile ? assertV74MetadataHandoff({ options, liveRef: live.ref, patch,
+      const continuationOptions = options.envFile ? metadataHandoff({ options, liveRef: live.ref, patch,
         previous: live.plist, next: plist }) : options;
       assertClosedR2ContinuationOptions(continuationOptions);
       assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment,
         reviewedFingerprintSource: fingerprintSourceHandoff(live.ref,selection.target,selection.files),
+        reviewedV85Source: v85SourceHandoff(live.ref,selection.target,selection.files),
         quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
         reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       if (!options.envFile && !isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
@@ -674,10 +688,10 @@ function loadV74WorkerSuccessor(successor, maintenance, continuation) {
   const origin = { personalSuccessor: successor.pointer, databaseMaintenance: maintenance.pointer,
     c04Activation: continuation.activation.pointer, c04Post: continuation.post.pointer };
   assertV74WorkerSuccessor({ proof, baseline: successor.review.database.workerBaseline, approvedPolicy: continuation.observation, origin });
-  return { proof, origin, fingerprintRecovery: readFingerprintRecoveryAuthority(file => readClosedR2PrivateBytes(file,repository,524288)) };
+  return { proof, origin, fingerprintRecovery: readFingerprintRecoveryAuthority(file => readClosedR2PrivateBytes(file,repository,524288)), v85:v85Authority() };
 }
-async function verifyV74ActiveWorker(proof) {
-  const paths = v74Paths(), node = join(homedir(), ".nvm/versions/node/v22.19.0/bin/node");
+async function verifyV74ActiveWorker(proof, paths=v74Paths()) {
+  const node = join(homedir(), ".nvm/versions/node/v22.19.0/bin/node");
   const installed = readQuantityV4InstalledWorkerPlist();
   if (hash(installed) !== proof.service.plistSha256) throw new DeploymentError("v74 installed launcher bytes differ");
   const metadata = readYoutubeExtractionWorkerCredential(paths.credential, { secretRoot: paths.secrets });
@@ -721,7 +735,7 @@ async function verifyProtectedBaseline(review, plan, options) {
   const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
   const v74Successor = workerContinuation && V74_ACTIVATION_SHA256 ? loadV74WorkerSuccessor(successor, databaseMaintenance, workerContinuation) : null;
   if (v74Successor) {
-    await verifyV74ActiveWorker(v74Successor.proof);
+    await verifyV74ActiveWorker(v74Successor.v85?.proof??v74Successor.proof,v74Successor.v85?.proof?v85Paths():v74Paths());
   } else if (workerContinuation) {
     await verifyQuantityV4ActiveWorkerService(workerContinuation.historical.authority.database.review, workerContinuation.historical);
     observed.worker = JSON.parse((await base.query(QUANTITY_V4_WORKER_STATE_SQL)).trim());
@@ -1028,7 +1042,7 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
   } else assertClosedR2LiveMarker({ ...recorded, marker, markerSha256: hash(bytes), live: { ...live, plistHash: hash(live.bytes) }, review, reviewSha256: CLOSED_R2_REVIEW_PIN.sha256 });
   if (!isDeepStrictEqual(marker.historicalProofs, verifyClosedR2HistoricalProofs(review, repository))) throw new DeploymentError("닫힌 R2 marker의 원 proof 기록이 다릅니다.");
   if (!rollback && !options.reviewedClosedR2Maintenance && !options.reviewedProtectedRollout) {
-    assertClosedR2ContinuationOptions(options.envFile ? assertV74MetadataHandoff({ options, liveRef: live.ref,
+    assertClosedR2ContinuationOptions(options.envFile ? metadataHandoff({ options, liveRef: live.ref,
       patch: readEnvironmentPatch(options.envFile, repository) }) : options);
     if (!approvedSourceAncestor(review.to, live.ref)) throw new DeploymentError("Closed source ancestry/receipt differs"); // Continuation starts from the reviewed F01 lineage, never a bootstrap predecessor.
   }
@@ -1652,6 +1666,7 @@ async function main() {
     } else if (closedContext) {
       assertRound2InheritanceBoundaries({ previous: live.plist, next: live.plist, files: selection.files, databaseDeployment: selection.scope.database.length > 0,
         reviewedFingerprintSource: fingerprintSourceHandoff(live.ref,selection.target,selection.files),
+        reviewedV85Source: v85SourceHandoff(live.ref,selection.target,selection.files),
         quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
         reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       verifyClosedR2Control(closedContext.review, repository);
