@@ -1,6 +1,6 @@
 # 완성 무게: 근거 경계와 오프라인 검증 후속
 
-상태: **로컬 후보, 운영 미반영**. 사용자 승인 중 남은 무게 항목의 작은 보완이다. 앞선 네 가지 UI 수정의 배포와 구분한다. 새 수율·DB·권한·기록 수집·학습·개인 보정 활성화·새 필수 입력은 없다.
+상태: **승인된 웹 배포 준비, 운영 미반영**. 사용자 승인 중 남은 무게 항목의 작은 보완이다. 앞선 네 가지 UI 수정의 배포와 구분한다. 새 수율·DB·권한·기록 수집·학습·개인 보정 활성화·새 필수 입력은 없다.
 
 ## 실제 남은 범위
 
@@ -46,3 +46,9 @@
 증거는 `/tmp/mumeok-beta-integration-20261017/06-weight-reason-mobile375.jpg`, `07-weight-invalid375.jpg`, `08-weight-conversion375.jpg`, `09-weight-conditions375.jpg`, `10-weight-estimate-desktop1440.jpg`, `weight-reasons-dom.json`, `11-weight-measured-submit.txt`다. 최초 자연1496px 캡처는 모바일 증거로 사용하지 않고 명시375px를 다시 적용해06파일을 교체했으며 최종 파일은375px다. 임시 Chrome 탭을 닫고 viewport를 복원했으며 격리 서버도 종료했다.
 
 전체 build·운영 데이터 쓰기·물리 음식 측정·운영 배포는 실행하지 않았다. 기존 개인 기록, 과거 예측·식사 분모와 C05/R2 OFF를 보존한다. push/PR/merge/배포는 이 신규 후보 범위에 포함하지 않는다.
+
+## 2026-10-17 — 최신 master 통합·공식 배포 준비
+
+사용자 요청에 따라 기존 source94d718f2a와 시각 확인 문서041fa6908을 master74cc2b1d5에 통합했다. 충돌은 SOT 상단 이력뿐이며 기존 YouTube 복구·검증 기록과 무게 후보 기록을 모두 보존했다. 기존 운영25a 이후PR1740–1744의 진도조회·상태입력·설정옵션·장보기응답 리팩터링은 별도 병행 변경으로 전체 diff를 확인한다. 별도 v85 추출기는 이 후보에 포함하지 않는다.
+
+통합 표적10파일173 PASS, 프로젝트 typecheck·변경5파일 ESLint·Anti Slop 신규0·diff검사 exit0다. jsdom scrollTo 안내는 실패가 아니다. 아래의 실제 표본0·적용 범위 미확대·수집OFF는 그대로이며, 공식 pnpm deploy:dev의 최종 build/canary와 운영 Chrome 확인을 마치기 전에는 배포 완료로 보고하지 않는다. 기존 문단의 push/PR/merge 제외는 당시 로컬 단계의 기록이며 이번 사용자 승인으로 반영 범위를 확장했다.
