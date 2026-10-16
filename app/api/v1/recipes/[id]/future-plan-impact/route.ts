@@ -10,7 +10,6 @@ import {
   isUuid,
   parseRecipeFutureImpactRequest,
   projectRecipeFutureImpactData,
-  type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   createRecipeFuturePropagationInternalClient,
@@ -72,7 +71,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const quantityMode = await readRecipeQuantityMode({ client: { rpc: (name, args) => serviceClient.rpc(name, args) },
+    const quantityMode = await readRecipeQuantityMode({ client: serviceClient,
       sessionAuthority: verifiedSession.sessionAuthority, recipeId, expectedRevision: parsed.value.baseRecipeRevision });
     if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를저장할 수 없어요. 원입력은 유지돼요.", 422);
   } catch (error) {
@@ -81,7 +80,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const result = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     "preview_recipe_future_plan_impact",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
