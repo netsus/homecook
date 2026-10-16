@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "224298c619c0495afcd8dd41a9eaae17036ab239",
-    "total": 149,
+    "baseCommit": "81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb",
+    "total": 147,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -340,12 +340,19 @@
       "column": 5,
       "snippet": "memory as unknown as RecipeNutritionServiceClient",
       "state": "needs-contract-refactor",
-      "holdReason": "Bundle adapter Row does not guarantee recipe id/base_servings/updated_at. Validate and precisely type bundle rows before replacing this assertion; do not invent fields.",
+      "holdReason": "The in-memory BundleQuery is not a native PostgREST builder (url/headers/urlLengthLimit/cloneRequestState and other SDK state missing), in addition to loose bundle Row types. Do not fill fake SDK methods or invent revision/quantity_input; separate pure computation/bundle preparation is a medium refactor candidate.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "followupInvestigation": {
+        "baseCommit": "81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb",
+        "directDeletion": "Whole-program TS2345 1; native builder identity mismatch.",
+        "commonLiteralContract": "Native assignment TS2589 1.",
+        "nativeMemoryUnion": "Call TS2349 2.",
+        "limit": "Read-only probes, no product edits. Only these approaches failed; not a proof pure-core refactoring is impossible."
       }
     },
     {
@@ -1377,13 +1384,18 @@
       "line": 1749,
       "column": 11,
       "snippet": "await createRouteHandlerClient({ anonymousPublicReadScope: \"ingredients\" }) as unknown as RecipeIngredientSearchClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "Separate actual catalog and recipe native consumed capabilities, preserve optional RPC, model nullable stored ingredient IDs without dropping rows and retain exact nonnull classification RPC results. Direct factory/SDK fixture assignments replace reassertions.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1778",
+        "verification": "Before4 suites27 PASS; after4 suites28 PASS/package type/lint/diff/verify:anti-slop. Exact4 SDK projections, absent-RPC and defensive null behavior. Independent APPROVE/28/type/lint/SQL/JS. Anti149→147/new0; route JS identical, helper only null guard differs. Not DB/RLS/whole-schema proof."
       }
     },
     {
@@ -1395,13 +1407,18 @@
       "line": 1750,
       "column": 11,
       "snippet": "routeClient as unknown as RecipeIngredientSearchClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "Separate actual catalog and recipe native consumed capabilities, preserve optional RPC, model nullable stored ingredient IDs without dropping rows and retain exact nonnull classification RPC results. Direct factory/SDK fixture assignments replace reassertions.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1778",
+        "verification": "Before4 suites27 PASS; after4 suites28 PASS/package type/lint/diff/verify:anti-slop. Exact4 SDK projections, absent-RPC and defensive null behavior. Independent APPROVE/28/type/lint/SQL/JS. Anti149→147/new0; route JS identical, helper only null guard differs. Not DB/RLS/whole-schema proof."
       }
     },
     {
