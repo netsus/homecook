@@ -1,5 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
-import { recordAdminAudit, type AdminAuditDbClient } from "@/lib/server/admin-audit";
+import { recordAdminAudit } from "@/lib/server/admin-audit";
 import { requireAdminUser, type AdminServiceRoleClient } from "@/lib/server/admin-auth";
 import { parseAdminPagination, readOptionalQuery } from "@/lib/server/admin-pagination";
 
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     return fail("ADMIN_SERVICE_ROLE_UNAVAILABLE", "관리자 조회에 필요한 서버 권한이 설정되지 않았어요.", 500);
   }
 
-  const auditOk = await recordAdminAudit(dbClient as unknown as AdminAuditDbClient, {
+  const auditOk = await recordAdminAudit(dbClient, {
     action: "list_operational_events",
     actorAdminUserId: adminUser.id,
     request,
