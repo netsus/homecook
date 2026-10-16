@@ -1,0 +1,54 @@
+{
+  "schema": "homecook.youtube-v74-cutover-preflight.v1",
+  "releaseSha": "3e58467499c63ba20c3b3191d9dd7dec77a7aa44",
+  "status": "blocked-before-web-deploy-execution",
+  "checks": {
+    "selectedVitest": {
+      "passed": 217,
+      "failed": 0,
+      "skipped": 0,
+      "files": 7
+    },
+    "nativePostgres17": {
+      "passed": 9,
+      "failed": 0,
+      "productionTouched": false
+    },
+    "lintExitCode": 0,
+    "typecheckExitCode": 0,
+    "antiSlopNewFindings": 0,
+    "productionReadOnlyPreflight": {
+      "ledger": 232,
+      "generation": 48,
+      "queued": 0,
+      "processing": 0
+    }
+  },
+  "actualActions": {
+    "candidateArtifactMetadataConfigStaged": true,
+    "webDeployExecuted": 0,
+    "workerReplacement": 0,
+    "databaseMutation": 0,
+    "generation49Issued": 0,
+    "managerIssued": 0,
+    "modelCalls": 0,
+    "representativeVideoRuns": 0
+  },
+  "blocker": {
+    "action": "pnpm deploy:dev exact release web-first metadata handoff",
+    "decision": "denied-before-execution",
+    "reason": "원 사용자 요청은 운영 배포를 명시적으로 금지했고 해당 배포를 승인한 신뢰할 수 있는 사용자 발화가 없습니다.",
+    "requiredEvidence": "Parent should relay original approval scope and human confirmation in top-level codex_delegation input transcript_evidence; no duplicate issuance or deployment workaround."
+  },
+  "remaining": [
+    "Relay original user approval evidence and re-evaluate the same denied web-first deployment once.",
+    "Finish actual web deployment and verify metadata/DB232/gen48 baseline.",
+    "Issue/register49 once; install and verify exact credential, authenticated caller, empty claim denial and stable loaded command/PID; enable after durable verification.",
+    "Perform one approved representative extraction, retain raw output and grade against frozen gold.",
+    "Seal actual activation hash, review/install operational tooling and record final evidence."
+  ],
+  "limitations": [
+    "The actual production cutover and same49 repair adapters have not executed.",
+    "No deployment or P5 success claim."
+  ]
+}

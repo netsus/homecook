@@ -40,6 +40,7 @@ import {
   YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
 } from "./lib/prelaunch-integrated-master-readiness.mjs";
 
+import { assertV74MetadataHandoff, assertV74WorkerSuccessor, assertV74LoadedService, v74Paths, V74_ACTIVATION_SHA256, V74_OPERATION_DIRECTORY } from "./lib/prelaunch-youtube-v74-cutover.mjs";
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./lib/youtube-extraction-worker-artifact.mjs";
 import { readYoutubeExtractionWorkerCredential, parseLaunchctlPrintStatus } from "./lib/youtube-extraction-worker-ops.mjs";
@@ -240,10 +241,12 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
       assertClosedR2Environment({ review, previous: live.plist, next: plist, patch,
         envPatchSha256: hash(readClosedR2PrivateBytes(options.envFile, repository)) });
     } else {
-      assertClosedR2ContinuationOptions(options);
+      const continuationOptions = options.envFile ? assertV74MetadataHandoff({ options, liveRef: live.ref, patch,
+        previous: live.plist, next: plist }) : options;
+      assertClosedR2ContinuationOptions(continuationOptions);
       assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment,
         quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection) });
-      if (!isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
+      if (!options.envFile && !isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
     }
     if (!options.reviewedProtectedRollout) {
       if (closedContext?.marker.protectedRollout) await verifyProtectedBaseline(closedContext.rollout, databasePlan, options);
@@ -629,6 +632,37 @@ function cookedWeightProductOffReceipt(review) {
   if (record.status !== "committed") return null;
   return assertCookedWeightProductOff(record, review, protectedRolloutPins(review).rollout.sha256);
 }
+function loadV74WorkerSuccessor(successor, maintenance, continuation) {
+  const bytes = readClosedR2PrivateBytes(join(V74_OPERATION_DIRECTORY, "activation.json"), repository, 524288);
+  if (hash(bytes) !== V74_ACTIVATION_SHA256) throw new DeploymentError("v74 immutable activation bytes differ");
+  const proof = JSON.parse(bytes);
+  const origin = { personalSuccessor: successor.pointer, databaseMaintenance: maintenance.pointer,
+    c04Activation: continuation.activation.pointer, c04Post: continuation.post.pointer };
+  assertV74WorkerSuccessor({ proof, baseline: successor.review.database.workerBaseline, approvedPolicy: continuation.observation, origin });
+  return { proof, origin };
+}
+async function verifyV74ActiveWorker(proof) {
+  const paths = v74Paths(), node = join(homedir(), ".nvm/versions/node/v22.19.0/bin/node");
+  const installed = readQuantityV4InstalledWorkerPlist();
+  if (hash(installed) !== proof.service.plistSha256) throw new DeploymentError("v74 installed launcher bytes differ");
+  const metadata = readYoutubeExtractionWorkerCredential(paths.credential, { secretRoot: paths.secrets });
+  const environment = await readWorkerEnvironment(paths.config);
+  const token = readClosedR2PrivateBytes(metadata.token_file, repository).toString("utf8").trim();
+  await verifyYoutubeResolutionWorkerCaller({ environment, token, secretRoot: paths.secrets });
+  const result = spawnSync(node, [join(paths.artifact, "scripts/youtube-extraction-worker-runner.mjs"), "health",
+    "--config", paths.config, "--manifest", paths.manifest, "--credential", paths.credential, "--secret-root", paths.secrets,
+    "--app-descriptor", paths.descriptor, "--policy", paths.policy, "--expected-schema", paths.schema], { encoding: "utf8", timeout: 30000 });
+  if (result.status !== 0 || JSON.parse(result.stdout).ready !== true) throw new DeploymentError("v74 local health failed");
+  const status = () => {
+    const serviceTarget = `${domain}/com.homecook.youtube-extraction-worker`;
+    const result = spawnSync("/bin/launchctl", ["print", serviceTarget], { encoding: "utf8" });
+    if (result.status !== 0) throw new DeploymentError("v74 worker not loaded");
+    return assertV74LoadedService({ stdout: result.stdout, plist: parsePlist(installed),
+      plistPath: join(homedir(), "Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist"), serviceTarget });
+  };
+  const first = status(); await delay(250); const second = status();
+  if (!first.loaded || first.state !== "running" || first.pid <= 0 || first.pid !== second.pid) throw new DeploymentError("v74 service unstable");
+}
 async function verifyProtectedBaseline(review, plan, options) {
   const { readerReceiptPath: protectedReaderReceiptPath, writerPrefix } = protectedRolloutPaths(root, review);
   const successor = loadCookedWeightAttestationSuccessor(repository);
@@ -644,7 +678,10 @@ async function verifyProtectedBaseline(review, plan, options) {
   const observed = await createProtectedPrelaunchAdapter(base, currentReview.feature, currentReview, databaseMaintenance).observe(undefined, "protected-baseline-readback");
   const workerContinuation = successor ? loadCookedWeightAttestationWorkerContinuation(successor, repository) : null;
   const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
-  if (workerContinuation) {
+  const v74Successor = workerContinuation && V74_ACTIVATION_SHA256 ? loadV74WorkerSuccessor(successor, databaseMaintenance, workerContinuation) : null;
+  if (v74Successor) {
+    await verifyV74ActiveWorker(v74Successor.proof);
+  } else if (workerContinuation) {
     await verifyQuantityV4ActiveWorkerService(workerContinuation.historical.authority.database.review, workerContinuation.historical);
     observed.worker = JSON.parse((await base.query(QUANTITY_V4_WORKER_STATE_SQL)).trim());
   }
@@ -660,7 +697,7 @@ async function verifyProtectedBaseline(review, plan, options) {
   assertProtectedPrelaunchObservation(review, { ...observed, writerEnabled: false }, "after", {
     productOffReceipt, reviewSha256: protectedRolloutPins(review).rollout.sha256,
     activeWorkerContinuation, attestationSuccessor: review.feature === QUANTITY_V4_FEATURE ? successor : undefined, databaseMaintenance,
-    approvedWorkerPolicy: workerContinuation?.observation, quantityOffReceipt,
+    approvedWorkerPolicy: workerContinuation?.observation, approvedWorkerSuccessor: v74Successor, quantityOffReceipt,
     workerCheckpoint: !successor && !activeWorkerContinuation && review.feature === QUANTITY_V4_FEATURE ? verifyQuantityV4WorkerBoundary(review, "after") : undefined });
   if (review.feature === COOKED_WEIGHT_FEATURE) verifyCookedWeightPredecessor(review, repository);
   if (protectedRolloutPins(review).writer.sha256) {
@@ -752,6 +789,7 @@ async function runProtectedWriterPhase(options, action, review) {
   const databaseMaintenance = loadCurrentDatabaseMaintenance(repository);
   const quantityCloseOnAttestation = quantityOff && Boolean(successor);
   const workerContinuation = successor ? loadCookedWeightAttestationWorkerContinuation(successor, repository) : null;
+  const v74Successor = workerContinuation && V74_ACTIVATION_SHA256 ? loadV74WorkerSuccessor(successor, databaseMaintenance, workerContinuation) : null;
   const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
   const workerCheckpoint = quantityCloseOnAttestation ? successor.predecessor.post.record : review.feature === QUANTITY_V4_FEATURE
     ? quantityOff ? loadQuantityV4WorkerCheckpoint(review, repository, "after", true) : verifyQuantityV4WorkerBoundary(review, "after") : undefined;
@@ -806,7 +844,7 @@ async function runProtectedWriterPhase(options, action, review) {
       ...(productCloseOnWeightBaseline ? { productWriterEnabled: true } : {}) }, "after", {
       productOffReceipt: productCloseOnWeightBaseline ? null : cookedWeightProductOffReceipt(review), reviewSha256: protectedRolloutPins(baselineReview).rollout.sha256,
       workerCheckpoint, safeQuantityOff: quantityOff, safeAttestationOff: review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE && writerAction === "writer-off",
-      attestationSuccessor: quantityCloseOnAttestation ? successor : undefined, approvedWorkerPolicy: workerContinuation?.observation, quantityOffReceipt, databaseMaintenance });
+      attestationSuccessor: quantityCloseOnAttestation ? successor : undefined, approvedWorkerPolicy: workerContinuation?.observation, approvedWorkerSuccessor: v74Successor, quantityOffReceipt, databaseMaintenance });
     say(JSON.stringify({ ready: true, mutationPerformed: false, phase: options.protectedPhase, readerFloor: reader.readerFloor, feature: review.feature, writerEnabled: productCloseOnWeightBaseline ? observed.productWriterEnabled : observed.writerEnabled }, null, 2)); return;
   }
   const guardPath = join(root, `${writerPrefix}-${protectedRolloutPins(review).writer.sha256}-${writerAction}.json`);
@@ -837,7 +875,7 @@ async function runProtectedWriterPhase(options, action, review) {
       approvalSha256: protectedRolloutPins(review).writer.sha256, readerReceipt: reader, readerReceiptSha256: hash(readerBytes), operationId,
       action: writerAction, adapter, journal, baselineReview, baselineReviewSha256: protectedRolloutPins(baselineReview).rollout.sha256,
       productOffReceipt: productCloseOnWeightBaseline ? null : cookedWeightProductOffReceipt(review), workerCheckpoint,
-      attestationSuccessor: quantityCloseOnAttestation ? successor : undefined, approvedWorkerPolicy: workerContinuation?.observation, quantityOffReceipt, databaseMaintenance,
+      attestationSuccessor: quantityCloseOnAttestation ? successor : undefined, approvedWorkerPolicy: workerContinuation?.observation, approvedWorkerSuccessor: v74Successor, quantityOffReceipt, databaseMaintenance,
       readerWorkerCheckpoint: readerWorkerEvidence?.record, workerReceipt: workerEvidence?.pointer,
       workerPolicyRepair: workerEvidence?.policyRepair ? { ...workerEvidence.policyRepair, earlierOrigin: readerWorkerEvidence.origin.record } : undefined,
       assertBoundary: async () => { lease.verify(); verifyProtectedBoundary(review, live);
@@ -949,7 +987,8 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
   } else assertClosedR2LiveMarker({ ...recorded, marker, markerSha256: hash(bytes), live: { ...live, plistHash: hash(live.bytes) }, review, reviewSha256: CLOSED_R2_REVIEW_PIN.sha256 });
   if (!isDeepStrictEqual(marker.historicalProofs, verifyClosedR2HistoricalProofs(review, repository))) throw new DeploymentError("닫힌 R2 marker의 원 proof 기록이 다릅니다.");
   if (!rollback && !options.reviewedClosedR2Maintenance && !options.reviewedProtectedRollout) {
-    assertClosedR2ContinuationOptions(options);
+    assertClosedR2ContinuationOptions(options.envFile ? assertV74MetadataHandoff({ options, liveRef: live.ref,
+      patch: readEnvironmentPatch(options.envFile, repository) }) : options);
     git(["merge-base", "--is-ancestor", review.to, live.ref]); // Continuation starts from the reviewed F01 lineage, never a bootstrap predecessor.
   }
   return { ...recorded, marker, markerPath: path, review, rollout };

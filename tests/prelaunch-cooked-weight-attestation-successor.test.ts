@@ -185,7 +185,7 @@ function personalWriterPlan(phase: string, observation: object, blockOverride?: 
     return (async () => {
       const action="plan", options={protectedPhase:phase}, reader={readerFloor:review.to}, baselineReview=review;
       const quantityCloseOnAttestation=false, productCloseOnWeightBaseline=false, quantityOff=false;
-      const workerCheckpoint=undefined, successor=undefined, workerContinuation=null, databaseMaintenance=undefined;
+      const workerCheckpoint=undefined, successor=undefined, workerContinuation=null, v74Successor=null, databaseMaintenance=undefined;
       const cookedWeightProductOffReceipt=()=>null;
       ${block}
     })();`);
