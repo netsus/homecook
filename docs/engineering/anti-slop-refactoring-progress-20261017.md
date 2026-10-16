@@ -89,6 +89,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1769](https://github.com/netsus/homecook/pull/1769) | 조리 완료 현대·legacy RPC 실제 client 직접 호출 | 158→157 | `c0afd5511f5990d96af5f3eef3e2686ff0c877c2` |
 | [#1770](https://github.com/netsus/homecook/pull/1770) | 장보기7leaf 단발 전달 함수 삭제·guest 계약 고정 | 157 유지 | `bf549a6853e783664d5802295d9e996db31930ce` |
 | [#1771](https://github.com/netsus/homecook/pull/1771) | tag/product GET 단발 unknown→cast helper 삭제 | 157 유지 | `4a9da270233b6c92e6a81498e35309efc348bb46` |
+| [#1772](https://github.com/netsus/homecook/pull/1772) | 원본ID별 잔여 판단과 실패/한계 고정 | 157 유지 | `81f0432bed2cecaa80169366e95ddb3b338adc02` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -181,7 +182,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | 의도적 유지 | 13 | prototype8+단순화 근거 없는5 |
 | 잔여 후보 합계 | 156 | baseline207·신규0 |
 
-### 현재 배치: 영양 owner query 단계·행 계약
+### 현재 배치: [#1773](https://github.com/netsus/homecook/pull/1773) 영양 owner query 단계·행 계약
 
 - 원본ID: `app/api/v1/recipes/[id]/publish/route.ts::anti-slop(no-chained-type-assertions)::59c307534b5136d238e3d3f1f3b86ec2cc1c4f5766ba2d2c1232194a98061068#1` (checkpoint40).
 - 기존 from() 단계에 eq/maybeSingle/정렬query가 있다고 손코딩한 선언을 실제 native table→select→filter/query 단계로 맞춘다. 기존 recipe/ingredient 행 필드를 native query parser에 명시해 선택 행 추론을 보존한다. recipe_id 필터 열을 기존 실제 조회에 맞게 포함하며 다른 table/DB schema를 생성·변경하지 않는다. publish의 실제 owner client를 직접 전달한다. 새 adapter/cast/any·unknown 확대0이다.

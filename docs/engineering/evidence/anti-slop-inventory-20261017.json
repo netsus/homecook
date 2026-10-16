@@ -1532,7 +1532,7 @@
       },
       "resolution": {
         "reason": "Replace incorrect handwritten from/query phases with native Supabase query identity for the same explicit owner-row projection. Selected-row types remain exact and compile-checked; publish actual client directly satisfies the contract. Runtime permissions and emitted JS unchanged; not deep-readonly typing.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1773",
         "verification": "before86+nativeSDKshape5 PASS; after6 suites91 PASS; typecheck/strict ESLint/diff-check PASS; compiler program including new type assertion diagnostic0; Anti Slop157->156,new0; product2 files emitted JS identical"
       }
     },
