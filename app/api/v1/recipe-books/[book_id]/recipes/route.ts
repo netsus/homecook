@@ -474,7 +474,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const dbClient = routeClient as unknown as
     RecipeBookRecipesDbClient & UserBootstrapDbClient;
-  const recipeReaderClient = routeClient as unknown as RecipeBookRecipesDbClient;
+  const recipeReaderClient: RecipeBookRecipesDbClient = dbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
