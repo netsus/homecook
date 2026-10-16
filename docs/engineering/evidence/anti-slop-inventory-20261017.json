@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "1b730e2498eb1f766e9fe5f8dcaebb94b64fc170",
-    "total": 153,
+    "baseCommit": "7d320fba86d586a82291874fda2097ec414247d3",
+    "total": 152,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -1398,13 +1398,18 @@
       "line": 1832,
       "column": 17,
       "snippet": "routeClient as unknown as RecipeCardUserStatusDbClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "Native SDK query phases and exact two-table/FK joined-row inference replace the inaccurate handwritten fluent interface; original routeClient passes directly. Runtime JS is unchanged.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1775",
+        "verification": "Before: runtime5 PASS; frozen-source exact join compiler TS2589/TS2344. After: 5 suites29 PASS; package typecheck/lint/diff and added-test compiler diagnostics0; independent APPROVE with JS byte-identical. Anti153→152/new0."
       }
     },
     {
