@@ -9,6 +9,22 @@ import { CookedBatchCompletionSheet } from "@/components/cooking/cooked-batch-co
 const defaults = { candidates: [], onClose: () => undefined, onSubmit: () => undefined, serverError: null, submitting: false, weightEvidenceEnabled: true };
 afterEach(cleanup);
 describe("optional explicit whole-dish measurement", () => {
+  it.each([
+    [["unquantified_ingredient", "quantity_conversion_missing"], "적당량처럼 양이 정해지지 않은 재료"],
+    [["invalid_quantity"], "일부 재료의 양을 확인하지 못해"],
+    [["quantity_conversion_missing"], "무게 환산 근거가 없어"],
+    [["invalid_grams_evidence"], "무게 환산 근거가 없어"],
+    [["boundary_unconfirmed"], "조리 조건을 확인할 근거가 부족해"],
+    [["future_reason"], "조리 조건을 확인할 근거가 부족해"],
+  ])("explains the available reason without requiring another input: %j", async (reason_codes, expected) => {
+    const onSubmit = vi.fn();
+    render(<CookedBatchCompletionSheet {...defaults} onSubmit={onSubmit} weightPrediction={{ source: "unavailable", predicted_g: null, model_version: "bounded-weight-v2", reason_codes }} />);
+    expect(screen.getByText(new RegExp(expected))).toBeTruthy();
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
+    expect(screen.getByRole("spinbutton").getAttribute("value")).toBe("");
+    await userEvent.click(screen.getByRole("button", { name: "완료 저장" }));
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith({ consumed_pantry_item_ids: [], weight_action: "weigh_later", finished_weight_g: null });
+  });
   it("offers exactly one blank optional number and completes when skipped", async () => {
     const onSubmit = vi.fn();
     render(<CookedBatchCompletionSheet {...defaults} onSubmit={onSubmit} />);

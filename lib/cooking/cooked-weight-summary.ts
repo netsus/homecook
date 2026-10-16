@@ -20,6 +20,19 @@ export function isCookedWeightAssumptionCodes(value: unknown): value is string[]
 
 export const COOKED_MIX_ASSUMPTION_TEXT = "가열 없는 섞기 단계와 적힌 재료가 모두 남는다는 가정이에요. 따로 버린 물·기름, 남긴 재료, 용기 무게나 적히지 않은 추가 물·기름은 확인하지 못했어요.";
 
+export function cookedWeightUnavailableReasonText(reasonCodes: readonly string[] = []): string {
+  if (reasonCodes.includes("unquantified_ingredient")) {
+    return "적당량처럼 양이 정해지지 않은 재료가 있어 전체무게를 추정하지 못했어요.";
+  }
+  if (reasonCodes.includes("invalid_quantity")) {
+    return "일부 재료의 양을 확인하지 못해 전체무게를 추정하지 못했어요.";
+  }
+  if (reasonCodes.some(code => code === "quantity_conversion_missing" || code === "invalid_grams_evidence")) {
+    return "일부 재료의 무게 환산 근거가 없어 전체무게를 추정하지 못했어요.";
+  }
+  return "조리 조건을 확인할 근거가 부족해 전체무게를 추정하지 못했어요.";
+}
+
 /** Public owner projection contains summaries, never the private input history. */
 export function isCookedWeightSummary(value: unknown): value is CookedWeightSummary {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
