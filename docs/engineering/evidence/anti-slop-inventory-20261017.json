@@ -1411,7 +1411,7 @@
       "holdReason": null,
       "resolution": {
         "reason": "Actual current internal and legacy route clients satisfy unchanged RPC contract. Remove chained fallback assertion, companion single assertion and unused type import; fallback/authority/args/runtime unchanged.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1769",
         "verification": "before/after2 suites21 PASS; typecheck/ESLint/diff-check PASS; Anti Slop158->157,new0; emitted JS byte-identical SHA256 73c23053f7bf2ca447886eb02bcc42f2364a4c991b90d54e8991f46ad3949ef6"
       }
     },

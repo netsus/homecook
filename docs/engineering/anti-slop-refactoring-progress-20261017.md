@@ -131,7 +131,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 3파일 ES2022/ESNext emitted JS 모두 byte-identical: service `e3a324c2406f3328b1f0033d30f40142f94a5985a8b57f473533eb391ef9f8a9`, recipes `c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98`, publish `058a78ad0bd1a14a9ada77364f6454acd4fd6279ec713a5cd92135bf155ac26b`.
 - 실행 로직·권한·내부factory·DB·운영 변경0이다. 전체 build·화면·실DB 미실행, 기존10실패·49원본 미확인은 별도다.
 
-## 현재 배치: 조리 완료 RPC client 경계
+## 현재 배치: [#1769](https://github.com/netsus/homecook/pull/1769) 조리 완료 RPC client 경계
 
 - 원본ID: `app/api/v1/cooking/sessions/[session_id]/complete/route.ts::anti-slop(no-chained-type-assertions)::dfdc16fbe4f15c336cd94233663b7dba171ea3dff258c662baafca9c5fc1f8bc#1` (checkpoint137).
 - 기존 routeClient fallback 연쇄 단언과 같은 호출의 serviceClient 단일 단언·미사용 type import만 제거한다. 현재 RPC·schema-cache fallback 조건·legacy 인수·owner/generation·멱등성·상태 전이 로직은 변경하지 않는다. 저장/UI/플래너 연결·무게 병행 파일은 수정하지 않았다.
