@@ -9,7 +9,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
-import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   PlannerAddSheet,
   type PlannerAddSheetState,
@@ -2172,10 +2171,6 @@ function MobileRecipeBookDetailView({
       ) : null}
       {renderBookDeleteDialog()}
       {renderRecipeRemoveDialog()}
-      <Wave1MobileBottomTab
-        ariaLabel="레시피북 상세 하단 탭"
-        currentTab="mypage"
-      />
     </div>
   );
 }
@@ -2783,10 +2778,6 @@ function RecipeBookDetailSkeleton({
             </div>
           </div>
         </div>
-        <Wave1MobileBottomTab
-          ariaLabel="레시피북 상세 하단 탭"
-          currentTab="mypage"
-        />
       </div>
     );
   }

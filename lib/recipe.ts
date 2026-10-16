@@ -1,4 +1,7 @@
 import { scaleProductAmount } from "@/lib/nutrition/product-quantity";
+import { formatProductQuantity } from "@/lib/planner/product-planner-entry-presentation";
+import { formatQuantityAmount } from "@/lib/quantity-input";
+import { recipeRawQuantityLabel } from "@/lib/recipe-quantity-input";
 import type { RecipeCardItem, RecipeIngredient, RecipeSortKey } from "@/types/recipe";
 
 const SORT_KEYS: RecipeSortKey[] = [
@@ -46,6 +49,22 @@ export function formatScaledIngredient(
     ingredient.unit === null
   ) {
     return ingredient.display_text ?? ingredient.standard_name;
+  }
+
+  if (ingredient.quantity_input) {
+    const amount = ingredient.scalable
+      ? scaleProductAmount(ingredient.amount, selectedServings, baseServings)
+      : ingredient.amount;
+    if (amount !== null) {
+      const unit = ingredient.unit;
+      const quantity = ingredient.quantity_input.raw_unit === unit
+        && (!ingredient.scalable || selectedServings === baseServings)
+        ? recipeRawQuantityLabel(ingredient.quantity_input)
+        : unit === "g" || unit === "ml" || unit === "serving" || unit === "package"
+          ? formatProductQuantity({ amount, unit })
+          : `${formatQuantityAmount(amount)}${unit}`;
+      return `${ingredient.standard_name} ${quantity}`;
+    }
   }
 
   if (ingredient.food_product_id && ingredient.food_product_nutrition_version_id) {

@@ -1058,6 +1058,18 @@ describe("MypageScreen", () => {
     expect(mockFetchPlanner).toHaveBeenCalledWith("1900-01-01", "9999-12-31");
   });
 
+  it("does not present an unloaded shopping history as zero or confuse a page length with planner totals", async () => {
+    installMatchMedia(true);
+    render(<MypageScreen initialAuthenticated />);
+    await screen.findByText("집밥러");
+    const entry = screen.getByRole("button", { name: /장보기 기록\s*보기/ });
+    expect(entry.textContent).not.toMatch(/\d+회/);
+    expect(mockFetchShoppingHistory).not.toHaveBeenCalled();
+    await userEvent.setup().click(entry);
+    await waitFor(() => expect(mockFetchShoppingHistory).toHaveBeenCalled());
+    expect(await screen.findByRole("heading", { name: "장보기 기록" })).toBeTruthy();
+  });
+
   it("removes the legacy desktop growth archive surface because the notification button owns archive access", async () => {
     render(<MypageScreen initialAuthenticated />);
 
