@@ -6,8 +6,6 @@ import type {
 } from "@/types/leftover";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 
-const LEFTOVER_DISH_STATUSES = ["leftover", "eaten"] as const;
-
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface LeftoverDishRow {
@@ -71,9 +69,7 @@ export function normalizeLeftoverStatus(value: string | null): LeftoverDishStatu
     return "leftover";
   }
 
-  return LEFTOVER_DISH_STATUSES.includes(value as LeftoverDishStatus)
-    ? (value as LeftoverDishStatus)
-    : null;
+  return value === "leftover" || value === "eaten" ? value : null;
 }
 
 export function addDaysIso(base: Date, days: number) {
