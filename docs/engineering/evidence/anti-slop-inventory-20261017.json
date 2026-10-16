@@ -1478,7 +1478,7 @@
       },
       "resolution": {
         "reason": "After exact native owner-row/query contract alignment in PR1773, preserve the original factory routeClient type rather than reasserting its narrowed dbClient alias. Both variables reference the same const object; all writer/authority behavior remains unchanged.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1774",
         "verification": "before/after6 suites93 PASS; managed/legacyRPC/legacyinsert exact client identity locked; typecheck/ESLint/diff-check PASS; Anti Slop156->153,new0; JS differs only in3 proven same-object argument references"
       }
     },
@@ -1501,7 +1501,7 @@
       },
       "resolution": {
         "reason": "After exact native owner-row/query contract alignment in PR1773, preserve the original factory routeClient type rather than reasserting its narrowed dbClient alias. Both variables reference the same const object; all writer/authority behavior remains unchanged.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1774",
         "verification": "before/after6 suites93 PASS; managed/legacyRPC/legacyinsert exact client identity locked; typecheck/ESLint/diff-check PASS; Anti Slop156->153,new0; JS differs only in3 proven same-object argument references"
       }
     },
@@ -1524,7 +1524,7 @@
       },
       "resolution": {
         "reason": "After exact native owner-row/query contract alignment in PR1773, preserve the original factory routeClient type rather than reasserting its narrowed dbClient alias. Both variables reference the same const object; all writer/authority behavior remains unchanged.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1774",
         "verification": "before/after6 suites93 PASS; managed/legacyRPC/legacyinsert exact client identity locked; typecheck/ESLint/diff-check PASS; Anti Slop156->153,new0; JS differs only in3 proven same-object argument references"
       }
     },

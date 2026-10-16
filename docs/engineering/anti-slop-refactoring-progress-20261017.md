@@ -193,7 +193,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 검토는91/type/lint/JS동일을 직접 확인했다. native builder는 Insert/Update:never여도 delete 메서드를 노출한다는 주석 정확성 지적을 수용해 완전 readonly나 runtime 권한 증거가 아님을 명시했다. 이 consumer는 select만 실행하며 권한 확대0이다. 보완본 APPROVE: 새5 fixture와 테스트를 포함한 전체 compiler program 진단0도 독립 재확인했다. Anti Slop은 부모 실행 결과와 구분한다.
 - 넓은 recipe-api-contracts90건은89 PASS/기존 managed-image mock 인수 실패1/exit1로 동일하다. 기존10실패·원49 미확인·1745/1749/444와 보호범위를 유지하며 다음 비충돌 계약 보강을 계속한다. 전체 build·화면·실DB·운영 배포는 실행하지 않았다.
 
-### 현재 배치: 수동 영양 호출의 실제 factory client 보존
+### 현재 배치: [#1774](https://github.com/netsus/homecook/pull/1774) 수동 영양 호출의 실제 factory client 보존
 
 - 원본ID는 `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::9763ee8b73027d7a1bc31e5d48061557cffac3c56473ba77be5893eb979beef2#1/#2/#3` (checkpoint2243/2293/2364)이다.
 - #1773의 정확 owner 행 계약을 이용해 수동 공개 준비·legacy RPC 후처리·legacy insert 후처리에 실제 routeClient를 직접 전달한다. dbClient는 동일 scope의 유일한 const routeClient 단언 별칭임을 AST로 확인했다. 타입이 축소된 별칭을 새로 단언하지 않고 실제 factory 타입을 보존한다. 초기 ManualRecipeDbClient/bootstrap/growth 경계는 이 배치에서 해결하지 않으며 그대로 둔다.
