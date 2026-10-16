@@ -88,7 +88,7 @@ function createUsersTable(results: Array<QueryResult<unknown>>) {
 
   return {
     select: vi.fn(() => query),
-    update: vi.fn(() => query),
+    update: vi.fn<(values: Record<string, unknown>) => typeof query>(() => query),
     __query: query,
   };
 }
@@ -198,6 +198,41 @@ describe("17c settings/account backend", () => {
       }),
     );
   }, 15_000);
+
+  it.each([
+    { existing: { user_bootstrap_version: 1, screen_wake_lock: true }, patch: {}, expected: { user_bootstrap_version: 1, screen_wake_lock: true } },
+    { existing: { user_bootstrap_version: 1, screen_wake_lock: true }, patch: { screen_wake_lock: false }, expected: { user_bootstrap_version: 1, screen_wake_lock: false } },
+    { existing: { user_bootstrap_version: 1 }, patch: {}, expected: { user_bootstrap_version: 1 } },
+    { existing: null, patch: {}, expected: {} },
+    { existing: null, patch: { screen_wake_lock: false }, expected: { screen_wake_lock: false } },
+    { existing: null, patch: { screen_wake_lock: true }, expected: { screen_wake_lock: true } },
+  ])("PATCH preserves omission and explicit boolean settings: %j", async ({ existing, patch, expected }) => {
+    const original = existing ? Object.freeze({ ...existing }) : null;
+    const usersTable = createUsersTable([
+      { data: { settings_json: original }, error: null },
+      { data: { settings_json: expected }, error: null },
+    ]);
+    setupAuthedClient({ from: vi.fn(() => usersTable) });
+
+    const { PATCH } = await importUserSettingsRoute();
+    const response = await PATCH(new Request("http://localhost:3000/api/v1/users/me/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(usersTable.update).toHaveBeenCalledWith(expect.objectContaining({ settings_json: expected }));
+    const written = usersTable.update.mock.calls[0][0].settings_json;
+    expect(written).toStrictEqual(expected);
+    expect(written).not.toBe(original);
+    expect(original).toEqual(existing);
+    expect(await response.json()).toEqual({
+      success: true,
+      data: { settings: { screen_wake_lock: "screen_wake_lock" in expected && expected.screen_wake_lock === true } },
+      error: null,
+    });
+  });
 
   it("PATCH /users/me/settings rejects non-boolean wake lock values", async () => {
     setupAuthedClient({ from: vi.fn() });
