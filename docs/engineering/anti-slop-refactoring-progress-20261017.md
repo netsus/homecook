@@ -202,7 +202,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - emitted JS byte-identical은 아니다. transpiler/AST로 유일한 const 별칭과 알려진 인수3개 교체 외에는 JS 차이가 없음을 확인했다(SHA `5b639cae6c2332d442d1061f23916c295f8bd742d8f48b09f8a89017d1f63416`). 실제 handler 회귀는 관리형 prepare와 legacy RPC/insert 각각 동일 원래 client 객체를 전달함을 검증했다.
 - 독립 리뷰 APPROVE: 동일93건·type/lint/diff, 객체 identity·3개 인수 외 JS 불변과 SHA를 직접 확인했다. Anti Slop은 부모 실행 결과와 구분한다. 보호99·기존 보류5·조율1·유지13, 기존10실패·별도49원본미확인 유지다. 운영·DB·접근권한·제품정책·build/화면/실DB 배포0이며 다음 비충돌 계약 보강을 계속한다.
 
-### 현재 배치: 카드 저장상태 native 조인 계약
+### 현재 배치: [#1775](https://github.com/netsus/homecook/pull/1775) 카드 저장상태 native 조인 계약
 
 - 원본ID: `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::b862a39f029c3d4647b2b4c6f210ded3831c4960685812e00256fbdc0ea416bb#1` (checkpoint1832).
 - 손코딩 fluent-query 선언을 실제 SDK의 table→select→filter 단계와 정확 선택행 계약으로 교체한다. 기존 migration의 book_id NOT NULL FK·unique(book_id,recipe_id)를 대조해 recipe_book_items→recipe_books 관계를 명시했다. 두 표의 로컬 projection이며 전체 DB schema 생성·변경은 아니다. factory client를 직접 전달하고 새 adapter/단언/any 확대0이다.

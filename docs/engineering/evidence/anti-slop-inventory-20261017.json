@@ -1408,7 +1408,7 @@
       },
       "resolution": {
         "reason": "Native SDK query phases and exact two-table/FK joined-row inference replace the inaccurate handwritten fluent interface; original routeClient passes directly. Runtime JS is unchanged.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1775",
         "verification": "Before: runtime5 PASS; frozen-source exact join compiler TS2589/TS2344. After: 5 suites29 PASS; package typecheck/lint/diff and added-test compiler diagnostics0; independent APPROVE with JS byte-identical. Anti153→152/new0."
       }
     },
