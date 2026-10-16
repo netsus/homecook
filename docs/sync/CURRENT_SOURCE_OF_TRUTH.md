@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-10-17 — 로그인 YouTube 신청→알림→저장→북/플래너 실제 확인
+
+현재 Chrome 계정들은 테스트 계정이라는 사용자 기존 승인 원문을 확인해 계정 대기를 해소했다. 운영 웹25a6314/build `prelaunch-25a6314ce16e-6R93aX`에서 대표 `pjwILwDVC7U` 신청1회→worker 시도1 성공→완료 알림→결과 등록→QA 북 저장→10/17 저녁2인분 계획1건을 사용자 Mac Chrome으로 확인했다. 북/플래너 재조회와 새로고침 유지,375/1440 화면을 확인했고 최종 V1 8·V2 34·active0·기존41 전체행 지문 보존이다. 실제 패킷 HTTP성공코드나 모델/repair횟수 별도 계측은 주장하지 않는다.
+
+접수 복구 연결은 확인했으나 새로고침 시 진행 화면 누락(F01·중간), 결과 이동 후 알림 창 잔존(F02·낮음)은 남았다. 기존 v74 마늘/수량 품질 문제와 초기 배치 이동은 별도 기존 한계로 기록했다. [실제 흐름·재현·권장 수정·검증 경계](../engineering/youtube-fingerprint-v2-operating-20261017.md), Library `libfile_7adf500afbf48191bf5ad68c0968b282` version1(화면9장)이 최신이다. 전체v9/정확도 완료 선언은 아니다. 이후 master435491dab의PR1740/1741은 아직 운영25a와 구분하며, 후속 무게/추출기 준비에서 전체diff를 확인한다.
+
 ## 2026-10-17 — 기존 V2 정책 복구·공식 웹 반영, 로그인 신청 확인 대기
 
 [#1738](https://github.com/netsus/homecook/pull/1738)을 병합해 웹 `25a6314ce16eef382b671b9086579e0909649afa` / build `prelaunch-25a6314ce16e-6R93aX`를 공식 반영했다. 기존 V2 키33/33 일치를 재확인해 새 키 발급 없이 current1→2와 timestamp만 전환했고 기존41작업 전체 지문·원 C04/v74/DB232 권위·worker PID49750/gen49·C05/R2 OFF를 보존했다. 최종 계획은 `be8e1cf9480bd579a1903ce70a684d58eaf567ca2cc5742a85dd66a2a478e05a`다. 배포 exit0·선택1451 PASS/133 SKIP·build/type/canary/운영 GET·loaded=true/recoveryPending=false를 확인했다. 병행 master91aa/PR1734–1737도 포함했다.
