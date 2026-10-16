@@ -77,13 +77,14 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
-## 현재 배치: 상세 선택 context projection
+## 현재 배치: [#1763](https://github.com/netsus/homecook/pull/1763) 상세 선택 context projection
 
 - `app/api/v1/recipes/[id]/route.ts`의 빈 객체 conditional spread 1곳만 기존 typed detail의 선택 필드 직접 대입으로 바꾼다. owner 판정/조회·편집/삭제 로직·키 순서·context 없는 응답의 키 생략을 유지한다.
 - 진단164→163, 신규0, baseline207·규칙·테스트 변경0. 전체 typecheck·변경 파일 ESLint·diff-check PASS.
 - 편집 전후 `recipe-api-contracts`의 `detail|recipe does not exist|edit context|confirmed counts|QA mock recipe` 선택23 PASS /67 선택 제외. 전체90 PASS를 주장하지 않는다.
 - 넓은92검사는 편집 전후90 PASS /기존2 FAIL로 동일하다. 아래 추가 기준선 절에 분리한다. 실행 JS 동일 주장은 하지 않는다(선택 필드 조립 변경).
-- 전체 build·화면·실DB·운영 흐름 미실행. 독립 리뷰와 현재 PR 정보는 반영 전에 기록한다.
+- 독립 리뷰 APPROVE: 동일23 PASS /67 선택 제외, 전체 typecheck·ESLint·diff-check PASS. 넓은92건도90 PASS /기존2 FAIL을 직접 재현했고, 완료44행의 merge commit 제목도 불일치0을 확인했다. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다.
+- 전체 build·화면·실DB·운영 흐름 미실행. 실제 merge SHA는 위 PR의 metadata와 다음 장부 갱신에서 확정한다.
 
 ## 보류·기술적 경계
 
