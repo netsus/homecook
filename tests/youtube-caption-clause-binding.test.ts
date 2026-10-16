@@ -19,6 +19,7 @@ describe("closed caption quantity clauses", () => {
     ["[00:01.000] 물을 넣어가면서 끓여 줘 감자 두 개", "감자 두 개", "감자", "두", "개", "2"],
     ["[00:01.000] 와 당근 하나를 잘라서 넣어 줘 바니", "당근 하나를 잘라서 넣어 줘", "당근", "하나", "개", "1"],
     ["[00:01.000] 진간장과 맛술을 반 컵씩 넣어 줘", "진간장과 맛술을 반 컵씩 넣어 줘", "맛술", "반", "컵", "1/2"],
+    ["[00:01.000] 진간장과 맛술을 반 컵씩 넣어 줘", "진간장과 맛술을 반 컵씩 넣어 줘", "진간장", "반", "컵", "1/2"],
     ["[00:01.000] 소금 두 꼬집 설탕 세 스푼", "설탕 세 스푼", "설탕", "세", "스푼", "3"],
   ])("binds a closed local clause without merging OCR roles: %s", (text, quote, name, amount, unit, expected) => {
     const checked = verify(text, quote, name, amount, unit);
