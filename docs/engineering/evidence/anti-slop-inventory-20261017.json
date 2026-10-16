@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
-    "total": 162,
+    "baseCommit": "f4f645c6389efe546d00571cd36155c7327e4c02",
+    "total": 160,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -1171,8 +1171,13 @@
       "line": 1989,
       "column": 9,
       "snippet": "serviceClient as unknown as RecipeDraftNutritionClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "resolved",
+      "holdReason": null,
+      "resolution": {
+        "reason": "Existing scoped factory directly satisfies unchanged nutrition/RPC consumer; remove redundant chained assertion and unused type import without adapters or runtime changes.",
+        "pullRequest": null,
+        "verification": "before/after 5 suites52 PASS; typecheck/ESLint/diff-check PASS; Anti Slop162->160,new0; emitted JS byte-identical SHA256 c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98"
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
@@ -1183,8 +1188,13 @@
       "line": 2009,
       "column": 7,
       "snippet": "serviceClient as unknown as FuturePropagationRpcClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "resolved",
+      "holdReason": null,
+      "resolution": {
+        "reason": "Existing scoped factory directly satisfies unchanged nutrition/RPC consumer; remove redundant chained assertion and unused type import without adapters or runtime changes.",
+        "pullRequest": null,
+        "verification": "before/after 5 suites52 PASS; typecheck/ESLint/diff-check PASS; Anti Slop162->160,new0; emitted JS byte-identical SHA256 c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98"
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::9763ee8b73027d7a1bc31e5d48061557cffac3c56473ba77be5893eb979beef2#1",
