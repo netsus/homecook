@@ -1027,7 +1027,7 @@
       "holdReason": null,
       "resolution": {
         "reason": "The existing scoped factory directly satisfies the existing RecipeDraftNutritionClient contract. No interface widening, runtime guard removal, adapter or assertion replacement.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1766",
         "verification": {
           "testsPassed": 41,
           "typecheck": "pass",

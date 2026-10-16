@@ -103,13 +103,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 먼저 시험한 `LeftoverMutationAuthedDbClient = UserBootstrapDbClient` 동의어 제거는 체인 단언 snippet 변경을 baseline이 신규1건으로 거절해 전부 원복했다. 원복 후 diff0·실제163/신규0을 확인했다. baseline·scope·규칙을 바꾸거나 단일 단언으로 바꿔 이 검사를 우회하지 않았다.
 - 실제 DB/운영/보안 정책/무게 후속 변경0, 전체 build·화면·실DB 흐름 미실행.
 
-## 현재 배치: PATCH 영양 helper client 경계
+## 현재 배치: [#1766](https://github.com/netsus/homecook/pull/1766) PATCH 영양 helper client 경계
 
 - 원본ID: `app/api/v1/recipes/[id]/route.ts::anti-slop(no-chained-type-assertions)::75dca4dc05eacbb3b3182090d0a749053ce982f349fd6869ff9238d463d5b741#1` (checkpoint063f8a226:671).
 - 기존 scoped factory가 기존 `RecipeDraftNutritionClient` 계약을 직접 만족하므로 연쇄 단언·미사용 type import만 제거한다. 인터페이스 확대/새 adapter/대체 단언·runtime guard 제거0이다.
 - 편집 전후 personal-recipe-customization-write-routes / recipe-future-impact-security / recipe-content-snapshot-future-propagation / recipe-product-nutrition: 4 suite41 PASS. 전체 typecheck·변경 ESLint·diff-check PASS, Anti Slop163→162 /baseline207/신규0.
 - TypeScript ES2022/ESNext emitted JS byte-identical, SHA256 `21a0633b8cd40ad823b93558869d8949e4346d43844d64fccb1b17fa6ab7ac20`. 실제 저장·권한·RPC 인수/실행 코드 변경0이다. 실DB 쓰기를 실행하지 않았다.
-- 현재 PR/독립 리뷰 정보는 반영 전에 확정한다. 전체 build·화면·운영 흐름·전체 검사 미실행, 기존 실패8건+추가2건과49원본미확인은 별도로 유지한다.
+- 독립 리뷰 APPROVE: 동일41건·전체 typecheck·ESLint·diff-check PASS, emitted JS 동일, inventory163개ID/hash/checkpoint/baseline대조0오류와상태집계일치를 확인했다. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다. 전체 build·화면·운영 흐름·전체 검사 미실행, 기존 실패8건+추가2건과49원본미확인은 별도로 유지한다.
 
 ## 보류·기술적 경계
 
