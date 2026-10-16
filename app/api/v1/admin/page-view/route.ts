@@ -1,5 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
-import { recordAdminAudit, type AdminAuditDbClient } from "@/lib/server/admin-audit";
+import { recordAdminAudit } from "@/lib/server/admin-audit";
 import { requireAdminUser } from "@/lib/server/admin-auth";
 
 const ALLOWED_ADMIN_PAGE_PATHS = new Set([
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     method: request.method,
   });
 
-  const auditOk = await recordAdminAudit(dbClient as unknown as AdminAuditDbClient, {
+  const auditOk = await recordAdminAudit(dbClient, {
     action: "admin_page_view",
     actorAdminUserId: adminUser.id,
     request: auditRequest,
