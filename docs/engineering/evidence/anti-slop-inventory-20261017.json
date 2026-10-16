@@ -1394,7 +1394,7 @@
       },
       "resolution": {
         "reason": "Separate actual catalog and recipe native consumed capabilities, preserve optional RPC, model nullable stored ingredient IDs without dropping rows and retain exact nonnull classification RPC results. Direct factory/SDK fixture assignments replace reassertions.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1778",
         "verification": "Before4 suites27 PASS; after4 suites28 PASS/package type/lint/diff/verify:anti-slop. Exact4 SDK projections, absent-RPC and defensive null behavior. Independent APPROVE/28/type/lint/SQL/JS. Anti149→147/new0; route JS identical, helper only null guard differs. Not DB/RLS/whole-schema proof."
       }
     },
@@ -1417,7 +1417,7 @@
       },
       "resolution": {
         "reason": "Separate actual catalog and recipe native consumed capabilities, preserve optional RPC, model nullable stored ingredient IDs without dropping rows and retain exact nonnull classification RPC results. Direct factory/SDK fixture assignments replace reassertions.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1778",
         "verification": "Before4 suites27 PASS; after4 suites28 PASS/package type/lint/diff/verify:anti-slop. Exact4 SDK projections, absent-RPC and defensive null behavior. Independent APPROVE/28/type/lint/SQL/JS. Anti149→147/new0; route JS identical, helper only null guard differs. Not DB/RLS/whole-schema proof."
       }
     },

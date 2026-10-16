@@ -238,7 +238,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 리뷰 APPROVE: 동일58건·전체typecheck·변경8파일 lint·diff·제품3파일JS동일을 직접 확인했다. typed fixture의 성공 쓰기/실패 흡수/중복 경로와 core read 보존을 검토했으며 SDK/외부 경계 한계도 그대로다. Anti Slop은 부모 실행 결과와 구분한다.
 - 보호99·기존 보류5·조율1·유지13, 기존10실패·49원본미확인·1745/1749/444는 유지한다. 실제 DB 쓰기·grant/RLS·인증설정·제품정책·운영배포·전체 build/화면/실DB 검증0이다.
 
-### 현재 배치: 재료 검색의 카탈로그/레시피 native 소비 계약
+### 현재 배치: [#1778](https://github.com/netsus/homecook/pull/1778) 재료 검색의 카탈로그/레시피 native 소비 계약
 
 - 원본ID는 `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::618b2074248421401bfdc85e35f73bdf1ff1b63afb3393caf1bd1612c5090a72#1` (checkpoint1749), 같은 파일 hash `598a39d3f5bf77409ff13897fb9870725912ac3348c52e72eb2afa3339aadb32#1` (checkpoint1750)이다.
 - 실제 카탈로그 ingredients/ingredient_synonyms·alias view와 recipe_ingredients/선택 RPC 기능을 분리한다. FK·category_code nullable·alias view5열·저장 ingredient_id nullable·RPC link의 nonnull ID를 기존 migration과 대조했다. 잘못된 양쪽 동일 client 요구를 제거하고 실제 factory를 직접 전달하며 fixture의 기존 연쇄 단언도 제거했다.
