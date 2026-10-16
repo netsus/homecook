@@ -544,10 +544,8 @@ export async function GET(request: Request, context: RouteContext) {
           : buildUnavailableRecipeNutrition(),
       user_status: userStatus,
       revision: Number(revision),
-      ...(entrypointContext
-        ? { edit_context: entrypointContext.edit_context }
-        : {}),
     };
+    if (entrypointContext) detail.edit_context = entrypointContext.edit_context;
 
     return ok(detail);
   } catch (error) {
