@@ -1,3 +1,4 @@
+import { assertV74WorkerSuccessor } from "./prelaunch-youtube-v74-cutover.mjs";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { spawnSync } from "node:child_process";
@@ -433,7 +434,7 @@ export async function createProtectedPrelaunchDatabase({ repositoryRoot, configP
 export function createProtectedPrelaunchWriter({ review, reviewSha256, approval, approvalSha256, readerReceipt, readerReceiptSha256, operationId, action, adapter, journal, assertBoundary,
   baselineReview = review, baselineReviewSha256 = reviewSha256, productOffReceipt = null, workerCheckpoint = /** @type {Record<string, unknown> | undefined} */ (undefined),
   readerWorkerCheckpoint = /** @type {Record<string, unknown> | undefined} */ (undefined), workerPolicyRepair = /** @type {Record<string, any> | undefined} */ (undefined), workerReceipt = /** @type {{path:string,sha256:string} | undefined} */ (undefined),
-  attestationSuccessor = /** @type {ReturnType<typeof loadCookedWeightAttestationSuccessor> | undefined} */ (undefined), approvedWorkerPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null),
+  attestationSuccessor = /** @type {ReturnType<typeof loadCookedWeightAttestationSuccessor> | undefined} */ (undefined), approvedWorkerSuccessor = null, approvedWorkerPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null),
   databaseMaintenance = /** @type {ReturnType<typeof loadNutritionValidatorMaintenance> | undefined} */ (undefined),
   quantityOffReceipt = /** @type {{schema:string,feature:string,status:string,action:string,writerEnabled:boolean,reviewSha256:string,approvalSha256:string,readerReceiptSha256:string,baselineReviewSha256:string,baselineDatabasePlanSha256:string} | null} */ (null) }) {
   assertProtectedWriterReview(approval, review, reviewSha256);
@@ -484,7 +485,7 @@ export function createProtectedPrelaunchWriter({ review, reviewSha256, approval,
     if (typeof observation[controlKey] !== "boolean") throw new Error("Protected writer control observation is invalid");
     if (personal && enabled && !reconciliation && observation.quantityWriterEnabled !== true) throw new Error("Personal attestation fresh writer ON requires quantity ON");
     if (quantityCloseOnAttestationBaseline) return assertProtectedPrelaunchObservation(review, { ...observation, writerEnabled: observation.quantityWriterEnabled }, "after",
-      { attestationSuccessor, safeQuantityOff: true, approvedWorkerPolicy, databaseMaintenance });
+      { attestationSuccessor, safeQuantityOff: true, approvedWorkerPolicy, approvedWorkerSuccessor, databaseMaintenance });
     if (personal && observation.quantityWriterEnabled === false) {
       if (!quantityOffReceipt || quantityOffReceipt.feature !== QUANTITY_V4_FEATURE || quantityOffReceipt.status !== "committed" || quantityOffReceipt.action !== "writer-off"
         || quantityOffReceipt.writerEnabled !== false || quantityOffReceipt.reviewSha256 !== review.predecessorQuantity.reviewSha256
@@ -494,7 +495,7 @@ export function createProtectedPrelaunchWriter({ review, reviewSha256, approval,
         || !same(quantityOffReceipt.databaseMaintenance ?? null, nutritionValidatorMaintenanceBinding(databaseMaintenance))) throw new Error("Personal attestation cannot adopt unreceipted quantity OFF");
     }
     if (productCloseOnWeightBaseline) return assertProtectedPrelaunchObservation(baselineReview, { ...observation, writerEnabled: false, productWriterEnabled: true }, "after");
-    return assertProtectedPrelaunchObservation(review, { ...observation, writerEnabled: false }, "after", { productOffReceipt, reviewSha256, workerCheckpoint, safeQuantityOff: quantity && !enabled, safeAttestationOff: personal && !enabled, approvedWorkerPolicy, quantityOffReceipt, databaseMaintenance });
+    return assertProtectedPrelaunchObservation(review, { ...observation, writerEnabled: false }, "after", { productOffReceipt, reviewSha256, workerCheckpoint, safeQuantityOff: quantity && !enabled, safeAttestationOff: personal && !enabled, approvedWorkerPolicy, approvedWorkerSuccessor, quantityOffReceipt, databaseMaintenance });
   };
   return {
     async apply() {
@@ -839,7 +840,7 @@ export function assertProtectedPrelaunchObservation(review, observation, phase, 
     return assertCookedWeightAttestationCurrentObservation(independent.databaseMaintenance.predecessor, observation,
       { safeQuantityOff: safeQuantityOff || independent.safeAttestationOff,
         quantityWriterState: independent.quantityOffReceipt || safeQuantityOff ? undefined : "on",
-        approvedWorkerPolicy: independent.approvedWorkerPolicy, databaseMaintenance: independent.databaseMaintenance });
+        approvedWorkerPolicy: independent.approvedWorkerPolicy, approvedWorkerSuccessor: independent.approvedWorkerSuccessor, databaseMaintenance: independent.databaseMaintenance });
   }
   if (activeWorkerContinuation && (review?.feature !== QUANTITY_V4_FEATURE || phase !== "after" || ddlOnly || safeQuantityOff)) throw new Error("Active worker authority is only for ordinary after-state continuation");
   if (independent.attestationSuccessor) {
@@ -847,7 +848,7 @@ export function assertProtectedPrelaunchObservation(review, observation, phase, 
     if (review.feature !== QUANTITY_V4_FEATURE || phase !== "after" || ddlOnly) throw new Error("Personal successor is only a current C04 boundary");
     assertCookedWeightAttestationPredecessor(successor.review, successor.predecessor);
     if (!isDeepStrictEqual(successor.predecessor.authority.database.review, review)) throw new Error("Personal successor cannot replace original C04 review");
-    assertCookedWeightAttestationCurrentObservation(successor, observation, { safeQuantityOff, quantityWriterState: safeQuantityOff ? undefined : "on", approvedWorkerPolicy: independent.approvedWorkerPolicy, databaseMaintenance: independent.databaseMaintenance });
+    assertCookedWeightAttestationCurrentObservation(successor, observation, { safeQuantityOff, quantityWriterState: safeQuantityOff ? undefined : "on", approvedWorkerPolicy: independent.approvedWorkerPolicy, approvedWorkerSuccessor: independent.approvedWorkerSuccessor, databaseMaintenance: independent.databaseMaintenance });
     return observation;
   }
   const database = review?.database;
@@ -910,20 +911,21 @@ export function assertProtectedPrelaunchObservation(review, observation, phase, 
 }
 
 function assertAttestationWorker(review, worker, safeOff = false, workerControlTransition = false,
-  approvedPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null)) {
+  approvedPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null), approvedSuccessor = null) {
   if (!worker || worker.catalogFingerprint !== QUANTITY_V4_WORKER_CATALOG_AFTER) throw new Error("Personal attestation worker critical catalog differs");
+  const successorWorker = approvedSuccessor ? assertV74WorkerSuccessor({ ...approvedSuccessor, baseline: review.database.workerBaseline, approvedPolicy }) : null;
   for (const key of ["credentialGeneration", "credentialRowSha256", "policyRowSha256", "policyStableSha256", "schemaIdentity", "snapshotDigest", "workerPolicyEnabled", "workerReleaseSha"]) {
     // Only the original controlled worker CLI checks the enabled/timestamp whole-row transition.
     // Its fixed observer retains the exact stable policy, credential and critical catalog here.
     if (workerControlTransition && ["policyRowSha256", "workerPolicyEnabled"].includes(key)) continue;
-    const expected = approvedPolicy && ["policyRowSha256", "workerPolicyEnabled"].includes(key) ? approvedPolicy[key] : review.database.workerBaseline[key];
+    const expected = successorWorker ? successorWorker[key] : approvedPolicy && ["policyRowSha256", "workerPolicyEnabled"].includes(key) ? approvedPolicy[key] : review.database.workerBaseline[key];
     if (worker[key] !== expected) throw new Error("Personal attestation original worker credential/policy differs");
   }
   if (!safeOff && (worker.credentialActive !== true || worker.queued !== 0 || worker.processing !== 0
     || worker.permitHeld !== false || worker.activeEnqueueSessions !== 0)) throw new Error("Personal attestation fresh worker expiry/zero state differs");
 }
 
-export function assertCookedWeightAttestationCurrentObservation(successor, observation, { quantityWriterState = /** @type {"off" | "on" | undefined} */ (undefined), safeQuantityOff = false, workerControlTransition = false, approvedWorkerPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null), databaseMaintenance = /** @type {ReturnType<typeof loadNutritionValidatorMaintenance> | undefined} */ (undefined) } = {}) {
+export function assertCookedWeightAttestationCurrentObservation(successor, observation, { quantityWriterState = /** @type {"off" | "on" | undefined} */ (undefined), safeQuantityOff = false, workerControlTransition = false, approvedWorkerSuccessor = null, approvedWorkerPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null), databaseMaintenance = /** @type {ReturnType<typeof loadNutritionValidatorMaintenance> | undefined} */ (undefined) } = {}) {
   assertCookedWeightAttestationReview(successor.review);
   const review = successor.review;
   if (databaseMaintenance) {
@@ -949,7 +951,7 @@ export function assertCookedWeightAttestationCurrentObservation(successor, obser
   if (databaseMaintenance?.review.feature === RECIPE_REQUEST_ROLE_FEATURE) assertRecipeRequestRoleCurrentFields(databaseMaintenance.review,observation);
   const quantity = observation.quantityWriterEnabled ?? observation.writerEnabled;
   if (typeof quantity !== "boolean" || (quantityWriterState && quantity !== (quantityWriterState === "on"))) throw new Error("Personal attestation current quantity state differs");
-  assertAttestationWorker(review, observation.worker, safeQuantityOff || workerControlTransition, workerControlTransition, approvedWorkerPolicy);
+  assertAttestationWorker(review, observation.worker, safeQuantityOff || workerControlTransition, workerControlTransition, approvedWorkerPolicy, approvedWorkerSuccessor);
   return observation;
 }
 

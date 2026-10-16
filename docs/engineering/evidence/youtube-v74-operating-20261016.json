@@ -1,0 +1,280 @@
+{
+  "schema": "homecook.youtube-v74-operating-evidence.v1",
+  "observedAt": "2026-10-16T14:44:10.832694+00:00",
+  "releaseSha": "3e58467499c63ba20c3b3191d9dd7dec77a7aa44",
+  "web": {
+    "buildId": "prelaunch-3e58467499c6-zl8qD7",
+    "sourceHandoffSha256": "b66db104d30beff97ae1f473115915b38263fb78ca87f0545e509d4e178e34d5",
+    "officialDeployExitCode": 0,
+    "deployTests": {
+      "passed": 1451,
+      "skipped": 133,
+      "failed": 0
+    }
+  },
+  "worker": {
+    "generation": 49,
+    "credentialIssued": 1,
+    "credentialRegistered": 1,
+    "replacements": 1,
+    "expiresAt": "2026-10-22T14:27:30.000Z",
+    "activationAt": "2026-10-16T14:29:38.899Z",
+    "activationSha256": "f9fbccad6e8a18cfd4b33e9cd6e92a21b27c0e98d6557f76c303f859cae6672d",
+    "health": {
+      "authenticatedStatus": 200,
+      "emptyClaimStatus": 500,
+      "emptyClaimDenied": true,
+      "ready": true,
+      "pid": 49750,
+      "secondPid": 49750
+    },
+    "managerFileRemoved": true
+  },
+  "preserved": {
+    "targetSha256": true,
+    "normalDataSha256": true,
+    "controlsSha256": true,
+    "catalogSha256": true,
+    "immutableSha256": true,
+    "authoritySha256": true
+  },
+  "backup": {
+    "bytes": 117872811,
+    "fullArchiveDecoded": true,
+    "sha256": "b59b8288183e4b7142d8503d0ac74ac8f4225c0b24487ca87244b652829fd532"
+  },
+  "verification": {
+    "selectedTestsPassed": 285,
+    "selectedTestsFailed": 0,
+    "selectedTestsSkipped": 0,
+    "nativePostgres17Passed": 9,
+    "readiness": {
+      "passed": true,
+      "entry": "actual deployed readiness function body and policy constants, unchanged TypeScript transpilation; pinned READ ONLY database readiness observation",
+      "workerHttpActor": {
+        "status": 403,
+        "reason": "restricted worker HTTP actor does not expose the web readiness RPC; no permission changed"
+      },
+      "limitation": "No signed-in user HTTP enqueue or UI flow is claimed",
+      "routeSha256": "a81b56601ee984c5740c190fd1e70306c852fcedcff3a1a3083de7051fa23fe4",
+      "policySha256": "741c775e972f3f17f034a49a489ba6415ba96244ad5e0e6755048dd3d2d52e0f",
+      "readiness": {
+        "expectedPolicyVersion": 3,
+        "expectedPolicySnapshotDigest": "6ad984e1ff856c009698bb15d1c2afb72116264b29120390204cc6af32aef121",
+        "currentFingerprintKeyVersion": "1",
+        "previousFingerprintKeyVersion": null,
+        "previousFingerprintValidUntil": null,
+        "fingerprintPipelineIdentity": "0d81a76c8df4b3f0c8ec05f1a0ad9aeab5477b9cb7fa4b64e299ce83452b7583"
+      },
+      "credentialGeneration": 49,
+      "modelCalls": 0,
+      "productionWrites": 0
+    },
+    "originalProtectedSuccessor": {
+      "passed": true,
+      "entry": "original protected full observation assertion with actual captured activation after-state and original C04/personal/DB232 receipt loaders",
+      "generation": 49,
+      "activationSha256": "f9fbccad6e8a18cfd4b33e9cd6e92a21b27c0e98d6557f76c303f859cae6672d",
+      "readOnly": true,
+      "modelCalls": 0
+    },
+    "lintExitCode": 0,
+    "lintWarnings": 0,
+    "typecheckExitCode": 0,
+    "antiSlopNewFindings": 0
+  },
+  "smoke": {
+    "videoId": "pjwILwDVC7U",
+    "actualModelCalls": 1,
+    "repairCalls": 0,
+    "cliInternalRetries": null,
+    "elapsedMs": 43496,
+    "preparationFailure": {
+      "phase": "source_and_media",
+      "code": "EACCES",
+      "elapsedMs": 35,
+      "modelCalls": 0,
+      "resolvedBy": "byte-identical copy in owned writable workspace, same as official worker",
+      "sameSingleModelBudget": true
+    },
+    "summary": {
+      "ingredientsExpected": 15,
+      "ingredientsMatched": 14,
+      "missingIngredients": [
+        "다진 마늘"
+      ],
+      "numericTotal": 10,
+      "numericPass": 8,
+      "numericUnresolved": 1,
+      "numericIngredientMissing": 1,
+      "quantityDifferences": [],
+      "rawInvalidReferences": 1,
+      "finalInvalidLiteralReferences": 0
+    },
+    "targetCaptionCases": {
+      "물엿": "pass",
+      "맛술": "pass",
+      "춘장 · 선택": "pass",
+      "감자": "pass",
+      "당근": "pass"
+    },
+    "quantityNotes": [
+      {
+        "ingredient": "늑간살",
+        "expected": "1kg",
+        "modelNormalized": "1kg",
+        "finalNormalized": "1kg",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "식용유",
+        "expected": "약간 / 팬에 두를 양",
+        "modelNormalized": null,
+        "finalNormalized": null,
+        "semanticNormalization": {
+          "normalized": "약간",
+          "literal": "팬에 식용유를 두르고 늑간살의 겉면만 바짝 굽는다.",
+          "basis": "explicit abstract instruction; ingredient row required"
+        },
+        "verdict": "abstract_equivalent_in_steps"
+      },
+      {
+        "ingredient": "갈아만든 배",
+        "expected": "500mL",
+        "modelNormalized": "500mL",
+        "finalNormalized": "500mL",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "흑설탕",
+        "expected": "2숟가락",
+        "modelNormalized": "2숟가락",
+        "finalNormalized": "2숟가락",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "물엿",
+        "expected": "3숟가락",
+        "modelNormalized": "3숟가락",
+        "finalNormalized": "3숟가락",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "진간장",
+        "expected": "1/2컵",
+        "modelNormalized": null,
+        "finalNormalized": null,
+        "semanticNormalization": null,
+        "verdict": "quantity_unresolved"
+      },
+      {
+        "ingredient": "맛술",
+        "expected": "1/2컵",
+        "modelNormalized": "0.5컵",
+        "finalNormalized": "0.5컵",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "다진 마늘",
+        "expected": "크게 1숟가락",
+        "modelNormalized": null,
+        "finalNormalized": null,
+        "semanticNormalization": null,
+        "verdict": "ingredient_missing"
+      },
+      {
+        "ingredient": "후추",
+        "expected": "약간",
+        "modelNormalized": null,
+        "finalNormalized": null,
+        "semanticNormalization": null,
+        "verdict": "abstract_quantity_unrepresented"
+      },
+      {
+        "ingredient": "춘장 · 선택",
+        "expected": "1숟가락",
+        "modelNormalized": "1숟가락",
+        "finalNormalized": "1숟가락",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "감자",
+        "expected": "2개",
+        "modelNormalized": "2개",
+        "finalNormalized": "2개",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "당근",
+        "expected": "1개",
+        "modelNormalized": "1개",
+        "finalNormalized": "1개",
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "물",
+        "expected": "약간 / 필요량",
+        "modelNormalized": null,
+        "finalNormalized": null,
+        "semanticNormalization": {
+          "normalized": "약간",
+          "literal": "끓이는 중간에 물이 부족하면 물을 넣는다.",
+          "basis": "explicit abstract instruction; ingredient row required"
+        },
+        "verdict": "abstract_equivalent_in_steps"
+      },
+      {
+        "ingredient": "가래떡",
+        "expected": "수량 미확정",
+        "modelNormalized": null,
+        "finalNormalized": null,
+        "semanticNormalization": null,
+        "verdict": "pass"
+      },
+      {
+        "ingredient": "참기름",
+        "expected": "약간 / 조금",
+        "modelNormalized": null,
+        "finalNormalized": null,
+        "semanticNormalization": {
+          "normalized": "약간",
+          "literal": "마지막으로 가래떡과 참기름을 조금 넣고 마무리한다.",
+          "basis": "explicit abstract instruction; ingredient row required"
+        },
+        "verdict": "abstract_equivalent_in_steps"
+      }
+    ],
+    "rawSha256": {
+      "identity.json": "11a1779a3369c53f3dc01a5b7da9c025acfd5bb1f4ac44cdb004a1770c61b984",
+      "attempt.started.json": "d79656e8f0f292c61dc1b248a2f1b3faa07c5f474ad5837d0af78cf95bdd01c6",
+      "failure.json": "a6f77ba8158ba21f49ebe61a8140f446a9e879f8a4af7b1d9b3e833cfa004a3d",
+      "pre-model-continuation.started.json": "e1c4fe03ef7791582efee1dad72ef84ed23910fc835460489abe729338c42f86",
+      "model-invocation.started.json": "fd46b6c9af14f63cd866ca3c55567bfa04534a26eb7efba3263d0885aa0fa443",
+      "source.json": "85d67c9dd18febd06960b5530beed9a8dca6eb29f70dda64776e67a27a03b67f",
+      "preparation-timings.json": "3346e51dbfd8629ed1af11aed59f75447d00b8bf602583f6855c28932c860af1",
+      "raw-model-output.json": "ebdee2b0b8bd93511955e7a702d63e8aec1fba113a5b830f58eb5bfa7cfa3ed3",
+      "raw-model.log": "c1ea5d6ff278fcb8292deac6f8117da1a3e216fc6d308c3b9019e5476dd3e1fb",
+      "raw-model-proposal.json": "3aeb2c9ae1a55247680e3643d8e5025716c3264a88f3c66418034972c8b812a3",
+      "model-read-boundary.json": "8768067a06ea70bdcd641c2bb3b6d45da9369e827f9d8a6eea3c422c9bd64d9d",
+      "verifier-trace.json": "236577e4266e07c745a02e99df5292cc820dc31da13d88d1ad9434e441bf6c3d",
+      "raw-extraction-result.json": "dc33da5c5a5cb0a0feed0f8bdabc3db31beba5052aec54268a0dda302d80b8bb",
+      "worker-safe-output.json": "3a452fcfb17a9ecf25d862ebd95b7ff8891e6061f2f5bcea5b8101f239520bee",
+      "outcome.json": "28edc5e888c05fd15ffef1caeffd12fd8383ca75b92512bec369de9e3654e097"
+    },
+    "productionQueueQuotaOrRecipeWrites": 0
+  },
+  "limitations": [
+    "Representative actual installed-source standalone extraction; no signed-in HTTP enqueue/UI flow.",
+    "No complete v74 three-video rerun and no P5 acceptance claim.",
+    "CLI internal retry metadata null means unknown, not zero.",
+    "Original three-video v73 evaluation remains separate."
+  ]
+}

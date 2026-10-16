@@ -60,6 +60,8 @@ source=source.slice(0,roleLoaderStart)+`let ownedRoleMaintenance=null;
 export function setOwnedRoleMaintenance(value){ownedRoleMaintenance=value;}
 export function loadRecipeRequestRoleMaintenance(){return ownedRoleMaintenance;}
 `+source.slice(roleLoaderEnd);
+const v74Dependency = readFileSync("scripts/lib/prelaunch-youtube-v74-cutover.mjs", "utf8").replace(/export const (V74_(?:ACTIVATION|WEB_HANDOFF)_SHA256)\s*=\s*[^;]+;/gu, (_text, name: string) => `export const ${name}=null;`);
+writeFileSync(join(temp,"prelaunch-youtube-v74-cutover.mjs"),v74Dependency,{mode:0o600});
 const webPath = join(temp, "web.mjs"); writeFileSync(webPath, source, { mode: 0o600 });
 const dbPath = join(temp, "database.mjs");
 const databaseSource = readFileSync("scripts/lib/prelaunch-database.mjs", "utf8").replace(/from "(\.\/[^"\n]+)"/gu,
@@ -185,7 +187,7 @@ function personalWriterPlan(phase: string, observation: object, blockOverride?: 
     return (async () => {
       const action="plan", options={protectedPhase:phase}, reader={readerFloor:review.to}, baselineReview=review;
       const quantityCloseOnAttestation=false, productCloseOnWeightBaseline=false, quantityOff=false;
-      const workerCheckpoint=undefined, successor=undefined, workerContinuation=null, databaseMaintenance=undefined;
+      const workerCheckpoint=undefined, successor=undefined, workerContinuation=null, v74Successor=null, databaseMaintenance=undefined;
       const cookedWeightProductOffReceipt=()=>null;
       ${block}
     })();`);
@@ -721,6 +723,7 @@ async function recipeAdmissionFixture() {
  const original=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8"),start=original.indexOf("export function loadRecipeSaveRecoveryMaintenance(repositoryRoot) {"),end=original.indexOf("export function loadCurrentDatabaseMaintenance",start);
  const ownedSource=source.replace('export function loadRecipeSaveRecoveryMaintenance(){return ownedRecipeMaintenance;}',()=>original.slice(start,end))
   .replace(/^export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = [^\r\n]*;$/gmu,()=>`export const RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN = Object.freeze(${JSON.stringify({path:reviewPath,sha256:hash(reviewBytes)})});`);
+ writeFileSync(join(directory,"prelaunch-youtube-v74-cutover.mjs"),v74Dependency,{mode:0o600});
  const modulePath=join(directory,"web.mjs");writeFileSync(modulePath,ownedSource,{mode:0o600});
  const owned:typeof web=await import(pathToFileURL(modulePath).href);owned.setOwnedMaintenance(old);
  const paths=owned.protectedRolloutPaths(join(temp,"state"),review),operationDirectory=join(paths.operationRoot,id);
@@ -971,6 +974,7 @@ async function requestRoleAdmissionFixture() {
  const original=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8"),start=original.indexOf("export function loadRecipeRequestRoleMaintenance(repositoryRoot) {"),end=original.indexOf("export function recipeRequestRolePhaseStatus",start);
  const ownedSource=source.replace('export function loadRecipeRequestRoleMaintenance(){return ownedRoleMaintenance;}',()=>original.slice(start,end))
   .replace(/^export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = [^\r\n]*;$/gmu,()=>`export const RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN = Object.freeze(${JSON.stringify({path:reviewPath,sha256:hash(reviewBytes)})});`);
+ writeFileSync(join(directory,"prelaunch-youtube-v74-cutover.mjs"),v74Dependency,{mode:0o600});
  const modulePath=join(directory,"web.mjs");writeFileSync(modulePath,ownedSource,{mode:0o600});
  const owned:typeof web=await import(pathToFileURL(modulePath).href);owned.setOwnedMaintenance(f.old);owned.setOwnedRecipeMaintenance(f.next);
  const paths=owned.protectedRolloutPaths(join(temp,"state"),review),operationDirectory=join(paths.operationRoot,id);mkdirSync(operationDirectory,{recursive:true,mode:0o700});rmSync(paths.databaseGuardPath,{force:true});

@@ -1,3 +1,4 @@
+import { assertV74SourceHandoff } from "./prelaunch-youtube-v74-cutover.mjs";
 import { isDeepStrictEqual } from "node:util";
 import { request as httpRequest } from "node:http";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
@@ -1887,6 +1888,11 @@ export function classifyPrelaunchScope(files, before, after, {
   ]);
   const support = /^(?:docs\/|tests\/|ui\/|marketing\/|\.github\/|\.agents\/|\.claude\/|\.codex\/|\.opencode\/|\.workflow-v2\/)|^(?:AGENTS|CLAUDE|README)\.md$|^opencode\.json$|^scripts\/(?:(?:lib\/)?marketing-validation-[a-z-]+|ci-path-filter|deploy-prelaunch-web|install-prelaunch-deploy|install-dev-deploy|lib\/dev-deploy-launcher|lib\/prelaunch-[a-z-]+)\.mjs$/u;
   const exactSupport = new Set([
+    // Bound operator-only v74 receipts/CLI and isolated verifier; never runtime hooks.
+    "scripts/lib/prelaunch-youtube-v74-cutover.mjs",
+    "scripts/lib/youtube-v74-cutover-preparation.mjs",
+    "scripts/youtube-v74-controlled-cutover.mjs",
+    "scripts/verify-youtube-v74-cutover-native.mjs",
     // Reviewed offline nutrition tools and contract checks; never executed as runtime hooks.
     "scripts/render-ingredient-nutrition-rambutan-20261008.mjs",
     "scripts/render-ingredient-nutrition-representatives-20261008.mjs",
@@ -2172,7 +2178,7 @@ export function inheritRound2Readiness({ readiness, previous, next, liveSha, rel
 }
 
 /** @param {{previous: any, next: any, files: string[], databaseDeployment?: boolean, quantityPublicReadDigests?: (string | null)[] | null}} input */
-export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false, quantityPublicReadDigests = null, nutritionMaintenanceHandoff = undefined }) {
+export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false, quantityPublicReadDigests = null, nutritionMaintenanceHandoff = undefined, reviewedV74Source = null }) {
   const before = previous.EnvironmentVariables ?? {}, after = next.EnvironmentVariables ?? {};
   // Only the reviewed guest quantity projection, with R2 still closed on both sides.
   const reviewedQuantityPublicRead = CLOSED_R2_FLAGS.every(key => before[key] === "false" && after[key] === "false")
@@ -2182,12 +2188,14 @@ export function assertRound2InheritanceBoundaries({ previous, next, files, datab
     ]);
   // Existing active and closed inheritance share the same protected source/environment boundaries.
   const reviewedNutrition = nutritionMaintenanceHandoff ? assertNutritionValidatorSourceHandoff(nutritionMaintenanceHandoff) : false;
+  const reviewedV74Support = reviewedV74Source ? assertV74SourceHandoff(reviewedV74Source) : null;
   const protectedSources = [
     /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|app\/(?:layout\.|globals\.css$)|components\/marketing\/|lib\/(?:marketing[./-]|supabase\/|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u,
     /^(?:supabase\/|infra\/|scripts\/sql\/|scripts\/(?:start-production\.mjs|lib\/(?:start-production-runtime|production-data-quality|full-local-|marketing-round2)))/u,
     /^(?:middleware\.|proxy\.|next\.config\.|tsconfig\.json$|package\.json$|pnpm-lock\.yaml$|\.env(?:\.|$))/u,
   ];
   if (databaseDeployment && !reviewedNutrition || !Array.isArray(files) || files.some(file => protectedSources.some(pattern => pattern.test(file))
+    && !(reviewedV74Support?.has(file))
     && !(reviewedQuantityPublicRead && file === "lib/server/hybrid-auth/public-read-policy-runtime.mjs")
     && !(reviewedNutrition && (file === `supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}` || nutritionMaintenanceHandoff.maintenance.review.feature === RECIPE_SAVE_RECOVERY_FEATURE
       && RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row => file === `supabase/migrations/${row.filename}`)

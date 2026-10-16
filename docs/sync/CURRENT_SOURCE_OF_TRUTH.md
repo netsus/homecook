@@ -1,5 +1,21 @@
 # Current Source of Truth
 
+## 2026-10-16 — v74/gen49 운영·대표1회 확인 완료
+
+웹3e584/build `prelaunch-3e58467499c6-zl8qD7`와 v74/gen49 worker를 반영했다. 인증·health·동일PID·원 C04/DB232 권위와 일반데이터/기존writer/fingerprint 보존, manager 제거를 확인했다. 대표 순살소갈비찜은 모델1회/repair0·43.496초, 숫자8/10·재료14/15·목표 자막5건 정답이다. 진간장 수량 미해결·마늘 재료/단계 누락·후추 모호량 표현 미반영을 남긴다. 원시 자료와 모델0 준비 실패도 보존하며 로그인사용자 HTTPenqueue/UI나 전체P5 통과는 주장하지 않는다. [실제 운영·채점·검증 한계](../engineering/youtube-v74-operating-20261016.md)가 아래 준비/진행 문단보다 최신이다.
+
+## 2026-10-16 — v74 웹·gen49 운영 전환, 대표 확인 진행
+
+기존 승인 원문 전달 후 자동 검토 차단을 해소하고, 정확한85파일 source 결속과 기존 DB232 권위를 보존해 공식 웹3e584/build `prelaunch-3e58467499c6-zl8qD7`을 반영했다. gen49는1회·6일로 발급/등록했고 새worker 인증·health·동일PID·내구verification 후 정책ON을 확정했다. DB232·기존writer·일반데이터·원 C04 영수증을 보존했고 manager파일을 제거했다. 대표1회 추출은 아직 확인 중이며 전체P5 완료가 아니다. [실제 전환/영수증/이력](../engineering/youtube-v74-gen49-preparation-safety-20261016.md#기존-승인-원문-확인실제-v74-전환-2026-10-16-1430-utc)을 따른다.
+
+## 2026-10-16 — v74 한정 전환 검증·실행 전 승인 검토 차단
+
+metadata3경로만 허용하는 웹 전환과 원 C04/DB232 영수증에 연결하는49 successor 후보를 준비했다. 격리 PostgreSQL17의 실제 CAS/rollback/중복거절/fingerprint·권한9개 및 운영 읽기 전용 preflight를 통과했다. 공식 웹 선배포 요청은 기존 배포 금지를 해제한 신뢰 가능한 승인 원문이 현재 실행 맥락에 없다는 자동 검토 사유로 실행 전에 거절됐다. 운영 전환/49 발급/추가모델은0이며, 기존 승인 원문 전달 후 재검토가 필요하다. [정확한 대상·원문 사유·준비 상태·남은 단계](../engineering/youtube-v74-gen49-preparation-safety-20261016.md#후속-진행과-실행-전-승인-검토-차단-2026-10-16-1400-utc)를 따른다.
+
+## 2026-10-16 — gen49 전환 승인 확보·운영 결속 사전 검증 중단
+
+사용자가 gen49 6일·manager 최대300초·DB policy/generation·웹/worker 교체·대표1회 및 등록 후 즉시 구48 복귀 불가를 승인했다. 다만 운영 웹의 과거 descriptor 경로와 원48 고정 보호 권위의 새49 연결 위험을 확인해, 신규 위험 시 중단 조건에 따라 실제 발급·DB·배포·추출은0으로 유지한다. 순수 준비/복구 후보와 원 제어 회귀111개를 통과했지만 실제 전환 adapter 검증은 미완료다. [정확한 중단 사유·후속 검증 범위](../engineering/youtube-v74-gen49-preparation-safety-20261016.md)를 따른다.
+
 ## 2026-10-16 — v74 운영 전환 준비·credential/정책 별도 확인 대기
 
 사용자가 이번 추출기 수정의 배포를 요청했다. 최신 master를 통합하고 v74 bundle·웹 exact identity·pipeline을 일치시켜 검증했다. 운영은 웹0ae67/DB232·worker6b610/gen48/v71 그대로이며, 새 release/snapshot에는 generation49와 DB policy 전환이 필요해 해당 부분의 별도 확인 전에는 교체하지 않는다. [현재 상태·후보 결속·검증·복구 경계](../engineering/youtube-v74-deployment-preparation-20261016.md)를 따른다.
