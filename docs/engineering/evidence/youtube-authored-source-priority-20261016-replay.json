@@ -1,0 +1,391 @@
+{
+  "createdAt": "2026-10-16T11:47:33.188Z",
+  "modelCalls": 0,
+  "mediaCalls": 0,
+  "policy": "v72/verifier45 offline replay, not a fresh extraction",
+  "criteria": "exact numeric proposal matches a pre-frozen accepted amount/unit pair; old post-verifier amount and unit both null; count ingredient rows, including two separate mirin uses",
+  "totalBeforeLosses": 21,
+  "restored": 16,
+  "retainedOldNonNull": 10,
+  "videos": {
+    "3h4nSEOw7_4": {
+      "beforeLosses": 10,
+      "restored": 10,
+      "retainedOldNonNull": 5,
+      "losses": [
+        {
+          "ingredient": "미림 · 세척",
+          "originalAmount": "3",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "3",
+            "unit": "스푼",
+            "originalName": "미림"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "대파",
+          "originalAmount": "80",
+          "originalUnit": "g",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "80",
+            "unit": "g",
+            "originalName": "대파 큰거"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "설탕",
+          "originalAmount": "5",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "5",
+            "unit": "스푼",
+            "originalName": "설탕"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "중간입자 고춧가루",
+          "originalAmount": "5",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "5",
+            "unit": "스푼",
+            "originalName": "중간입자 고추가루"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "진간장",
+          "originalAmount": "7",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "7",
+            "unit": "스푼",
+            "originalName": "진간장"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "미림 · 양념",
+          "originalAmount": "4",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "4",
+            "unit": "스푼",
+            "originalName": "미림"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "굴소스",
+          "originalAmount": "1",
+          "originalUnit": "큰술",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "1",
+            "unit": "큰술",
+            "originalName": "굴소스"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "간마늘",
+          "originalAmount": "1",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "1",
+            "unit": "스푼",
+            "originalName": "간마늘"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "고추장",
+          "originalAmount": "2",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "2",
+            "unit": "스푼",
+            "originalName": "고추장"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "된장",
+          "originalAmount": "반",
+          "originalUnit": "스푼",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "1/2",
+            "unit": "스푼",
+            "originalName": "된장"
+          },
+          "restored": true,
+          "remainingIssues": []
+        }
+      ]
+    },
+    "ytrHKwmjXuQ": {
+      "beforeLosses": 6,
+      "restored": 6,
+      "retainedOldNonNull": 1,
+      "losses": [
+        {
+          "ingredient": "순두부",
+          "originalAmount": "1",
+          "originalUnit": "개",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "1",
+            "unit": "개",
+            "originalName": "순두부"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "물",
+          "originalAmount": "70",
+          "originalUnit": "ml",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "70",
+            "unit": "ml",
+            "originalName": "물"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "간장",
+          "originalAmount": "2",
+          "originalUnit": "T",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "2",
+            "unit": "T",
+            "originalName": "간장"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "비건 굴소스",
+          "originalAmount": "1",
+          "originalUnit": "T",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "1",
+            "unit": "T",
+            "originalName": "비건굴소스"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "설탕",
+          "originalAmount": "1",
+          "originalUnit": "T",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "1",
+            "unit": "T",
+            "originalName": "설탕"
+          },
+          "restored": true,
+          "remainingIssues": []
+        },
+        {
+          "ingredient": "전분",
+          "originalAmount": "1",
+          "originalUnit": "T",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": "1",
+            "unit": "T",
+            "originalName": "전분"
+          },
+          "restored": true,
+          "remainingIssues": []
+        }
+      ]
+    },
+    "pjwILwDVC7U": {
+      "beforeLosses": 5,
+      "restored": 0,
+      "retainedOldNonNull": 4,
+      "losses": [
+        {
+          "ingredient": "물엿",
+          "originalAmount": "세",
+          "originalUnit": "숟가락",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": null,
+            "unit": null,
+            "originalName": "물엿"
+          },
+          "restored": false,
+          "remainingIssues": [
+            "literal-repair-role-ambiguous"
+          ]
+        },
+        {
+          "ingredient": "맛술",
+          "originalAmount": "반",
+          "originalUnit": "컵",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": null,
+            "unit": null,
+            "originalName": "맛술"
+          },
+          "restored": false,
+          "remainingIssues": [
+            "quantity-not-bound-to-name"
+          ]
+        },
+        {
+          "ingredient": "춘장 · 선택",
+          "originalAmount": "한",
+          "originalUnit": "숟가락",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": null,
+            "unit": null,
+            "originalName": "춘장"
+          },
+          "restored": false,
+          "remainingIssues": [
+            "quantity-not-bound-to-name"
+          ]
+        },
+        {
+          "ingredient": "감자",
+          "originalAmount": "두",
+          "originalUnit": "개",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": null,
+            "unit": null,
+            "originalName": "감자"
+          },
+          "restored": false,
+          "remainingIssues": [
+            "literal-repair-role-ambiguous"
+          ]
+        },
+        {
+          "ingredient": "당근",
+          "originalAmount": "하나",
+          "originalUnit": "개",
+          "before": {
+            "amount": null,
+            "unit": null
+          },
+          "after": {
+            "amount": null,
+            "unit": null,
+            "originalName": "당근"
+          },
+          "restored": false,
+          "remainingIssues": [
+            "literal-repair-role-ambiguous"
+          ]
+        }
+      ]
+    }
+  },
+  "preCommitReview": {
+    "verifiedAt": "2026-10-16T11:55:03.368833+00:00",
+    "relatedTestsPassed": 295,
+    "originalThreeReplaysDeepEqual": true,
+    "bundleHashesVerified": 22,
+    "goldenUnchanged": true,
+    "modelCalls": 0,
+    "fixes": [
+      "authored reference-weight conflicts preserved",
+      "unrelated explicit caption headings excluded from new cross-source conflict check"
+    ]
+  }
+}

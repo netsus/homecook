@@ -1,0 +1,512 @@
+{
+  "createdAt": "2026-10-16T12:11:16.849Z",
+  "modelCalls": 0,
+  "mediaCalls": 0,
+  "totalBeforeLosses": 21,
+  "restored": 21,
+  "originalNonNullRetained": 10,
+  "videos": {
+    "3h4nSEOw7_4": {
+      "restored": 10,
+      "originalNonNullRetained": 5,
+      "v72NonNullRetained": 15,
+      "rows": [
+        {
+          "ingredient": "미림 · 세척",
+          "index": 2,
+          "amount": "3",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "3스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0004",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 3,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "미림 3스푼 24g",
+              "locator_hash": "6fbef419351b30fce5c5f7dd"
+            }
+          ]
+        },
+        {
+          "ingredient": "대파",
+          "index": 6,
+          "amount": "80",
+          "unit": "g",
+          "optional": false,
+          "amountRawText": "80g",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0008",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 7,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "대파 큰거 반대 80g",
+              "locator_hash": "1e63ae0f3430196e2b0c8e6f"
+            }
+          ]
+        },
+        {
+          "ingredient": "설탕",
+          "index": 8,
+          "amount": "5",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "5스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0011",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 11,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "설탕 5스푼 50g",
+              "locator_hash": "3aa464badaade5a5d596c381"
+            }
+          ]
+        },
+        {
+          "ingredient": "중간입자 고춧가루",
+          "index": 9,
+          "amount": "5",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "5스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0012",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 12,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "중간입자 고추가루 5스푼 35g",
+              "locator_hash": "b1f62a365ffa93ba05594bcd"
+            }
+          ]
+        },
+        {
+          "ingredient": "진간장",
+          "index": 10,
+          "amount": "7",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "7스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0014",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 14,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "진간장 7스푼 56g",
+              "locator_hash": "abd090345b084ab6707635ad"
+            }
+          ]
+        },
+        {
+          "ingredient": "미림 · 양념",
+          "index": 11,
+          "amount": "4",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "4스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0015",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 15,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "미림 4스푼 32g",
+              "locator_hash": "96c475151666363544f7542c"
+            }
+          ]
+        },
+        {
+          "ingredient": "굴소스",
+          "index": 12,
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "amountRawText": "1큰술",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0016",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 16,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "굴소스 1큰술 14g",
+              "locator_hash": "9777245efef78727e94eb460"
+            }
+          ]
+        },
+        {
+          "ingredient": "간마늘",
+          "index": 13,
+          "amount": "1",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "1스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0017",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 17,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "간마늘 1스푼 20g",
+              "locator_hash": "06a5d8349ca5ce8450f6c8df"
+            }
+          ]
+        },
+        {
+          "ingredient": "고추장",
+          "index": 14,
+          "amount": "2",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "2스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0018",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 18,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "고추장 2스푼 60g",
+              "locator_hash": "b68bcbff815bfc02d402fb70"
+            }
+          ]
+        },
+        {
+          "ingredient": "된장",
+          "index": 15,
+          "amount": "1/2",
+          "unit": "스푼",
+          "optional": false,
+          "amountRawText": "반스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0019",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 19,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "된장 반스푼 15g",
+              "locator_hash": "68ceb1d391e6905a879ec01c"
+            }
+          ]
+        }
+      ]
+    },
+    "ytrHKwmjXuQ": {
+      "restored": 6,
+      "originalNonNullRetained": 1,
+      "v72NonNullRetained": 7,
+      "rows": [
+        {
+          "ingredient": "순두부",
+          "index": 1,
+          "amount": "1",
+          "unit": "개",
+          "optional": false,
+          "amountRawText": "1개",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0004",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 4,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "순두부 ______ 1개",
+              "locator_hash": "c7d92df00f600b732f481afe"
+            },
+            {
+              "evidence_id": "S0013",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 16,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "순두부도 크게크게 편썰어주세요",
+              "locator_hash": "5299ff9978c06baabfe56fa8"
+            }
+          ]
+        },
+        {
+          "ingredient": "물",
+          "index": 2,
+          "amount": "70",
+          "unit": "ml",
+          "optional": false,
+          "amountRawText": "70ml",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0006",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 7,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "물 _________ 70ml",
+              "locator_hash": "0c90c4a8d6b4e8ab480c649e"
+            }
+          ]
+        },
+        {
+          "ingredient": "간장",
+          "index": 3,
+          "amount": "2",
+          "unit": "T",
+          "optional": false,
+          "amountRawText": "2T",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0007",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 8,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "간장 ________ 2T",
+              "locator_hash": "1690525d85ac5b6495b8e95d"
+            }
+          ]
+        },
+        {
+          "ingredient": "비건 굴소스",
+          "index": 4,
+          "amount": "1",
+          "unit": "T",
+          "optional": false,
+          "amountRawText": "1T",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0008",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 9,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "비건굴소스 ___ 1T(일반 굴소스 대체가능)",
+              "locator_hash": "68395461075e01ad33fb5d55"
+            }
+          ]
+        },
+        {
+          "ingredient": "설탕",
+          "index": 5,
+          "amount": "1",
+          "unit": "T",
+          "optional": false,
+          "amountRawText": "1T",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0009",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 10,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "설탕 ________ 1T",
+              "locator_hash": "432926ddb4e16d077042e0e4"
+            }
+          ]
+        },
+        {
+          "ingredient": "전분",
+          "index": 6,
+          "amount": "1",
+          "unit": "T",
+          "optional": false,
+          "amountRawText": "1T",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0010",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 11,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "전분 ________ 1T",
+              "locator_hash": "fcc6f3ba260cfcc8365ad1f5"
+            }
+          ]
+        }
+      ]
+    },
+    "pjwILwDVC7U": {
+      "restored": 5,
+      "originalNonNullRetained": 4,
+      "v72NonNullRetained": 4,
+      "rows": [
+        {
+          "ingredient": "물엿",
+          "index": 4,
+          "amount": "3",
+          "unit": "숟가락",
+          "optional": false,
+          "amountRawText": "세 숟가락",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0022",
+              "source_method": "caption",
+              "source_provider": "youtube",
+              "line_index": 12,
+              "start_ms": 25640,
+              "frame_ts_ms": null,
+              "snippet": "물엿 세 숟가락",
+              "locator_hash": "15776940694157bab8257fb6"
+            },
+            {
+              "evidence_id": "O0010",
+              "source_method": "visual",
+              "source_provider": "macos-vision-ocr",
+              "line_index": null,
+              "start_ms": null,
+              "frame_ts_ms": 24524,
+              "snippet": "물엿 3",
+              "locator_hash": "15230e43b1e9c04f629a1468"
+            }
+          ]
+        },
+        {
+          "ingredient": "맛술",
+          "index": 6,
+          "amount": "1/2",
+          "unit": "컵",
+          "optional": false,
+          "amountRawText": "반 컵",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0023",
+              "source_method": "caption",
+              "source_provider": "youtube",
+              "line_index": 13,
+              "start_ms": 27640,
+              "frame_ts_ms": null,
+              "snippet": "진간장과 맛술을 반 컵씩 넣어 줘",
+              "locator_hash": "f25d9fa7f1b427a6de11c059"
+            },
+            {
+              "evidence_id": "F0030",
+              "source_method": "visual",
+              "source_provider": "codex-vision",
+              "line_index": null,
+              "start_ms": null,
+              "frame_ts_ms": 29029,
+              "snippet": "영상 장면 직접 확인",
+              "locator_hash": "d8c1f08492e7979e3fd93157"
+            }
+          ]
+        },
+        {
+          "ingredient": "춘장 · 선택",
+          "index": 8,
+          "amount": "1",
+          "unit": "숟가락",
+          "optional": true,
+          "amountRawText": "한 숟가락",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0025",
+              "source_method": "caption",
+              "source_provider": "youtube",
+              "line_index": 15,
+              "start_ms": 31439,
+              "frame_ts_ms": null,
+              "snippet": "[00:31.439] 마지막으로 후추를 뿌려 줘 이건 선택",
+              "locator_hash": "8219b08f7e042f890c1bb503"
+            },
+            {
+              "evidence_id": "S0026",
+              "source_method": "caption",
+              "source_provider": "youtube",
+              "line_index": 16,
+              "start_ms": 33480,
+              "frame_ts_ms": null,
+              "snippet": "[00:33.480] 사항인데 춘장을 한 숟가락 넣으면",
+              "locator_hash": "b65c933375c41b34df51112d"
+            }
+          ]
+        },
+        {
+          "ingredient": "감자",
+          "index": 10,
+          "amount": "2",
+          "unit": "개",
+          "optional": false,
+          "amountRawText": "두 개",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0031",
+              "source_method": "caption",
+              "source_provider": "youtube",
+              "line_index": 21,
+              "start_ms": 43719,
+              "frame_ts_ms": null,
+              "snippet": "감자 두 개",
+              "locator_hash": "8917f710701d2484170ab380"
+            },
+            {
+              "evidence_id": "O0020",
+              "source_method": "visual",
+              "source_provider": "macos-vision-ocr",
+              "line_index": null,
+              "start_ms": null,
+              "frame_ts_ms": 44544,
+              "snippet": "감자",
+              "locator_hash": "1f21e56b769a933b1668fa60"
+            }
+          ]
+        },
+        {
+          "ingredient": "당근",
+          "index": 11,
+          "amount": "1",
+          "unit": "개",
+          "optional": false,
+          "amountRawText": "하나",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0032",
+              "source_method": "caption",
+              "source_provider": "youtube",
+              "line_index": 22,
+              "start_ms": 45719,
+              "frame_ts_ms": null,
+              "snippet": "당근 하나를 잘라서 넣어 줘",
+              "locator_hash": "1d320d5127ba9483b3e39ebd"
+            },
+            {
+              "evidence_id": "O0024",
+              "source_method": "visual",
+              "source_provider": "macos-vision-ocr",
+              "line_index": null,
+              "start_ms": null,
+              "frame_ts_ms": 47047,
+              "snippet": "당근",
+              "locator_hash": "cbc905628f0ef2adcca33c3a"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "goldenSha256": "848c29e69fba85ce2a34b08b6bc9c9b6b39f0e2ef309818f2894e8b50975f7b4"
+}
