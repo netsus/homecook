@@ -150,7 +150,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const recipeResult = await (routeClient as unknown as CookingSessionDbClient)
+  const recipeResult = await dbClient
     .from("recipes")
     .select("id")
     .eq("id", sessionInput.recipe_id)
