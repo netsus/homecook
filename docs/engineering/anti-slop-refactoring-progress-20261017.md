@@ -87,10 +87,10 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 리뷰 APPROVE: 동일23 PASS /67 선택 제외, 전체 typecheck·ESLint·diff-check PASS. 넓은92건도90 PASS /기존2 FAIL을 직접 재현했고, 완료44행의 merge commit 제목도 불일치0을 확인했다. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다.
 - 전체 build·화면·실DB·운영 흐름 미실행. 실제 merge SHA는 위 완료 표에 확정했다.
 
-## 현재 배치: leftover GET 단발 전달 함수 제거
+## 현재 배치: [#1765](https://github.com/netsus/homecook/pull/1765) leftover GET 단발 전달 함수 제거
 
 - `app/api/v1/leftovers/route.ts`에서 한 번만 쓰는 `requireUser` 전달 함수를 제거하고, 기존 `routeClient.auth.getUser()` 호출과 nullable user 읽기를 GET에 직접 둔다. 같은 client의 호출1회·fixture 선행 분기·401 조건·bootstrap·조회·정렬·응답·상태 정책은 그대로다.
-- 편집 전후 `leftovers.backend`, `leftover-mutation-parser`, `leftover-status-normalization` 3 suite /63 PASS. 전체 typecheck·변경 파일 ESLint·diff-check PASS, Anti Slop163 유지/신규0. 이것을 전체 검사 통과로 넓히지 않는다. 독립 리뷰 결과는 반영 전에 확정한다.
+- 편집 전후 `leftovers.backend`, `leftover-mutation-parser`, `leftover-status-normalization` 3 suite /63 PASS. 전체 typecheck·변경 파일 ESLint·diff-check PASS, Anti Slop163 유지/신규0. 독립 리뷰 APPROVE 및 동일63건·typecheck·ESLint·diff-check PASS. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다. 이것을 전체 검사 통과로 넓히지 않는다.
 - 진단 감소 목적의 변경이 아니다. `eat/route.ts`의 최초 불검증 client 경계는 그대로이며 runtime guard·새 adapter·단언 변경0이다. 실행JS 동일 주장은 하지 않는다(단발 함수 인라인 포함).
 - 먼저 시험한 `LeftoverMutationAuthedDbClient = UserBootstrapDbClient` 동의어 제거는 체인 단언 snippet 변경을 baseline이 신규1건으로 거절해 전부 원복했다. 원복 후 diff0·실제163/신규0을 확인했다. baseline·scope·규칙을 바꾸거나 단일 단언으로 바꿔 이 검사를 우회하지 않았다.
 - 실제 DB/운영/보안 정책/무게 후속 변경0, 전체 build·화면·실DB 흐름 미실행.
