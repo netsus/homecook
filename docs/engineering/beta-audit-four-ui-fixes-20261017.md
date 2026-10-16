@@ -1,5 +1,13 @@
 # 베타 감사 후 UI 4건 수정 — 후보와 운영 확인 기록
 
+## 2026-10-17 — 감사 4건 운영 반영·Chrome 재검증 완료
+
+사용자 묶음 반영 요청에 따라 [#1731](https://github.com/netsus/homecook/pull/1731)과 실제 조회 누락을 보완한 [#1732](https://github.com/netsus/homecook/pull/1732)를 병합해 웹 `53da069a4b27672bb5eb9d0a617783c1b9c33d5f` / build `prelaunch-53da069a4b27-BiZLes`를 공식 경로로 반영했다. 최종 배포 exit0·선택1451 PASS/133 SKIP·typecheck/build/canary/health 성공, loaded=true·recoveryPending=false·DB232다. DB 변경0이며 기존 worker `3e58467499c63ba20c3b3191d9dd7dec77a7aa44` / v74/verifier47 / gen49의 artifact·동일PID49750을 보존했다. C05/R2 수집OFF와 기존 writer 권위는 유지했다.
+
+사용자 Mac Chrome 운영375/1440에서 원1/3L·1/7kg와 제품명, 최초 편집 준비 잠금→명시적 수량 재확인→취소, 장보기 `보기`와 완료 기록, 모바일 loading/ready의 단일 탐색1개·링크5개와 desktop 메뉴·가로 넘침 없음을 확인했다. empty/error/guest·계정 실패/변경은 모형 회귀 범위다. 첫 배포96fb에서는 실제 book GET의 원수량 projection 누락으로 F01이 남았고, 후보 fixture가 이 연결 누락을 놓친 사실을 보존한다. 보완 회귀7개는 수정 전4 FAIL/3 PASS→수정 후7 PASS, 관련19 PASS·독립16 PASS(중복 포함)다. 최초 예시 config 경로의 준비 실패는 웹 교체 전에 종료했고 정상 config로 재시도했다. [수정·실패·검증 경계](beta-audit-four-ui-fixes-20261017.md), 최종 Library `libfile_911ed5e76e48819193e0d385086a531b`(내장 운영 화면5장)를 따른다.
+
+남은 우선순위는 완성 무게 W0/W2 근거·범위 및 W5 정확도, 네이버 검수 제출/일반 신규 가입, 로그인 HTTP 유튜브 신청→worker→알림→저장과 나머지 T9 통합이다. 최근 레시피 단위 기억U-A11/C05 새 수집은 사용자 보류 상태다. 날짜 문맥/회사 배지는 별도 개선 후보이며 단정된 계획 위반이 아니다. 별도 추출기 로컬93de94d/조건부vision 후속은 포함하지 않았다. 전체v9 완료·모든 버그 없음·정확도 검증을 주장하지 않는다. 이번 배포 후 새 business 기록·삭제·추출·외부AI0, 기존 사용자 checkout의 미커밋 변경 보존이다.
+
 ## 2026-10-17 운영 재검증과 F01 조회 보완
 
 사용자 묶음 반영 요청으로 PR [#1731](https://github.com/netsus/homecook/pull/1731)이 master `96fb4cb5f48083b765dc9e21b3a8231712d17509`에 머지됐고 공식 `homecook-deploy` 경로로 웹 build `prelaunch-96fb4cb5f480-MG8UqZ`가 반영됐다. 배포 선택 검사 1451 PASS / 133 SKIP 및 typecheck/build 성공. DB232와 추출 worker `3e58467499c63ba20c3b3191d9dd7dec77a7aa44`(v74/verifier47, gen49)는 유지했다.
