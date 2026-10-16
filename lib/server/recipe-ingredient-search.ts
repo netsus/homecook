@@ -1,5 +1,6 @@
 import { canonicalizeIngredient, expandIngredientIdentityIds, loadIngredientAliases } from "@/lib/server/ingredient-canonical-search";
 import { ingredientSearchPattern, normalizeIngredientSearchName } from "@/lib/ingredient-search";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const PAGE_SIZE = 1000;
 const ID_BATCH_SIZE = 100;
@@ -11,21 +12,66 @@ const PORK_CUT_NAMES = [
   "돼지앞다리살", "돼지뒷다리살", "돼지갈비", "돼지등심", "돼지안심",
 ];
 
-interface Ingredient { id: string; standard_name: string; category: string; category_code?: string | null }
-interface Synonym { ingredient_id: string; ingredients: Ingredient | Ingredient[] | null }
-interface Match { recipe_id: string; ingredient_id: string }
+interface Ingredient { id: string; standard_name: string; category: string; category_code: string | null }
+interface Match { recipe_id: string; ingredient_id: string | null }
 interface Query<T> extends PromiseLike<{ data: T[] | null; error: unknown }> {
   in(column: string, values: string[]): Query<T>;
   like(column: string, value: string): Query<T>;
   order(column: string, options: { ascending: boolean }): Query<T>;
   range(from: number, to: number): Query<T>;
 }
-export interface RecipeIngredientSearchClient {
-  rpc?(name: "read_recipe_product_ingredient_classification", args: { p_ingredient_ids: string[] }): PromiseLike<{ data: Match[] | null; error: unknown }>;
-  from(table: "ingredients"): { select(columns: string): Query<Ingredient> };
-  from(table: "ingredient_synonyms"): { select(columns: string): Query<Synonym> };
-  from(table: "recipe_ingredients"): { select(columns: string): Query<Match> };
-}
+// Local consumed read projections, not replacement DB schemas or grants.
+// Native builders still expose delete; these types are not runtime readonly.
+type IngredientCatalogSearchClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      ingredients: {
+        Row: { id: string; standard_name: string; category: string; category_code: string | null; search_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      ingredient_synonyms: {
+        Row: { id: string; ingredient_id: string; synonym: string; search_name: string };
+        Insert: never; Update: never;
+        Relationships: [{
+          foreignKeyName: "ingredient_synonyms_ingredient_id_fkey";
+          columns: ["ingredient_id"]; isOneToOne: false;
+          referencedRelation: "ingredients"; referencedColumns: ["id"];
+        }];
+      };
+    };
+    Views: {
+      ingredient_catalog_aliases: {
+        Row: {
+          ingredient_id: string; representative_ingredient_id: string;
+          representative_standard_name: string; representative_category: string;
+          representative_category_code: string | null;
+        };
+        Relationships: [];
+      };
+    };
+    Functions: Record<never, never>;
+  };
+}>, "from">;
+
+type RecipeIngredientMatchNativeClient = SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_ingredients: {
+        Row: { id: string; recipe_id: string; ingredient_id: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: {
+      read_recipe_product_ingredient_classification: {
+        Args: { p_ingredient_ids: string[] };
+        Returns: Array<{ recipe_id: string; ingredient_id: string }>;
+      };
+    };
+  };
+}>;
+type RecipeIngredientMatchClient = Pick<RecipeIngredientMatchNativeClient, "from"> &
+  Partial<Pick<RecipeIngredientMatchNativeClient, "rpc">>;
 
 async function readPages<T>(build: () => Query<T>) {
   const rows: T[] = [];
@@ -39,8 +85,8 @@ async function readPages<T>(build: () => Query<T>) {
 }
 
 export function createRecipeIngredientSearch(
-  catalog: RecipeIngredientSearchClient,
-  recipes: RecipeIngredientSearchClient,
+  catalog: IngredientCatalogSearchClient,
+  recipes: RecipeIngredientMatchClient,
 ) {
   let aliasPromise: ReturnType<typeof loadIngredientAliases> | undefined;
   const readAliases = () => aliasPromise ??= loadIngredientAliases(catalog);
@@ -115,9 +161,9 @@ export function createRecipeIngredientSearch(
         return new Set(expandIngredientIdentityIds([id, ...(ingredient ? await idsForName(ingredient.standard_name) : [])], aliases));
       }));
       const rows = await rowsForIds(groups.flatMap((group) => [...group]));
-      const byRecipe = new Map<string, Set<string>>();
+      const byRecipe = new Map<string, Set<string | null>>();
       for (const row of rows) {
-        const matched = byRecipe.get(row.recipe_id) ?? new Set<string>();
+        const matched = byRecipe.get(row.recipe_id) ?? new Set<string | null>();
         matched.add(row.ingredient_id);
         byRecipe.set(row.recipe_id, matched);
       }
@@ -126,7 +172,7 @@ export function createRecipeIngredientSearch(
       for (const [recipeId, ids] of byRecipe) {
         const matchesEveryGroup = groups.every((group) => {
           for (const id of ids) {
-            if (group.has(id)) return true;
+            if (id !== null && group.has(id)) return true;
           }
           return false;
         });

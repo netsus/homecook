@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `224298c619c0495afcd8dd41a9eaae17036ab239`, 실제 진단 **151**, baseline **207**, 신규 **0**.
-- 후속 진행/활동 capability 계약은 로컬 **151→149/신규0**을 확인했다. 단순 삭제 실패를 전체 종료 사유로 보지 않고 실제 query/행 계약과 shape 회귀로 검증한다.
+- 마지막 확정 master: `81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb`, 실제 진단 **149**, baseline **207**, 신규 **0**.
+- 후속 재료 검색 계약은 로컬 **149→147/신규0**을 확인했다. 단순 삭제 실패를 전체 종료 사유로 보지 않고 실제 query/행 계약과 shape 회귀로 검증한다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -16,7 +16,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요31, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결14이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
+- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요29, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결16이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
@@ -94,6 +94,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1774](https://github.com/netsus/homecook/pull/1774) | 수동 영양3호출의 실제 factory client 보존 | 156→153 | `7d320fba86d586a82291874fda2097ec414247d3` |
 | [#1775](https://github.com/netsus/homecook/pull/1775) | 카드 저장상태 native 조인·선택행 계약 | 153→152 | `2d8103c8bc456f9263909c761ad863ee83b861db` |
 | [#1776](https://github.com/netsus/homecook/pull/1776) | 검색 목록 native 선택행·RPC 계약 | 152→151 | `224298c619c0495afcd8dd41a9eaae17036ab239` |
+| [#1777](https://github.com/netsus/homecook/pull/1777) | 진행/활동 writer의 실제 projection capability 계약 | 151→149 | `81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -175,16 +176,16 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 
 ## 후속 재개: 실제 계약 보강과 현재 범주
 
-재개 당시 master81f0432be의 잔여157은 계약 보강39+보호99(추출기52/보안24/플래너23)+기존 보류5(명시4/like기술1)+병행조율1+유지13(prototype8/근거없음5)이다. 해결6은 이157에 합산하지 않는다. native owner1·수동 호출3·카드1·검색1의 머지와 진행/활동2의 로컬 해결을 반영한 현재 후보는 다음과 같다.
+재개 당시 master81f0432be의 잔여157은 계약 보강39+보호99(추출기52/보안24/플래너23)+기존 보류5(명시4/like기술1)+병행조율1+유지13(prototype8/근거없음5)이다. 해결6은 이157에 합산하지 않는다. native owner1·수동 호출3·카드1·검색1·진행/활동2의 머지와 재료 검색2의 로컬 해결을 반영한 현재 후보는 다음과 같다.
 
 | 상태 | 건수 | 처리 |
 | --- | --- | --- |
-| 계약 보강 필요 | 31 | 실제 read/write shape 근거로 계속 진행 |
+| 계약 보강 필요 | 29 | 실제 read/write shape 근거로 계속 진행 |
 | 보호: 추출기/보안/플래너 | 99 | 52/24/23, 부모 조율 전 보존 |
 | 기존 명시/기술 보류 | 5 | #1745 1/save fallback3/like1 |
 | 병행 충돌 조율 | 1 | session-attempts cook-mode 보존 |
 | 의도적 유지 | 13 | prototype8+단순화 근거 없는5 |
-| 잔여 후보 합계 | 149 | baseline207·신규0 |
+| 잔여 후보 합계 | 147 | baseline207·신규0 |
 
 ### 최근 반영: [#1773](https://github.com/netsus/homecook/pull/1773) 영양 owner query 단계·행 계약
 
@@ -225,7 +226,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 리뷰 APPROVE: 같은25건·전체type/lint/diff·migration 열/nullability/RPC를 재확인했다. private 타입의 select("id")가 정확 {id:string}[]|null, 두RPC가 정확 {recipe_id:string}[]|null임을 메모리 전용 assertion을 넣은 전체 compiler program diagnostics0으로 확인했다. 괄호를 제외한 emitted JS AST도 동일하다. Anti Slop은 부모 결과와 구분한다.
 - 보호99·기존 보류5·조율1·유지13, 기존10실패·49원본미확인·1745/1749/444는 유지한다. 진행/활동 capability 후속안은 제품 편집0이며, 메모리 probe에서 기존 award fixture13개의 축소 타입 단언을 추가 확인했다. 그 fixture를 완전한 projection 증거로 쓰지 않으며 실제 성공/실패 경로 보강 후 별도 진행한다. 운영·DB 쓰기·권한·제품정책·전체 build/화면/실DB 검증0이다.
 
-### 현재 배치: [#1777](https://github.com/netsus/homecook/pull/1777) 진행/활동 writer의 실제 projection capability 계약
+### 최근 반영: [#1777](https://github.com/netsus/homecook/pull/1777) 진행/활동 writer의 실제 projection capability 계약
 
 - 원본ID는 `lib/server/user-progress.ts::anti-slop(no-chained-type-assertions)::a2c5fd4bd48d3ce5683f88b76fd735a69e7b35408f4dfb83886844dddfa6b4bf#1` (checkpoint431), `lib/server/user-growth-activity.ts::anti-slop(no-chained-type-assertions)::4d0a30d6891165e87b8ad349dc6c268b125b55a22ae06cd50835576b733680ab#1` (checkpoint164)이다.
 - award 인수에 이미 호출하는 gamification 계약을 명시하되 core progress 읽기 계약은 그대로 둔다. growth 기록 client에는 기존 부가 progress/gamification 소비 계약을 함께 선언한다. 내부 재단언2개와 book 생성의 불필요 축소 단일단언만 제거한다. 외부 factory/공통 bootstrap 경계 단언은 남으며 이 배치가 그 경계까지 해결한 것은 아니다.
@@ -236,6 +237,22 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 실제 SDK를 기존 progress/gamification/activity 전체 수동 계약에 직접 대입하는 별도 probe는 TS2322/TS2589로 실패했다. 특히 head:true CountTable의 data:null 고정과 native builder 반환 타입이 다르다. 이 기존 유지보수 부채와 외부 단언은 미해결이며 이번 내부 capability 교집합으로 해결했다고 과장하지 않는다.
 - 독립 리뷰 APPROVE: 동일58건·전체typecheck·변경8파일 lint·diff·제품3파일JS동일을 직접 확인했다. typed fixture의 성공 쓰기/실패 흡수/중복 경로와 core read 보존을 검토했으며 SDK/외부 경계 한계도 그대로다. Anti Slop은 부모 실행 결과와 구분한다.
 - 보호99·기존 보류5·조율1·유지13, 기존10실패·49원본미확인·1745/1749/444는 유지한다. 실제 DB 쓰기·grant/RLS·인증설정·제품정책·운영배포·전체 build/화면/실DB 검증0이다.
+
+### 현재 배치: 재료 검색의 카탈로그/레시피 native 소비 계약
+
+- 원본ID는 `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::618b2074248421401bfdc85e35f73bdf1ff1b63afb3393caf1bd1612c5090a72#1` (checkpoint1749), 같은 파일 hash `598a39d3f5bf77409ff13897fb9870725912ac3348c52e72eb2afa3339aadb32#1` (checkpoint1750)이다.
+- 실제 카탈로그 ingredients/ingredient_synonyms·alias view와 recipe_ingredients/선택 RPC 기능을 분리한다. FK·category_code nullable·alias view5열·저장 ingredient_id nullable·RPC link의 nonnull ID를 기존 migration과 대조했다. 잘못된 양쪽 동일 client 요구를 제거하고 실제 factory를 직접 전달하며 fixture의 기존 연쇄 단언도 제거했다.
+- 선택 RPC 분기를 그대로 유지한다. 저장 ID는 string|null로 맞추고 selected group에 null이 맞지 않음을 명시한다. 행을 버리는 filter나 순서 변경을 넣지 않는다. 정상 SDK의 IN은 null을 제외하지만, 고의 null 응답을 넣은 방어 회귀에서도 이전 search 결과 유지·선택 filter 불일치를 확인했다. 잘못된 fixture 응답을 실제 DB/RLS 동작으로 주장하지 않는다.
+- 편집 전4 suite27 PASS, 편집 후 exact-native 타입 회귀1개를 더한4 suite28 PASS. 단언 없는 실제 SDK client 대입과 synonym inner object·alias5열·nullable 저장행·nonnull RPC의 정확4개 projection 타입을 전체 typecheck에 포함했다. 기존 fake ingredient 행의 누락 category_code는 실제 선택열에 맞게 null로 정합했다. 최종 typecheck·변경 ESLint·diff·verify:anti-slop PASS, 실제149→147/baseline207/신규0이다.
+- route emitted JS byte-identical SHA `655ee974eeafb3b5292f5e0b9f86cc3c9243acc77b2b1bcb263144a8ce795b7f`. helper JS는 null 비교1곳만 다르며 SHA `86f2d28c726705dd5ff9d4e9ba476656c5b15aaf04a95f5be64f397df53c323e`다. 새 local schema는 전체 DB schema/runtime grant/deep-readonly가 아니며 alias loader의 기존 unknown/cast 경계는 그대로다.
+- 독립 리뷰 APPROVE: 같은28건·전체typecheck·변경3파일 lint·diff·FK/view/nullability/RPC·JS차이를 재확인했다. Anti Slop은 부모 실행 결과와 구분한다. 보호99·기존 보류5·조율1·유지13·10기존실패·49원본미확인·1745/1749/444와 운영/DB/권한/정책 무변경을 유지한다.
+
+### 최근 통합과 공유 계약 조사 한계
+
+- master81563d1f7과 코드가 같은 #1777 최종head에서 후속20 suite187 PASS. 별도 기존5 suite127건은117 PASS/같은10 FAIL(exit1)을 재현했다. 전체 green으로 쓰거나 오래된 실패를 이번 배치 성과로 세지 않는다.
+- 영양 memory 직접 전달은 최신81563d1f7 전체 program에서 TS2345 1건이다. loose Row 외에 BundleQuery가 native builder의 url/headers/urlLengthLimit/cloneRequestState 등 상태8개를 갖지 않는 원인이다. 정확 select-literal 공통 구조안은 native 대입 TS2589 1건, native|memory union 호출은 TS2349 2건이었다. 가짜 SDK 메서드를 채우거나 bundle에 없는 revision/quantity_input을 만들지 않는다. 별도 pure-core 분리 가능성을 남기며 모든 리팩터링 불가로 단정하지 않는다.
+- 공통 bootstrap의 native3표와 각1표 native.from 교집합안은 보호 meals/route.ts:762의 TS2589 1건으로 미채택했다. users만 native로 바꾸고 ensurePublicUserRow/readUserRow를1표로 좁힌 안도 cooking/sessions/route.ts:144 TS2589 1건이다. 동일 const 객체의 원 factory 인수를 전달해도 그1건이 남았다. 제품/보호 파일 변경0이며, 이 실패를 해결로 세지 않는다.
+- 위 bootstrap 조사 선언에서 interface Row를 섞어 생긴 never 오류와 SDK Views overload를 잘못 특수화한 TS2344는 probe 자체 오류로 정정·분리했다. 실제 DB의 social_id/settings_json NOT NULL과 JSONB 전체 타입은 기존 소비 계약과 구별한다. 이 특정 native 교체안의 실패는 다른 정확 계약안이나 전체26개 bootstrap 관련 후속 작업의 불가능 증거가 아니다.
 
 ## 보류·기술적 경계
 

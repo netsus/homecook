@@ -75,7 +75,7 @@ import {
   createRecipeImageInternalClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
-import { createRecipeIngredientSearch, type RecipeIngredientSearchClient } from "@/lib/server/recipe-ingredient-search";
+import { createRecipeIngredientSearch } from "@/lib/server/recipe-ingredient-search";
 import type {
   ManualRecipeCreateData,
   ManualRecipeIngredientInput,
@@ -1758,8 +1758,8 @@ export async function GET(request: NextRequest) {
     const recipeSearchDbClient: RecipeSearchDbClient = routeClient;
     const ingredientSearch = listQuery.q || listQuery.ingredient_ids?.length
       ? createRecipeIngredientSearch(
-          await createRouteHandlerClient({ anonymousPublicReadScope: "ingredients" }) as unknown as RecipeIngredientSearchClient,
-          routeClient as unknown as RecipeIngredientSearchClient,
+          await createRouteHandlerClient({ anonymousPublicReadScope: "ingredients" }),
+          routeClient,
         )
       : null;
     const [ingredientFilterIds, ingredientQueryIds]: [string[] | null, string[]] = ingredientSearch
