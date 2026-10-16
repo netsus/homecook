@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `7d320fba86d586a82291874fda2097ec414247d3`, 실제 진단 **153**, baseline **207**, 신규 **0**.
-- 후속 카드 조회 계약은 로컬 **153→152/신규0**을 확인했다. 단순 삭제 실패를 전체 종료 사유로 보지 않고 실제 query/행 계약과 shape 회귀로 검증한다.
+- 마지막 확정 master: `2d8103c8bc456f9263909c761ad863ee83b861db`, 실제 진단 **152**, baseline **207**, 신규 **0**.
+- 후속 검색 조회 계약은 로컬 **152→151/신규0**을 확인했다. 단순 삭제 실패를 전체 종료 사유로 보지 않고 실제 query/행 계약과 shape 회귀로 검증한다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -16,7 +16,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요34, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결11이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
+- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요33, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결12이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
@@ -92,6 +92,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1772](https://github.com/netsus/homecook/pull/1772) | 원본ID별 잔여 판단과 실패/한계 고정 | 157 유지 | `81f0432bed2cecaa80169366e95ddb3b338adc02` |
 | [#1773](https://github.com/netsus/homecook/pull/1773) | native 영양 owner query·선택 행 계약 보강 | 157→156 | `1b730e2498eb1f766e9fe5f8dcaebb94b64fc170` |
 | [#1774](https://github.com/netsus/homecook/pull/1774) | 수동 영양3호출의 실제 factory client 보존 | 156→153 | `7d320fba86d586a82291874fda2097ec414247d3` |
+| [#1775](https://github.com/netsus/homecook/pull/1775) | 카드 저장상태 native 조인·선택행 계약 | 153→152 | `2d8103c8bc456f9263909c761ad863ee83b861db` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -173,16 +174,16 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 
 ## 후속 재개: 실제 계약 보강과 현재 범주
 
-재개 당시 master81f0432be의 잔여157은 계약 보강39+보호99(추출기52/보안24/플래너23)+기존 보류5(명시4/like기술1)+병행조율1+유지13(prototype8/근거없음5)이다. 해결6은 이157에 합산하지 않는다. native owner1·수동 호출3의 머지와 카드 조회 계약1의 로컬 해결을 반영한 현재 후보는 다음과 같다.
+재개 당시 master81f0432be의 잔여157은 계약 보강39+보호99(추출기52/보안24/플래너23)+기존 보류5(명시4/like기술1)+병행조율1+유지13(prototype8/근거없음5)이다. 해결6은 이157에 합산하지 않는다. native owner1·수동 호출3·카드 조회1의 머지와 검색 조회1의 로컬 해결을 반영한 현재 후보는 다음과 같다.
 
 | 상태 | 건수 | 처리 |
 | --- | --- | --- |
-| 계약 보강 필요 | 34 | 실제 read/write shape 근거로 계속 진행 |
+| 계약 보강 필요 | 33 | 실제 read/write shape 근거로 계속 진행 |
 | 보호: 추출기/보안/플래너 | 99 | 52/24/23, 부모 조율 전 보존 |
 | 기존 명시/기술 보류 | 5 | #1745 1/save fallback3/like1 |
 | 병행 충돌 조율 | 1 | session-attempts cook-mode 보존 |
 | 의도적 유지 | 13 | prototype8+단순화 근거 없는5 |
-| 잔여 후보 합계 | 152 | baseline207·신규0 |
+| 잔여 후보 합계 | 151 | baseline207·신규0 |
 
 ### 최근 반영: [#1773](https://github.com/netsus/homecook/pull/1773) 영양 owner query 단계·행 계약
 
@@ -202,7 +203,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - emitted JS byte-identical은 아니다. transpiler/AST로 유일한 const 별칭과 알려진 인수3개 교체 외에는 JS 차이가 없음을 확인했다(SHA `5b639cae6c2332d442d1061f23916c295f8bd742d8f48b09f8a89017d1f63416`). 실제 handler 회귀는 관리형 prepare와 legacy RPC/insert 각각 동일 원래 client 객체를 전달함을 검증했다.
 - 독립 리뷰 APPROVE: 동일93건·type/lint/diff, 객체 identity·3개 인수 외 JS 불변과 SHA를 직접 확인했다. Anti Slop은 부모 실행 결과와 구분한다. 보호99·기존 보류5·조율1·유지13, 기존10실패·별도49원본미확인 유지다. 운영·DB·접근권한·제품정책·build/화면/실DB 배포0이며 다음 비충돌 계약 보강을 계속한다.
 
-### 현재 배치: [#1775](https://github.com/netsus/homecook/pull/1775) 카드 저장상태 native 조인 계약
+### 최근 반영: [#1775](https://github.com/netsus/homecook/pull/1775) 카드 저장상태 native 조인 계약
 
 - 원본ID: `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::b862a39f029c3d4647b2b4c6f210ded3831c4960685812e00256fbdc0ea416bb#1` (checkpoint1832).
 - 손코딩 fluent-query 선언을 실제 SDK의 table→select→filter 단계와 정확 선택행 계약으로 교체한다. 기존 migration의 book_id NOT NULL FK·unique(book_id,recipe_id)를 대조해 recipe_book_items→recipe_books 관계를 명시했다. 두 표의 로컬 projection이며 전체 DB schema 생성·변경은 아니다. factory client를 직접 전달하고 새 adapter/단언/any 확대0이다.
@@ -211,6 +212,17 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - recipe-visibility-security의 구형 cast 문자열 기대를 같은 호출의 직접 routeClient 전달·해당 cast 부재 검사로 강화했다. 기존 service-role/요청 scope 보호 검사는 유지한다. 실제 DB/RLS 검증이나 보안 정책 변경으로 표현하지 않는다.
 - 제품2파일 emitted JS byte-identical: helper SHA `addfca9b0faa3232cc8e9d3d1a86b54f699bc3df52c2e5f97d74510e1b9505d4`, recipes SHA `5b639cae6c2332d442d1061f23916c295f8bd742d8f48b09f8a89017d1f63416`. 독립 리뷰 APPROVE: 동일29건·type/lint/diff·추가 testroot compiler진단0·FK/행/JS동일을 직접 재확인했다. Anti Slop은 부모 결과와 구분한다.
 - 보호99·기존 보류5·조율1·유지13, 기존10실패·별도49원본미확인·1745/1749/444를 유지한다. 운영·DB 쓰기·권한·제품정책·전체 build/화면/실DB 검증0이며 다음 비충돌 계약 보강을 계속한다.
+
+### 현재 배치: [#1776](https://github.com/netsus/homecook/pull/1776) 검색 목록 native 선택행·RPC 계약
+
+- 원본ID: `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::c4d70fde2704d45db48bb362e214d0d76570933efdba41a227b78fa8bd766064#1` (checkpoint1746).
+- 임의 select문에도 같은 RecipeListRow를 반환한다고 선언하던 수동 from/rpc/query 계약을 native SDK의 실제 선택행과 두 RPC Args/Returns로 교체한다. core_schema_bootstrap:96의 필드/nullability(tags NOT NULL), visibility_read_hardening:3,572의 필터열/태그RPC, product_only_identity:935의 제품RPC와 대조했다. 로컬 소비 projection이며 전체 DB schema·runtime grant·deep-readonly가 아니다.
+- 기존 sort/cursor helper에 order/or:this 최소 constraint를 두어 실제 builder의 선택 결과 identity를 유지한다. 새 wrapper/adapter나 결과 any 주석 없이 factory를 직접 대입하고 최종 결과 as도 제거했다. ingredient 검색2경계·bootstrap·보호영역은 그대로다.
+- 수정 전 기존3 suite18 PASS·새 실제SDK/fake-fetch7 PASS, 수정 후4 suite25 PASS. 새7건은 latest/count 커서방향2·전체선택열·public/deleted필터·tag중복제거·두RPC exact body·title escape·오류2·null-data를 확인한다. 최초fixture는 동시RPC 순서를 잘못 기대해6 PASS/1 FAIL이었고, 제품 수정 없이 count2+순서독립 exact body 비교로 바로잡았다.
+- 전체 typecheck·변경 ESLint·diff PASS, Anti Slop152→151/baseline207/신규0이다. 처음 입력한 없는 check:anti-slop 명령은 exit254였으며 실제 기존 lint:anti-slop 재실행 결과로 기록한다. 검사 설정·baseline·범위 변경0이다.
+- 제품 emitted JS의 차이는 결과 표현식의 불필요 괄호 한 쌍 제거1줄뿐이다. byte-identical로 주장하지 않으며 현재 SHA는 `655ee974eeafb3b5292f5e0b9f86cc3c9243acc77b2b1bcb263144a8ce795b7f`다. 쿼리·정렬·커서·RPC·빈값/오류·응답·실행동작은 유지한다.
+- 독립 리뷰 APPROVE: 같은25건·전체type/lint/diff·migration 열/nullability/RPC를 재확인했다. private 타입의 select("id")가 정확 {id:string}[]|null, 두RPC가 정확 {recipe_id:string}[]|null임을 메모리 전용 assertion을 넣은 전체 compiler program diagnostics0으로 확인했다. 괄호를 제외한 emitted JS AST도 동일하다. Anti Slop은 부모 결과와 구분한다.
+- 보호99·기존 보류5·조율1·유지13, 기존10실패·49원본미확인·1745/1749/444는 유지한다. 진행/활동 capability 후속안은 제품 편집0이며, 메모리 probe에서 기존 award fixture13개의 축소 타입 단언을 추가 확인했다. 그 fixture를 완전한 projection 증거로 쓰지 않으며 실제 성공/실패 경로 보강 후 별도 진행한다. 운영·DB 쓰기·권한·제품정책·전체 build/화면/실DB 검증0이다.
 
 ## 보류·기술적 경계
 
