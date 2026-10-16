@@ -18,12 +18,51 @@ const support = new Set([
   'scripts/deploy-prelaunch-web.mjs', 'scripts/lib/prelaunch-web-deploy.mjs', 'scripts/lib/prelaunch-database.mjs',
   'scripts/run-youtube-fingerprint-recovery-postgres.mjs',
 ]);
+// Already-merged PR1734–1737: preserve only these reviewed exact before/after bytes.
+const integratedMasterSources = {
+  "app/api/v1/leftovers/[leftover_id]/eat/route.ts": [
+    "c77d023b381f9f850efb46148bad7a8d4b968e885e6fa03f2e7558ab088ded9b",
+    "4f8df5bfa65317c2b4da3b51a6658683c3f15bec5068a6b58623347fd2211a4d"
+  ],
+  "app/api/v1/leftovers/[leftover_id]/keep/route.ts": [
+    "07bcdcfc7028e82683149d9bf48308ce471b2d7f44a15ca706d5441c0fc0603a",
+    "1f974ea02f7b262f8c3c70ed6f584c112d7a0115ea352333f22542a239f067bc"
+  ],
+  "app/api/v1/leftovers/[leftover_id]/uneat/route.ts": [
+    "74019c7ee867301acb10c02f213185680c0f3b6487aebd809b078f2563097143",
+    "aa0c7affc50f6ae160ec46308e5c95ac82765dee2056b19681a4e355560b0a08"
+  ],
+  "lib/server/leftovers.ts": [
+    "de95800f41158dafe9d908d122b5613183be82cdf113713ffc0f2decb8fd4a34",
+    "569f75eb5ce9250c0321f81d5f3dac5f9254f643912062d49c41498676d1ac01"
+  ],
+  "lib/server/user-progress.ts": [
+    "7380875b918a783e809febe06b397dc17007cbb73dc0343fe0a5cf9ba3b9a9fc",
+    "bec65c06c6387961372a507647918f7e401a4cf87957cf4ccb913beb1f39d751"
+  ],
+  "tests/leftover-mutation-parser.test.ts": [
+    null,
+    "b2153a33656a3d0ff31c0b8c988eacd86ea466f7d1ba028428a3081d9a80169f"
+  ],
+  "tests/leftovers.backend.test.ts": [
+    "a5375cefdc921516040dd8fd1ecde4419ed1339be48df7e672bbe7b06f8f32a0",
+    "879f106f1f5d659a2b1443f268d93b5b541dea3ab966be1af8f9b135ee0af3f5"
+  ],
+  "tests/user-progress-events.test.ts": [
+    "f2ca48473d3f97473850013e8d1d75b816e2f2a46b938c85b79b5b020c879c8b",
+    "858eb565e3c9532e593a6486dc9418f466e384d198d763fb7a84cf5dbea1473a"
+  ],
+  "tests/user-progress-repeat-caps.test.ts": [
+    null,
+    "7954610b1bd8fc9cc3c338bf0990fde4bcecda79677754c68667905c2005a9f4"
+  ]
+};
 export function assertFingerprintSource({ plan, from, to, digests }) {
   check(plan?.schema === 'homecook.youtube-fingerprint-recovery-plan.v1' && plan.from === FINGERPRINT_RECOVERY_FROM
     && from === plan.from && to === plan.candidate && REF.test(to), 'exact-source');
   check(isDeepStrictEqual(digests, plan.sources) && Object.keys(digests).length > 0, 'complete-source-bytes');
   for (const [file, pair] of Object.entries(digests)) {
-    check(support.has(file) || /^tests\/(?:fixtures\/)?youtube-fingerprint-recovery[-./a-z0-9]*\.(?:mjs|ts|sql|json)$/u.test(file)
+    check((Object.hasOwn(integratedMasterSources,file) && isDeepStrictEqual(pair,integratedMasterSources[file])) || support.has(file) || /^tests\/(?:fixtures\/)?youtube-fingerprint-recovery[-./a-z0-9]*\.(?:mjs|ts|sql|json)$/u.test(file)
       || file === 'tests/youtube-enqueue-runtime-preflight.test.ts'
       || file === 'tests/prelaunch-closed-r2-maintenance.test.ts'
       || ['tests/prelaunch-cooked-weight-attestation-successor.test.ts','tests/prelaunch-recipe-request-role-maintenance.test.ts','tests/prelaunch-recipe-save-maintenance.test.ts'].includes(file)

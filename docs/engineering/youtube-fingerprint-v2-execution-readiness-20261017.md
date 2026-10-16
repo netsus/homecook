@@ -64,3 +64,9 @@ Keychain이 잠겼거나 접근이 거절되면 그 조치만 중단한다. 새 
 - typecheck·변경 파일 ESLint(오류/경고0)·Next build·diff 검사 통과. build에는 변경 전 추출기 bundle의 기존 미사용 변수 경고가 남는다.
 - 독립 검토에서 남은 CRITICAL/HIGH 없음. 실제 READ ONLY prepare의 운영 원41·worker·기존 key 일치 확인은 최종 후보에 결속해 별도 보고한다.
 - 후보의 기준 master는 `61471885`다. 나중에 머지된 leftovers PR1734/1735 / master`12c17c3`는 이 후보에 포함하지 않았고 덮어쓰지 않는다. 최종 병합/배포 시 전체 diff를 다시 확인한다.
+
+## 실행 승인 후 통합 준비 — 2026-10-16 UTC
+
+사용자는 기존 V2 키 재사용 복구와 PR/머지·정책1행 전환·공식 웹 배포·Chrome1회 확인을 승인했다. 새 키·인증 접근권한 변경은 포함하지 않는다. create-only Keychain 항목은 공개될 수 있는 plan SHA만 담는 변조 방지 앵커이며 비밀 접근권한을 추가하지 않는다. 실제 Keychain 잠금/접근 거절은 우회하지 않는다.
+
+최신 master `91aa40c5d`의 PR1734–1737(남은 요리 응답 파싱·에러 공통화, 경험치 중복 제거·메타데이터 정규화)을 충돌 없이 통합한다. 기존 웹53da→master의9파일 before/after SHA를 개별 고정하고 다른 bytes는 거부한다. 새 후보·전체 diff·검증 결과로 READ ONLY plan을 다시 만들며 이전 fbdd 계획을 다른 후보에 재사용하지 않는다. 별도 무게/추출기 후보는 제외한다.

@@ -46,6 +46,16 @@ describe('V2 exact authority and policy boundary',()=>{
     expect(()=>assertFingerprintSource({plan:{...plan,sources:{'lib/server/auth.ts':[digest,other]}},from:plan.from,to:plan.candidate,digests:{'lib/server/auth.ts':[digest,other]}})).toThrow();
     expect(()=>assertFingerprintSource({plan,from:plan.from,to:'d'.repeat(40),digests:plan.sources})).toThrow();
   });
+  it('preserves the merged master bytes but rejects unreviewed edits to those paths',()=>{
+    const {plan}=fixture();
+    const pair=["7380875b918a783e809febe06b397dc17007cbb73dc0343fe0a5cf9ba3b9a9fc", "bec65c06c6387961372a507647918f7e401a4cf87957cf4ccb913beb1f39d751"];
+    const sources={'lib/server/user-progress.ts':pair};
+    expect(()=>assertFingerprintSource({plan:{...plan,sources},from:plan.from,to:plan.candidate,digests:sources})).not.toThrow();
+    for(const modified of [[digest,pair[1]],[pair[0],other]]) {
+      const changed={'lib/server/user-progress.ts':modified};
+      expect(()=>assertFingerprintSource({plan:{...plan,sources:changed},from:plan.from,to:plan.candidate,digests:changed})).toThrow('unrelated-source');
+    }
+  });
   it('binds compensation full preimage to the actual apply receipt, not just its hash labels',()=>{
     const f=fixture();
     const compensation={...f.receipt,direction:'compensate',planSha256:digest,predecessorSha256:other,
