@@ -530,7 +530,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const dbClient = routeClient as unknown as
     RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient;
-  const recipeReaderClient = routeClient as unknown as RecipeBookRecipeRemoveDbClient;
+  const recipeReaderClient: RecipeBookRecipeRemoveDbClient = dbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -853,7 +853,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   const dbClient = routeClient as unknown as
     RecipeBookRecipeRemoveAuthedDbClient;
-  const recipeReaderClient = routeClient as unknown as RecipeBookRecipeRemoveDbClient;
+  const recipeReaderClient: RecipeBookRecipeRemoveDbClient = dbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
