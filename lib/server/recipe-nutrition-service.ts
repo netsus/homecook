@@ -14,15 +14,15 @@ import {
   loadRecipeNutritionPredecessors,
 } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
 
-interface RecipeNutritionRecipeRow {
+type RecipeNutritionRecipeRow = {
   id: string;
   base_servings: number;
   updated_at: string;
   created_by?: string | null;
   revision?: number;
-}
+};
 
-interface RecipeNutritionIngredientRow {
+type RecipeNutritionIngredientRow = {
   id: string;
   ingredient_id: string | null;
   amount: number | null;
@@ -33,27 +33,32 @@ interface RecipeNutritionIngredientRow {
   quantity_input?: unknown;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
-}
+};
 
-interface MaybeSingleQuery<T> {
-  select(columns: string): MaybeSingleQuery<T>;
-  eq(column: string, value: string): MaybeSingleQuery<T>;
-  maybeSingle(): PromiseLike<{ data: T | null; error: unknown }>;
-}
-
-interface IngredientQuery {
-  select(columns: string): IngredientQuery;
-  eq(column: string, value: string): IngredientQuery;
-  order(
-    column: string,
-    options: { ascending: boolean },
-  ): PromiseLike<{ data: RecipeNutritionIngredientRow[] | null; error: unknown }>;
-}
-
-interface RecipeNutritionReadClient {
-  from(table: "recipes"): MaybeSingleQuery<RecipeNutritionRecipeRow>;
-  from(table: "recipe_ingredients"): IngredientQuery;
-}
+// Only the owner-row projections consumed below, not a replacement DB schema.
+// Keep native query phases and selected-row inference. Insert/Update payloads
+// are never, but native builders still expose delete; this is not deep-readonly
+// typing or a runtime permission grant. This consumer only issues selects.
+type RecipeNutritionReadClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipes: {
+        Row: RecipeNutritionRecipeRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      recipe_ingredients: {
+        Row: RecipeNutritionIngredientRow & { recipe_id: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: Record<never, never>;
+  };
+}>, "from">;
 
 // Preserve the library's select-builder type instead of requiring query methods
 // on from() itself. Predecessor evidence never reads or writes owner recipe rows.

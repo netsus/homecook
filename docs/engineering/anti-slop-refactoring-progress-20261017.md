@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `4a9da270233b6c92e6a81498e35309efc348bb46`, 실제 진단 **157**, baseline **207**, 신규 **0**.
-- 현재 배치는 남은 원본53개 항목의 판단 기록만 갱신한다. 제품 코드·checker·baseline·테스트 변경0이며 판단 완료를 코드 해결로 세지 않는다.
+- 마지막 확정 master: `81f0432bed2cecaa80169366e95ddb3b338adc02`, 실제 진단 **157**, baseline **207**, 신규 **0**.
+- 후속 첫 계약 보강은 로컬 **157→156/신규0**을 확인했다. 단순 삭제 실패를 전체 종료 사유로 보지 않고 실제 query/행 계약과 shape 회귀로 검증한다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -16,7 +16,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요39, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결6이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
+- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요38, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결7이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
@@ -89,6 +89,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1769](https://github.com/netsus/homecook/pull/1769) | 조리 완료 현대·legacy RPC 실제 client 직접 호출 | 158→157 | `c0afd5511f5990d96af5f3eef3e2686ff0c877c2` |
 | [#1770](https://github.com/netsus/homecook/pull/1770) | 장보기7leaf 단발 전달 함수 삭제·guest 계약 고정 | 157 유지 | `bf549a6853e783664d5802295d9e996db31930ce` |
 | [#1771](https://github.com/netsus/homecook/pull/1771) | tag/product GET 단발 unknown→cast helper 삭제 | 157 유지 | `4a9da270233b6c92e6a81498e35309efc348bb46` |
+| [#1772](https://github.com/netsus/homecook/pull/1772) | 원본ID별 잔여 판단과 실패/한계 고정 | 157 유지 | `81f0432bed2cecaa80169366e95ddb3b338adc02` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -156,7 +157,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 기존 scope·로그인·RPC 인수·검증·성공/오류 응답/빈 목록 처리는 유지한다. 단발 identity 함수 삭제이므로 전체 emitted JS byte-identical 주장은 하지 않는다. 운영·DB·보안설정 변경0, 전체 build·화면·실DB 미실행이다. 기존10실패·49원본 미확인은 별도다.
 - 최종 제품 코드에서 기존 실패5 suite를 재실행해127건=117 PASS/같은10 FAIL/skip0, exit1을 확인했다. 실패제목은 기존 목록과 같고 성공27건과 합쳐 전체통과로 표현하지 않는다. 권한 검사 완화·기대값 교체0이다.
 
-## 현재 배치: [#1772](https://github.com/netsus/homecook/pull/1772) 잔여 원본 ID별 판단 고정
+## 최근 반영: [#1772](https://github.com/netsus/homecook/pull/1772) 잔여 원본 ID별 판단 고정
 
 - 제품157건을 없앤 것이 아니라 inventory의 미검토53건을 분류했다. 원본163 ID/file/rule/hash/occurrence/checkpoint위치/snippet은 불변이고 해결6+잔여157을 유지한다. 별도49건 원본은 여전히 미확인이다.
 - 독립 조사자는 clean063f8a226의 전체 TypeScript 진단0 확인 후 미검토 연쇄 단언45건을 각1개씩 메모리에서 직접대입으로 바꿨다. 직접성공4/TS2589 30/구조불일치11이었다. 제품 파일을 수정하지 않았다. 실패 probe는 변경 파일의 semantic diagnostics 분리이며 성공4와 nutrition predecessor 계약 개선은 전체 program0도 확인했다.
@@ -167,6 +168,29 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - production 체인1(dedupeRecipeIds)은 실제 검색 RPC 중복ID 제거와 회귀 책임이 있고 크기/latency 문제 증거가 없다. filter(Boolean) 방어를 없애거나 loop로 바꾸지 않는다. product projection4의 의미는 다르다: normalize366/368은 각 값이 문자열일 때만 trim한 키를 넣고 부재/null/undefined/비문자열은 모두 생략한다. payload1367은 food_product_id가 truthy일 때 두 키를 함께 넣으며 version은 그 안에서 own undefined/null일 수 있다. snapshot641만 hasOwn으로 부재와 own undefined/null을 구분한다. 각각의 키순서/조건을 보존하려고 typed 임시객체+무조건spread로 바꾸는 방식은 실제 단순성/할당 개선 근거가 없다. 이5건은 해결이 아닌 근거 없음 유지다.
 - 독립 장부 검토의 첫 verdict는 REQUEST CHANGES였다. projection4에 동일한 own-key 사유를 붙인 MEDIUM 정확성 문제와 prototype7+1의 capture 문구 LOW를 수용해 항목별 실제 조건으로 바로잡았다. 수정 전 실패 판단을 숨기지 않으며 재검토에서 모두 해결된 것으로 APPROVE를 받았다.
 - 현 배치에서 원본163 ID·hash/위치 불변·baseline count 대조·집계·모든 해결PR/보류근거 존재·diff를 기계 검증했다. master4a9da2702 통합 관련21 suite310 PASS, 전체 typecheck·이번 연속 변경15파일 ESLint PASS, Anti Slop157/baseline207/신규0을 확인했다. 063f8a226 이후 checker/baseline/save route/내부factory 파일 diff0이다. 독립 장부 검토 APPROVE: 실제 조건·원본identity·집계·30+9·제품diff0·diff-check를 직접 재확인했다. 통합310/type/lint/Anti는 부모 실행 결과와 구분한다. 운영·DB·권한·보안설정·배포 변경0이다.
+
+## 후속 재개: 실제 계약 보강과 현재 범주
+
+재개 당시 master81f0432be의 잔여157은 계약 보강39+보호99(추출기52/보안24/플래너23)+기존 보류5(명시4/like기술1)+병행조율1+유지13(prototype8/근거없음5)이다. 해결6은 이157에 합산하지 않는다. 후속 첫 후보의 로컬 해결1을 반영한 현재 후보는 다음과 같다.
+
+| 상태 | 건수 | 처리 |
+| --- | --- | --- |
+| 계약 보강 필요 | 38 | 실제 read/write shape 근거로 계속 진행 |
+| 보호: 추출기/보안/플래너 | 99 | 52/24/23, 부모 조율 전 보존 |
+| 기존 명시/기술 보류 | 5 | #1745 1/save fallback3/like1 |
+| 병행 충돌 조율 | 1 | session-attempts cook-mode 보존 |
+| 의도적 유지 | 13 | prototype8+단순화 근거 없는5 |
+| 잔여 후보 합계 | 156 | baseline207·신규0 |
+
+### 현재 배치: [#1773](https://github.com/netsus/homecook/pull/1773) 영양 owner query 단계·행 계약
+
+- 원본ID: `app/api/v1/recipes/[id]/publish/route.ts::anti-slop(no-chained-type-assertions)::59c307534b5136d238e3d3f1f3b86ec2cc1c4f5766ba2d2c1232194a98061068#1` (checkpoint40).
+- 기존 from() 단계에 eq/maybeSingle/정렬query가 있다고 손코딩한 선언을 실제 native table→select→filter/query 단계로 맞춘다. 기존 recipe/ingredient 행 필드를 native query parser에 명시해 선택 행 추론을 보존한다. recipe_id 필터 열을 기존 실제 조회에 맞게 포함하며 다른 table/DB schema를 생성·변경하지 않는다. publish의 실제 owner client를 직접 전달한다. 새 adapter/cast/any·unknown 확대0이다.
+- 제품2파일 emitted JS byte-identical: service SHA `e3a324c2406f3328b1f0033d30f40142f94a5985a8b57f473533eb391ef9f8a9`, publish SHA `058a78ad0bd1a14a9ada77364f6454acd4fd6279ec713a5cd92135bf155ac26b`. 실제 SQL/RPC/권한/DB/정책 동작은 변경하지 않는다.
+- 편집 전 기존5 suite86 PASS, 실제 설치 SDK+외부네트워크 없는 fetch fixture5 PASS. 편집 후6 suite91 PASS, 전체 typecheck·변경 ESLint·diff PASS. 테스트를 별도 compiler program에 포함해 `id/base_servings/updated_at|null` 선택행 타입을 확인한 진단0도 확보했다. 일반 typecheck가 이 테스트까지 포함한다고 과장하지 않는다. Anti Slop157→156/baseline207/신규0이다.
+- 새 shape5건은 실제 SDK의 select/filter/order·기존 missing/invalid 행4개 거절·snapshot 쓰기0을 확인한다. 최초 새fixture는 계산결과에 없는 recipe_id를 기대해1 FAIL/4 PASS였고 제품 수정 없이 기존 계산결과 계약으로 바로잡았다. 첫 손코딩 staged 타입안은 TS2589로 실패했고 native 행 identity로 해결했다. 추가 compiler probe의 incremental 설정5074와 type-only 변수 lint1경고도 각각 probe 옵션/실제 then 검사로 수정했으며 제품 config·규칙은 바꾸지 않았다.
+- 독립 검토는91/type/lint/JS동일을 직접 확인했다. native builder는 Insert/Update:never여도 delete 메서드를 노출한다는 주석 정확성 지적을 수용해 완전 readonly나 runtime 권한 증거가 아님을 명시했다. 이 consumer는 select만 실행하며 권한 확대0이다. 보완본 APPROVE: 새5 fixture와 테스트를 포함한 전체 compiler program 진단0도 독립 재확인했다. Anti Slop은 부모 실행 결과와 구분한다.
+- 넓은 recipe-api-contracts90건은89 PASS/기존 managed-image mock 인수 실패1/exit1로 동일하다. 기존10실패·원49 미확인·1745/1749/444와 보호범위를 유지하며 다음 비충돌 계약 보강을 계속한다. 전체 build·화면·실DB·운영 배포는 실행하지 않았다.
 
 ## 보류·기술적 경계
 

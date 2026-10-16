@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "4a9da270233b6c92e6a81498e35309efc348bb46",
-    "total": 157,
+    "baseCommit": "81f0432bed2cecaa80169366e95ddb3b338adc02",
+    "total": 156,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -1522,13 +1522,18 @@
       "line": 40,
       "column": 53,
       "snippet": "client as unknown as RecipeNutritionServiceClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "Owner raw Supabase from builder does not match handwritten nutrition recipe/ingredient query contract. Needs owner read contract alignment; predecessor fix does not resolve this owner boundary.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "Replace incorrect handwritten from/query phases with native Supabase query identity for the same explicit owner-row projection. Selected-row types remain exact and compile-checked; publish actual client directly satisfies the contract. Runtime permissions and emitted JS unchanged; not deep-readonly typing.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1773",
+        "verification": "before86+nativeSDKshape5 PASS; after6 suites91 PASS; typecheck/strict ESLint/diff-check PASS; compiler program including new type assertion diagnostic0; Anti Slop157->156,new0; product2 files emitted JS identical"
       }
     },
     {
