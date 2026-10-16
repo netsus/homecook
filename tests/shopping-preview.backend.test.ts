@@ -1193,6 +1193,8 @@ describe("shopping stage2 backend", () => {
       error: null,
     });
 
+    expect(Object.hasOwn(body.data, "all_items_in_pantry")).toBe(false);
+    expect(Object.hasOwn(body.data, "pantry_item_count")).toBe(false);
     expect(rpc).toHaveBeenCalledWith(
       "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({

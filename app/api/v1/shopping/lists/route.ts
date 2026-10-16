@@ -1204,19 +1204,21 @@ export async function POST(request: Request) {
     const pair = productVersionKey(item.food_product_id, item.food_product_nutrition_version_id);
     item.purchase_suggestion = productPurchaseSuggestion(purchaseAmountsByPair.get(pair) ?? [], quantityContexts.get(pair));
   }
-  return ok({
+  const summary = {
     id: rpcData.id,
     title: rpcData.title ?? title,
     is_completed: rpcData.is_completed ?? false,
     items: createdItems,
-    ...(allNeededIngredientsAreInPantry
-      ? {
-          all_items_in_pantry: true as const,
-          pantry_item_count: matchedPantryItemCount,
-        }
-      : {}),
     created_at: rpcData.created_at,
-  } satisfies ShoppingListSummary | ShoppingListAllPantrySummary, { status: 201 });
+  } satisfies ShoppingListSummary;
+  if (allNeededIngredientsAreInPantry) {
+    return ok({
+      ...summary,
+      all_items_in_pantry: true,
+      pantry_item_count: matchedPantryItemCount,
+    } satisfies ShoppingListAllPantrySummary, { status: 201 });
+  }
+  return ok(summary, { status: 201 });
 }
 
 const DEFAULT_HISTORY_LIMIT = 20;
