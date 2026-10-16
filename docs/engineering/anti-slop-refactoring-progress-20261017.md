@@ -139,7 +139,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 편집 전후 cook-planner-complete.backend / legacy-cooking-complete-routes: 2 suite21 PASS, 전체 typecheck·변경 ESLint·diff-check PASS, Anti Slop158→157/baseline207/신규0. 독립 리뷰 APPROVE: 같은21건·type/lint/diff·JS동일을 직접 확인했다. Anti Slop은 부모 실행 결과와 구분한다. 감소1은 연쇄 단언이며 companion 단일 단언을 추가 감소로 세지 않는다.
 - ES2022/ESNext emitted JS byte-identical SHA256 `73c23053f7bf2ca447886eb02bcc42f2364a4c991b90d54e8991f46ad3949ef6`. 기존 legacy fallback을 제거하거나 권한 정책을 바꾼 배치가 아니다. 실DB·운영·build·화면 검증 미실행이며 기존10실패·49원본미확인 유지다.
 
-## 현재 배치: 장보기 leaf 단발 전달 함수 삭제
+## 현재 배치: [#1770](https://github.com/netsus/homecook/pull/1770) 장보기 leaf 단발 전달 함수 삭제
 
 - 원본 finding에 대응하는 진단 감소가 아니라 실제 불필요 코드 정리다. `shopping/preview`와 `shopping/lists/[list_id]`의 detail/share-text/complete/items/[item_id]/items/bulk/items/reorder 총7개 route에서 각각 한 번만 사용한 `requireUser` 함수를 삭제한다. 호출점은 같은 client의 auth.getUser1회와 authResult.data.user를 직접 읽는다. root lists의2회 사용 함수는 유지한다.
 - 수정 전 기존5 suite92 PASS, 새 characterization7 PASS. 수정 후6 suite99 PASS: shopping-leaf-auth-read / shopping-preview.backend / shopping-detail.backend / shopping-reorder.backend / shopping-complete.backend / shopping-share-text.backend. 새7건은 실제 route를 호출해 같은 client1회·getUser1회·guest401·from/rpc0을 고정한다.
