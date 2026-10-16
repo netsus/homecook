@@ -72,3 +72,51 @@ it('validates actual loaded root arguments and ignores a nested fake PID', () =>
   expect(()=>assertV74LoadedService({...f,stdout:stdout.replace('\t\t/runner','\t\t/foreign')})).toThrow();
   expect(()=>assertV74LoadedService({...f,stdout:stdout.replace('\tpid = 123','\tpid = 123\n\tpid = 999')})).toThrow();
 });
+
+import {readFileSync} from 'node:fs';
+import {assertV74SourceHandoff,assertV74WebHandoff} from '../scripts/lib/prelaunch-youtube-v74-cutover.mjs';
+const sourceHandoff=JSON.parse(readFileSync('docs/engineering/evidence/youtube-v74-source-handoff-20261016.json','utf8'));
+describe('complete exact source handoff',()=>{
+  it('admits only the pinned administrative files and already-applied SQL closure',()=>{
+    const support=assertV74SourceHandoff(sourceHandoff);
+    expect(support.has('scripts/lib/full-local-security-inventory.mjs')).toBe(true);
+    expect(support.has('lib/server/youtube-async-extraction.ts')).toBe(false);
+  });
+  it.each(['from','to','omit','extra','alter'])('rejects %s',change=>{
+    const x=structuredClone(sourceHandoff);
+    if(change==='from')x.from='a'.repeat(40);if(change==='to')x.to='b'.repeat(40);
+    if(change==='omit')delete x.digests[Object.keys(x.digests)[0]];
+    if(change==='extra')x.digests['lib/server/auth.ts']=['a'.repeat(64),'b'.repeat(64)];
+    if(change==='alter')x.digests[Object.keys(x.digests)[0]][1]='f'.repeat(64);
+    expect(()=>assertV74SourceHandoff(x)).toThrow();
+  });
+  it('has no web receipt authority before the actual official deployment',()=>expect(()=>assertV74WebHandoff({proof:{},maintenance:{},ledger:[]})).toThrow());
+});
+function webReceiptFixture(){
+  const hash='a'.repeat(64),maintenance={path:'/original/receipt.json',sha256:hash};
+  const ledger=Array.from({length:232},(_,i)=>({filename:`${i}.sql`,sha256:hash}));
+  const proof={schema:'homecook.youtube-v74-web-handoff.v1',from:V74_WEB_PREDECESSOR,to:V74_RELEASE,
+    sourceDiffSha256:sourceHandoff.diffSha256,databaseMaintenance:maintenance,
+    web:{releaseSha:V74_RELEASE,plistSha256:hash,buildId:'actual-build'},
+    state:{ref:V74_RELEASE,targetPlistHash:hash,buildId:'actual-build',databaseVerification:{baselineRequired:false,pending:[],source:ledger,applied:ledger},
+      closedR2:{from:V74_WEB_PREDECESSOR,to:V74_RELEASE,activationAuthorized:false,kind:'continuation',targetPlistSha256:hash,previousStateSha256:hash,previousArtifactSha256:hash}}};
+  return {proof,maintenance,ledger};
+}
+it('binds the actual web build to the original232 maintenance and complete applied ledger',()=>expect(assertV74WebHandoff(webReceiptFixture())).toBe(true));
+it.each(['ledger','build','plist','maintenance','active'])('rejects actual web receipt %s',change=>{
+  const f=webReceiptFixture();
+  if(change==='ledger')f.proof.state.databaseVerification.source=[];
+  if(change==='build')f.proof.web.buildId='other';
+  if(change==='plist')f.proof.web.plistSha256='b'.repeat(64);
+  if(change==='maintenance')f.proof.databaseMaintenance={path:'/foreign/receipt.json',sha256:'b'.repeat(64)};
+  if(change==='active')f.proof.state.closedR2.activationAuthorized=true;
+  expect(()=>assertV74WebHandoff(f)).toThrow();
+});
+
+import {classifyPrelaunchScope} from '../scripts/lib/prelaunch-web-deploy.mjs';
+it('classifies only the enumerated v74 operator files as support for later official web deployments',()=>{
+ const pkg={scripts:{build:'next build',start:'node scripts/start-production.mjs'}};
+ const files=['scripts/lib/prelaunch-youtube-v74-cutover.mjs','scripts/lib/youtube-v74-cutover-preparation.mjs','scripts/youtube-v74-controlled-cutover.mjs','scripts/verify-youtube-v74-cutover-native.mjs'];
+ expect(classifyPrelaunchScope(files,pkg,pkg).support).toEqual(files);
+ expect(()=>classifyPrelaunchScope(['scripts/unreviewed-worker-control.mjs'],pkg,pkg)).toThrow();
+});

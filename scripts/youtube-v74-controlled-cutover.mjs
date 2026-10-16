@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
 import { V74_TRANSITION as V, assertV74WorkerCredential } from './lib/youtube-v74-cutover-preparation.mjs';
-import { V74_OPERATION_DIRECTORY as OP, v74Paths, v74MetadataPatch, assertV74WorkerSuccessor, assertV74LoadedService } from './lib/prelaunch-youtube-v74-cutover.mjs';
+import { V74_OPERATION_DIRECTORY as OP, v74Paths, v74MetadataPatch, assertV74WorkerSuccessor, assertV74LoadedService, assertV74WebHandoff, V74_WEB_PREDECESSOR, V74_SOURCE_DIFF_SHA256 } from './lib/prelaunch-youtube-v74-cutover.mjs';
 import { loadCookedWeightAttestationSuccessor, loadCurrentDatabaseMaintenance, loadCookedWeightAttestationWorkerContinuation,
   acquirePrelaunchDeployLock, verifyClosedR2Control, loadClosedR2Review, readClosedR2PrivateBytes } from './lib/prelaunch-web-deploy.mjs';
 import { createRecordingDockerAdapter } from './lib/marketing-round2-controlled-deploy.mjs';
@@ -32,7 +32,7 @@ const DB_CONFIG = join(HOME, '.homecook/config/full-local-production.env');
 const OLD_CONFIG = join(P.secrets, 'worker-v48-6b610eb012da-116dabb5-c04.env');
 const sha = b => createHash('sha256').update(b).digest('hex');
 const check = (ok, why) => { if (!ok) throw new Error(`v74 cutover: ${why}`); };
-const json = p => JSON.parse(readClosedR2PrivateBytes(p, ROOT, 2 * 1024 * 1024));
+const json = p => JSON.parse(readClosedR2PrivateBytes(p, ROOT, 524288));
 const claims = token => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
 const literal = value => `'${String(value).replaceAll("'", "''")}'`;
 function command(bin, args, input) {
@@ -188,7 +188,7 @@ async function verifyInstalled(metadata) {
 }
 const flags=()=>['--config',P.config,'--manifest',P.manifest,'--credential',P.credential,'--secret-root',P.secrets,'--app-descriptor',P.descriptor,'--policy',P.policy,'--expected-schema',P.schema];
 async function adapters(c, resume = false) {
-  let before=resume?json(join(OP,'before.json')):undefined,web=resume?before.web:undefined,registrationSha256=resume?sha(readFileSync(join(OP,'registration.json'))):undefined,verificationSha256,health,managerTokenPath=join(P.secrets,'manager-v74-gen49.jwt');
+  let before=resume?json(join(OP,'before.json')):undefined,web=resume?before.web:undefined,registrationSha256=resume?sha(readFileSync(join(OP,'registration.json'))):undefined,verificationSha256,health,resumeEnabled=false,managerTokenSha256,managerTokenPath=join(P.secrets,'manager-v74-gen49.jwt');
   const metadata=()=>json(P.credential);
   return {
     resumePreflight:async()=>{
@@ -199,7 +199,7 @@ async function adapters(c, resume = false) {
       check(o.worker.credentialRowSha256===reg.observation.worker.credentialRowSha256
         && o.worker.policyStableSha256===reg.observation.worker.policyStableSha256,'same49 registration rows');
       if(o.policy.enabled)check(existsSync(join(OP,'verification.json')),'ON without durable verification; readback only');
-      return {activated:existsSync(join(OP,'activation.json')),enabled:o.policy.enabled,metadata:m};
+      resumeEnabled=o.policy.enabled;return {activated:existsSync(join(OP,'activation.json')),enabled:o.policy.enabled,metadata:m};
     },
     verifyActivated:async()=>{
       const proof=json(join(OP,'activation.json'));assertV74WorkerSuccessor({proof,baseline:c.s.review.database.workerBaseline,approvedPolicy:c.c.observation,origin:c.origin});
@@ -217,10 +217,12 @@ async function adapters(c, resume = false) {
       // Full-local custom-format backup; no credentials in arguments or output.
       const dump=join(OP,'before-gen49.dump'),fd=openSync(dump,'wx',0o600);
       let backup;try{backup=spawnSync('docker',['exec',c.target.postgresContainerId,'pg_dump','-U','postgres','-d','postgres','-Fc'],{stdio:['ignore',fd,'pipe']});fsyncSync(fd);}finally{closeSync(fd);}
-      check(backup.status===0&&lstatSync(dump).size>0,'pre-transition backup'); publish('backup.json',{targetSha256:before.targetSha256,path:dump,sha256:sha(readFileSync(dump)),bytes:lstatSync(dump).size});
+      check(backup.status===0&&lstatSync(dump).size>0,'pre-transition backup');
+      for(const args of [['--list'],['--file=/dev/null']]){const input=openSync(dump,'r');let decoded;try{decoded=spawnSync('docker',['exec','-i',c.target.postgresContainerId,'pg_restore',...args],{stdio:[input,'ignore','pipe']});}finally{closeSync(input);}check(decoded.status===0,'backup archive decode');}
+      publish('backup.json',{targetSha256:before.targetSha256,path:dump,sha256:sha(readFileSync(dump)),bytes:lstatSync(dump).size,fullArchiveDecoded:true});
       await transaction(c,async tx=>{const b=await tx.observe();assertBefore(c,b);preserved(before,b);await tx.query("UPDATE private.youtube_extraction_current_policy SET enabled=false,updated_at=clock_timestamp() WHERE policy_key='primary';");const a=await tx.observe();preserved(b,a);check(!a.policy.enabled&&zero(a.worker),'OFF/drain');});
       check(sha(readFileSync(PLIST))===json(join(OP,'before.json')).service.plistSha256,'predecessor launcher changed');
-      command('/bin/launchctl',['bootout',SERVICE]);check(!status().loaded,'predecessor stop');return before;
+      command('/bin/launchctl',['bootout',SERVICE]);for(let i=0;i<40&&status().loaded;i++)await delay(250);check(!status().loaded,'predecessor stop');return before;
     },
     issueWorker:async()=>{
       publish('issue-intent.json',{generation:49,releaseSha:V.releaseSha,ttlSeconds:V.workerLifetimeSeconds,at:new Date().toISOString()});
@@ -229,7 +231,7 @@ async function adapters(c, resume = false) {
     },
     issueManager:async()=>{
       const m=issueYoutubeExtractionCredentialManager({jwtKeys:json(join(HOME,'.homecook/secrets/full-local-supabase/jwt_keys')),ttlSeconds:300});
-      privateCreate(managerTokenPath,m.token+'\n');assertV71ManagerClaims(m.claims);const env=await readWorkerEnvironment(P.config);
+      privateCreate(managerTokenPath,m.token+'\n');managerTokenSha256=sha(readFileSync(managerTokenPath));assertV71ManagerClaims(m.claims);const env=await readWorkerEnvironment(P.config);
       const client=createRestrictedPostgrestRpcClient({dataApiUrl:env.HOMECOOK_YOUTUBE_WORKER_DATA_API_URL,apiKey:readFileSync(env.HOMECOOK_YOUTUBE_WORKER_DATA_API_KEY_FILE,'utf8').trim(),token:m.token});
       check((await client.rpc('check_youtube_extraction_worker_pre_request')).error===null,'manager authenticated pre-request');return m;
     },
@@ -254,7 +256,7 @@ async function adapters(c, resume = false) {
       if(currentHash!==targetHash){const temp=PLIST+'.v74.tmp';privateCreate(temp,preview);renameSync(temp,PLIST);}
       command('/bin/launchctl',['bootstrap',`gui/${process.getuid()}`,PLIST]);await stable();
     },
-    verify:async m=>{health=await verifyInstalled(m);const o=await observation(c);assertAfter(o,m,false);preserved(before,o);verificationSha256=publish(existsSync(join(OP,'verification.json'))?`verification-repair-${randomUUID()}.json`:'verification.json',{observation:o,health,service:{plistSha256:sha(readFileSync(PLIST))},registrationSha256,web});return health;},
+    verify:async m=>{health=await verifyInstalled(m);const o=await observation(c);assertAfter(o,m,resume&&resumeEnabled);preserved(before,o);verificationSha256=publish(existsSync(join(OP,'verification.json'))?`verification-repair-${randomUUID()}.json`:'verification.json',{observation:o,health,service:{plistSha256:sha(readFileSync(PLIST))},registrationSha256,web});return health;},
     activate:async(m,h)=>{
       await transaction(c,async tx=>{const b=await tx.observe();assertAfter(b,m,false);preserved(before,b);check(status().pid===h.pid,'PID before enable');
         await tx.query("UPDATE private.youtube_extraction_current_policy SET enabled=true,updated_at=clock_timestamp() WHERE policy_key='primary' AND enabled=false;");const a=await tx.observe();assertAfter(a,m,true);preserved(b,a);});
@@ -268,11 +270,11 @@ async function adapters(c, resume = false) {
     readGeneration:async()=>{const o=await observation(c);if(o.worker.credentialGeneration===49){assertAfter(o,metadata(),o.policy.enabled);preserved(before,o);}return o.worker.credentialGeneration;},
     closeNewPolicy:async()=>{await c.base.query(`UPDATE private.youtube_extraction_current_policy SET enabled=false,updated_at=clock_timestamp() WHERE policy_key='primary' AND EXISTS(SELECT 1 FROM private.youtube_extraction_worker_credentials WHERE credential_name='primary' AND current_generation=49 AND release_sha=${literal(V.releaseSha)});`);},
     failure:async result=>{publish(`failure-${randomUUID()}.json`,{...result,at:new Date().toISOString(),same49RepairOnly:result.registered,noAutomaticRetry:true});},
-    removeManager:async()=>{if(existsSync(managerTokenPath))unlinkSync(managerTokenPath);},
+    removeManager:async()=>{if(existsSync(managerTokenPath)){check(managerTokenSha256&&sha(readFileSync(managerTokenPath))===managerTokenSha256,'foreign manager file; not removed');unlinkSync(managerTokenPath);}},
   };
 }
 async function main() {
-  const action=process.argv[2];check(['stage','preflight','apply','resume'].includes(action),'usage: stage | preflight | apply | resume');
+  const action=process.argv[2];check(['stage','preflight','apply','resume','seal-web'].includes(action),'usage: stage | preflight | apply | resume | seal-web');
   mkdirSync(OP,{recursive:true,mode:0o700});check(lstatSync(OP).isDirectory()&&!lstatSync(OP).isSymbolicLink()&&lstatSync(OP).uid===process.getuid(),'owned operation directory');chmodSync(OP,0o700);
   if(action==='stage'){
     check(!existsSync(P.artifact)&&!existsSync(P.descriptor)&&!existsSync(P.config)&&!existsSync(P.policy),'candidate staging already exists; readback required');
@@ -287,6 +289,15 @@ async function main() {
   const c=await context();
   if(action==='preflight'){await candidate();const o=await observation(c);assertBefore(c,o);verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);process.stdout.write(JSON.stringify({preflight:true,generation:o.worker.credentialGeneration,queued:o.worker.queued,processing:o.worker.processing,ledgerCount:o.full.ledger.length,credentialIssued:false})+'\n');return;}
   const lock=await acquirePrelaunchDeployLock();
-  try{const a=await adapters(c,action==='resume');process.stdout.write(JSON.stringify(action==='resume'?await resumeV74Cutover(a):await runV74Cutover(a))+'\n');}finally{await lock.release();}
+  try{
+    if(action==='seal-web'){
+      const web=webReady(),state=json(join(HOME,'.homecook/prelaunch-web/state.json'));
+      const proof={schema:'homecook.youtube-v74-web-handoff.v1',from:V74_WEB_PREDECESSOR,to:V.releaseSha,
+        sourceDiffSha256:V74_SOURCE_DIFF_SHA256,databaseMaintenance:c.m.pointer,state,web};
+      assertV74WebHandoff({proof,maintenance:c.m.pointer,ledger:c.m.review.database.after});
+      const digest=publish('web-handoff.json',proof);process.stdout.write(JSON.stringify({sealed:true,webHandoffSha256:digest,credentialIssued:false})+'\n');return;
+    }
+    const a=await adapters(c,action==='resume');process.stdout.write(JSON.stringify(action==='resume'?await resumeV74Cutover(a):await runV74Cutover(a))+'\n');
+  }finally{await lock.release();}
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{console.error(error.message);process.exitCode=1;});

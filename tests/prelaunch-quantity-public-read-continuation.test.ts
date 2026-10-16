@@ -5,8 +5,9 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertRound2InheritanceBoundaries, inheritRound2Readiness, retargetPlist } from "../scripts/lib/prelaunch-web-deploy.mjs";
+import { RECIPE_REQUEST_ROLE_MIGRATION, RECIPE_SAVE_RECOVERY_MIGRATIONS, RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES, NUTRITION_VALIDATOR_MIGRATION, assertRound2InheritanceBoundaries, inheritRound2Readiness, retargetPlist } from "../scripts/lib/prelaunch-web-deploy.mjs";
 
+const V74_WEB_PREDECESSOR="0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7",V74_RELEASE="3e58467499c63ba20c3b3191d9dd7dec77a7aa44";
 const policy = "lib/server/hybrid-auth/public-read-policy-runtime.mjs";
 const pair = ["d7399684db1e10d0bc86847dad3e2d6a361d61f7c1589446b37b9eb0dc089639", "e0d54ee86c56eeae6df11cd7ddf7346e744c72323d098599dc62425c006ac37e"];
 function fixture() {
@@ -100,7 +101,7 @@ describe("CLI Git evidence and continuation wiring", () => {
   it.each(["plan", "stage"])("%s passes actual Git evidence and the unfiltered full diff to the boundary", async phase => {
     const f = cliFixture(), boundary = vi.fn(), verifyBaseline = vi.fn(), say = vi.fn();
     const options = { ref: f.selection.target, refOption: "--reviewed-ref", alreadyAppliedDb: true };
-    const common = { ...f.bindings, assertRound2InheritanceBoundaries: boundary, retargetPlist, isDeepStrictEqual,
+    const common = { ...f.bindings, RECIPE_REQUEST_ROLE_MIGRATION, RECIPE_SAVE_RECOVERY_MIGRATIONS, RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES, NUTRITION_VALIDATOR_MIGRATION, V74_WEB_PREDECESSOR, V74_RELEASE, assertRound2InheritanceBoundaries: boundary, retargetPlist, isDeepStrictEqual,
       DeploymentError: Error, verifyProtectedBaseline: verifyBaseline, verifyClosedR2Control: vi.fn(),
       loadClosedR2Review: () => f.context.review, readEnvironmentPatch: () => ({}), assertClosedR2ContinuationOptions: vi.fn() };
     if (phase === "stage") {

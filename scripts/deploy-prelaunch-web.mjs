@@ -40,7 +40,7 @@ import {
   YOUTUBE_INTEGRATED_WEB_FIRST_SCHEMA,
 } from "./lib/prelaunch-integrated-master-readiness.mjs";
 
-import { assertV74MetadataHandoff, assertV74WorkerSuccessor, assertV74LoadedService, v74Paths, V74_ACTIVATION_SHA256, V74_OPERATION_DIRECTORY } from "./lib/prelaunch-youtube-v74-cutover.mjs";
+import { assertV74MetadataHandoff, assertV74WorkerSuccessor, assertV74LoadedService, assertV74SourceHandoff, assertV74WebHandoff, V74_WEB_HANDOFF_SHA256, V74_RELEASE, V74_WEB_PREDECESSOR, v74Paths, V74_ACTIVATION_SHA256, V74_OPERATION_DIRECTORY } from "./lib/prelaunch-youtube-v74-cutover.mjs";
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./lib/youtube-extraction-worker-artifact.mjs";
 import { readYoutubeExtractionWorkerCredential, parseLaunchctlPrintStatus } from "./lib/youtube-extraction-worker-ops.mjs";
@@ -129,12 +129,32 @@ function assertClean(cwd) {
     throw new DeploymentError("현재 웹 checkout에 수정한 추적 파일이 있어 배포를 중단합니다.");
   }
 }
+let verifiedV74Support, verifiedV74Inputs;
+function verifiedV74Source() {
+  if (verifiedV74Support) return verifiedV74Support;
+  const from=V74_WEB_PREDECESSOR,to=V74_RELEASE;
+  const files=prelaunchChangedFiles(args=>command("git",["-C",repository,...args],{trimOutput:false}),from,to).sort();
+  const digests=Object.fromEntries(files.map(file=>[file,[from,to].map(ref=>git(["ls-tree",ref,"--",file]).length
+    ? hash(execFileSync("git",["-C",repository,"show",`${ref}:${file}`],{maxBuffer:64*1024*1024,stdio:["ignore","pipe","pipe"]})):null)]));
+  verifiedV74Inputs={from,to,digests};verifiedV74Support=assertV74SourceHandoff(verifiedV74Inputs);return verifiedV74Support;
+}
+function approvedSourceAncestor(ancestor,descendant) {
+  if(spawnSync("git",["-C",repository,"merge-base","--is-ancestor",ancestor,descendant],{stdio:"ignore"}).status===0)return true;
+  if(!V74_WEB_HANDOFF_SHA256)return false;
+  const bytes=readClosedR2PrivateBytes(join(V74_OPERATION_DIRECTORY,"web-handoff.json"),repository,524288);
+  if(hash(bytes)!==V74_WEB_HANDOFF_SHA256)throw new DeploymentError("v74 pinned web handoff bytes differ");
+  const maintenance=loadCurrentDatabaseMaintenance(repository);
+  assertV74WebHandoff({proof:JSON.parse(bytes),maintenance:maintenance.pointer,ledger:maintenance.review.database.after});verifiedV74Source();
+  return spawnSync("git",["-C",repository,"merge-base","--is-ancestor",ancestor,V74_WEB_PREDECESSOR],{stdio:"ignore"}).status===0
+    &&spawnSync("git",["-C",repository,"merge-base","--is-ancestor",V74_RELEASE,descendant],{stdio:"ignore"}).status===0;
+}
 function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript,
   youtubeTrialReview = null, youtubeResolutionReview = null, integratedMaster = false, protectedCandidate = null) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
-  git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
   const files = prelaunchChangedFiles((args) => command("git", ["-C", repository, ...args], { trimOutput: false }), live.ref, target);
+  const v74Support = option === "--reviewed-ref" && live.ref === V74_WEB_PREDECESSOR && target === V74_RELEASE ? verifiedV74Source() : null;
+  if (!v74Support) git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
   if (protectedCandidate) validateProtectedCandidate(protectedCandidate.review, live, { target, files }, protectedCandidate.context);
   if (youtubeTrialReview) {
     const digests = Object.fromEntries(Object.keys(youtubeTrialReview.files).map(file => [file, [live.ref, target].map(sha =>
@@ -166,7 +186,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   if (recipeSaveHandoff) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
-      reviewedIntegratedFiles: integratedReview?.reviewedFiles,
+      reviewedIntegratedFiles: integratedReview?.reviewedFiles ?? v74Support,
       // validateProtectedCandidate above already checked the complete exact byte pairs.
       reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
       reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff), eslintConfigDigests });
@@ -223,7 +243,8 @@ function nutritionSourceHandoff(live, selection) {
     git(["ls-tree", sha, "--", file]).length ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`],
       { maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null)]));
   return { maintenance, from: live.ref, to: selection.target, live: { ref: live.ref, buildId: live.buildId, plistSha256: hash(live.bytes) }, files: selection.files, digests,
-    reviewedSourceAncestor: spawnSync("git",["-C",repository,"merge-base","--is-ancestor",maintenance.review.to,selection.target],{stdio:"ignore"}).status===0 };
+    reviewedSourceAncestor: spawnSync("git",["-C",repository,"merge-base","--is-ancestor",maintenance.review.to,selection.target],{stdio:"ignore"}).status===0
+      || live.ref===V74_WEB_PREDECESSOR && selection.target===V74_RELEASE && maintenance.review.to==="5a3926e5a188d48a0642317805ef5bca38958a30" && Boolean(verifiedV74Source()) };
 }
 async function stageRound2Readiness(plist, release, live, selection, databaseDeployment, options, databasePlan, closedContext) {
   if (options.reviewedClosedR2Maintenance || closedContext) {
@@ -245,7 +266,8 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
         previous: live.plist, next: plist }) : options;
       assertClosedR2ContinuationOptions(continuationOptions);
       assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment,
-        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection) });
+        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
+        reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       if (!options.envFile && !isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
     }
     if (!options.reviewedProtectedRollout) {
@@ -367,18 +389,18 @@ function currentProtectedPhase(live = current()) {
   const role = readRecipeRequestRoleAttempt(repository);
   if (role) {
     if (role.record.status === "committed") loadCurrentDatabaseMaintenance(repository);
-    return recipeRequestRolePhaseStatus(role,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",role.review.sourceReaderRef,live.ref]).status===0);
+    return recipeRequestRolePhaseStatus(role,approvedSourceAncestor(role.review.sourceReaderRef,live.ref));
   }
   const recipeSave = readRecipeSaveRecoveryAttempt(repository);
   if (recipeSave) {
     if (recipeSave.record.status === "committed") loadCurrentDatabaseMaintenance(repository);
-    return recipeSaveRecoveryPhaseStatus(recipeSave,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",recipeSave.review.sourceReaderRef,live.ref]).status===0);
+    return recipeSaveRecoveryPhaseStatus(recipeSave,approvedSourceAncestor(recipeSave.review.sourceReaderRef,live.ref));
   }
   const maintenance = readNutritionValidatorAttempt(repository);
   if (maintenance) {
     if (maintenance.record.status === "committed") loadCurrentDatabaseMaintenance(repository);
     return nutritionValidatorPhaseStatus(maintenance,
-      spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", maintenance.review.sourceReaderRef, live.ref]).status === 0);
+      approvedSourceAncestor(maintenance.review.sourceReaderRef, live.ref));
   }
   if (!existsSync(protectedDatabaseGuardPath)) return null;
   const product = recordedProtectedPhase(loadProtectedRolloutReview(repository), live);
@@ -969,12 +991,12 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
     rollout = loadProtectedRolloutReview(repository, { reviewSha256: marker.protectedRollout.reviewSha256 });
     assertProtectedClosedR2Marker({ ...recorded, marker, markerSha256: hash(bytes), live: { ...live, plistHash: hash(live.bytes) },
       closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout) });
-    git(["merge-base", "--is-ancestor", rollout.to, live.ref]);
+    if (!approvedSourceAncestor(rollout.to, live.ref)) throw new DeploymentError("Protected source ancestry/receipt differs");
     const maintenance = maintenanceAttempt?.review.feature === RECIPE_REQUEST_ROLE_FEATURE && maintenanceAttempt.record.status !== "committed"
       ? loadRecipeSaveRecoveryMaintenance(repository) : maintenanceAttempt?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE && maintenanceAttempt.record.status !== "committed"
       ? loadNutritionValidatorMaintenance(repository) : maintenanceAttempt?.record.status === "committed" ? loadCurrentDatabaseMaintenance(repository) : null;
     if (maintenance) {
-      git(["merge-base", "--is-ancestor", maintenance.review.sourceReaderRef, live.ref]);
+      if (!approvedSourceAncestor(maintenance.review.sourceReaderRef, live.ref)) throw new DeploymentError("Maintenance source ancestry/receipt differs");
       assertNutritionValidatorMarker(maintenance, marker,
         live.ref === maintenance.review.sourceReaderRef && hash(bytes) === maintenance.review.closedArtifactSha256);
     }
@@ -989,7 +1011,7 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
   if (!rollback && !options.reviewedClosedR2Maintenance && !options.reviewedProtectedRollout) {
     assertClosedR2ContinuationOptions(options.envFile ? assertV74MetadataHandoff({ options, liveRef: live.ref,
       patch: readEnvironmentPatch(options.envFile, repository) }) : options);
-    git(["merge-base", "--is-ancestor", review.to, live.ref]); // Continuation starts from the reviewed F01 lineage, never a bootstrap predecessor.
+    if (!approvedSourceAncestor(review.to, live.ref)) throw new DeploymentError("Closed source ancestry/receipt differs"); // Continuation starts from the reviewed F01 lineage, never a bootstrap predecessor.
   }
   return { ...recorded, marker, markerPath: path, review, rollout };
 }
@@ -1610,7 +1632,8 @@ async function main() {
       verifyClosedR2Control(review, repository);
     } else if (closedContext) {
       assertRound2InheritanceBoundaries({ previous: live.plist, next: live.plist, files: selection.files, databaseDeployment: selection.scope.database.length > 0,
-        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection) });
+        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
+        reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       verifyClosedR2Control(closedContext.review, repository);
     }
     say(JSON.stringify({ ...selection, environmentKeys, database: { required: selection.scope.database.length > 0 || Boolean(options.dbConfig), configProvided: Boolean(options.dbConfig), readOnly: Boolean(options.alreadyAppliedDb || options.reviewedIntegratedMasterReadiness), requiresCompatibilityConfirmation: (selection.scope.database.length > 0 || Boolean(options.dbConfig)) && !options.dbCompatible && !options.alreadyAppliedDb && !options.reviewedIntegratedMasterReadiness, note: options.reviewedIntegratedMasterReadiness ? "DB218 선행 상태를 읽기 전용으로 고정하고 웹만 먼저 배포합니다." : "DB 이력·현재 스키마·추가형 변경 여부는 배포 시 대상 커밋에서 검사합니다." } }, null, 2));

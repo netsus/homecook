@@ -31,7 +31,7 @@
 
 멈춘 작업은 **gen49 발급·CAS·DB policy 변경·웹/worker 교체와 대표 영상 실행**이다. 상태는 기술적 사전 검증 미충족으로 중단된 것이며 실행 결과가 불확실한 mutation은 없다. gen49 또는 다른 세대를 이미 만들었다고 가정해 재발급하지 않는다. 새 승인 범위를 임의로 추가하지 않으며, 승인된 전환 안에서 위 결속 경계를 먼저 해결·검증해야 한다.
 
-## 후속 진행과 실행 전 승인 검토 차단 (2026-10-16 23:00 UTC)
+## 후속 진행과 실행 전 승인 검토 차단 (2026-10-16 14:00 UTC)
 
 이전 중단 후 부모가 기존 gen49·6일·manager300초·정책 전환·웹/worker 교체·대표1회 승인 범위에서 최소 도구 보완과 실제 배포까지 계속하도록 지시했다. 현재 준비한 코드는 원 C04 권위/영수증을 수정하지 않는다.
 
@@ -47,3 +47,16 @@
 현재 실제 웹/DB/worker 전환0·gen49 발급0·추가모델0이며 웹0ae67/DB232/worker6b610/gen48 유지다. 다음 실행 전에는 DB와 발급/intent 파일을 다시 읽어 중복을 방지해야 한다. 실제 웹 선배포→gen49 등록/교체/ON→대표1회→불변 activation PIN과 도구 설치/문서 반영은 미완료다. 선택 회귀·타입·lint와 native 결과를 운영 성공이나 전체 P5 통과로 확장하지 않는다.
 
 최종 독립 검사는 선택 Vitest217개(7파일)·실패/skip0, native PostgreSQL17 9개·실패0, 선택 lint exit0/경고0, typecheck exit0, Anti Slop 신규0이다. 같은49 resume의 순수 검사4개는 추가 발급/CAS 없이 OFF forward repair·ON 영수증 대조·committed 읽기 확인·foreign49 거절을 다룬다. 실제 운영 resume의 성공 증거는 아니다. [기계 판독 준비/차단 기록](evidence/youtube-v74-cutover-preflight-20261016.json)을 보존한다.
+
+
+## 기존 승인 원문 확인·실제 v74 전환 (2026-10-16 14:30 UTC)
+
+부모가 원 사용자 발화(13:04:52 UTC 배포 요청, 13:27:12 UTC “모두 승인. 진행해줘”)와 직전 gen49/6일·manager300초·DB policy/generation·웹/worker·대표1회 범위를 top-level delegation에 전달했다. 자동 검토가 같은 배포를 허용하여 위 승인 부재 차단은 해소됐다. 첫 허용 호출은 Git 계보 검사에서 운영 교체 전에 종료했다.
+
+운영 전용 commit0ae67과 master3e584가 공통8e515 이후 별도 계보여서, 정확한85파일 byte pair 전체를 `08678a3ad27c71360201a6f0b7cb3a2c4c558bd8c7e7221fcabb18f3a8131bb3`에 고정했다. 앱 코드 차이는 추출기6파일이며 이미 적용된232 SQL의 정확한 source와 기존 maintenance 영수증을 별도 대조한다. 일반 ancestry/R2 경계를 포괄 허용하지 않고 이 source pair와 실제 웹 영수증만 원0ae67 lineage에 연결한다. 새 미검토 source/env/SQL은 계속 거절한다. [전체 파일 byte 결속](evidence/youtube-v74-source-handoff-20261016.json)을 따른다.
+
+공식 웹 배포 exit0, release3e58467499c63ba20c3b3191d9dd7dec77a7aa44, build `prelaunch-3e58467499c6-zl8qD7`, 선택 배포 검사1451통과/선택제외133/실패0 및 production build를 확인했다. metadata3경로는 새 descriptor/manifest/schema로 반영됐다. 실제 source/applied232·build·plist·원 영수증을 담은 private `web-handoff.json` SHA는 `b66db104d30beff97ae1f473115915b38263fb78ca87f0545e509d4e178e34d5`다. 교체 후 status와 빈 diff 공식plan에서 readerPending/recoveryPending false·normalDeploymentAllowed true를 확인했다.
+
+발급 전 서명 없는 임시 fixture의 실제 artifact install plan/기존 launcher 환경 보존과 실제 CLI로그인을 확인했다. 기존284개 선택 회귀가 통과했다. 실제 gen49는1회 발급했고 유효기간은 `2026-10-22T14:27:30.000Z`다. 실제 backup117872811 bytes의 archive 전체 decode를 확인한 뒤 OFF/queue0·구48정지→제한 manager의 원자48→49 CAS와 새pipeline→새worker교체→실제 인증/빈claim거절/localhealth/동일PID→내구verification후ON을 수행했다. manager파일은 제거됐다. schema변경/추가 generation/새 signing key/모델 호출은0이다.
+
+activation `2026-10-16T14:29:38.899Z`, private activation SHA `f9fbccad6e8a18cfd4b33e9cd6e92a21b27c0e98d6557f76c303f859cae6672d`, PID49750을 확인했다. 원 C04·personal/DB232 receipt는 바꾸지 않았다. 일반 데이터·기존writer controls·catalog 해시는 전환 전후 동일하며 fingerprint current/previous/TTL과 나머지 정책 필드를 보존했다. 이후 실제 웹 readiness와 승인된 대표1회 추출 확인은 별도로 기록한다. 이 절은 위의 미실행/차단 시점 기록을 대체한다.

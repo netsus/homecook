@@ -1,0 +1,348 @@
+{
+  "from": "0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7",
+  "to": "3e58467499c63ba20c3b3191d9dd7dec77a7aa44",
+  "digests": {
+    "docs/engineering/c04-active-worker-ui-continuation-20261015.md": [
+      null,
+      "256e667264f9e5cffb7829de454b4efc8c4e22942da3ffe7ea12a4a087119173"
+    ],
+    "docs/engineering/c04-worker-attestation-successor-20261015.md": [
+      null,
+      "d30bbd063a372ca70c034f8293cd296ea3dc1a7eee486bef6fc6473fcd940f4b"
+    ],
+    "docs/engineering/cooked-weight-attestation-successor-deployment-20261015.md": [
+      null,
+      "06ec3a3ea4904cc5136e693deac8576f65e103fb14790bfaf5fa8e8c266534b4"
+    ],
+    "docs/engineering/cooked-weight-user-attestation-20261015.md": [
+      "062571d6583ab70fc0a50b56bb96575e1aaee1e6cdb787640367e1e27f127887",
+      "559e2c21b08b544ed0d58cd52463f20462d4a8f046cf74b9e06c25009f52beeb"
+    ],
+    "docs/engineering/cooking-quantity-fidelity-20261015.md": [
+      "dd2da736407ad504af0c8ed703b9298cdc68c564bd203ff826ec374b16200553",
+      "57c893f84ed088c4da2a015435ab310de9d0595c76362bac7c6a57c377cb7f1b"
+    ],
+    "docs/engineering/evidence/youtube-authored-source-priority-20261016-replay.json": [
+      null,
+      "664e6c7a41822cba996267bb8d45143c4ed5bd09151137a52c29654b42aed0c1"
+    ],
+    "docs/engineering/evidence/youtube-caption-candidate-evaluation-20261016.json": [
+      null,
+      "89f4ee3df5372eed2a747a863a25d05c4c6efb566ef8170a56e5374d3e6f645a"
+    ],
+    "docs/engineering/evidence/youtube-caption-clause-replay-20261016.json": [
+      null,
+      "fdc0ec3c0834acb098b81ae13a4c4538c4ae0b4b4d70295ab6695c9552104bd1"
+    ],
+    "docs/engineering/meal-log-recent-unit-20261015.md": [
+      "191e8fb019a6b3ca8195726e3b9fb5d805a2f28df87de8b73b07fc1e47b4da12",
+      "2cc8403186879b1ff45984d55e4136d82135cbdd960e286adfa1bef5d8898b03"
+    ],
+    "docs/engineering/mumeok-beta-f01-privacy-reconciliation-20261013.md": [
+      "332221b0e6d1b69d9b6f97252f9c2d6030a624e64fde169f8c9ad344b4d40e4e",
+      "9c73e79b95bdafbd132068f0d76feb87bc34678b8d63d70b7e4df15fc7cbf20b"
+    ],
+    "docs/engineering/mumeok-beta-v9-progress-20261013.md": [
+      "0b52a42b746fcdc8b995704fc380e47f4509d697ced4763f8b7b0827418e6691",
+      "ad0bd0d094c913fa614bf21a8b20488c315dcd49dbcaa6ec1a1988f1dbaa2f11"
+    ],
+    "docs/engineering/nutrition-validator-maintenance-20261015.md": [
+      null,
+      "27bdc32970d45542c297932e0801ac88b986cbd11ffc208413bdf8c86fe7b274"
+    ],
+    "docs/engineering/plan-snapshot-clarity-20261015.md": [
+      "ef72d2e48c5e82b3d1f6d70f6ef505b72dd6050a90476ec2ff4b22b3dd3aa87b",
+      "e628724e7c63db27dc84a59938c0e2d616bf5123a7a1f0f103d4735692000771"
+    ],
+    "docs/engineering/prelaunch-web-deployment.md": [
+      "0680809f4d4ec9db251b885deae548b52c78584ff17ec625a9a39afa61647fec",
+      "d5943316f08f56c86c64cf1623234b07b8feae56a9c4f1618c1a0a2a5ad209e4"
+    ],
+    "docs/engineering/recipe-future-request-role-20261015.md": [
+      null,
+      "d841d47aefd67fbf195010e1bd9ac28987282e91c2fc5704d51d23ccfc71d1ea"
+    ],
+    "docs/engineering/recipe-nutrition-quantity-v4-warning-contract-20261015.md": [
+      "16bd799b0fe504fca0da18fe172aab9de82c6b9d8c87a7b20c6def9590ed5469",
+      "85d52e4306514371f9e42bc58fe14b9f1478d927968544e95daee2a99a3256fd"
+    ],
+    "docs/engineering/recipe-request-role-maintenance-20261015.md": [
+      null,
+      "e158df52ca829406cdc4d16a2c263129b6fa940d6706c1246b5900537d2c5d2d"
+    ],
+    "docs/engineering/recipe-save-recovery-maintenance-20261015.md": [
+      null,
+      "1151c0188148dc01364087f98bf7064bd437317a00b7c7e7b956635ace00d253"
+    ],
+    "docs/engineering/recipe-save-recovery-operating-20261015.md": [
+      null,
+      "963f20f35bfeefad6a1da1c2f8d748e897e21fcc843228745947a1b4e05fe3c3"
+    ],
+    "docs/engineering/youtube-authored-source-priority-20261016.md": [
+      null,
+      "0962e1a3d19d79d6fb44aa9bbfd32a60c2393706ec7663b4a20b4b31dfbd5e25"
+    ],
+    "docs/engineering/youtube-c04-quantity-worker-cutover-preparation-20261014.md": [
+      null,
+      "4f6082cd3b5c77e064f3dcb42f18545f3fbd3c1680edd5144d0384259d3eb109"
+    ],
+    "docs/engineering/youtube-caption-clause-evaluation-20261016.md": [
+      null,
+      "539603623fad242f7b2bf96d891286440d9fa923b6bcd2464c37012da0268dde"
+    ],
+    "docs/engineering/youtube-recipebook-planner-bridge-20261012.md": [
+      "e64bff7bfa0e3f49c38a7792f519a3fdb4a786bdcda8a7c213987b2dc716e02d",
+      "11e3bbc94c540825bc435f68dc4c8ad624ad073531c98270d0cbde27f0e3fc79"
+    ],
+    "docs/engineering/youtube-v71-worker-preparation-20261013.md": [
+      null,
+      "a58c455604ae13d2e1aabef40aaa3d879adad8d363533674e3e83fdd7920b73f"
+    ],
+    "docs/engineering/youtube-v74-deployment-preparation-20261016.md": [
+      null,
+      "2da98091e2eb218717bb32175e6792c0f8e839490c1f4bd1d1174597d6ed4aaf"
+    ],
+    "docs/security/recipe-future-request-role-source-function-postimage.json": [
+      null,
+      "8cb39f32a50a85a713798049459500ce3eecf1ff33171e55b742a9ff9fd0bde2"
+    ],
+    "docs/security/recipe-save-recovery-source-function-postimages.json": [
+      null,
+      "4e908266cca5637fa8ebc1a6eeea8605bdebd7b26dc4a6a4bcfb0cd068aa6874"
+    ],
+    "docs/sync/CURRENT_SOURCE_OF_TRUTH.md": [
+      "2a08dceb11f51216d89e38f9f1059d790c3162f4b3ab047ab30167c70804b36a",
+      "85f5b1434831b7bd162b2f25791ba783ef0f36fd19f3b0350ee6498c9e130c42"
+    ],
+    "docs/요구사항기준선-v1.7.36.md": [
+      "49d20bf6557138553dd7bfe3e1a59ab99bfeee63945fb6c0f0f080bef79700cd",
+      "7e08cf69c88df00f8322b49f636b5eb8b1ab76da40e048fe1e9c2985ff30b5ec"
+    ],
+    "lib/server/youtube-async-extraction.ts": [
+      "45d7ff72b38e59b279827ffd885f8eb84db9fdc9efaa82a8cb77c99d1b5fa525",
+      "741c775e972f3f17f034a49a489ba6415ba96244ad5e0e6755048dd3d2d52e0f"
+    ],
+    "lib/server/youtube-i031-runtime.ts": [
+      "af21ef3ea4a801896a5698249ac1285383c375fe51956d6972da6acbd50fefaa",
+      "960822143deb0a35a950748e60ec3aa34e834e2c5d6261d7e80bc93147d998ee"
+    ],
+    "lib/server/youtube-i031-runtime/bundle/manifest.json": [
+      "cdddf47409303e6235e00b8a13177845356d5cf16f9e7509fc47f2ac4b7c2969",
+      "32078b535050f2a5196dd05b3cb9cf8820181398a97c7606449eacb90a4865ac"
+    ],
+    "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs": [
+      "cf2b15e279272dc90d331471083adc9ad86e37758bc22ffa3e363db1fc8c10dc",
+      "3ada7b95255b9ab482d60e1a9bf52bddc7b8d5970b6d97fdebf07de27d5ef606"
+    ],
+    "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-quantity-owner-hints.mjs": [
+      "e70c3484aa5edd4547c19a3b7bdac7dc13ea817df486d1d7e7c5fb0e59f8b691",
+      "23a14e0d2f8e1170bfa91f49c5afa62de2cacfc9afbded125ce93958433bc3f0"
+    ],
+    "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/snapshot-video.mjs": [
+      "d338969907f6af13e098b41fcdbb76e252eee6af64cd682704528f996fdc8b63",
+      "964b40f1f7a5fdbb64b4a460a8f9287e105b2ed3cc1e57376733bf0cc899ae82"
+    ],
+    "scripts/deploy-prelaunch-web.mjs": [
+      "8f0821c4c8a08f037ed1ba68f4689b6acee0b7d2fb3363645b4020c056f0b431",
+      "a1021512f921e25159c0279722bb9841f6ec4e3a619e05f2d2995fbc0b0dde27"
+    ],
+    "scripts/full-local-production-runtime.mjs": [
+      "3df7a3695e9ed35b58e8ae0e4d972a459cfc5b6e1d91b9c9c84a01a391c4637d",
+      "d3998327cc6a714932cd800f608525d11417ce37b716fdb5d796877a395bd068"
+    ],
+    "scripts/install-dev-deploy.mjs": [
+      "2aee48c84aea6c6a14adfc7eebf625aca56b6dc5e9a0c8709cb5130084897818",
+      "4e9b1feb400fb7a9d47aef634e9d548f3e338f8c878cf6001900e34fdcd3299d"
+    ],
+    "scripts/lib/dev-deploy-launcher.mjs": [
+      "e589658d8a71acfc7a68976b0a952fbd3889d7ab8745ea92c320c71fd6cd5c90",
+      "2c30a12c2c89c53c30dd76394656e39bbe5fbb6261a2591f9db2b1087930c044"
+    ],
+    "scripts/lib/full-local-restore-cutover.mjs": [
+      "d90419a32fde6ec024a86bcd3e41e7f7295a116718ea54b5f0a8eaba8f41b8de",
+      "0f6a68fca9a4a6225099d8b7a5593cb188fbf2883d4142660fff1fc38254f3dd"
+    ],
+    "scripts/lib/full-local-security-inventory.mjs": [
+      "d92a5942e72edb9d0b505ffade25ce65dec690706ad1ee3953421c6c08b99813",
+      "753f639577a400c8c03f70c2fb5502a6fd1f8d6d6935e40c332aa096e23b3e7f"
+    ],
+    "scripts/lib/marketing-round2-controlled-deploy.mjs": [
+      "6ae5475ea0e2cdd5b5c65935cc44b56dbc8e9e86eaf5d8c08b5626f0e0394e16",
+      "c5404f942f1139dcfcbd052aa55c48a18cf7e29efcdb70d142460d9f9b04a7c5"
+    ],
+    "scripts/lib/prelaunch-database.mjs": [
+      "e41dd0c6ea6f15a430405f358a17436fbb813b40ffe2b8be42b275a5157f7b0c",
+      "096fe873a1bf4bfb95ae6b334477fec7876dfd607e2e2d823dfd5e667aa96583"
+    ],
+    "scripts/lib/prelaunch-web-deploy.mjs": [
+      "4322bee9166b734a3a2ca3649f8a7bf88582fb346314279d04b949c347bbe7df",
+      "4237cc197476b12309ddd045723ad663d2b3bf1d01f06341c64965b4d1e6ed35"
+    ],
+    "scripts/lib/prelaunch-youtube-resolution-worker-install.mjs": [
+      "9ed0241a98349b8a7f5ac8f622f45b05e2ecc1f28b5beed41b9e8e5aca38c76d",
+      "212909b42ddae762a93552637868e112fbf6105c9e37ebfbed48430ce5dbbfc0"
+    ],
+    "scripts/lib/youtube-extraction-worker-local-credential.mjs": [
+      "3a6f66f1dcd252ae01a87568ab4997d62d8cc2dcfb8af4d2841efa8efe4f465f",
+      "ee44c496a1ff84cbbf0321034746dbbe87f195307276192b4e27a9e6901ad9c9"
+    ],
+    "scripts/lib/youtube-v71-controlled-cutover.mjs": [
+      null,
+      "04782d0d5e2c157db161b53138b38a4a7e8b3313d4ea12cd479f66780b594b43"
+    ],
+    "scripts/lib/youtube-v71-worker-preparation.mjs": [
+      null,
+      "2c0be6be50978ecd38d1a389d28c2a4ee13e702325d08895517a0375197e62c9"
+    ],
+    "scripts/youtube-extraction-worker-local-credential.mjs": [
+      "8aad3e504133ba316d475d5178af7cd5cf80a1e06a0941086cae36696a9ce17c",
+      "b2936a068a1862edd9be4039e87466d96eb3b1d1ff46c39f5a13aa895e9c88b3"
+    ],
+    "scripts/youtube-integrated-controlled-db.mjs": [
+      "bd7623fe2bf45435f90689162f8ddd7f5273fad91582b0a8e46eab500723a0b1",
+      "5d9efee86ae69ec7cc06d3c23420ea40b04cab114aff9f3966a26f9301aa9dde"
+    ],
+    "scripts/youtube-v71-controlled-cutover.mjs": [
+      null,
+      "4af5ddf296db8b92e3264fdeed5e1bb5cb50480aafde095dd5a4be05311bff86"
+    ],
+    "scripts/youtube-v71-worker-preparation.mjs": [
+      null,
+      "6ef3184165c0457d8c13de15e2382f02206b80ec280032d228091ffa6295b4bc"
+    ],
+    "supabase/migrations/20261015100000_recipe_future_request_role.sql": [
+      null,
+      "2322ccf737382e9738aa2c3d5cb50531c769c1a7902e2f621c8d378f9ce1505e"
+    ],
+    "tests/dev-deploy-launcher.test.ts": [
+      "351a67e2ca6849bd297b5d8fd0d9b6e2588a7f029df2e96035a68c83565f223c",
+      "936630ce2f8404a48b6d6b438439a1f584743f319302b89c74908d29d7c65ca6"
+    ],
+    "tests/full-local-backup-readiness.test.ts": [
+      "c1e9b3eee233848e8bc41146cb050ab1b6523475b8ecd1edb5d4f44d43cd68e5",
+      "d8c4e54464c5545236978fb8aa9f46bcee482148f3f12ac8b050dc61ebb7dcc7"
+    ],
+    "tests/full-local-restore-cutover.test.ts": [
+      "4980e8c78f7860e6208e3e18d95ed423cbae676ebacca7815e7c9730ce4d0cd9",
+      "47108b2d325604ca9ebb8c1ac073b3a7ba906c7da0d520ddc72a564178a2c65a"
+    ],
+    "tests/full-local-restored-platform-data-streaming.test.ts": [
+      null,
+      "1d39a46ad4c33495bc6b734b369826cd89edb6b989d93da5b80353f5be5b4de5"
+    ],
+    "tests/menu-add-screen.test.tsx": [
+      "683643427fb47f4b6b4789ca220235aff5c68622b50526b4f4da43311ff48bb5",
+      "f6723f7366468d921d1ac7503b45b7e536754f40b647ab4c1bce9a1c886b1671"
+    ],
+    "tests/planner-add-sheet-redesign.test.tsx": [
+      "9e19607b636fc063835b4311441283122bab71ab57d8aed7e952b46679096213",
+      "79547f8b5a03f5fb218f665bed59255e3fcb8fa83cf36f8515dfd63a2108ade0"
+    ],
+    "tests/prelaunch-closed-r2-maintenance.test.ts": [
+      null,
+      "1dede1e1a113d575c03761c2b9534ca48f6d40525fb455eb64e2069823354301"
+    ],
+    "tests/prelaunch-cooked-weight-attestation-successor.test.ts": [
+      null,
+      "4eefc9448bdc1046d98a24cc14d1c094fdadf6976399e69a058dc0325a668f66"
+    ],
+    "tests/prelaunch-cooked-weight-rollout.test.ts": [
+      null,
+      "61896b294c1e79c3d1b6e2ec6b0bec771511856fa85cd783786d6a1c88e0f3e0"
+    ],
+    "tests/prelaunch-integrated-master-readiness.test.ts": [
+      "1b72a1ccbddf78715ae5d9f7fb30a137c936958db587f98191f424284c1a1266",
+      "535c1e6987ca8a1288ca08086533d13ee00250f5a185236bc6f0a9f76ed83353"
+    ],
+    "tests/prelaunch-nutrition-validator-maintenance.test.ts": [
+      null,
+      "dfe2ea3482badc16021ffbef63729eb508c064b15061b9c157c65f3dead01111"
+    ],
+    "tests/prelaunch-protected-ledger-postgres.integration.test.ts": [
+      null,
+      "39d0626bc44aa9622970dfecb0242e5750483f35d8f71bbb2f6d0e31202d15bd"
+    ],
+    "tests/prelaunch-protected-rollout.test.ts": [
+      null,
+      "be31ba7231a54d152f51ae0dcf02f63ef55a7ed82ec52afacc61e039385bcf0e"
+    ],
+    "tests/prelaunch-quantity-public-read-continuation.test.ts": [
+      null,
+      "5ef9bb517fea518078d10e74b1c42a9eefd4d6c1a8230d835e38c8bf6db36bdf"
+    ],
+    "tests/prelaunch-quantity-v4-active-service.test.ts": [
+      null,
+      "40c704bf91d49ffb5680ff91cdcf264a945b612b1b87fff5458c8d0d954e0e2b"
+    ],
+    "tests/prelaunch-quantity-v4-normal-data.test.ts": [
+      null,
+      "cd511122d62a54cb535e328d3c5840b854b44a8142038b3a89a4fa4ff392b8ff"
+    ],
+    "tests/prelaunch-quantity-v4-protected-rollout.test.ts": [
+      null,
+      "ded86481d4d348b3ac92008c71fe099735c33c143740613231b0839af16e62fe"
+    ],
+    "tests/prelaunch-recipe-request-role-maintenance.test.ts": [
+      null,
+      "4559d0ac8e623736f59e028389c3c815058d03b38c65d4879c03e353cfaf9274"
+    ],
+    "tests/prelaunch-recipe-save-maintenance.test.ts": [
+      null,
+      "071929f542a1cf1635f01b490b6ff9f057f9cb7aeb4e9d511f4c9c05e34551b6"
+    ],
+    "tests/prelaunch-web-deploy.test.ts": [
+      "130a07076d1c90afbf1bd39656d98dc2b176f239c222d096bfb7e488961b7634",
+      "237afe9d92d14083cae18a0c72e6f26bb4893009c6e6d73fb8633bef1a748e93"
+    ],
+    "tests/recipe-product-only-postgres.integration.test.ts": [
+      "f14f7f9521208fcaff4eb17ffe91b966766cac353c74aacca9d8ec086a95fd47",
+      "0ddf04093db5e620c148eea978b420367b8238470a1b2afd5a5276c4ac1c9e26"
+    ],
+    "tests/recipe-request-role.native.test.ts": [
+      null,
+      "d1f023e16aaf93dfc114a2dbc260e6cfd525be2d6d91e010d2959e6c677911da"
+    ],
+    "tests/sql/future-meal-key-full-schema-verify.sql": [
+      "0a0033091924b3073bda12041a74c08031c73e9af035f321ff96db83c5034ff8",
+      "4285297b8d0f7dbe87eec16b5a072276bab219c345921525e9d673f2d49e26d7"
+    ],
+    "tests/sql/recipe-product-only-fixture.sql": [
+      "5d346264d33841cc7e95e3512b0044768ff9d0a8b3654458d1550b4667d6af7c",
+      "47ef87136c7075c77ae207d5ded02b6fa03216c9f39826ceec8c6456c472e536"
+    ],
+    "tests/youtube-authored-source-priority.test.ts": [
+      null,
+      "e8cd2f0e949d88550389a6eccd2e1096e8190c1f8b8b3b21d6d487c5305955d1"
+    ],
+    "tests/youtube-c04-activation-locks-postgres.integration.test.ts": [
+      null,
+      "241a2a1d438e2fd1a6fe6e799216f95b5dd2d4f947435cfe3b9d9a6c39448350"
+    ],
+    "tests/youtube-c04-quantity-worker-cutover.test.ts": [
+      null,
+      "571ad61df16a49f2000ced5529ebd2e3037ab1f003e9bd41446f7355f848c958"
+    ],
+    "tests/youtube-c04-worker-successor.test.ts": [
+      null,
+      "e2c016e2d551e30839b28bad814f5fc2363244d31e75349c77240f1e5a459afa"
+    ],
+    "tests/youtube-caption-clause-binding.test.ts": [
+      null,
+      "821d9026807d67bb1ee7897bf8543dab1bf8669322e35db3070fd918c32316fb"
+    ],
+    "tests/youtube-extraction-release-installer.test.ts": [
+      "4b9355a59548a58f09d7088789ecd3f5e1c2185ba74ae3f9faaa7c5f06fe5a45",
+      "a411795469abc92232f4b5baeb8cd0639da28f0db377e48ed12eb3eb76febcbd"
+    ],
+    "tests/youtube-v71-controlled-cutover.test.ts": [
+      null,
+      "01b856371ecfb74909e9e0aa47cbfa7316fb895a52a7034bd14183e9448ccc8e"
+    ],
+    "tests/youtube-v71-worker-preparation.test.ts": [
+      null,
+      "515d4f6f44a8e085cb451ce39e1eb71926416f879e591565f15236567b518c97"
+    ]
+  },
+  "diffSha256": "08678a3ad27c71360201a6f0b7cb3a2c4c558bd8c7e7221fcabb18f3a8131bb3",
+  "files": 85
+}

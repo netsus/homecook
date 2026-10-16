@@ -73,6 +73,8 @@ function workerFixtureGraph(directory: string, inputs = {
     if (cli.split(old).length !== 2) throw new Error("Fixture CLI root declaration changed");
     cli = cli.replace(old, () => replacement);
   }
+  const v74Dependency=readFileSync("scripts/lib/prelaunch-youtube-v74-cutover.mjs","utf8").replace(/export const (V74_(?:ACTIVATION|WEB_HANDOFF)_SHA256)\s*=\s*[^;]+;/gu, (_text,name:string)=>`export const ${name}=null;`);
+  writeFileSync(join(directory,"prelaunch-youtube-v74-cutover.mjs"),v74Dependency,{mode:0o600});
   // No module is imported or spawned until every authority and graph edge is checked.
   for (const [path, source] of [[webPath, web], [databasePath, database], [workerPath, worker], [cliPath, cli]]) writeFileSync(path, source, { mode: 0o600 });
   return { webPath, databasePath, workerPath, cliPath, cliSource: cli };

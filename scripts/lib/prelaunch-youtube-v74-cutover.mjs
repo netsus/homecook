@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 // Exact metadata handoff for the reviewed v74 release; no credential or DB writes.
 import { isDeepStrictEqual } from "node:util";
 import { homedir } from "node:os";
@@ -35,7 +36,7 @@ export function assertV74MetadataHandoff({ options, liveRef, patch, previous, ne
   return { ...options, envFile: undefined };
 }
 
-export const V74_ACTIVATION_SHA256 = null; // Filled only from the immutable actual activation receipt.
+export const V74_ACTIVATION_SHA256 = "f9fbccad6e8a18cfd4b33e9cd6e92a21b27c0e98d6557f76c303f859cae6672d"; // Filled only from the immutable actual activation receipt.
 export const V74_OPERATION_DIRECTORY = join(homedir(), '.homecook/operations/youtube-v74-gen49-20261016');
 const hashPattern = /^[a-f0-9]{64}$/u;
 const workerFields = ['credentialGeneration', 'credentialRowSha256', 'policyRowSha256', 'policyStableSha256',
@@ -88,4 +89,28 @@ export function assertV74LoadedService({ stdout, plist, plistPath, serviceTarget
     ||!isDeepStrictEqual(args.map(line=>line.slice(2)),plist.ProgramArguments)||field('state')==='running'&&(!/^\d+$/u.test(field('pid'))||Number(field('pid'))<=0))
     throw new Error('v74 actual loaded command differs from installed launcher');
   return {loaded:true,state:field('state'),pid:field('state')==='running'?Number(field('pid')):null};
+}
+
+// The private release history and merged master have different commit ancestry.
+// Bind their complete85-file diff, including the already-applied exact232 SQL.
+export const V74_SOURCE_DIFF_SHA256='08678a3ad27c71360201a6f0b7cb3a2c4c558bd8c7e7221fcabb18f3a8131bb3';
+export const V74_WEB_HANDOFF_SHA256="b66db104d30beff97ae1f473115915b38263fb78ca87f0545e509d4e178e34d5";
+export function assertV74SourceHandoff({from,to,digests}) {
+  const hash=bytes=>createHash("sha256").update(bytes).digest("hex");
+  if(from!==V74_WEB_PREDECESSOR||to!==V74_RELEASE||Object.keys(digests??{}).length!==85
+    ||hash(JSON.stringify(Object.fromEntries(Object.entries(digests).sort(([a],[b])=>a<b?-1:a>b?1:0))))!==V74_SOURCE_DIFF_SHA256)
+    throw new Error('v74 complete source handoff bytes differ');
+  return new Set(Object.keys(digests).filter(path=>path.startsWith('scripts/')));
+}
+export function assertV74WebHandoff({proof,maintenance,ledger}) {
+  const s=proof?.state,w=proof?.web;
+  if(proof?.schema!=='homecook.youtube-v74-web-handoff.v1'||proof.from!==V74_WEB_PREDECESSOR||proof.to!==V74_RELEASE
+    ||proof.sourceDiffSha256!==V74_SOURCE_DIFF_SHA256||!isDeepStrictEqual(proof.databaseMaintenance,maintenance)
+    ||!Array.isArray(ledger)||ledger.length!==232||s?.databaseVerification?.baselineRequired!==false
+    ||s.databaseVerification.pending?.length!==0||!isDeepStrictEqual(s.databaseVerification.source,ledger)||!isDeepStrictEqual(s.databaseVerification.applied,ledger)
+    ||s?.ref!==V74_RELEASE||s?.closedR2?.from!==V74_WEB_PREDECESSOR||s.closedR2.to!==V74_RELEASE||s.closedR2.activationAuthorized!==false
+    ||s.closedR2.kind!=='continuation'||w?.releaseSha!==V74_RELEASE||w.plistSha256!==s.targetPlistHash||w.buildId!==s.buildId
+    ||s.closedR2.targetPlistSha256!==w.plistSha256||!hashPattern.test(s.closedR2.previousStateSha256)
+    ||!hashPattern.test(s.closedR2.previousArtifactSha256))throw new Error('v74 actual web handoff receipt differs');
+  return true;
 }
