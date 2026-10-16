@@ -48,7 +48,6 @@ import {
   projectRecipePatchData,
   readRequiredIdempotencyKey,
   RecipeDraftNutritionValidationError,
-  type FuturePropagationRpcClient,
   type RecipeDraftNutritionClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
@@ -737,7 +736,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const result = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     "write_personal_recipe_core",
     {
       ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
