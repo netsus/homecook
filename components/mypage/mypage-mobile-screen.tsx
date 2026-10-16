@@ -210,8 +210,6 @@ export function MypageMobileScreen({
           savedRecipeCount={savedRecipeCount}
           savedRecipes={savedRecipes}
           savedRecipesState={savedRecipesState}
-          shoppingItems={shoppingItems}
-          shoppingLoaded={shoppingLoaded}
           onOpenNicknameSheet={onOpenNicknameSheet}
           onDismissTutorialQuest={onDismissTutorialQuest}
           onRetrySavedRecipes={onRetrySavedRecipes}
@@ -334,8 +332,6 @@ function MobileHomeSurface({
   savedRecipeCount,
   savedRecipes,
   savedRecipesState,
-  shoppingItems,
-  shoppingLoaded,
   onOpenNicknameSheet,
   onDismissTutorialQuest,
   onRetrySavedRecipes,
@@ -352,8 +348,6 @@ function MobileHomeSurface({
   savedRecipeCount: number;
   savedRecipes: RecipeBookRecipeItem[];
   savedRecipesState: "idle" | "loading" | "ready" | "empty" | "error";
-  shoppingItems: ShoppingListHistoryItem[];
-  shoppingLoaded: boolean;
   onDismissTutorialQuest: (questKey: string) => void;
   onOpenNicknameSheet: () => void;
   onRetrySavedRecipes: () => void;
@@ -363,7 +357,6 @@ function MobileHomeSurface({
     ? MOBILE_PROVIDER_LABELS[profile.social_provider]
     : "소셜 로그인";
   const recipeBookCount = books.length;
-  const shoppingCount = shoppingLoaded ? shoppingItems.length : 0;
 
   const menuRows = [
     {
@@ -375,7 +368,7 @@ function MobileHomeSurface({
       onClick: () => onSurfaceChange("recipebook"),
     },
     {
-      detail: `${shoppingCount}회`,
+      detail: "보기",
       icon: "cart",
       iconTreatment: "emphasis",
       id: "shopping-history",

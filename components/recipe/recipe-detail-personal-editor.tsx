@@ -182,8 +182,10 @@ export function RecipeDetailPersonalEditor({
   const authGateOpen = useAuthGateStore((state) => state.isOpen);
   const draftOwnerUuidRef = useRef<string | null>(null);
   const draftOwnerGenerationRef = useRef<number | null>(null);
+  const [draftOwnerLoading, setDraftOwnerLoading] = useState(true);
   useEffect(() => {
     let current = true;
+    setDraftOwnerLoading(true);
     draftOwnerUuidRef.current = null;
     draftOwnerGenerationRef.current = null;
     void fetchUserProfile().then((profile) => {
@@ -194,6 +196,8 @@ export function RecipeDetailPersonalEditor({
       }
     }).catch(() => {
       // An unverified draft owner must never be resumed after reauthentication.
+    }).finally(() => {
+      if (current) setDraftOwnerLoading(false);
     });
     return () => { current = false; };
   }, [recipeId]);
@@ -519,7 +523,7 @@ export function RecipeDetailPersonalEditor({
                         <RecipeQuantityInput label={`재료 ${index + 1}`} amount={ingredient.amount} unit={ingredient.unit}
                           quantityInput={ingredient.quantity_input}
                           onRequestContext={ingredient.row_key ? () => void quantityContextRead.request(ingredient.row_key!) : undefined}
-                          contextLoading={ingredient.row_key === quantityContextRead.loadingKey}
+                          contextLoading={draftOwnerLoading || ingredient.row_key === quantityContextRead.loadingKey}
                           contextChanged={Boolean(ingredient.quantity_input && ingredient.row_key && quantityContexts[ingredient.row_key]?.ready && ingredient.quantity_input.expected_context_sha256 !== quantityContexts[ingredient.row_key].context_sha256)} toTaste={ingredient.ingredient_type === "TO_TASTE"}
                           enabled={Boolean(ingredient.row_key && quantityContexts[ingredient.row_key]?.ready)}
                           units={ingredient.row_key && quantityContexts[ingredient.row_key]?.ready
