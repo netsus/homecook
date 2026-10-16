@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "f4f645c6389efe546d00571cd36155c7327e4c02",
-    "total": 160,
+    "baseCommit": "c06cf4538bfd1c816814782d5867a8b6417dd7cb",
+    "total": 158,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -1075,8 +1075,13 @@
       "line": 1196,
       "column": 75,
       "snippet": "rpcClient as unknown as RecipeNutritionServiceClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "resolved",
+      "holdReason": null,
+      "resolution": {
+        "reason": "Separate actual predecessor3-table/native-select plus product RPC contract from owner recipe reads and snapshot writer. Existing factory directly satisfies it; no replacement cast/runtime change. MJS any boundary remains.",
+        "pullRequest": null,
+        "verification": "before/after 6 suites116 PASS; typecheck/ESLint/diff-check PASS; Anti Slop160->158,new0; emitted JS3 files byte-identical"
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::e795e548fa21a1828d5f7bd6d2a62a57386040b76ded57d87ee3dab5fa5be5ad#1",
@@ -1253,8 +1258,13 @@
       "line": 40,
       "column": 108,
       "snippet": "rpcClient as unknown as RecipeNutritionServiceClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "resolved",
+      "holdReason": null,
+      "resolution": {
+        "reason": "Separate actual predecessor3-table/native-select plus product RPC contract from owner recipe reads and snapshot writer. Existing factory directly satisfies it; no replacement cast/runtime change. MJS any boundary remains.",
+        "pullRequest": null,
+        "verification": "before/after 6 suites116 PASS; typecheck/ESLint/diff-check PASS; Anti Slop160->158,new0; emitted JS3 files byte-identical"
+      }
     },
     {
       "id": "components/planner/food-product-picker.tsx::anti-slop(no-conditional-empty-object-spread)::44bc57cfc7aaf47feaa462cb8d24fcefdd3ee7408624dc23692804844624e7f6#1",

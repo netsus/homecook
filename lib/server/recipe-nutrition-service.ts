@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { hydrateRecipeQuantityNutrition } from "@/lib/server/recipe-quantity-input";
 import { RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { addRecipeProductNutritionGuard, hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
@@ -40,14 +41,6 @@ interface MaybeSingleQuery<T> {
   maybeSingle(): PromiseLike<{ data: T | null; error: unknown }>;
 }
 
-interface ListQuery<T> extends PromiseLike<{ data: T[] | null; error: unknown }> {
-  select(columns: string): ListQuery<T>;
-  in(column: string, values: string[]): ListQuery<T>;
-  eq(column: string, value: string | boolean): ListQuery<T>;
-  order(column: string, options: { ascending: boolean }): ListQuery<T>;
-  range(from: number, to: number): ListQuery<T>;
-}
-
 interface IngredientQuery {
   select(columns: string): IngredientQuery;
   eq(column: string, value: string): IngredientQuery;
@@ -57,11 +50,20 @@ interface IngredientQuery {
   ): PromiseLike<{ data: RecipeNutritionIngredientRow[] | null; error: unknown }>;
 }
 
-export interface RecipeNutritionServiceClient {
+interface RecipeNutritionReadClient {
   from(table: "recipes"): MaybeSingleQuery<RecipeNutritionRecipeRow>;
   from(table: "recipe_ingredients"): IngredientQuery;
-  from(table: "ingredient_nutrition_profiles"): ListQuery<Record<string, unknown>>;
-  from(table: "ingredient_conversion_assignments"): ListQuery<Record<string, unknown>>;
+}
+
+// Preserve the library's select-builder type instead of requiring query methods
+// on from() itself. Predecessor evidence never reads or writes owner recipe rows.
+type RecipeNutritionPredecessorTable = Pick<ReturnType<SupabaseClient["from"]>, "select">;
+
+export interface RecipeNutritionPredecessorClient extends RecipeProductNutritionClient {
+  from(table: "ingredient_nutrition_profiles" | "ingredient_conversion_assignments" | "piece_unit_weights"): RecipeNutritionPredecessorTable;
+}
+
+interface RecipeNutritionWriterClient {
   rpc(
     functionName: "write_recipe_nutrition_snapshot",
     args: {
@@ -75,6 +77,9 @@ export interface RecipeNutritionServiceClient {
     error: unknown;
   }>;
 }
+
+export type RecipeNutritionServiceClient =
+  RecipeNutritionReadClient & RecipeNutritionPredecessorClient & RecipeNutritionWriterClient;
 
 export class RecipeNutritionServiceError extends Error {
   constructor(public readonly code: string) {
@@ -118,7 +123,7 @@ function isValidIngredient(row: RecipeNutritionIngredientRow) {
 export async function prepareRecipeNutritionSnapshot(
   dbClient: RecipeNutritionServiceClient,
   recipeId: string,
-  predecessorClient: Pick<RecipeNutritionServiceClient, "from"> & RecipeProductNutritionClient = dbClient,
+  predecessorClient: RecipeNutritionPredecessorClient = dbClient,
   sessionAuthority?: AccountGenerationBootstrapSessionAuthority,
 ) {
   if (!isNonEmptyText(recipeId)) {
