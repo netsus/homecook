@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   awardUserProgressEvent,
-  type UserProgressDbClient,
   USER_PROGRESS_XP_AWARDS,
 } from "@/lib/server/user-progress";
 import {
@@ -17,6 +16,9 @@ interface QueryError {
   code?: string;
   message: string;
 }
+
+// Existing fixture boundary assertions are not structural client proofs.
+// The dedicated capability suite checks the complete projection without casts.
 
 interface QueryResult<T> {
   data: T | null;
@@ -403,7 +405,7 @@ describe("user gamification event projection", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "shopping_completed",
       sourceTable: "shopping_lists",
@@ -544,7 +546,7 @@ describe("user gamification event projection", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "recipe_saved",
       sourceTable: "recipe_book_items",
@@ -638,7 +640,7 @@ describe("user gamification event projection", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "cooking_completed",
       sourceTable: "leftover_dishes",

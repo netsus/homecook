@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   awardUserProgressEvent,
   buildUserProgressEventInsert,
-  type UserProgressDbClient,
   USER_PROGRESS_XP_POLICY,
 } from "@/lib/server/user-progress";
 
@@ -13,6 +12,9 @@ interface QueryError {
   code?: string;
   message: string;
 }
+
+// Legacy policy fixtures assert at the award boundary; they are not complete
+// projection clients. The dedicated capability suite verifies the full path.
 
 interface QueryResult<T> {
   data: T | null;
@@ -261,7 +263,7 @@ describe("user progress XP policy v2", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "planner_registered",
       sourceTable: "meals",
@@ -308,7 +310,7 @@ describe("user progress XP policy v2", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "custom_book_created",
       sourceTable: "recipe_books",
@@ -360,7 +362,7 @@ describe("user progress XP policy v2", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "planner_registered",
       sourceTable: "meals",
@@ -444,7 +446,7 @@ describe("user progress XP policy v2", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "planner_registered",
       sourceTable: "meals",
@@ -519,7 +521,7 @@ describe("user progress XP policy v2", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "planner_registered",
       sourceTable: "meals",

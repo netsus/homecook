@@ -612,7 +612,7 @@ export async function POST(request: Request) {
   };
 
   try {
-    await awardUserProgressEvent(auth.dbClient as RecipeBookDbClient & UserProgressDbClient, {
+    await awardUserProgressEvent(auth.dbClient, {
       userId: auth.user.id,
       eventType: "custom_book_created",
       sourceTable: "recipe_books",
