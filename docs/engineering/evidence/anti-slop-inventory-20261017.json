@@ -1079,7 +1079,7 @@
       "holdReason": null,
       "resolution": {
         "reason": "Separate actual predecessor3-table/native-select plus product RPC contract from owner recipe reads and snapshot writer. Existing factory directly satisfies it; no replacement cast/runtime change. MJS any boundary remains.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1768",
         "verification": "before/after 6 suites116 PASS; typecheck/ESLint/diff-check PASS; Anti Slop160->158,new0; emitted JS3 files byte-identical"
       }
     },
@@ -1262,7 +1262,7 @@
       "holdReason": null,
       "resolution": {
         "reason": "Separate actual predecessor3-table/native-select plus product RPC contract from owner recipe reads and snapshot writer. Existing factory directly satisfies it; no replacement cast/runtime change. MJS any boundary remains.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1768",
         "verification": "before/after 6 suites116 PASS; typecheck/ESLint/diff-check PASS; Anti Slop160->158,new0; emitted JS3 files byte-identical"
       }
     },

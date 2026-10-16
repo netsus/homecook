@@ -121,7 +121,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - ES2022/ESNext emitted JS byte-identical, SHA256 `c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98`. 전체 build·화면·실DB·운영 검증 미실행이며 기존10실패·49원본 미확인은 별도다.
 - 부모 세션 중간 통지는 지정 thread에 전송했으나 `thread not found`로 실패했다. 전달 성공으로 기록하지 않으며 다른 수신처로 우회하지 않는다.
 
-## 현재 배치: 영양 predecessor 읽기 계약 분리
+## 현재 배치: [#1768](https://github.com/netsus/homecook/pull/1768) 영양 predecessor 읽기 계약 분리
 
 - 원본ID: `app/api/v1/recipes/route.ts` checkpoint1196 및 `app/api/v1/recipes/[id]/publish/route.ts` checkpoint40, 각각 `no-chained-type-assertions::aa336e5ccd3ca10ecf13203e85ddb7c47042d995049950ccb04cd7c142e9f3b0#1`. 전체 ID/위치/근거는 inventory에 보존한다.
 - 기존 predecessor 인수는 실제로 읽지 않는 recipes/recipe_ingredients와 잘못된 from단계 ListQuery를 요구했고 실제 사용하는 piece_unit_weights는 빠져 있었다. 실제3표의 select와 product/quantity RPC 계약을 분리하고, owner read·snapshot writer 계약은 전체 service client 교집합으로 유지한다. 새 adapter·단언·unknown 확대0, 두 호출자의 불필요 전체 서비스 단언만 제거한다.
