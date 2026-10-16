@@ -14,6 +14,79 @@ import { inventoryHybridAuthorityPaths } from "../scripts/lib/hybrid-authority-i
 
 const temporaryRepositories: string[] = [];
 
+// Response-envelope inventory only; this does not approve service-role access.
+// The original 63 plus five already-shipped routes are fixed by exact pathname.
+const EXPECTED_DATA_RESPONSE_BOUNDARY_FILES = [
+  "app/api/v1/cooked-batches/[id]/adjust/route.ts",
+  "app/api/v1/cooked-batches/[id]/close-unweighed/route.ts",
+  "app/api/v1/cooked-batches/[id]/discard/route.ts",
+  "app/api/v1/cooked-batches/[id]/weight/route.ts",
+  "app/api/v1/cooked-batches/route.ts",
+  "app/api/v1/cooked-weight-attestations/[id]/route.ts",
+  "app/api/v1/cooking-methods/route.ts",
+  "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+  "app/api/v1/cooking/session-attempts/[id]/complete/route.ts",
+  "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+  "app/api/v1/cooking/session-attempts/route.ts",
+  "app/api/v1/cooking/sessions/[session_id]/cancel/route.ts",
+  "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+  "app/api/v1/cooking/sessions/[session_id]/cook-mode/route.ts",
+  "app/api/v1/cooking/sessions/route.ts",
+  "app/api/v1/cooking/standalone-complete/route.ts",
+  "app/api/v1/feedback/404/route.ts",
+  "app/api/v1/food-catalog/search/route.ts",
+  "app/api/v1/food-products/[product_id]/report/route.ts",
+  "app/api/v1/food-products/[product_id]/route.ts",
+  "app/api/v1/food-products/route.ts",
+  "app/api/v1/ingredients/route.ts",
+  "app/api/v1/leftovers/[leftover_id]/eat/route.ts",
+  "app/api/v1/leftovers/[leftover_id]/keep/route.ts",
+  "app/api/v1/leftovers/[leftover_id]/uneat/route.ts",
+  "app/api/v1/leftovers/route.ts",
+  "app/api/v1/marketing/round2/route.ts",
+  "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts",
+  "app/api/v1/meals/[meal_id]/route.ts",
+  "app/api/v1/meals/route.ts",
+  "app/api/v1/pantry/bundles/route.ts",
+  "app/api/v1/pantry/route.ts",
+  "app/api/v1/planner/nutrition/route.ts",
+  "app/api/v1/planner/route.ts",
+  "app/api/v1/product-planner-entries/[entry_id]/route.ts",
+  "app/api/v1/product-planner-entries/route.ts",
+  "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
+  "app/api/v1/recipe-books/[book_id]/recipes/route.ts",
+  "app/api/v1/recipe-books/[book_id]/route.ts",
+  "app/api/v1/recipe-books/route.ts",
+  "app/api/v1/recipes/[id]/cook-mode/route.ts",
+  "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+  "app/api/v1/recipes/[id]/image/route.ts",
+  "app/api/v1/recipes/[id]/like/route.ts",
+  "app/api/v1/recipes/[id]/publish/route.ts",
+  "app/api/v1/recipes/[id]/route.ts",
+  "app/api/v1/recipes/[id]/save/route.ts",
+  "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+  "app/api/v1/recipes/images/route.ts",
+  "app/api/v1/recipes/pantry-match/route.ts",
+  "app/api/v1/recipes/quantity-input-context/route.ts",
+  "app/api/v1/recipes/route.ts",
+  "app/api/v1/recipes/tag-suggestions/route.ts",
+  "app/api/v1/recipes/themes/route.ts",
+  "app/api/v1/recipes/youtube/recipio/check/route.ts",
+  "app/api/v1/shopping/lists/[list_id]/complete/route.ts",
+  "app/api/v1/shopping/lists/[list_id]/items/[item_id]/route.ts",
+  "app/api/v1/shopping/lists/[list_id]/items/bulk/route.ts",
+  "app/api/v1/shopping/lists/[list_id]/items/reorder/route.ts",
+  "app/api/v1/shopping/lists/[list_id]/route.ts",
+  "app/api/v1/shopping/lists/[list_id]/share-text/route.ts",
+  "app/api/v1/shopping/lists/route.ts",
+  "app/api/v1/shopping/preview/route.ts",
+  "app/api/v1/tags/route.ts",
+  "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+  "app/api/v1/users/me/progress/route.ts",
+  "app/api/v1/users/me/route.ts",
+  "app/api/v1/users/me/settings/route.ts",
+];
+
 const APPROVED_USER_SERVICE_ROLE_FILES = [
   "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
   "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
@@ -294,7 +367,8 @@ describe("hybrid authority AST/static gate", () => {
   it("routes every local Data handler through the common API response boundary", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.dataRouteResponseBoundaries).toHaveLength(63);
+    expect(inventory.dataRouteResponseBoundaries.map((entry) => entry.file))
+      .toEqual(EXPECTED_DATA_RESPONSE_BOUNDARY_FILES);
     expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
   }, 20_000);
 
