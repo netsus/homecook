@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-17 — v85 소스 병합·artifact 봉인 완료, 신규 자격 실행 확인 대기
+
+PR1753을1be5eeea5dd946d8a54edf6c5fd0c3c28d1815fa로 병합했고 최신master1b551630e 통합 후626 PASS·type/build·Anti Slop173/신규0이다. 해당SHA worker artifact38파일 및 descriptor를 로컬 봉인했다. generation50/최대300초manager 발급은 실행 시점 확인 대기이며 운영DB/웹/worker전환·추가모델0이다. 원49를 새snapshot에 재사용하지 않으며49→50 successor/metadata handoff·불확실commit 대조/동일50 복구 준비가 남는다. [최종diff·봉인SHA·정확한권한/만료·복구조건](../engineering/youtube-v85-deployment-preparation-20261017.md), Library `libfile_2bab86cb9f4081919a1058f72da0b5bd`를 따른다. 현재 운영은 무게반영웹06a/v74-gen49다.
+
 ## 2026-10-17 — v85 전체 선행 통합·운영 전환 준비 (미배포)
 
 무게 배포06a 완료 후 원 후보47d8e67f4의 선행93de94d97 포함4커밋을 masterf511d3f95 위에 통합했다. 관련525 PASS·type/Anti Slop 신규0·변경lint 오류0/기존경고1, 저장된 실제3응답의 웹 parser 수신을 추가모델0으로 확인했다. 평가 번들SHA11290b3c는 그대로다. 운영 worker는v74/gen49이며 새pipeline/snapshot에49를 재사용하지 않는다. [정확한 통합·새50 결속 대상·검증 한계](../engineering/youtube-v85-deployment-preparation-20261017.md)를 따른다. 신규50/manager발급·DB전환·새모델·운영배포0이며 전체P5 완료가 아니다.
