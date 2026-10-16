@@ -48,7 +48,6 @@ import {
   projectRecipePatchData,
   readRequiredIdempotencyKey,
   RecipeDraftNutritionValidationError,
-  type RecipeDraftNutritionClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   parseYoutubeSavedPublicRecipeProjection,
@@ -668,7 +667,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       sessionAuthority: authority.sessionAuthority, recipeId, expectedRevision: parsed.value.baseRecipeRevision });
     if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를 저장할 수 없어요. 입력은 유지돼요.", 422);
     nutrition = await calculateRecipeDraftNutrition(
-      serviceClient as unknown as RecipeDraftNutritionClient,
+      serviceClient,
       {
         recipeId,
         ownerUserId: user.id,
