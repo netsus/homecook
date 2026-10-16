@@ -11,7 +11,6 @@ import {
 } from "@/lib/server/account-generation/session-authority";
 import {
   runManagedRecipeImageCancel,
-  type ManagedRecipeImageCancelRpcClient,
 } from "@/lib/server/recipe-image-managed-cancel";
 import {
   createManagedRecipeImageCancelResponse,
@@ -77,8 +76,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const result = await runManagedRecipeImageCancel({
-    dbClient:
-      serviceRoleClient as unknown as ManagedRecipeImageCancelRpcClient,
+    dbClient: serviceRoleClient,
     idempotencyKey: idempotencyKey.idempotencyKey,
     imageObjectId,
     sessionAuthority: verifiedSession.sessionAuthority,
