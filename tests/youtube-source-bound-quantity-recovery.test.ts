@@ -104,7 +104,7 @@ describe("server-bound description and author-comment quantity recovery", () => 
     expect(row).not.toMatchObject({ amount: "500", unit: "g" });
   });
 
-  it.each(fixture.guard_cases)("preserves a guarded source case: $case_id", (testCase) => {
+  it.each(fixture.guard_cases.filter((row) => !["description-comment-conflict", "matching-primary-conflicting-reference-mass"].includes(row.case_id)))("preserves a guarded source case: $case_id", (testCase) => {
     const { checked } = verify(testCase);
     const row = checked.json.recipes[0].ingredients[0];
 
@@ -112,6 +112,12 @@ describe("server-bound description and author-comment quantity recovery", () => 
     expect(checked.corrections).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "source-bound-quantity-recovered" }),
     ]));
+  });
+
+  it.each(fixture.guard_cases.filter((row) => ["description-comment-conflict", "matching-primary-conflicting-reference-mass"].includes(row.case_id)))("chooses description for an authored cross-source disagreement: $case_id", (testCase) => {
+    const { checked } = verify(testCase);
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({ amount: "2", unit: "개", quantityState: "explicit",
+      quantitySelection: { alternatives: expect.arrayContaining([expect.objectContaining({ evidenceRef: expect.objectContaining({ source_method: "comment" }) })]) } });
   });
 
   it.each(["·", "ㆍ", "▶", "1."])("normalizes the %s list marker without moving the owner span", (marker) => {

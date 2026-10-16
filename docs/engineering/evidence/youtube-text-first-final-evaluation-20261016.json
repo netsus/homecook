@@ -1,0 +1,2341 @@
+{
+  "schemaVersion": 1,
+  "status": "v85_actual_evaluation_complete_with_quality_limitations",
+  "scope": "Same three reviewed videos only; final frozen candidate used once per target; purposeful earlier cohorts preserved; no P5 pass claimed",
+  "candidate": {
+    "baselineCommit": "8b67afed95deb7cab6f55d541a327b9f9fa7e624",
+    "trackedDiffSha256": "5e97af2c896ee0a4d1a8b40b0aac1968bd3cf74fa92e1c26692ff097c4b21a67",
+    "bundleManifestSha256": "11290b3c16276664e9a3ecce4711a8493779b96be7c80a8e58e08f82236ca6ed",
+    "goldenSha256": "848c29e69fba85ce2a34b08b6bc9c9b6b39f0e2ef309818f2894e8b50975f7b4",
+    "gradingSpecsSha256": "6a463a60e014e04068e3b3f7fdb2a95968d9c57ac1ee78fbe9e9634a84a45e1e",
+    "preparedAt": "2026-10-16T21:18:02.056Z",
+    "deployment": false
+  },
+  "identity": {
+    "pipelineVersion": "vision-evidence-v2-source-anchored",
+    "provider": "codex-vision-keyframes",
+    "model": "gpt-5.6-luna",
+    "selectorModel": "gpt-5.6-sol",
+    "sourcePromptVersion": "source-anchored-single-recipe-v26-coupled-procedure-source-citations",
+    "selectorPromptVersion": "deterministic-evidence-v3-ingredient-event-preserving-largest-gap",
+    "finalPromptVersion": "source-anchored-single-recipe-v26-coupled-procedure-source-citations",
+    "clientVersion": "codex-vision-source-anchored-v85-coupled-procedure-source-citations",
+    "executionConfigSignature": "bf2e196ca9db50eca22f2b0d",
+    "frameExtractorVersion": "extract-video-frames-v7-adaptive-screen-ocr",
+    "frameMode": "hybrid",
+    "interval": 4,
+    "hybridAnchorBudget": 36,
+    "selectorCandidateLimit": 12,
+    "keyframeTotalLimit": 8,
+    "screenOcrMode": "auto",
+    "codexCliVersion": "0.154.0-alpha.6.2"
+  },
+  "runtimeEffort": "low",
+  "modelReadBoundary": "macos-sandbox-exec clean; no golden or git in model view; raw source via stdin",
+  "counts": {
+    "currentCandidateAttempts": 3,
+    "currentCandidateModelCalls": 8,
+    "priorAttempts": 24,
+    "priorModelCalls": 66,
+    "totalTextFirstImprovementAttempts": 27,
+    "totalTextFirstImprovementModelCalls": 74,
+    "cumulativeElapsedMsSum": 1563607,
+    "currentCandidateElapsedMsSum": 159921,
+    "failedModelCalls": 0,
+    "repairCalls": 0,
+    "automaticEvaluationRetries": 0,
+    "cliInternalRetries": null
+  },
+  "countsScope": "From v76 text-first improvement through v85; earlier v71/v73/v74 evaluations and other tasks excluded; elapsed values summed per attempt, not wall clock",
+  "grading": {
+    "goldenSha256": "848c29e69fba85ce2a34b08b6bc9c9b6b39f0e2ef309818f2894e8b50975f7b4",
+    "videos": {
+      "3h4nSEOw7_4": {
+        "path": "/tmp/mumeok-text-first-v85-final-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+        "candidate": {
+          "baselineCommit": "8b67afed95deb7cab6f55d541a327b9f9fa7e624",
+          "trackedDiffSha256": "5e97af2c896ee0a4d1a8b40b0aac1968bd3cf74fa92e1c26692ff097c4b21a67",
+          "bundleManifestSha256": "11290b3c16276664e9a3ecce4711a8493779b96be7c80a8e58e08f82236ca6ed",
+          "goldenSha256": "848c29e69fba85ce2a34b08b6bc9c9b6b39f0e2ef309818f2894e8b50975f7b4",
+          "gradingSpecsSha256": "6a463a60e014e04068e3b3f7fdb2a95968d9c57ac1ee78fbe9e9634a84a45e1e",
+          "preparedAt": "2026-10-16T21:18:02.056Z",
+          "deployment": false
+        },
+        "outcome": {
+          "id": "3h4nSEOw7_4",
+          "attempt": 1,
+          "status": "success",
+          "modelCallCount": 3,
+          "failedModelCallCount": 0,
+          "repairCallCount": 0,
+          "cliInternalRetryCount": null,
+          "elapsedMs": 68821,
+          "textFirst": {
+            "policyVersion": "authored-text-first-v9-coupled-procedure-source-citations",
+            "sourceCollection": {
+              "description": {
+                "status": "present",
+                "reason": null
+              },
+              "authorComments": {
+                "status": "empty",
+                "reason": null
+              }
+            },
+            "route": "quantities-and-steps",
+            "needs": {
+              "ingredients": false,
+              "quantities": true,
+              "steps": true
+            },
+            "collectionFailed": false,
+            "missingSourceIngredients": [],
+            "inventoryCount": 15,
+            "textFailure": null,
+            "textMs": 10849,
+            "textModelCalls": 1,
+            "visionModelCalls": 1,
+            "visionPreparationMs": 9990,
+            "captionCollection": {
+              "status": "present",
+              "reason": null
+            },
+            "retainedTextQuantityCompletionCount": 0,
+            "stepGroundingModelCalls": 1,
+            "stepGroundingMs": 15880,
+            "visionMs": 20041,
+            "rejectedStepCount": 0,
+            "finalIngredientCount": 18,
+            "unresolvedSourceIngredients": [],
+            "finalCompleteness": {
+              "ingredients": true,
+              "quantities": false,
+              "steps": true
+            },
+            "reviewRequired": true,
+            "droppedIngredientNames": []
+          },
+          "productionWrites": 0,
+          "productionQueueCalls": 0
+        },
+        "grades": [
+          {
+            "goldenName": "냉동 낙지",
+            "expected": "350g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "냉동 낙지",
+              "originalName": "냉동낙지",
+              "amount": "350",
+              "unit": "g",
+              "quantityState": "explicit",
+              "amountRawText": "350g",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "냉동낙지 350g",
+                  "line_index": 1,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "2cf7a4c276ebba9de673c6e1",
+                  "evidence_id": "S0002"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "밀가루",
+            "expected": "30g 또는 2큰술과 30g 병기",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "밀가루",
+              "originalName": "밀가루",
+              "amount": "30",
+              "unit": "g",
+              "quantityState": "explicit",
+              "amountRawText": "30g",
+              "amountBasis": "onscreen",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "밀가루 2큰술 30g~",
+                  "line_index": 2,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "a33299db8eae94e62074a5d2",
+                  "evidence_id": "S0003"
+                },
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "밀가루 2큰술 30g",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 22523,
+                  "locator_hash": "0dc4afa5823dcf183f65cef7",
+                  "evidence_id": "O0012"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "미림 · 세척",
+            "expected": "3스푼 / 24g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "미림",
+              "originalName": "미림",
+              "amount": "3",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "3스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "미림 3스푼 24g",
+                  "line_index": 3,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "6fbef419351b30fce5c5f7dd",
+                  "evidence_id": "S0004"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "양배추",
+            "expected": "150g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "양배추",
+              "originalName": "양배추",
+              "amount": "150",
+              "unit": "g",
+              "quantityState": "explicit",
+              "amountRawText": "150g",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "양배추 150g",
+                  "line_index": 4,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "9e16b919ca12f555f567cc1a",
+                  "evidence_id": "S0005"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "양파",
+            "expected": "200g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "양파",
+              "originalName": "양파",
+              "amount": "200",
+              "unit": "g",
+              "quantityState": "explicit",
+              "amountRawText": "200g",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "양파는 200g",
+                  "line_index": 5,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "48730788e8dcce503f0429ba",
+                  "evidence_id": "S0006"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "당근 · 선택",
+            "expected": "50g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "당근",
+              "originalName": "당근",
+              "amount": "50",
+              "unit": "g",
+              "quantityState": "explicit",
+              "amountRawText": "50g",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "당근 50g",
+                  "line_index": 6,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "6847682ea5eccce51ef4c802",
+                  "evidence_id": "S0007"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "대파",
+            "expected": "큰 것 1/2대 / 80g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "대파",
+              "originalName": "대파 큰거",
+              "amount": "80",
+              "unit": "g",
+              "quantityState": "explicit",
+              "amountRawText": "80g",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "대파 큰거 반대 80g",
+                  "line_index": 7,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "1e63ae0f3430196e2b0c8e6f",
+                  "evidence_id": "S0008"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "식용유",
+            "expected": "2스푼; 16g 또는 12g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "식용유",
+              "originalName": "식용유",
+              "amount": "2",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "2스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "식용유 2스푼 16g",
+                  "line_index": 8,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "e79188ae2cd6075a3afd0337",
+                  "evidence_id": "S0009"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "설탕",
+            "expected": "5스푼 / 50g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "설탕",
+              "originalName": "설탕",
+              "amount": "5",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "5스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "설탕 5스푼 50g",
+                  "line_index": 11,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "3aa464badaade5a5d596c381",
+                  "evidence_id": "S0011"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "중간입자 고춧가루",
+            "expected": "5스푼 / 35g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "중간 입자 고춧가루",
+              "originalName": "중간입자 고추가루",
+              "amount": "5",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "5스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "중간입자 고추가루 5스푼 35g",
+                  "line_index": 12,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "b1f62a365ffa93ba05594bcd",
+                  "evidence_id": "S0012"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "진간장",
+            "expected": "7스푼 / 56g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "진간장",
+              "originalName": "진간장",
+              "amount": "7",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "7스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "진간장 7스푼 56g",
+                  "line_index": 14,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "abd090345b084ab6707635ad",
+                  "evidence_id": "S0014"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "미림 · 양념",
+            "expected": "4스푼 / 32g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "미림",
+              "originalName": "미림",
+              "amount": "4",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "4스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "미림 4스푼 32g",
+                  "line_index": 15,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "96c475151666363544f7542c",
+                  "evidence_id": "S0015"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "굴소스",
+            "expected": "1큰술 / 14g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "굴소스",
+              "originalName": "굴소스",
+              "amount": "1",
+              "unit": "큰술",
+              "quantityState": "explicit",
+              "amountRawText": "1큰술",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "굴소스 1큰술 14g",
+                  "line_index": 16,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "9777245efef78727e94eb460",
+                  "evidence_id": "S0016"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "간마늘",
+            "expected": "1스푼 / 20g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "다진 마늘",
+              "originalName": "간마늘",
+              "amount": "1",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "1스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "간마늘 1스푼 20g",
+                  "line_index": 17,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "06a5d8349ca5ce8450f6c8df",
+                  "evidence_id": "S0017"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "고추장",
+            "expected": "2스푼 / 60g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "고추장",
+              "originalName": "고추장",
+              "amount": "2",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "2스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "고추장 2스푼 60g",
+                  "line_index": 18,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "b68bcbff815bfc02d402fb70",
+                  "evidence_id": "S0018"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "된장",
+            "expected": "1/2스푼 / 15g",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "된장",
+              "originalName": "된장",
+              "amount": "1/2",
+              "unit": "스푼",
+              "quantityState": "explicit",
+              "amountRawText": "반스푼",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "된장 반스푼 15g",
+                  "line_index": 19,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "68ceb1d391e6905a879ec01c",
+                  "evidence_id": "S0019"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "후춧가루",
+            "expected": "2꼬집",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "후춧가루",
+              "originalName": "후추가루",
+              "amount": "2",
+              "unit": "꼬집",
+              "quantityState": "explicit",
+              "amountRawText": "2꼬집",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "후추가루 2꼬집",
+                  "line_index": 20,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "11ef052cbe6e0310cfefac77",
+                  "evidence_id": "S0020"
+                }
+              ]
+            }
+          }
+        ],
+        "ingredientPresence": {
+          "correct": 17,
+          "total": 17
+        },
+        "numeric": {
+          "correct": 17,
+          "total": 17
+        },
+        "allQuantities": {
+          "correct": 17,
+          "total": 17
+        },
+        "steps": [
+          "설탕, 중간입자 고추가루, 진간장, 미림, 굴소스, 간마늘, 고추장, 된장, 후추가루를 섞어 양념장을 만듭니다.",
+          "양념장을 24시간 숙성합니다.",
+          "손질된 냉동낙지에 밀가루와 미림을 넣고 2~3분 박박 문지른 뒤 10분 둡니다.",
+          "냉동낙지를 찬물에 2~3차례 깨끗하게 씻습니다.",
+          "양배추를 1~2cm 두께로 썰고, 양파를 1cm 두께로 썹니다.",
+          "당근을 먹기 좋게 썰고, 대파 큰거를 썹니다.",
+          "식용유를 두르고 강불로 달굽니다.",
+          "양배추, 양파, 당근, 대파 큰거를 넣고 2분 볶습니다.",
+          "양념장을 전부 넣고 강불에 1분 볶습니다.",
+          "냉동낙지를 넣고 2분 볶습니다.",
+          "밥을 한 공기 담고 건더기를 적당히 올린 뒤 소스를 조금 둘러 비벼 먹습니다."
+        ],
+        "extraRows": [
+          {
+            "name": "청양고추가루",
+            "amount": null,
+            "unit": null
+          }
+        ],
+        "evidenceHashes": {
+          "source.json": "5af6e2a122eb19fe868f795f150e13cdd437a78ddb654c65c49a287cba03864f",
+          "text-trace.json": "6f3d92c185f8f5485d8dbebfbb8c22e82cf04c7f36ac3b72f6155d88ef99fbee",
+          "vision-trace.json": "927902f1de6f4ec058af210500558ad9be2d73b03bca77a85363e15f004bd61a",
+          "worker-safe-output.json": "6de44d686bfaea6c973fc58db822ea2a951010e5a76c6f97eb9bd6ebc41f4a24",
+          "outcome.json": "463f67277faffb4e9cb1a0290c4b277da239eeeccae965a407fb317ce30eaa2c"
+        }
+      },
+      "ytrHKwmjXuQ": {
+        "path": "/tmp/mumeok-text-first-v85-final-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+        "candidate": {
+          "baselineCommit": "8b67afed95deb7cab6f55d541a327b9f9fa7e624",
+          "trackedDiffSha256": "5e97af2c896ee0a4d1a8b40b0aac1968bd3cf74fa92e1c26692ff097c4b21a67",
+          "bundleManifestSha256": "11290b3c16276664e9a3ecce4711a8493779b96be7c80a8e58e08f82236ca6ed",
+          "goldenSha256": "848c29e69fba85ce2a34b08b6bc9c9b6b39f0e2ef309818f2894e8b50975f7b4",
+          "gradingSpecsSha256": "6a463a60e014e04068e3b3f7fdb2a95968d9c57ac1ee78fbe9e9634a84a45e1e",
+          "preparedAt": "2026-10-16T21:18:02.056Z",
+          "deployment": false
+        },
+        "outcome": {
+          "id": "ytrHKwmjXuQ",
+          "attempt": 1,
+          "status": "success",
+          "modelCallCount": 2,
+          "failedModelCallCount": 0,
+          "repairCallCount": 0,
+          "cliInternalRetryCount": null,
+          "elapsedMs": 40047,
+          "textFirst": {
+            "policyVersion": "authored-text-first-v9-coupled-procedure-source-citations",
+            "sourceCollection": {
+              "description": {
+                "status": "present",
+                "reason": null
+              },
+              "authorComments": {
+                "status": "present",
+                "reason": null
+              }
+            },
+            "route": "quantities",
+            "needs": {
+              "ingredients": false,
+              "quantities": true,
+              "steps": false
+            },
+            "collectionFailed": false,
+            "missingSourceIngredients": [],
+            "inventoryCount": 12,
+            "textFailure": null,
+            "textMs": 13749,
+            "textModelCalls": 1,
+            "visionModelCalls": 1,
+            "visionPreparationMs": 10525,
+            "captionCollection": {
+              "status": "present",
+              "reason": null
+            },
+            "retainedTextQuantityCompletionCount": 0,
+            "stepGroundingModelCalls": 0,
+            "stepGroundingMs": 0,
+            "visionMs": 12152,
+            "rejectedStepCount": 10,
+            "finalIngredientCount": 9,
+            "unresolvedSourceIngredients": [],
+            "finalCompleteness": {
+              "ingredients": true,
+              "quantities": false,
+              "steps": true
+            },
+            "reviewRequired": true,
+            "droppedIngredientNames": []
+          },
+          "productionWrites": 0,
+          "productionQueueCalls": 0
+        },
+        "grades": [
+          {
+            "goldenName": "양파",
+            "expected": "1개",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "양파",
+              "originalName": "양파",
+              "amount": "1",
+              "unit": "개",
+              "quantityState": "explicit",
+              "amountRawText": "1개",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "양파 ________ 1개",
+                  "line_index": 3,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "c1e7b8f8757d715a30810b67",
+                  "evidence_id": "S0003"
+                },
+                {
+                  "source_method": "comment",
+                  "source_provider": "youtube",
+                  "snippet": "양파 ________ 1개",
+                  "line_index": 25,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "ef056f238b06c4ee17476788",
+                  "evidence_id": "S0040"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "순두부",
+            "expected": "1개",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "순두부",
+              "originalName": "순두부",
+              "amount": "1",
+              "unit": "개",
+              "quantityState": "explicit",
+              "amountRawText": "1개",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "순두부 ______ 1개",
+                  "line_index": 4,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "c7d92df00f600b732f481afe",
+                  "evidence_id": "S0004"
+                },
+                {
+                  "source_method": "comment",
+                  "source_provider": "youtube",
+                  "snippet": "순두부 ______ 1개",
+                  "line_index": 26,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "3c8fab92978cc18747a8fc0c",
+                  "evidence_id": "S0041"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "물",
+            "expected": "70mL",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "물",
+              "originalName": "물",
+              "amount": "70",
+              "unit": "ml",
+              "quantityState": "explicit",
+              "amountRawText": "70ml",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "물 _________ 70ml",
+                  "line_index": 7,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "0c90c4a8d6b4e8ab480c649e",
+                  "evidence_id": "S0006"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "간장",
+            "expected": "2T",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "간장",
+              "originalName": "간장",
+              "amount": "2",
+              "unit": "T",
+              "quantityState": "explicit",
+              "amountRawText": "2T",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "간장 ________ 2T",
+                  "line_index": 8,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "1690525d85ac5b6495b8e95d",
+                  "evidence_id": "S0007"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "비건 굴소스",
+            "expected": "1T; 일반 굴소스 대체 가능",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "비건 굴소스",
+              "originalName": "비건굴소스",
+              "amount": "1",
+              "unit": "T",
+              "quantityState": "explicit",
+              "amountRawText": "1T",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "비건굴소스 ___ 1T(일반 굴소스 대체가능)",
+                  "line_index": 9,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "68395461075e01ad33fb5d55",
+                  "evidence_id": "S0008"
+                },
+                {
+                  "source_method": "comment",
+                  "source_provider": "youtube",
+                  "snippet": "비건굴소스 ___ 1T(일반 굴소스 대체가능)",
+                  "line_index": 31,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "ce5424b80458ea242e2ed599",
+                  "evidence_id": "S0045"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "설탕",
+            "expected": "1T",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "설탕",
+              "originalName": "설탕",
+              "amount": "1",
+              "unit": "T",
+              "quantityState": "explicit",
+              "amountRawText": "1T",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "설탕 ________ 1T",
+                  "line_index": 10,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "432926ddb4e16d077042e0e4",
+                  "evidence_id": "S0009"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "전분",
+            "expected": "1T",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "전분",
+              "originalName": "전분",
+              "amount": "1",
+              "unit": "T",
+              "quantityState": "explicit",
+              "amountRawText": "1T",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "전분 ________ 1T",
+                  "line_index": 11,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "fcc6f3ba260cfcc8365ad1f5",
+                  "evidence_id": "S0010"
+                },
+                {
+                  "source_method": "comment",
+                  "source_provider": "youtube",
+                  "snippet": "전분 ________ 1T",
+                  "line_index": 33,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "704054c73aec5bc6b3c54fa0",
+                  "evidence_id": "S0047"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "오일",
+            "expected": "약간 / 팬에 두를 양 / 수량 미기재 허용",
+            "kind": "oil_exception",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "오일",
+              "originalName": "오일",
+              "amount": null,
+              "unit": null,
+              "quantityState": "unknown",
+              "amountRawText": null,
+              "amountBasis": null,
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "예열된 팬에 오일 두르고 양파를 넣고 볶다가 양파가 연갈색을 띄면 순두를 넣고 양념도 잘 저어서 넣어준 뒤, 휘젓지 마시고 팬을 흔들어서 재료들을 잘 섞어주면 완성이에요~💕",
+                  "line_index": 18,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "553721f3280cc56f7cb490f4",
+                  "evidence_id": "S0014"
+                },
+                {
+                  "source_method": "comment",
+                  "source_provider": "youtube",
+                  "snippet": "예열된 팬에 오일 두르고 양파를 넣고 볶다가 양파가 연갈색을 띄면 순두를 넣고 양념도 잘 저어서 넣어준 뒤, 휘젓지 마시고 팬을 흔들어서 재료들을 잘 섞어주면 완성이에요~💕",
+                  "line_index": 40,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "f1ac79aa3a6b5adcfdeb9ef7",
+                  "evidence_id": "S0051"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "고추기름 · 조건부",
+            "expected": "약간; 원문 1–2바퀴",
+            "kind": "abstract",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "고추기름",
+              "originalName": "고추기름",
+              "amount": null,
+              "unit": null,
+              "quantityState": "to_taste",
+              "amountRawText": "한 두 바퀴",
+              "amountBasis": "stated",
+              "groupLabel": null,
+              "optional": true,
+              "evidenceRefs": [
+                {
+                  "source_method": "comment",
+                  "source_provider": "youtube",
+                  "snippet": "아, 그리고 고추기름 있으시면 마지막에",
+                  "line_index": 17,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "8c96d4114eaa57cf62fca3c4",
+                  "evidence_id": "S0034"
+                },
+                {
+                  "source_method": "comment",
+                  "source_provider": "youtube",
+                  "snippet": "한 두 바퀴 뿌려주면 훨씬 더 맛있어요👍",
+                  "line_index": 18,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "d00f59429c014ffc34c8fe61",
+                  "evidence_id": "S0035"
+                }
+              ]
+            }
+          }
+        ],
+        "ingredientPresence": {
+          "correct": 9,
+          "total": 9
+        },
+        "numeric": {
+          "correct": 7,
+          "total": 7
+        },
+        "allQuantities": {
+          "correct": 9,
+          "total": 9
+        },
+        "steps": [
+          "1. 양념재료들로 양념을 먼저 만들어주세요.",
+          "2. 양파 1개를 가늘게 채썰고, 순두부도 크게크게 편썰어주세요.",
+          "3. 예열된 팬에 오일 두르고 양파를 넣고 볶다가 양파가 연갈색을 띄면 순두를 넣고 양념도 잘 저어서 넣어준 뒤, 휘젓지 마시고 팬을 흔들어서 재료들을 잘 섞어주면 완성이에요~💕",
+          "✔️주의! 양념에 전분이 있어서 붓기전 꼭 잘 저어서 부어주시고, 양념을 붓고 웍으로만 뒤집어서 재료들을 섞어주세요😊",
+          "아, 그리고 고추기름 있으시면 마지막에 한 두 바퀴 뿌려주면 훨씬 더 맛있어요👍"
+        ],
+        "extraRows": [],
+        "evidenceHashes": {
+          "source.json": "7e0a11b98887bbeb1ddc24f682c992b955f79e602358f15730a5848550afa040",
+          "text-trace.json": "3cf1f6d4e5f23dfbf7c39519690c89c3a190d2fed45cb09eff5f71550ad49099",
+          "vision-trace.json": "981b451b1685fbe4cf0b6c6f2e9957659dd447d640318bc44ca65bd054033a53",
+          "worker-safe-output.json": "944cd91eb1c5268ccd4c278567c22a787d227ab3056a2b2508b4b398361c1c92",
+          "outcome.json": "fd94613b508061ee62070b840b5cdf743c26776806b57429340d4e8120080345"
+        }
+      },
+      "pjwILwDVC7U": {
+        "path": "/tmp/mumeok-text-first-v85-final-evaluation-20261016/pjwILwDVC7U/attempt-1",
+        "candidate": {
+          "baselineCommit": "8b67afed95deb7cab6f55d541a327b9f9fa7e624",
+          "trackedDiffSha256": "5e97af2c896ee0a4d1a8b40b0aac1968bd3cf74fa92e1c26692ff097c4b21a67",
+          "bundleManifestSha256": "11290b3c16276664e9a3ecce4711a8493779b96be7c80a8e58e08f82236ca6ed",
+          "goldenSha256": "848c29e69fba85ce2a34b08b6bc9c9b6b39f0e2ef309818f2894e8b50975f7b4",
+          "gradingSpecsSha256": "6a463a60e014e04068e3b3f7fdb2a95968d9c57ac1ee78fbe9e9634a84a45e1e",
+          "preparedAt": "2026-10-16T21:18:02.056Z",
+          "deployment": false
+        },
+        "outcome": {
+          "id": "pjwILwDVC7U",
+          "attempt": 1,
+          "status": "success",
+          "modelCallCount": 3,
+          "failedModelCallCount": 0,
+          "repairCallCount": 0,
+          "cliInternalRetryCount": null,
+          "elapsedMs": 51053,
+          "textFirst": {
+            "policyVersion": "authored-text-first-v9-coupled-procedure-source-citations",
+            "sourceCollection": {
+              "description": {
+                "status": "present",
+                "reason": null
+              },
+              "authorComments": {
+                "status": "present",
+                "reason": null
+              }
+            },
+            "route": "full",
+            "needs": {
+              "ingredients": true,
+              "quantities": true,
+              "steps": true
+            },
+            "collectionFailed": false,
+            "missingSourceIngredients": [],
+            "inventoryCount": 0,
+            "textFailure": null,
+            "textMs": 6086,
+            "textModelCalls": 1,
+            "visionModelCalls": 1,
+            "visionPreparationMs": 7858,
+            "captionCollection": {
+              "status": "present",
+              "reason": null
+            },
+            "retainedTextQuantityCompletionCount": 0,
+            "stepGroundingModelCalls": 1,
+            "stepGroundingMs": 11198,
+            "visionMs": 17096,
+            "rejectedStepCount": 0,
+            "finalIngredientCount": 15,
+            "unresolvedSourceIngredients": [],
+            "finalCompleteness": {
+              "ingredients": true,
+              "quantities": false,
+              "steps": true
+            },
+            "reviewRequired": true,
+            "droppedIngredientNames": []
+          },
+          "productionWrites": 0,
+          "productionQueueCalls": 0
+        },
+        "grades": [
+          {
+            "goldenName": "늑간살",
+            "expected": "1kg",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "늑간살",
+              "originalName": "늑간살",
+              "amount": "1",
+              "unit": "kg",
+              "quantityState": "explicit",
+              "amountRawText": "1kg",
+              "amountBasis": "onscreen",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "description",
+                  "source_provider": "youtube",
+                  "snippet": "늑간살을 활용한 뼈 없는 순살 소갈비찜 레시피입니다.",
+                  "line_index": 0,
+                  "start_ms": null,
+                  "frame_ts_ms": null,
+                  "locator_hash": "cffde72b147593e263d01347",
+                  "evidence_id": "S0001"
+                },
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "늑간살 1kg",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 6506,
+                  "locator_hash": "7f9242546eb349a4a9506737",
+                  "evidence_id": "O0006"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "식용유",
+            "expected": "약간 / 팬에 두를 양",
+            "kind": "abstract",
+            "ingredientPresent": true,
+            "quantityCorrect": false,
+            "actual": {
+              "name": "식용유",
+              "originalName": "식용유",
+              "amount": null,
+              "unit": null,
+              "quantityState": "unknown",
+              "amountRawText": null,
+              "amountBasis": null,
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "식용유",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 13514,
+                  "locator_hash": "10c1b6ab3434dbf75e532230",
+                  "evidence_id": "O0008"
+                },
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "고기를 한입 크기로 잘라서 식용유를",
+                  "line_index": 6,
+                  "start_ms": 13240,
+                  "frame_ts_ms": null,
+                  "locator_hash": "3f6437d21c5f80777e1a9369",
+                  "evidence_id": "S0016"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "갈아만든 배",
+            "expected": "500mL",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "갈아만든 배",
+              "originalName": "갈아만든 배",
+              "amount": "500",
+              "unit": "ml",
+              "quantityState": "explicit",
+              "amountRawText": "500ml",
+              "amountBasis": "onscreen",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "갈아만든 배 500ml",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 22022,
+                  "locator_hash": "c427a4e9727113a7657239e1",
+                  "evidence_id": "O0009"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "흑설탕",
+            "expected": "2숟가락",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "흑설탕",
+              "originalName": "흑설탕",
+              "amount": "2",
+              "unit": "숟가락",
+              "quantityState": "explicit",
+              "amountRawText": "두 숟가락",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "흑설탕 두 숟가락 물엿 세 숟가락",
+                  "line_index": 12,
+                  "start_ms": 25640,
+                  "frame_ts_ms": null,
+                  "locator_hash": "15776940694157bab8257fb6",
+                  "evidence_id": "S0022"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "물엿",
+            "expected": "3숟가락",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "물엿",
+              "originalName": "물엿",
+              "amount": "3",
+              "unit": "숟가락",
+              "quantityState": "explicit",
+              "amountRawText": "세 숟가락",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "물엿 세 숟가락",
+                  "line_index": 12,
+                  "start_ms": 25640,
+                  "frame_ts_ms": null,
+                  "locator_hash": "15776940694157bab8257fb6",
+                  "evidence_id": "S0022"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "진간장",
+            "expected": "1/2컵",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "진간장",
+              "originalName": "진간장",
+              "amount": "1/2",
+              "unit": "컵",
+              "quantityState": "explicit",
+              "amountRawText": "반 컵",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "진간장과 맛술을 반 컵씩 넣어 줘",
+                  "line_index": 13,
+                  "start_ms": 27640,
+                  "frame_ts_ms": null,
+                  "locator_hash": "f25d9fa7f1b427a6de11c059",
+                  "evidence_id": "S0023"
+                },
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "진간장 90ml",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 27527,
+                  "locator_hash": "ce88968dc675ed45513545b2",
+                  "evidence_id": "O0018"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "맛술",
+            "expected": "1/2컵",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "맛술",
+              "originalName": "맛술",
+              "amount": "1/2",
+              "unit": "컵",
+              "quantityState": "explicit",
+              "amountRawText": "반 컵",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "진간장과 맛술을 반 컵씩 넣어 줘",
+                  "line_index": 13,
+                  "start_ms": 27640,
+                  "frame_ts_ms": null,
+                  "locator_hash": "f25d9fa7f1b427a6de11c059",
+                  "evidence_id": "S0023"
+                },
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "Cooking wine",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 29029,
+                  "locator_hash": "629c77237acc0eb98cd620b5",
+                  "evidence_id": "O0019"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "다진 마늘",
+            "expected": "크게 1숟가락",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "다진마늘",
+              "originalName": "다진마늘",
+              "amount": "1",
+              "unit": "숟가락",
+              "quantityState": "explicit",
+              "amountRawText": "크게 한 숟가락",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "다진마늘 1",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 30731,
+                  "locator_hash": "8c838eb143017c910578bd62",
+                  "evidence_id": "O0020"
+                },
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "다진 을 크게 한 숟가락 넣고",
+                  "line_index": 14,
+                  "start_ms": 29599,
+                  "frame_ts_ms": null,
+                  "locator_hash": "2213653f0fb14be5ee25b912",
+                  "evidence_id": "S0024"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "후추",
+            "expected": "약간",
+            "kind": "abstract",
+            "ingredientPresent": true,
+            "quantityCorrect": false,
+            "actual": {
+              "name": "후추",
+              "originalName": "후추",
+              "amount": null,
+              "unit": null,
+              "quantityState": "unknown",
+              "amountRawText": null,
+              "amountBasis": null,
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "후추",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 31532,
+                  "locator_hash": "ec70772e324e16e2f34b8fc9",
+                  "evidence_id": "O0021"
+                },
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "마지막으로 후추를 뿌려 줘",
+                  "line_index": 15,
+                  "start_ms": 31439,
+                  "frame_ts_ms": null,
+                  "locator_hash": "8219b08f7e042f890c1bb503",
+                  "evidence_id": "S0025"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "춘장 · 선택",
+            "expected": "1숟가락",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "춘장",
+              "originalName": "춘장",
+              "amount": "1",
+              "unit": "숟가락",
+              "quantityState": "explicit",
+              "amountRawText": "한 숟가락",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": true,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "[00:31.439] 마지막으로 후추를 뿌려 줘 이건 선택",
+                  "line_index": 15,
+                  "start_ms": 31439,
+                  "frame_ts_ms": null,
+                  "locator_hash": "8219b08f7e042f890c1bb503",
+                  "evidence_id": "S0025"
+                },
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "[00:33.480] 사항인데 춘장을 한 숟가락 넣으면",
+                  "line_index": 16,
+                  "start_ms": 33480,
+                  "frame_ts_ms": null,
+                  "locator_hash": "b65c933375c41b34df51112d",
+                  "evidence_id": "S0026"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "감자",
+            "expected": "2개",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "감자",
+              "originalName": "감자",
+              "amount": "2",
+              "unit": "개",
+              "quantityState": "explicit",
+              "amountRawText": "두 개",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "감자 두 개",
+                  "line_index": 21,
+                  "start_ms": 43719,
+                  "frame_ts_ms": null,
+                  "locator_hash": "8917f710701d2484170ab380",
+                  "evidence_id": "S0031"
+                },
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "감자",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 44044,
+                  "locator_hash": "744bc32aa7a77a43671b5e74",
+                  "evidence_id": "O0025"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "당근",
+            "expected": "1개",
+            "kind": "numeric",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "당근",
+              "originalName": "당근",
+              "amount": "1",
+              "unit": "개",
+              "quantityState": "explicit",
+              "amountRawText": "하나",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "와 당근 하나를 잘라서 넣어 줘",
+                  "line_index": 22,
+                  "start_ms": 45719,
+                  "frame_ts_ms": null,
+                  "locator_hash": "1d320d5127ba9483b3e39ebd",
+                  "evidence_id": "S0032"
+                },
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "당근",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 47047,
+                  "locator_hash": "cbc905628f0ef2adcca33c3a",
+                  "evidence_id": "O0033"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "물",
+            "expected": "약간 / 필요량",
+            "kind": "abstract",
+            "ingredientPresent": true,
+            "quantityCorrect": false,
+            "actual": {
+              "name": "물",
+              "originalName": "물",
+              "amount": null,
+              "unit": null,
+              "quantityState": "unknown",
+              "amountRawText": null,
+              "amountBasis": null,
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "중간에 물이 부족하면",
+                  "line_index": 20,
+                  "start_ms": 41680,
+                  "frame_ts_ms": null,
+                  "locator_hash": "12ff6b27e6a8d455e4d502fb",
+                  "evidence_id": "S0030"
+                },
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "물을 넣어가면서 끓여 줘",
+                  "line_index": 21,
+                  "start_ms": 43719,
+                  "frame_ts_ms": null,
+                  "locator_hash": "8917f710701d2484170ab380",
+                  "evidence_id": "S0031"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "가래떡",
+            "expected": "수량 미확정",
+            "kind": "unknown_required",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "가래떡",
+              "originalName": "가래떡",
+              "amount": null,
+              "unit": null,
+              "quantityState": "unknown",
+              "amountRawText": null,
+              "amountBasis": null,
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "마지막으로 가래떡과 참기름",
+                  "line_index": 26,
+                  "start_ms": 54320,
+                  "frame_ts_ms": null,
+                  "locator_hash": "70742f8ed9afd71a7bc87a62",
+                  "evidence_id": "S0036"
+                },
+                {
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "snippet": "가래떡",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 50550,
+                  "locator_hash": "da8176b57e9491e6e1a0e04f",
+                  "evidence_id": "O0041"
+                }
+              ]
+            }
+          },
+          {
+            "goldenName": "참기름",
+            "expected": "약간 / 조금",
+            "kind": "abstract",
+            "ingredientPresent": true,
+            "quantityCorrect": true,
+            "actual": {
+              "name": "참기름",
+              "originalName": "참기름",
+              "amount": null,
+              "unit": null,
+              "quantityState": "to_taste",
+              "amountRawText": "조금",
+              "amountBasis": "spoken",
+              "groupLabel": null,
+              "optional": false,
+              "evidenceRefs": [
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "랜덤 게임 마지막으로 가래떡과 참기름",
+                  "line_index": 26,
+                  "start_ms": 54320,
+                  "frame_ts_ms": null,
+                  "locator_hash": "70742f8ed9afd71a7bc87a62",
+                  "evidence_id": "S0036"
+                },
+                {
+                  "source_method": "caption",
+                  "source_provider": "youtube",
+                  "snippet": "조금 넣고 마무리해 주면 뼈없는",
+                  "line_index": 27,
+                  "start_ms": 56840,
+                  "frame_ts_ms": null,
+                  "locator_hash": "1c1d316823db51f31739ec76",
+                  "evidence_id": "S0037"
+                }
+              ]
+            }
+          }
+        ],
+        "ingredientPresence": {
+          "correct": 15,
+          "total": 15
+        },
+        "numeric": {
+          "correct": 10,
+          "total": 10
+        },
+        "allQuantities": {
+          "correct": 12,
+          "total": 15
+        },
+        "steps": [
+          "꼭 한번 구워서 사용해야 근막과 살이 분리되지 않습니다.",
+          "늑간살을 한입 크기로 자릅니다.",
+          "팬에 식용유를 두르고 늑간살의 겉면만 바짝 굽습니다.",
+          "구운 늑간살의 기름을 뺍니다.",
+          "갈아만든 배, 흑설탕, 물엿, 진간장, 맛술, 다진마늘, 후추를 넣습니다.",
+          "선택 사항으로 춘장을 넣습니다.",
+          "양념을 잘 섞습니다.",
+          "냉장고에서 두 시간 재웁니다.",
+          "약불에서 천천히 두 시간 끓입니다.",
+          "중간에 물이 부족하면 물을 넣어가며 끓입니다.",
+          "감자와 당근을 잘라 넣습니다.",
+          "마지막으로 가래떡과 참기름을 조금 넣어 마무리합니다."
+        ],
+        "extraRows": [],
+        "evidenceHashes": {
+          "source.json": "01d865c4ee1c07112ece41098670c0ec123dff6e8d2edbb393c011a02fdafab6",
+          "text-trace.json": "e930d1be22d68aabe20acfe316a97789821e0134a3220841bb08cd32355566c3",
+          "vision-trace.json": "040429f2a7ac6b7957a3c63dfd60d8dfef0ecc1c0ee21762d11a34963c975f11",
+          "worker-safe-output.json": "39239251977d285d5e93c78c22ab94526c44374cf0824d88ee3197bc5291f6b5",
+          "outcome.json": "95afb606075c93c9aa12b8c6b84b4258da0435c4d16a3182094a970fc4525c49"
+        }
+      }
+    },
+    "gradingPolicy": "Frozen reviewed rows; abstract unknown is wrong except onion oil. No numeric unit conversion. Name aliases and original source row order used independently from amount.",
+    "totals": {
+      "ingredientPresence": {
+        "correct": 41,
+        "total": 41
+      },
+      "numeric": {
+        "correct": 34,
+        "total": 34
+      },
+      "allQuantities": {
+        "correct": 38,
+        "total": 41
+      }
+    },
+    "actualModelCallsCurrentTask": 74,
+    "qualityFailedInitialAttempt": "/tmp/mumeok-text-first-evaluation-20261016/3h4nSEOw7_4/attempt-1"
+  },
+  "attemptLedger": [
+    {
+      "cohort": "mumeok-text-first-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T19:23:23.894Z",
+      "processStatus": "success",
+      "actualModelCalls": 2,
+      "modelOutputFiles": 2,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 32318,
+      "textFailure": "NOT_RECIPE_VIDEO",
+      "outcomeSha256": "0f9a32a0dec5e7f942906141117c1b0e1935d3cfd7c633a26fc8f60f3c1231da"
+    },
+    {
+      "cohort": "mumeok-text-first-v77-final-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v77-final-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T19:39:04.654Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 64812,
+      "textFailure": null,
+      "outcomeSha256": "ca35e9e2ba61ad24573990ecb6297ed8ccd8ef9eb9f7de87a7c2488644858a4f"
+    },
+    {
+      "cohort": "mumeok-text-first-v77-name-evidence-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v77-name-evidence-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T19:46:03.815Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 43995,
+      "textFailure": null,
+      "outcomeSha256": "1b977897b0e19e20081758ef44cfdaf4e0d9d63317e9c9bc2b8b4e01f053ef43"
+    },
+    {
+      "cohort": "mumeok-text-first-v77-role-safe-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v77-role-safe-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T19:41:04.063Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 52352,
+      "textFailure": null,
+      "outcomeSha256": "dded1d05b6c65ab73c6408b94a4f3d3da97699c45b1542b6ad499f443364bb0d"
+    },
+    {
+      "cohort": "mumeok-text-first-v77-role-safe-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v77-role-safe-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T19:40:40.755Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 40136,
+      "textFailure": null,
+      "outcomeSha256": "8c09fa698974e77bc3d88710a2500c038de992b9b3e582ae5187c01670f9750c"
+    },
+    {
+      "cohort": "mumeok-text-first-v78-unified-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v78-unified-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T20:05:34.818Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 50394,
+      "textFailure": null,
+      "outcomeSha256": "0ba7f812a05f0b1715f50fedb58aa349959832c7a95433f9c9ba81f55b386ba8"
+    },
+    {
+      "cohort": "mumeok-text-first-v79-unified-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v79-unified-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T20:07:57.684Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 62000,
+      "textFailure": null,
+      "outcomeSha256": "123600522167e3a2047ff3a5f3c69136ac53278a1f165e662162badc6ba96c39"
+    },
+    {
+      "cohort": "mumeok-text-first-v79-unified-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v79-unified-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T20:08:40.842Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 50536,
+      "textFailure": null,
+      "outcomeSha256": "e2cfc60cb2f4725a71c4f049aa047957b338cb6a348dd728ae3649f5a33c58ea"
+    },
+    {
+      "cohort": "mumeok-text-first-v79-unified-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v79-unified-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T20:07:58.957Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 45488,
+      "textFailure": null,
+      "outcomeSha256": "f449983013065f8c670e8239d529aca80280c8980702cc87a9d39e6ad7948b9a"
+    },
+    {
+      "cohort": "mumeok-text-first-v80-unified-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v80-unified-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T20:29:07.883Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 59896,
+      "textFailure": null,
+      "outcomeSha256": "e10beb6f5707871c292a4f7dcd1ab10b07655be0bd1e797019a8263500e5cd59"
+    },
+    {
+      "cohort": "mumeok-text-first-v80-unified-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v80-unified-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T20:29:28.472Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 68462,
+      "textFailure": null,
+      "outcomeSha256": "3cdb51144dc0a57905429eb4b21470f7b5fe7205fc50d3092bd8ef787585e2c2"
+    },
+    {
+      "cohort": "mumeok-text-first-v80-unified-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v80-unified-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T20:29:17.733Z",
+      "processStatus": "success",
+      "actualModelCalls": 2,
+      "modelOutputFiles": 2,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 34124,
+      "textFailure": null,
+      "outcomeSha256": "3c4ed574687e2e50b941bc65a35cc93eea2c590e16ac368f612830859d0853cb"
+    },
+    {
+      "cohort": "mumeok-text-first-v81-unified-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v81-unified-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T20:36:29.707Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 101920,
+      "textFailure": null,
+      "outcomeSha256": "923a77dd4e8a65c35c73aa3b1c8add775e8ac62f1d6a8d30da8f744828fb81bc"
+    },
+    {
+      "cohort": "mumeok-text-first-v81-unified-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v81-unified-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T20:36:48.596Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 90358,
+      "textFailure": null,
+      "outcomeSha256": "fbcb25c1856bd810d16ff6eb7156fb88625501d6382e5e04ea664ec1e77300c3"
+    },
+    {
+      "cohort": "mumeok-text-first-v81-unified-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v81-unified-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T20:36:39.633Z",
+      "processStatus": "success",
+      "actualModelCalls": 2,
+      "modelOutputFiles": 2,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 57837,
+      "textFailure": null,
+      "outcomeSha256": "7b771fd406181511ddff558c087c9618364e5b2e19faa7514cd3771bd710d4d1"
+    },
+    {
+      "cohort": "mumeok-text-first-v82-final-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v82-final-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T20:48:48.858Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 93818,
+      "textFailure": null,
+      "outcomeSha256": "34149b49afda1a560abf9b6ebdcb39047051bd9ce14f5d13a813a2a57465fdb7"
+    },
+    {
+      "cohort": "mumeok-text-first-v82-final-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v82-final-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T20:49:10.118Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 93838,
+      "textFailure": null,
+      "outcomeSha256": "a653aed591bf47c8575816d11c1bb109d78ac3373dc0a1ef52f264f4494a7713"
+    },
+    {
+      "cohort": "mumeok-text-first-v82-final-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v82-final-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T20:48:58.808Z",
+      "processStatus": "success",
+      "actualModelCalls": 2,
+      "modelOutputFiles": 2,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 49807,
+      "textFailure": null,
+      "outcomeSha256": "4568f48888171e3121fdb8f054dffd632571d9a623b3b8f693877c5929efeb18"
+    },
+    {
+      "cohort": "mumeok-text-first-v83-final-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v83-final-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T20:58:54.397Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 65679,
+      "textFailure": null,
+      "outcomeSha256": "319c7ffb36441dc047a365d7cf761851fd192fb2bd6b9a5e1dc1ef89b9818101"
+    },
+    {
+      "cohort": "mumeok-text-first-v83-final-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v83-final-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T20:59:15.099Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 53361,
+      "textFailure": null,
+      "outcomeSha256": "1ca20cb9db7ac9dd90c4bdcd8faeab7f88d33c49274c52b1117ddc9054d6bd0f"
+    },
+    {
+      "cohort": "mumeok-text-first-v83-final-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v83-final-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T20:59:04.797Z",
+      "processStatus": "success",
+      "actualModelCalls": 2,
+      "modelOutputFiles": 2,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 37262,
+      "textFailure": null,
+      "outcomeSha256": "35f0d096dc7b8888644e9943dab01c6b70072628407e2e9465599841babfc764"
+    },
+    {
+      "cohort": "mumeok-text-first-v84-final-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v84-final-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T21:09:41.386Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 69494,
+      "textFailure": null,
+      "outcomeSha256": "13e1c967f3e0340a543cd4bee569d6a17dca0c6b0f7f8bfaa25957debc1e7331"
+    },
+    {
+      "cohort": "mumeok-text-first-v84-final-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v84-final-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T21:10:05.519Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 49324,
+      "textFailure": "NOT_RECIPE_VIDEO",
+      "outcomeSha256": "afc3d1fe3983ccd0893e751ecc5cb3097e8528607ed647e9e5559fc4510122d2"
+    },
+    {
+      "cohort": "mumeok-text-first-v84-final-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v84-final-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T21:09:52.765Z",
+      "processStatus": "success",
+      "actualModelCalls": 2,
+      "modelOutputFiles": 2,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 36475,
+      "textFailure": null,
+      "outcomeSha256": "75074c228ec473e7b8dc93cf3f38e1b218c3e32d5a5d248393c0be3edfc95382"
+    },
+    {
+      "cohort": "mumeok-text-first-v85-final-evaluation-20261016",
+      "videoId": "3h4nSEOw7_4",
+      "path": "/tmp/mumeok-text-first-v85-final-evaluation-20261016/3h4nSEOw7_4/attempt-1",
+      "startedAt": "2026-10-16T21:18:17.034Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 68821,
+      "textFailure": null,
+      "outcomeSha256": "463f67277faffb4e9cb1a0290c4b277da239eeeccae965a407fb317ce30eaa2c"
+    },
+    {
+      "cohort": "mumeok-text-first-v85-final-evaluation-20261016",
+      "videoId": "pjwILwDVC7U",
+      "path": "/tmp/mumeok-text-first-v85-final-evaluation-20261016/pjwILwDVC7U/attempt-1",
+      "startedAt": "2026-10-16T21:18:34.636Z",
+      "processStatus": "success",
+      "actualModelCalls": 3,
+      "modelOutputFiles": 3,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 51053,
+      "textFailure": null,
+      "outcomeSha256": "95afb606075c93c9aa12b8c6b84b4258da0435c4d16a3182094a970fc4525c49"
+    },
+    {
+      "cohort": "mumeok-text-first-v85-final-evaluation-20261016",
+      "videoId": "ytrHKwmjXuQ",
+      "path": "/tmp/mumeok-text-first-v85-final-evaluation-20261016/ytrHKwmjXuQ/attempt-1",
+      "startedAt": "2026-10-16T21:18:26.066Z",
+      "processStatus": "success",
+      "actualModelCalls": 2,
+      "modelOutputFiles": 2,
+      "failedModelCalls": 0,
+      "repairCalls": 0,
+      "elapsedMs": 40047,
+      "textFailure": null,
+      "outcomeSha256": "fd94613b508061ee62070b840b5cdf743c26776806b57429340d4e8120080345"
+    }
+  ],
+  "webBoundaryReplay": {
+    "modelCalls": 0,
+    "identityRewritten": false,
+    "proofs": [
+      {
+        "id": "3h4nSEOw7_4",
+        "ingredientCount": 18,
+        "stepCount": 11,
+        "status": "accepted"
+      },
+      {
+        "id": "ytrHKwmjXuQ",
+        "ingredientCount": 9,
+        "stepCount": 5,
+        "status": "accepted"
+      },
+      {
+        "id": "pjwILwDVC7U",
+        "ingredientCount": 15,
+        "stepCount": 12,
+        "status": "accepted"
+      }
+    ]
+  },
+  "sourceAndRawResultHashes": {
+    "3h4nSEOw7_4": {
+      "vision-trace.json": "927902f1de6f4ec058af210500558ad9be2d73b03bca77a85363e15f004bd61a",
+      "outcome.json": "463f67277faffb4e9cb1a0290c4b277da239eeeccae965a407fb317ce30eaa2c",
+      "source.json": "5af6e2a122eb19fe868f795f150e13cdd437a78ddb654c65c49a287cba03864f",
+      "worker-safe-output.json": "6de44d686bfaea6c973fc58db822ea2a951010e5a76c6f97eb9bd6ebc41f4a24",
+      "verifier-trace.json": "62c8db253a9d2dfb8a7caeed63237cfb79c8d67ac47115d556cf4a957b03be23",
+      "captions.json": "35811967ab9adb2ee3c9e92bf30338faea40c5ad3bc6ac782a3783322583ea39",
+      "raw-extraction-result.json": "2584e1e36458860b1dbb878f4abf3a6b3a2221f4c0861d002fc45ea3c4d659e7",
+      "identity.json": "d0bce130af855fa632b7a149ed82d724fa60892c0027006962d4523881641446",
+      "attempt.started.json": "9d32c4ec44157e9c373ba1464a591a4f41739f8b486b784d6452395c10692569",
+      "text-trace.json": "6f3d92c185f8f5485d8dbebfbb8c22e82cf04c7f36ac3b72f6155d88ef99fbee",
+      "vision-preparation-timing.json": "c7b9c62dad48911e77cf6e031e31125c995b72f77df95b80d223254b3365397e",
+      "source-collection-timing.json": "9b5e1418f2f0ab82a55d74257e1d24faefeb3f536cf375d461372bcf775a7392"
+    },
+    "ytrHKwmjXuQ": {
+      "vision-trace.json": "981b451b1685fbe4cf0b6c6f2e9957659dd447d640318bc44ca65bd054033a53",
+      "outcome.json": "fd94613b508061ee62070b840b5cdf743c26776806b57429340d4e8120080345",
+      "source.json": "7e0a11b98887bbeb1ddc24f682c992b955f79e602358f15730a5848550afa040",
+      "worker-safe-output.json": "944cd91eb1c5268ccd4c278567c22a787d227ab3056a2b2508b4b398361c1c92",
+      "verifier-trace.json": "813b00648411b6ea535090da8bc09745bd76d726f3658409c3415ad92bbc0d12",
+      "captions.json": "c6fe9b35b61d23b6d03ff5424b463374e77235513965932743d37476bbd076aa",
+      "raw-extraction-result.json": "eb10585768902686c7e94f26af939eb3b0c5f3883dc80f0d280639052bbd6068",
+      "identity.json": "d0bce130af855fa632b7a149ed82d724fa60892c0027006962d4523881641446",
+      "attempt.started.json": "1fd0dfa7a0b9d1a1e1f01624ad404f7ee62711942f97e1cb168d3d209e45fa54",
+      "text-trace.json": "3cf1f6d4e5f23dfbf7c39519690c89c3a190d2fed45cb09eff5f71550ad49099",
+      "vision-preparation-timing.json": "38ca5181f3aeffae36efe9095d82465e073e5e428c652f5c99bead08643664bc",
+      "source-collection-timing.json": "d19edbb3bbe261fb7c0ca8ed6d8d1731c35861d0dca7eafa361c6ca59322ea45"
+    },
+    "pjwILwDVC7U": {
+      "vision-trace.json": "040429f2a7ac6b7957a3c63dfd60d8dfef0ecc1c0ee21762d11a34963c975f11",
+      "outcome.json": "95afb606075c93c9aa12b8c6b84b4258da0435c4d16a3182094a970fc4525c49",
+      "source.json": "01d865c4ee1c07112ece41098670c0ec123dff6e8d2edbb393c011a02fdafab6",
+      "worker-safe-output.json": "39239251977d285d5e93c78c22ab94526c44374cf0824d88ee3197bc5291f6b5",
+      "verifier-trace.json": "13ff0a510da533e54eb23a5d3c0d2c50f369e7c6730e635e805e09a43c8b8571",
+      "captions.json": "b7c73ca39ac7548db43bd9c20512879d34f919b7e4daf04842a2d82b70d2febc",
+      "raw-extraction-result.json": "05cfb4d0cf12a6f1cb479b25d322c4875fd97eb18f0c4d2ddaa3b56e5722028e",
+      "identity.json": "d0bce130af855fa632b7a149ed82d724fa60892c0027006962d4523881641446",
+      "attempt.started.json": "091bb94d56fe6c8d72a4bca5719632abba8e1e3eb4035bd76174ab6375609c0a",
+      "text-trace.json": "e930d1be22d68aabe20acfe316a97789821e0134a3220841bb08cd32355566c3",
+      "vision-preparation-timing.json": "c468c0d0258f2a3a47f402a7e9be743303f38edac4c9edaf8f3a775f82e84a0a",
+      "source-collection-timing.json": "d8217ad448980495308244a95d06ac3e86948db029a398652cb71749e544e6e6"
+    }
+  },
+  "qualityLimitations": [
+    {
+      "videoId": "pjwILwDVC7U",
+      "type": "quantity",
+      "rows": [
+        "식용유",
+        "후추",
+        "물"
+      ],
+      "actual": "unknown/null quantity",
+      "expected": "fixed gold abstract amount 약간",
+      "reason": "Literal quantity not stated in collected authored/caption/OCR evidence; source cooking use is known. Kept unknown rather than silently grade as 약간 or invent g."
+    },
+    {
+      "videoId": "3h4nSEOw7_4",
+      "type": "optionality",
+      "row": "당근",
+      "actual": false,
+      "expected": true,
+      "reason": "Authored ingredient row false is locked; caption conditional use not merged into this flag. Separate from numeric and presence scores."
+    },
+    {
+      "videoId": "3h4nSEOw7_4",
+      "type": "additional-conditional-row",
+      "row": "청양고추가루",
+      "reason": "Source-backed optional half replacement of medium chili powder; not an omitted gold row and not included in ingredient recall precision claim."
+    },
+    {
+      "videoId": "pjwILwDVC7U",
+      "type": "procedure-format",
+      "reason": "One literal author grilling advice precedes eleven chronological vision steps. Step count is not a completeness/accuracy score."
+    }
+  ],
+  "previousRegressions": {
+    "v80": "water row missing in actual beef output",
+    "v81": "separate step/evidence arrays could shift index",
+    "v82": "flour and sugar quantities unresolved; judge context omitted earlier modifiers",
+    "v83": "automatic time ordering incorrectly moved grilling before cutting",
+    "v84": "literal OCR action expansion duplicated procedure and copied author-comment citation lost four correct onion quantities"
+  },
+  "approvalHistory": {
+    "v79BeefDuplicateStart": "denied before execution once; read-only absence proof supplied; original operation retried once and completed",
+    "v80Nakji": "two pre-execution denials; original user evidence explicitly authorizing sufficient Luna low calls supplied; reconsidered exact operation allowed and completed",
+    "currentBlocker": null,
+    "uncertainExecution": false
+  },
+  "checks": {
+    "targetedRegression": "11 files / 351 passed including 3 temporary saved actual boundary tests; permanent suite 10 files / 348 tests",
+    "typecheck": "passed",
+    "selectedEslint": "0 errors / 0 warnings",
+    "verifyAntiSlop": "passed; 0 new findings; current185/baseline207",
+    "bundleFilesVerified": 23,
+    "independentReview": {
+      "reviewer": "source_priority_review",
+      "mode": "read-only",
+      "modelCalls": 0,
+      "mediaCalls": 0,
+      "databaseCalls": 0,
+      "codeChanges": 0,
+      "reportedParserAssertions": 19,
+      "verified": [
+        "same candidate manifest23files and gold/spec hashes",
+        "independent numeric34/34 presence41/41 allquantity38/41",
+        "actual output web boundary roundtrip3/3 unchanged identity",
+        "27attempt74calls159921msfinal1563607msall",
+        "no procedure generated duplicates or cut/grill inversion"
+      ],
+      "remaining": [
+        "beef oil/pepper/water abstract quantity mismatches",
+        "nakji carrot optional flag not reflected"
+      ],
+      "recommendation": "Record limitations and finish without additional model calls; not a full P5 pass"
+    }
+  },
+  "notExecuted": [
+    "production DB write",
+    "queue RPC",
+    "schema change",
+    "new credentials",
+    "worker/gen49 changes",
+    "deployment",
+    "HTTP enqueue",
+    "UI mobile/desktop",
+    "full build",
+    "full P5"
+  ],
+  "rawRoot": "/tmp/mumeok-text-first-v85-final-evaluation-20261016",
+  "rawPreservation": "source snapshots, captions, wire/normalized proposals, model JSON/logs, read boundary receipts, verifier traces, safe output, started guards and outcomes retained without overwriting earlier cohorts"
+}

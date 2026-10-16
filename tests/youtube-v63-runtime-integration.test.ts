@@ -26,7 +26,7 @@ describe("v71 source-anchored runtime integration", () => {
       keyframesPerRecipe: 8,
       screenOcrMode: "auto",
       ocrStrategy: "auto",
-      timeoutMs: 180_000,
+      timeoutMs: 420_000,
     });
     expect(worker.createExtractionClientOptions(() => undefined).timeoutMs).toBe(1_200_000);
     expect(worker.createExtractionIdentity(options)).toEqual({ ...I031_EXACT_IDENTITY, codexCliVersion: "0.154.0-alpha.6.2" });

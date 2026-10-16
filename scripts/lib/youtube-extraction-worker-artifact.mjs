@@ -145,6 +145,7 @@ export const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES = Object.freeze([
   "scripts/recipe-loop/lib/single-pass-vision.mjs",
   "scripts/recipe-loop/lib/source-anchored-vision.mjs",
   "scripts/recipe-loop/lib/source-quantity-owner-hints.mjs",
+  "scripts/recipe-loop/lib/text-first-source-routing.mjs",
   "scripts/recipe-loop/macos-vision-ocr.swift",
   "scripts/recipe-loop/snapshot-video.mjs",
   "worker.mjs",

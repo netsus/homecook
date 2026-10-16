@@ -1,0 +1,82 @@
+{
+  "modelCalls": 0,
+  "mediaCalls": 0,
+  "goldenSha256": "848c29e69fba85ce2a34b08b6bc9c9b6b39f0e2ef309818f2894e8b50975f7b4",
+  "videos": [
+    {
+      "id": "3h4nSEOw7_4",
+      "trace": "/tmp/mumeok-caption-candidate-evaluation-20261016/3h4nSEOw7_4/verifier-trace.json",
+      "traceSha256": "4d09b2354e0bc792d3e993ed277b59164b39135e16c95921949302f0f8855dcb",
+      "retainedNumeric": 15,
+      "changes": [
+        {
+          "index": 7,
+          "name": "식용유",
+          "before": {
+            "amount": null,
+            "unit": null,
+            "state": "conflicting"
+          },
+          "after": {
+            "amount": "2",
+            "unit": "스푼",
+            "state": "explicit"
+          },
+          "amountRawText": "2스푼",
+          "evidenceRefs": [
+            {
+              "evidence_id": "S0009",
+              "source_method": "description",
+              "source_provider": "youtube",
+              "line_index": 8,
+              "start_ms": null,
+              "frame_ts_ms": null,
+              "snippet": "식용유 2스푼 16g",
+              "locator_hash": "e79188ae2cd6075a3afd0337"
+            }
+          ],
+          "quantitySelection": {
+            "policy": "authored-source-priority-v1",
+            "selectedEvidenceId": "S0009",
+            "correctionTargetEvidenceId": null,
+            "alternatives": [],
+            "unresolvedEvidenceRefs": [
+              {
+                "evidence_id": "S0044",
+                "source_method": "caption",
+                "source_provider": "youtube",
+                "line_index": 20,
+                "start_ms": 41000,
+                "frame_ts_ms": null,
+                "snippet": "식용류 두 스푼 12g",
+                "locator_hash": "3e8dfb1c74f5fc0b18ee3055"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ytrHKwmjXuQ",
+      "trace": "/tmp/mumeok-caption-candidate-evaluation-20261016/ytrHKwmjXuQ/verifier-trace.json",
+      "traceSha256": "5c46c9ed186be24a0851590e0f7a3cc77d66de69e9aa61f1d82954f4601e2e6c",
+      "retainedNumeric": 7,
+      "changes": []
+    },
+    {
+      "id": "pjwILwDVC7U",
+      "trace": "/tmp/mumeok-v74-deployed-smoke-20261016/pjwILwDVC7U/verifier-trace.json",
+      "traceSha256": "236577e4266e07c745a02e99df5292cc820dc31da13d88d1ad9434e441bf6c3d",
+      "retainedNumeric": 8,
+      "changes": []
+    }
+  ],
+  "baselineCommit": "67e6d0c2be2eeef3831b45855755d9dada4925f4",
+  "baselineClient": "codex-vision-source-anchored-v74-caption-shared-owner",
+  "candidateClient": "codex-vision-source-anchored-v75-authored-conflict-priority",
+  "baselineV74SavedBeefFullObjectMatch": true,
+  "ingredientCountsAndStepsUnchanged": true,
+  "allCandidateRowsPassedEvidenceSanitizer": true,
+  "rawInputsUnchanged": true,
+  "totalPreviouslyValidNumericRetained": 30
+}
