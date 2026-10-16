@@ -58,6 +58,9 @@ describe("closed R2 F01 review boundary", () => {
   it("rejects an empty pin before reading environment or production state", () => {
     const root = fixture().root;
     writeFileSync(join(root, "prelaunch-youtube-v74-cutover.mjs"), readFileSync(join(repository, "scripts/lib/prelaunch-youtube-v74-cutover.mjs")));
+    for (const name of ["youtube-fingerprint-recovery-authority.mjs","youtube-fingerprint-recovery.mjs","youtube-fingerprint-approval.mjs"]) {
+      writeFileSync(join(root,name),readFileSync(join(repository,"scripts/lib",name)));
+    }
     const libraryPath = join(root, "prelaunch-web-deploy.mjs");
     const library = readFileSync(join(repository, "scripts/lib/prelaunch-web-deploy.mjs"), "utf8");
     const pinPattern = /export const CLOSED_R2_REVIEW_PIN = Object\.freeze\(\{[\s\S]*?\}\);/u;

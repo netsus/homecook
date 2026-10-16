@@ -42,6 +42,9 @@ import {
 
 import { assertV74MetadataHandoff, assertV74WorkerSuccessor, assertV74LoadedService, assertV74SourceHandoff, assertV74WebHandoff, V74_WEB_HANDOFF_SHA256, V74_RELEASE, V74_WEB_PREDECESSOR, v74Paths, V74_ACTIVATION_SHA256, V74_OPERATION_DIRECTORY } from "./lib/prelaunch-youtube-v74-cutover.mjs";
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
+import { assertFingerprintSource, readFingerprintRecoveryAuthority } from "./lib/youtube-fingerprint-recovery-authority.mjs";
+import { prepareStartProductionRuntimeEnv } from "./lib/start-production-runtime.mjs";
+import { assertYoutubeEnqueueRuntimeSecrets } from "./lib/youtube-enqueue-runtime-preflight.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./lib/youtube-extraction-worker-artifact.mjs";
 import { readYoutubeExtractionWorkerCredential, parseLaunchctlPrintStatus } from "./lib/youtube-extraction-worker-ops.mjs";
 import { readWorkerEnvironment } from "./lib/youtube-extraction-worker-runtime.mjs";
@@ -148,12 +151,22 @@ function approvedSourceAncestor(ancestor,descendant) {
   return spawnSync("git",["-C",repository,"merge-base","--is-ancestor",ancestor,V74_WEB_PREDECESSOR],{stdio:"ignore"}).status===0
     &&spawnSync("git",["-C",repository,"merge-base","--is-ancestor",V74_RELEASE,descendant],{stdio:"ignore"}).status===0;
 }
+function fingerprintSourceHandoff(from,to,files) {
+  const recovery=readFingerprintRecoveryAuthority(file=>readClosedR2PrivateBytes(file,repository,524288));
+  if (!recovery || from!==recovery.plan.from || to!==recovery.plan.candidate) return null;
+  const digests=Object.fromEntries([...files].sort().map(file=>[file,[from,to].map(ref=>
+    git(["ls-tree",ref,"--",file]).length?hash(execFileSync("git",["-C",repository,"show",`${ref}:${file}`],
+      {maxBuffer:32*1024*1024,stdio:["ignore","pipe","pipe"]})):null)]));
+  return {plan:recovery.plan,from,to,digests};
+}
 function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript,
   youtubeTrialReview = null, youtubeResolutionReview = null, integratedMaster = false, protectedCandidate = null) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
   const files = prelaunchChangedFiles((args) => command("git", ["-C", repository, ...args], { trimOutput: false }), live.ref, target);
   const v74Support = option === "--reviewed-ref" && live.ref === V74_WEB_PREDECESSOR && target === V74_RELEASE ? verifiedV74Source() : null;
+  const fingerprintHandoff = fingerprintSourceHandoff(live.ref,target,files);
+  const fingerprintSupport = fingerprintHandoff ? assertFingerprintSource(fingerprintHandoff) : null;
   if (!v74Support) git(["merge-base", "--is-ancestor", ...prelaunchSourceAncestry(option, ref, live.ref, target)]);
   if (protectedCandidate) validateProtectedCandidate(protectedCandidate.review, live, { target, files }, protectedCandidate.context);
   if (youtubeTrialReview) {
@@ -186,7 +199,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   if (recipeSaveHandoff) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
-      reviewedIntegratedFiles: integratedReview?.reviewedFiles ?? v74Support,
+      reviewedIntegratedFiles: integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport,
       // validateProtectedCandidate above already checked the complete exact byte pairs.
       reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
       reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff), eslintConfigDigests });
@@ -266,6 +279,7 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
         previous: live.plist, next: plist }) : options;
       assertClosedR2ContinuationOptions(continuationOptions);
       assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment,
+        reviewedFingerprintSource: fingerprintSourceHandoff(live.ref,selection.target,selection.files),
         quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
         reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       if (!options.envFile && !isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
@@ -661,7 +675,7 @@ function loadV74WorkerSuccessor(successor, maintenance, continuation) {
   const origin = { personalSuccessor: successor.pointer, databaseMaintenance: maintenance.pointer,
     c04Activation: continuation.activation.pointer, c04Post: continuation.post.pointer };
   assertV74WorkerSuccessor({ proof, baseline: successor.review.database.workerBaseline, approvedPolicy: continuation.observation, origin });
-  return { proof, origin };
+  return { proof, origin, fingerprintRecovery: readFingerprintRecoveryAuthority(file => readClosedR2PrivateBytes(file,repository,524288)) };
 }
 async function verifyV74ActiveWorker(proof) {
   const paths = v74Paths(), node = join(homedir(), ".nvm/versions/node/v22.19.0/bin/node");
@@ -698,6 +712,13 @@ async function verifyProtectedBaseline(review, plan, options) {
     || hash(readClosedR2PrivateBytes(options.dbConfig, repository, 65536)) !== review.database.configSha256)) throw new DeploymentError("보호 reader의 승인된 config bytes가 다릅니다.");
   const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
   const observed = await createProtectedPrelaunchAdapter(base, currentReview.feature, currentReview, databaseMaintenance).observe(undefined, "protected-baseline-readback");
+  const fingerprintPolicy = JSON.parse((await base.query(`SELECT jsonb_build_object('currentFingerprintKeyVersion',fingerprint_key_version,
+    'previousFingerprintKeyVersion',CASE WHEN previous_fingerprint_valid_until>=clock_timestamp() THEN previous_fingerprint_key_version ELSE NULL END,
+    'previousFingerprintValidUntil',CASE WHEN previous_fingerprint_valid_until>=clock_timestamp() THEN previous_fingerprint_valid_until ELSE NULL END)
+    FROM private.youtube_extraction_current_policy WHERE policy_key='primary';`)).trim());
+  const operating = current();
+  assertYoutubeEnqueueRuntimeSecrets({env:prepareStartProductionRuntimeEnv({repositoryRoot:repository,
+    processEnv:productionEnvironment(operating.plist)}),readiness:fingerprintPolicy});
   const workerContinuation = successor ? loadCookedWeightAttestationWorkerContinuation(successor, repository) : null;
   const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
   const v74Successor = workerContinuation && V74_ACTIVATION_SHA256 ? loadV74WorkerSuccessor(successor, databaseMaintenance, workerContinuation) : null;
@@ -1632,6 +1653,7 @@ async function main() {
       verifyClosedR2Control(review, repository);
     } else if (closedContext) {
       assertRound2InheritanceBoundaries({ previous: live.plist, next: live.plist, files: selection.files, databaseDeployment: selection.scope.database.length > 0,
+        reviewedFingerprintSource: fingerprintSourceHandoff(live.ref,selection.target,selection.files),
         quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
         reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       verifyClosedR2Control(closedContext.review, repository);

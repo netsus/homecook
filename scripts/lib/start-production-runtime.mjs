@@ -1,5 +1,6 @@
 import { loadFullLocalAppSecretEnv } from "./full-local-app-runtime-env.mjs";
 import { loadProductionEnvFiles } from "./production-data-quality.mjs";
+import { loadFingerprintV2SecretEnv } from "./youtube-fingerprint-secret-env.mjs";
 
 /**
  * @param {{
@@ -23,5 +24,7 @@ export function prepareStartProductionRuntimeEnv({
     repositoryRoot,
     secretDirectory: processEnv.HOMECOOK_FULL_LOCAL_SECRET_DIR,
   });
-  return Object.freeze({ ...processEnv, ...secretEnv });
+  const merged = { ...processEnv, ...secretEnv };
+  const fingerprintEnv = loadFingerprintV2SecretEnv({ repositoryRoot, env: merged });
+  return Object.freeze({ ...merged, ...fingerprintEnv });
 }

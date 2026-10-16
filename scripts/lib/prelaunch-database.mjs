@@ -1,5 +1,6 @@
-import { assertV74WorkerSuccessor } from "./prelaunch-youtube-v74-cutover.mjs";
+import { assertV74WorkerSuccessor, V74_ACTIVATION_SHA256 } from "./prelaunch-youtube-v74-cutover.mjs";
 import { createHash } from "node:crypto";
+import { fingerprintWorkerSuccessor, assertFingerprintCurrentPolicy } from "./youtube-fingerprint-recovery-authority.mjs";
 import { isDeepStrictEqual } from "node:util";
 import { spawnSync } from "node:child_process";
 import { closeSync, openSync } from "node:fs";
@@ -225,6 +226,9 @@ export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-
       const active = (await query(`SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=${literal(applicationName)}${sessionQuery ? " AND pid<>pg_backend_pid()" : ""});`)).trim() === "t";
       const result = { target, ledger: JSON.parse((await query(PROTECTED_LEDGER_SQL)).trim()), catalogSha256: (await query(PROTECTED_CATALOG_SQL)).trim(),
         immutableSha256: immutable.catalog, preservedRowsSha256: digest(JSON.stringify(immutable.rows)), writerEnabled: control === "true", active };
+      if ([COOKED_WEIGHT_ATTESTATION_FEATURE,NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(feature)) {
+        result.fingerprintPolicy = JSON.parse((await query("SELECT to_jsonb(p) FROM private.youtube_extraction_current_policy p WHERE policy_key='primary';")).trim());
+      }
       if (feature === COOKED_WEIGHT_FEATURE) {
         const exists = (await query("SELECT to_regclass('private.cooked_batch_weight_evidence_control') IS NOT NULL;")).trim() === "t";
         const weightControl = exists ? (await query(COOKED_WEIGHT_WRITER_SQL)).trim() : "false";
@@ -913,7 +917,9 @@ export function assertProtectedPrelaunchObservation(review, observation, phase, 
 function assertAttestationWorker(review, worker, safeOff = false, workerControlTransition = false,
   approvedPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null), approvedSuccessor = null) {
   if (!worker || worker.catalogFingerprint !== QUANTITY_V4_WORKER_CATALOG_AFTER) throw new Error("Personal attestation worker critical catalog differs");
-  const successorWorker = approvedSuccessor ? assertV74WorkerSuccessor({ ...approvedSuccessor, baseline: review.database.workerBaseline, approvedPolicy }) : null;
+  const originalWorker = approvedSuccessor ? assertV74WorkerSuccessor({ ...approvedSuccessor, baseline: review.database.workerBaseline, approvedPolicy }) : null;
+  const successorWorker = originalWorker ? fingerprintWorkerSuccessor(originalWorker, approvedSuccessor.fingerprintRecovery,
+    approvedSuccessor.origin, V74_ACTIVATION_SHA256) : null;
   for (const key of ["credentialGeneration", "credentialRowSha256", "policyRowSha256", "policyStableSha256", "schemaIdentity", "snapshotDigest", "workerPolicyEnabled", "workerReleaseSha"]) {
     // Only the original controlled worker CLI checks the enabled/timestamp whole-row transition.
     // Its fixed observer retains the exact stable policy, credential and critical catalog here.
@@ -952,6 +958,7 @@ export function assertCookedWeightAttestationCurrentObservation(successor, obser
   const quantity = observation.quantityWriterEnabled ?? observation.writerEnabled;
   if (typeof quantity !== "boolean" || (quantityWriterState && quantity !== (quantityWriterState === "on"))) throw new Error("Personal attestation current quantity state differs");
   assertAttestationWorker(review, observation.worker, safeQuantityOff || workerControlTransition, workerControlTransition, approvedWorkerPolicy, approvedWorkerSuccessor);
+  assertFingerprintCurrentPolicy(approvedWorkerSuccessor?.fingerprintRecovery, observation.fingerprintPolicy, observation.worker);
   return observation;
 }
 

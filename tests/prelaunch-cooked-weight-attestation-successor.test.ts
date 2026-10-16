@@ -15,7 +15,8 @@ const temp = mkdtempSync(join(realpathSync("/tmp"), "attestation-successor-owned
 afterAll(() => rmSync(temp, { recursive: true, force: true }));
 const raw = readFileSync("supabase/migrations/20261014224500_cooked_weight_user_attestation.sql");
 const payload = raw.toString("utf8").replace(/^begin;\n/u, "").replace(/\ncommit;\n$/u, "");
-let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8");
+let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs", "utf8")
+  .replace('from "./youtube-fingerprint-recovery-authority.mjs"',`from "${pathToFileURL(join(process.cwd(),"scripts/lib/youtube-fingerprint-recovery-authority.mjs")).href}"`);
 // Neutralize every web authority in the disposable copy before import. No live HOME/ROOT lookup.
 source = source.replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,
   (_text, name: string) => `export const ${name} = Object.freeze({ path: null, sha256: null });`);
@@ -397,6 +398,7 @@ describe("exact private attestation227→228 successor, synthetic transports onl
       }), { name: db.QUANTITY_V4_NORMAL_COLUMNS.find(row => row.table === table)!.added, type: "jsonb", not_null: false, default: null }] };
     });
     const query = vi.fn(async (sql: string) => {
+      if (sql.startsWith("SELECT to_jsonb(p) FROM private.youtube_extraction_current_policy")) return "{}";
       if (sql === db.PROTECTED_IMMUTABLE_CATALOG_SQL) return f.review.database.afterImmutableSha256;
       if (sql === db.PROTECTED_CATALOG_SQL) return f.review.database.afterCatalogSha256;
       if (sql === db.QUANTITY_V4_NORMAL_DATA_SQL) return sha("9");

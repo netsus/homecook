@@ -7,7 +7,9 @@ const hash = (v: string | Buffer) => createHash("sha256").update(v).digest("hex"
 const sha = (c: string) => c.repeat(64), ref = (c: string) => c.repeat(40);
 const temp = mkdtempSync(join(realpathSync("/tmp"), "recipe-save-owned-"));
 afterAll(() => rmSync(temp, {recursive:true,force:true}));
-let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8").replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,
+let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8")
+  .replace(/from "(\.\/[^"\n]+)"/gu,(_text,relative:string)=>`from "${pathToFileURL(join(process.cwd(),"scripts/lib",relative)).href}"`)
+  .replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,
   (_text,name:string)=>`export const ${name} = Object.freeze({path:null,sha256:null});`);
 source=source.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',()=>`function prelaunchStateRoot() { return ${JSON.stringify(join(temp,"state"))}; }`);
 source=source.replace(/^export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = [^\r\n]*;$/gmu,()=>`export const RECIPE_SAVE_RECOVERY_RELEASE_SHA = "${ref("b")}";`)
@@ -16,7 +18,8 @@ const raw = [Buffer.from("begin;\nSELECT 1;\ncommit;\n"),Buffer.from("begin;\nSE
 const fixedMigrations=[{filename:"20261014225200_recipe_snapshot_reason_identity.sql",sha256:hash(raw[0])},{filename:"20261014225300_recipe_future_patch_http_replay.sql",sha256:hash(raw[1])}];
 source=source.replace(/export const RECIPE_SAVE_RECOVERY_MIGRATIONS = Object.freeze\(\[[\s\S]*?\n\]\);/u,()=>`export const RECIPE_SAVE_RECOVERY_MIGRATIONS = Object.freeze(${JSON.stringify(fixedMigrations)});`);
 source=source.replace(/^export const RECIPE_SAVE_RECOVERY_READER_SOURCES = [^\r\n]*;$/gmu,()=>`export const RECIPE_SAVE_RECOVERY_READER_SOURCES = Object.freeze(${JSON.stringify(Object.fromEntries(["lib/nutrition/recipe-nutrition-calculator.ts","lib/server/recipe-nutrition-snapshot.ts","lib/server/planner-nutrition-summary.ts","lib/server/recipe-snapshot-entrypoint.ts"].map(path=>[path,sha("1")])))});`);
-const webPath=join(temp,"web.mjs");writeFileSync(webPath,source,{mode:0o600});
+const webPath=join(temp,"web.mjs");writeFileSync(webPath,source.replace(/from "(\.\/[^"\n]+)"/gu,
+  (_text,relative:string)=>`from "${pathToFileURL(join(process.cwd(),"scripts/lib",relative)).href}"`),{mode:0o600});
 const web:typeof import("../scripts/lib/prelaunch-web-deploy.mjs")=await import(pathToFileURL(webPath).href);
 const dbPath=join(temp,"database.mjs");writeFileSync(dbPath,readFileSync("scripts/lib/prelaunch-database.mjs","utf8").replace(/from "(\.\/[^"\n]+)"/gu,
   (_text,relative:string)=>`from "${pathToFileURL(relative==="./prelaunch-web-deploy.mjs"?webPath:join(process.cwd(),"scripts/lib",relative)).href}"`),{mode:0o600});
@@ -229,9 +232,9 @@ it("the actual source helper sends partial runtime-only variants to the exact231
  if(start<0||end<=start)throw Error("Actual source helper moved");
  const route="app/api/v1/recipes/[id]/route.ts",serializer="lib/server/recipe-content-snapshot-future-propagation.ts";
  let current:typeof maintenance|null=maintenance,fullAlreadyLive=false;
- const invoke=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync","RECIPE_REQUEST_ROLE_MIGRATION","RECIPE_REQUEST_ROLE_FEATURE",cli.slice(start,end)+";return nutritionSourceHandoff;")(
+ const invoke=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync","RECIPE_REQUEST_ROLE_MIGRATION","RECIPE_REQUEST_ROLE_FEATURE","V74_WEB_PREDECESSOR",cli.slice(start,end)+";return nutritionSourceHandoff;")(
    web.recipeSaveRecoveryRuntimeContract,web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,web.RECIPE_SAVE_RECOVERY_FEATURE,web.RECIPE_SAVE_RECOVERY_MIGRATIONS,web.NUTRITION_VALIDATOR_MIGRATION,()=>current,temp,web.DeploymentError,hash,()=>"owned blob",
-   (_program:string,args:string[])=>args.at(-1)!.endsWith(serializer)?Buffer.from('"recipe-nutrition-v5" // whitespace-only variant'):Buffer.from('"read_recipe_future_patch_result" // comment'),()=>({status:fullAlreadyLive?0:1}),web.RECIPE_REQUEST_ROLE_MIGRATION,web.RECIPE_REQUEST_ROLE_FEATURE);
+   (_program:string,args:string[])=>args.at(-1)!.endsWith(serializer)?Buffer.from('"recipe-nutrition-v5" // whitespace-only variant'):Buffer.from('"read_recipe_future_patch_result" // comment'),()=>({status:fullAlreadyLive?0:1}),web.RECIPE_REQUEST_ROLE_MIGRATION,web.RECIPE_REQUEST_ROLE_FEATURE,"0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7");
  const live={ref:review.from,buildId:review.predecessorBuildId,plistSha256:review.predecessorPlistSha256,bytes:Buffer.from("owned plist")};
  for(const files of [[route],[serializer],[route,serializer],[route,`supabase/migrations/${fixedMigrations[0].filename}`]]){
    const handoff=invoke(live,{target:review.to,files});expect(handoff).toBeTruthy();expect(()=>web.assertRecipeSaveRecoverySourceHandoff(handoff)).toThrow();
