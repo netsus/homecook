@@ -271,3 +271,43 @@ describe("authored source quantity priority", () => {
     expect(selectVideoAuthorComments(items, null)).toEqual([]);
   });
 });
+
+describe("equivalent verified-author citation reanchoring", () => {
+  function copiedList() {
+    const source = "[SOURCE: description]\n[재료]\n가지 ______ 2개\n[만드는법]\n가지가 부드러워지면 볶는다\n[SOURCE: author_comment]\n필요하면 대체하세요\n가지 ______ 2개";
+    const ledger = buildSinglePassEvidenceLedger({ sourceText: source, sourceAnchored: true });
+    const comment = ledger.find((entry: { source_method: string; text: string }) => entry.source_method === "comment" && entry.text.includes("2개"));
+    Object.assign(comment, { verifiedAuthorChannelId: "verified-fixture-channel" });
+    const raw = { recipes: [{ title: "가지 볶음", steps: [], ingredients: [{ name: "가지", sourceName: "가지", amount: "2", unit: "개",
+      optional: false, quantityState: "explicit", evidence: [{ id: comment.id, quote: comment.text }] }] }] };
+    return { ledger, raw };
+  }
+  it("preserves the exact value by citing a unique identical description row and leaves raw untouched", () => {
+    const { ledger, raw } = copiedList(); const before = structuredClone(raw);
+    const checked = validateSourceAnchoredResult(raw, ledger);
+    expect(raw).toEqual(before);
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({ originalName: "가지", amount: "2", unit: "개", quantityState: "explicit",
+      evidenceRefs: [expect.objectContaining({ source_method: "description", snippet: "가지 ______ 2개" })] });
+    expect(checked.corrections).toContainEqual(expect.objectContaining({ code: "equivalent-authored-citation-reanchored" }));
+  });
+  it.each(["unverified", "different-text", "different-role", "ambiguous-description", "wrong-amount", "partial-quote"])("does not reanchor %s", (mode) => {
+    const { ledger, raw } = copiedList();
+    const comment = ledger.find((entry: { id: string }) => entry.id === raw.recipes[0].ingredients[0].evidence[0].id);
+    const description = ledger.find((entry: { source_method: string; text: string }) => entry.source_method === "description" && entry.text.includes("2개"));
+    if (mode === "unverified") delete comment.verifiedAuthorChannelId;
+    if (mode === "different-text") description.text = "가지 2개";
+    if (mode === "different-role") description.scopeLabel = "다른 요리";
+    if (mode === "ambiguous-description") ledger.push({ ...description, id: "EXTRA_DESCRIPTION" });
+    if (mode === "wrong-amount") raw.recipes[0].ingredients[0].amount = "3";
+    if (mode === "partial-quote") raw.recipes[0].ingredients[0].evidence[0].quote = "2개";
+    const checked = validateSourceAnchoredResult(raw, ledger);
+    expect(checked.corrections.some((entry: { code: string }) => entry.code === "equivalent-authored-citation-reanchored")).toBe(false);
+  });
+  it("keeps malformed sibling rows and multiple recipe failures visible", () => {
+    const { ledger, raw } = copiedList();
+    raw.recipes[0].ingredients.push({ ...raw.recipes[0].ingredients[0], evidence: [] });
+    expect(() => validateSourceAnchoredResult(raw, ledger)).toThrow("SOURCE_ANCHORED_SCHEMA");
+    raw.recipes.push(structuredClone(raw.recipes[0]));
+    expect(() => validateSourceAnchoredResult(raw, ledger)).toThrow("SOURCE_ANCHORED_SCHEMA");
+  });
+});

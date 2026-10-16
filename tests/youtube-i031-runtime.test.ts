@@ -151,6 +151,9 @@ describe("YouTube i031 exact runtime", () => {
         finalCompleteness: { ingredients: true, quantities: true, steps: false }, reviewRequired: true, stepGroundingFailure: "JUDGE_FAILED" } } };
     expect(parseYoutubeI031WorkerOutput(partial).meta).toMatchObject({ textFirst: { reviewRequired: true,
       rejectedStepCount: 1, stepGroundingFailure: "JUDGE_FAILED", finalCompleteness: { steps: false } } });
+    const counted = { ...partial, meta: { ...partial.meta, textFirst: { ...partial.meta.textFirst,
+      retainedTextQuantityCompletionCount: 1 } } };
+    expect(parseYoutubeI031WorkerOutput(counted).meta.textFirst).toMatchObject({retainedTextQuantityCompletionCount:1});
   });
 
   it("preserves bounded source priority evidence at the web parsing boundary", () => {
@@ -267,6 +270,23 @@ describe("YouTube i031 exact runtime", () => {
         ...exactWorkerOutput,
         recipe: { ...exactWorkerOutput.recipe, ingredients: [ingredient] },
       }).recipe.ingredients[0]).toMatchObject(ingredient);
+    }
+  });
+
+  it("retains source-backed qualitative quantities while rejecting incompatible evidence and unknown bases", () => {
+    const row = { name: "소금", amount: null, unit: null, optional: false, groupLabel: null, quantityState: "to_taste", amountBasis: "stated",
+      evidenceRefs: [{ source_method: "description", source_provider: "youtube", snippet: "소금 조금 넣는다" }] };
+    const parse = (ingredient: object) => parseYoutubeI031WorkerOutput({ ...exactWorkerOutput,
+      recipe: { ...exactWorkerOutput.recipe, ingredients: [ingredient] } }).recipe.ingredients[0];
+    for (const [basis, method, provider] of [["stated", "description", "youtube"], ["stated", "comment", "youtube"],
+      ["spoken", "caption", "youtube"], ["onscreen", "visual", "macos-vision-ocr"]]) {
+      expect(parse({ ...row, amountBasis: basis, evidenceRefs: [{ ...row.evidenceRefs[0], source_method: method, source_provider: provider }] }))
+        .toMatchObject({ quantityState: "to_taste", amountBasis: basis, amount: null, unit: null });
+    }
+    for (const invalid of [{ ...row, amount: "5", unit: "g" }, { ...row, evidenceRefs: [] }, { ...row, amountBasis: "spoken" },
+      { ...row, amountBasis: "visual-estimate" }, { ...row, quantityState: "unknown" }, { ...row, quantityState: "conflicting" },
+      { ...row, amountBasis: "onscreen", evidenceRefs: [{ source_method: "visual", source_provider: "codex-vision", snippet: "소금 조금" }] }]) {
+      expect(() => parse(invalid)).toThrow(YoutubeI031RuntimeError);
     }
   });
 

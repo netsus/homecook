@@ -16,11 +16,11 @@ export const I031_EXACT_IDENTITY = Object.freeze({
   provider: "codex-vision-keyframes",
   model: "gpt-5.6-luna",
   selectorModel: "gpt-5.6-sol",
-  sourcePromptVersion: "source-anchored-single-recipe-v21-authored-procedure-completion",
+  sourcePromptVersion: "source-anchored-single-recipe-v26-coupled-procedure-source-citations",
   selectorPromptVersion: "deterministic-evidence-v3-ingredient-event-preserving-largest-gap",
-  finalPromptVersion: "source-anchored-single-recipe-v21-authored-procedure-completion",
-  clientVersion: "codex-vision-source-anchored-v80-authored-procedure-completion",
-  executionConfigSignature: "34dca963389b5fb68a6b30d8",
+  finalPromptVersion: "source-anchored-single-recipe-v26-coupled-procedure-source-citations",
+  clientVersion: "codex-vision-source-anchored-v85-coupled-procedure-source-citations",
+  executionConfigSignature: "bf2e196ca9db50eca22f2b0d",
   frameExtractorVersion: "extract-video-frames-v7-adaptive-screen-ocr",
   frameMode: "hybrid",
   interval: 4,
@@ -95,7 +95,8 @@ export interface YoutubeI031SafeMeta {
     sourceCollection: Record<"description"|"authorComments", { status: string; reason: string|null }> | null;
     textMs: number|null; visionMs: number|null; stepGroundingMs: number|null;
     finalCompleteness: { ingredients: boolean; quantities: boolean; steps: boolean };
-    reviewRequired: boolean; rejectedStepCount: number; stepGroundingFailure: string|null };
+    reviewRequired: boolean; rejectedStepCount: number; stepGroundingFailure: string|null;
+    retainedTextQuantityCompletionCount: number };
   modelCallCount: number;
   frameCount: number;
   selectedFrameCount: number;
@@ -416,7 +417,7 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
     }
     const textSource = (reference: YoutubeI031EvidenceRef) => reference.source_method !== "visual"
       || reference.source_provider === "macos-vision-ocr";
-    if (quantityState === "explicit") {
+    if (quantityState === "explicit" || quantityState === "to_taste" && amountBasis !== null) {
       const allowedBasis = new Set(["stated", "source-bound-stated", "spoken", "onscreen"]);
       if (amountBasis === undefined || amountBasis === null || !allowedBasis.has(amountBasis)) {
         throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 explicit amount basis is invalid: ${index}`);
@@ -443,7 +444,7 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
         throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 estimated evidence source is invalid: ${index}`);
       }
     }
-    if (["unknown", "conflicting", "to_taste"].includes(quantityState ?? "") && amountBasis !== null) {
+    if (["unknown", "conflicting"].includes(quantityState ?? "") && amountBasis !== null) {
       throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 nonnumeric amount basis is invalid: ${index}`);
     }
     let alternativeNames: string[] | undefined;
@@ -585,6 +586,7 @@ function parseSafeMeta(value: unknown): YoutubeI031SafeMeta {
     textFirst = { route: String(value.textFirst.route), collectionFailed: value.textFirst.collectionFailed,
       finalCompleteness: { ingredients: completion.ingredients as boolean, quantities: completion.quantities as boolean, steps: completion.steps as boolean },
       reviewRequired: value.textFirst.reviewRequired as boolean, rejectedStepCount: boundedInteger(value.textFirst.rejectedStepCount ?? 0, "rejectedStepCount", 0, 80),
+      retainedTextQuantityCompletionCount: boundedInteger(value.textFirst.retainedTextQuantityCompletionCount ?? 0, "retainedTextQuantityCompletionCount", 0, 80),
       stepGroundingFailure: groundingFailure,
       sourceCollection, textMs: nullableDuration(value.textFirst.textMs, "textMs"),
       visionMs: nullableDuration(value.textFirst.visionMs ?? null, "visionMs"),

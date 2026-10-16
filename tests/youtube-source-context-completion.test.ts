@@ -1,9 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { prepareStepGroundingEvidence, verifiedSteps, augmentTextFirstOcrCandidates, assessTextCoverage } from '@/lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/text-first-source-routing.mjs';
+import { prepareStepGroundingEvidence, normalizeTextFirstSteps, completeRetainedTextQuantities, verifiedSteps, augmentTextFirstOcrCandidates, assessTextCoverage } from '@/lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/text-first-source-routing.mjs';
 import { buildSinglePassEvidenceLedger } from '@/lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs';
 import { validateSourceAnchoredResult } from '@/lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs';
 
 describe('bounded original source context completion', () => {
+  it('recovers an abstained quantity from a directly named tuple before another ingredient tuple', () => {
+    const ledger=buildSinglePassEvidenceLedger({sourceAnchored:true,sourceText:'[SOURCE: transcript(ko)]\n[00:04] 고춧기름 두 숟가락 참깨 세 숟가락'});
+    const entry=ledger.find((item:{source_method?:string})=>item.source_method==='caption')!;
+    const raw={recipes:[{title:'요리',steps:[],ingredients:[{sourceName:'고춧기름',name:'고춧기름',amount:null,unit:null,quantityState:'unknown',optional:false,
+      evidence:[{id:entry.id,quote:'고춧기름 두 숟가락'}]}]}]};
+    const checked=validateSourceAnchoredResult(raw,ledger,{preferSpokenQuantities:true});
+    expect(checked.json.recipes[0].ingredients[0]).toMatchObject({amount:'2',unit:'숟가락',quantityState:'explicit'});
+    const unsafe=structuredClone(ledger);unsafe.find((item:{id:string})=>item.id===entry.id)!.text='고춧기름 두 숟가락 중 반만 사용한다';
+    expect(validateSourceAnchoredResult(raw,unsafe,{preferSpokenQuantities:true}).json.recipes[0].ingredients[0].amount).toBeNull();
+  });
+  it('rechecks retained unresolved text quantities against later literal OCR without changing already explicit text', () => {
+    const ledger=[{id:'D',kind:'text',source_method:'description',text:'귀리가루 2큰술 40g~',scopeLabel:null},
+      {id:'O',kind:'ocr',source_method:'visual',text:'귀리가루 2큰술 40g',timestampSec:5,scopeLabel:null}];
+    const raw={recipes:[{title:'요리',steps:[],ingredients:[{sourceName:'귀리가루',name:'귀리가루',amount:'2',unit:'큰술',quantityState:'estimated',optional:false,
+      evidence:[{id:'D',quote:'귀리가루 2큰술 40g~'}]}]}]};
+    const text=validateSourceAnchoredResult(raw,[ledger[0]],{preferSpokenQuantities:true});
+    const incoming=validateSourceAnchoredResult({recipes:[{title:'요리',steps:[],ingredients:[]}]},ledger,{preferSpokenQuantities:true});
+    const {checked,count}=completeRetainedTextQuantities(text,incoming,raw,ledger);
+    expect(count).toBe(1);expect(checked.json.recipes[0].ingredients[0]).toMatchObject({amount:'40',unit:'g'});
+    expect(text.json.recipes[0].ingredients[0].amount).toBeNull();expect(incoming.json.recipes[0].ingredients).toEqual([]);
+    text.json.recipes[0].ingredients[0].amount='2';text.json.recipes[0].ingredients[0].quantityState='explicit';
+    expect(completeRetainedTextQuantities(text,incoming,raw,ledger).count).toBe(0);
+  });
+  it('keeps each model cooking sentence attached to its own evidence through normalization', () => {
+    const wire={recipes:[{ingredients:[],cookingSteps:[{text:'마지막에 깨를 넣는다',evidence:[{id:'last',quote:'마지막에 깨를 넣는다'}]}]}]};
+    const raw=normalizeTextFirstSteps(wire);
+    expect(raw.recipes[0].stepEvidence).toEqual([{stepIndex:0,evidence:[{id:'last',quote:'마지막에 깨를 넣는다'}]}]);
+    expect(wire.recipes[0].cookingSteps).toHaveLength(1);
+    expect(()=>normalizeTextFirstSteps({recipes:[{...wire.recipes[0],steps:['다른 단계']}]})).toThrow('TEXT_FIRST_INVALID_COUPLED_STEPS');
+  });
   const ledger = [
     { id: 'S1', kind: 'text', source_method: 'caption', source_block_index: 1, line_index: 0, timestampSec: 10, text: '[00:10] 소스를 잘' },
     { id: 'S2', kind: 'text', source_method: 'caption', source_block_index: 1, line_index: 1, timestampSec: 12, text: '[00:12] 섞어서 두 시간 재운다' },
@@ -29,6 +59,61 @@ describe('bounded original source context completion', () => {
     expect(verifiedSteps(proposal, ledger, { requireGrounding: true, groundedStepIndexes: [0] })).toEqual([]);
     const missing = structuredClone(raw); missing.recipes[0].stepEvidence[0].evidence[0].id = 'missing';
     expect(verifiedSteps(prepareStepGroundingEvidence(missing,ledger).proposal,ledger,{groundedStepIndexes:[0]})).toEqual([]);
+  });
+  it('keeps original anchors and conditional context when repeated overlays fill the reference budget', () => {
+    const source = [
+      { id: 'C1', kind: 'text', source_method: 'caption', source_block_index: 0, line_index: 0, timestampSec: 8, text: '홍차와 꿀을 넣고' },
+      { id: 'C2', kind: 'text', source_method: 'caption', source_block_index: 0, line_index: 1, timestampSec: 10, text: '이것은 선택인데 레몬을 넣는다' },
+      ...Array.from({length: 20},(_,i) => ({ id: 'O'+i, kind: 'ocr', source_method: 'visual', timestampSec: 8+i/20, text: '꿀 1큰술' })),
+      { id: 'named', kind: 'ocr', source_method: 'visual', timestampSec: 9, text: '홍차 100ml' },
+    ];
+    const proposal = { recipes: [{ ingredients: [{sourceName:'홍차'}, {sourceName:'꿀'}], steps: ['홍차와 꿀을 넣는다.'],
+      stepEvidence: [{stepIndex:0,evidence:[{id:'C1',quote:'홍차와 꿀을 넣고'}]}] }] };
+    const refs = prepareStepGroundingEvidence(proposal,source).proposal.recipes[0].stepEvidence[0].evidence;
+    expect(refs.map((ref: {id: string}) => ref.id)).toEqual(['C1','C2','O0','named']);
+    expect(proposal.recipes[0].stepEvidence[0].evidence).toHaveLength(1);
+  });
+  it('does not prioritize a longer ingredient name over the actual step noun', () => {
+    const source = [
+      { id:'C',kind:'text',source_method:'caption',source_block_index:0,line_index:0,timestampSec:10,text:'두르고 섞는다' },
+      ...Array.from({length:15},(_,i) => ({id:'O'+i,kind:'ocr',source_method:'visual',timestampSec:10,text:'고추오일 '+(i+1)+'g'})),
+      {id:'actual',kind:'ocr',source_method:'visual',timestampSec:10,text:'오일'},
+    ];
+    const raw = {recipes:[{ingredients:[{sourceName:'오일'}],steps:['오일을 두른다.'],stepEvidence:[{stepIndex:0,evidence:[{id:'C',quote:'두르고 섞는다'}]}]}]};
+    const refs = prepareStepGroundingEvidence(raw,source).proposal.recipes[0].stepEvidence[0].evidence;
+    expect(refs.some((ref:{id:string}) => ref.id==='actual')).toBe(true);
+    expect(refs).toHaveLength(16);
+  });
+  it('attaches adjacent action OCR to quantity overlays and recognizes rubbing and resting', () => {
+    const source = [
+      {id:'I',kind:'ocr',source_method:'visual',timestampSec:20,text:'옥수수가루 2큰술'},
+      {id:'A',kind:'ocr',source_method:'visual',timestampSec:21,text:'2분 문질러서 7분 방치'},
+    ];
+    const raw = {recipes:[{ingredients:[{sourceName:'옥수수가루'}],steps:['2분 문지르고 7분 방치한다.'],
+      stepEvidence:[{stepIndex:0,evidence:[{id:'I',quote:'옥수수가루 2큰술'}]}]}]};
+    const {proposal} = prepareStepGroundingEvidence(raw,source);
+    expect(proposal.recipes[0].stepEvidence[0].evidence.map((ref:{id:string})=>ref.id)).toEqual(['I','A']);
+    expect(verifiedSteps(proposal,source,{requireGrounding:true,groundedStepIndexes:[0]})).toHaveLength(1);
+  });
+  it('can attach only an already submitted nearby image to an OCR action', () => {
+    const source = [
+      {id:'O',kind:'ocr',source_method:'visual',timestampSec:10,text:'겉면을 굽는다'},
+      {id:'visible',kind:'frame',timestampSec:11,framePath:'/tmp/submitted.png'},
+      {id:'hidden',kind:'frame',timestampSec:10,framePath:'/tmp/not-submitted.png'},
+    ];
+    const raw={recipes:[{ingredients:[],steps:['겉면을 굽는다'],stepEvidence:[{stepIndex:0,evidence:[{id:'O',quote:'겉면을 굽는다'}]}]}]};
+    const {proposal}=prepareStepGroundingEvidence(raw,source,{visibleFramePaths:['/tmp/submitted.png']});
+    expect(proposal.recipes[0].stepEvidence[0].evidence.map((ref:{id:string})=>ref.id)).toEqual(['O','visible']);
+    expect(verifiedSteps(proposal,source,{requireGrounding:true,groundedStepIndexes:[0],visibleFramePaths:[]})).toEqual([]);
+  });
+  it('can use the immediately preceding caption modifier when OCR locates a later noun fragment', () => {
+    const source=[
+      {id:'C0',kind:'text',source_method:'caption',source_block_index:0,line_index:0,timestampSec:7,text:'미리 손질된'},
+      {id:'C1',kind:'text',source_method:'caption',source_block_index:0,line_index:1,timestampSec:9,text:'채소에 양념을 넣고'},
+      {id:'O',kind:'ocr',source_method:'visual',timestampSec:10,text:'채소에 양념을 넣고'},
+    ];
+    const raw={recipes:[{steps:['손질된 채소에 양념을 넣는다'],stepEvidence:[{stepIndex:0,evidence:[{id:'O',quote:'채소에 양념을 넣고'}]}]}]};
+    expect(prepareStepGroundingEvidence(raw,source).proposal.recipes[0].stepEvidence[0].evidence.some((ref:{id:string})=>ref.id==='C0')).toBe(true);
   });
   it('preserves already selected OCR images and includes omitted short transition frames within its cap', () => {
     const frames = [0,1,1.5,2,3].map((timestampSec) => ({ path: '/tmp/f'+timestampSec, timestampSec }));
