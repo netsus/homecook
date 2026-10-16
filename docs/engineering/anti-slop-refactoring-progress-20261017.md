@@ -4,13 +4,20 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `9a96f3fde5f3797a690ddbaa53bee6d27f297435`, 실제 진단 **163**, baseline **207**, 신규 **0**.
-- 현재 leftover GET 단발 전달 함수 제거는 실제 불필요 코드 정리이며 진단 감소로 계산하지 않는다. 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
+- 마지막 확정 master: `063f8a2267b4559f8c7e2450006ce536ea60dec9`, 실제 진단 **163**, baseline **207**, 신규 **0**.
+- 현재 PATCH 영양 helper의 실제 client 직접 전달은 로컬 **163→162 /신규0**을 확인했다. 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
 - #1649 이후 이 승계에서 baseline207·규칙·scope를 변경하지 않았다. 이전 baseline snapshot 감소 이력을 현재의 검사 완화로 되살리지 않는다.
 - 다음 배치는 직전 PR의 실제 merge SHA·검사 결과를 이 장부에 먼저 반영한다. 이미 완료된 아래 항목을 다시 실행하지 않는다. 새 adapter/단언·무의미한 루프 치환으로 숫자만 줄이지 않는다.
+
+### 원본 진단 ID와 판단 추적
+
+- [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
+- 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
+- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 미검토58, 현재 배치 해결1이다. 범위 보류는 컴파일 실패나 취약점 판정이 아니며, 미검토를 실행 불가로 간주하지 않는다.
+- 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
 
@@ -75,6 +82,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1761](https://github.com/netsus/homecook/pull/1761) | 북 표지 RPC/storage 실제 client 직접 전달 | 166→165 | `4a219fbc16ad7c8f81f0e25258cfcb397bea0252` |
 | [#1762](https://github.com/netsus/homecook/pull/1762) | recipe DELETE RPC 단언·미사용 import 제거 | 165→164 | `be8101c9a7b844129648e8bf552e74e0cc274816` |
 | [#1763](https://github.com/netsus/homecook/pull/1763) | 상세 GET 선택 context 직접 대입·지속 장부 복구 | 164→163 | `9a96f3fde5f3797a690ddbaa53bee6d27f297435` |
+| [#1765](https://github.com/netsus/homecook/pull/1765) | leftover GET 단발 전달 함수 제거·철회 실험 기록 | 163 유지 | `063f8a2267b4559f8c7e2450006ce536ea60dec9` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -87,13 +95,21 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 리뷰 APPROVE: 동일23 PASS /67 선택 제외, 전체 typecheck·ESLint·diff-check PASS. 넓은92건도90 PASS /기존2 FAIL을 직접 재현했고, 완료44행의 merge commit 제목도 불일치0을 확인했다. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다.
 - 전체 build·화면·실DB·운영 흐름 미실행. 실제 merge SHA는 위 완료 표에 확정했다.
 
-## 현재 배치: [#1765](https://github.com/netsus/homecook/pull/1765) leftover GET 단발 전달 함수 제거
+## 최근 반영: [#1765](https://github.com/netsus/homecook/pull/1765) leftover GET 단발 전달 함수 제거
 
 - `app/api/v1/leftovers/route.ts`에서 한 번만 쓰는 `requireUser` 전달 함수를 제거하고, 기존 `routeClient.auth.getUser()` 호출과 nullable user 읽기를 GET에 직접 둔다. 같은 client의 호출1회·fixture 선행 분기·401 조건·bootstrap·조회·정렬·응답·상태 정책은 그대로다.
 - 편집 전후 `leftovers.backend`, `leftover-mutation-parser`, `leftover-status-normalization` 3 suite /63 PASS. 전체 typecheck·변경 파일 ESLint·diff-check PASS, Anti Slop163 유지/신규0. 독립 리뷰 APPROVE 및 동일63건·typecheck·ESLint·diff-check PASS. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다. 이것을 전체 검사 통과로 넓히지 않는다.
 - 진단 감소 목적의 변경이 아니다. `eat/route.ts`의 최초 불검증 client 경계는 그대로이며 runtime guard·새 adapter·단언 변경0이다. 실행JS 동일 주장은 하지 않는다(단발 함수 인라인 포함).
 - 먼저 시험한 `LeftoverMutationAuthedDbClient = UserBootstrapDbClient` 동의어 제거는 체인 단언 snippet 변경을 baseline이 신규1건으로 거절해 전부 원복했다. 원복 후 diff0·실제163/신규0을 확인했다. baseline·scope·규칙을 바꾸거나 단일 단언으로 바꿔 이 검사를 우회하지 않았다.
 - 실제 DB/운영/보안 정책/무게 후속 변경0, 전체 build·화면·실DB 흐름 미실행.
+
+## 현재 배치: [#1766](https://github.com/netsus/homecook/pull/1766) PATCH 영양 helper client 경계
+
+- 원본ID: `app/api/v1/recipes/[id]/route.ts::anti-slop(no-chained-type-assertions)::75dca4dc05eacbb3b3182090d0a749053ce982f349fd6869ff9238d463d5b741#1` (checkpoint063f8a226:671).
+- 기존 scoped factory가 기존 `RecipeDraftNutritionClient` 계약을 직접 만족하므로 연쇄 단언·미사용 type import만 제거한다. 인터페이스 확대/새 adapter/대체 단언·runtime guard 제거0이다.
+- 편집 전후 personal-recipe-customization-write-routes / recipe-future-impact-security / recipe-content-snapshot-future-propagation / recipe-product-nutrition: 4 suite41 PASS. 전체 typecheck·변경 ESLint·diff-check PASS, Anti Slop163→162 /baseline207/신규0.
+- TypeScript ES2022/ESNext emitted JS byte-identical, SHA256 `21a0633b8cd40ad823b93558869d8949e4346d43844d64fccb1b17fa6ab7ac20`. 실제 저장·권한·RPC 인수/실행 코드 변경0이다. 실DB 쓰기를 실행하지 않았다.
+- 독립 리뷰 APPROVE: 동일41건·전체 typecheck·ESLint·diff-check PASS, emitted JS 동일, inventory163개ID/hash/checkpoint/baseline대조0오류와상태집계일치를 확인했다. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다. 전체 build·화면·운영 흐름·전체 검사 미실행, 기존 실패8건+추가2건과49원본미확인은 별도로 유지한다.
 
 ## 보류·기술적 경계
 
