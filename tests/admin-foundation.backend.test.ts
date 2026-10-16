@@ -188,6 +188,42 @@ describe("admin foundation backend", () => {
     expect(routeClient.from).not.toHaveBeenCalled();
   });
 
+  it("returns the exact scoped factory client after membership verification", async () => {
+    setupRouteUser({ id: "admin-1" });
+    const serviceClient = setupAdminServiceClient();
+    const { requireAdminUser } = await import("@/lib/server/admin-auth");
+
+    const result = await requireAdminUser(new Request("http://localhost:3000/api/v1/admin/users"));
+
+    expect(result.response).toBeNull();
+    expect(result.serviceRoleClient).toBe(serviceClient);
+  });
+
+  it.each(["query error", "query throw"])("fails closed and records a sanitized event on membership %s", async (failure) => {
+    setupRouteUser({ id: "admin-1" });
+    const serviceClient = setupAdminServiceClient();
+    if (failure === "query error") {
+      serviceClient.__queries.adminMembersQuery.maybeSingle.mockResolvedValue({
+        data: null, error: { message: "private membership failure" },
+      });
+    } else {
+      serviceClient.__queries.adminMembersQuery.maybeSingle.mockRejectedValue(new Error("private membership failure"));
+    }
+
+    const { GET } = await importAdminUsersRoute();
+    const response = await GET(new Request("http://localhost:3000/api/v1/admin/users"));
+
+    expect(response.status).toBe(500);
+    expect((await response.json()).error.code).toBe("INTERNAL_ERROR");
+    expect(serviceClient.__queries.eventsQuery.insert).toHaveBeenCalledWith(expect.objectContaining({
+      actor_user_id: "admin-1",
+      event_type: "unhandled_server_error",
+      error_code: failure === "query error" ? "ADMIN_MEMBERSHIP_QUERY_FAILED" : "ADMIN_MEMBERSHIP_UNHANDLED",
+      message_summary: failure === "query error" ? "Admin membership lookup failed" : "Admin membership lookup threw unexpectedly",
+    }));
+    expect(serviceClient.from).not.toHaveBeenCalledWith("users");
+  });
+
   it("returns masked user summaries and writes a search audit without the search term", async () => {
     setupRouteUser({ id: "admin-1" });
     const serviceClient = setupAdminServiceClient();

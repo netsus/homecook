@@ -6,36 +6,9 @@ import {
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
 
-import { recordOperationalEvent, type OperationalEventsDbClient } from "./admin-events";
+import { recordOperationalEvent } from "./admin-events";
 
-interface QueryError {
-  message: string;
-}
-
-interface AdminMemberRow {
-  role: string;
-  user_id: string;
-}
-
-interface AdminMemberQuery {
-  eq(column: string, value: string): AdminMemberQuery;
-  maybeSingle(): PromiseLike<{
-    data: AdminMemberRow | null;
-    error: QueryError | null;
-  }>;
-}
-
-interface AdminMembersTable {
-  select(columns: string): AdminMemberQuery;
-}
-
-export interface AdminServiceRoleClient {
-  from(table: string): unknown;
-}
-
-interface AdminMembershipClient extends AdminServiceRoleClient {
-  from(table: "admin_members"): AdminMembersTable;
-}
+export type AdminServiceRoleClient = NonNullable<ReturnType<typeof createAdminDataInternalClient>>;
 
 export interface AdminAuthResult {
   adminUser: User | null;
@@ -64,8 +37,7 @@ export async function requireAdminUser(request: Request): Promise<AdminAuthResul
     };
   }
 
-  const serviceRoleClient =
-    createAdminDataInternalClient() as AdminServiceRoleClient | null;
+  const serviceRoleClient = createAdminDataInternalClient();
 
   if (!serviceRoleClient) {
     await recordOperationalEvent(null, {
@@ -87,14 +59,14 @@ export async function requireAdminUser(request: Request): Promise<AdminAuthResul
   }
 
   try {
-    const memberResult = await (serviceRoleClient as AdminMembershipClient)
+    const memberResult = await serviceRoleClient
       .from("admin_members")
       .select("user_id, role")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (memberResult.error) {
-      await recordOperationalEvent(serviceRoleClient as unknown as OperationalEventsDbClient, {
+      await recordOperationalEvent(serviceRoleClient, {
         event_type: "unhandled_server_error",
         severity: "error",
         source: "admin",
@@ -126,7 +98,7 @@ export async function requireAdminUser(request: Request): Promise<AdminAuthResul
       serviceRoleClient,
     };
   } catch {
-    await recordOperationalEvent(serviceRoleClient as unknown as OperationalEventsDbClient, {
+    await recordOperationalEvent(serviceRoleClient, {
       event_type: "unhandled_server_error",
       severity: "error",
       source: "admin",
