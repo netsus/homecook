@@ -430,6 +430,32 @@ describe("leftover mutation RPC payload validation", () => {
     expect(projectUserGamificationAfterProgressEvent).not.toHaveBeenCalled();
     expect(projectUserGamificationAfterActivityEvent).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["eat", importEatRoute, "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요."],
+    ["uneat", importUneatRoute, "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요."],
+    ["keep", importKeepRoute, "이미 다먹음 처리된 남은 요리는 계속 보관할 수 없어요."],
+  ] as const)("preserves every %s RPC error response", async (_action, loadRoute, conflictMessage) => {
+    const { POST } = await loadRoute();
+    const errors = [
+      { code: "RESOURCE_NOT_FOUND", status: 404, message: "남은 요리를 찾을 수 없어요." },
+      { code: "FORBIDDEN", status: 403, message: "내 남은 요리만 수정할 수 있어요." },
+      { code: "CONFLICT", status: 409, message: conflictMessage },
+    ];
+    for (const error of errors) {
+      setupAuthenticatedDb({ rpc: vi.fn(async () => ({ data: { error_code: error.code }, error: null })) });
+      const response = await POST(new Request("http://localhost:3000"), {
+        params: Promise.resolve({ leftover_id: leftoverId }),
+      });
+
+      expect(response.status).toBe(error.status);
+      expect(await response.json()).toEqual({
+        success: false, data: null, error: { code: error.code, message: error.message, fields: [] },
+      });
+    }
+    expect(projectUserGamificationAfterProgressEvent).not.toHaveBeenCalled();
+    expect(projectUserGamificationAfterActivityEvent).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/v1/leftovers", () => {

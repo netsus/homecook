@@ -103,6 +103,25 @@ interface LegacyLeftoverMutationError {
   error_code: "RESOURCE_NOT_FOUND" | "FORBIDDEN" | "CONFLICT";
 }
 
+export function describeLegacyLeftoverMutationError(
+  code: LegacyLeftoverMutationError["error_code"],
+  action: "eat" | "uneat" | "keep",
+) {
+  if (code === "RESOURCE_NOT_FOUND") {
+    return { code, message: "남은 요리를 찾을 수 없어요.", status: 404 };
+  }
+  if (code === "FORBIDDEN") {
+    return { code, message: "내 남은 요리만 수정할 수 있어요.", status: 403 };
+  }
+  return {
+    code,
+    message: action === "keep"
+      ? "이미 다먹음 처리된 남은 요리는 계속 보관할 수 없어요."
+      : "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요.",
+    status: 409,
+  };
+}
+
 export function parseLegacyLeftoverMutation(
   value: unknown,
   action: "keep",
