@@ -76,8 +76,7 @@ describe("authored source quantity priority", () => {
     expect(checked.json.recipes[0].ingredients).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "물", amount: "70", unit: "ml", amountRawText: "70ml" }),
     ]));
-    expect(checked.statistics.authoredSourceAddedRowCount).toBe(1);
-    expect(checked.statistics.modelNumericCount).toBe(2);
+    expect(checked.statistics).toMatchObject({ authoredSourceAddedRowCount: 1, modelNumericCount: 2 });
   });
 
   it("leaves caption-only completion and a previously valid quantity intact", () => {

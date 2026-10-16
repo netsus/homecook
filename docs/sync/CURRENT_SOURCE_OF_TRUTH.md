@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-16 — v74 운영 전환 준비·credential/정책 별도 확인 대기
+
+사용자가 이번 추출기 수정의 배포를 요청했다. 최신 master를 통합하고 v74 bundle·웹 exact identity·pipeline을 일치시켜 검증했다. 운영은 웹0ae67/DB232·worker6b610/gen48/v71 그대로이며, 새 release/snapshot에는 generation49와 DB policy 전환이 필요해 해당 부분의 별도 확인 전에는 교체하지 않는다. [현재 상태·후보 결속·검증·복구 경계](../engineering/youtube-v74-deployment-preparation-20261016.md)를 따른다.
+
 ## 2026-10-16 — 자막 절·공유 수량 보완 후보 (로컬, 미배포)
 
 명시 이름·수량 절, `씩` 공유량, 한국어 개수어와 선택 재료의 닫힌 사용 문법을 v73/verifier46에서 보완하고 동일 세 영상을 각 1회 평가했다. 실제 숫자 정답은 9/34→28/34이며 목표 자막 5건은 보존됐다. 후속 v74/verifier47의 공유 첫 이름 결속은 오프라인만 검증했다. 설명란·검증된 작성자 우선과 충돌 보호는 유지한다. 기존 응답 재생에서 21개 소실 복구·기존 정상 10개 유지를 확인했으며 실제 재평가 모델 3회·추가 반복 0이며 운영은 변경하지 않았다. [원인·문법·검증·평가 기록](../engineering/youtube-caption-clause-evaluation-20261016.md)을 따른다.

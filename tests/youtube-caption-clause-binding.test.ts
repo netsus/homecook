@@ -3,8 +3,9 @@ import { buildSinglePassEvidenceLedger } from "@/lib/server/youtube-i031-runtime
 import { validateSourceAnchoredResult } from "@/lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs";
 
 function verify(text: string, quote: string, name: string, amount: string, unit: string, optional = false) {
-  const ledger = buildSinglePassEvidenceLedger({ sourceText: `[SOURCE: transcript(ko)]\n${text}`,
-    ocrEvents: [{ text: name, startSec: 2 }], sourceAnchored: true });
+  const ledger = buildSinglePassEvidenceLedger({ sourceText: `[SOURCE: transcript(ko)]\n${text}`, sourceAnchored: true });
+  ledger.push({ ...ledger[0], id: "O0001", kind: "ocr", source_method: "visual",
+    source_provider: "macos-vision-ocr", text: name, timestampSec: 2 });
   const entry = ledger.find((value: { text: string }) => value.text.includes(quote));
   const ocr = ledger.find((value: { kind: string }) => value.kind === "ocr");
   if (!entry || !ocr) throw new Error("missing fixture evidence");
