@@ -28,13 +28,7 @@ export async function GET() {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  let dbClient: UserProgressDbClient & UserBootstrapDbClient;
-  try {
-    dbClient = routeClient as unknown as
-      UserProgressDbClient & UserBootstrapDbClient;
-  } catch {
-    return fail("INTERNAL_ERROR", "사용자 진도를 불러오지 못했어요.", 500);
-  }
+  const dbClient = routeClient as unknown as UserProgressDbClient & UserBootstrapDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
