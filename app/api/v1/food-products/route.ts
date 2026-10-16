@@ -20,10 +20,6 @@ interface CatalogDbClient {
   ): PromiseLike<{ data: unknown; error: RpcError | null }>;
 }
 
-function asCatalogDbClient(value: unknown) {
-  return value as CatalogDbClient;
-}
-
 function asCatalogCreateDbClient(value: unknown) {
   return value as CatalogDbClient & UserBootstrapDbClient;
 }
@@ -60,7 +56,7 @@ export async function GET(request: Request) {
     return fail(parsed.code, "검색 조건을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = asCatalogDbClient(routeClient);
+  const db: CatalogDbClient = routeClient;
   const result = await db.rpc("list_food_products", {
     p_user_id: user.id,
     p_query: parsed.value.q || null,
