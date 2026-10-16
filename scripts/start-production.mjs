@@ -7,12 +7,14 @@ import { normalizeNextRoutesManifest } from "./lib/next-routes-manifest.mjs";
 import { relayChildLifecycle } from "./lib/process-signal-relay.mjs";
 import { normalizeProductionStartArgs } from "./lib/start-production-args.mjs";
 import { prepareStartProductionRuntimeEnv } from "./lib/start-production-runtime.mjs";
+import { assertStartupYoutubeFingerprint } from "./lib/youtube-fingerprint-startup-preflight.mjs";
 
 const require = createRequire(import.meta.url);
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const nextBin = require.resolve("next/dist/bin/next");
 const startArgs = normalizeProductionStartArgs(process.argv.slice(2));
 const runtimeEnv = prepareStartProductionRuntimeEnv({ repositoryRoot });
+assertStartupYoutubeFingerprint({ repositoryRoot, env: runtimeEnv });
 
 normalizeNextRoutesManifest();
 

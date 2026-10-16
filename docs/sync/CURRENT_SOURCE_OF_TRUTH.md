@@ -1,5 +1,15 @@
 # Current Source of Truth
 
+## 2026-10-17 — 기존 V2 정책 복구·공식 웹 반영, 로그인 신청 확인 대기
+
+[#1738](https://github.com/netsus/homecook/pull/1738)을 병합해 웹 `25a6314ce16eef382b671b9086579e0909649afa` / build `prelaunch-25a6314ce16e-6R93aX`를 공식 반영했다. 기존 V2 키33/33 일치를 재확인해 새 키 발급 없이 current1→2와 timestamp만 전환했고 기존41작업 전체 지문·원 C04/v74/DB232 권위·worker PID49750/gen49·C05/R2 OFF를 보존했다. 최종 계획은 `be8e1cf9480bd579a1903ce70a684d58eaf567ca2cc5742a85dd66a2a478e05a`다. 배포 exit0·선택1451 PASS/133 SKIP·build/type/canary/운영 GET·loaded=true/recoveryPending=false를 확인했다. 병행 master91aa/PR1734–1737도 포함했다.
+
+사용자 Mac Chrome1440/375 입력 화면은 확인했으나 현재 계정의 신규 테스트 기록 허용 여부 확인을 요청해 실제 신청→worker→알림→저장→북/플래너는 미실행이다. 모델0·신규job0이며 로그인 HTTP 최종 복구 완료를 주장하지 않는다. 데스크톱 초기 배치 이동은 낮은 심각도의 기존 UI 관찰이다. [운영 결과·실패 이력·검증 경계](../engineering/youtube-fingerprint-v2-operating-20261017.md), Library `libfile_7adf500afbf48191bf5ad68c0968b282`를 따른다. 별도 무게/추출기 후속은 이번 후보에 포함하지 않았다. 아래 준비 문단의 실행 대기 상태는 이 절이 최신이다.
+
+## 2026-10-17 — YouTube 접수 V2 복구 도구 로컬 준비
+
+로그인 HTTP 접수의 V1 요구/V2 키 불일치를 조사했다. 기존 V1 terminal8 외 V2 terminal33과 현재 공식 웹의 기존 V2 키를 발견해 HMAC33/33 일치를 비공개 대조했다. 새 키 발급안은 폐기하고 사용자 승인 범위의 기존 V2 재사용 준비 도구로 좁혔다. 기존41건·C04/v74 원 권위·DB232·worker gen49는 보존한다. [실행 준비와 정확한 승인 범위](../engineering/youtube-fingerprint-v2-execution-readiness-20261017.md)를 따른다. 격리 PG15/17의 잠금·CAS·중복·재신청·quota·보상 검증은 운영 접수 성공을 뜻하지 않는다. 키 생성/값 변경은 제외했다. 실제 Keychain 승인 hash 등록·DB policy 전환·웹 재시작·로그인 HTTP는 별도 실행 시점 승인 대상이며 아직 수행하지 않았다. 완성 무게 후속·별도 추출기 후보·Anti Slop 정리는 이 복구 변경에 포함하지 않는다.
+
 ## 2026-10-17 — 감사 4건 운영 반영·Chrome 재검증 완료
 
 사용자 묶음 반영 요청에 따라 [#1731](https://github.com/netsus/homecook/pull/1731)과 실제 조회 누락을 보완한 [#1732](https://github.com/netsus/homecook/pull/1732)를 병합해 웹 `53da069a4b27672bb5eb9d0a617783c1b9c33d5f` / build `prelaunch-53da069a4b27-BiZLes`를 공식 경로로 반영했다. 최종 배포 exit0·선택1451 PASS/133 SKIP·typecheck/build/canary/health 성공, loaded=true·recoveryPending=false·DB232다. DB 변경0이며 기존 worker `3e58467499c63ba20c3b3191d9dd7dec77a7aa44` / v74/verifier47 / gen49의 artifact·동일PID49750을 보존했다. C05/R2 수집OFF와 기존 writer 권위는 유지했다.

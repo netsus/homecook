@@ -9,10 +9,12 @@ const sha=(c:string)=>c.repeat(64),ref=(c:string)=>c.repeat(40);
 const temp=mkdtempSync(join(realpathSync("/tmp"),"recipe-request-role-owned-"));
 afterAll(()=>rmSync(temp,{recursive:true,force:true}));
 const source=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8")
+  .replace(/from "(\.\/[^"\n]+)"/gu,(_text,relative:string)=>`from "${pathToFileURL(join(process.cwd(),"scripts/lib",relative)).href}"`)
   .replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,(_text,name:string)=>`export const ${name} = Object.freeze({path:null,sha256:"${sha(name==="RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN"?"8":"1")}"});`)
   .replace(/^export const RECIPE_REQUEST_ROLE_RELEASE_SHA = [^\r\n]*;$/gmu,()=>`export const RECIPE_REQUEST_ROLE_RELEASE_SHA = "${ref("b")}";`)
   .replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',()=>`function prelaunchStateRoot() { return ${JSON.stringify(join(temp,"state"))}; }`);
-const webPath=join(temp,"web.mjs");writeFileSync(webPath,source,{mode:0o600});
+const webPath=join(temp,"web.mjs");writeFileSync(webPath,source.replace(/from "(\.\/[^"\n]+)"/gu,
+  (_text,relative:string)=>`from "${pathToFileURL(join(process.cwd(),"scripts/lib",relative)).href}"`),{mode:0o600});
 const web:typeof import("../scripts/lib/prelaunch-web-deploy.mjs")=await import(pathToFileURL(webPath).href);
 const dbPath=join(temp,"database.mjs");writeFileSync(dbPath,readFileSync("scripts/lib/prelaunch-database.mjs","utf8").replace(/from "(\.\/[^"\n]+)"/gu,
   (_text,relative:string)=>`from "${pathToFileURL(relative==="./prelaunch-web-deploy.mjs"?webPath:join(process.cwd(),"scripts/lib",relative)).href}"`),{mode:0o600});
