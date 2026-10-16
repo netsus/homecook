@@ -2,6 +2,7 @@ import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { isQaFixtureModeEnabled, uneatQaFixtureLeftover } from "@/lib/mock/recipes";
 import {
+  describeLegacyLeftoverMutationError,
   isUuid,
   parseLegacyLeftoverMutation,
 } from "@/lib/server/leftovers";
@@ -77,13 +78,8 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("INTERNAL_ERROR", "남은 요리를 덜먹음 처리하지 못했어요.", 500);
   }
   if ("error_code" in mutationData) {
-    if (mutationData.error_code === "RESOURCE_NOT_FOUND") {
-      return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
-    }
-    if (mutationData.error_code === "FORBIDDEN") {
-      return fail("FORBIDDEN", "내 남은 요리만 수정할 수 있어요.", 403);
-    }
-    return fail("CONFLICT", "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요.", 409);
+    const error = describeLegacyLeftoverMutationError(mutationData.error_code, "uneat");
+    return fail(error.code, error.message, error.status);
   }
 
   return ok(mutationData);
