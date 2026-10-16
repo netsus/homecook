@@ -1,3 +1,4 @@
+import { sanitizeStepEvidence } from "./youtube-i031-runtime/bundle/lib/server/recipe-extraction-lab/quantity-evidence.mjs";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { access, cp, link, mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
@@ -15,11 +16,11 @@ export const I031_EXACT_IDENTITY = Object.freeze({
   provider: "codex-vision-keyframes",
   model: "gpt-5.6-luna",
   selectorModel: "gpt-5.6-sol",
-  sourcePromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
+  sourcePromptVersion: "source-anchored-single-recipe-v26-coupled-procedure-source-citations",
   selectorPromptVersion: "deterministic-evidence-v3-ingredient-event-preserving-largest-gap",
-  finalPromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
-  clientVersion: "codex-vision-source-anchored-v74-caption-shared-owner",
-  executionConfigSignature: "06bdcbd216cd40f307ddbb74",
+  finalPromptVersion: "source-anchored-single-recipe-v26-coupled-procedure-source-citations",
+  clientVersion: "codex-vision-source-anchored-v85-coupled-procedure-source-citations",
+  executionConfigSignature: "bf2e196ca9db50eca22f2b0d",
   frameExtractorVersion: "extract-video-frames-v7-adaptive-screen-ocr",
   frameMode: "hybrid",
   interval: 4,
@@ -61,6 +62,13 @@ export interface YoutubeI031Ingredient {
   originalName?: string;
   alternativeNames?: string[];
   evidenceRefs?: YoutubeI031EvidenceRef[];
+  quantitySelection?: {
+    policy: "authored-source-priority-v1";
+    selectedEvidenceId: string;
+    correctionTargetEvidenceId: string | null;
+    unresolvedEvidenceRefs: YoutubeI031EvidenceRef[];
+    alternatives: Array<{ amount: string; unit: string; evidenceRef: YoutubeI031EvidenceRef }>;
+  };
 }
 
 export interface YoutubeI031EvidenceRef {
@@ -79,9 +87,16 @@ export interface YoutubeI031Recipe {
   title: string;
   ingredients: YoutubeI031Ingredient[];
   steps: string[];
+  stepEvidence?: Array<{ stepIndex: number; evidence: Array<{ id: string; sourceMethod: string; quote: string|null }> }>;
 }
 
 export interface YoutubeI031SafeMeta {
+  textFirst?: { route: string; textModelCalls: number; visionModelCalls: number; stepGroundingModelCalls: number; collectionFailed: boolean;
+    sourceCollection: Record<"description"|"authorComments", { status: string; reason: string|null }> | null;
+    textMs: number|null; visionMs: number|null; stepGroundingMs: number|null;
+    finalCompleteness: { ingredients: boolean; quantities: boolean; steps: boolean };
+    reviewRequired: boolean; rejectedStepCount: number; stepGroundingFailure: string|null;
+    retainedTextQuantityCompletionCount: number };
   modelCallCount: number;
   frameCount: number;
   selectedFrameCount: number;
@@ -402,7 +417,7 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
     }
     const textSource = (reference: YoutubeI031EvidenceRef) => reference.source_method !== "visual"
       || reference.source_provider === "macos-vision-ocr";
-    if (quantityState === "explicit") {
+    if (quantityState === "explicit" || quantityState === "to_taste" && amountBasis !== null) {
       const allowedBasis = new Set(["stated", "source-bound-stated", "spoken", "onscreen"]);
       if (amountBasis === undefined || amountBasis === null || !allowedBasis.has(amountBasis)) {
         throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 explicit amount basis is invalid: ${index}`);
@@ -429,7 +444,7 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
         throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 estimated evidence source is invalid: ${index}`);
       }
     }
-    if (["unknown", "conflicting", "to_taste"].includes(quantityState ?? "") && amountBasis !== null) {
+    if (["unknown", "conflicting"].includes(quantityState ?? "") && amountBasis !== null) {
       throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", `i031 nonnumeric amount basis is invalid: ${index}`);
     }
     let alternativeNames: string[] | undefined;
@@ -440,7 +455,33 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
       alternativeNames = ingredient.alternativeNames.map((name, alternativeIndex) =>
         boundedEvidenceString(name, `ingredients[${index}].alternativeNames[${alternativeIndex}]`, 160));
     }
-    return {
+    let quantitySelection: YoutubeI031Ingredient["quantitySelection"];
+    if (ingredient.quantitySelection !== undefined) {
+      const selection = ingredient.quantitySelection;
+      if (!isRecord(selection) || selection.policy !== "authored-source-priority-v1"
+        || !Array.isArray(selection.alternatives) || selection.alternatives.length > 16
+        || !Array.isArray(selection.unresolvedEvidenceRefs) || selection.unresolvedEvidenceRefs.length > 2) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid quantity selection");
+      }
+      const selectedEvidenceId = boundedEvidenceString(selection.selectedEvidenceId, "selectedEvidenceId", 80);
+      if (!evidenceRefs?.some((ref) => ref.evidence_id === selectedEvidenceId)) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Missing selected evidence");
+      }
+      quantitySelection = {
+        policy: selection.policy,
+        selectedEvidenceId,
+        correctionTargetEvidenceId: nullableString(selection.correctionTargetEvidenceId, "correctionTargetEvidenceId", 80),
+        unresolvedEvidenceRefs: parseEvidenceRefs(selection.unresolvedEvidenceRefs, index) ?? [],
+        alternatives: selection.alternatives.map((alternative) => {
+          if (!isRecord(alternative)) throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid alternative quantity");
+          const refs = parseEvidenceRefs([alternative.evidenceRef], index);
+          if (!refs?.[0]) throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Missing alternative evidence");
+          return { amount: boundedEvidenceString(alternative.amount, "alternative.amount", 32),
+            unit: boundedEvidenceString(alternative.unit, "alternative.unit", 40), evidenceRef: refs[0] };
+        }),
+      };
+    }
+    const parsed: YoutubeI031Ingredient = {
       name: requiredString(ingredient.name, `ingredients[${index}].name`, 100),
       amount,
       unit,
@@ -452,14 +493,17 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
       ...(alternativeNames !== undefined ? { alternativeNames } : {}),
       ...(evidenceRefs !== undefined ? { evidenceRefs } : {}),
     };
+    if (quantitySelection !== undefined) parsed.quantitySelection = quantitySelection;
+    return parsed;
   });
 
-  return {
-    title: requiredString(value.title, "recipe.title", 200),
-    ingredients,
-    steps: value.steps.map((step, index) =>
-      requiredString(step, `steps[${index}]`, 2_000)),
-  };
+  const steps = value.steps.map((step, index) => requiredString(step, `steps[${index}]`, 2_000));
+  const parsed: YoutubeI031Recipe = { title: requiredString(value.title, "recipe.title", 200), ingredients, steps };
+  if (value.stepEvidence !== undefined) {
+    if (!Array.isArray(value.stepEvidence)) throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid step evidence");
+    parsed.stepEvidence = sanitizeStepEvidence(steps, value.stepEvidence);
+  }
+  return parsed;
 }
 
 function parseSourceAvailability(value: unknown): YoutubeI031SafeMeta["sourceAvailability"] {
@@ -515,10 +559,52 @@ function parseSafeMeta(value: unknown): YoutubeI031SafeMeta {
     );
   }
 
-  return {
-    modelCallCount: boundedInteger(value.modelCallCount, "meta.modelCallCount", 1, 2),
-    frameCount: boundedInteger(value.frameCount, "meta.frameCount", 1, 10_000),
-    selectedFrameCount: boundedInteger(value.selectedFrameCount, "meta.selectedFrameCount", 1, 8),
+  let textFirst: YoutubeI031SafeMeta["textFirst"];
+  if (value.textFirst !== undefined && value.textFirst !== null) {
+    if (!isRecord(value.textFirst) || !["text-only", "quantities", "steps", "quantities-and-steps", "full"].includes(String(value.textFirst.route))
+      || typeof value.textFirst.collectionFailed !== "boolean") throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid text-first route");
+    let sourceCollection: NonNullable<YoutubeI031SafeMeta["textFirst"]>["sourceCollection"] = null;
+    if (value.textFirst.sourceCollection !== null) {
+      const sources = value.textFirst.sourceCollection;
+      if (!isRecord(sources)) throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid collection status");
+      const parseStatus = (entry: unknown) => {
+        if (!isRecord(entry) || !["present", "empty", "failed"].includes(String(entry.status))) {
+          throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid collection status");
+        }
+        return { status: String(entry.status), reason: entry.reason === undefined ? null : nullableString(entry.reason, "collection.reason", 120) };
+      };
+      sourceCollection = { description: parseStatus(sources.description), authorComments: parseStatus(sources.authorComments) };
+    }
+    const completion = value.textFirst.finalCompleteness;
+    if (!isRecord(completion) || [completion.ingredients, completion.quantities, completion.steps, value.textFirst.reviewRequired].some((flag) => typeof flag !== "boolean")) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid completion state");
+    }
+    const groundingFailure = value.textFirst.stepGroundingFailure ?? null;
+    if (groundingFailure !== null && (typeof groundingFailure !== "string" || !/^[A-Za-z_][A-Za-z_0-9]{0,79}$/.test(groundingFailure))) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid grounding failure");
+    }
+    textFirst = { route: String(value.textFirst.route), collectionFailed: value.textFirst.collectionFailed,
+      finalCompleteness: { ingredients: completion.ingredients as boolean, quantities: completion.quantities as boolean, steps: completion.steps as boolean },
+      reviewRequired: value.textFirst.reviewRequired as boolean, rejectedStepCount: boundedInteger(value.textFirst.rejectedStepCount ?? 0, "rejectedStepCount", 0, 80),
+      retainedTextQuantityCompletionCount: boundedInteger(value.textFirst.retainedTextQuantityCompletionCount ?? 0, "retainedTextQuantityCompletionCount", 0, 80),
+      stepGroundingFailure: groundingFailure,
+      sourceCollection, textMs: nullableDuration(value.textFirst.textMs, "textMs"),
+      visionMs: nullableDuration(value.textFirst.visionMs ?? null, "visionMs"),
+      stepGroundingMs: nullableDuration(value.textFirst.stepGroundingMs ?? null, "stepGroundingMs"),
+      stepGroundingModelCalls: boundedInteger(value.textFirst.stepGroundingModelCalls ?? 0, "stepGroundingModelCalls", 0, 1),
+      textModelCalls: boundedInteger(value.textFirst.textModelCalls, "textModelCalls", 0, 1),
+      visionModelCalls: boundedInteger(value.textFirst.visionModelCalls, "visionModelCalls", 0, 1) };
+    if (textFirst.route === "text-only" && (textFirst.visionModelCalls !== 0 || textFirst.textModelCalls !== 1 || textFirst.collectionFailed || textFirst.reviewRequired
+      || !Object.values(textFirst.finalCompleteness).every(Boolean) || !sourceCollection
+      || Object.values(sourceCollection).some((source) => source.status === "failed"))) {
+      throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid text-only completion");
+    }
+  }
+  const minimumFrames = textFirst?.route === "text-only" ? 0 : 1;
+  const parsed = {
+    modelCallCount: boundedInteger(value.modelCallCount, "meta.modelCallCount", 1, 3),
+    frameCount: boundedInteger(value.frameCount, "meta.frameCount", minimumFrames, 10_000),
+    selectedFrameCount: boundedInteger(value.selectedFrameCount, "meta.selectedFrameCount", minimumFrames, 8),
     selectorBypassed: value.selectorBypassed,
     screenOcrStatus,
     sourceAvailability: parseSourceAvailability(value.sourceAvailability),
@@ -530,6 +616,8 @@ function parseSafeMeta(value: unknown): YoutubeI031SafeMeta {
       ocrTotalMs: nullableDuration(value.timings.ocrTotalMs, "meta.timings.ocrTotalMs"),
     },
   };
+  if (textFirst) return { ...parsed, textFirst };
+  return parsed;
 }
 
 export function parseYoutubeI031WorkerOutput(value: unknown): YoutubeI031ExtractionResult {
@@ -541,11 +629,13 @@ export function parseYoutubeI031WorkerOutput(value: unknown): YoutubeI031Extract
     );
   }
 
-  return {
-    identity: assertExactIdentity(value.identity),
-    recipe: parseRecipe(value.recipe),
-    meta: parseSafeMeta(value.meta),
-  };
+  const recipe = parseRecipe(value.recipe);
+  const meta = parseSafeMeta(value.meta);
+  if (meta.textFirst?.route === "text-only" && (!recipe.ingredients.length || !recipe.steps.length
+    || recipe.stepEvidence?.length !== recipe.steps.length || meta.frameCount !== 0 || meta.selectedFrameCount !== 0)) {
+    throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid text-only evidence");
+  }
+  return { identity: assertExactIdentity(value.identity), recipe, meta };
 }
 
 export function resolveYoutubeRecipeExtractorMode(
