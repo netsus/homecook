@@ -12,7 +12,7 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "bf549a6853e783664d5802295d9e996db31930ce",
+    "baseCommit": "4a9da270233b6c92e6a81498e35309efc348bb46",
     "total": 157,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
@@ -75,8 +75,14 @@
       "line": 124,
       "column": 20,
       "snippet": "routeClient as unknown as LeftoversDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/planner/route.ts::anti-slop(no-chained-type-assertions)::dbc701ee1443a382ea4c8238f09525dd993c05dbd7eb886a8705b3e245a52d01#1",
@@ -99,8 +105,14 @@
       "line": 57,
       "column": 20,
       "snippet": "routeClient as unknown as LeftoverMutationAuthedDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "lib/server/marketing-round2.ts::anti-slop(no-conditional-empty-object-spread)::1074c5efc6313c249855ad1fb10f9499113dfb09031ce9d74d89b53190b88e00#1",
@@ -123,8 +135,14 @@
       "line": 51,
       "column": 20,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "lib/server/recipe-extraction-lab/prompt.mjs::anti-slop(no-array-filter-map)::d14c717e8fbb23ae9ecb7e2241d9a67e60f9fdbde752042fd91abc4be8a53bce#1",
@@ -147,8 +165,14 @@
       "line": 51,
       "column": 20,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-array-filter-map)::a4ada9dfe223ee89ccb5dbbd41885289bebaa9ce7b5c0dc1553920124fcaca4c#1",
@@ -315,8 +339,14 @@
       "line": 148,
       "column": 5,
       "snippet": "memory as unknown as RecipeNutritionServiceClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Bundle adapter Row does not guarantee recipe id/base_servings/updated_at. Validate and precisely type bundle rows before replacing this assertion; do not invent fields.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipe-books/route.ts::anti-slop(no-chained-type-assertions)::27ebc9d56f69b69f83690da7d2ea200c42b7a8976af789e26342bb1192e7c315#1",
@@ -327,8 +357,14 @@
       "line": 370,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipe-books/route.ts::anti-slop(no-chained-type-assertions)::8c8f2edb3fd70f767d10253a58f09f56913fd5fd9769b968a69f1b8ada2222fc#1",
@@ -339,8 +375,14 @@
       "line": 419,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipe-books/[book_id]/route.ts::anti-slop(no-chained-type-assertions)::0c02a21adac6a0fccf9c1acd2b75c8c87bcf716024973fa8a05dff5b2b31f10c#1",
@@ -351,8 +393,14 @@
       "line": 216,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookDetailDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::42b213e63f521a5b1d7d24990338bb1918dfbc337317ea9d8e084975e83ed253#1",
@@ -363,8 +411,14 @@
       "line": 200,
       "column": 9,
       "snippet": "...(returnToModal ? { returnToModal } : {})",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Fixed screenshot visual reference, not production bundle source. Reference README requires user-approved refreeze. Preserve runnable reference artifact; do not rewrite for a metric.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::0686d5adf87baff37fb31b849989d853bd6c447803fc09d32afa9f8edd776802#1",
@@ -375,8 +429,14 @@
       "line": 201,
       "column": 9,
       "snippet": "...(returnToPage ? { returnToPage } : {})",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Fixed screenshot visual reference, not production bundle source. Reference README requires user-approved refreeze. Preserve runnable reference artifact; do not rewrite for a metric.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::8084d999b093f6aaa05e37f9efef2744b3b710fe3106152ee2b4147b8364a1e0#1",
@@ -387,8 +447,14 @@
       "line": 260,
       "column": 7,
       "snippet": "...(incoming?.items ? { items: incoming.items } : {})",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Fixed screenshot visual reference, not production bundle source. Reference README requires user-approved refreeze. Preserve runnable reference artifact; do not rewrite for a metric.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts::anti-slop(no-chained-type-assertions)::13be47fc629b2b9da8569a9bcd9d608ced4f29d954ab656a3cd4b72080748696#1",
@@ -399,8 +465,14 @@
       "line": 531,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts::anti-slop(no-chained-type-assertions)::58dfb17a095eb0ff3b4d31d2ee7b8938e090c134eca4ec9f59982b5c0a5d7888#1",
@@ -411,8 +483,14 @@
       "line": 854,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookRecipeRemoveAuthedDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipe-books/[book_id]/recipes/route.ts::anti-slop(no-chained-type-assertions)::57b04ea1fa26b7b0c8c1d59f62d84e80951ea3538f44684baab0d0d82734fe10#1",
@@ -423,8 +501,14 @@
       "line": 475,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookRecipesDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts::anti-slop(no-chained-type-assertions)::e37acc447d4e8ad8c719ae510162a9d9770b7ea42147717d46fef54d7f7524b9#1",
@@ -447,8 +531,14 @@
       "line": 296,
       "column": 20,
       "snippet": "[...picked].map(id => DM.ING[id]).filter(Boolean)",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Exported Claude Design handoff prototype, not production implementation. No production performance defect established; preserve reference rather than rewrite to lower count.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
@@ -507,8 +597,14 @@
       "line": 431,
       "column": 9,
       "snippet": "dbClient as unknown as UserGamificationDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Progress-only client omits gamification downstream table capabilities. Needs actual caller/callee capability contract alignment, not a cast adapter.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
@@ -567,8 +663,14 @@
       "line": 743,
       "column": 14,
       "snippet": "[r.theme, ...displayTags].filter(Boolean).map((tag, idx) => ( <span key={`${tag}-${idx}`} style={{ fontSize: 12, color: idx === 0 ? T.mintDeep : T.text2, fontWeight: 800, background: idx === 0 ? T.mintSoft : T.surfaceFill, padding: '4px 9px', borderRadius: 9999, }}>{tag}</span> ))",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Fixed screenshot visual reference, not production bundle source. Reference README requires user-approved refreeze. Preserve runnable reference artifact; do not rewrite for a metric.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx::anti-slop(no-array-filter-map)::c565029adc76b4bce3f607d0977d4c4136539b8aba1cf166591d24c9befed9c6#1",
@@ -579,8 +681,14 @@
       "line": 1481,
       "column": 19,
       "snippet": "sections.map(sec => ({ sec, list: buy.filter(i => i.section === sec) })).filter(g => g.list.length > 0)",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Fixed screenshot visual reference, not production bundle source. Reference README requires user-approved refreeze. Preserve runnable reference artifact; do not rewrite for a metric.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/planner/nutrition/route.ts::anti-slop(no-chained-type-assertions)::92e084546d67fd71e7919c79a5c7a7071c42750e4aeb39b29f6ac932fc35979f#1",
@@ -615,8 +723,14 @@
       "line": 53,
       "column": 12,
       "snippet": "[recipe.theme, ...displayTags].filter(Boolean).map((tag, idx) => ( <span key={`${tag}-${idx}`} style={{ fontSize: 12, color: idx === 0 ? T.mintDeep : T.text2, fontWeight: 800, background: idx === 0 ? T.mintSoft : T.surfaceFill, padding: '4px 9px', borderRadius: 9999 }}>{tag}</span> ))",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Fixed screenshot visual reference, not production bundle source. Reference README requires user-approved refreeze. Preserve runnable reference artifact; do not rewrite for a metric.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-chained-type-assertions)::6ffeb26c3ea5844adc99e5d696e54ab8c817d988b959ca6628737fc04a45c64c#1",
@@ -663,8 +777,14 @@
       "line": 1928,
       "column": 12,
       "snippet": "INGREDIENT_FILTER_GROUPS.filter(g => activeCat === '전체' || g.cat === activeCat).map(g => { const filtered = query ? g.ingredients.filter(n => n.includes(query)) : g.ingredients; if (filtered.length === 0) return null; return ( <div key={g.cat} style={{ marginBottom: 16 }}> <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 8 }}>{g.cat}</div> <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}> {filtered.map(n => { const on = selected.has(n); return ( <button key={n} onClick={() => toggle(n)} style={{ padding: '8px 12px', borderRadius: 9999, background: on ? T.mintSoft : T.surfaceFill, color: on ? T.mintDeep : T.text2, border: on ? `1px solid ${T.mint}` : '1px solid transparent', fontSize: 12, fontWeight: 700, cursor: 'pointer', }}>{n}</button> ); })} </div> </div> ); })",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-reference",
+      "holdReason": "Fixed screenshot visual reference, not production bundle source. Reference README requires user-approved refreeze. Preserve runnable reference artifact; do not rewrite for a metric.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read source/reference README and call-path evidence; no source change",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/planner/columns/shared.ts::anti-slop(no-chained-type-assertions)::91ed2302347fd6bac4d9d018e4d817e65709029fb2fd3c9547c5bd9c3ad3c5ec#1",
@@ -699,8 +819,14 @@
       "line": 118,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingPreviewDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::2cd700b4d3558c3e1f11e949e748e7ee8bcb4b7afa56642ec8b656fb525bb838#1",
@@ -771,8 +897,14 @@
       "line": 164,
       "column": 9,
       "snippet": "dbClient as unknown as UserGamificationDbClient & UserProgressDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Growth-only client omits downstream progress/gamification capabilities. Needs actual caller/callee contract alignment, not broader opaque assertions.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/route.ts::anti-slop(no-chained-type-assertions)::9377f0d687ea163881aeb71c049740d2aedaaeadc3e3f8d36a05b34010bae458#1",
@@ -783,8 +915,14 @@
       "line": 578,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingCreateDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
@@ -807,8 +945,14 @@
       "line": 1282,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingCreateDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/pantry/bundles/route.ts::anti-slop(no-chained-type-assertions)::96b8ff9e2372384f43a42c8da7206004be0bc87c015fdadc060811be956760d8#1",
@@ -819,8 +963,14 @@
       "line": 83,
       "column": 20,
       "snippet": "routeClient as unknown as PantryBundlesDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/[list_id]/items/[item_id]/route.ts::anti-slop(no-chained-type-assertions)::37a09f27ef371f760c8b53e235b4a031b54fd19f242536d1a333d84cf58852ab#1",
@@ -831,8 +981,14 @@
       "line": 222,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingItemUpdateDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/pantry/route.ts::anti-slop(no-chained-type-assertions)::dcbbb9a552ef8853b448ea49658f36e450e2c074bf953c86e795cfc7f04b3858#1",
@@ -843,8 +999,14 @@
       "line": 245,
       "column": 20,
       "snippet": "routeClient as unknown as PantryDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/[list_id]/items/bulk/route.ts::anti-slop(no-chained-type-assertions)::4e95ab99711c9ddfd0e66f6c1e99622beaa5fcd8186cc02b16f4ffd9c5e1fdc1#1",
@@ -855,8 +1017,14 @@
       "line": 213,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingBulkItemUpdateDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/[list_id]/share-text/route.ts::anti-slop(no-chained-type-assertions)::6850c6e76c6bd99465367a6cce2202fb7673ec5d727f9028f6f394290a86e28f#1",
@@ -867,8 +1035,14 @@
       "line": 137,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingShareTextDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/[list_id]/complete/route.ts::anti-slop(no-chained-type-assertions)::a309e12ebc96615a9a578ed2c5fde4ad761a0e7750b896e81b2cd8518ed07f01#1",
@@ -879,8 +1053,14 @@
       "line": 179,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/[list_id]/route.ts::anti-slop(no-chained-type-assertions)::bad943693927d658c957a56021331a3b94c6893dc8a95bd5ccea6f70e7a23297#1",
@@ -891,8 +1071,14 @@
       "line": 250,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingListDetailDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/shopping/lists/[list_id]/items/reorder/route.ts::anti-slop(no-chained-type-assertions)::d4981b272978b1aed6dbe70f59957eab90d0912347113b3f4594388b502488da#1",
@@ -903,8 +1089,14 @@
       "line": 204,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingReorderDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/users/me/gamification/_helpers.ts::anti-slop(no-chained-type-assertions)::63592dedca1c006cc7b61b3f204225c2848c2c9fd3e18bbee5a52ebbba5558c0#1",
@@ -999,8 +1191,14 @@
       "line": 146,
       "column": 22,
       "snippet": "routeClient as unknown as StandaloneCookModeDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Generated product/ingredient/step projection has GenericStringError, missing step methods and array/object relation mismatch. Confirm exact query/schema contract before declaring row types.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/[id]/route.ts::anti-slop(no-chained-type-assertions)::91e5705e78b700f1287003227440f6dab707875d501101f851a207a28286d093#1",
@@ -1011,8 +1209,14 @@
       "line": 442,
       "column": 28,
       "snippet": "(ingredientsResult.data ?? []) as unknown as NonNullable< Parameters<typeof normalizeRecipeIngredients>[0] >",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Ingredients result has no runtime normalized-row guard and inferred product/ingredient rows do not guarantee required normalized fields. Needs real projection/validation contract, not assertion relocation.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/[id]/route.ts::anti-slop(no-chained-type-assertions)::75dca4dc05eacbb3b3182090d0a749053ce982f349fd6869ff9238d463d5b741#1",
@@ -1051,8 +1255,14 @@
       "line": 366,
       "column": 5,
       "snippet": "...(typeof row.food_product_id === \"string\" ? { food_product_id: row.food_product_id.trim() } : {})",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "retained-no-improvement-evidence",
+      "holdReason": "This key is independently emitted only for a string source value (trimmed, including empty strings). Absent/null/undefined/non-string values all omit it. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read consumer/source semantics; no performance or simpler behavior-preserving alternative established",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::f662a8a2b81fbd32d5d5a51847b61960e4229c510ba386727756885db3ac6eab#1",
@@ -1063,8 +1273,14 @@
       "line": 368,
       "column": 5,
       "snippet": "...(typeof row.food_product_nutrition_version_id === \"string\" ? { food_product_nutrition_version_id: row.food_product_nutrition_version_id.trim() } : {})",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "retained-no-improvement-evidence",
+      "holdReason": "This key is independently emitted only for a string source value (trimmed, including empty strings). Absent/null/undefined/non-string values all omit it. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read consumer/source semantics; no performance or simpler behavior-preserving alternative established",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::aa336e5ccd3ca10ecf13203e85ddb7c47042d995049950ccb04cd7c142e9f3b0#1",
@@ -1092,8 +1308,14 @@
       "line": 1367,
       "column": 7,
       "snippet": "...(ingredient.food_product_id ? { food_product_id: ingredient.food_product_id, food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id, } : {})",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "retained-no-improvement-evidence",
+      "holdReason": "The two product keys are jointly emitted only when food_product_id is truthy; the nutrition-version value may remain an own undefined/null value inside that branch. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read consumer/source semantics; no performance or simpler behavior-preserving alternative established",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-array-filter-map)::c2acee8946d823a14f92b11b6296f4ebfb91966112db0b788e083dd255c8737f#1",
@@ -1104,8 +1326,14 @@
       "line": 1422,
       "column": 29,
       "snippet": "rows.map((row) => row.recipe_id).filter(Boolean)",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "retained-no-improvement-evidence",
+      "holdReason": "Production search deduplication has real duplicate-ID responsibility and regression coverage. No cardinality/latency problem established; loop-only rewrite or filter removal is not justified.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read consumer/source semantics; no performance or simpler behavior-preserving alternative established",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::c4d70fde2704d45db48bb362e214d0d76570933efdba41a227b78fa8bd766064#1",
@@ -1116,8 +1344,14 @@
       "line": 1746,
       "column": 34,
       "snippet": "routeClient as unknown as RecipeSearchDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::618b2074248421401bfdc85e35f73bdf1ff1b63afb3393caf1bd1612c5090a72#1",
@@ -1128,8 +1362,14 @@
       "line": 1749,
       "column": 11,
       "snippet": "await createRouteHandlerClient({ anonymousPublicReadScope: \"ingredients\" }) as unknown as RecipeIngredientSearchClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::598a39d3f5bf77409ff13897fb9870725912ac3348c52e72eb2afa3339aadb32#1",
@@ -1140,8 +1380,14 @@
       "line": 1750,
       "column": 11,
       "snippet": "routeClient as unknown as RecipeIngredientSearchClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::b862a39f029c3d4647b2b4c6f210ded3831c4960685812e00256fbdc0ea416bb#1",
@@ -1152,8 +1398,14 @@
       "line": 1832,
       "column": 17,
       "snippet": "routeClient as unknown as RecipeCardUserStatusDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::50dc6803b50c304c522be326ed993ca34ee28525522d08817a260870987215b0#1",
@@ -1164,8 +1416,14 @@
       "line": 1946,
       "column": 20,
       "snippet": "routeClient as unknown as ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::75dca4dc05eacbb3b3182090d0a749053ce982f349fd6869ff9238d463d5b741#1",
@@ -1210,8 +1468,14 @@
       "line": 2243,
       "column": 9,
       "snippet": "dbClient as unknown as RecipeNutritionServiceClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "ManualRecipeDbClient from overloads do not satisfy nutrition owner recipe/ingredient/predecessor read contract. Separate actual capabilities and row contract before direct assignment.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::9763ee8b73027d7a1bc31e5d48061557cffac3c56473ba77be5893eb979beef2#2",
@@ -1222,8 +1486,14 @@
       "line": 2293,
       "column": 7,
       "snippet": "dbClient as unknown as RecipeNutritionServiceClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "ManualRecipeDbClient from overloads do not satisfy nutrition owner recipe/ingredient/predecessor read contract. Separate actual capabilities and row contract before direct assignment.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::9763ee8b73027d7a1bc31e5d48061557cffac3c56473ba77be5893eb979beef2#3",
@@ -1234,8 +1504,14 @@
       "line": 2364,
       "column": 5,
       "snippet": "dbClient as unknown as RecipeNutritionServiceClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "ManualRecipeDbClient from overloads do not satisfy nutrition owner recipe/ingredient/predecessor read contract. Separate actual capabilities and row contract before direct assignment.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/[id]/publish/route.ts::anti-slop(no-chained-type-assertions)::59c307534b5136d238e3d3f1f3b86ec2cc1c4f5766ba2d2c1232194a98061068#1",
@@ -1246,8 +1522,14 @@
       "line": 40,
       "column": 53,
       "snippet": "client as unknown as RecipeNutritionServiceClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Owner raw Supabase from builder does not match handwritten nutrition recipe/ingredient query contract. Needs owner read contract alignment; predecessor fix does not resolve this owner boundary.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/recipes/[id]/publish/route.ts::anti-slop(no-chained-type-assertions)::aa336e5ccd3ca10ecf13203e85ddb7c47042d995049950ccb04cd7c142e9f3b0#1",
@@ -1323,8 +1605,14 @@
       "line": 139,
       "column": 20,
       "snippet": "routeClient as unknown as CookingSessionDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/cooking/sessions/[session_id]/cook-mode/route.ts::anti-slop(no-chained-type-assertions)::eb9ee866151c5534de5ce603ca099bccd76329c17172627c26d5890f63dd1d09#1",
@@ -1335,8 +1623,14 @@
       "line": 230,
       "column": 20,
       "snippet": "routeClient as unknown as CookModeDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "lib/supabase/server.ts::anti-slop(no-conditional-empty-object-spread)::eb7dee8d361a75fb15140abc686d4fc6a8b6e7cc120ad5155fff2043233af23f#1",
@@ -1424,8 +1718,14 @@
       "line": 77,
       "column": 20,
       "snippet": "routeClient as unknown as CookingCancelDbClient & UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
@@ -1436,8 +1736,14 @@
       "line": 53,
       "column": 5,
       "snippet": "serviceClient as unknown as FuturePropagationRpcClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "held-coordination",
+      "holdReason": "Direct assignment compiles, but this is the cook-mode endpoint covered by parallel weight compatibility work. Read-only comparison found no current target diff in checked weight worktrees, not proof of no future overlap. Parent coordination unavailable (thread not found); preserve until owner confirms.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement, whole-program diagnostics0; coordination not confirmed",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "lib/server/youtube-multi-recipe-extractor.ts::anti-slop(no-array-filter-map)::b0fcfeeb0e737e9d27fe7f122574e52d74a119bdd23dbc84dfae2bb12a5286f6#1",
@@ -1484,8 +1790,14 @@
       "line": 18,
       "column": 29,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "needs-contract-refactor",
+      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "components/marketing/round2/round2-turnstile.tsx::anti-slop(no-chained-type-assertions)::9e2a0750b99b350e4bb98d094219cdfbbf3c9b2f5a2453cb1b46fc8c98d1fff2#1",
@@ -1580,8 +1892,14 @@
       "line": 641,
       "column": 9,
       "snippet": "...(Object.hasOwn(guard, \"product_predecessor\") ? { product_predecessor: guard.product_predecessor } : {})",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "retained-no-improvement-evidence",
+      "holdReason": "Object.hasOwn deliberately distinguishes an absent product_predecessor key from an own undefined/null value. Preserving this and key order via a temporary object/unconditional spread has no demonstrated simplicity/allocation benefit.",
+      "review": {
+        "source": "independent read-only compiler/source investigation",
+        "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
+        "evidence": "read consumer/source semantics; no performance or simpler behavior-preserving alternative established",
+        "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      }
     },
     {
       "id": "lib/server/youtube-dictionary-resolution-scoring.ts::anti-slop(no-array-filter-map)::e238adcbe3546aace55104ce34de370a5a86be87d3951b01e911a21296c9b28d#1",
