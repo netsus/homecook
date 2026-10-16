@@ -147,12 +147,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 전체 typecheck·제품7파일/새test ESLint·diff-check PASS, Anti Slop157 유지/baseline207/신규0. 제품 코드 순28줄 감소이며 테스트 추가를 제품 감소로 숨기지 않는다. 독립 리뷰 APPROVE: 동일99건·전체 typecheck·ESLint·diff-check를 직접 확인했다. Anti Slop은 부모 결과와 구분한다.
 - 401 판정·body/ID 검사 순서·bootstrap·조회·read-only409·완료상태·RPC 인수/권한/소유권은 유지한다. auth 보안 설정을 변경하거나 새 auth wrapper를 만들지 않았다. wrapper 제거라 emitted JS 동일 주장은 하지 않는다. 전체 build·화면·실DB·운영 미실행이며 기존10실패·49원본 미확인은 별도다.
 
-## 현재 배치: 목록 GET 단발 타입 변환 함수 삭제
+## 현재 배치: [#1771](https://github.com/netsus/homecook/pull/1771) 목록 GET 단발 타입 변환 함수 삭제
 
 - `app/api/v1/tags/route.ts`의 단일사용 asTagsDbClient와 `app/api/v1/food-products/route.ts` GET의 단일사용 asCatalogDbClient를 삭제한다. unknown으로 넓혀 다시 단언하던 호출을 기존 consumer 타입의 직접 변수 대입으로 바꾼다. 새 wrapper/cast/adapter0, 제품 POST의 별도 create/bootstrap 단언 helper는 그대로 둔다.
 - 원본 finding 감소와 다른 실제 불필요 코드 정리로, 제품 순8줄 감소·Anti Slop157 유지/baseline207/신규0이다. SDK 기본 RPC 결과의 any 경계·DB schema별 행 검증이 해결됐다는 주장은 하지 않는다.
 - 편집 전후 recipe-tags-route / prepared-food-catalog-api / community-prepared-food-catalog-api 3 suite27 PASS. 전체 typecheck·변경 ESLint·diff-check PASS. 독립 리뷰 APPROVE: 동일27건·type/lint/diff와 제품순8줄감소를 직접 확인했다. Anti Slop은 부모 결과와 구분한다.
 - 기존 scope·로그인·RPC 인수·검증·성공/오류 응답/빈 목록 처리는 유지한다. 단발 identity 함수 삭제이므로 전체 emitted JS byte-identical 주장은 하지 않는다. 운영·DB·보안설정 변경0, 전체 build·화면·실DB 미실행이다. 기존10실패·49원본 미확인은 별도다.
+- 최종 제품 코드에서 기존 실패5 suite를 재실행해127건=117 PASS/같은10 FAIL/skip0, exit1을 확인했다. 실패제목은 기존 목록과 같고 성공27건과 합쳐 전체통과로 표현하지 않는다. 권한 검사 완화·기대값 교체0이다.
 
 ## 보류·기술적 경계
 
