@@ -1,3 +1,4 @@
+import { assertV85Source } from "./youtube-v85-cutover.mjs";
 import { assertV74SourceHandoff } from "./prelaunch-youtube-v74-cutover.mjs";
 import { assertFingerprintSource } from "./youtube-fingerprint-recovery-authority.mjs";
 import { isDeepStrictEqual } from "node:util";
@@ -2178,8 +2179,8 @@ export function inheritRound2Readiness({ readiness, previous, next, liveSha, rel
   return { ...readiness, release_sha: releaseSha };
 }
 
-/** @param {{previous: any, next: any, files: string[], databaseDeployment?: boolean, quantityPublicReadDigests?: (string | null)[] | null}} input */
-export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false, quantityPublicReadDigests = null, nutritionMaintenanceHandoff = undefined, reviewedV74Source = null, reviewedFingerprintSource = null }) {
+/** @param {{previous: any, next: any, files: string[], databaseDeployment?: boolean, quantityPublicReadDigests?: (string | null)[] | null, reviewedV85Source?: import("./youtube-v85-cutover.mjs").V85Source | null}} input */
+export function assertRound2InheritanceBoundaries({ previous, next, files, databaseDeployment = false, quantityPublicReadDigests = null, nutritionMaintenanceHandoff = undefined, reviewedV74Source = null, reviewedFingerprintSource = null, reviewedV85Source = /** @type {import("./youtube-v85-cutover.mjs").V85Source | null} */ (null) }) {
   const before = previous.EnvironmentVariables ?? {}, after = next.EnvironmentVariables ?? {};
   // Only the reviewed guest quantity projection, with R2 still closed on both sides.
   const reviewedQuantityPublicRead = CLOSED_R2_FLAGS.every(key => before[key] === "false" && after[key] === "false")
@@ -2191,6 +2192,7 @@ export function assertRound2InheritanceBoundaries({ previous, next, files, datab
   const reviewedNutrition = nutritionMaintenanceHandoff ? assertNutritionValidatorSourceHandoff(nutritionMaintenanceHandoff) : false;
   const reviewedV74Support = reviewedV74Source ? assertV74SourceHandoff(reviewedV74Source) : null;
   const fingerprintSupport = reviewedFingerprintSource ? assertFingerprintSource(reviewedFingerprintSource) : null;
+  const v85Support = reviewedV85Source ? assertV85Source(reviewedV85Source) : null;
   const protectedSources = [
     /^(?:app\/(?:beta|privacy|api\/v1\/marketing|%5F_ops\/r2-preflight)\/|app\/(?:layout\.|globals\.css$)|components\/marketing\/|lib\/(?:marketing[./-]|supabase\/|server\/(?:marketing-|recording-page\.|homeflow-page\.|full-local-auth\/|hybrid-auth\/))|types\/marketing-)/u,
     /^(?:supabase\/|infra\/|scripts\/sql\/|scripts\/(?:start-production\.mjs|lib\/(?:start-production-runtime|production-data-quality|full-local-|marketing-round2)))/u,
@@ -2199,6 +2201,7 @@ export function assertRound2InheritanceBoundaries({ previous, next, files, datab
   if (databaseDeployment && !reviewedNutrition || !Array.isArray(files) || files.some(file => protectedSources.some(pattern => pattern.test(file))
     && !(reviewedV74Support?.has(file))
     && !(fingerprintSupport?.has(file))
+    && !(v85Support?.has(file))
     && !(reviewedQuantityPublicRead && file === "lib/server/hybrid-auth/public-read-policy-runtime.mjs")
     && !(reviewedNutrition && (file === `supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}` || nutritionMaintenanceHandoff.maintenance.review.feature === RECIPE_SAVE_RECOVERY_FEATURE
       && RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row => file === `supabase/migrations/${row.filename}`)

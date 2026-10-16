@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-17 — v85 고정49→50 전환 도구 준비, 실제 발급/운영 전환 보류
+
+원 C04/v74/V2 권위와 봉인1be5eeea/artifact38파일을 유지하는 별도 전환 도구를 구현했다. metadata3경로·독립create-only승인anchor·fresh RC잠금/CAS·불확실commit대조·동일50복구를 fixture405 PASS와 격리PG17 7 PASS로 확인했다. type/build/lint·Anti Slop173/신규0, 재생성artifact hash 동일이며 제품/번들diff0이다. [정확한권한/만료·실행순서·일시503·복구/수동대조경계](../engineering/youtube-v85-controlled-cutover-20261017.md)를 따른다. 실제50/manager·새승인anchor·DB/웹/worker변경·추가모델은0이며 실행시점확인 전이다. 운영06a/v74-gen49·V2·DB232·C05/R2OFF를 유지한다.
+
 ## 2026-10-17 — v85 소스 병합·artifact 봉인 완료, 신규 자격 실행 확인 대기
 
 PR1753을1be5eeea5dd946d8a54edf6c5fd0c3c28d1815fa로 병합했고 최신master1b551630e 통합 후626 PASS·type/build·Anti Slop173/신규0이다. 해당SHA worker artifact38파일 및 descriptor를 로컬 봉인했다. generation50/최대300초manager 발급은 실행 시점 확인 대기이며 운영DB/웹/worker전환·추가모델0이다. 원49를 새snapshot에 재사용하지 않으며49→50 successor/metadata handoff·불확실commit 대조/동일50 복구 준비가 남는다. [최종diff·봉인SHA·정확한권한/만료·복구조건](../engineering/youtube-v85-deployment-preparation-20261017.md), Library `libfile_2bab86cb9f4081919a1058f72da0b5bd`를 따른다. 현재 운영은 무게반영웹06a/v74-gen49다.

@@ -1,0 +1,150 @@
+{
+  "app/api/v1/admin/audit-logs/route.ts": [
+    "b1a2cb1057bc48770e451b728e980a5cfa73d4e5b5a31578836362424f467b57",
+    "e7065f162b110c97115b1eb62ba2424428ec59a3507f27a56bf40ab24d2332d2"
+  ],
+  "app/api/v1/admin/operational-events/route.ts": [
+    "8dbfd67193ea1c60035266aa5c129fc211cab8089621005c8c81113fcbdb3cb5",
+    "ce71338a4b70f136185f9f5afb27dc855fba6e10f4712e78f06bd62be245d1ab"
+  ],
+  "app/api/v1/admin/page-view/route.ts": [
+    "34c15376ae374104a6e8ff83883a7af54923156172c745bc880cd41abeac85fc",
+    "ab42039e1ea4e9a56c5e5a00475b89f58d943788b6bec8dd0c0b182abb141307"
+  ],
+  "app/api/v1/admin/users/route.ts": [
+    "32207801763a47a3004c851322f38201a70b04e1ad99fba10154c27fbfa24254",
+    "23e1670e41a0aa6a2763cea43b3cb544dccf4521829083afb9b9ac1246c38cfb"
+  ],
+  "app/api/v1/cooking/sessions/route.ts": [
+    "ef7587f8d04a0c4737b0f4e1584c26132ed529df62402eebb494447c9bf5e47e",
+    "ca80d569e29541e635e6a888fca63bcc6965f42bcd1691d96bc7452f5bf2d055"
+  ],
+  "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts": [
+    "4d3e1d95e0db2334973c36e401f9475bef2958ac3202d29990928cde0f9eed40",
+    "50e5ad4b4e013219504b036fa594ba72c97ed7430547c67f4890aeb3ca6be3f4"
+  ],
+  "app/api/v1/recipes/images/route.ts": [
+    "b1da12110a2611a4ad034cc2aaf19e25388e23b9f1c40bc3a07caecd248cec96",
+    "e4b70fa07c5c450320113fd79ea138ea013e5f31b4401251a89f67761f546dba"
+  ],
+  "docs/engineering/cooked-weight-followup-operating-20261017.md": [
+    null,
+    "35c80137a97d8bfb6c1f1cc24f241f5c9fc14258a99401a0f86becb137d09343"
+  ],
+  "docs/engineering/cooked-weight-validation-followup-20261017.md": [
+    "9e192f3714b63fcaaa79b8f8602bf96876b5512d6a0c5c6956fb4e20cf4ca5b3",
+    "33b571e70d72697f749066e917a840cd132f056b11a7943d20c0ab0a617db6fb"
+  ],
+  "docs/engineering/evidence/youtube-source-conflict-priority-replay-20261016.json": [
+    null,
+    "4722eb7795734ef9ffbd18ec987ae009361a1ab78932f0fa4efd5e23e172f791"
+  ],
+  "docs/engineering/evidence/youtube-text-first-continuation-20261016.json": [
+    null,
+    "7dd2ed62bbf15671e2a1a1e10a3ec70b0fcef0d724d2ce11e6398ce678d74d17"
+  ],
+  "docs/engineering/evidence/youtube-text-first-evaluation-20261016.json": [
+    null,
+    "ebc19606cf3116538c239d9b053d50e79e4d15859ecc42217b9c2c22d439dc1e"
+  ],
+  "docs/engineering/evidence/youtube-text-first-final-evaluation-20261016.json": [
+    null,
+    "a02b455ce7ac376c14eb9b98a83cfcf8ac0c82942eedcc780a7442041d35cd3b"
+  ],
+  "docs/engineering/youtube-source-conflict-priority-20261016.md": [
+    null,
+    "0d66fc2a3352875b500960fa6f31addeec36b616c6765cbc996892a3a3df25d0"
+  ],
+  "docs/engineering/youtube-text-first-conditional-completion-20261016.md": [
+    null,
+    "164a51a5a7f4e6f319750c26c73bb1c6fbc1e15ff410163b11374e34c65508fe"
+  ],
+  "docs/engineering/youtube-v85-deployment-preparation-20261017.md": [
+    null,
+    "6b6cd89ef21dd46349b8c908ef317ec728e7a9254bfc587d42e6bb291ad2ffbc"
+  ],
+  "docs/sync/CURRENT_SOURCE_OF_TRUTH.md": [
+    "3ca5b9cb00ce5dc656e6c0c0d5cadab26800ce9125ed317efae85b013566e90e",
+    "297456b80367c652b9a09e6a529e0ed05ff6560d77a40073b69b01524fb83ecb"
+  ],
+  "lib/server/admin-auth.ts": [
+    "0777dce1639f403d7b84fcceec21d0cb961ea493b4d3a2a47cf68e864d44d0c4",
+    "7d3aad56f90ab22837371c2516eb89ce45d692eccf1bcfd11f6e59cb7057e685"
+  ],
+  "lib/server/youtube-async-extraction.ts": [
+    "741c775e972f3f17f034a49a489ba6415ba96244ad5e0e6755048dd3d2d52e0f",
+    "1d3261c9e8c9259c291fa2a727534fa91986aca148ebe35f7f0d0f00d5ed34ad"
+  ],
+  "lib/server/youtube-i031-runtime.ts": [
+    "960822143deb0a35a950748e60ec3aa34e834e2c5d6261d7e80bc93147d998ee",
+    "58721cda74b62e3ef23f0415186f25abc67babf5512b401cc641ef79b40e6c89"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/lib/server/recipe-extraction-lab/extract.mjs": [
+    "cbed908cd363aae05a621a77cd48e76d48d8be6841772e5b0d6e14b3f635464d",
+    "22267b9e88c9657e36c632526aa13d6ba2a38fd5c2e0eaf2fd8e7ec6531c76db"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/lib/server/recipe-extraction-lab/quantity-evidence.mjs": [
+    "1ab113eb0978bf93fa074244ffef7b7db76dfd02825aedb528eecccffb3b090c",
+    "ea18704293fb5339acfcbe38363e05539916c776e9860b06bb443a6610e61b65"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/manifest.json": [
+    "32078b535050f2a5196dd05b3cb9cf8820181398a97c7606449eacb90a4865ac",
+    "11290b3c16276664e9a3ecce4711a8493779b96be7c80a8e58e08f82236ca6ed"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs": [
+    "a8614a16b2588e311262c8c3fede756bc6fe7f8b11ee2cbb2ba27f9e3759b4f3",
+    "c2bb2b5d4e22e9e890d91b70fe7263c3bd083d3eb3557bf13a2d18c8623c4f1b"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs": [
+    "3ada7b95255b9ab482d60e1a9bf52bddc7b8d5970b6d97fdebf07de27d5ef606",
+    "85479f5b0f389f4e9aceaa7f6ea6b807ccf9919a1291e7255e34cdf50e104fa2"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-quantity-owner-hints.mjs": [
+    "23a14e0d2f8e1170bfa91f49c5afa62de2cacfc9afbded125ce93958433bc3f0",
+    "1858c664f99d289b6985c7f5f012f1dcc67173b7f92966d071593cba7b709d50"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/text-first-source-routing.mjs": [
+    null,
+    "39eb1ce0eecd245d1482b989871753ba4f9ffa7a5963ad6af8ffbfa4370e0a44"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/snapshot-video.mjs": [
+    "964b40f1f7a5fdbb64b4a460a8f9287e105b2ed3cc1e57376733bf0cc899ae82",
+    "8d19e96f85f0af85770bd33d39c7d9b1e8298197df2acc758e429640c50b6a18"
+  ],
+  "lib/server/youtube-i031-runtime/bundle/worker.mjs": [
+    "df98afa793f7a100a5206d44d32a4c9963af8bd2a895be9f176d2e5641ba4c1f",
+    "d256fa53e0b131565573e05731c17d78e2af174a628e5788b40eea9f6b69e445"
+  ],
+  "scripts/lib/youtube-extraction-worker-artifact.mjs": [
+    "17ea03e158e3f3345e76c4335c50ff6d5a5603e90bcf169d18614ec75cc4c86f",
+    "f8558098d7cd6a1a6b683fcd3a04797bb6447753c3fbaf80adad4abb09778182"
+  ],
+  "tests/admin-foundation.backend.test.ts": [
+    "1a6603201d565076794c6efb9a4be1e7efbae97ecca6a1c15fdb4ec50def699e",
+    "ab7ee276f5cad920d0276150da033bcac7e887c4c1b9ef29d9b1fccdf747e4e5"
+  ],
+  "tests/youtube-authored-source-priority.test.ts": [
+    "e8cd2f0e949d88550389a6eccd2e1096e8190c1f8b8b3b21d6d487c5305955d1",
+    "5685e741965b3d0ffd3c2b156813570cfad7995cecf6b21a69eca8f306fb9e09"
+  ],
+  "tests/youtube-i031-runtime.test.ts": [
+    "958b0f4a010ee7ffc5c0b64a9a53c382321be7000a333073aaf36c3fb29e4820",
+    "9d0fd7fe461ffcd5cb1fd90a7f1d3975a646f59f144c870bcc2cd20511c40389"
+  ],
+  "tests/youtube-source-bound-quantity-recovery.test.ts": [
+    "93100f1931f7fad622d36de78c83108c6abe20ac236f322a57b104dc77612ee5",
+    "a9a3643fd3ac93c72f3504c5c3e294fc5904032681fbb5824a00b6dfbf7eb3a9"
+  ],
+  "tests/youtube-source-context-completion.test.ts": [
+    null,
+    "5bee7121d12d1af67c31d143928daae623461e5a040123015490564d6f65e5e1"
+  ],
+  "tests/youtube-text-first-routing.test.ts": [
+    null,
+    "c8658b7969380cb520f53c28a71d7a46112bd5a579e687aafa3e3f3449712410"
+  ],
+  "tests/youtube-v63-runtime-integration.test.ts": [
+    "376a56cd71130facdf9c09e20f84084ffd76756e397f96546764c68ff254ee71",
+    "345cc7167cae22fcbf70e0b15e10923916a4be79434f1e27913bfc508035206f"
+  ]
+}

@@ -1,3 +1,4 @@
+import { assertV85Successor } from "./youtube-v85-cutover.mjs";
 import { assertV74WorkerSuccessor, V74_ACTIVATION_SHA256 } from "./prelaunch-youtube-v74-cutover.mjs";
 import { createHash } from "node:crypto";
 import { fingerprintWorkerSuccessor, assertFingerprintCurrentPolicy } from "./youtube-fingerprint-recovery-authority.mjs";
@@ -918,8 +919,11 @@ function assertAttestationWorker(review, worker, safeOff = false, workerControlT
   approvedPolicy = /** @type {{policyRowSha256: string, workerPolicyEnabled: boolean} | null} */ (null), approvedSuccessor = null) {
   if (!worker || worker.catalogFingerprint !== QUANTITY_V4_WORKER_CATALOG_AFTER) throw new Error("Personal attestation worker critical catalog differs");
   const originalWorker = approvedSuccessor ? assertV74WorkerSuccessor({ ...approvedSuccessor, baseline: review.database.workerBaseline, approvedPolicy }) : null;
-  const successorWorker = originalWorker ? fingerprintWorkerSuccessor(originalWorker, approvedSuccessor.fingerprintRecovery,
+  const fingerprintWorker = originalWorker ? fingerprintWorkerSuccessor(originalWorker, approvedSuccessor.fingerprintRecovery,
     approvedSuccessor.origin, V74_ACTIVATION_SHA256) : null;
+  const successorWorker = approvedSuccessor?.v85?.proof ? assertV85Successor({authority:approvedSuccessor.v85,worker:fingerprintWorker,
+    policy:(approvedSuccessor.fingerprintRecovery.compensation??approvedSuccessor.fingerprintRecovery.receipt).after.policy,
+    origin:approvedSuccessor.origin,recovery:approvedSuccessor.fingerprintRecovery}) : fingerprintWorker;
   for (const key of ["credentialGeneration", "credentialRowSha256", "policyRowSha256", "policyStableSha256", "schemaIdentity", "snapshotDigest", "workerPolicyEnabled", "workerReleaseSha"]) {
     // Only the original controlled worker CLI checks the enabled/timestamp whole-row transition.
     // Its fixed observer retains the exact stable policy, credential and critical catalog here.
@@ -958,7 +962,11 @@ export function assertCookedWeightAttestationCurrentObservation(successor, obser
   const quantity = observation.quantityWriterEnabled ?? observation.writerEnabled;
   if (typeof quantity !== "boolean" || (quantityWriterState && quantity !== (quantityWriterState === "on"))) throw new Error("Personal attestation current quantity state differs");
   assertAttestationWorker(review, observation.worker, safeQuantityOff || workerControlTransition, workerControlTransition, approvedWorkerPolicy, approvedWorkerSuccessor);
-  assertFingerprintCurrentPolicy(approvedWorkerSuccessor?.fingerprintRecovery, observation.fingerprintPolicy, observation.worker);
+  if(approvedWorkerSuccessor?.v85?.proof) {
+    const after=approvedWorkerSuccessor.v85.proof.after;
+    if(!isDeepStrictEqual(observation.fingerprintPolicy,after.full.fingerprintPolicy)||observation.worker.policyRowSha256!==after.worker.policyRowSha256
+      ||observation.worker.policyStableSha256!==after.worker.policyStableSha256)throw new Error('v85 exact live full policy differs');
+  } else assertFingerprintCurrentPolicy(approvedWorkerSuccessor?.fingerprintRecovery, observation.fingerprintPolicy, observation.worker);
   return observation;
 }
 
