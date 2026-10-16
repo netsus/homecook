@@ -402,6 +402,36 @@ async function importKeepRoute() {
   return import("@/app/api/v1/leftovers/[leftover_id]/keep/route");
 }
 
+describe("leftover mutation RPC payload validation", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
+    projectUserGamificationAfterProgressEvent.mockClear();
+    projectUserGamificationAfterActivityEvent.mockClear();
+  });
+
+  it.each([
+    ["eat", importEatRoute],
+    ["uneat", importUneatRoute],
+    ["keep", importKeepRoute],
+  ] as const)("returns 500 rather than success for a malformed %s RPC result", async (_action, loadRoute) => {
+    const db = { rpc: vi.fn(async () => ({ data: {}, error: null })) };
+    setupAuthenticatedDb(db);
+    const { POST } = await loadRoute();
+    const response = await POST(new Request("http://localhost:3000"), {
+      params: Promise.resolve({ leftover_id: leftoverId }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({
+      success: false, data: null, error: { code: "INTERNAL_ERROR" },
+    });
+    expect(projectUserGamificationAfterProgressEvent).not.toHaveBeenCalled();
+    expect(projectUserGamificationAfterActivityEvent).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/v1/leftovers", () => {
   beforeEach(() => {
     vi.resetModules();
