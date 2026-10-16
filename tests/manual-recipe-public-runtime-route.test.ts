@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
 
 const mocks = vi.hoisted(() => ({
-  route: vi.fn(), rpc: vi.fn(), prepare: vi.fn(), publish: vi.fn(), recalculate: vi.fn(),
+  route: vi.fn(), rpc: vi.fn(), prepare: vi.fn(), publish: vi.fn(), recalculate: vi.fn(), capability: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: mocks.route,
@@ -15,7 +15,7 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   formatBootstrapErrorMessage: (_error: unknown, fallback: string) => fallback,
 }));
 vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
-  readAccountGenerationCapability: async () => ({ ok: true, state: "generation_active", revision: 1 }),
+  readAccountGenerationCapability: mocks.capability,
 }));
 vi.mock("@/lib/server/account-generation/session-authority", () => ({
   readVerifiedAccountGenerationSession: async () => ({ ok: true, sessionAuthority: {
@@ -47,6 +47,7 @@ const headers = { "content-type": "application/json", "Idempotency-Key": key, "X
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.capability.mockReset().mockResolvedValue({ ok: true, state: "generation_active", revision: 1 });
   mocks.route.mockResolvedValue({
     auth: { getUser: async () => ({ data: { user: { id: owner } } }) },
     from: (table: string) => ({ select: () => ({ in: async () => ({
@@ -87,7 +88,45 @@ describe("manual publication readiness", () => {
     expect(mocks.prepare.mock.invocationCallOrder[0]).toBeLessThan(mocks.publish.mock.invocationCallOrder[0]);
     expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({ auth: expect.any(Object) }), recipeId,
       expect.objectContaining({ rpc: mocks.rpc }), expect.objectContaining({ ownerUuid: owner }));
+    expect(mocks.prepare.mock.calls[0][0]).toBe(await mocks.route.mock.results[0].value);
     expect(mocks.recalculate).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("preserves the same owner client for legacy nutrition, rpc=%s", async (hasRpc) => {
+    mocks.capability.mockResolvedValue({ ok: true, state: "legacy", revision: 1 });
+    const insertRecipe = vi.fn(() => ({ select: () => ({ maybeSingle: async () => ({ data: row, error: null }) }) }));
+    const insertChild = vi.fn(async () => ({ data: null, error: null }));
+    const rpc = vi.fn(async () => ({ data: row, error: null }));
+    const client = {
+      auth: { getUser: async () => ({ data: { user: { id: owner } } }) },
+      from: (table: string) => {
+        if (table === "recipes") return { insert: insertRecipe };
+        if (table === "recipe_ingredients" || table === "recipe_steps") return { insert: insertChild };
+        return { select: () => ({ in: async () => ({
+          data: table === "ingredients" ? [{ id: ingredientId }] : [{ id: methodId, label: "끓이기" }], error: null,
+        }) }) };
+      },
+      rpc: hasRpc ? rpc : undefined,
+    };
+    mocks.route.mockResolvedValue(client);
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(new Request("http://localhost/api/v1/recipes", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    }));
+
+    expect(response.status, JSON.stringify(await response.clone().json())).toBe(201);
+    expect(mocks.recalculate).toHaveBeenCalledExactlyOnceWith(client, recipeId);
+    expect(mocks.prepare).not.toHaveBeenCalled();
+    expect(mocks.publish).not.toHaveBeenCalled();
+    if (hasRpc) {
+      expect(rpc).toHaveBeenCalledWith("create_manual_recipe", expect.objectContaining({ p_user_id: owner }));
+      expect(insertRecipe).not.toHaveBeenCalled();
+      expect(insertChild).not.toHaveBeenCalled();
+    } else {
+      expect(insertRecipe).toHaveBeenCalledOnce();
+      expect(insertChild).toHaveBeenCalledTimes(2);
+    }
   });
 
   it("does not mistake an infrastructure failure for unavailable nutrition or successful publication", async () => {
