@@ -2,6 +2,7 @@ import type {
   LeftoverDishStatus,
   LeftoverListItemData,
   LeftoverMutationData,
+  LeftoverKeepData,
 } from "@/types/leftover";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 
@@ -98,17 +99,64 @@ export function projectLeftoverCompatibilityStatus(
     : "leftover";
 }
 
-export function toLeftoverMutationData(row: {
-  id: string;
-  status: LeftoverDishStatus;
-  eaten_at: string | null;
-  auto_hide_at: string | null;
-}): LeftoverMutationData {
+interface LegacyLeftoverMutationError {
+  error_code: "RESOURCE_NOT_FOUND" | "FORBIDDEN" | "CONFLICT";
+}
+
+export function describeLegacyLeftoverMutationError(
+  code: LegacyLeftoverMutationError["error_code"],
+  action: "eat" | "uneat" | "keep",
+) {
+  if (code === "RESOURCE_NOT_FOUND") {
+    return { code, message: "남은 요리를 찾을 수 없어요.", status: 404 };
+  }
+  if (code === "FORBIDDEN") {
+    return { code, message: "내 남은 요리만 수정할 수 있어요.", status: 403 };
+  }
   return {
-    id: row.id,
-    status: row.status,
-    eaten_at: row.eaten_at,
-    auto_hide_at: row.auto_hide_at,
+    code,
+    message: action === "keep"
+      ? "이미 다먹음 처리된 남은 요리는 계속 보관할 수 없어요."
+      : "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요.",
+    status: 409,
+  };
+}
+
+export function parseLegacyLeftoverMutation(
+  value: unknown,
+  action: "keep",
+): LeftoverKeepData | LegacyLeftoverMutationError | null;
+export function parseLegacyLeftoverMutation(
+  value: unknown,
+  action: "eat" | "uneat",
+): LeftoverMutationData | LegacyLeftoverMutationError | null;
+export function parseLegacyLeftoverMutation(
+  value: unknown,
+  action: "eat" | "uneat" | "keep",
+): LeftoverMutationData | LeftoverKeepData | LegacyLeftoverMutationError | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if ("error_code" in value) {
+    const code = value.error_code;
+    return code === "RESOURCE_NOT_FOUND" || code === "FORBIDDEN" || code === "CONFLICT"
+      ? { error_code: code }
+      : null;
+  }
+  if (!("id" in value) || typeof value.id !== "string" || value.id.length === 0 ||
+    !("status" in value) || value.status !== (action === "eat" ? "eaten" : "leftover") ||
+    !("transitioned" in value) || typeof value.transitioned !== "boolean") return null;
+
+  if (action === "keep") {
+    if (!("stale_reviewed_at" in value) || typeof value.stale_reviewed_at !== "string") return null;
+    return { id: value.id, status: "leftover", stale_reviewed_at: value.stale_reviewed_at };
+  }
+  if (!("eaten_at" in value) || (value.eaten_at !== null && typeof value.eaten_at !== "string") ||
+    !("auto_hide_at" in value) || (value.auto_hide_at !== null && typeof value.auto_hide_at !== "string")) return null;
+
+  return {
+    id: value.id,
+    status: action === "eat" ? "eaten" : "leftover",
+    eaten_at: value.eaten_at,
+    auto_hide_at: value.auto_hide_at,
   };
 }
 

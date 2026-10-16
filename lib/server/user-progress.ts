@@ -225,12 +225,12 @@ export function calculateUserProgressLevel(totalXp: number): UserProgressLevelDa
   const normalizedTotalXp = Math.max(0, Math.floor(totalXp));
   let currentLevel = 1;
 
-  while (getLevelStartXp(currentLevel + 1) <= normalizedTotalXp) {
+  while (levelStartXp(currentLevel + 1) <= normalizedTotalXp) {
     currentLevel += 1;
   }
 
-  const currentLevelStartXp = getLevelStartXp(currentLevel);
-  const nextLevelStartXp = getLevelStartXp(currentLevel + 1);
+  const currentLevelStartXp = levelStartXp(currentLevel);
+  const nextLevelStartXp = levelStartXp(currentLevel + 1);
   const xpIntoCurrentLevel = normalizedTotalXp - currentLevelStartXp;
   const xpToNextLevel = nextLevelStartXp - normalizedTotalXp;
   const levelSpan = nextLevelStartXp - currentLevelStartXp;
@@ -253,10 +253,6 @@ export function calculateUserProgressLevel(totalXp: number): UserProgressLevelDa
 export function levelStartXp(level: number) {
   const normalizedLevel = Math.max(1, Math.floor(level));
   return Math.max(0, 40 * (normalizedLevel - 1) ** 2 + 60 * (normalizedLevel - 1));
-}
-
-function getLevelStartXp(level: number) {
-  return levelStartXp(level);
 }
 
 export function getUserProgressGrade(level: number): UserProgressGradeData {
@@ -661,13 +657,6 @@ function isDuplicateSource(
     return true;
   }
 
-  if (input.eventType === "recipe_saved") {
-    const recipeSourceKey = `recipe_saved:${input.userId}:${input.recipeId}`;
-    return existingEvents.some((event) =>
-      event.event_type === "recipe_saved" && event.source_key === recipeSourceKey
-    );
-  }
-
   if (input.eventType === "planner_registered") {
     const repeatSourceKey = `planner_registered:${input.sourceId}`;
     return existingEvents.some((event) =>
@@ -694,29 +683,32 @@ export function isUserProgressRepeatCapExceeded(
     return false;
   }
 
-  const repeatEvents = existingEvents.filter((event) => {
-    if (event.event_type !== eventType) {
-      return false;
-    }
-
-    return normalizeSourceMeta(event.source_meta_json).xp_kind === "repeat";
+  const repeatEvents: Array<{ occurredAt: string; meta: ReturnType<typeof normalizeSourceMeta> }> = [];
+  existingEvents.forEach((event) => {
+    if (event.event_type !== eventType) return;
+    const meta = normalizeSourceMeta(event.source_meta_json);
+    if (meta.xp_kind === "repeat") repeatEvents.push({ occurredAt: event.occurred_at, meta });
   });
 
   if (caps.daily && sourceMeta.cap_day_key) {
-    const dailyCount = repeatEvents.filter((event) =>
-      normalizeSourceMeta(event.source_meta_json).cap_day_key === sourceMeta.cap_day_key
-        || getKstDateKey(event.occurred_at) === sourceMeta.cap_day_key
-    ).length;
+    let dailyCount = 0;
+    for (const { occurredAt, meta } of repeatEvents) {
+      if (meta.cap_day_key === sourceMeta.cap_day_key || getKstDateKey(occurredAt) === sourceMeta.cap_day_key) {
+        dailyCount += 1;
+      }
+    }
     if (dailyCount >= caps.daily) {
       return true;
     }
   }
 
   if (caps.weekly && sourceMeta.cap_week_key) {
-    const weeklyCount = repeatEvents.filter((event) =>
-      normalizeSourceMeta(event.source_meta_json).cap_week_key === sourceMeta.cap_week_key
-        || getKstIsoWeekKey(event.occurred_at) === sourceMeta.cap_week_key
-    ).length;
+    let weeklyCount = 0;
+    for (const { occurredAt, meta } of repeatEvents) {
+      if (meta.cap_week_key === sourceMeta.cap_week_key || getKstIsoWeekKey(occurredAt) === sourceMeta.cap_week_key) {
+        weeklyCount += 1;
+      }
+    }
     if (weeklyCount >= caps.weekly) {
       return true;
     }

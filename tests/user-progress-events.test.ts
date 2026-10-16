@@ -166,6 +166,39 @@ describe("user progress event writer", () => {
     expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
   });
 
+  it("does not award a saved recipe again when another book membership uses the same recipe", async () => {
+    const insert = vi.fn();
+    const upsert = vi.fn();
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "user_progress_events") return {
+          insert,
+          select: () => createArraySelectQuery({
+            data: [{
+              event_type: "recipe_saved",
+              source_id: "old-book-item",
+              source_key: "recipe_saved:user-1:recipe-1",
+              xp_delta: 10,
+              occurred_at: "2026-06-10T10:00:00.000Z",
+            }],
+            error: null,
+          }),
+        };
+        if (table === "user_progress_summary") return { upsert };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+      userId: "user-1", eventType: "recipe_saved", sourceTable: "recipe_book_items",
+      sourceId: "new-book-item", recipeId: "recipe-1", occurredAt: "2026-06-11T10:00:00.000Z",
+    });
+
+    expect(result).toEqual({ awarded: false, duplicate: true, error: null, summary: null });
+    expect(insert).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
   it("does not award the same planner meal again after it created the first planner event", async () => {
     const progressEventsTable = {
       insert: vi.fn(),
