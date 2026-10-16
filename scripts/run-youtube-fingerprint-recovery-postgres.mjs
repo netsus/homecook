@@ -80,7 +80,8 @@ function openSession(label) {
 }
 const literal = text => `'${String(text).replaceAll("'", "''")}'`;
 const uuid = n => `80000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-const owner = uuid(10), admin = uuid(20), retainedOwner = uuid(30);
+const owner = uuid(10), admin = uuid(20), retainedOwner = uuid(30), legacyV2Owner = uuid(40);
+const originalV2Count = 33;
 const fingerprint = text => createHash("sha256").update(`fake-test:${text}`).digest("hex");
 const fixture = JSON.parse(readFileSync(join(repo, "tests/fixtures/youtube-fingerprint-recovery-production-contract.json"), "utf8"));
 const pins = { enqueue: "27f2e32dbf5062e4d1697c4fee51a400b08896188644a159bf8282e721d961c9",
@@ -118,7 +119,7 @@ CREATE FUNCTION private.assert_youtube_extraction_catalog_ready() RETURNS void L
 ${fixture.snapshotDigest};
 ${fixture.enqueue};
 ${fixture.activeDedupeIndex};
-INSERT INTO public.users VALUES (${literal(owner)}),(${literal(admin)}),(${literal(retainedOwner)});
+INSERT INTO public.users VALUES (${literal(owner)}),(${literal(admin)}),(${literal(retainedOwner)}),(${literal(legacyV2Owner)});
 INSERT INTO public.admin_members VALUES (${literal(admin)});
 INSERT INTO private.youtube_extraction_worker_credentials VALUES ('fixture',49);
 INSERT INTO public.youtube_extractor_permits VALUES ('primary',NULL,NULL);
@@ -132,7 +133,7 @@ const enqueueSql = (user, video, version = "2") => `${claims(user)}
 const enqueue = async (session, user, video, version = "2") => JSON.parse((await session.query(enqueueSql(user, video, version))).split("\n").at(-1));
 const state = async session => JSON.parse(await session.query(FINGERPRINT_RECOVERY_STATE_SQL));
 const protectedSql = `SELECT jsonb_build_object(
- 'oldEight',(SELECT coalesce(jsonb_agg(to_jsonb(j) ORDER BY id),'[]') FROM public.youtube_extraction_jobs j WHERE user_id=${literal(retainedOwner)}),
+ 'oldFortyOne',(SELECT coalesce(jsonb_agg(to_jsonb(j) ORDER BY id),'[]') FROM public.youtube_extraction_jobs j WHERE user_id IN (${literal(retainedOwner)},${literal(legacyV2Owner)})),
  'credentials',(SELECT jsonb_agg(to_jsonb(c)) FROM private.youtube_extraction_worker_credentials c),
  'permit',(SELECT jsonb_agg(to_jsonb(p)) FROM public.youtube_extractor_permits p),
  'ordinary',(SELECT jsonb_agg(to_jsonb(o)) FROM public.ordinary_fixture o));`;
@@ -182,7 +183,12 @@ try {
        release_policy_key,policy_version,policy_snapshot_digest,extractor_mode,pipeline_identity,result_affecting_options,submission_mode,status,completed_at,created_at,completion_delivery_key,extraction_session_id)
       SELECT ('80000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,${literal(retainedOwner)},'old-'||n,md5(n::text)||md5(n::text),'1',
        'primary',3,${policyDigest},'codex_cli',repeat('a',64),'{}','background_notify',CASE WHEN n=8 THEN 'failed' ELSE 'succeeded' END,
-       '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z','old-delivery-'||n,gen_random_uuid() FROM generate_series(1,8) AS n;`);
+       '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z','old-delivery-'||n,gen_random_uuid() FROM generate_series(1,8) AS n;
+      INSERT INTO public.youtube_extraction_jobs(id,user_id,youtube_video_id,request_fingerprint,request_fingerprint_key_version,
+       release_policy_key,policy_version,policy_snapshot_digest,extractor_mode,pipeline_identity,result_affecting_options,submission_mode,status,completed_at,created_at,completion_delivery_key,extraction_session_id)
+      SELECT ('80000000-0000-4000-8000-'||lpad((n+100)::text,12,'0'))::uuid,${literal(legacyV2Owner)},'legacy-v2-'||n,md5('v2-'||n)||md5('v2-'||n),'2',
+       'primary',3,${policyDigest},'codex_cli',repeat('a',64),'{}','background_notify',CASE WHEN n<=24 THEN 'succeeded' ELSE 'failed' END,
+       '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z','legacy-v2-delivery-'||n,gen_random_uuid() FROM generate_series(1,33) AS n;`);
   }
   const change = async (session, expected, direction = "apply", observePreserved = observer) => {
     const journal = [];
@@ -210,7 +216,7 @@ try {
     assert.equal((await state(base)).policy.fingerprint_key_version, "1");
     await base.query("UPDATE public.youtube_extractor_permits SET owner_id=NULL,expires_at=NULL;");
   });
-  await test("V1 active rejects with eight terminal rows preserved", async () => {
+  await test("V1 active rejects with original V1 eight and V2 thirty-three preserved", async () => {
     await reset(); const before = await observer(base.query); await enqueue(base, owner, "active-v1", "1");
     const session = await guardedSession("active-reject");
     await assert.rejects(change(session, await state(base)), /rejected-before-commit/u);
@@ -232,7 +238,7 @@ try {
     await assert.rejects(change(await guardedSession("cas"), expected), /rejected-before-commit/u);
     assert.equal((await state(base)).policy.fingerprint_key_version, "1");
   });
-  await test("transition holds four table locks and preserves old8/ordinary/credentials/permit", async () => {
+  await test("transition holds four table locks and preserves old41/ordinary/credentials/permit", async () => {
     await reset(); const expected = await state(base), before = await observer(base.query);
     const session = await guardedSession("success");
     const changed = await change(session, expected, "apply", async query => {
@@ -240,6 +246,10 @@ try {
       return observer(query);
     });
     assert.equal(changed.record.after.policy.fingerprint_key_version, "2"); assert.deepEqual(await observer(base.query), before);
+    assert.equal(changed.record.before.v2Count, originalV2Count); assert.equal(changed.record.after.v2Count, originalV2Count);
+    assert.equal(before.oldFortyOne.length, 41);
+    assert.equal(await base.query("SELECT count(*) FROM public.youtube_extraction_jobs WHERE request_fingerprint_key_version='2' AND status='succeeded';"), "24");
+    assert.equal(await base.query("SELECT count(*) FROM public.youtube_extraction_jobs WHERE request_fingerprint_key_version='2' AND status='failed';"), "9");
     assert.deepEqual(changed.journal.map(row => row.phase), ["intent", "commit-dispatch", "committed"]);
     assert.equal(changed.record.before.jobsSha256, changed.record.after.jobsSha256);
   });
@@ -254,7 +264,7 @@ try {
     await waitFor(() => base.query(`SELECT wait_event_type||':'||wait_event FROM pg_stat_activity WHERE application_name=${literal(second.name)};`), value => value === "Lock:advisory", "per-owner dedupe lock");
     await first.query("COMMIT;"); const two = await pending;
     assert.equal(two.job_id, one.job_id); assert.equal(two.deduplicated, true);
-    assert.equal(await base.query("SELECT count(*) FROM public.youtube_extraction_jobs WHERE request_fingerprint_key_version='2';"), "1");
+    assert.equal(await base.query("SELECT count(*) FROM public.youtube_extraction_jobs WHERE request_fingerprint_key_version='2';"), String(originalV2Count + 1));
   });
   await test("terminal resubmission creates a new job without rewriting the completed one", async () => {
     const session = await guardedSession("resubmit"), original = await enqueue(session, owner, "double-v2");
@@ -279,16 +289,16 @@ try {
     await enqueue(adminSession, admin, "active-admin-1"); await enqueue(adminSession, admin, "active-admin-2");
     await assert.rejects(enqueue(adminSession, admin, "active-admin-3"), /RATE_LIMITED/u);
   });
-  await test("any V2 terminal history rejects compensation and forces forward fix", async () => {
+  await test("new V2 terminal beyond original33 rejects compensation and forces forward fix", async () => {
     await reset(); const applied = await change(await guardedSession("apply-for-compensation"), await state(base));
     const job = await enqueue(base, owner, "terminal-v2");
     await base.query(`UPDATE public.youtube_extraction_jobs SET status='failed',completed_at=clock_timestamp() WHERE id=${literal(job.job_id)};`);
-    const observed = await state(base);
-    assert.equal(classifyFingerprintReconciliation({ expected: applied.record.before, dispatch: applied.record, observed }), "forward-fix-only");
+    const observed = await state(base); assert.equal(observed.v2Count, originalV2Count + 1);
+    assert.equal(classifyFingerprintReconciliation({ expected: applied.record.before, dispatch: applied.record, observed }), "committed-with-new-work");
     await assert.rejects(change(await guardedSession("terminal-compensation"), observed, "compensate"), /rejected-before-commit/u);
     assert.equal((await state(base)).policy.fingerprint_key_version, "2");
   });
-  await test("compensation without any V2 history restores only policy version/time", async () => {
+  await test("compensation with only original33 V2 restores only policy version/time", async () => {
     await reset(); await change(await guardedSession("empty-apply"), await state(base));
     const before = await state(base); const restored = await change(await guardedSession("empty-compensate"), before, "compensate");
     assert.equal(restored.record.after.policy.fingerprint_key_version, "1"); assert.equal(restored.record.before.jobsSha256, restored.record.after.jobsSha256);
@@ -299,7 +309,7 @@ try {
   finalReport = { passed: results.length, failed: 0, isolated: true, serverVersion,
     execution: docker17 ? "owned Docker; no network/mount/port; existing pinned image" : "native",
     ...(docker17 ? { image: dockerImage } : {}),
-    transport: "private Unix socket; no TCP", contractPins: pins, moduleSha256,
+    transport: "private Unix socket; no TCP", originalHistory: { v1Terminal: 8, v2Terminal: originalV2Count, v2Succeeded: 24, v2Failed: 9, fullRowsPreserved: 41 }, contractPins: pins, moduleSha256,
     limitations: ["Synthetic tables/data", "Catalog assertion stubbed", "No PostgREST/production RLS/real authentication validation", "No worker or model call", "No production state read or mutation"] };
 } finally {
   for (const session of sessions) session.stop();

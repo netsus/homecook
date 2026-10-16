@@ -2,7 +2,7 @@
 
 ## 2026-10-17 — YouTube 접수 V2 복구 도구 로컬 준비
 
-로그인 HTTP 접수의 V1 fingerprint key 누락을 조사한 뒤, 사용자 승인으로 기존 terminal8·C04/v74 원 권위·DB232·worker gen49를 보존하는 V2 준비 도구를 구현했다. [실행 준비와 정확한 승인 범위](../engineering/youtube-fingerprint-v2-execution-readiness-20261017.md)를 따른다. 격리 PG15/17의 잠금·CAS·중복·재신청·quota·보상 검증은 운영 접수 성공을 뜻하지 않는다. 실제 key 생성/설정·Keychain 승인 hash 등록·DB policy 전환·웹 재시작·로그인 HTTP는 별도 실행 시점 승인 대상이며 아직 수행하지 않았다. 완성 무게 후속·별도 추출기 후보·Anti Slop 정리는 이 복구 변경에 포함하지 않는다.
+로그인 HTTP 접수의 V1 요구/V2 키 불일치를 조사했다. 기존 V1 terminal8 외 V2 terminal33과 현재 공식 웹의 기존 V2 키를 발견해 HMAC33/33 일치를 비공개 대조했다. 새 키 발급안은 폐기하고 사용자 승인 범위의 기존 V2 재사용 준비 도구로 좁혔다. 기존41건·C04/v74 원 권위·DB232·worker gen49는 보존한다. [실행 준비와 정확한 승인 범위](../engineering/youtube-fingerprint-v2-execution-readiness-20261017.md)를 따른다. 격리 PG15/17의 잠금·CAS·중복·재신청·quota·보상 검증은 운영 접수 성공을 뜻하지 않는다. 키 생성/값 변경은 제외했다. 실제 Keychain 승인 hash 등록·DB policy 전환·웹 재시작·로그인 HTTP는 별도 실행 시점 승인 대상이며 아직 수행하지 않았다. 완성 무게 후속·별도 추출기 후보·Anti Slop 정리는 이 복구 변경에 포함하지 않는다.
 
 ## 2026-10-17 — 감사 4건 운영 반영·Chrome 재검증 완료
 

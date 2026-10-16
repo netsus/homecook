@@ -11,8 +11,7 @@ import { acquirePrelaunchDeployLock, acquireClosedR2ControlLease, loadClosedR2Re
   readClosedR2PrivateBytes } from './prelaunch-web-deploy.mjs';
 import { V74_ACTIVATION_SHA256, V74_OPERATION_DIRECTORY, assertV74WorkerSuccessor, assertV74LoadedService } from './prelaunch-youtube-v74-cutover.mjs';
 import { openDedicatedAdminSession } from '../youtube-resolution-controlled-db.mjs';
-import { prepareStartProductionRuntimeEnv } from './start-production-runtime.mjs';
-import { assertYoutubeEnqueueRuntimeSecrets } from './youtube-enqueue-runtime-preflight.mjs';
+import { verifyOperatingYoutubeEnqueueRuntime } from './youtube-enqueue-runtime-preflight-ops.mjs';
 import { FINGERPRINT_RECOVERY_FROM, FINGERPRINT_RECOVERY_SCHEMA, FINGERPRINT_RECOVERY_CONFIRMATION,
   FINGERPRINT_RECOVERY_STATE_SQL, FINGERPRINT_RECOVERY_BEGIN_SQL, FINGERPRINT_RECOVERY_TABLE_LOCK_SQL,
   transitionFingerprintPolicy, fingerprintRecoveryHash as hash, assertFingerprintRecoveryState,
@@ -20,7 +19,6 @@ import { FINGERPRINT_RECOVERY_FROM, FINGERPRINT_RECOVERY_SCHEMA, FINGERPRINT_REC
 import { FINGERPRINT_RECOVERY_DIRECTORY as OP, assertFingerprintSource, readFingerprintRecoveryAuthority,
   fingerprintWorkerSuccessor, fingerprintRecoveryAttemptDirectory } from './youtube-fingerprint-recovery-authority.mjs';
 import { readFingerprintPlanApproval, registerFingerprintPlanApproval } from './youtube-fingerprint-approval.mjs';
-import { stageFingerprintKey, verifyStagedFingerprintKey } from './youtube-fingerprint-key-staging.mjs';
 
 const HOME_DIR = homedir();
 const DB_CONFIG = join(HOME_DIR, '.homecook/operations/mumeok-beta-db-backup-20261015-4g3a88bt/staged-production.env');
@@ -111,6 +109,7 @@ async function state(c, query) {
 }
 export async function prepareFingerprintRecovery({ root, candidate, output }) {
   check(/^[a-f0-9]{40}$/u.test(candidate), 'candidate-sha');
+  check(command('git',['-C',root,'rev-parse','HEAD'])===candidate,'executing-candidate-source');
   check(isAbsolute(output) && resolve(output)===output && relative(root,output).startsWith(`..${sep}`),'external-private-output');
   await privatePath(dirname(output),true);
   check(command('git',['-C',root,'status','--porcelain']) === '', 'commit-reviewed-source-first');
@@ -120,13 +119,13 @@ export async function prepareFingerprintRecovery({ root, candidate, output }) {
   const full = await c.observe(); assertFull(c,full);
   check(isDeepStrictEqual(preservedFingerprintObservation(full).worker,
     preservedFingerprintObservation({worker:c.proof.after.worker}).worker),'v74-complete-worker-preimage');
-  const before = await state(c); assertFingerprintRecoveryState(before,{version:'1',requireNoV2:true});
+  const before = await state(c); assertFingerprintRecoveryState(before,{version:'1',requireOriginalV2:true});
   const plan = { schema:'homecook.youtube-fingerprint-recovery-plan.v1', from:current.ref,candidate,
     preparedAt:new Date().toISOString(), origin:{v74ActivationSha256:V74_ACTIVATION_SHA256,authority:c.origin},
     configSha256:hash(readClosedR2PrivateBytes(DB_CONFIG,root)), targetSha256:hash(JSON.stringify(full.target)),
     before, beforePreserved:preservedFingerprintObservation(full), web:current.web, service:current.service,
-    sources:fingerprintSourceDigests(root,current.ref,candidate), requiredSecretFile:join(HOME_DIR,'.homecook/youtube-extraction/fingerprint-hmac-v2'),
-    keyCreationApproved:false, operatingTransitionApproved:false, httpAcceptanceRequired:true };
+    sources:fingerprintSourceDigests(root,current.ref,candidate), existingV2Verification:await verifyExistingKey(c,current),
+    keyChanges:0, operatingTransitionApproved:false, httpAcceptanceRequired:true };
   assertFingerprintSource({plan,from:plan.from,to:candidate,digests:plan.sources});
   // Only evidence output; never create the operational authority during preparation.
   createPrivate(output,bytes(plan));
@@ -137,16 +136,26 @@ function approvedPlan(root, planPath, planSha256, confirmation) {
   const raw = readClosedR2PrivateBytes(planPath,root,524288);
   check(hash(raw) === planSha256,'approved-plan-bytes');
   const plan = JSON.parse(raw);
+  check(command('git',['-C',root,'rev-parse','HEAD'])===plan.candidate
+    && command('git',['-C',root,'status','--porcelain'])==='','executing-approved-clean-source');
   check(Number.isFinite(Date.parse(plan.preparedAt)) && Date.now() >= Date.parse(plan.preparedAt), 'plan-time');
   assertFingerprintSource({plan,from:plan.from,to:plan.candidate,digests:fingerprintSourceDigests(root,plan.from,plan.candidate)});
   return {plan,raw};
 }
-export async function stageApprovedFingerprintKey({root,planPath,planSha256,confirmation,resume=false}) {
+async function verifyExistingKey(c,current) {
+  const rows=JSON.parse(await c.adapter.query(`SELECT coalesce(json_agg(json_build_object('user_id',user_id,
+   'youtube_video_id',youtube_video_id,'extractor_mode',extractor_mode,'pipeline_identity',pipeline_identity,
+   'policy_version',policy_version,'result_affecting_options',result_affecting_options,'fingerprint',request_fingerprint)),'[]'::json)::text
+   FROM public.youtube_extraction_jobs WHERE request_fingerprint_key_version='2';`));
+  return verifyOperatingYoutubeEnqueueRuntime({codeRoot:c.root,plist:current.plist,
+    readiness:{currentFingerprintKeyVersion:'2',previousFingerprintKeyVersion:null,previousFingerprintValidUntil:null},rows});
+}
+export async function authorizeFingerprintPlan({root,planPath,planSha256,confirmation}) {
   const {plan}=approvedPlan(root,planPath,planSha256,confirmation);
-  const current=live(root);
-  check(isDeepStrictEqual(current.web,plan.web) && isDeepStrictEqual(current.service,plan.service),'key-staging-live-drift');
-  registerFingerprintPlanApproval(planSha256);
-  return stageFingerprintKey(root,{resume});
+  const c=await context(root),current=live(root);
+  check(isDeepStrictEqual(current.web,plan.web) && isDeepStrictEqual(current.service,plan.service),'approval-live-drift');
+  await verifyExistingKey(c,current);
+  return {...registerFingerprintPlanApproval(planSha256),keyChanges:0};
 }
 export async function applyFingerprintRecovery({root,planPath,planSha256,confirmation,retry=false}) {
   const {plan,raw} = approvedPlan(root,planPath,planSha256,confirmation);
@@ -162,10 +171,7 @@ export async function applyFingerprintRecovery({root,planPath,planSha256,confirm
       && hash(c.read(join(OP,'plan.json')))===planSha256,'known-not-applied-retry-only');
     else check(!retry,'retry-needs-original-attempt');
     check(hash(readClosedR2PrivateBytes(DB_CONFIG,root)) === plan.configSha256, 'config-drift');
-    verifyStagedFingerprintKey(root);
-    const runtime = prepareStartProductionRuntimeEnv({repositoryRoot:root,processEnv:{...process.env,...current.plist.EnvironmentVariables}});
-    check(runtime.HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION==='1','async-flag-must-stay-enabled');
-    assertYoutubeEnqueueRuntimeSecrets({env:runtime,readiness:{currentFingerprintKeyVersion:'2',previousFingerprintKeyVersion:null,previousFingerprintValidUntil:null}});
+    await verifyExistingKey(c,current);
     if (!existsSync(OP)) {
       mkdirSync(OP,{mode:0o700}); createPrivate(join(OP,'plan.json'),raw);
       createPrivate(join(OP,'policy-backup.json'),bytes({targetSha256:plan.targetSha256,policy:plan.before.policy,policyRowSha256:plan.before.policyRowSha256}));
@@ -228,18 +234,22 @@ export async function recoverFingerprintReceipt({root,planPath,planSha256,confir
     session=openDedicatedAdminSession(c.target.postgresContainerId,'youtube-resolution-fingerprint-v2-evidence-recovery');
     await session.query(FINGERPRINT_RECOVERY_BEGIN_SQL);await session.query(FINGERPRINT_RECOVERY_TABLE_LOCK_SQL);
     const observed=await state(c,session.query),outcome=classifyFingerprintReconciliation({expected,dispatch,observed});
-    check(['not-applied','committed'].includes(outcome),'unknown-or-v2-history-forward-fix-only');
+    check(['not-applied','committed','committed-with-new-work'].includes(outcome),'unknown-or-v2-history-forward-fix-only');
     const preserved=preservedFingerprintObservation(await c.observe(session.query));
-    check(isDeepStrictEqual(preserved,plan.beforePreserved),'recovery-preservation-drift');
+    if(outcome!=='committed-with-new-work')check(isDeepStrictEqual(preserved,plan.beforePreserved),'recovery-preservation-drift');
     lease.verify();
     if(outcome==='not-applied') {
       publishIfExact(root,compensation?join(OP,'compensate-not-applied.json'):join(attempt,'not-applied.json'),{planSha256,outcome,observed});
     } else {
       const receipt={...dispatch,schema:FINGERPRINT_RECOVERY_SCHEMA,status:'committed',planSha256,
         predecessorSha256:apply?hash(c.read(join(OP,'apply-receipt.json'))):V74_ACTIVATION_SHA256,origin:plan.origin};
-      check(isDeepStrictEqual(observed,dispatch.after) && isDeepStrictEqual(dispatch.before,expected)
+      check((outcome==='committed-with-new-work'||isDeepStrictEqual(observed,dispatch.after)) && isDeepStrictEqual(dispatch.before,expected)
         && isDeepStrictEqual(dispatch.beforePreserved,plan.beforePreserved),'recovery-exact-dispatch');
       assertFingerprintReceipt(receipt,{predecessorSha256:receipt.predecessorSha256,origin:plan.origin,worker:c.activeWorker});
+      const recovery={plan,receipt:apply??receipt,authority:{planSha256,receiptSha256:hash(bytes(apply??receipt))},
+        ...(apply?{compensation:receipt}:{})};
+      assertCookedWeightAttestationCurrentObservation(c.successor,await c.observe(session.query),{quantityWriterState:'on',
+        approvedWorkerPolicy:c.continuation.observation,approvedWorkerSuccessor:{proof:c.proof,origin:c.origin,fingerprintRecovery:recovery},databaseMaintenance:c.maintenance});
       publishIfExact(root,compensation?join(OP,'compensate-committed.json'):join(attempt,'committed.json'),dispatch);
       publishIfExact(root,join(OP,compensation?'compensate-receipt.json':'apply-receipt.json'),receipt);
       if(!compensation)publishIfExact(root,join(OP,'authority.json'),{schema:'homecook.youtube-fingerprint-recovery-authority.v1',planSha256,

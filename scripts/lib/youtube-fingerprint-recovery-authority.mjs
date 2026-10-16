@@ -11,9 +11,9 @@ const check = (ok, why) => { if (!ok) throw new Error(`fingerprint authority: ${
 const support = new Set([
   'scripts/youtube-fingerprint-recovery.mjs', 'scripts/lib/youtube-fingerprint-recovery.mjs',
   'scripts/lib/youtube-fingerprint-recovery-authority.mjs', 'scripts/lib/youtube-fingerprint-recovery-ops.mjs',
-  'scripts/lib/youtube-fingerprint-secret-env.mjs', 'scripts/lib/youtube-enqueue-runtime-preflight.mjs',
+  'scripts/lib/youtube-enqueue-runtime-preflight.mjs', 'scripts/lib/youtube-enqueue-runtime-preflight-ops.mjs',
   'scripts/lib/youtube-fingerprint-startup-preflight.mjs',
-  'scripts/lib/youtube-fingerprint-key-staging.mjs', 'scripts/lib/youtube-fingerprint-approval.mjs',
+  'scripts/lib/youtube-fingerprint-approval.mjs',
   'scripts/lib/start-production-runtime.mjs', 'scripts/start-production.mjs',
   'scripts/deploy-prelaunch-web.mjs', 'scripts/lib/prelaunch-web-deploy.mjs', 'scripts/lib/prelaunch-database.mjs',
   'scripts/run-youtube-fingerprint-recovery-postgres.mjs',

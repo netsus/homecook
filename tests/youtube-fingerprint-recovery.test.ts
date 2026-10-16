@@ -1,12 +1,12 @@
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { assertFingerprintPolicyChange, classifyFingerprintReconciliation, fingerprintRecoveryHash as hash,
-  transitionFingerprintPolicy, FINGERPRINT_RECOVERY_SCHEMA } from '../scripts/lib/youtube-fingerprint-recovery.mjs';
+  transitionFingerprintPolicy, verifyExistingV2Fingerprints, FINGERPRINT_RECOVERY_SCHEMA } from '../scripts/lib/youtube-fingerprint-recovery.mjs';
 import { assertFingerprintSource, assertFingerprintCurrentPolicy, fingerprintWorkerSuccessor, readFingerprintRecoveryAuthority } from '../scripts/lib/youtube-fingerprint-recovery-authority.mjs';
-import { loadFingerprintV2SecretEnv, fingerprintV2SecretPath } from '../scripts/lib/youtube-fingerprint-secret-env.mjs';
-import { sealFingerprintKey, openFingerprintKey } from '../scripts/lib/youtube-fingerprint-key-staging.mjs';
+import { buildYoutubeExtractionFingerprint } from '../lib/server/youtube-async-extraction';
+import { verifyOperatingYoutubeEnqueueRuntime } from '../scripts/lib/youtube-enqueue-runtime-preflight-ops.mjs';
 
 const roots:string[]=[];
 const temp=()=>{const p=mkdtempSync(join(tmpdir(),'hc-fp-unit-'));chmodSync(p,0o700);roots.push(p);return p;};
@@ -15,7 +15,7 @@ const digest='a'.repeat(64),other='b'.repeat(64);
 function fixture(){
   const policy={policy_key:'primary',enabled:true,policy_version:3,pipeline_identity:'fixed-v74',result_affecting_options:{},
     fingerprint_key_version:'1',previous_fingerprint_key_version:null,previous_fingerprint_valid_until:null,updated_at:'2026-10-16T00:00:00Z'};
-  const before={policy,policyRowSha256:digest,policyStableSha256:digest,jobsSha256:digest,v1Count:8,v1TerminalCount:8,v2Count:0,activeCount:0,permitHeld:false};
+  const before={policy,policyRowSha256:digest,policyStableSha256:digest,jobsSha256:digest,v1Count:8,v1TerminalCount:8,v2Count:33,activeCount:0,permitHeld:false,originalJobs:Object.fromEntries(Array.from({length:41},(_,n)=>[n.toString(16).padStart(64,'0'),digest]))};
   const after={...before,policy:{...policy,fingerprint_key_version:'2',updated_at:'2026-10-16T01:00:00Z'},policyRowSha256:other,policyStableSha256:other};
   const worker={credentialGeneration:49,workerReleaseSha:'3e58467499c63ba20c3b3191d9dd7dec77a7aa44',credentialRowSha256:digest,
     schemaIdentity:'fixed-schema',snapshotDigest:digest,workerPolicyEnabled:true,policyRowSha256:digest,policyStableSha256:digest};
@@ -68,6 +68,13 @@ describe('V2 exact authority and policy boundary',()=>{
     writeFileSync(join(root,'compensate-intent.json'),'{}');
     expect(()=>readFingerprintRecoveryAuthority(read,root,()=>planSha)).toThrow('pending-compensation');
   });
+  it('cannot replace the approved old41 map in a commit dispatch or receipt',()=>{
+    const f=fixture(),after={...f.after,originalJobs:{...f.after.originalJobs,['0'.repeat(64)]:other}};
+    const observed={...after,v2Count:34,jobsSha256:other};
+    expect(classifyFingerprintReconciliation({expected:f.before,dispatch:{after},observed})).toBe('uncertain-forward-fix-only');
+    const recovery={plan:f.plan,receipt:{...f.receipt,after},authority:{planSha256:digest,receiptSha256:other}};
+    expect(()=>fingerprintWorkerSuccessor(f.worker,recovery,f.origin.authority,digest)).toThrow('receipt-original-jobs');
+  });
   it('blocks a pending attempt; only an explicitly reconciled noncommit permits a fresh attempt',()=>{
     const root=temp();mkdirSync(join(root,'attempt-1'),{mode:0o700});
     expect(()=>readFingerprintRecoveryAuthority((p:string)=>readFileSync(p),root,()=>digest)).toThrow('pending-transition');
@@ -90,31 +97,30 @@ describe('uncertain commit and compensation',()=>{
     const f=fixture(),dispatch={after:f.after};
     expect(classifyFingerprintReconciliation({expected:f.before,dispatch,observed:f.before})).toBe('not-applied');
     expect(classifyFingerprintReconciliation({expected:f.before,dispatch,observed:f.after})).toBe('committed');
-    expect(classifyFingerprintReconciliation({expected:f.before,dispatch,observed:{...f.after,v2Count:1}})).toBe('forward-fix-only');
+    expect(classifyFingerprintReconciliation({expected:f.before,dispatch,observed:{...f.after,v2Count:34,originalJobs:{...f.after.originalJobs,[other]:other},jobsSha256:other}})).toBe('committed-with-new-work');
     expect(classifyFingerprintReconciliation({expected:f.before,dispatch,observed:{...f.after,jobsSha256:other}})).toBe('uncertain-forward-fix-only');
   });
 });
 
-describe('private V2 runtime file and encrypted recovery',()=>{
-  function setup(){const home=temp();mkdirSync(join(home,'.homecook/youtube-extraction'),{recursive:true,mode:0o700});return {home,file:fingerprintV2SecretPath(home),repo:process.cwd()};}
-  const fakeSecret='synthetic-fingerprint-test-only-'.repeat(2),fakeBackup='synthetic-backup-key-test-only-'.repeat(2);
-  it('loads exactly V2 from a private fixed file and refuses env disagreement',()=>{
-    const f=setup();writeFileSync(f.file,fakeSecret+'\n',{mode:0o600});
-    const env={HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION:'1'};
-    expect(loadFingerprintV2SecretEnv({repositoryRoot:f.repo,env,home:f.home})).toEqual({HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V2:fakeSecret});
-    expect(()=>loadFingerprintV2SecretEnv({repositoryRoot:f.repo,env:{...env,HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V2:'different'},home:f.home})).toThrow();
+describe('existing V2 key verification without key creation',()=>{
+  const fake='synthetic-fingerprint-test-only-'.repeat(2);
+  const policy={policyKey:'primary',policyVersion:3,extractorMode:'i031_codex_vision',pipelineIdentity:'existing',resultAffectingOptions:{singleRecipeOnly:true},currentFingerprintKeyVersion:'2'};
+  const userId='80000000-0000-4000-8000-000000000010',videoId='fixtureVideo';
+  const row={user_id:userId,youtube_video_id:videoId,extractor_mode:policy.extractorMode,pipeline_identity:policy.pipelineIdentity,
+    policy_version:policy.policyVersion,result_affecting_options:policy.resultAffectingOptions,
+    fingerprint:buildYoutubeExtractionFingerprint({secret:fake,userId,videoId,policy}).digest};
+  it('matches the production canonical HMAC for all33 legacy rows and rejects a different key',()=>{
+    const rows=Array.from({length:33},()=>row),env={HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V2:fake};
+    expect(verifyExistingV2Fingerprints(env,rows)).toEqual({existingV2Configured:true,compared:33,matched:33,secretDisclosed:false});
+    expect(()=>verifyExistingV2Fingerprints({...env,HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V2:'wrong-synthetic-key-'.repeat(3)},rows)).toThrow('existing-v2-key-mismatch');
+    expect(()=>verifyExistingV2Fingerprints(env,rows.slice(1))).toThrow('existing-v2-history-count');
   });
-  it.each(['mode','symlink','short','oversize'])('rejects %s without exposing file bytes',kind=>{
-    const f=setup();writeFileSync(f.file,kind==='short'?'short':kind==='oversize'?'x'.repeat(4097):fakeSecret,{mode:0o600});
-    if(kind==='mode')chmodSync(f.file,0o644);
-    if(kind==='symlink'){rmSync(f.file);const target=join(f.home,'target');writeFileSync(target,fakeSecret);symlinkSync(target,f.file);}
-    expect(()=>loadFingerprintV2SecretEnv({repositoryRoot:f.repo,env:{HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION:'1'},home:f.home})).toThrow('unavailable or unsafe');
-  });
-  it('authenticates encrypted backup purpose/version and rejects tampering/wrong backup keys',()=>{
-    const sealed=sealFingerprintKey(fakeSecret,fakeBackup,Buffer.alloc(12,1));
-    expect(JSON.stringify(sealed)).not.toContain(fakeSecret);expect(openFingerprintKey(sealed,fakeBackup)).toBe(fakeSecret);
-    expect(()=>openFingerprintKey({...sealed,version:'1'},fakeBackup)).toThrow();
-    expect(()=>openFingerprintKey({...sealed,tag:Buffer.alloc(16).toString('base64')},fakeBackup)).toThrow();
-    expect(()=>openFingerprintKey(sealed,'different-fake-backup-key-'.repeat(2))).toThrow();
+  it('checks the actual production env-file loading in an isolated child without disclosing the key',()=>{
+    const root=temp();writeFileSync(join(root,'.env.production.local'),'HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V2='+fake+'\n',{mode:0o600});
+    const plist={WorkingDirectory:root,ProgramArguments:[process.execPath],EnvironmentVariables:{HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION:'1',NODE_ENV:'production'}};
+    const readiness={currentFingerprintKeyVersion:'2',previousFingerprintKeyVersion:null,previousFingerprintValidUntil:null};
+    const result=verifyOperatingYoutubeEnqueueRuntime({codeRoot:process.cwd(),plist,readiness});
+    expect(result.ready).toBe(true);expect(JSON.stringify(result)).not.toContain(fake);
+    expect(()=>verifyOperatingYoutubeEnqueueRuntime({codeRoot:process.cwd(),plist,readiness:{...readiness,currentFingerprintKeyVersion:'1'}})).toThrow('preflight failed');
   });
 });

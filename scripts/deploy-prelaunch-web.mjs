@@ -43,8 +43,7 @@ import {
 import { assertV74MetadataHandoff, assertV74WorkerSuccessor, assertV74LoadedService, assertV74SourceHandoff, assertV74WebHandoff, V74_WEB_HANDOFF_SHA256, V74_RELEASE, V74_WEB_PREDECESSOR, v74Paths, V74_ACTIVATION_SHA256, V74_OPERATION_DIRECTORY } from "./lib/prelaunch-youtube-v74-cutover.mjs";
 import { applyEnvironmentPatch, readEnvironmentPatch } from "./lib/prelaunch-environment.mjs";
 import { assertFingerprintSource, readFingerprintRecoveryAuthority } from "./lib/youtube-fingerprint-recovery-authority.mjs";
-import { prepareStartProductionRuntimeEnv } from "./lib/start-production-runtime.mjs";
-import { assertYoutubeEnqueueRuntimeSecrets } from "./lib/youtube-enqueue-runtime-preflight.mjs";
+import { verifyOperatingYoutubeEnqueueRuntime } from "./lib/youtube-enqueue-runtime-preflight-ops.mjs";
 import { verifyYoutubeExtractionWorkerArtifact } from "./lib/youtube-extraction-worker-artifact.mjs";
 import { readYoutubeExtractionWorkerCredential, parseLaunchctlPrintStatus } from "./lib/youtube-extraction-worker-ops.mjs";
 import { readWorkerEnvironment } from "./lib/youtube-extraction-worker-runtime.mjs";
@@ -717,8 +716,7 @@ async function verifyProtectedBaseline(review, plan, options) {
     'previousFingerprintValidUntil',CASE WHEN previous_fingerprint_valid_until>=clock_timestamp() THEN previous_fingerprint_valid_until ELSE NULL END)
     FROM private.youtube_extraction_current_policy WHERE policy_key='primary';`)).trim());
   const operating = current();
-  assertYoutubeEnqueueRuntimeSecrets({env:prepareStartProductionRuntimeEnv({repositoryRoot:repository,
-    processEnv:productionEnvironment(operating.plist)}),readiness:fingerprintPolicy});
+  verifyOperatingYoutubeEnqueueRuntime({codeRoot:repository,plist:operating.plist,readiness:fingerprintPolicy});
   const workerContinuation = successor ? loadCookedWeightAttestationWorkerContinuation(successor, repository) : null;
   const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
   const v74Successor = workerContinuation && V74_ACTIVATION_SHA256 ? loadV74WorkerSuccessor(successor, databaseMaintenance, workerContinuation) : null;
