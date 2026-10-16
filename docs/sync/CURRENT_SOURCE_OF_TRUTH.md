@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-17 — v85 웹 선배포 중단의 정확한06a 웹 전용 복구 준비
+
+웹7b 반영 후 gen50 발급 전 자료 보존 검사가 중단됐다. 일반 자료는 레시피 조회수1 차이를 가상 계산으로 입증했고 인증 보호행 갱신도 있어 원 plan/anchor를 바꿔50을 진행하지 않는다. 기존 DB rollback guard를 유지하며 정확한7b→06a·v74/gen49·V2·DB232·원42작업을 검증하는 [별도 공식 웹 전용 복구](../engineering/youtube-v85-web-only-recovery-20261017.md)를 준비한다. 이 문단 시점 복구는 아직 미실행이며 실제 실행·readiness 결과로 갱신해야 한다.
+
 ## 2026-10-17 — v85 고정49→50 전환 도구 준비, 실제 발급/운영 전환 보류
 
 원 C04/v74/V2 권위와 봉인1be5eeea/artifact38파일을 유지하는 별도 전환 도구를 구현했다. metadata3경로·독립create-only승인anchor·fresh RC잠금/CAS·불확실commit대조·동일50복구를 fixture405 PASS와 격리PG17 7 PASS로 확인했다. type/build/lint·Anti Slop173/신규0, 재생성artifact hash 동일이며 제품/번들diff0이다. [정확한권한/만료·실행순서·일시503·복구/수동대조경계](../engineering/youtube-v85-controlled-cutover-20261017.md)를 따른다. 실제50/manager·새승인anchor·DB/웹/worker변경·추가모델은0이며 실행시점확인 전이다. 운영06a/v74-gen49·V2·DB232·C05/R2OFF를 유지한다.

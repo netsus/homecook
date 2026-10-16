@@ -234,6 +234,8 @@
     "deploy:dev:landing": "node scripts/deploy-prelaunch-web.mjs deploy",
     "deploy:dev:status": "node scripts/deploy-prelaunch-web.mjs status",
     "deploy:dev:rollback": "node scripts/deploy-prelaunch-web.mjs rollback",
+    "deploy:dev:recover-v85-web": "node scripts/deploy-prelaunch-web.mjs recover-v85-web",
+    "deploy:dev:plan-v85-web-recovery": "node scripts/deploy-prelaunch-web.mjs plan-v85-web-recovery",
     "deploy:dev": "node scripts/deploy-prelaunch-web.mjs deploy",
     "deploy:dev:plan": "node scripts/deploy-prelaunch-web.mjs plan",
     "deploy:dev:install": "node scripts/install-dev-deploy.mjs",
