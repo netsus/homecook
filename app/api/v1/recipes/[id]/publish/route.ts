@@ -37,7 +37,7 @@ export const POST = withHybridAuthorityRouteError("공개 등록을 완료하지
   }
   let prepared;
   try {
-    prepared = await prepareRecipeNutritionSnapshot(client as unknown as RecipeNutritionServiceClient, id, rpcClient as unknown as RecipeNutritionServiceClient, verified.sessionAuthority);
+    prepared = await prepareRecipeNutritionSnapshot(client as unknown as RecipeNutritionServiceClient, id, rpcClient, verified.sessionAuthority);
   } catch (error) {
     if (error instanceof RecipeQuantityModeError) return fail(error.code, error.message, error.status);
     throw error;
