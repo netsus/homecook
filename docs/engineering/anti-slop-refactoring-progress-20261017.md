@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `be8101c9a7b844129648e8bf552e74e0cc274816`, 실제 진단 **164**, baseline **207**, 신규 **0**.
-- 현재 상세 GET 선택 `edit_context` 조립 정리의 로컬 결과: **164→163 / 신규0**. 아래 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
+- 마지막 확정 master: `9a96f3fde5f3797a690ddbaa53bee6d27f297435`, 실제 진단 **163**, baseline **207**, 신규 **0**.
+- 현재 leftover GET 단발 전달 함수 제거는 실제 불필요 코드 정리이며 진단 감소로 계산하지 않는다. 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -74,17 +74,26 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1760](https://github.com/netsus/homecook/pull/1760) | 북 상세 GET/DELETE의 중복 reader 단언 제거 | 168→166 | `1e4c7351f717ba4c468b526fdcdad0a3238e0132` |
 | [#1761](https://github.com/netsus/homecook/pull/1761) | 북 표지 RPC/storage 실제 client 직접 전달 | 166→165 | `4a219fbc16ad7c8f81f0e25258cfcb397bea0252` |
 | [#1762](https://github.com/netsus/homecook/pull/1762) | recipe DELETE RPC 단언·미사용 import 제거 | 165→164 | `be8101c9a7b844129648e8bf552e74e0cc274816` |
+| [#1763](https://github.com/netsus/homecook/pull/1763) | 상세 GET 선택 context 직접 대입·지속 장부 복구 | 164→163 | `9a96f3fde5f3797a690ddbaa53bee6d27f297435` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
-## 현재 배치: [#1763](https://github.com/netsus/homecook/pull/1763) 상세 선택 context projection
+## 최근 반영: [#1763](https://github.com/netsus/homecook/pull/1763) 상세 선택 context projection
 
 - `app/api/v1/recipes/[id]/route.ts`의 빈 객체 conditional spread 1곳만 기존 typed detail의 선택 필드 직접 대입으로 바꾼다. owner 판정/조회·편집/삭제 로직·키 순서·context 없는 응답의 키 생략을 유지한다.
 - 진단164→163, 신규0, baseline207·규칙·테스트 변경0. 전체 typecheck·변경 파일 ESLint·diff-check PASS.
 - 편집 전후 `recipe-api-contracts`의 `detail|recipe does not exist|edit context|confirmed counts|QA mock recipe` 선택23 PASS /67 선택 제외. 전체90 PASS를 주장하지 않는다.
 - 넓은92검사는 편집 전후90 PASS /기존2 FAIL로 동일하다. 아래 추가 기준선 절에 분리한다. 실행 JS 동일 주장은 하지 않는다(선택 필드 조립 변경).
 - 독립 리뷰 APPROVE: 동일23 PASS /67 선택 제외, 전체 typecheck·ESLint·diff-check PASS. 넓은92건도90 PASS /기존2 FAIL을 직접 재현했고, 완료44행의 merge commit 제목도 불일치0을 확인했다. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다.
-- 전체 build·화면·실DB·운영 흐름 미실행. 실제 merge SHA는 위 PR의 metadata와 다음 장부 갱신에서 확정한다.
+- 전체 build·화면·실DB·운영 흐름 미실행. 실제 merge SHA는 위 완료 표에 확정했다.
+
+## 현재 배치: [#1765](https://github.com/netsus/homecook/pull/1765) leftover GET 단발 전달 함수 제거
+
+- `app/api/v1/leftovers/route.ts`에서 한 번만 쓰는 `requireUser` 전달 함수를 제거하고, 기존 `routeClient.auth.getUser()` 호출과 nullable user 읽기를 GET에 직접 둔다. 같은 client의 호출1회·fixture 선행 분기·401 조건·bootstrap·조회·정렬·응답·상태 정책은 그대로다.
+- 편집 전후 `leftovers.backend`, `leftover-mutation-parser`, `leftover-status-normalization` 3 suite /63 PASS. 전체 typecheck·변경 파일 ESLint·diff-check PASS, Anti Slop163 유지/신규0. 독립 리뷰 APPROVE 및 동일63건·typecheck·ESLint·diff-check PASS. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다. 이것을 전체 검사 통과로 넓히지 않는다.
+- 진단 감소 목적의 변경이 아니다. `eat/route.ts`의 최초 불검증 client 경계는 그대로이며 runtime guard·새 adapter·단언 변경0이다. 실행JS 동일 주장은 하지 않는다(단발 함수 인라인 포함).
+- 먼저 시험한 `LeftoverMutationAuthedDbClient = UserBootstrapDbClient` 동의어 제거는 체인 단언 snippet 변경을 baseline이 신규1건으로 거절해 전부 원복했다. 원복 후 diff0·실제163/신규0을 확인했다. baseline·scope·규칙을 바꾸거나 단일 단언으로 바꿔 이 검사를 우회하지 않았다.
+- 실제 DB/운영/보안 정책/무게 후속 변경0, 전체 build·화면·실DB 흐름 미실행.
 
 ## 보류·기술적 경계
 
@@ -113,7 +122,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 
 ### 추가로 재현한 넓은 상세/쓰기 검사 기준선
 
-`be8101c9a` 기반 현재 배치 편집 전후 다음 2 suite는 **92건 중90 PASS /같은2 FAIL, exit1**이다. 앞의8실패에 섞거나 자동 수정하지 않는다.
+`be8101c9a` 기반 #1763 편집 전후 다음 2 suite는 **92건 중90 PASS /같은2 FAIL, exit1**이다. 앞의8실패에 섞거나 자동 수정하지 않는다.
 
 - `personal-recipe-editor-permissions`: exact `"write_recipe_future_plan_change"` source 문자열을 기대하지만 현재 구현은 recoverable writer를 사용한다. source-text 검사 불일치이며 이 관찰만으로 권한 완전성을 입증하지 않는다.
 - `recipe-api-contracts`: `dispatches generation-active managed image creation through the session-bound transaction writer`가 nutrition 준비 mock의 구형3인수 호출을 기대하는 반면 현재 구현은 session authority를 포함한 다른 인수 형태를 쓴다. 이번 GET 선택 필드와 무관한 쓰기 계약/fixture 확인 항목이며 실제 버그 여부를 단정하거나 기대값을 바꾸지 않는다.
