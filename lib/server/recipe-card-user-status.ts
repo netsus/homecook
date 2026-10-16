@@ -1,32 +1,40 @@
-import type { RecipeCardUserStatus } from "@/types/recipe";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RecipeBookType, RecipeCardUserStatus } from "@/types/recipe";
 
-interface QueryError {
-  message: string;
-}
-
-interface SavedRecipeBookItemRow {
+type SavedRecipeBookItemRow = {
   recipe_id: string;
   book_id: string;
-}
+};
 
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface SavedRecipeBookItemsQuery {
-  eq(column: string, value: string): SavedRecipeBookItemsQuery;
-  in(column: string, values: string[]): SavedRecipeBookItemsQuery;
-  then: ArrayResult<SavedRecipeBookItemRow>["then"];
-}
-
-interface SavedRecipeBookItemsTable {
-  select(columns: string): SavedRecipeBookItemsQuery;
-}
-
-export interface RecipeCardUserStatusDbClient {
-  from(table: "recipe_book_items"): SavedRecipeBookItemsTable;
-}
+// Selected-row projections and the existing book FK, not a replacement DB schema.
+// Native builders expose delete despite never Insert/Update payloads; this is
+// not deep-readonly typing or a runtime grant. This consumer only selects.
+export type RecipeCardUserStatusDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_book_items: {
+        Row: SavedRecipeBookItemRow;
+        Insert: never;
+        Update: never;
+        Relationships: [{
+          foreignKeyName: "recipe_book_items_book_id_fkey";
+          columns: ["book_id"];
+          isOneToOne: false;
+          referencedRelation: "recipe_books";
+          referencedColumns: ["id"];
+        }];
+      };
+      recipe_books: {
+        Row: { id: string; user_id: string; book_type: RecipeBookType };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: Record<never, never>;
+  };
+}>, "from">;
 
 function buildEmptyRecipeCardUserStatuses(recipeIds: string[]) {
   return new Map<string, RecipeCardUserStatus>(

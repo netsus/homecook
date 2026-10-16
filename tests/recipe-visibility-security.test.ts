@@ -47,9 +47,8 @@ describe("recipe visibility security inventory", () => {
     expect(listGet).toContain(
       "const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient",
     );
-    expect(listGet).toContain(
-      "dbClient: routeClient as unknown as RecipeCardUserStatusDbClient",
-    );
+    expect(listGet).toMatch(/readRecipeCardUserStatuses\(\{\s*dbClient: routeClient,/);
+    expect(listGet).not.toContain("RecipeCardUserStatusDbClient");
     expect(detail).not.toContain(
       "const dbClient = serviceClient ?? routeClient",
     );

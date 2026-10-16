@@ -68,7 +68,6 @@ import {
 } from "@/lib/server/recipe-tags";
 import {
   readRecipeCardUserStatuses,
-  type RecipeCardUserStatusDbClient,
 } from "@/lib/server/recipe-card-user-status";
 import {
   createRecipeFuturePropagationInternalClient,
@@ -1827,7 +1826,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userStatusByRecipeId = await readRecipeCardUserStatuses({
-      dbClient: routeClient as unknown as RecipeCardUserStatusDbClient,
+      dbClient: routeClient,
       recipeIds: pageRows.map((recipe) => recipe.id),
       userId,
     });
