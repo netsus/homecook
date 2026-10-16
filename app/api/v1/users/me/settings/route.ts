@@ -138,10 +138,10 @@ export async function PATCH(request: Request) {
 
   const nextSettings = {
     ...normalizeSettings(currentResult.data.settings_json),
-    ...(typeof body.screen_wake_lock === "boolean"
-      ? { screen_wake_lock: body.screen_wake_lock }
-      : {}),
   };
+  if (typeof body.screen_wake_lock === "boolean") {
+    nextSettings.screen_wake_lock = body.screen_wake_lock;
+  }
 
   const updateResult = await dbClient
     .from("users")
