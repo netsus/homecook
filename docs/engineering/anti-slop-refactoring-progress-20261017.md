@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `bf549a6853e783664d5802295d9e996db31930ce`, 실제 진단 **157**, baseline **207**, 신규 **0**.
-- 현재 목록 GET 단발 타입 변환 함수 삭제는 로컬 **157 유지 /신규0**을 확인했다. 진단 감소가 아닌 실제 코드 정리이며 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
+- 마지막 확정 master: `4a9da270233b6c92e6a81498e35309efc348bb46`, 실제 진단 **157**, baseline **207**, 신규 **0**.
+- 현재 배치는 남은 원본53개 항목의 판단 기록만 갱신한다. 제품 코드·checker·baseline·테스트 변경0이며 판단 완료를 코드 해결로 세지 않는다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -16,7 +16,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 미검토53, 해결6이다. 범위 보류는 컴파일 실패나 취약점 판정이 아니며, 미검토를 실행 불가로 간주하지 않는다.
+- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요39, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결6이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
@@ -88,6 +88,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1768](https://github.com/netsus/homecook/pull/1768) | 영양 predecessor 실제 읽기 계약 분리 | 160→158 | `017d22faba3ee8a333f8af4a579fe946055fed92` |
 | [#1769](https://github.com/netsus/homecook/pull/1769) | 조리 완료 현대·legacy RPC 실제 client 직접 호출 | 158→157 | `c0afd5511f5990d96af5f3eef3e2686ff0c877c2` |
 | [#1770](https://github.com/netsus/homecook/pull/1770) | 장보기7leaf 단발 전달 함수 삭제·guest 계약 고정 | 157 유지 | `bf549a6853e783664d5802295d9e996db31930ce` |
+| [#1771](https://github.com/netsus/homecook/pull/1771) | tag/product GET 단발 unknown→cast helper 삭제 | 157 유지 | `4a9da270233b6c92e6a81498e35309efc348bb46` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -147,7 +148,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 전체 typecheck·제품7파일/새test ESLint·diff-check PASS, Anti Slop157 유지/baseline207/신규0. 제품 코드 순28줄 감소이며 테스트 추가를 제품 감소로 숨기지 않는다. 독립 리뷰 APPROVE: 동일99건·전체 typecheck·ESLint·diff-check를 직접 확인했다. Anti Slop은 부모 결과와 구분한다.
 - 401 판정·body/ID 검사 순서·bootstrap·조회·read-only409·완료상태·RPC 인수/권한/소유권은 유지한다. auth 보안 설정을 변경하거나 새 auth wrapper를 만들지 않았다. wrapper 제거라 emitted JS 동일 주장은 하지 않는다. 전체 build·화면·실DB·운영 미실행이며 기존10실패·49원본 미확인은 별도다.
 
-## 현재 배치: [#1771](https://github.com/netsus/homecook/pull/1771) 목록 GET 단발 타입 변환 함수 삭제
+## 최근 반영: [#1771](https://github.com/netsus/homecook/pull/1771) 목록 GET 단발 타입 변환 함수 삭제
 
 - `app/api/v1/tags/route.ts`의 단일사용 asTagsDbClient와 `app/api/v1/food-products/route.ts` GET의 단일사용 asCatalogDbClient를 삭제한다. unknown으로 넓혀 다시 단언하던 호출을 기존 consumer 타입의 직접 변수 대입으로 바꾼다. 새 wrapper/cast/adapter0, 제품 POST의 별도 create/bootstrap 단언 helper는 그대로 둔다.
 - 원본 finding 감소와 다른 실제 불필요 코드 정리로, 제품 순8줄 감소·Anti Slop157 유지/baseline207/신규0이다. SDK 기본 RPC 결과의 any 경계·DB schema별 행 검증이 해결됐다는 주장은 하지 않는다.
@@ -155,11 +156,23 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 기존 scope·로그인·RPC 인수·검증·성공/오류 응답/빈 목록 처리는 유지한다. 단발 identity 함수 삭제이므로 전체 emitted JS byte-identical 주장은 하지 않는다. 운영·DB·보안설정 변경0, 전체 build·화면·실DB 미실행이다. 기존10실패·49원본 미확인은 별도다.
 - 최종 제품 코드에서 기존 실패5 suite를 재실행해127건=117 PASS/같은10 FAIL/skip0, exit1을 확인했다. 실패제목은 기존 목록과 같고 성공27건과 합쳐 전체통과로 표현하지 않는다. 권한 검사 완화·기대값 교체0이다.
 
+## 현재 배치: 잔여 원본 ID별 판단 고정
+
+- 제품157건을 없앤 것이 아니라 inventory의 미검토53건을 분류했다. 원본163 ID/file/rule/hash/occurrence/checkpoint위치/snippet은 불변이고 해결6+잔여157을 유지한다. 별도49건 원본은 여전히 미확인이다.
+- 독립 조사자는 clean063f8a226의 전체 TypeScript 진단0 확인 후 미검토 연쇄 단언45건을 각1개씩 메모리에서 직접대입으로 바꿨다. 직접성공4/TS2589 30/구조불일치11이었다. 제품 파일을 수정하지 않았다. 실패 probe는 변경 파일의 semantic diagnostics 분리이며 성공4와 nutrition predecessor 계약 개선은 전체 program0도 확인했다.
+- 성공4 중 POST2와 complete1은 #1767/#1769에 반영했다. 구조불일치11 중 실제 predecessor 계약2는 #1768로 해결했다. 남은39는 TS2589 30+구조불일치9이며 **단순삭제 불가이지 전체 리팩토링 불가가 아니다**. 각 ID의 holdReason/review에 query 단계·row shape·누락 capability 및 probe 한계를 남겼다.
+- 구조9의 실제 경계는 bundle generic Row의 recipe 필수필드 미보장1, progress/growth→gamification capability 누락2, standalone cook-mode generated projection 불일치1, detail ingredients normalized-row 검증/타입 경계1, manual nutrition caller3, publish owner read1이다. 검증 없이 generated row·조인 형태를 단정하거나 adapter/새cast로 숨기지 않는다. 후속은 해당 consumer의 실제 read/row 계약을 먼저 확정하는 원인 수준 작업이다.
+- 직접성공 나머지1은 session-attempts cook-mode로, 병행 무게 호환 경로다. 확인한 weight worktree에 현재 target diff는 없었지만 미래 겹침까지 증명하지 못한다. 부모에 중간 통지를 시도했으나 thread not found였으므로 owner 조율 전에는 보존한다. 기술 실패로 위장하지 않는다.
+- prototype8은 production bundle이 아니라 고정 visual reference/디자인 handoff다. Wave1 참고 README는 승인된 refreeze만 허용하고 screenshot capture 때는 실제 실행된다. 따라서 죽은 코드라 삭제하거나 Anti 수치만 줄이려고 고치지 않는다.
+- production 체인1(dedupeRecipeIds)은 실제 검색 RPC 중복ID 제거와 회귀 책임이 있고 크기/latency 문제 증거가 없다. filter(Boolean) 방어를 없애거나 loop로 바꾸지 않는다. 선택 product projection4는 부재/own-undefined/null·독립 조건·키순서 의미를 보존해야 하며 typed 임시객체+무조건spread로 바꾸는 방식은 실제 단순성/할당 개선 근거가 없다. 이5건은 해결이 아닌 근거 없음 유지다.
+- 현 배치에서 원본163 ID·hash/위치 불변·baseline count 대조·집계·모든 해결PR/보류근거 존재·diff를 기계 검증했다. master4a9da2702 통합 관련21 suite310 PASS, 전체 typecheck·이번 연속 변경15파일 ESLint PASS, Anti Slop157/baseline207/신규0을 확인했다. 063f8a226 이후 checker/baseline/save route/내부factory 파일 diff0이다. 독립 장부 검토는 확인 중이다. 운영·DB·권한·보안설정·배포 변경0이다.
+
 ## 보류·기술적 경계
 
 - [#1745](https://github.com/netsus/homecook/pull/1745): OPEN DRAFT, head `5fc7dd78678a6d321bc689f7f3f74c6b02940e1e`. 완료 표에 넣지 않는다.
 - [#1749](https://github.com/netsus/homecook/pull/1749): OPEN DRAFT, head `d551ff06ac2eeb368789dd67cd701ce36433e1f0`. response-boundary 강한 목록 검사 후보지만 미반영이다.
 - `444fe1f6f`: 구형 save service-role fallback 제거의 접근 결과 변경 위험 때문에 보류. 분리 시도도 철회했으며 적용하지 않는다.
+- 최신 재확인: #1745/#1749는 위 exact head의 OPEN DRAFT다. 444는 master의 ancestor가 아니며 save의 기존 generic fallback도 남아 있다. 사용자 메인 checkout은 codex/gabia-direct-prelaunch·privacy/공식문서/관련test/미추적파일 dirty 그대로 보존했다.
 - 좋아요 client 직접 대입과 과거 progress 직접 대입의 TS2589 실험은 원복/철회했다. 복잡한 adapter·새 단언으로 우회하지 않는다. 최초 DB client 경계가 남은 배치는 이를 해결한 것으로 과장하지 않는다.
 - v85 추출기 전환·보안 승계·무게 후속·저장/UI/플래너 병행 변경은 이 작업의 수정 범위 밖이다. 운영 배포는 부모 조율이며 이 장부는 실행 승인이 아니다.
 
