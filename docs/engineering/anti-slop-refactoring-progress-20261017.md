@@ -213,7 +213,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 제품2파일 emitted JS byte-identical: helper SHA `addfca9b0faa3232cc8e9d3d1a86b54f699bc3df52c2e5f97d74510e1b9505d4`, recipes SHA `5b639cae6c2332d442d1061f23916c295f8bd742d8f48b09f8a89017d1f63416`. 독립 리뷰 APPROVE: 동일29건·type/lint/diff·추가 testroot compiler진단0·FK/행/JS동일을 직접 재확인했다. Anti Slop은 부모 결과와 구분한다.
 - 보호99·기존 보류5·조율1·유지13, 기존10실패·별도49원본미확인·1745/1749/444를 유지한다. 운영·DB 쓰기·권한·제품정책·전체 build/화면/실DB 검증0이며 다음 비충돌 계약 보강을 계속한다.
 
-### 현재 배치: 검색 목록 native 선택행·RPC 계약
+### 현재 배치: [#1776](https://github.com/netsus/homecook/pull/1776) 검색 목록 native 선택행·RPC 계약
 
 - 원본ID: `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::c4d70fde2704d45db48bb362e214d0d76570933efdba41a227b78fa8bd766064#1` (checkpoint1746).
 - 임의 select문에도 같은 RecipeListRow를 반환한다고 선언하던 수동 from/rpc/query 계약을 native SDK의 실제 선택행과 두 RPC Args/Returns로 교체한다. core_schema_bootstrap:96의 필드/nullability(tags NOT NULL), visibility_read_hardening:3,572의 필터열/태그RPC, product_only_identity:935의 제품RPC와 대조했다. 로컬 소비 projection이며 전체 DB schema·runtime grant·deep-readonly가 아니다.

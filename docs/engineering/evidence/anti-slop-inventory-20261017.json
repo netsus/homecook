@@ -1354,7 +1354,7 @@
       },
       "resolution": {
         "reason": "Native table selected-row/RPC Args+Returns replace the handwritten fixed-result query contract. Minimal existing sort/cursor helpers preserve concrete builder identity; direct factory assignment and final result cast removal.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1776",
         "verification": "Before/after native SDK shape7 PASS; related3 suites18 PASS; final4 suites25 PASS/type/lint/diff. Independent APPROVE/25/type/lint and exact selected-id/two-RPC-row compiler diagnostics0. Anti152→151/new0. Emitted JS differs only by one redundant parenthesis pair; independent normalized AST identical, not byte-identical."
       }
     },
