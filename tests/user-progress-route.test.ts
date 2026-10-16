@@ -194,6 +194,40 @@ describe("GET /api/v1/users/me/progress", () => {
     });
   });
 
+  it.each(["public user", "bootstrap state"])("stops before reading progress when %s initialization fails", async (stage) => {
+    const user = { id: "user-1" };
+    const routeClient = {
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user } })),
+      },
+    };
+    createRouteHandlerClient.mockResolvedValue(routeClient);
+    const bootstrapError = new Error("bootstrap unavailable");
+    const failingInitializer = stage === "public user" ? ensurePublicUserRow : ensureUserBootstrapState;
+    failingInitializer.mockRejectedValue(bootstrapError);
+
+    const { GET } = await importRoute();
+    const response = await GET();
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "formatted: bootstrap unavailable",
+        fields: [],
+      },
+    });
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(routeClient, user);
+    if (stage === "public user") {
+      expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+    } else {
+      expect(ensureUserBootstrapState).toHaveBeenCalledWith(routeClient, user.id);
+    }
+    expect(readUserProgress).not.toHaveBeenCalled();
+  });
+
   it("returns the documented envelope shape for a user with XP", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {
