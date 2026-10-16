@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `c06cf4538bfd1c816814782d5867a8b6417dd7cb`, 실제 진단 **160**, baseline **207**, 신규 **0**.
-- 현재 영양 predecessor 읽기 계약 분리는 로컬 **160→158 /신규0**을 확인했다. 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
+- 마지막 확정 master: `017d22faba3ee8a333f8af4a579fe946055fed92`, 실제 진단 **158**, baseline **207**, 신규 **0**.
+- 현재 조리 완료 RPC client 직접 전달은 로컬 **158→157 /신규0**을 확인했다. 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -16,7 +16,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 미검토54, 해결5이다. 범위 보류는 컴파일 실패나 취약점 판정이 아니며, 미검토를 실행 불가로 간주하지 않는다.
+- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 미검토53, 해결6이다. 범위 보류는 컴파일 실패나 취약점 판정이 아니며, 미검토를 실행 불가로 간주하지 않는다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
@@ -85,6 +85,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1765](https://github.com/netsus/homecook/pull/1765) | leftover GET 단발 전달 함수 제거·철회 실험 기록 | 163 유지 | `063f8a2267b4559f8c7e2450006ce536ea60dec9` |
 | [#1766](https://github.com/netsus/homecook/pull/1766) | PATCH 영양 helper 실제 client 직접 전달 | 163→162 | `f4f645c6389efe546d00571cd36155c7327e4c02` |
 | [#1767](https://github.com/netsus/homecook/pull/1767) | POST fork 영양·RPC 실제 client 직접 전달 | 162→160 | `c06cf4538bfd1c816814782d5867a8b6417dd7cb` |
+| [#1768](https://github.com/netsus/homecook/pull/1768) | 영양 predecessor 실제 읽기 계약 분리 | 160→158 | `017d22faba3ee8a333f8af4a579fe946055fed92` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -121,7 +122,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - ES2022/ESNext emitted JS byte-identical, SHA256 `c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98`. 전체 build·화면·실DB·운영 검증 미실행이며 기존10실패·49원본 미확인은 별도다.
 - 부모 세션 중간 통지는 지정 thread에 전송했으나 `thread not found`로 실패했다. 전달 성공으로 기록하지 않으며 다른 수신처로 우회하지 않는다.
 
-## 현재 배치: [#1768](https://github.com/netsus/homecook/pull/1768) 영양 predecessor 읽기 계약 분리
+## 최근 반영: [#1768](https://github.com/netsus/homecook/pull/1768) 영양 predecessor 읽기 계약 분리
 
 - 원본ID: `app/api/v1/recipes/route.ts` checkpoint1196 및 `app/api/v1/recipes/[id]/publish/route.ts` checkpoint40, 각각 `no-chained-type-assertions::aa336e5ccd3ca10ecf13203e85ddb7c47042d995049950ccb04cd7c142e9f3b0#1`. 전체 ID/위치/근거는 inventory에 보존한다.
 - 기존 predecessor 인수는 실제로 읽지 않는 recipes/recipe_ingredients와 잘못된 from단계 ListQuery를 요구했고 실제 사용하는 piece_unit_weights는 빠져 있었다. 실제3표의 select와 product/quantity RPC 계약을 분리하고, owner read·snapshot writer 계약은 전체 service client 교집합으로 유지한다. 새 adapter·단언·unknown 확대0, 두 호출자의 불필요 전체 서비스 단언만 제거한다.
@@ -129,6 +130,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 편집 전후 영양 service·manual publish·public runtime·supabase scope·personal write·product nutrition 6 suite116 PASS. 전체 typecheck·변경 ESLint·diff-check PASS, Anti Slop160→158 /baseline207/신규0. 독립 리뷰 APPROVE: 동일116건·type/lint·3파일JS동일 직접 확인, native default schema/MJS 한계도 확인했다. Anti Slop은 부모 결과와 구분한다.
 - 3파일 ES2022/ESNext emitted JS 모두 byte-identical: service `e3a324c2406f3328b1f0033d30f40142f94a5985a8b57f473533eb391ef9f8a9`, recipes `c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98`, publish `058a78ad0bd1a14a9ada77364f6454acd4fd6279ec713a5cd92135bf155ac26b`.
 - 실행 로직·권한·내부factory·DB·운영 변경0이다. 전체 build·화면·실DB 미실행, 기존10실패·49원본 미확인은 별도다.
+
+## 현재 배치: [#1769](https://github.com/netsus/homecook/pull/1769) 조리 완료 RPC client 경계
+
+- 원본ID: `app/api/v1/cooking/sessions/[session_id]/complete/route.ts::anti-slop(no-chained-type-assertions)::dfdc16fbe4f15c336cd94233663b7dba171ea3dff258c662baafca9c5fc1f8bc#1` (checkpoint137).
+- 기존 routeClient fallback 연쇄 단언과 같은 호출의 serviceClient 단일 단언·미사용 type import만 제거한다. 현재 RPC·schema-cache fallback 조건·legacy 인수·owner/generation·멱등성·상태 전이 로직은 변경하지 않는다. 저장/UI/플래너 연결·무게 병행 파일은 수정하지 않았다.
+- 편집 전후 cook-planner-complete.backend / legacy-cooking-complete-routes: 2 suite21 PASS, 전체 typecheck·변경 ESLint·diff-check PASS, Anti Slop158→157/baseline207/신규0. 독립 리뷰 APPROVE: 같은21건·type/lint/diff·JS동일을 직접 확인했다. Anti Slop은 부모 실행 결과와 구분한다. 감소1은 연쇄 단언이며 companion 단일 단언을 추가 감소로 세지 않는다.
+- ES2022/ESNext emitted JS byte-identical SHA256 `73c23053f7bf2ca447886eb02bcc42f2364a4c991b90d54e8991f46ad3949ef6`. 기존 legacy fallback을 제거하거나 권한 정책을 바꾼 배치가 아니다. 실DB·운영·build·화면 검증 미실행이며 기존10실패·49원본미확인 유지다.
 
 ## 보류·기술적 경계
 

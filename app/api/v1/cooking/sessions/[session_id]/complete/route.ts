@@ -8,7 +8,6 @@ import { readVerifiedAccountGenerationSession } from
 import {
   buildSessionAuthorityRpcArgs,
   callFuturePropagationRpc,
-  type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   getLegacyCookingIdempotencyPhase,
@@ -129,12 +128,12 @@ export async function POST(request: Request, context: RouteContext) {
   };
   let rpcResult: { data: unknown; error: unknown };
   try {
-    rpcResult = await (serviceClient as FuturePropagationRpcClient).rpc(
+    rpcResult = await serviceClient.rpc(
       "complete_cooking_session",
       authorityArgs,
     );
     if (rpcResult.error && isMissingSessionAuthorityCompletionRpc(rpcResult.error)) {
-      rpcResult = await (routeClient as unknown as FuturePropagationRpcClient).rpc(
+      rpcResult = await routeClient.rpc(
         "complete_cooking_session",
         {
           p_session_id: sessionId,

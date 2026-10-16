@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "c06cf4538bfd1c816814782d5867a8b6417dd7cb",
-    "total": 158,
+    "baseCommit": "017d22faba3ee8a333f8af4a579fe946055fed92",
+    "total": 157,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -1407,8 +1407,13 @@
       "line": 137,
       "column": 26,
       "snippet": "routeClient as unknown as FuturePropagationRpcClient",
-      "state": "unreviewed",
-      "holdReason": null
+      "state": "resolved",
+      "holdReason": null,
+      "resolution": {
+        "reason": "Actual current internal and legacy route clients satisfy unchanged RPC contract. Remove chained fallback assertion, companion single assertion and unused type import; fallback/authority/args/runtime unchanged.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1769",
+        "verification": "before/after2 suites21 PASS; typecheck/ESLint/diff-check PASS; Anti Slop158->157,new0; emitted JS byte-identical SHA256 73c23053f7bf2ca447886eb02bcc42f2364a4c991b90d54e8991f46ad3949ef6"
+      }
     },
     {
       "id": "app/api/v1/cooking/sessions/[session_id]/cancel/route.ts::anti-slop(no-chained-type-assertions)::9c8870879609aec680a58d5ac81910ae6684e8652b748acbf235440a27ae49e4#1",
