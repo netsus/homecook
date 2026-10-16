@@ -1175,7 +1175,7 @@
       "holdReason": null,
       "resolution": {
         "reason": "Existing scoped factory directly satisfies unchanged nutrition/RPC consumer; remove redundant chained assertion and unused type import without adapters or runtime changes.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1767",
         "verification": "before/after 5 suites52 PASS; typecheck/ESLint/diff-check PASS; Anti Slop162->160,new0; emitted JS byte-identical SHA256 c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98"
       }
     },
@@ -1192,7 +1192,7 @@
       "holdReason": null,
       "resolution": {
         "reason": "Existing scoped factory directly satisfies unchanged nutrition/RPC consumer; remove redundant chained assertion and unused type import without adapters or runtime changes.",
-        "pullRequest": null,
+        "pullRequest": "https://github.com/netsus/homecook/pull/1767",
         "verification": "before/after 5 suites52 PASS; typecheck/ESLint/diff-check PASS; Anti Slop162->160,new0; emitted JS byte-identical SHA256 c6882876d2044e11098f021fdd3be2afedbf78dc406b02ee51994d4b9cf6da98"
       }
     },

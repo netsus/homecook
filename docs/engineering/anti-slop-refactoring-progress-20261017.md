@@ -112,7 +112,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - TypeScript ES2022/ESNext emitted JS byte-identical, SHA256 `21a0633b8cd40ad823b93558869d8949e4346d43844d64fccb1b17fa6ab7ac20`. 실제 저장·권한·RPC 인수/실행 코드 변경0이다. 실DB 쓰기를 실행하지 않았다.
 - 독립 리뷰 APPROVE: 동일41건·전체 typecheck·ESLint·diff-check PASS, emitted JS 동일, inventory163개ID/hash/checkpoint/baseline대조0오류와상태집계일치를 확인했다. Anti Slop은 중복 실행하지 않아 부모 결과와 구분한다. 전체 build·화면·운영 흐름·전체 검사 미실행, 기존 실패8건+추가2건과49원본미확인은 별도로 유지한다.
 
-## 현재 배치: POST 파생 레시피 client 경계
+## 현재 배치: [#1767](https://github.com/netsus/homecook/pull/1767) POST 파생 레시피 client 경계
 
 - 원본ID는 inventory의 `app/api/v1/recipes/route.ts` / `no-chained-type-assertions` / hash `75dca4dc05eacbb3b3182090d0a749053ce982f349fd6869ff9238d463d5b741#1`(checkpoint1989), `fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1`(checkpoint2009)이다.
 - 기존 scoped factory를 nutrition helper와 fork RPC에 직접 전달한다. 두 연쇄 단언과 미사용 type import만 제거한다. consumer 계약 확대/새 adapter/대체 단언0이며 권한·저장·RPC runtime 변경0이다.
