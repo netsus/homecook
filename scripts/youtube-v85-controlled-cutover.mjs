@@ -75,7 +75,7 @@ async function context(backupDirectory=OP) {
   return {s,m,c,base,target,origin,legacy,predecessor,adapter:createProtectedPrelaunchAdapter(base,m.review.feature,m.review,m)};
 }
 async function observation(c,query) {
-  const full=await c.adapter.observe(query,'youtube-v85-observe');
+  const full=await c.adapter.observe(query,'youtube-resolution-v85-observe');
   const read=sql=>query?query(sql):c.base.query(sql),policy=lastJson(await read(POLICY_SQL)),credential=lastJson(await read(CREDENTIAL_SQL)),jobs=lastJson(await read(JOBS_SQL));
   return {full,worker:full.worker,policy,credential,jobCount:jobs.count,jobsSha256:jobs.sha256,targetSha256:sha(JSON.stringify(full.target)),normalDataSha256:full.normalDataSha256,
     controlsSha256:full.controlsSha256,catalogSha256:full.catalogSha256,immutableSha256:full.immutableSha256,authoritySha256:sha(JSON.stringify(c.origin))};
@@ -85,13 +85,13 @@ function assertBefore(c,o) {
   assertCookedWeightAttestationCurrentObservation(c.s,o.full,{quantityWriterState:'on',approvedWorkerPolicy:c.c.observation,approvedWorkerSuccessor:c.legacy,databaseMaintenance:c.m});
 }
 async function readSnapshot(c) {
-  const s=openDedicatedAdminSession(c.target.postgresContainerId,'youtube-v85-readonly');
-  try {await s.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL statement_timeout='45s'; SET LOCAL search_path=public,extensions; SET LOCAL TIME ZONE 'UTC';");
+  const s=openDedicatedAdminSession(c.target.postgresContainerId,'youtube-resolution-v85-readonly');
+  try {await s.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL ROLE postgres; SET LOCAL statement_timeout='45s'; SET LOCAL search_path=public,extensions; SET LOCAL TIME ZONE 'UTC';");
     const result=await observation(c,sql=>s.query(sql));await s.query('COMMIT;');check(await s.close()===0,'read-only snapshot close');return result;
   }finally{s.stop();}
 }
 async function transaction(c,callback) {
-  const s=openDedicatedAdminSession(c.target.postgresContainerId,'youtube-v85');
+  const s=openDedicatedAdminSession(c.target.postgresContainerId,'youtube-resolution-v85');
   try {
     await s.query(V85_BEGIN_SQL);await s.query(V85_LOCK_SQL);
     const query=sql=>s.query(sql),observe=async()=>{
