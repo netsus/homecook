@@ -213,17 +213,11 @@ function serviceClient({
   const assignmentsQuery = listResult(conversionAssignments);
   const pieceWeightsQuery = listResult(pieceWeights);
   const rpc = vi.fn(async (_name: string, args: {
-    p_snapshot: Record<string, unknown>;
-    p_input_guard: Record<string, unknown>;
-  }) => ({
-    data: {
-      snapshot_id: "snapshot-1",
-      created: true,
-      is_current: true,
-      captured: args.p_snapshot,
-    },
-    error: null,
-  }));
+    p_snapshot: Record<string, unknown>; p_input_guard: Record<string, unknown>;
+  }) => {
+    if (_name === "build_recipe_nutrition_input_guard") return { data: { recipe_ingredients: [] }, error: null };
+    return { data: { snapshot_id: "snapshot-1", created: true, is_current: true, captured: args.p_snapshot }, error: null };
+  });
   const from = vi.fn((table: string) => {
     if (table === "recipes") return recipeQuery;
     if (table === "recipe_ingredients") return ingredientsQuery;
@@ -245,6 +239,116 @@ function serviceClient({
 }
 
 describe("recipe nutrition snapshot service", () => {
+  const authority = {
+    ownerUuid: "550e8400-e29b-41d4-a716-446655440001",
+    authIdentityCreatedAt: "2026-01-01T00:00:00Z",
+    sessionKeyHash: "a".repeat(64), hmacKeyVersion: 1,
+    sessionIssuedAt: "2026-01-02T00:00:00Z",
+  };
+  const recipeId = "550e8400-e29b-41d4-a716-446655440002";
+  function ownedPreparation(v4 = true, raw = true) {
+    const ingredients = [
+      { id: "550e8400-e29b-41d4-a716-446655440003", ingredient_id: "550e8400-e29b-41d4-a716-446655440004",
+        amount: 1 / 3, unit: "L", raw: "1/3" },
+      { id: "550e8400-e29b-41d4-a716-446655440005", ingredient_id: "550e8400-e29b-41d4-a716-446655440006",
+        amount: 1 / 7, unit: "kg", raw: "1/7" },
+    ].map(row => ({ id: row.id, ingredient_id: row.ingredient_id, amount: row.amount, unit: row.unit,
+      ingredient_type: "QUANT", scalable: true, sort_order: row.unit === "L" ? 0 : 1,
+      quantity_input: raw ? { schema_version: "quantity-v4", raw_value: row.raw, raw_unit: row.unit,
+        expected_context_sha256: "b".repeat(64) } : null }));
+    const internal = serviceClient({ recipeId, ingredients,
+      nutritionLinks: ingredients.map(row => approvedNutritionLink({
+        ingredientId: row.ingredient_id, id: row.id, profileId: row.ingredient_id,
+      })),
+    });
+    internal.recipeQuery.maybeSingle.mockResolvedValue({ data: { id: recipeId, base_servings: 2,
+      updated_at: "2026-07-16T00:00:00.000Z", created_by: authority.ownerUuid, revision: 7 }, error: null });
+    const context = { revision: 7, ...(v4 ? { quantity_policy_version: "quantity-v4" } : {}), edit_context: {
+      base_recipe_revision: 7, image_object_id: null,
+      draft: { title: "분수 원문", description: null, base_servings: 2, steps: [],
+        ingredients: ingredients.map(row => ({ ingredient_id: row.ingredient_id, amount: row.amount, unit: row.unit,
+          ingredient_type: row.ingredient_type, scalable: row.scalable, display_text: null, component_label: null,
+          food_product_id: null, food_product_nutrition_version_id: null, row_key: row.id,
+          ...(row.quantity_input ? { quantity_input: row.quantity_input } : {}) })) },
+    } };
+    const rpc = vi.fn(async (name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> => {
+      if (name === "read_recipe_snapshot_entrypoint_context") return { data: context, error: null };
+      if (name === "read_recipe_product_nutrition_predecessors" && args.p_owner_uuid === authority.ownerUuid) {
+        return { data: ingredients.map(row => ({ id: row.id, recipe_quantity_predecessor: {
+          guard_hash: "b".repeat(64), context: { ingredient_id: row.ingredient_id, preparation_state: "raw-edible", size_code: null,
+            unit_context: { edible_portion_basis: "edible", densities: [], pieces: [] } },
+        } })), error: null };
+      }
+      throw new Error(`RPC is outside the existing publication scope: ${name}`);
+    });
+    const user = { from: vi.fn((table: string) => {
+      if (table === "recipes" || table === "recipe_ingredients") return internal.from(table);
+      throw new Error(`User cannot read predecessor table: ${table}`);
+    }), rpc: vi.fn() };
+    return { user, internal: { ...internal, rpc }, context, ingredients };
+  }
+
+  it("prepares owner publication with only the signed mode reader and keeps unknown density and fractions", async () => {
+    const fixture = ownedPreparation();
+    const original = structuredClone(fixture.ingredients);
+    const prepared = await prepareRecipeNutritionSnapshot(fixture.user as never, recipeId, fixture.internal as never, authority);
+    expect(fixture.internal.rpc.mock.calls.map(([name]) => name)).toEqual([
+      "read_recipe_snapshot_entrypoint_context", "read_recipe_product_nutrition_predecessors",
+    ]);
+    expect(fixture.internal.rpc.mock.calls[0][1]).toEqual({
+      p_recipe_id: recipeId, p_owner_uuid: authority.ownerUuid,
+      p_auth_identity_created_at_snapshot: authority.authIdentityCreatedAt,
+      p_session_key_hash: authority.sessionKeyHash, p_hmac_key_version: authority.hmacKeyVersion,
+      p_session_issued_at: authority.sessionIssuedAt,
+    });
+    expect(prepared.calculation).toMatchObject({ calculation_version: "recipe-nutrition-v4", calculation_status: "partial",
+      reflected_ingredient_count: 1, target_ingredient_count: 2, warnings: ["DENSITY_REQUIRED"] });
+    expect(prepared.calculation.scalable_values.energy_kcal).toBeCloseTo(1000 / 7, 10);
+    expect(prepared.inputGuard).toMatchObject({ quantity_policy_version: "quantity-v4", quantity_recipe_revision: 7,
+      recipe_ingredients: original.map(row => expect.objectContaining({ amount: row.amount, unit: row.unit,
+        recipe_quantity_context_sha256: "b".repeat(64) })) });
+    expect(fixture.ingredients).toEqual(original);
+    expect(fixture.user.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each(["RESOURCE_NOT_FOUND", "ACCOUNT_SESSION_STALE"])("does not prepare publication when signed context rejects %s", async message => {
+    const fixture = ownedPreparation();
+    fixture.internal.rpc.mockResolvedValueOnce({ data: null, error: { message } });
+    await expect(prepareRecipeNutritionSnapshot(fixture.user as never, recipeId, fixture.internal as never, authority))
+      .rejects.toMatchObject({ code: message });
+    expect(fixture.internal.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not prepare publication against a different recipe revision or a legacy mode with raw input", async () => {
+    const fixture = ownedPreparation();
+    fixture.context.revision = 8;
+    fixture.context.edit_context.base_recipe_revision = 8;
+    await expect(prepareRecipeNutritionSnapshot(fixture.user as never, recipeId, fixture.internal as never, authority))
+      .rejects.toMatchObject({ code: "RECIPE_REVISION_CONFLICT" });
+    const legacy = ownedPreparation(false);
+    await expect(prepareRecipeNutritionSnapshot(legacy.user as never, recipeId, legacy.internal as never, authority))
+      .rejects.toMatchObject({ code: "UNIT_CONTEXT_STALE" });
+  });
+
+  it("rejects a different owner before reading a publication context", async () => {
+    const fixture = ownedPreparation();
+    await expect(prepareRecipeNutritionSnapshot(fixture.user as never, recipeId, fixture.internal as never,
+      { ...authority, ownerUuid: "550e8400-e29b-41d4-a716-446655440009" }))
+      .rejects.toMatchObject({ code: "RESOURCE_NOT_FOUND" });
+    expect(fixture.internal.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("keeps the signed stored mode after raw quantities are absent, v4=%s", async v4 => {
+    const fixture = ownedPreparation(v4, false);
+    const prepared = await prepareRecipeNutritionSnapshot(fixture.user as never, recipeId, fixture.internal as never, authority);
+    expect(prepared.calculation.calculation_version).toBe(v4 ? "recipe-nutrition-v4" : "recipe-nutrition-v3");
+    expect(fixture.internal.rpc.mock.calls.map(([name]) => name)).toEqual(v4
+      ? ["read_recipe_snapshot_entrypoint_context", "read_recipe_product_nutrition_predecessors"]
+      : ["read_recipe_snapshot_entrypoint_context"]);
+    if (v4) expect(prepared.inputGuard).toMatchObject({ quantity_policy_version: "quantity-v4", quantity_recipe_revision: 7 });
+    else expect(prepared.inputGuard).not.toHaveProperty("quantity_policy_version");
+  });
+
   it("uses the scoped predecessor reader while keeping recipe ownership reads on the user client", async () => {
     const internal = serviceClient();
     const user = { from: vi.fn((table: string) => {
@@ -271,11 +375,11 @@ describe("recipe nutrition snapshot service", () => {
     );
 
     expect(result).toMatchObject({ snapshot_id: "snapshot-1", created: true, is_current: true });
-    expect(rpc).toHaveBeenCalledOnce();
-    expect(rpc.mock.calls[0][1]).toMatchObject({
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1]).toMatchObject({
       p_expected_recipe_updated_at: "2026-07-16T00:00:00.000Z",
     });
-    const snapshotPayload = rpc.mock.calls[0][1].p_snapshot;
+    const snapshotPayload = rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot;
     expect(snapshotPayload).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
@@ -317,7 +421,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "unavailable",
       calculation_quality: null,
       reflected_ingredient_count: 0,
@@ -360,12 +464,12 @@ describe("recipe nutrition snapshot service", () => {
       "recipe-1",
     );
 
-    expect(massClient.rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(massClient.rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
       scalable_values: expect.objectContaining({ energy_kcal: 100 }),
     });
-    expect(volumeClient.rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(volumeClient.rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
       scalable_values: expect.objectContaining({ energy_kcal: 100 }),
@@ -401,7 +505,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "direct",
       scalable_values: expect.objectContaining({ energy_kcal: expectedEnergy }),
@@ -425,7 +529,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -453,7 +557,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 17.7 }),
@@ -487,7 +591,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -511,7 +615,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -561,7 +665,7 @@ describe("recipe nutrition snapshot service", () => {
     expect(assignmentsQuery.select.mock.calls[0][0]).toContain("measurement_source_evidence(");
     expect(pieceWeightsQuery.in).toHaveBeenCalledOnce();
     expect(pieceWeightsQuery.select.mock.calls[0][0]).toContain("measurement_source_evidence(");
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       reflected_ingredient_count: 2,
       target_ingredient_count: 2,
@@ -585,7 +689,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_input_guard).toEqual({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_input_guard).toEqual({
       recipe_ingredients: [{
         id: "recipe-ingredient-1",
         ingredient_id: "ingredient-1",
@@ -699,7 +803,7 @@ describe("recipe nutrition snapshot service", () => {
       ["is_active", true],
     ]);
     expect(assignmentsQuery.range).toHaveBeenCalledWith(0, 999);
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       reflected_ingredient_count: 2,
       target_ingredient_count: 2,
@@ -722,7 +826,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       calculation_quality: "estimated",
       scalable_values: expect.objectContaining({ energy_kcal: 15 }),
@@ -759,7 +863,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "unavailable",
       reflected_ingredient_count: 0,
       warnings: ["UNIT_CONVERSION_MISSING"],
@@ -789,7 +893,7 @@ describe("recipe nutrition snapshot service", () => {
 
     await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
 
-    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+    expect(rpc.mock.calls.find(call => call[0] === "write_recipe_nutrition_snapshot")![1].p_snapshot).toMatchObject({
       calculation_status: "unavailable",
       calculation_quality: null,
       reflected_ingredient_count: 0,
@@ -901,7 +1005,7 @@ describe("AI predecessor provenance", () => {
       food_product_id: "product-1", food_product_nutrition_version_id: "product-version-1" };
     const client = {
       ...serviceClient({ ingredients: [pin], nutritionLinks: [aiLink()] }),
-      rpc: vi.fn(async () => ({ data: [{ id: pin.id, product_predecessor: null }], error: null })),
+      rpc: vi.fn(async (name: string) => ({ data: name === "build_recipe_nutrition_input_guard" ? { recipe_ingredients: [] } : [{ id: pin.id, product_predecessor: null }], error: null })),
     };
     const prepared = await prepareRecipeNutritionSnapshot(client as never, "recipe-1");
     expect(prepared.inputGuard.recipe_ingredients[0]).toMatchObject({

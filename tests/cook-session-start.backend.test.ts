@@ -190,6 +190,7 @@ describe("14 cook session start backend", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
       from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: [],error:null}]))};
         if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery), update: mealsUpdate };
         if (table === "cooking_sessions") return { insert: sessionInsert };
@@ -246,6 +247,68 @@ describe("14 cook session start backend", () => {
     expect(mealsUpdate).not.toHaveBeenCalled();
   });
 
+  it.each(["user-1", "other-user"])("prevents a product-only pinned meal from entering legacy writes after owner checks: %s", async (mealOwner) => {
+    const recipesQuery = createMaybeSingleQuery([{ data: { id: recipeId }, error: null }]);
+    const productSnapshot = { ingredients_json: [{ ingredient_id: null,
+      food_product_id: "79000000-0000-4000-8000-000000000001", food_product_nutrition_version_id: "79000000-0000-4000-8000-000000000002" }] };
+    const mealsQuery = createArraySelectQuery([{ data: [
+      { id: mealId1, user_id: "user-1", recipe_id: recipeId, status: "shopping_done", recipe_content_snapshots: null },
+      { id: mealId2, user_id: mealOwner, recipe_id: recipeId, status: "shopping_done", recipe_content_snapshots: productSnapshot },
+    ], error: null }]);
+    const sessionInsert = vi.fn();
+    const sessionMealInsert = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: [],error:null}]))};
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "cooking_sessions") return { insert: sessionInsert };
+        if (table === "cooking_session_meals") return { insert: sessionMealInsert };
+        throw new Error(`unexpected table: ${table}`);
+      }) });
+    const { POST } = await importSessionsRoute();
+    const response = await POST(createJsonRequest("http://localhost:3000/api/v1/cooking/sessions", {
+      recipe_id: recipeId, meal_ids: [mealId1, mealId2], cooking_servings: 2,
+    }));
+    expect(response.status).toBe(mealOwner === "user-1" ? 409 : 403);
+    const body = await response.json();
+    expect(body.error.code).toBe(mealOwner === "user-1" ? "CONFLICT" : "FORBIDDEN");
+    expect(body.error.message).not.toContain("snapshot");
+    expect(sessionInsert).not.toHaveBeenCalled();
+    expect(sessionMealInsert).not.toHaveBeenCalled();
+  });
+
+  it.each(["user-1", "other-user"])("prevents an unpinned legacy meal with current product-only rows from entering legacy writes after owner checks: %s", async (mealOwner) => {
+    const recipesQuery = createMaybeSingleQuery([{ data: { id: recipeId }, error: null }]);
+    const productSnapshot = { ingredients_json: [{ ingredient_id: null,
+      food_product_id: "79000000-0000-4000-8000-000000000001", food_product_nutrition_version_id: "79000000-0000-4000-8000-000000000002" }] };
+    const mealsQuery = createArraySelectQuery([{ data: [
+      { id: mealId1, user_id: "user-1", recipe_id: recipeId, status: "shopping_done", recipe_content_snapshots: null },
+      { id: mealId2, user_id: mealOwner, recipe_id: recipeId, status: "shopping_done", recipe_content_snapshots: null },
+    ], error: null }]);
+    const sessionInsert = vi.fn();
+    const sessionMealInsert = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: productSnapshot.ingredients_json,error:null}]))};
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "cooking_sessions") return { insert: sessionInsert };
+        if (table === "cooking_session_meals") return { insert: sessionMealInsert };
+        throw new Error(`unexpected table: ${table}`);
+      }) });
+    const { POST } = await importSessionsRoute();
+    const response = await POST(createJsonRequest("http://localhost:3000/api/v1/cooking/sessions", {
+      recipe_id: recipeId, meal_ids: [mealId1, mealId2], cooking_servings: 2,
+    }));
+    expect(response.status).toBe(mealOwner === "user-1" ? 409 : 403);
+    const body = await response.json();
+    expect(body.error.code).toBe(mealOwner === "user-1" ? "CONFLICT" : "FORBIDDEN");
+    expect(body.error.message).not.toContain("snapshot");
+    expect(sessionInsert).not.toHaveBeenCalled();
+    expect(sessionMealInsert).not.toHaveBeenCalled();
+  });
+
   it("does not let service role widen new cooking-session recipe selection", async () => {
     const routeRecipeQuery = createMaybeSingleQuery([{ data: null, error: null }]);
     const serviceRecipeQuery = createMaybeSingleQuery([
@@ -279,11 +342,13 @@ describe("14 cook session start backend", () => {
       ]),
     );
     const routeFrom = vi.fn((table: string) => {
-      if (table === "recipes") return { select: vi.fn(() => routeRecipeQuery) };
+      if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: [],error:null}]))};
+        if (table === "recipes") return { select: vi.fn(() => routeRecipeQuery) };
       throw new Error(`unexpected route table: ${table}`);
     });
     const serviceFrom = vi.fn((table: string) => {
-      if (table === "recipes") return { select: vi.fn(() => serviceRecipeQuery) };
+      if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: [],error:null}]))};
+        if (table === "recipes") return { select: vi.fn(() => serviceRecipeQuery) };
       if (table === "meals") return { select: vi.fn(() => mealsQuery) };
       if (table === "cooking_sessions") return { insert: sessionInsert };
       if (table === "cooking_session_meals") return { insert: sessionMealInsert };
@@ -334,6 +399,7 @@ describe("14 cook session start backend", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
       from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: [],error:null}]))};
         if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };
         throw new Error(`unexpected table: ${table}`);
@@ -372,6 +438,7 @@ describe("14 cook session start backend", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
       from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: [],error:null}]))};
         if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };
         throw new Error(`unexpected table: ${table}`);
@@ -410,6 +477,7 @@ describe("14 cook session start backend", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
       from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return {select: vi.fn(() => createArraySelectQuery([{data: [],error:null}]))};
         if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };
         throw new Error(`unexpected table: ${table}`);

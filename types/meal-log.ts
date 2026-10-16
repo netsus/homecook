@@ -1,3 +1,5 @@
+import type { QuantityInputDraft, QuantityInputSnapshot } from "@/types/quantity-input";
+
 export type MealLogSourceType = "cooked_batch" | "food_product" | "ingredient";
 export type MealLogNutritionStatus = "complete" | "partial" | "unavailable";
 
@@ -19,17 +21,34 @@ export interface MealLogMutationInput {
   source: MealLogSourceInput;
   quantity: MealLogQuantityInput;
   expectedRevision: number | null;
+  quantityInput?: QuantityInputDraft;
 }
 
 export interface MealLogNutritionEvidence {
   /** Frozen provenance; absent on older records means no recorded AI estimate. */
   contains_ai_estimate?: boolean;
+  /** Server-frozen denominator/provenance. Missing on historical records stays missing. */
+  weight_basis?: MealLogWeightBasis;
+  /** Frozen assumptions accompany the estimate; they never alter the nine-key basis. */
+  weight_assumption_codes?: string[];
   calculation_status: MealLogNutritionStatus;
   calories_kcal: number | null;
   carbohydrate_g: number | null;
   protein_g: number | null;
   fat_g: number | null;
   sodium_mg: number | null;
+}
+
+export interface MealLogWeightBasis {
+  schema_version: "cooked-weight-basis-v1";
+  batch_id: string;
+  recipe_content_snapshot_id: string | null;
+  finished_weight_g: number | null;
+  source: import("@/types/cooking").CookedWeightSummary["source"];
+  model_version: string | null;
+  prediction_id: string | null;
+  observation_id: string | null;
+  batch_revision: number | null;
 }
 
 export interface MealLogEntry {
@@ -42,6 +61,7 @@ export interface MealLogEntry {
   slot_name_snapshot: string;
   source: { type: MealLogSourceType; id: string };
   quantity: { amount: number; unit: string };
+  quantity_input?: QuantityInputSnapshot;
   display_name: string;
   display_brand: string | null;
   nutrition: MealLogNutritionEvidence;
@@ -80,6 +100,7 @@ export interface MealLogMutationData {
 }
 
 export interface MealLogDayData {
+  quantity_policy?: "quantity-v4";
   date: string;
   active_columns: MealLogColumn[];
   active_sections: MealLogActiveSection[];
@@ -89,6 +110,8 @@ export interface MealLogDayData {
 }
 
 export interface MealLogRecentItem {
+  source_version?: string;
+  quantity_input?: QuantityInputSnapshot;
   source: { type: MealLogSourceType; id: string };
   display_name: string;
   display_brand: string | null;

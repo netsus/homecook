@@ -79,6 +79,9 @@ export interface FoodProductData {
   source_type: "public_dataset" | "manual";
   editable: boolean;
   nutrition_version_id: string;
+  nutrition_version_number?: number;
+  /** Database registration time, not a manufacturer revision date. */
+  nutrition_version_created_at?: string;
   basis_relations: Array<{
     from: { amount: number; unit: FoodProductBasisUnit };
     to: { amount: number; unit: FoodProductBasisUnit };
@@ -95,6 +98,7 @@ export interface FoodProductData {
 }
 
 export interface FoodProductListData {
+  quantity_policy?: "quantity-v4";
   items: FoodProductData[];
   next_cursor: string | null;
   has_next: boolean;

@@ -1,4 +1,9 @@
+import { readRecipeQuantityInputSnapshot, recipeRawQuantityLabel } from "@/lib/recipe-quantity-input";
+import { savedQuantitySnapshot } from "@/lib/youtube-saved-quantity-input";
+import { formatQuantityAmount } from "@/lib/quantity-input";
+import { formatProductQuantity } from "@/lib/planner/product-planner-entry-presentation";
 import { recipeProductLabel } from "@/lib/server/recipe-product-labels";
+import { scaleProductAmount } from "@/lib/server/recipe-product-quantity";
 import type {
   CookingModeIngredient,
   CookingModeStep,
@@ -23,11 +28,15 @@ interface IngredientJoinRow {
 }
 
 export interface CookingIngredientRow {
+  quantity_input?: unknown;
+  id?: string;
+  row_key?: string;
+  source_kind?: "ingredient" | "food_product" | null;
   food_product_id?: string | null;
   food_product_nutrition_version_id?: string | null;
   food_product_name?: string | null;
   food_product_brand?: string | null;
-  ingredient_id: string;
+  ingredient_id: string | null;
   amount: number | null;
   unit: string | null;
   display_text: string | null;
@@ -288,20 +297,49 @@ export function toCookingModeIngredient({
 }): CookingModeIngredient {
   const ingredient = firstJoin(row.ingredients) ?? {};
   const name = recipeProductLabel(row) ?? ingredient.standard_name ?? "";
-  const amount = scaleAmount({
+  let quantityInput: CookingModeIngredient["quantity_input"];
+  try {
+    quantityInput = readRecipeQuantityInputSnapshot(row.quantity_input, row);
+  } catch {
+    // Worker saved snapshots use the existing context-free shape; never invent a context hash.
+    const saved = savedQuantitySnapshot(row.quantity_input, row.amount, row.unit);
+    if (saved?.batch_basis === null && (!row.food_product_id
+      || saved.source_versions.length === 1 && saved.source_versions[0] === row.food_product_nutrition_version_id)) {
+      quantityInput = saved;
+    }
+    // Invalid optional proof must not remove rows/steps used by weight prediction.
+  }
+  if (quantityInput) {
+    const ratio = Number(quantityInput.numerator) / Number(quantityInput.denominator);
+    if (!Number.isFinite(ratio) || ratio <= 0) quantityInput = undefined;
+  }
+  const fixedProduct = Boolean(row.food_product_id && row.food_product_nutrition_version_id);
+  const preciseQuantity = fixedProduct || quantityInput !== undefined;
+  const amount = preciseQuantity && row.amount !== null && row.scalable && baseServings >= 1
+    ? scaleProductAmount(row.amount, cookingServings, baseServings)
+    : preciseQuantity ? row.amount : scaleAmount({
     amount: row.amount,
     baseServings,
     cookingServings,
     scalable: row.scalable,
   });
-  const amountText = formatAmount(amount);
+  const amountText = fixedProduct ? amount?.toString() ?? null : formatAmount(amount);
   const componentLabel = normalizeRecipeSectionLabel(row.component_label);
-  const displayText =
+  let displayText =
     row.ingredient_type === "QUANT" && amountText && row.unit
       ? `${name} ${amountText}${row.unit}`
       : stripMatchingSectionPrefix(row.display_text, componentLabel);
 
-  return {
+  if (quantityInput && row.ingredient_type === "QUANT" && amount !== null && row.unit) {
+    const quantityLabel = quantityInput.raw_unit === row.unit && (!row.scalable || cookingServings === baseServings)
+      ? recipeRawQuantityLabel(quantityInput)
+      : row.unit === "g" || row.unit === "ml" || row.unit === "serving" || row.unit === "package"
+        ? formatProductQuantity({ amount, unit: row.unit })
+        : `${formatQuantityAmount(amount)}${row.unit}`;
+    displayText = `${name} ${quantityLabel}`;
+  }
+
+  const projected: CookingModeIngredient = {
     ingredient_id: row.ingredient_id,
     standard_name: name,
     amount,
@@ -311,6 +349,18 @@ export function toCookingModeIngredient({
     ingredient_type: row.ingredient_type,
     scalable: row.scalable,
   };
+  if (quantityInput) projected.quantity_input = quantityInput;
+  if (row.source_kind || row.row_key || row.food_product_id) {
+    projected.row_key = row.row_key ?? row.id;
+    projected.source_kind = row.food_product_id ? "food_product" : "ingredient";
+  }
+  if (row.food_product_id) {
+    projected.food_product_id = row.food_product_id;
+    projected.food_product_nutrition_version_id = row.food_product_nutrition_version_id ?? null;
+    projected.food_product_name = row.food_product_name ?? null;
+    projected.food_product_brand = row.food_product_brand ?? null;
+  }
+  return projected;
 }
 
 export function toCookingModeStep(row: CookingStepRow): CookingModeStep {

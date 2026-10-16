@@ -1,4 +1,6 @@
 import { formatEnergyKcal } from "@/lib/nutrition/energy-display";
+import { formatQuantityAmount } from "@/lib/quantity-input";
+import { convertProductQuantity } from "@/lib/nutrition/product-quantity";
 import {
   FOOD_PRODUCT_BASIS_UNITS,
   type FoodProductBasisUnit,
@@ -82,8 +84,11 @@ function isPositiveAmount(value: number) {
 
 export function buildCompatibleFoodProductUnits(
   product: Pick<FoodProductData, "basis_relations" | "nutrition">,
+  quantityV4 = false,
 ) {
   const basisUnit = product.nutrition.basis.unit;
+  if (quantityV4) return FOOD_PRODUCT_BASIS_UNITS.filter(candidate =>
+    convertProductQuantity(1, candidate, basisUnit, product.basis_relations) !== null);
   return FOOD_PRODUCT_BASIS_UNITS.filter((candidate) => {
     if (candidate === basisUnit) return true;
 
@@ -102,12 +107,13 @@ export function buildCompatibleFoodProductUnits(
 
 export function getFoodProductComparisonQuantity(
   product: Pick<FoodProductData, "basis_relations" | "nutrition">,
+  quantityV4 = false,
 ) {
   if (product.nutrition.basis.unit === "g" || product.nutrition.basis.unit === "ml") {
     return { amount: 100, unit: product.nutrition.basis.unit };
   }
 
-  const compatibleUnits = buildCompatibleFoodProductUnits(product);
+  const compatibleUnits = buildCompatibleFoodProductUnits(product, quantityV4);
   const directComparableUnit = compatibleUnits.find((unit) => unit === "g" || unit === "ml");
   if (!directComparableUnit) return null;
   return { amount: 100, unit: directComparableUnit };
@@ -118,6 +124,11 @@ export function formatProductUnit(unit: FoodProductBasisUnit) {
   if (unit === "package") return "팩";
   if (unit === "ml") return "mL";
   return "g";
+}
+
+export function formatProductRawQuantity(input: { raw_value: string; raw_unit: string }): string {
+  const unit = FOOD_PRODUCT_BASIS_UNITS.find(candidate => candidate === input.raw_unit);
+  return `${input.raw_value}${unit ? formatProductUnit(unit) : input.raw_unit}`;
 }
 
 function isObserved(value: number | null | undefined): value is number {
@@ -148,13 +159,18 @@ const CORE_NUTRIENT_META = [
   { code: "sodium_mg", label: "나트륨", unit: "mg" },
 ] as const;
 
-function directQuantityScale(
+function quantityScale(
   product: Pick<FoodProductData, "basis_relations" | "nutrition">,
   quantity?: { amount: number; unit: FoodProductBasisUnit },
+  quantityV4 = false,
 ) {
   if (!quantity || !isPositiveAmount(quantity.amount)) return 1;
   const basis = product.nutrition.basis;
   if (!isPositiveAmount(basis.amount)) return null;
+  if (quantityV4) {
+    const amount = convertProductQuantity(quantity.amount, quantity.unit, basis.unit, product.basis_relations);
+    return amount === null ? null : amount / basis.amount;
+  }
   if (quantity.unit === basis.unit) return quantity.amount / basis.amount;
 
   const relations = product.basis_relations.filter((relation) =>
@@ -183,20 +199,22 @@ function scaleNutrientValue(value: FoodProductNutrientValue | undefined, scale: 
 export function formatFoodProductExpectedEnergy(
   product: Pick<FoodProductData, "basis_relations" | "nutrition">,
   quantity?: { amount: number; unit: FoodProductBasisUnit },
+  quantityV4 = false,
 ) {
-  const scale = directQuantityScale(product, quantity);
+  const scale = quantityScale(product, quantity, quantityV4);
   return formatProductExpectedEnergy(
-    scaleNutrientValue(product.nutrition.values.energy_kcal, scale),
+    quantityV4 && scale === null ? undefined : scaleNutrientValue(product.nutrition.values.energy_kcal, scale),
   );
 }
 
 export function getFoodProductCoreNutritionLines(
   product: Pick<FoodProductData, "basis_relations" | "nutrition">,
   quantity?: { amount: number; unit: FoodProductBasisUnit },
+  quantityV4 = false,
 ) {
-  const scale = directQuantityScale(product, quantity);
+  const scale = quantityScale(product, quantity, quantityV4);
   return CORE_NUTRIENT_META.map(({ code, label, unit }) => {
-    const value = scaleNutrientValue(product.nutrition.values[code], scale);
+    const value = quantityV4 && scale === null ? undefined : scaleNutrientValue(product.nutrition.values[code], scale);
     if (value?.status === "complete" && isObserved(value.amount)) {
       return `${label} ${formatAmount(Math.round(value.amount))} ${unit}`;
     }
@@ -214,5 +232,5 @@ export function formatProductQuantity({
   amount: number;
   unit: FoodProductBasisUnit;
 }) {
-  return `${unit === "g" ? formatAmount(Math.round(amount)) : formatAmount(amount)}${formatProductUnit(unit)}`;
+  return `${formatQuantityAmount(amount)}${unit === "serving" ? "회분" : formatProductUnit(unit)}`;
 }

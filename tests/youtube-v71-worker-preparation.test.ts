@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -20,6 +21,7 @@ import {
   buildYoutubeExtractionAppDescriptor,
   materializeYoutubeExtractionWorkerArtifact,
   stableStringify,
+  YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES,
 } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
 import {
   buildYoutubeExtractionWorkerCredentialState,
@@ -75,7 +77,13 @@ function writePrivate(path: string, contents: string) {
 
 function createCandidate(root: string) {
   const artifactDir = join(root, "artifact");
+  const historicalRoot = join(root, "source-8e");
+  mkdirSync(historicalRoot, { mode: 0o700 });
+  const archive = execFileSync("git", ["archive", "--format=tar", YOUTUBE_V71_RELEASE_SHA,
+    ...YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES, "lib/server/youtube-i031-runtime/bundle"], { maxBuffer: 16 * 1024 * 1024 });
+  execFileSync("tar", ["-xf", "-", "-C", historicalRoot], { input: archive });
   const artifact = materializeYoutubeExtractionWorkerArtifact({
+    rootDir: historicalRoot,
     outputDir: artifactDir,
     releaseSha: YOUTUBE_V71_RELEASE_SHA,
     releaseTree: YOUTUBE_V71_RELEASE_TREE,

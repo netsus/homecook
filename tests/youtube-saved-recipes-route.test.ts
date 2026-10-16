@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { getUser, readVerified, rpc } = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -20,6 +20,7 @@ import {
   handleGetYoutubeSavedRecipe,
   handleUpdateYoutubeSavedRecipe,
 } from "@/lib/server/youtube-saved-recipes";
+import { GET } from "@/app/api/v1/recipes/youtube/saved-drafts/[draft_id]/route";
 
 const authority = {
   ownerUuid: "10000000-0000-4000-8000-000000000001",
@@ -68,8 +69,69 @@ beforeEach(() => {
   getUser.mockResolvedValue({ data: { user: { id: authority.ownerUuid } } });
   readVerified.mockResolvedValue({ ok: true, sessionAuthority: authority });
 });
+afterEach(() => vi.unstubAllEnvs());
 
 describe("youtube saved recipe route boundary", () => {
+  it("requires a requested protocol and the web write flag for raw fractional updates", async () => {
+    const edited = { ...content, ingredients: [{ ...content.ingredients[0], quantity_mode: "quantity", amount: 1 / 3, unit: "g",
+      quantity_input: { schema_version: "quantity-v4", raw_value: "1/3", raw_unit: "g", expected_context_fingerprint: "b".repeat(64) } }] };
+    vi.stubEnv("MUMEOK_QUANTITY_V4_ENABLED", "true");
+    const missingHeader = await handleUpdateYoutubeSavedRecipe(request({ expected_revision: 1, content: edited }, "PATCH"), "70000000-0000-4000-8000-000000000001");
+    expect(missingHeader.status).toBe(422); expect(rpc).not.toHaveBeenCalled();
+    const withHeader = () => {
+      const value = request({ expected_revision: 1, content: edited }, "PATCH");
+      value.headers.set("X-Homecook-Quantity-Contract", "quantity-v4"); return value;
+    };
+    vi.stubEnv("MUMEOK_QUANTITY_V4_ENABLED", "false");
+    expect((await handleUpdateYoutubeSavedRecipe(withHeader(), "70000000-0000-4000-8000-000000000001")).status).toBe(503);
+    expect(rpc).not.toHaveBeenCalled();
+    vi.stubEnv("MUMEOK_QUANTITY_V4_ENABLED", "true");
+    rpc.mockResolvedValue({ data: { success: true, data: { draft_id: "70000000-0000-4000-8000-000000000001" }, error: null }, error: null });
+    expect((await handleUpdateYoutubeSavedRecipe(withHeader(), "70000000-0000-4000-8000-000000000001")).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("write_youtube_saved_recipe_result", expect.objectContaining({
+      p_editable_content: expect.objectContaining({ ingredients: [expect.objectContaining({ quantity_input: edited.ingredients[0].quantity_input })] }),
+    }));
+  });
+
+  it("separates opt-in stored quantity reads from current write capability and leaves the RPC data untouched", async () => {
+    const data = { content: { ...content, ingredients: [{ ...content.ingredients[0], quantity_input: { schema_version: "quantity-v4", raw_value: "1/3" },
+      quantity_context_fingerprint: "a".repeat(64) }] }, quantity_policy: "quantity-v4", quantity_contexts: {} };
+    const before = structuredClone(data);
+    rpc.mockResolvedValue({ data: { success: true, data, error: null }, error: null });
+    const legacy = await (await handleGetYoutubeSavedRecipe("70000000-0000-4000-8000-000000000001")).json();
+    expect(legacy.data.content.ingredients[0]).not.toHaveProperty("quantity_input");
+    expect(legacy.data).not.toHaveProperty("quantity_policy");
+    const read = new Request("http://localhost/fixture", { headers: { "X-Homecook-Quantity-Contract": "quantity-v4" } });
+    vi.stubEnv("MUMEOK_QUANTITY_V4_ENABLED", "false");
+    const opted = await (await handleGetYoutubeSavedRecipe("70000000-0000-4000-8000-000000000001", read)).json();
+    expect(opted.data.content.ingredients[0].quantity_input.raw_value).toBe("1/3");
+    expect(opted.data.quantity_policy).toBeNull();
+    expect(data).toEqual(before);
+  });
+
+  it("forwards the real GET request opt-in and keeps the existing verified subject boundary", async () => {
+    const data = { content: { ...content, ingredients: [{ ...content.ingredients[0], quantity_input: { raw_value: "1/3" } }] },
+      quantity_policy: "quantity-v4", quantity_contexts: {} };
+    rpc.mockResolvedValue({ data: { success: true, data, error: null }, error: null });
+    const read = new Request("http://localhost/fixture", { headers: { "X-Homecook-Quantity-Contract": "quantity-v4" } });
+    const context = { params: Promise.resolve({ draft_id: "70000000-0000-4000-8000-000000000001" }) };
+    expect((await (await GET(read, context)).json()).data.content.ingredients[0].quantity_input).toEqual({ raw_value: "1/3" });
+    vi.clearAllMocks();
+    getUser.mockResolvedValue({ data: { user: { id: authority.ownerUuid } } });
+    readVerified.mockResolvedValue({ ok: false, code: "ACCOUNT_SESSION_STALE" });
+    expect((await GET(read, context)).status).toBe(409);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([["QUANTITY_CONTEXT_CHANGED", 409], ["QUANTITY_INPUT_REQUIRED", 409], ["UNIT_POLICY_INACTIVE", 503], ["UNIT_CONVERSION_MISSING", 422]])
+    ("returns %s without exposing the SQL detail", async (code, status) => {
+      rpc.mockResolvedValue({ data: null, error: { message: `${code}: private SQL detail` } });
+      const response = await handleUpdateYoutubeSavedRecipe(request({ expected_revision: 1, content }, "PATCH"), "70000000-0000-4000-8000-000000000001");
+      expect(response.status).toBe(status);
+      const payload = await response.json();
+      expect(payload.error.code).toBe(code);
+      expect(JSON.stringify(payload)).not.toContain("private SQL detail");
+    });
   it("ensures a saved result from only the trusted extraction id", async () => {
     rpc.mockResolvedValue({
       data: { success: true, data: { draft_id: "70000000-0000-4000-8000-000000000001" }, error: null },

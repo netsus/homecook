@@ -1,6 +1,7 @@
 import {
   CORE_NUTRIENT_CODES,
   OPTIONAL_NUTRIENT_CODES,
+  RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION,
   type RecipeNutritionCalculation,
   type RecipeNutritionSourceAttribution,
   type RecipeNutritionValue,
@@ -39,7 +40,16 @@ const ESTIMATED_WARNINGS = new Set([
   "PIECE_WEIGHT_CONVERSION_USED",
   "AI_NUTRITION_ESTIMATE_USED",
 ]);
+const QUANTITY_WARNINGS = new Set([
+  "UNIT_DEFINITION_REQUIRED",
+  "UNIT_DEFINITION_CONFLICT",
+  "PIECE_IDENTITY_REQUIRED",
+  "DENSITY_REQUIRED",
+  "AMBIGUOUS_EVIDENCE",
+  "UNIT_MEASUREMENT_ESTIMATE_USED",
+]);
 const MISSING_REASON_PATTERN = /^(?:(?:TO_TASTE_EXCLUDED|PREDECESSOR_NOT_APPROVED|NUTRITION_PROFILE_MISSING|INVALID_QUANTITY|UNIT_CONVERSION_MISSING|PIECE_WEIGHT_REQUIRED):[0-9A-Za-z-]+|NUTRIENT_VALUE_MISSING:[0-9A-Za-z-]+:(?:energy_kcal|carbohydrate_g|protein_g|fat_g|sodium_mg|sugars_g|saturated_fat_g|fiber_g))$/;
+const QUANTITY_MISSING_REASON_PATTERN = /^(?:UNIT_DEFINITION_REQUIRED|UNIT_DEFINITION_CONFLICT|PIECE_IDENTITY_REQUIRED|DENSITY_REQUIRED|AMBIGUOUS_EVIDENCE):[0-9A-Za-z-]+$/;
 
 export class RecipeNutritionSnapshotError extends Error {
   constructor(public readonly code: string) {
@@ -177,6 +187,11 @@ function validateNutrientValue(value: unknown): value is RecipeNutritionValue {
 }
 
 export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalculation) {
+  validateRecipeNutritionSnapshotContents(calculation,
+    calculation.calculation_version === RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION);
+}
+
+function validateRecipeNutritionSnapshotContents(calculation: RecipeNutritionCalculation, quantityWarningsAllowed: boolean) {
   if (!Number.isFinite(calculation.base_servings) || calculation.base_servings <= 0) {
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_BASE_SERVINGS");
   }
@@ -213,12 +228,15 @@ export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalc
 
   const warnings = calculation.warnings;
   const missingReasons = calculation.missing_reasons;
-  const hasEstimatedWarning = warnings.some((warning) => ESTIMATED_WARNINGS.has(warning));
+  const hasEstimatedWarning = warnings.some((warning) => ESTIMATED_WARNINGS.has(warning)
+    || (quantityWarningsAllowed && warning === "UNIT_MEASUREMENT_ESTIMATE_USED"));
   const hasAiSource = calculation.sources.some((source) => source?.provider === "HOMECOOK_AI_ESTIMATE");
   const hasOtherSource = calculation.sources.some((source) => source?.provider !== "HOMECOOK_AI_ESTIMATE");
-  if (warnings.some((warning) => !ALLOWED_WARNINGS.has(warning)) ||
+  if (warnings.some((warning) => !ALLOWED_WARNINGS.has(warning)
+      && !(quantityWarningsAllowed && QUANTITY_WARNINGS.has(warning))) ||
     new Set(warnings).size !== warnings.length ||
-    missingReasons.some((reason) => !MISSING_REASON_PATTERN.test(reason)) ||
+    missingReasons.some((reason) => !MISSING_REASON_PATTERN.test(reason)
+      && !(quantityWarningsAllowed && QUANTITY_MISSING_REASON_PATTERN.test(reason))) ||
     new Set(missingReasons).size !== missingReasons.length ||
     JSON.stringify([...missingReasons].sort()) !== JSON.stringify(missingReasons) ||
     (warnings.includes("AI_NUTRITION_ESTIMATE_USED") !== hasAiSource) ||
@@ -394,7 +412,9 @@ export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): Rec
     rounding_policy_version: "display-v1",
   };
   try {
-    validateRecipeNutritionSnapshot(projectedCalculation);
+    // Stored rows already crossed the version-gated SQL writer. Decode their
+    // exact known codes without inventing a write version or another SELECT.
+    validateRecipeNutritionSnapshotContents(projectedCalculation, true);
   } catch {
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_PROJECTION");
   }

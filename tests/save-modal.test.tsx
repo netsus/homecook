@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -192,5 +192,36 @@ describe("SaveModal", () => {
     await userEvent.click(readyScope.getByRole("button", { name: "추가" }));
 
     expect(readyProps.onCreateBook).toHaveBeenCalledTimes(1);
+  });
+
+  it("contains desktop keyboard focus and closes on Escape", async () => {
+    const user = userEvent.setup();
+    const { desktopDialog, props } = renderDesktopSaveModal();
+    const dialog = within(desktopDialog);
+    const closeButton = dialog.getByRole("button", { name: "닫기" });
+
+    expect(document.activeElement).toBe(closeButton);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(dialog.getByRole("button", { name: "1개 레시피북에 저장" }));
+    await user.tab();
+    expect(document.activeElement).toBe(closeButton);
+    await user.keyboard("{Escape}");
+    expect(props.onClose).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { isSavingRecipe: true, isCreatingBook: false },
+    { isSavingRecipe: false, isCreatingBook: true },
+  ])("blocks desktop dismiss while saving or creating a book: %j", async (savingState) => {
+    const user = userEvent.setup();
+    const { desktopDialog, props } = renderDesktopSaveModal(savingState);
+    const backdrop = desktopDialog.closest(".web-modal-backdrop");
+    if (!backdrop) throw new Error("SaveModal desktop backdrop was not rendered");
+
+    await user.keyboard("{Escape}");
+    fireEvent.click(backdrop);
+
+    expect(props.onClose).not.toHaveBeenCalled();
+    expect(document.body.style.overflow).toBe("hidden");
   });
 });

@@ -16,6 +16,13 @@ const callFuturePropagationRpc = vi.fn();
 const recalculateRecipeNutritionSnapshot = vi.fn();
 const recordOperationalEventFromServiceRole = vi.fn();
 
+// Quantity mode has its own actual-reader/native regressions; these tests keep
+// their existing session/nutrition/write boundary and legacy v3 behavior.
+vi.mock("@/lib/server/recipe-snapshot-entrypoint", async importOriginal => {
+  const actual = await importOriginal<typeof import("@/lib/server/recipe-snapshot-entrypoint")>();
+  return { ...actual, readRecipeQuantityMode: vi.fn(async () => false) };
+});
+
 vi.mock("@/lib/supabase/server", () => ({
   createRecipeFuturePropagationInternalClient,
   createRemoteCompatibilityServiceRoleClient: vi.fn(),
@@ -584,7 +591,11 @@ describe("personal recipe customization write routes", () => {
         predecessorGuard: { recipe_ingredients: [] },
       };
     });
-    callFuturePropagationRpc.mockImplementation(async () => {
+    callFuturePropagationRpc.mockImplementation(async (_client, name) => {
+      if (name === "read_recipe_future_patch_result") {
+        order.push("read");
+        return { ok: true, data: { state: "absent", result: null } };
+      }
       order.push("rpc");
       return {
         ok: true,
@@ -612,7 +623,7 @@ describe("personal recipe customization write routes", () => {
     const { PATCH } = await importRecipeDetailRoute();
     const response = await PATCH(buildPatchRequest(body), recipeContext());
 
-    expect(order).toEqual(["session", "nutrition", "rpc"]);
+    expect(order).toEqual(["session", "read", "nutrition", "rpc"]);
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       success: true,
@@ -624,7 +635,7 @@ describe("personal recipe customization write routes", () => {
     });
     expect(callFuturePropagationRpc).toHaveBeenCalledWith(
       serviceClient,
-      "write_recipe_future_plan_change",
+      "write_recipe_future_plan_change_recoverable",
       {
         p_owner_uuid: user.id,
         p_auth_identity_created_at_snapshot: sessionAuthority.authIdentityCreatedAt,
@@ -632,13 +643,10 @@ describe("personal recipe customization write routes", () => {
         p_hmac_key_version: sessionAuthority.hmacKeyVersion,
         p_session_issued_at: sessionAuthority.sessionIssuedAt,
         p_recipe_id: recipeId,
-        p_base_recipe_revision: 12,
-        p_draft: body.draft,
+        p_request_body: body,
+        p_quantity_contract: null,
         p_nutrition_snapshot: { calculation_version: "v1" },
         p_nutrition_predecessor_guard: { recipe_ingredients: [] },
-        p_future_plan_strategy: "replace_all",
-        p_impact_token: "opaque-token",
-        p_image_object_id: managedImageObjectId,
         p_idempotency_key: idempotencyKey,
       },
     );

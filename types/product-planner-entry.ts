@@ -2,6 +2,7 @@ import type {
   FoodProductBasisUnit,
   FoodProductData,
 } from "@/types/food-product";
+import type { QuantityInputDraft, QuantityInputSnapshot } from "@/types/quantity-input";
 
 export interface ProductPlannerEntryQuantity {
   amount: number;
@@ -13,10 +14,12 @@ export interface ProductPlannerEntryCreateBody {
   plan_date: string;
   column_id: string;
   quantity: ProductPlannerEntryQuantity;
+  quantity_input?: QuantityInputDraft;
 }
 
 export interface ProductPlannerEntryPatchBody {
   quantity: ProductPlannerEntryQuantity;
+  quantity_input?: QuantityInputDraft;
 }
 
 export interface ProductPlannerEntryData {
@@ -28,6 +31,8 @@ export interface ProductPlannerEntryData {
   plan_date: string;
   column_id: string;
   quantity: ProductPlannerEntryQuantity;
+  quantity_input?: QuantityInputSnapshot;
+  quantity_policy?: "quantity-v4";
   workflow_status: null;
   product_nutrition_version_id: string;
   basis_relations: FoodProductData["basis_relations"];

@@ -1,29 +1,44 @@
 "use client";
 
 import { create } from "zustand";
+import type { RefObject } from "react";
 
 export const useActionConfirmationStore = create<{
   message: string | null;
+  fallbackFocusRef: RefObject<HTMLElement | null> | null;
+  confirmationId: number;
+  returnFocusPath: string | null;
   dismiss: () => void;
 }>((set) => ({
   message: null,
-  dismiss: () => set({ message: null }),
+  fallbackFocusRef: null,
+  confirmationId: 0,
+  returnFocusPath: null,
+  dismiss: () => set({ message: null, fallbackFocusRef: null, returnFocusPath: null }),
 }));
 
-export function showActionConfirmation(message: string) {
-  useActionConfirmationStore.setState({ message });
+export function showActionConfirmation(message: string, fallbackFocusRef?: RefObject<HTMLElement | null>) {
+  useActionConfirmationStore.setState((state) => ({
+    message,
+    fallbackFocusRef: fallbackFocusRef ?? null,
+    confirmationId: state.confirmationId + 1,
+    returnFocusPath: fallbackFocusRef && typeof window !== "undefined" ? window.location.pathname : null,
+  }));
 }
 
 import type {
   PendingRecipeAction,
   PendingRecipeActionType,
+  RecipeEditorPantryResume,
 } from "@/lib/auth/pending-action";
 import type { RecipeEditContext } from "@/types/recipe";
 
 type AuthGateOpenPayload =
-  | { recipeId: string; type: Exclude<PendingRecipeActionType, "recipe-edit-save" | "recipe-save-as-new" | "recipe-fork"> }
-  | { editContext?: RecipeEditContext; sourceOwnerUuid?: string | null; recipeId: string; type: "recipe-fork" }
-  | { editContext: RecipeEditContext; sourceOwnerUuid: string | null; recipeId: string; type: "recipe-edit-save" | "recipe-save-as-new" };
+  | { recipeId: string; type: Exclude<PendingRecipeActionType, "recipe-edit-save" | "recipe-save-as-new" | "recipe-fork" | "planner" | "cook"> }
+  | { recipeId: string; type: "planner"; plannedServings?: number }
+  | { recipeId: string; type: "cook"; cookingServings: number; recipeRevision?: number }
+  | { editContext?: RecipeEditContext; sourceOwnerUuid?: string | null; sourceAccountGeneration?: number; resumeEditor?: RecipeEditorPantryResume; recipeId: string; type: "recipe-fork" }
+  | { editContext: RecipeEditContext; sourceOwnerUuid: string | null; sourceAccountGeneration?: number; recipeId: string; type: "recipe-edit-save" | "recipe-save-as-new" };
 
 interface AuthGateState {
   isOpen: boolean;
@@ -38,7 +53,7 @@ export const useAuthGateStore = create<AuthGateState>((set) => ({
   open: (payload) => {
     const common: Pick<
       PendingRecipeAction,
-      "recipeId" | "redirectTo" | "createdAt" | "sourceOwnerUuid"
+      "recipeId" | "redirectTo" | "createdAt" | "sourceOwnerUuid" | "sourceAccountGeneration"
     > = {
       recipeId: payload.recipeId,
       redirectTo: `/recipe/${payload.recipeId}`,
@@ -48,14 +63,19 @@ export const useAuthGateStore = create<AuthGateState>((set) => ({
     if ("sourceOwnerUuid" in payload) {
       common.sourceOwnerUuid = payload.sourceOwnerUuid;
     }
+    if ("sourceAccountGeneration" in payload) common.sourceAccountGeneration = payload.sourceAccountGeneration;
 
     const action: PendingRecipeAction = (
       payload.type === "recipe-edit-save" || payload.type === "recipe-save-as-new"
     )
       ? { ...common, type: payload.type, editContext: payload.editContext }
       : payload.type === "recipe-fork"
-        ? { ...common, type: payload.type, editContext: payload.editContext }
-        : { ...common, type: payload.type };
+        ? { ...common, type: payload.type, editContext: payload.editContext, resumeEditor: payload.resumeEditor }
+        : payload.type === "planner"
+          ? { ...common, type: payload.type, plannedServings: payload.plannedServings }
+          : payload.type === "cook"
+            ? { ...common, type: payload.type, cookingServings: payload.cookingServings, recipeRevision: payload.recipeRevision }
+          : { ...common, type: payload.type };
     set({ isOpen: true, action });
   },
   close: () =>

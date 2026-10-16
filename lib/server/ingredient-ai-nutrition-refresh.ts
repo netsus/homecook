@@ -101,6 +101,11 @@ function bundleClient(bundle: RefreshBundle) {
       return new BundleQuery(tables[table]);
     },
     async rpc(name: string, args: Record<string, unknown>) {
+      // This is the already authenticated job bundle, not a new HTTP read.
+      // The independently rebuilt guard is still compared below before writing.
+      if (name === "build_recipe_nutrition_input_guard" && args.p_recipe_id === bundle.recipe_id) {
+        return { data: bundle.input_guard, error: null };
+      }
       if (name !== "read_recipe_product_nutrition_predecessors" ||
         args.p_owner_uuid !== (bundle.recipe.created_by ?? null) || !Array.isArray(args.p_ingredients)) {
         throw new IngredientAiRecipeRefreshError("AI_NUTRITION_REFRESH_INVALID_BUNDLE");

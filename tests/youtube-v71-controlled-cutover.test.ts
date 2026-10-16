@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   assertV71CutoverPoststate,
@@ -147,16 +147,20 @@ describe("YouTube v71 controlled cutover", () => {
   });
 
   it("builds one fail-closed policy plus generation 46-to-47 transaction fragment", () => {
-    const sql = buildV71DatabaseTransitionSql({
-      managerClaims,
-      credentialMetadata,
-    });
-    expect(sql).toContain("enabled = false");
-    expect(sql).toContain("SET LOCAL ROLE youtube_extraction_credential_manager");
-    expect(sql).toContain("rotate_youtube_extraction_worker_credential(\n  46,\n  47,");
-    expect(sql).toContain(releaseSha);
-    expect(sql).toContain(policyDigest);
-    expect(sql).not.toContain("generation 48");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    try {
+      const sql = buildV71DatabaseTransitionSql({
+        managerClaims,
+        credentialMetadata,
+      });
+      expect(sql).toContain("enabled = false");
+      expect(sql).toContain("SET LOCAL ROLE youtube_extraction_credential_manager");
+      expect(sql).toContain("rotate_youtube_extraction_worker_credential(\n  46,\n  47,");
+      expect(sql).toContain(releaseSha);
+      expect(sql).toContain(policyDigest);
+      expect(sql).not.toContain("generation 48");
+    } finally { vi.useRealTimers(); }
   });
 
   it("requires drained predecessor state and exact v71 poststate", () => {

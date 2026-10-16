@@ -1,9 +1,14 @@
+import { attestationOwnerPrecondition, attestationRpcArgs } from "@/lib/server/cooked-weight-attestation";
+import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
 import { createRecipeMealWeightReadInternalClient } from "@/lib/supabase/server";
 import { readCookedWeightEstimate, type CookingWeightSessionClient } from "@/lib/server/cooked-batch-weight-estimate";
+import { cookedWeightEvidenceEnabled, readSnapshotWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
+import type { RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import {
   callCookedBatchRpc,
+  isCookedWeightEvidenceDisabledResponse,
   isUuid,
   parseSnapshotV2CompleteRequest,
   projectCookedBatchGamification,
@@ -27,27 +32,71 @@ export async function POST(request: Request, context: RouteContext) {
   if (!body.ok) return body.response;
   const parsed = parseSnapshotV2CompleteRequest(body.value);
   if (!parsed.ok) return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
-  let estimatedWeight: number | null = null;
-  if (parsed.value.weightAction === "weigh_later") {
-    try {
-      estimatedWeight = await readCookedWeightEstimate({
-        client: authorized.routeClient as unknown as CookingWeightSessionClient,
-        weightClient: createRecipeMealWeightReadInternalClient(),
-        ownerId: authorized.user.id, sessionId: id,
+  const attestation = parsed.value.weightAttestation;
+  if (attestation) {
+    const error = attestationOwnerPrecondition(attestation, authorized.user.id);
+    if (error) return error;
+  }
+  const evidenceEnabled = cookedWeightEvidenceEnabled();
+  const withEvidence = evidenceEnabled || parsed.value.weightInputSource !== null;
+  const args: Record<string, unknown> = {
+    ...authorized.authorityArgs, p_session_id: id, p_idempotency_key: key.key,
+    p_consumed_pantry_item_ids: parsed.value.consumedPantryItemIds,
+    p_weight_action: parsed.value.weightAction, p_finished_weight_g: parsed.value.finishedWeightG,
+  };
+  const sessionClient: CookingWeightSessionClient & RecipeProductNutritionClient = {
+    rpc: (name, params) => authorized.routeClient.rpc(name, params),
+    from: (table) => ({ select: (columns) => {
+      let query = authorized.routeClient.from(table).select(columns);
+      const reader = {
+        eq: (column: string, value: string) => { query = query.eq(column, value); return reader; },
+        maybeSingle: async () => {
+          const result = await query.maybeSingle();
+          return { data: result.data, error: result.error };
+        },
+      };
+      return reader;
+    } }),
+  };
+  try {
+    if (withEvidence) {
+      args.p_prediction = await readSnapshotWeightPrediction({
+        client: sessionClient, weightClient: createRecipeMealWeightReadInternalClient(),
+        ownerId: authorized.user.id, sessionId: id, methodClient: authorized.client, authorityArgs: authorized.authorityArgs,
       });
+      args.p_weight_input_source = parsed.value.weightInputSource;
+      args.p_write_enabled = evidenceEnabled;
+    } else if (parsed.value.weightAction === "weigh_later") {
+      args.p_weight_action = "estimate_from_ingredients";
+      args.p_finished_weight_g = await readCookedWeightEstimate({
+        client: sessionClient,
+        weightClient: createRecipeMealWeightReadInternalClient(), ownerId: authorized.user.id, sessionId: id,
+      });
+    }
+  } catch (error) {
+    return createHybridAuthorityRouteError(error)
+      ?? fail("INTERNAL_ERROR", "요리 중량 근거를 확인하지 못했어요. 다시 시도해 주세요.", 500);
+  }
+  if (attestation) Object.assign(args, attestationRpcArgs(attestation));
+  let result = await callCookedBatchRpc(authorized.client, attestation ? "complete_snapshot_v2_cooking_session_with_attestation" : withEvidence
+    ? "complete_snapshot_v2_cooking_session_with_weight_evidence" : "complete_snapshot_v2_cooking_session", args);
+  if (withEvidence && parsed.value.weightInputSource === null && !result.ok && await isCookedWeightEvidenceDisabledResponse(result.response)) {
+    const legacyArgs = { ...args };
+    delete legacyArgs.p_prediction;
+    delete legacyArgs.p_weight_input_source;
+    delete legacyArgs.p_write_enabled;
+    try {
+      if (parsed.value.weightAction === "weigh_later") {
+        legacyArgs.p_weight_action = "estimate_from_ingredients";
+        legacyArgs.p_finished_weight_g = await readCookedWeightEstimate({ client: sessionClient,
+          weightClient: createRecipeMealWeightReadInternalClient(), ownerId: authorized.user.id, sessionId: id });
+      }
     } catch (error) {
       return createHybridAuthorityRouteError(error)
         ?? fail("INTERNAL_ERROR", "요리 중량을 확인하지 못했어요. 다시 시도해 주세요.", 500);
     }
+    result = await callCookedBatchRpc(authorized.client, "complete_snapshot_v2_cooking_session", legacyArgs);
   }
-  const result = await callCookedBatchRpc(authorized.client, "complete_snapshot_v2_cooking_session", {
-    ...authorized.authorityArgs,
-    p_session_id: id,
-    p_idempotency_key: key.key,
-    p_consumed_pantry_item_ids: parsed.value.consumedPantryItemIds,
-    p_weight_action: parsed.value.weightAction === "weigh_later" ? "estimate_from_ingredients" : parsed.value.weightAction,
-    p_finished_weight_g: parsed.value.weightAction === "weigh_later" ? estimatedWeight : parsed.value.finishedWeightG,
-  });
   if (!result.ok) return result.response;
   await projectCookedBatchGamification(
     authorized.routeClient,
@@ -55,6 +104,6 @@ export async function POST(request: Request, context: RouteContext) {
     "cooking_completed",
     id,
   );
-  const data = projectSnapshotV2CompleteData(result.data);
+  const data = projectSnapshotV2CompleteData(result.data, wantsCookedWeightEvidence(request), attestation);
   return data ? ok(data) : fail("INTERNAL_ERROR", "요리 완료 결과를 확인하지 못했어요.", 500);
 }

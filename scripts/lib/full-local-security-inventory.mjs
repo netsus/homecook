@@ -21,6 +21,21 @@ const RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
 );
+const RECIPE_PRODUCT_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/recipe-product-source-function-postimages.json",
+);
+const COOKED_WEIGHT_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/cooked-weight-evidence-source-function-postimages.json",
+);
+const WEIGHT_ATTESTATION_POSTIMAGES_PATH = join(REPOSITORY_ROOT,
+  "docs/security/cooked-weight-user-attestation-source-function-postimages.json");
+const WEIGHT_ATTESTATION_TABLES = ["cooked_weight_user_attestations", "cooked_weight_user_attestation_control"];
+const QUANTITY_V4_POSTIMAGES_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/quantity-input-v4-source-function-postimages.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -582,6 +597,392 @@ const RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT =
   recipeFuturePropagationManifest.functions.map(
     (entry) => parseFunction(entry, recipeFuturePropagationMigration),
   );
+
+// Explicitly reviewed schema-only 219 -> C03 postimages. The old source and
+// metadata contracts remain checked; unrelated baseline drift is not adopted.
+function recipeProductPostimages() {
+  const postimages = JSON.parse(readFileSync(RECIPE_PRODUCT_POSTIMAGES_PATH, "utf8"));
+  const migration = readFileSync(join(REPOSITORY_ROOT, postimages.migration));
+  if (postimages.schema_version !== 1
+    || postimages.migration !== "supabase/migrations/20261013190000_recipe_product_only_identity.sql"
+    || createHash("sha256").update(migration).digest("hex") !== postimages.migration_sha256
+    || postimages.schema_archive_sha256 !== "15c29821618e9cb7c70bbbe0df2cb2f0bd3246924352667bf8ce047400f48097"
+    || postimages.predecessor_219_sha256 !== "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
+    || postimages.application_rows_restored !== 0 || postimages.functions.length !== 24) {
+    throw new Error("recipe product postimage provenance drift");
+  }
+  const publicReaders = new Set(["read_public_recipe_product_sources", "find_public_recipe_ids_by_product_name", "read_recipe_product_ingredient_classification"]);
+  for (const { postimage, preimage } of postimages.functions) {
+    if (!preimage && (postimage.owner !== "postgres" || postimage.allowedAcl !==
+      (publicReaders.has(postimage.name) ? "anon:EXECUTE:false,authenticated:EXECUTE:false" : ""))) {
+      throw new Error("recipe product new function privilege drift");
+    }
+    if (preimage) for (const field of ["securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]) {
+      if (preimage[field] !== postimage[field]) throw new Error(`recipe product metadata changed: ${field}`);
+    }
+  }
+  return postimages;
+}
+
+function withRecipeProductContracts(contracts) {
+  const postimages = recipeProductPostimages();
+  const result = [...contracts];
+  for (const { postimage, preimage, checkedInInventoryPreimageMd5 } of postimages.functions) {
+    if (!/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || !["public", "private"].includes(postimage.schema)
+      || !postimage.searchPath.startsWith("pg_catalog,")
+      || !postimage.searchPath.endsWith("pg_temp")) throw new Error("invalid recipe product postimage");
+    if (preimage) {
+      for (const field of ["securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]) {
+        if (preimage[field] !== postimage[field]) throw new Error(`recipe product metadata changed: ${field}`);
+      }
+    }
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index >= 0) {
+      if (checkedInInventoryPreimageMd5 !== result[index].sourceHash) {
+        throw new Error("recipe product checked-in preimage drift");
+      }
+      // Replace only the body expectation. Do not silently replace owner,
+      // privileges or search_path when the existing 219 baseline is stale.
+      result[index] = { ...result[index], sourceHash: postimage.sourceHash };
+    } else result.push(postimage);
+  }
+  return result;
+}
+
+function cookedWeightPostimages() {
+  const manifest = JSON.parse(readFileSync(COOKED_WEIGHT_POSTIMAGES_PATH, "utf8"));
+  const migration = readFileSync(join(REPOSITORY_ROOT, manifest.migration));
+  if (manifest.schema_version !== 1 || manifest.status !== "local-review-draft"
+    || manifest.migration !== "supabase/migrations/20261013233000_cooked_batch_weight_evidence.sql"
+    || createHash("sha256").update(migration).digest("hex") !== manifest.migration_sha256
+    || manifest.schema_archive_sha256 !== "15c29821618e9cb7c70bbbe0df2cb2f0bd3246924352667bf8ce047400f48097"
+    || manifest.predecessor_219_sha256 !== "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
+    || manifest.predecessor_C03_sha256 !== recipeProductPostimages().migration_sha256
+    || manifest.application_rows_restored !== 0 || manifest.C03_integration_pending !== false
+    || manifest.functions.length !== 15) throw new Error("cooked weight postimage provenance drift");
+  const publicWriters = new Set(["complete_snapshot_v2_cooking_session_with_weight_evidence", "mutate_cooked_batch_weight_with_evidence"]);
+  for (const { postimage, preimage } of manifest.functions) {
+    if (!/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || !["public", "private"].includes(postimage.schema)
+      || !postimage.searchPath.startsWith("pg_catalog,")
+      || !postimage.searchPath.endsWith("pg_temp")) throw new Error("invalid cooked weight postimage");
+    if (preimage) {
+      for (const field of ["securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]) {
+        if (preimage[field] !== postimage[field]) throw new Error(`cooked weight metadata changed: ${field}`);
+      }
+    } else if (postimage.owner !== "postgres"
+      || postimage.allowedAcl !== (publicWriters.has(postimage.name) ? "service_role:EXECUTE:false" : "")) {
+      throw new Error("cooked weight new function privilege drift");
+    }
+  }
+  const predecessor = manifest.preserved_scope_predecessor;
+  const before = manifest.functions.find((entry) => entry.postimage.name === "verify_full_local_internal_scope")?.preimage;
+  const alias = manifest.functions.find((entry) => entry.postimage.name === "verify_scope_pre_cooked_weight_evidence_20261013")?.postimage;
+  if (!before || !alias || !predecessor.body_and_attributes_unchanged
+    || JSON.stringify(before) !== JSON.stringify(predecessor.before)
+    || JSON.stringify(alias) !== JSON.stringify(predecessor.renamed)
+    || ["sourceHash", "securityDefiner", "owner", "searchPath", "allowedAcl", "volatility"]
+      .some((field) => before[field] !== alias[field])) throw new Error("cooked weight scope predecessor drift");
+  return manifest;
+}
+
+function withCookedWeightContracts(contracts) {
+  const result = [...contracts];
+  for (const { postimage, checkedInInventoryPreimageMd5 } of cookedWeightPostimages().functions) {
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index >= 0) {
+      if (checkedInInventoryPreimageMd5 !== result[index].sourceHash) throw new Error("cooked weight checked-in preimage drift");
+      result[index] = { ...result[index], sourceHash: postimage.sourceHash };
+    } else result.push(postimage);
+  }
+  return result;
+}
+
+function quantityV4Postimages() {
+  const manifest = JSON.parse(readFileSync(QUANTITY_V4_POSTIMAGES_PATH, "utf8"));
+  const paths = ["20261014010000_ingredient_quantity_policy_v4.sql", "20261014200000_quantity_input_v4_consumers.sql",
+    "20261014210000_product_quantity_input_v4.sql", "20261014213000_product_quantity_edit_capability.sql",
+    "20261014220000_recipe_quantity_input_v4.sql", "20261014223000_youtube_quantity_input_bridge.sql"];
+  if (manifest.schema_version !== 1 || manifest.status !== "local-review-draft"
+    || manifest.schema_archive_sha256 !== recipeProductPostimages().schema_archive_sha256
+    || manifest.predecessor_219_sha256 !== recipeProductPostimages().predecessor_219_sha256
+    || manifest.predecessor_C03_sha256 !== recipeProductPostimages().migration_sha256
+    || manifest.predecessor_C01_sha256 !== cookedWeightPostimages().migration_sha256
+    || manifest.application_rows_restored !== 0 || manifest.whole_inventory_drift_not_waived !== true
+    || manifest.functions.length !== 60 || manifest.preserved_overloads.length !== 3 || manifest.migrations.length !== paths.length
+    || manifest.catalog_before !== "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9"
+    || manifest.catalog_after !== "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05") {
+    throw new Error("quantity v4 postimage provenance drift");
+  }
+  for (const [index, migration] of manifest.migrations.entries()) {
+    if (migration.path !== `supabase/migrations/${paths[index]}`
+      || migration.actor !== (index === 5 ? "supabase_admin" : "postgres")
+      || createHash("sha256").update(readFileSync(join(REPOSITORY_ROOT, migration.path))).digest("hex") !== migration.sha256) {
+      throw new Error("quantity v4 migration source drift");
+    }
+  }
+  const privileges = new Map([
+    ["create_product_planner_entry", "authenticated:EXECUTE:false,service_role:EXECUTE:false"],
+    ["update_product_planner_entry_quantity", "authenticated:EXECUTE:false,service_role:EXECUTE:false"],
+    ["preview_meal_log_nutrition", "service_role:EXECUTE:false"],
+    ["youtube_worker_quantity_input_v4", "youtube_extraction_worker_rpc_owner:EXECUTE:false"],
+    ["youtube_worker_quantity_write_admission_v4", "youtube_extraction_worker_rpc_owner:EXECUTE:false"],
+  ]);
+  const signatures = new Set();
+  let existing = 0;
+  for (const { preimage, postimage } of manifest.functions) {
+    if (!/^[a-f0-9]{32}$/u.test(postimage.sourceHash) || !/^[a-f0-9]{64}$/u.test(postimage.definitionSha256)
+      || postimage.signature !== normalizeSignature(postimage.lookupSignature)
+      || !["public", "private"].includes(postimage.schema) || signatures.has(postimage.signature)
+      || !/^[a-z_][a-z0-9_]*$/u.test(postimage.name)
+      || !postimage.lookupSignature.startsWith(`${postimage.schema}.${postimage.name}(`)
+      || typeof postimage.securityDefiner !== "boolean" || !["i", "s", "v"].includes(postimage.volatility)
+      || !Array.isArray(postimage.configuration)
+      || !postimage.configuration.includes(`search_path=${postimage.searchPath === '""' ? '""' : postimage.searchPath.split(",").join(", ")}`)) {
+      throw new Error("invalid quantity v4 postimage");
+    }
+    signatures.add(postimage.signature);
+    if (preimage) {
+      existing += 1;
+      for (const key of ["signature", "owner", "allowedAcl", "searchPath", "configuration", "securityDefiner", "volatility"]) {
+        if (JSON.stringify(preimage[key]) !== JSON.stringify(postimage[key])) throw new Error(`quantity v4 metadata changed: ${key}`);
+      }
+    } else if (postimage.owner !== "postgres" || postimage.allowedAcl !== (privileges.get(postimage.name) ?? "")) {
+      throw new Error("quantity v4 new function privilege drift");
+    }
+  }
+  if (existing !== 33) throw new Error("quantity v4 preimage identity drift");
+  const preserved = new Set(["public.create_product_planner_entry(uuid,uuid,date,uuid,numeric,text,uuid)",
+    "public.update_product_planner_entry_quantity(uuid,uuid,numeric,text)",
+    "public.list_food_products(uuid,text,timestampwithtimezone,uuid,integer)"]);
+  for (const { preimage, postimage } of manifest.preserved_overloads) {
+    if (!preserved.delete(postimage.signature) || JSON.stringify(preimage) !== JSON.stringify(postimage)) {
+      throw new Error("quantity v4 preserved overload drift");
+    }
+  }
+  const worker = JSON.parse(readFileSync(join(REPOSITORY_ROOT, "docs/security/youtube-worker-quantity-function-postimages.json"), "utf8"));
+  if (worker.migration_sha256 !== manifest.migrations[5].sha256 || worker.functions.length !== 13
+    || worker.catalog_before !== manifest.catalog_before || worker.catalog_after !== manifest.catalog_after) {
+    throw new Error("quantity v4 worker provenance drift");
+  }
+  for (const { postimage } of worker.functions) {
+    const registered = manifest.functions.find((entry) => entry.postimage.signature === normalizeSignature(postimage.signature))?.postimage;
+    if (!registered || registered.sourceHash !== postimage.source_md5 || registered.definitionSha256 !== postimage.definition_sha256
+      || registered.owner !== postimage.owner || registered.securityDefiner !== postimage.security_definer
+      || registered.volatility !== postimage.volatility || JSON.stringify(registered.configuration) !== JSON.stringify(postimage.config)) {
+      throw new Error("quantity v4 worker execution contract drift");
+    }
+  }
+  return manifest;
+}
+
+function withQuantityV4Contracts(contracts) {
+  const result = [...contracts];
+  const manifest = quantityV4Postimages();
+  for (const { postimage, checkedInInventoryPreimageMd5 } of [...manifest.functions, ...manifest.preserved_overloads]) {
+    const index = result.findIndex((entry) => entry.signature === postimage.signature);
+    if (index >= 0) {
+      if (result[index].sourceHash !== checkedInInventoryPreimageMd5) throw new Error("quantity v4 checked-in preimage drift");
+      result[index] = { ...result[index], sourceHash: postimage.sourceHash,
+        configuration: postimage.configuration, quantityVolatility: postimage.volatility };
+    } else result.push(postimage);
+  }
+  return result;
+}
+
+function weightAttestationPostimages() {
+  const manifest = JSON.parse(readFileSync(WEIGHT_ATTESTATION_POSTIMAGES_PATH, "utf8"));
+  const quantity = quantityV4Postimages();
+  if (manifest.schema_version !== 1 || manifest.status !== "local-review-draft"
+    || manifest.migration !== "supabase/migrations/20261014224500_cooked_weight_user_attestation.sql"
+    || createHash("sha256").update(readFileSync(join(REPOSITORY_ROOT, manifest.migration))).digest("hex") !== manifest.migration_sha256
+    || manifest.predecessor_C01_sha256 !== cookedWeightPostimages().migration_sha256
+    || JSON.stringify(manifest.predecessor_C04_migrations) !== JSON.stringify(quantity.migrations)
+    || manifest.schema_archive_sha256 !== "5447e5ae08359feb9750676820968daf2edcf0ed57b64997e718ccc8d8dae790"
+    || manifest.roles_sha256 !== "a37b43865c14194ab8aae8758c7f596679cc50e93f425d0af52767f54b9145d3"
+    || manifest.application_rows_restored !== 0 || manifest.whole_inventory_drift_not_waived !== true
+    || manifest.worker_catalog_unchanged !== quantity.catalog_after || manifest.functions.length !== 10) throw new Error("weight attestation provenance drift");
+  const publicRpcs = new Set(["read_cooked_weight_attestation", "complete_snapshot_v2_cooking_session_with_attestation",
+    "mutate_cooked_batch_weight_with_attestation", "retract_cooked_weight_attestation"]);
+  for (const { postimage, preimage } of manifest.functions) {
+    if (postimage.signature !== normalizeSignature(postimage.lookupSignature) || !/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || !/^[a-f0-9]{64}$/u.test(postimage.definitionSha256) || postimage.owner !== "postgres"
+      || postimage.allowedAcl !== (publicRpcs.has(postimage.name) ? "service_role:EXECUTE:false" : "")
+      || postimage.searchPath !== "pg_catalog,public,private,pg_temp"
+      || JSON.stringify(postimage.configuration) !== JSON.stringify(["search_path=pg_catalog, public, private, pg_temp"])) {
+      throw new Error("weight attestation execution contract drift");
+    }
+    if (preimage) for (const key of ["owner", "allowedAcl", "configuration", "securityDefiner", "volatility"]) {
+      if (JSON.stringify(preimage[key]) !== JSON.stringify(postimage[key])) throw new Error(`weight attestation prior metadata drift: ${key}`);
+    }
+  }
+  const predecessor = manifest.preserved_scope_predecessor;
+  const before = manifest.functions.find(entry => entry.postimage.name === "verify_full_local_internal_scope")?.preimage;
+  const alias = manifest.functions.find(entry => entry.postimage.name === "verify_scope_pre_weight_attestation_20261014")?.postimage;
+  if (!before || !alias || predecessor.body_and_attributes_unchanged !== true
+    || JSON.stringify(predecessor.before) !== JSON.stringify(before) || JSON.stringify(predecessor.renamed) !== JSON.stringify(alias)
+    || ["sourceHash", "owner", "allowedAcl", "configuration", "securityDefiner", "volatility"].some(key => JSON.stringify(before[key]) !== JSON.stringify(alias[key]))) {
+    throw new Error("weight attestation prior scope drift");
+  }
+  return manifest;
+}
+function withWeightAttestationContracts(contracts) {
+  const result = [...contracts];
+  for (const { postimage, checkedInInventoryPreimageMd5 } of weightAttestationPostimages().functions) {
+    const index = result.findIndex(entry => entry.signature === postimage.signature);
+    if (index < 0) result.push(postimage);
+    else {
+      if (result[index].sourceHash !== checkedInInventoryPreimageMd5) throw new Error("weight attestation registered preimage drift");
+      result[index] = postimage;
+    }
+  }
+  return result;
+}
+function recipeSaveRecoveryPostimages() {
+  const bytes = readFileSync(join(REPOSITORY_ROOT,"docs/security/recipe-save-recovery-source-function-postimages.json"));
+  const manifest = JSON.parse(bytes);
+  if (createHash("sha256").update(bytes).digest("hex") !== "4e908266cca5637fa8ebc1a6eeea8605bdebd7b26dc4a6a4bcfb0cd068aa6874"
+    || manifest.schema_version !== 1 || manifest.feature !== "recipe-save-recovery" || manifest.functions.length !== 10
+    || manifest.worker_catalog_unchanged !== "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05") throw new Error("recipe-save exact postimage registry drift");
+  for (const migration of manifest.migrations) if (createHash("sha256").update(readFileSync(join(REPOSITORY_ROOT,"supabase/migrations",migration.filename))).digest("hex") !== migration.sha256) throw new Error("recipe-save reviewed migration bytes drift");
+  for (const {preimage,postimage} of manifest.functions) {
+    if (postimage.signature !== normalizeSignature(postimage.lookupSignature) || !/^[a-f0-9]{32}$/u.test(postimage.sourceHash)
+      || !/^[a-f0-9]{64}$/u.test(postimage.definitionSha256)) throw new Error("recipe-save exact function identity drift");
+    if (preimage) for (const key of ["owner","allowedAcl","configuration","securityDefiner","volatility"])
+      if (JSON.stringify(preimage[key]) !== JSON.stringify(postimage[key])) throw new Error(`recipe-save preserved function authority drift: ${key}`);
+  }
+  const outer=manifest.functions.find(row=>row.postimage.name === "verify_full_local_internal_scope");
+  const alias=manifest.functions.find(row=>row.postimage.name === "verify_scope_pre_recipe_future_http_replay_20261014");
+  if (!outer?.preimage || !alias || ["owner","allowedAcl","configuration","securityDefiner","volatility","sourceHash"].some(key=>JSON.stringify(outer.preimage[key])!==JSON.stringify(alias.postimage[key]))) throw new Error("recipe-save original scope alias drift");
+  return manifest;
+}
+function withRecipeSaveRecoveryContracts(contracts) {
+  const result=[...contracts];
+  for (const {preimage,postimage} of recipeSaveRecoveryPostimages().functions) {
+    const index=result.findIndex(row=>row.signature===postimage.signature);
+    if (index < 0) result.push(postimage);
+    else {
+      if (!preimage || result[index].sourceHash !== preimage.sourceHash) throw new Error("recipe-save registered predecessor source drift");
+      result[index]=postimage;
+    }
+  }
+  return result;
+}
+function withRecipeRequestRoleContracts(contracts) {
+  const bytes=readFileSync(join(REPOSITORY_ROOT,"docs/security/recipe-future-request-role-source-function-postimage.json"));
+  if (createHash("sha256").update(bytes).digest("hex")!=="8cb39f32a50a85a713798049459500ce3eecf1ff33171e55b742a9ff9fd0bde2") throw new Error("recipe request-role fixed postimage bytes differ");
+  const manifest=JSON.parse(bytes);
+  if (manifest.feature!=="recipe-future-request-role" || manifest.schema_version!==1
+    || manifest.migration.filename!=="20261015100000_recipe_future_request_role.sql"
+    || manifest.migration.sha256!=="2322ccf737382e9738aa2c3d5cb50531c769c1a7902e2f621c8d378f9ce1505e") throw new Error("recipe request-role source identity differs");
+  const index=contracts.findIndex(row=>row.signature===manifest.preimage.signature);
+  if (index<0 || JSON.stringify(contracts[index])!==JSON.stringify(manifest.preimage)
+    || ["signature","lookupSignature","name","schema","owner","allowedAcl","configuration","searchPath","securityDefiner","volatility"].some(key=>JSON.stringify(manifest.preimage[key])!==JSON.stringify(manifest.postimage[key]))) throw new Error("recipe request-role exact predecessor/authority differs");
+  return contracts.map((row,i)=>i===index?manifest.postimage:row);
+}
+export function buildRecipeSaveRecoverySourceFunctionInventorySql({includeRecipeRequestRoleFunctions = false} = {}) {
+  const manifest=recipeSaveRecoveryPostimages();
+  const contracts=[...manifest.functions.map(row=>row.postimage),manifest.preserved_writer];
+  return buildSourceFunctionInventorySql(includeRecipeRequestRoleFunctions ? withRecipeRequestRoleContracts(contracts) : contracts,true);
+}
+export function assertRecipeSaveRecoverySourceFunctionInventoryResult(result) { return assertSourceFunctionInventoryResult(result,11); }
+
+export function buildCookedWeightAttestationSourceFunctionInventorySql({includeRecipeSaveRecoveryFunctions = false, includeRecipeRequestRoleFunctions = false} = {}) {
+  const contracts=weightAttestationPostimages().functions.map(entry => entry.postimage);
+  if (includeRecipeRequestRoleFunctions && !includeRecipeSaveRecoveryFunctions) throw new Error("request-role requires exact231 predecessor contracts");
+  const selected=includeRecipeSaveRecoveryFunctions ? contracts.map(entry=>recipeSaveRecoveryPostimages().functions.find(row=>row.postimage.signature===entry.signature)?.postimage ?? entry) : contracts;
+  return buildSourceFunctionInventorySql(includeRecipeRequestRoleFunctions ? withRecipeRequestRoleContracts(selected) : selected, true);
+}
+export function assertCookedWeightAttestationSourceFunctionInventoryResult(result) {
+  return assertSourceFunctionInventoryResult(result, 10);
+}
+
+export function buildQuantityInputV4SourceFunctionInventorySql() {
+  const manifest = quantityV4Postimages();
+  return buildSourceFunctionInventorySql([...manifest.functions, ...manifest.preserved_overloads].map((entry) => entry.postimage));
+}
+
+export function assertQuantityInputV4SourceFunctionInventoryResult(result) {
+  return assertSourceFunctionInventoryResult(result, 63);
+}
+
+export function buildRecipeProductSourceFunctionInventorySql({ includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false, includeCookedWeightAttestationFunctions = false, includeRecipeSaveRecoveryFunctions = false, includeRecipeRequestRoleFunctions = false } = {}) {
+  const contracts = recipeProductPostimages().functions.map((entry) => entry.postimage);
+  const weight = includeCookedWeightEvidenceFunctions ? withCookedWeightContracts(contracts) : contracts;
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
+  const quantity = includeQuantityInputV4Functions ? withQuantityV4Contracts(weight) : weight;
+  if (includeCookedWeightAttestationFunctions && !includeQuantityInputV4Functions) throw new Error("weight attestation requires quantity v4 predecessor contracts");
+  const personal=includeCookedWeightAttestationFunctions ? withWeightAttestationContracts(quantity) : quantity;
+  if (includeRecipeSaveRecoveryFunctions && !includeCookedWeightAttestationFunctions) throw new Error("recipe-save requires exact attestation predecessor contracts");
+  if (includeRecipeRequestRoleFunctions && !includeRecipeSaveRecoveryFunctions) throw new Error("request-role requires exact231 predecessor contracts");
+  const selected=includeRecipeSaveRecoveryFunctions ? withRecipeSaveRecoveryContracts(personal) : personal;
+  return buildSourceFunctionInventorySql(includeRecipeRequestRoleFunctions ? withRecipeRequestRoleContracts(selected) : selected);
+}
+
+export function buildCookedWeightEvidenceSourceFunctionInventorySql() {
+  return buildSourceFunctionInventorySql(cookedWeightPostimages().functions.map((entry) => entry.postimage));
+}
+
+function buildSourceFunctionInventorySql(functions, includeDefinitions = false) {
+  const rows = functions.map((entry) => [entry.lookupSignature, entry.sourceHash,
+    entry.owner, String(entry.securityDefiner), `search_path=${entry.searchPath}`, entry.allowedAcl, entry.volatility,
+    entry.configuration ? JSON.stringify(entry.configuration) : "", includeDefinitions ? entry.definitionSha256 : ""]);
+  return `with expected(signature, body_md5, owner_name, security_definer, search_path, allowed_acl, volatility, configuration, definition_sha256) as (
+    values ${valuesSql(rows)}
+  ), actual as (
+    select expected.*, p.oid, md5(btrim(p.prosrc,chr(10))) as actual_body,
+      pg_get_userbyid(p.proowner) as actual_owner, p.prosecdef as actual_security, p.provolatile::text as actual_volatility,
+      encode(sha256(convert_to(pg_get_functiondef(p.oid),'UTF8')),'hex') as actual_definition,
+      replace(coalesce((select c from unnest(p.proconfig) c where c like 'search_path=%'),''),' ','') as actual_path,
+      to_jsonb(p.proconfig) as actual_configuration,
+      coalesce((select string_agg((case when a.grantee=0 then 'public' else r.rolname end)||':'||a.privilege_type||':'||a.is_grantable::text,','
+        order by (case when a.grantee=0 then 'public' else r.rolname end),a.privilege_type,a.is_grantable)
+        from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a left join pg_roles r on r.oid=a.grantee
+        where a.grantee is distinct from p.proowner),'') as actual_acl
+    from expected left join pg_proc p on p.oid=to_regprocedure(expected.signature)
+  ) select jsonb_build_object('required_functions',count(*),
+    'missing',count(*) filter(where oid is null),
+    'body',count(*) filter(where actual_body is distinct from body_md5
+      or (nullif(definition_sha256,'') is not null and actual_definition is distinct from definition_sha256)),
+    'owner',count(*) filter(where actual_owner is distinct from owner_name),
+    'security',count(*) filter(where actual_security is distinct from security_definer::boolean),
+    'search_path',count(*) filter(where actual_path is distinct from search_path
+      or (nullif(configuration,'') is not null and actual_configuration is distinct from configuration::jsonb)),
+    'acl',count(*) filter(where actual_acl is distinct from allowed_acl),
+    'volatility',count(*) filter(where actual_volatility is distinct from volatility)) from actual;`;
+}
+
+export function assertRecipeProductSourceFunctionInventoryResult(result, { includeCookedWeightEvidenceFunctions = false, includeQuantityInputV4Functions = false, includeCookedWeightAttestationFunctions = false, includeRecipeSaveRecoveryFunctions = false, includeRecipeRequestRoleFunctions = false } = {}) {
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
+  const count = includeQuantityInputV4Functions
+    ? withQuantityV4Contracts(withCookedWeightContracts(recipeProductPostimages().functions.map((entry) => entry.postimage))).length
+    : includeCookedWeightEvidenceFunctions ? 38 : 24;
+  if (includeCookedWeightAttestationFunctions && !includeQuantityInputV4Functions) throw new Error("weight attestation requires quantity v4 predecessor contracts");
+  if (includeRecipeSaveRecoveryFunctions && !includeCookedWeightAttestationFunctions) throw new Error("recipe-save requires exact attestation predecessor contracts");
+  if (includeRecipeRequestRoleFunctions && !includeRecipeSaveRecoveryFunctions) throw new Error("request-role requires exact231 predecessor contracts");
+  const contracts=includeRecipeSaveRecoveryFunctions ? withRecipeSaveRecoveryContracts(withWeightAttestationContracts(withQuantityV4Contracts(withCookedWeightContracts(recipeProductPostimages().functions.map(entry=>entry.postimage))))) : null;
+  return assertSourceFunctionInventoryResult(result,contracts?.length ?? count + (includeCookedWeightAttestationFunctions ? 9 : 0));
+}
+
+export function assertCookedWeightEvidenceSourceFunctionInventoryResult(result) {
+  return assertSourceFunctionInventoryResult(result, 15);
+}
+
+function assertSourceFunctionInventoryResult(result, count) {
+  const keys = ["required_functions", "missing", "body", "owner", "security", "search_path", "acl", "volatility"];
+  if (!result || Object.keys(result).length !== keys.length
+    || result.required_functions !== count || keys.slice(1).some((key) => result[key] !== 0)) {
+    throw new Error("recipe product source inventory failed closed");
+  }
+  return result;
+}
 const CORE_POLICY_CONTRACT = CORE_POLICY_SOURCES.map(([migration, name]) =>
   parsePolicy(migration, name)
 );
@@ -621,6 +1022,10 @@ function buildSecurityInventoryExpression({
   includeSnapshotTables,
   includePersonalRecipeFunctions,
   includeRecipeFuturePropagationFunctions,
+  includeRecipeProductFunctions,
+  includeCookedWeightEvidenceFunctions,
+  includeQuantityInputV4Functions,
+  includeCookedWeightAttestationFunctions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
@@ -628,15 +1033,34 @@ function buildSecurityInventoryExpression({
   const functionsWithPersonalRecipe = includePersonalRecipeFunctions
     ? [...baseFunctions, ...PERSONAL_RECIPE_FUNCTION_CONTRACT]
     : baseFunctions;
-  const functions = includeRecipeFuturePropagationFunctions
+  const legacyFunctions = includeRecipeFuturePropagationFunctions
     ? [
         ...functionsWithPersonalRecipe,
         ...RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT,
       ]
     : functionsWithPersonalRecipe;
-  const rlsTables = includeSnapshotTables
+  if (includeRecipeProductFunctions && !(includeSnapshotTables
+    && includePersonalRecipeFunctions && includeRecipeFuturePropagationFunctions)) {
+    throw new Error("recipe product inventory requires all predecessor contracts");
+  }
+  if (includeCookedWeightEvidenceFunctions && !includeRecipeProductFunctions) {
+    throw new Error("cooked weight inventory requires the recipe product predecessor contracts");
+  }
+  const productFunctions = includeRecipeProductFunctions
+    ? withRecipeProductContracts(legacyFunctions) : legacyFunctions;
+  const weightFunctions = includeCookedWeightEvidenceFunctions
+    ? withCookedWeightContracts(productFunctions) : productFunctions;
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
+  const quantityFunctions = includeQuantityInputV4Functions ? withQuantityV4Contracts(weightFunctions) : weightFunctions;
+  if (includeCookedWeightAttestationFunctions && !includeQuantityInputV4Functions) throw new Error("weight attestation requires quantity v4 predecessor contracts");
+  const functions = includeCookedWeightAttestationFunctions ? withWeightAttestationContracts(quantityFunctions) : quantityFunctions;
+  const legacyRlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
+  const rlsTables = includeCookedWeightAttestationFunctions
+    ? [...legacyRlsTables, ...WEIGHT_ATTESTATION_TABLES.map(table => ["private", table, "postgres", "false"])] : legacyRlsTables;
   const snapshotPolicies = includeCookedBatchPolicyCutover
     ? SNAPSHOT_POLICY_CONTRACT.filter(
         (policy) => policy.name !== "leftover_dishes_insert_own",
@@ -655,6 +1079,8 @@ function buildSecurityInventoryExpression({
     entry.owner,
     entry.searchPath,
     entry.allowedAcl,
+    entry.configuration ? JSON.stringify(entry.configuration) : "",
+    entry.configuration ? (entry.quantityVolatility ?? entry.volatility) : "",
   ]));
   const tableValues = valuesSql(rlsTables);
   const policyValues = valuesSql(policies.map((policy) => [
@@ -670,13 +1096,13 @@ function buildSecurityInventoryExpression({
   const roleValues = valuesSql(ROLE_ATTRIBUTE_CONTRACT);
   const membershipValues = valuesSql(ROLE_MEMBERSHIP_CONTRACT);
   const snapshotTableAclSource = includeSnapshotTables
-    ? `values\n      ${valuesSql(SNAPSHOT_TABLE_ACL_CONTRACT)}`
+    ? `values\n      ${valuesSql(includeCookedWeightAttestationFunctions ? [...SNAPSHOT_TABLE_ACL_CONTRACT, ...WEIGHT_ATTESTATION_TABLES.map(table => ["private", table, ""])] : SNAPSHOT_TABLE_ACL_CONTRACT)}`
     : `select null::text, null::text, null::text where false`;
 
   return `
     with expected_functions(
       lookup_signature, signature, schema_name, function_name, source_hash, security_definer,
-      owner_name, search_path, allowed_acl
+      owner_name, search_path, allowed_acl, configuration, quantity_volatility
     ) as (
       values
       ${functionValues}
@@ -685,6 +1111,8 @@ function buildSecurityInventoryExpression({
         expected.*,
         procedure.oid,
         procedure.prosecdef,
+        procedure.proconfig,
+        procedure.provolatile::text as actual_volatility,
         owner.rolname as actual_owner,
         pg_catalog.md5(pg_catalog.btrim(procedure.prosrc, pg_catalog.chr(10)))
           as actual_source_hash,
@@ -850,9 +1278,13 @@ function buildSecurityInventoryExpression({
       'required_function_count', (select count(*) from expected_functions),
       'function_missing_count', (select count(*) from function_inventory where oid is null),
       'function_source_drift_count', (select count(*) from function_inventory where oid is not null and actual_source_hash is distinct from source_hash),
-      'function_security_drift_count', (select count(*) from function_inventory where oid is not null and prosecdef is distinct from security_definer::boolean),
+      'function_security_drift_count', (select count(*) from function_inventory where oid is not null and (
+        prosecdef is distinct from security_definer::boolean
+        or (nullif(quantity_volatility,'') is not null and actual_volatility is distinct from quantity_volatility))),
       'function_owner_drift_count', (select count(*) from function_inventory where oid is not null and actual_owner is distinct from owner_name),
-      'function_search_path_drift_count', (select count(*) from function_inventory where oid is not null and actual_search_path is distinct from 'search_path=' || search_path),
+      'function_search_path_drift_count', (select count(*) from function_inventory where oid is not null and (
+        actual_search_path is distinct from 'search_path=' || search_path
+        or (nullif(configuration,'') is not null and to_jsonb(proconfig) is distinct from configuration::jsonb))),
       'function_acl_drift_count', (select count(*) from function_inventory where oid is not null and actual_acl is distinct from allowed_acl),
       'unexpected_function_overload_count', (
         select count(*)
@@ -865,10 +1297,7 @@ function buildSecurityInventoryExpression({
         )
           and not exists (
             select 1 from expected_functions as expected
-            where expected.signature = pg_catalog.replace(pg_catalog.format(
-              '%I.%I(%s)', namespace.nspname, procedure.proname,
-              pg_catalog.oidvectortypes(procedure.proargtypes)
-            ), ' ', '')
+            where procedure.oid = pg_catalog.to_regprocedure(expected.lookup_signature)
           )
       ),
       'required_role_count', (select count(*) from expected_roles),
@@ -1009,12 +1438,20 @@ export function buildFullLocalSecurityInventoryExpression({
   includeSnapshotTables = false,
   includePersonalRecipeFunctions = false,
   includeRecipeFuturePropagationFunctions = false,
+  includeRecipeProductFunctions = false,
+  includeCookedWeightEvidenceFunctions = false,
+  includeQuantityInputV4Functions = false,
+  includeCookedWeightAttestationFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeCookedBatchPolicyCutover,
     includeSnapshotTables,
     includePersonalRecipeFunctions,
     includeRecipeFuturePropagationFunctions,
+    includeRecipeProductFunctions,
+    includeCookedWeightEvidenceFunctions,
+    includeQuantityInputV4Functions,
+  includeCookedWeightAttestationFunctions,
   });
 }
 
@@ -1031,19 +1468,30 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     includeSnapshotTables = false,
     includePersonalRecipeFunctions = false,
     includeRecipeFuturePropagationFunctions = false,
+    includeRecipeProductFunctions = false,
+    includeCookedWeightEvidenceFunctions = false,
+    includeQuantityInputV4Functions = false,
+  includeCookedWeightAttestationFunctions = false,
   } = {},
 ) {
   const baseFunctionCount = includeSnapshotTables
     ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
     : FUNCTION_CONTRACT.length;
+  if (includeQuantityInputV4Functions && !includeCookedWeightEvidenceFunctions) {
+    throw new Error("quantity v4 inventory requires the C03 and C01 predecessor contracts");
+  }
   const expectedFunctionCount = baseFunctionCount
     + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0)
     + (includeRecipeFuturePropagationFunctions
       ? RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT.length
-      : 0);
-  const expectedTableCount = includeSnapshotTables
-    ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
-    : CORE_RLS_TABLES.length;
+      : 0)
+    + (includeRecipeProductFunctions ? 19 : 0)
+    + (includeCookedWeightEvidenceFunctions ? 14 : 0)
+    + (includeQuantityInputV4Functions ? quantityV4Postimages().functions.filter((entry) => !entry.checkedInInventoryPreimageMd5).length + 3 : 0)
+    + (includeCookedWeightAttestationFunctions ? 9 : 0);
+  if (includeCookedWeightAttestationFunctions && !includeQuantityInputV4Functions) throw new Error("weight attestation requires quantity v4 predecessor contracts");
+  const expectedTableCount = (includeSnapshotTables
+    ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length : CORE_RLS_TABLES.length) + (includeCookedWeightAttestationFunctions ? 2 : 0);
   const snapshotPolicies = includeCookedBatchPolicyCutover
     ? SNAPSHOT_POLICY_CONTRACT.filter(
         (policy) => policy.name !== "leftover_dishes_insert_own",
@@ -1052,9 +1500,8 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   const expectedPolicyCount = includeSnapshotTables
     ? CORE_POLICY_CONTRACT.length + snapshotPolicies.length
     : CORE_POLICY_CONTRACT.length;
-  const expectedSnapshotTableAclCount = includeSnapshotTables
-    ? SNAPSHOT_TABLE_ACL_CONTRACT.length
-    : 0;
+  const tableAcls = includeCookedWeightAttestationFunctions ? [...SNAPSHOT_TABLE_ACL_CONTRACT, ...WEIGHT_ATTESTATION_TABLES.map(table => ["private", table, ""])] : SNAPSHOT_TABLE_ACL_CONTRACT;
+  const expectedSnapshotTableAclCount = includeSnapshotTables ? tableAcls.length : 0;
   const expectedPolicies = includeSnapshotTables
     ? [...CORE_POLICY_CONTRACT, ...snapshotPolicies]
     : CORE_POLICY_CONTRACT;
@@ -1062,7 +1509,7 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   const snapshotTableAclInventory = result?._snapshot_table_acl_inventory;
   const exactSnapshotTableAcls = Array.isArray(snapshotTableAclInventory)
     && snapshotTableAclInventory.length === expectedSnapshotTableAclCount
-    && SNAPSHOT_TABLE_ACL_CONTRACT.slice(0, expectedSnapshotTableAclCount)
+    && tableAcls.slice(0, expectedSnapshotTableAclCount)
       .every(([schema, table, acl]) => snapshotTableAclInventory.some((entry) =>
         entry?.schema === schema
         && entry?.table === table

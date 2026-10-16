@@ -1,7 +1,36 @@
 import { chmodSync, lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const MARKER = "// homecook-dev-deploy-launcher";
+
+export const DEV_DEPLOY_SNAPSHOT_PATHS = Object.freeze([
+  "scripts", "infra", ".env.example", "package.json", "supabase/config.toml",
+  // Static data imported by the deployment tool's worker artifact validator.
+  "lib/server/youtube-extraction-worker-timing.json",
+  // Committed SQL and the exact static authorization/postimage closure used by protected source inventories.
+  "supabase/migrations",
+  "docs/security/full-local-auth-db-security-function-authorization-manifest.json",
+  "docs/security/recipe-snapshot-authority-security-function-authorization-manifest.json",
+  "docs/security/personal-recipe-customization-write-core-security-function-authorization-manifest.json",
+  "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
+  "docs/security/recipe-product-source-function-postimages.json",
+  "docs/security/cooked-weight-evidence-source-function-postimages.json",
+  "docs/security/quantity-input-v4-source-function-postimages.json",
+  "docs/security/youtube-worker-quantity-function-postimages.json",
+  "docs/security/cooked-weight-user-attestation-source-function-postimages.json",
+  "docs/security/recipe-save-recovery-source-function-postimages.json",
+  "docs/security/recipe-future-request-role-source-function-postimage.json",
+]);
+
+export function verifyDevDeployToolLoad({ entryPoint, repository, nodePath }) {
+  if (![entryPoint, repository, nodePath].every(isAbsolute)) throw new Error("Tool load paths must be absolute");
+  const result = spawnSync(nodePath, ["--", entryPoint, "--help"], {
+    cwd: repository, env: { ...process.env, HOMECOOK_DEPLOY_REPOSITORY: repository },
+    timeout: 5000, maxBuffer: 32768, stdio: ["ignore", "ignore", "pipe"],
+  });
+  if (result.status !== 0) throw new Error("Deployment snapshot could not load");
+}
 
 export function installDevDeployLauncher({ binDirectory, entryPoint, repository, nodePath }) {
   if (![binDirectory, entryPoint, repository, nodePath].every(isAbsolute)) throw new Error("Launcher paths must be absolute");

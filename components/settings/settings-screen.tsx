@@ -1250,7 +1250,7 @@ function ConfirmDialog({
     confirmTone === "danger" ? "bg-[var(--danger)]" : "bg-[var(--brand)]";
 
   return (
-    <WebModal onBackdropClick={onCancel}>
+    <WebModal closeDisabled={disabled} onBackdropClick={onCancel}>
       <WebDialog
         aria-labelledby="settings-confirm-title"
         className="web-confirm-dialog"

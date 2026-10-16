@@ -3,6 +3,7 @@ import {
   type RecipeNutritionIngredientInput,
 } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { hydrateRecipeNutritionIngredients, loadRecipeNutritionPredecessors } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
+import { hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 
 interface Snapshot {
   id: string;
@@ -24,7 +25,7 @@ interface SessionQuery {
   eq(column: string, value: string): SessionQuery;
   maybeSingle(): PromiseLike<{ data: unknown; error: unknown }>;
 }
-export interface CookingWeightSessionClient {
+export interface CookingWeightSessionClient extends Partial<RecipeProductNutritionClient> {
   from(table: "cooking_sessions"): { select(columns: string): SessionQuery };
 }
 
@@ -46,20 +47,32 @@ export function estimateCookedWeight(ingredients: RecipeNutritionIngredientInput
   return Number.isFinite(estimate) && estimate > 0 ? estimate : null;
 }
 
-function snapshotIngredients(value: unknown[]): RecipeNutritionIngredientInput[] | null {
-  const result: RecipeNutritionIngredientInput[] = [];
+export interface CookingWeightSnapshotIngredient extends RecipeNutritionIngredientInput {
+  /** Owner-verified frozen metadata; the prediction mapper validates its shape and binding. */
+  quantity_input?: unknown;
+}
+
+export function snapshotIngredients(value: unknown[]): CookingWeightSnapshotIngredient[] | null {
+  const result: CookingWeightSnapshotIngredient[] = [];
   for (const [index, item] of value.entries()) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return null;
     const row = item as Record<string, unknown>;
-    if (typeof row.ingredient_id !== "string" || typeof row.scalable !== "boolean"
-      || !["QUANT", "TO_TASTE"].includes(String(row.ingredient_type))
+    const product = row.food_product_id ?? null;
+    const version = row.food_product_nutrition_version_id ?? null;
+    if ((typeof row.ingredient_id !== "string" && row.ingredient_id !== null)
+      || (product === null) !== (version === null)
+      || (product !== null && (typeof product !== "string" || typeof version !== "string" || !product || !version))
+      || (row.ingredient_id === null && product === null) || typeof row.scalable !== "boolean"
+      || (row.ingredient_type !== "QUANT" && row.ingredient_type !== "TO_TASTE")
       || (row.amount !== null && (typeof row.amount !== "number" || !Number.isFinite(row.amount)))
       || (row.unit !== null && typeof row.unit !== "string")) return null;
-    result.push({ id: `${row.ingredient_id}:${index}`, ingredient_id: row.ingredient_id,
-      ingredient_type: row.ingredient_type as "QUANT" | "TO_TASTE", amount: row.amount as number | null,
-      unit: row.unit as string | null, scalable: row.scalable, preparation_state: null,
-      food_product_id: typeof row.food_product_id === "string" ? row.food_product_id : null,
-      food_product_nutrition_version_id: typeof row.food_product_nutrition_version_id === "string" ? row.food_product_nutrition_version_id : null });
+    const ingredient: CookingWeightSnapshotIngredient = { id: typeof row.row_key === "string" ? row.row_key : `${product ?? row.ingredient_id}:${index}`, ingredient_id: row.ingredient_id,
+      ingredient_type: row.ingredient_type, amount: row.amount,
+      unit: row.unit, scalable: row.scalable, preparation_state: null,
+      food_product_id: typeof product === "string" ? product : null,
+      food_product_nutrition_version_id: typeof version === "string" ? version : null };
+    if (Object.hasOwn(row, "quantity_input")) ingredient.quantity_input = row.quantity_input;
+    result.push(ingredient);
   }
   return result;
 }
@@ -82,12 +95,19 @@ export async function readCookedWeightEstimate({ client, weightClient, ownerId, 
   const ingredients = snapshotIngredients(snapshot.ingredients_json);
   if (!ingredients) return null;
   const direct = estimateCookedWeight(ingredients, snapshot.base_servings, session.cooking_servings);
-  if (direct !== null || !weightClient) return direct;
+  if (direct !== null) return direct;
   // This scope reads approved public conversion evidence only. A missing piece
   // weight/density (or unavailable evidence) leaves the batch's weight unknown.
   try {
-    const predecessors = await loadRecipeNutritionPredecessors(weightClient, ingredients.map((row) => row.ingredient_id));
-    const hydrated = hydrateRecipeNutritionIngredients(ingredients, predecessors) as RecipeNutritionIngredientInput[];
+    const genericIds = ingredients.flatMap((row) => !row.food_product_id && row.ingredient_id ? [row.ingredient_id] : []);
+    if (genericIds.length && !weightClient) return null;
+    const predecessors = genericIds.length && weightClient
+      ? await loadRecipeNutritionPredecessors(weightClient, genericIds) : new Map();
+    let hydrated: RecipeNutritionIngredientInput[] = hydrateRecipeNutritionIngredients(ingredients, predecessors);
+    if (ingredients.some((row) => row.food_product_id)) {
+      if (!client.rpc) return null;
+      hydrated = (await hydrateRecipeProductNutrition({ rpc: client.rpc.bind(client) }, ingredients, hydrated, ownerId)).ingredients;
+    }
     return estimateCookedWeight(hydrated, snapshot.base_servings, session.cooking_servings);
   } catch {
     return null;

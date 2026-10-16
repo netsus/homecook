@@ -40,6 +40,12 @@ export function LoginGateModal() {
     if (!action) {
       return "";
     }
+    if (action.type === "recipe-fork" && action.resumeEditor?.source === "quantity") {
+      return "같은 계정으로 로그인하면 수량 초안을 다시 열어요. 수량 정보는 직접 다시 확인하며 자동 저장하지 않아요.";
+    }
+    if (action.type === "recipe-fork" && action.resumeEditor) {
+      return "같은 계정으로 다시 로그인하면 작성 중인 제품 선택으로 돌아가요. 자동으로 저장하지 않아요.";
+    }
 
     if (action.type === "recipe-edit-save") {
       return "다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.";
@@ -51,6 +57,10 @@ export function LoginGateModal() {
 
     if (action.type === "recipe-delete") {
       return "다시 로그인하면 삭제 확인으로 돌아가요. 삭제는 마지막 확인 뒤에만 진행돼요.";
+    }
+
+    if (action.type === "cook") {
+      return `로그인하면 선택한 ${action.cookingServings}인분으로 돌아가요. 요리하기를 다시 눌러 시작해 주세요.`;
     }
 
     return "로그인하면 원래 하려던 작업으로 자동 이동해요.";
@@ -69,7 +79,9 @@ export function LoginGateModal() {
 
   const handleLogin = () => {
     if (!savePendingAction(action)) {
-      setStorageError("작업을 임시 보관하지 못했어요. 내용을 복사해 둔 뒤 다시 시도해 주세요.");
+      setStorageError(action.type === "cook"
+        ? "선택한 인분을 임시 보관하지 못했어요. 이 화면에서 다시 시도해 주세요."
+        : "작업을 임시 보관하지 못했어요. 내용을 복사해 둔 뒤 다시 시도해 주세요.");
       return;
     }
     document.cookie = createPostAuthNextCookie(action.redirectTo);
@@ -80,7 +92,7 @@ export function LoginGateModal() {
   if (isDesktopViewport) {
     return (
       <WebModal onBackdropClick={close}>
-        <WebDialog aria-labelledby="login-gate-title" ref={dialogRef} size="narrow">
+        <WebDialog aria-labelledby="login-gate-title" manageFocus={false} ref={dialogRef} size="narrow">
           <WebDialogHeader>
             <WebDialogTitle id="login-gate-title">
               로그인이 필요한 작업이에요

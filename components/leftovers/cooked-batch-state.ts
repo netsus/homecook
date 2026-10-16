@@ -1,4 +1,5 @@
 import type { CookedBatchProjection } from "@/types/cooking";
+import type { WeightAttestationInput } from "@/types/cooked-weight-attestation";
 
 export type CookedBatchAction =
   | "set_finished_weight"
@@ -9,12 +10,19 @@ export type CookedBatchAction =
   | "cancel_current";
 
 export type CookedBatchMutationRequest =
-  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number }
+  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number; weight_input_source?: "reported_measured"; weight_attestation?: WeightAttestationInput }
   | { action: "mark_unrecoverable"; expected_revision: number }
   | { action: "discard"; discarded_g: number; reason: string; expected_revision: number }
   | { action: "adjust"; delta_g: number; reason: string; expected_revision: number }
   | { action: "close"; closure_reason: "consumed" | "discarded" | "mixed"; expected_revision: number }
   | { action: "cancel_current"; reverses_event_id: string; expected_revision: number };
+
+export type CookedBatchActionView = CookedBatchAction | "view_weight_attestation";
+
+export function canReadWeightAttestation(batch: CookedBatchProjection) {
+  return batch.weight_evidence?.source === "reported_measured" && batch.revision !== null
+    && (batch.weight_status === "known" || batch.batch_status === "depleted");
+}
 
 export interface CookedBatchOperation {
   fingerprint: string;

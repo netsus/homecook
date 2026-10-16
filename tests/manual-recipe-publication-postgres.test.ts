@@ -55,6 +55,10 @@ beforeAll(() => {
     create function recipe_visibility_guard.is_owner_publicly_visible(uuid) returns boolean language sql as $$select true$$;
     create function public.read_owned_manual_recipe_publication_context(uuid,timestamptz,text,integer,timestamptz,uuid) returns jsonb language plpgsql as $$
     declare result jsonb; begin select jsonb_build_object('runtime_ready',exists (select 1 from private.runtime_calls where recipe_id=recipe.id)) into result from public.recipes recipe where recipe.id=$6; return result; end $$;`);
+  sql("alter function private.verify_full_local_internal_scope() rename to verify_full_local_internal_scope_prelaunch_20260919");
+  const modeScopeSource = readFileSync("supabase/migrations/20260919000000_prelaunch_recipe_meal_log_repairs.sql", "utf8");
+  const modeScopeStart = modeScopeSource.indexOf("create or replace function private.verify_full_local_internal_scope()");
+  sql(modeScopeSource.slice(modeScopeStart, modeScopeSource.indexOf("$function$;", modeScopeStart) + "$function$;".length));
   const projectionSource=readFileSync("supabase/migrations/20260927120100_recipe_fork_image_preservation.sql","utf8");
   const projectionStart=projectionSource.indexOf("create or replace function public.read_recipe_image_projections(");
   sql(projectionSource.slice(projectionStart,projectionSource.indexOf("$function$;",projectionStart)+"$function$;".length));
@@ -185,12 +189,13 @@ describe("isolated manual publication transaction", () => {
     sql(publish());
     expect(sql(`select review_status||':'||visibility from recipe_tags order by review_status`)).toBe("approved:public\npending:private");
   });
-  it("adds only the two exact POST scope paths and preserves all predecessor decisions", () => {
+  it("keeps publication and the existing signed mode reader allowed without exposing the guard builder", () => {
     const headers = `set request.headers='{"x-homecook-internal-scope":"recipe-future-propagation"}'; set request.method='POST';`;
-    for (const path of ["publish_manual_recipe", "read_owned_manual_recipe_publication_context"]) {
+    for (const path of ["publish_manual_recipe", "read_owned_manual_recipe_publication_context", "read_recipe_snapshot_entrypoint_context"]) {
       expect(() => sql(`${headers}set request.path='/rpc/${path}'; select private.verify_full_local_internal_scope();`)).not.toThrow();
     }
     expect(() => sql(`${headers}set request.path='/rpc/unrelated'; select private.verify_full_local_internal_scope();`)).toThrow("old scope");
+    expect(() => sql(`${headers}set request.path='/rpc/build_recipe_nutrition_input_guard'; select private.verify_full_local_internal_scope();`)).toThrow("old scope");
     expect(() => sql(`${headers}set request.method='GET';set request.path='/rpc/publish_manual_recipe'; select private.verify_full_local_internal_scope();`)).toThrow("old scope");
     expect(sql(`select has_function_privilege('service_role','private.verify_full_local_internal_scope_pre_manual_publish_20260927()','execute')`)).toBe("f");
   });

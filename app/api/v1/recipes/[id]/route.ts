@@ -1,4 +1,8 @@
-import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
+import { readRecipeQuantityMode, RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
+import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
+import { quantityInputContractRequested } from "@/lib/server/quantity-input";
+import { recipeQuantityWriteFailure } from "@/lib/server/recipe-quantity-input";
+import { readPublicRecipeProductLabels, readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import {
@@ -302,9 +306,8 @@ export async function GET(request: Request, context: RouteContext) {
         })
       : Promise.resolve(legacyThumbnailUrl);
 
-    const ingredientColumns = authResult.data.user
-      ? "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name), food_product_id, food_product_nutrition_version_id"
-      : "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)";
+    const ingredientColumns = (quantityInputContractRequested(request) ? "quantity_input, " : "") + "id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)"
+      + (authResult.data.user ? ", food_product_id, food_product_nutrition_version_id" : "");
     const [
       sourceResult,
       ingredientsResult,
@@ -402,6 +405,13 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
+    if (entrypointContext && !quantityInputContractRequested(request)) {
+      for (const context of [entrypointContext.edit_context]) {
+        if (context) context.draft.ingredients = context.draft.ingredients.map(row => {
+          const legacy = { ...row }; delete legacy.quantity_input; return legacy;
+        });
+      }
+    }
     const revision = entrypointContext?.revision ?? recipeResult.data.revision;
     if (!Number.isSafeInteger(revision) || Number(revision) <= 0) {
       return fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요.", 500);
@@ -435,7 +445,7 @@ export async function GET(request: Request, context: RouteContext) {
     >;
     let ingredients = normalizeRecipeIngredients(user
       ? await readRecipeProductLabels(dbClient, ingredientRows)
-      : ingredientRows);
+      : await readPublicRecipeProductLabels(routeClient, id, ingredientRows));
     let steps = normalizeRecipeSteps(stepsResult.data);
 
     if (
@@ -576,6 +586,16 @@ async function readRecipeMutationAuthority(
   };
 }
 
+function decodeRecipePatchReplay(value: unknown, recipeId: string) {
+  if (!isRecord(value) || Object.keys(value).length !== 2) return null;
+  if (value.state === "absent" && value.result === null) return { state: "absent" as const };
+  if (value.state !== "succeeded" || !isRecord(value.result)
+    || Object.keys(value.result).length !== 3 || value.result.success !== true || value.result.error !== null
+    || !isRecord(value.result.data) || Object.keys(value.result.data).length !== 2) return null;
+  const data = projectRecipePatchData(value.result.data);
+  return data?.id === recipeId ? { state: "succeeded" as const, data } : null;
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
@@ -589,10 +609,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     return idempotency.response;
   }
 
-  const { id: recipeId } = await context.params;
-  if (!isUuid(recipeId)) {
+  const { id: requestedRecipeId } = await context.params;
+  if (!isUuid(requestedRecipeId)) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
+  const recipeId = requestedRecipeId.toLowerCase();
 
   let body: unknown;
   try {
@@ -621,18 +642,46 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500);
   }
 
+  const requestBody = {
+    base_recipe_revision: parsed.value.baseRecipeRevision,
+    draft: { ...parsed.value.draft, description: parsed.value.draft.description ?? null },
+    future_plan_strategy: parsed.value.futurePlanStrategy,
+    impact_token: parsed.value.impactToken,
+    image_object_id: parsed.value.imageObjectId,
+  };
+  const replayArgs = {
+    ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
+    p_recipe_id: recipeId,
+    p_request_body: requestBody,
+    p_quantity_contract: quantityInputContractRequested(request) ? "quantity-v4" : null,
+    p_idempotency_key: idempotency.key,
+  };
+  const read = await callFuturePropagationRpc(serviceClient, "read_recipe_future_patch_result", replayArgs);
+  if (!read.ok) return read.response;
+  const replay = decodeRecipePatchReplay(read.data, recipeId);
+  if (!replay) return fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500);
+  if (replay.state === "succeeded") return ok(replay.data);
+
+  const quantityFailure = recipeQuantityWriteFailure(request, parsed.value.draft.ingredients);
+  if (quantityFailure) return quantityFailure;
+
   let nutrition;
   try {
+    const quantityMode = await readRecipeQuantityMode({ client: { rpc: (name, args) => serviceClient.rpc(name, args) },
+      sessionAuthority: authority.sessionAuthority, recipeId, expectedRevision: parsed.value.baseRecipeRevision });
+    if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를 저장할 수 없어요. 입력은 유지돼요.", 422);
     nutrition = await calculateRecipeDraftNutrition(
       serviceClient as unknown as RecipeDraftNutritionClient,
       {
         recipeId,
         ownerUserId: user.id,
+        quantityMode,
         baseRecipeRevision: parsed.value.baseRecipeRevision,
         draft: parsed.value.draft,
       },
     );
   } catch (error) {
+    if (error instanceof RecipeQuantityModeError) return fail(error.code, error.message, error.status);
     if (error instanceof RecipeDraftNutritionValidationError) {
       return fail("VALIDATION_ERROR", "레시피 영양 입력을 확인해 주세요.", 422, [
         { field: "draft.ingredients", reason: "invalid_nutrition_input" },
@@ -642,19 +691,12 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const result = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
-    "write_recipe_future_plan_change",
+    serviceClient,
+    "write_recipe_future_plan_change_recoverable",
     {
-      ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
-      p_recipe_id: recipeId,
-      p_base_recipe_revision: parsed.value.baseRecipeRevision,
-      p_draft: parsed.value.draft,
+      ...replayArgs,
       p_nutrition_snapshot: nutrition.nutritionSnapshot,
       p_nutrition_predecessor_guard: nutrition.predecessorGuard,
-      p_future_plan_strategy: parsed.value.futurePlanStrategy,
-      p_impact_token: parsed.value.impactToken,
-      p_image_object_id: parsed.value.imageObjectId,
-      p_idempotency_key: idempotency.key,
     },
   );
   if (!result.ok) {

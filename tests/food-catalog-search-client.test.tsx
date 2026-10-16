@@ -13,6 +13,28 @@ afterEach(() => {
 });
 
 describe("prepared food unified search client", () => {
+  it("keeps the existing source URL unchanged with an omitted or empty options object", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ success: true,
+      data: { items: [], next_cursor: null, has_next: false }, error: null })));
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchFoodCatalogSource("food_product", "product-1");
+    await fetchFoodCatalogSource("food_product", "product-1", undefined, {});
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/food-catalog/search?source_type=food_product&source_id=product-1",
+      "/api/v1/food-catalog/search?source_type=food_product&source_id=product-1",
+    ]);
+  });
+  it("sends only the explicit pantry item lookup, encodes it, and preserves the abort signal", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ success: true,
+      data: { items: [], next_cursor: null, has_next: false }, error: null })));
+    vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+    const options = { pantryItemId: "fixture+/&=", ownerId: "not-a-client-authority", nutritionVersionId: "not-forwarded" };
+    await fetchFoodCatalogSource("food_product", "product-1", controller.signal, options);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/v1/food-catalog/search?source_type=food_product&source_id=product-1&pantry_item_id=fixture%2B%2F%26%3D");
+    expect(init?.signal).toBe(controller.signal);
+  });
   it("resolves a current source by identity without historical name or search filters", async () => {
     const item = { type: "ingredient", id: "ingredient-1", standard_name: "새 재료 이름", category: "채소", default_unit: "g" };
     const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ success: true, data: { items: [item], next_cursor: null, has_next: false }, error: null })));

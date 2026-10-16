@@ -7,6 +7,8 @@ import {
   type ParsedShoppingMealConfig,
   type ParsedShoppingRecipeConfig,
 } from "@/lib/server/shopping";
+import { productPurchaseSuggestion, productVersionKey, readProductQuantityContexts, scaleProductAmount, type ProductAmount } from "@/lib/server/recipe-product-quantity";
+import type { RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -116,6 +118,12 @@ interface RecipeIngredientRow {
   display_text: string | null;
 }
 
+interface RecipeIngredientSourceRow extends Omit<RecipeIngredientRow, "ingredient_id"> {
+  ingredient_id: string | null;
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+}
+
 interface RecipeRow {
   id: string;
   base_servings: number;
@@ -199,7 +207,7 @@ interface ShoppingListItemsSelectForHistoryQuery {
 
 interface RecipeIngredientsSelectQuery {
   in(column: string, values: string[]): RecipeIngredientsSelectQuery;
-  then: ArrayQueryResult<RecipeIngredientRow>["then"];
+  then: ArrayQueryResult<RecipeIngredientSourceRow>["then"];
 }
 
 interface RecipesSelectQuery {
@@ -303,7 +311,7 @@ interface ShoppingListItemsTable {
   ): ShoppingListItemsInsertQuery;
 }
 
-interface ShoppingCreateDbClient {
+interface ShoppingCreateDbClient extends Partial<RecipeProductNutritionClient> {
   from(table: "meals"): MealsTable;
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
@@ -767,6 +775,8 @@ export async function POST(request: Request) {
     unit: string | null;
     shopping_servings: number;
     planned_servings: number;
+    scalable: boolean;
+    purchase_scale: ProductAmount["scale"];
   }> = [];
 
   if (legacyRecipeIds.length > 0) {
@@ -785,14 +795,20 @@ export async function POST(request: Request) {
 
     const recipeIngredientRowsResult = await dbClient
       .from("recipe_ingredients")
-      .select("recipe_id, ingredient_id, amount, unit, ingredient_type, display_text")
+      .select("recipe_id, ingredient_id, food_product_id, food_product_nutrition_version_id, amount, unit, ingredient_type, display_text")
       .in("recipe_id", legacyRecipeIds);
 
     if (recipeIngredientRowsResult.error || !recipeIngredientRowsResult.data) {
       return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
     }
 
-    recipeIngredientRowsResult.data.forEach((row) => {
+    if (recipeIngredientRowsResult.data.some((row) => row.ingredient_id === null && row.food_product_id && row.food_product_nutrition_version_id)) {
+      return fail("CONFLICT", "장보기 재료를 확인하지 못했어요. 계획을 다시 열어 확인해 주세요.", 409);
+    }
+
+    for (const row of recipeIngredientRowsResult.data) {
+      const ingredientId = row.ingredient_id;
+      if (ingredientId === null) return fail("INTERNAL_ERROR", "장보기 재료를 확인하지 못했어요.", 500);
       legacyMeals
         .filter((meal) => meal.recipe_id === row.recipe_id)
         .forEach((meal) => {
@@ -803,13 +819,14 @@ export async function POST(request: Request) {
 
           ingredientAggregationRows.push({
             ...row,
+            ingredient_id: ingredientId,
             shopping_key: `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? "legacy"}`,
             shopping_servings:
               shoppingServingsByMealId.get(meal.id) ?? meal.planned_servings,
             planned_servings: plannedServings,
           });
         });
-    });
+    }
   }
 
   contentPinnedMeals.forEach((meal) => {
@@ -835,6 +852,11 @@ export async function POST(request: Request) {
           unit: ingredient.unit,
           shopping_servings: shoppingServings,
           planned_servings: contentSnapshot.base_servings,
+          scalable: ingredient.scalable !== false,
+          purchase_scale: ingredient.scalable === false ? [] : usesRecipeConfigs
+            ? [{ numerator: recipeGroupShoppingServings.get(shoppingContentGroupKey(meal)) ?? meal.planned_servings, denominator: contentSnapshot.base_servings },
+              { numerator: meal.planned_servings, denominator: recipeGroupPlannedServings.get(shoppingContentGroupKey(meal)) ?? meal.planned_servings }]
+            : [{ numerator: shoppingServings, denominator: contentSnapshot.base_servings }],
         });
         continue;
       }
@@ -992,12 +1014,21 @@ export async function POST(request: Request) {
     }
   >();
 
+  const purchaseAmountsByPair = new Map<string, ProductAmount[] | null>();
   productAggregationRows.forEach((product) => {
     const pair = `${product.food_product_id}:${product.food_product_nutrition_version_id}`;
     const existing = productPayloadByPair.get(pair);
+    if (purchaseAmountsByPair.get(pair) !== null) {
+      if (product.amount === null || !product.unit) purchaseAmountsByPair.set(pair, null);
+      else {
+        const amounts = purchaseAmountsByPair.get(pair) ?? [];
+        amounts.push({ amount: product.amount, unit: product.unit, scale: product.purchase_scale });
+        purchaseAmountsByPair.set(pair, amounts);
+      }
+    }
     const scaledAmount =
       typeof product.amount === "number" && product.planned_servings > 0
-        ? (product.amount * product.shopping_servings) / product.planned_servings
+        ? product.scalable ? scaleProductAmount(product.amount, product.shopping_servings, product.planned_servings) : product.amount
         : null;
     const nextAmount =
       scaledAmount !== null && product.unit
@@ -1167,11 +1198,17 @@ export async function POST(request: Request) {
     // Activity history is secondary; shopping list creation remains authoritative.
   }
 
+  const createdItems = (rpcData.items ?? []).map(toShoppingCreateItem);
+  const quantityContexts = await readProductQuantityContexts(dbClient, user.id, createdItems).catch(() => new Map());
+  for (const item of createdItems) if (item.food_product_id && item.food_product_nutrition_version_id) {
+    const pair = productVersionKey(item.food_product_id, item.food_product_nutrition_version_id);
+    item.purchase_suggestion = productPurchaseSuggestion(purchaseAmountsByPair.get(pair) ?? [], quantityContexts.get(pair));
+  }
   return ok({
     id: rpcData.id,
     title: rpcData.title ?? title,
     is_completed: rpcData.is_completed ?? false,
-    items: (rpcData.items ?? []).map(toShoppingCreateItem),
+    items: createdItems,
     ...(allNeededIngredientsAreInPantry
       ? {
           all_items_in_pantry: true as const,

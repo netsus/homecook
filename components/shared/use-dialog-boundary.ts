@@ -88,6 +88,7 @@ export function useDialogBoundary({
   fallbackFocusRef,
   initialFocusRef,
   onClose,
+  restoreFocusWhen,
 }: {
   active?: boolean;
   priority?: number;
@@ -96,6 +97,7 @@ export function useDialogBoundary({
   fallbackFocusRef?: RefObject<HTMLElement | null>;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
+  restoreFocusWhen?: () => boolean;
 }) {
   const closeRef = useRef(onClose);
   const closeOnEscapeRef = useRef(closeOnEscape);
@@ -129,7 +131,8 @@ export function useDialogBoundary({
     if (insertionIndex < 0) activeDialogs.push(dialog);
     else activeDialogs.splice(insertionIndex, 0, dialog);
     updateDialogIsolation(activeDialogs.at(-1) === dialog
-      ? () => initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog
+      ? () => initialFocusRef?.current
+        ?? (activeElement && dialog.contains(activeElement) ? activeElement : focusableElements(dialog)[0] ?? dialog)
       : undefined);
     const focusGuardFrame = requestAnimationFrame(() => {
       if (activeDialogs.at(-1) !== dialog || !dialog.isConnected || dialog.contains(document.activeElement)) return;
@@ -158,7 +161,7 @@ export function useDialogBoundary({
       }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog || !dialog.contains(document.activeElement))) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
@@ -176,6 +179,7 @@ export function useDialogBoundary({
       const index = activeDialogs.indexOf(dialog);
       if (index >= 0) activeDialogs.splice(index, 1);
       updateDialogIsolation(wasTop ? () => {
+        if (restoreFocusWhen && !restoreFocusWhen()) return null;
         const requested = typeof requestedReturnFocusRef.current === "function"
           ? requestedReturnFocusRef.current()
           : requestedReturnFocusRef.current;
@@ -187,10 +191,19 @@ export function useDialogBoundary({
           : requestedReturnFocusRef.current;
         const returnTarget = invokerFocusRef.current;
         if (wasTop && !dialog.isConnected) {
+          if (restoreFocusWhen && !restoreFocusWhen()) {
+            invokerFocusRef.current = null;
+            return;
+          }
           const target = requestedTarget?.isConnected
             ? requestedTarget
             : returnTarget?.isConnected ? returnTarget : fallbackFocusTarget;
           const nextDialog = activeDialogs.at(-1);
+          // A newer dialog already owns focus; do not overwrite it with an older restore frame.
+          if (nextDialog?.contains(document.activeElement) && (!target || !nextDialog.contains(target))) {
+            invokerFocusRef.current = null;
+            return;
+          }
           const focusTarget = nextDialog && (!target || !nextDialog.contains(target))
             ? focusableElements(nextDialog)[0] ?? nextDialog
             : target;
@@ -199,7 +212,7 @@ export function useDialogBoundary({
         }
       });
     };
-  }, [active, dialogRef, fallbackFocusRef, initialFocusRef, priority]);
+  }, [active, dialogRef, fallbackFocusRef, initialFocusRef, priority, restoreFocusWhen]);
 
   return { setReturnFocusTarget };
 }

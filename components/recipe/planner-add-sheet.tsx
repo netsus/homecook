@@ -12,6 +12,7 @@ import { ModalHeader } from "@/components/shared/modal-header";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import {
   WebButton,
   WebChip,
@@ -88,6 +89,13 @@ export function PlannerAddSheet({
   variant = "default",
 }: PlannerAddSheetProps) {
   const isDesktopViewport = useDesktopViewport();
+  const mobileDialogRef = React.useRef<HTMLDivElement | null>(null);
+  useDialogBoundary({
+    active: isOpen && !isDesktopViewport,
+    closeOnEscape: sheetState !== "submitting",
+    dialogRef: mobileDialogRef,
+    onClose,
+  });
 
   if (!isOpen) {
     return null;
@@ -405,13 +413,14 @@ export function PlannerAddSheet({
             closeDisabled={isSubmitting}
             footer={footerActions}
             onClose={onClose}
+            panelRef={mobileDialogRef}
             title="플래너에 추가"
           >
             {recipeDetailContent}
           </AppBottomSheet>
         ) : null}
         {isDesktopViewport ? (
-          <WebModal onBackdropClick={onClose}>
+          <WebModal closeDisabled={isSubmitting} onBackdropClick={onClose}>
             <WebDialog aria-labelledby="planner-add-sheet-title-desktop" size="wide">
               <WebDialogHeader>
                 <div>
@@ -478,7 +487,9 @@ export function PlannerAddSheet({
       aria-modal="true"
       className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 lg:items-center lg:justify-center"
       onClick={onClose}
+      ref={mobileDialogRef}
       role="dialog"
+      tabIndex={-1}
     >
       <div
         className="w-full max-w-lg rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)] lg:rounded-[var(--radius-xl)] lg:border-t-2 lg:border-t-[var(--brand)]"

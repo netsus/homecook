@@ -1,3 +1,5 @@
+import { isQuantityInputDraft, parseQuantityInput } from "@/lib/quantity-input";
+import type { QuantityInputDraft } from "@/types/quantity-input";
 import {
   FOOD_PRODUCT_BASIS_UNITS,
   FOOD_PRODUCT_CORE_NUTRIENTS,
@@ -40,6 +42,7 @@ export interface ProductPickerReturnContext extends BaseReturnContext {
   productId: string | null;
   quantityAmount: string;
   quantityUnit: FoodProductBasisUnit | null;
+  quantityInput?: QuantityInputDraft;
 }
 
 export interface ProductCreateReturnContext extends BaseReturnContext {
@@ -57,6 +60,7 @@ export interface ProductMealEntryReturnContext extends BaseReturnContext {
   action: "edit" | "delete";
   quantityAmount?: string;
   quantityUnit?: FoodProductBasisUnit;
+  quantityInput?: QuantityInputDraft;
 }
 
 export type ProductPlannerReturnContext =
@@ -135,10 +139,12 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
     const modernKeys = [
       "version", "kind", "planDate", "columnId", "slotName", "query", "source",
       "productId", "quantityAmount", "quantityUnit",
+      ...("quantityInput" in value ? ["quantityInput"] : []),
     ];
     const legacyKeys = [
       "version", "kind", "planDate", "columnId", "slotName", "query",
       "productId", "quantityAmount", "quantityUnit",
+      ...("quantityInput" in value ? ["quantityInput"] : []),
     ];
     if (!hasExactKeys(value, modernKeys) && !hasExactKeys(value, legacyKeys)) return null;
     if (
@@ -148,6 +154,12 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
       !isSafeText(value.quantityAmount, 40) ||
       (value.quantityUnit !== null && !isUnit(value.quantityUnit))
     ) return null;
+    if ("quantityInput" in value && (!isUnit(value.quantityUnit)
+      || !isQuantityInputDraft(value.quantityInput, { amount: parseQuantityInput(value.quantityAmount as string)?.amount ?? 0, unit: value.quantityUnit })
+      || !isUnit(value.quantityInput.raw_unit)
+      || value.productId === null
+      || !value.quantityInput.expected_product_nutrition_version_id
+      || "expected_batch_revision" in value.quantityInput)) return null;
     return {
       ...value,
       source: isSource(value.source) ? value.source : "all",
@@ -186,7 +198,7 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
 
   if (value.kind === "meal-entry") {
     const required = ["version", "kind", "planDate", "columnId", "slotName", "entryId", "action"];
-    const optional = ["quantityAmount", "quantityUnit"];
+    const optional = ["quantityAmount", "quantityUnit", "quantityInput"];
     const keys = Object.keys(value);
     if (!required.every((key) => keys.includes(key)) || keys.some((key) => ![...required, ...optional].includes(key))) {
       return null;
@@ -197,6 +209,12 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
       (value.quantityAmount !== undefined && !isSafeText(value.quantityAmount, 40)) ||
       (value.quantityUnit !== undefined && !isUnit(value.quantityUnit))
     ) return null;
+    if ("quantityInput" in value && (value.action !== "edit" || !isUnit(value.quantityUnit)
+      || typeof value.quantityAmount !== "string"
+      || !isQuantityInputDraft(value.quantityInput, { amount: parseQuantityInput(value.quantityAmount)?.amount ?? 0, unit: value.quantityUnit })
+      || !isUnit(value.quantityInput.raw_unit)
+      || !value.quantityInput.expected_product_nutrition_version_id
+      || "expected_batch_revision" in value.quantityInput)) return null;
     const context: ProductMealEntryReturnContext = {
       version: 1,
       kind: "meal-entry",
@@ -212,6 +230,9 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
     if (value.quantityUnit !== undefined) {
       context.quantityUnit = value.quantityUnit;
     }
+    if (isQuantityInputDraft(value.quantityInput, { amount: parseQuantityInput(context.quantityAmount ?? "")?.amount ?? 0, unit: context.quantityUnit ?? "" })) {
+      context.quantityInput = value.quantityInput;
+    }
     return context;
   }
 
@@ -219,11 +240,13 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
 }
 
 export function clearProductPlannerReturnContext() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") return false;
   try {
     window.sessionStorage.removeItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY);
+    return true;
   } catch {
     // Storage is an optional local return aid.
+    return false;
   }
 }
 
@@ -242,15 +265,17 @@ export function readProductPlannerReturnContext() {
 }
 
 export function saveProductPlannerReturnContext(context: ProductPlannerReturnContext) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") return false;
   const safe = parseContext(context);
   if (!safe) {
     clearProductPlannerReturnContext();
-    return;
+    return false;
   }
   try {
     window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify(safe));
+    return true;
   } catch {
     // URL fallback keeps navigation usable when session storage is unavailable.
+    return false;
   }
 }

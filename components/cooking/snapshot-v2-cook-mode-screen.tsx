@@ -29,6 +29,10 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   const completeInFlightRef = useRef(false);
   const requestIdRef = useRef(0);
   const recoveryFocusRef = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null);
+  const completionButtonRef = useRef<HTMLButtonElement | null>(null);
+  const completionReturnPathRef = useRef<string | null>(null);
+  const restoreCompletionFocusWhen = useCallback(() =>
+    window.location.pathname === completionReturnPathRef.current, []);
   const appReturn = useAppReturn({
     fallback: data?.mode === "standalone" ? `/recipe/${data.recipe.id}` : "/planner",
   });
@@ -118,6 +122,7 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
 
   const openCompletion = async () => {
     if (data.status !== "in_progress" || cancelling || completionRefreshRef.current) return;
+    completionReturnPathRef.current = window.location.pathname;
     completionRefreshRef.current = true;
     setCompletionPreparing(true);
     setPreparationError(null);
@@ -153,6 +158,7 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
     <>
       <SnapshotV2CookModeView
         cancelling={cancelling}
+        completionButtonRef={completionButtonRef}
         data={data}
         onCancel={cancelCooking}
         onComplete={() => void openCompletion()}
@@ -162,7 +168,12 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
       {preparationError ? <AppFeedbackToast message={preparationError} position="bottom" tone="error" /> : null}
       {completionOpen ? (
         <CookedBatchCompletionSheet
+          sessionId={sessionId}
           candidates={data.pantry_candidates}
+          returnFocusRef={completionButtonRef}
+          restoreFocusWhen={restoreCompletionFocusWhen}
+          weightEvidenceEnabled={data.weight_evidence_enabled === true}
+          weightPrediction={data.weight_prediction}
           onClose={() => {
             if (!completionSubmitting) setCompletionOpen(false);
           }}

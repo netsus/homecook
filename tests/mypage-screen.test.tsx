@@ -2,7 +2,7 @@
 
 import React from "react";
 import { renderToString } from "react-dom/server";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -1822,6 +1822,49 @@ describe("MypageScreen", () => {
     });
 
     expect(await screen.findByText("삭제했어요")).toBeTruthy();
+  });
+
+  it.each([
+    { mobile: false, action: "삭제" },
+    { mobile: false, action: "색상 변경" },
+    { mobile: false, action: "커버 이미지 변경" },
+    { mobile: true, action: "색상 변경" },
+    { mobile: true, action: "커버 이미지 변경" },
+  ])("restores the actual book menu trigger after cancelling $action on mobile=$mobile", async ({ mobile, action }) => {
+    installMatchMedia(mobile);
+    const user = userEvent.setup();
+    render(
+      <MypageScreen
+        initialActiveTab="recipebooks"
+        initialAuthenticated
+        initialMobileSurface="recipebook"
+      />,
+    );
+    const surface = await screen.findByTestId("recipebook-tab");
+    const menuTrigger = within(surface).getByRole("button", { name: "주말 파티 옵션 메뉴" });
+    await user.click(menuTrigger);
+    await user.click(screen.getByRole("menuitem", { name: action }));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(menuTrigger));
+  });
+
+  it("keeps the book delete confirmation open while deletion is in progress", async () => {
+    mockDeleteRecipeBook.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<MypageScreen initialAuthenticated />);
+    await openRecipebookSurface();
+    await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
+    await user.click(screen.getByRole("menuitem", { name: "삭제" }));
+    const backdrop = screen.getByTestId("delete-confirm-dialog");
+    await user.click(within(backdrop).getByRole("button", { name: "삭제" }));
+    await screen.findByRole("button", { name: "삭제 중..." });
+    await user.keyboard("{Escape}");
+    fireEvent.click(backdrop);
+
+    expect(screen.getByTestId("delete-confirm-dialog")).toBe(backdrop);
+    expect(mockDeleteRecipeBook).toHaveBeenCalledOnce();
   });
 
   it("cancels delete dialog without deleting", async () => {

@@ -393,6 +393,7 @@ export function MypageScreen({
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const bookMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const bookCoverLoadedIdsRef = useRef<Set<string>>(new Set());
   const bookCoverLoadingIdsRef = useRef<Set<string>>(new Set());
   const shoppingLoadFailedRef = useRef(false);
@@ -1652,6 +1653,10 @@ export function MypageScreen({
       variant="recipe-detail"
     />
   );
+  const handleBookMenuOpen = (id: string, trigger: HTMLButtonElement) => {
+    bookMenuTriggerRef.current = trigger;
+    setMenuOpenBookId(id);
+  };
   const bookCoverDialogs = (
     <>
       {colorTarget ? (
@@ -1659,6 +1664,7 @@ export function MypageScreen({
           currentColor={getRecipeBookCoverTone(colorTarget)}
           disabled={isUpdatingBookCover}
           errorMessage={bookCoverError}
+          fallbackFocusRef={bookMenuTriggerRef}
           onCancel={() => {
             setColorTarget(null);
             setBookCoverError(null);
@@ -1670,6 +1676,7 @@ export function MypageScreen({
         <BookCoverImageDialog
           disabled={isUpdatingBookCover}
           errorMessage={bookCoverError}
+          fallbackFocusRef={bookMenuTriggerRef}
           imageUrl={coverImageValue}
           onCancel={() => {
             setCoverImageTarget(null);
@@ -1848,7 +1855,7 @@ export function MypageScreen({
           onCreateNameChange={setCreateName}
           onDismissTutorialQuest={handleDismissTutorialQuest}
           onMenuClose={() => setMenuOpenBookId(null)}
-          onMenuOpen={(id) => setMenuOpenBookId(id)}
+          onMenuOpen={handleBookMenuOpen}
           onRenameStart={(book) => {
             setRenamingBookId(book.id);
             setRenameValue(book.name);
@@ -2100,6 +2107,7 @@ export function MypageScreen({
           ) : null}
           {activeTab === "recipebooks" ? (
             <RecipeBookTabContent
+              bookMenuTriggerRef={bookMenuTriggerRef}
               createInputRef={createInputRef}
               createName={createName}
               customBooks={customBooks}
@@ -2137,7 +2145,7 @@ export function MypageScreen({
               bookCoverUpdatedAt={bookCoverUpdatedAt}
               selectedBook={selectedRecipeBook}
               onOpenBookDetail={(book) => setSelectedRecipeBook(book)}
-              onMenuOpen={(id) => setMenuOpenBookId(id)}
+              onMenuOpen={handleBookMenuOpen}
               onRenameStart={(book) => {
                 setRenamingBookId(book.id);
                 setRenameValue(book.name);
@@ -3401,6 +3409,7 @@ function MypageDesktopLoadingShell() {
 // ─── Recipe Book Tab ─────────────────────────────────────────────────────────
 
 interface RecipeBookTabContentProps {
+  bookMenuTriggerRef: React.RefObject<HTMLElement | null>;
   systemBooks: RecipeBookSummary[];
   customBooks: RecipeBookSummary[];
   menuOpenBookId: string | null;
@@ -3421,7 +3430,7 @@ interface RecipeBookTabContentProps {
   onOpenBookDetail: (book: RecipeBookSummary) => void;
   onChangeColor: (book: RecipeBookSummary) => void;
   onChangeCoverImage: (book: RecipeBookSummary) => void;
-  onMenuOpen: (id: string) => void;
+  onMenuOpen: (id: string, trigger: HTMLButtonElement) => void;
   onRenameStart: (book: RecipeBookSummary) => void;
   onCancelRename: () => void;
   onConfirmRename: () => void;
@@ -3436,6 +3445,7 @@ interface RecipeBookTabContentProps {
 }
 
 function RecipeBookTabContent({
+  bookMenuTriggerRef,
   systemBooks,
   customBooks,
   menuOpenBookId,
@@ -3562,7 +3572,7 @@ function RecipeBookTabContent({
               onChangeCoverImage={() => onChangeCoverImage(book)}
               onConfirmRename={onConfirmRename}
               onOpen={() => onOpenBookDetail(book)}
-              onMenuOpen={() => onMenuOpen(book.id)}
+              onMenuOpen={(trigger) => onMenuOpen(book.id, trigger)}
               onRenameStart={() => onRenameStart(book)}
               onRenameValueChange={onRenameValueChange}
               onRequestDelete={() => onRequestDelete(book)}
@@ -3591,6 +3601,7 @@ function RecipeBookTabContent({
       {deleteTarget ? (
         <DeleteConfirmDialog
           bookName={deleteTarget.name}
+          fallbackFocusRef={bookMenuTriggerRef}
           isDeleting={isDeleting}
           onCancel={onCloseDeleteDialog}
           onConfirm={onConfirmDelete}
@@ -3693,7 +3704,7 @@ interface CustomBookCardProps {
   renameValue: string;
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
-  onMenuOpen: () => void;
+  onMenuOpen: (trigger: HTMLButtonElement) => void;
   onChangeColor: () => void;
   onChangeCoverImage: () => void;
   onOpen: () => void;
@@ -3781,7 +3792,7 @@ function CustomBookCard({
           className="web-recipebook-menu-button"
           onClick={(e) => {
             e.preventDefault();
-            onMenuOpen();
+            onMenuOpen(e.currentTarget);
           }}
           type="button"
         >
@@ -3849,6 +3860,7 @@ function CustomBookCard({
 
 interface DeleteConfirmDialogProps {
   bookName: string;
+  fallbackFocusRef: React.RefObject<HTMLElement | null>;
   isDeleting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -3856,14 +3868,16 @@ interface DeleteConfirmDialogProps {
 
 function DeleteConfirmDialog({
   bookName,
+  fallbackFocusRef,
   isDeleting,
   onCancel,
   onConfirm,
 }: DeleteConfirmDialogProps) {
   return (
-    <WebModal data-testid="delete-confirm-dialog" onBackdropClick={onCancel}>
+    <WebModal closeDisabled={isDeleting} data-testid="delete-confirm-dialog" onBackdropClick={onCancel}>
       <WebDialog
         aria-labelledby="recipebook-delete-title"
+        fallbackFocusRef={fallbackFocusRef}
         className="web-confirm-dialog"
         role="alertdialog"
         size="narrow"
@@ -3907,23 +3921,27 @@ function BookColorDialog({
   currentColor,
   disabled,
   errorMessage,
+  fallbackFocusRef,
   onCancel,
   onSelectColor,
 }: {
   currentColor: RecipeBookCoverColorKey;
   disabled: boolean;
   errorMessage: string | null;
+  fallbackFocusRef: React.RefObject<HTMLElement | null>;
   onCancel: () => void;
   onSelectColor: (colorKey: RecipeBookCoverColorKey) => void;
 }) {
   return (
     <WebModal
       className="web-recipebook-management-modal"
+      closeDisabled={disabled}
       data-testid="book-color-dialog"
       onBackdropClick={onCancel}
     >
       <WebDialog
         aria-labelledby="book-color-title"
+        fallbackFocusRef={fallbackFocusRef}
         className="web-confirm-dialog"
         role="dialog"
         size="narrow"
@@ -3963,6 +3981,7 @@ function BookColorDialog({
 function BookCoverImageDialog({
   disabled,
   errorMessage,
+  fallbackFocusRef,
   imageUrl,
   onCancel,
   onChangeImageUrl,
@@ -3971,6 +3990,7 @@ function BookCoverImageDialog({
 }: {
   disabled: boolean;
   errorMessage: string | null;
+  fallbackFocusRef: React.RefObject<HTMLElement | null>;
   imageUrl: string;
   onCancel: () => void;
   onChangeImageUrl: (value: string) => void;
@@ -3980,11 +4000,13 @@ function BookCoverImageDialog({
   return (
     <WebModal
       className="web-recipebook-management-modal"
+      closeDisabled={disabled}
       data-testid="book-cover-image-dialog"
       onBackdropClick={onCancel}
     >
       <WebDialog
         aria-labelledby="book-cover-image-title"
+        fallbackFocusRef={fallbackFocusRef}
         className="web-confirm-dialog"
         role="dialog"
         size="narrow"

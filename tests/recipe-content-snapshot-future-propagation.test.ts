@@ -9,6 +9,13 @@ const createServiceRoleClient = vi.fn();
 const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 
+// Quantity mode has its own actual-reader/native regressions; these tests keep
+// their existing session/nutrition/write boundary and legacy v3 behavior.
+vi.mock("@/lib/server/recipe-snapshot-entrypoint", async importOriginal => {
+  const actual = await importOriginal<typeof import("@/lib/server/recipe-snapshot-entrypoint")>();
+  return { ...actual, readRecipeQuantityMode: vi.fn(async () => false) };
+});
+
 vi.mock("@/lib/supabase/server", () => ({
   createAccountLifecycleInternalRpcClient: createServiceRoleClient,
   createRecipeFuturePropagationInternalClient: createServiceRoleClient,
@@ -227,7 +234,7 @@ describe("recipe content snapshot future propagation public contract", () => {
   });
 
   it("returns PATCH success as exactly {id,revision} even when the durable RPC stores internal evidence", async () => {
-    const { from } = setupAuthorizedRpc({
+    const { from, rpc } = setupAuthorizedRpc({
       data: {
         id: recipeId,
         revision: 13,
@@ -239,6 +246,7 @@ describe("recipe content snapshot future propagation public contract", () => {
       },
       error: null,
     });
+    rpc.mockResolvedValueOnce({ data: { state: "absent", result: null }, error: null });
 
     const { PATCH } = await importRecipeRoute();
     expect(PATCH, "PATCH /recipes/{id} is missing").toBeTypeOf("function");
@@ -250,6 +258,9 @@ describe("recipe content snapshot future propagation public contract", () => {
       data: { id: recipeId, revision: 13 },
       error: null,
     });
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+      "read_recipe_future_patch_result", "write_recipe_future_plan_change_recoverable",
+    ]);
     expect(from).not.toHaveBeenCalled();
   });
 

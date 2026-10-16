@@ -1,5 +1,7 @@
 import { fail, ok } from "@/lib/api/response";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
+import { productPurchaseSuggestion, productVersionKey, readProductQuantityContexts, shoppingProductPurchaseAmounts } from "@/lib/server/recipe-product-quantity";
+import type { RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -37,6 +39,8 @@ interface ShoppingListRow {
 }
 
 interface ShoppingListRecipeRow {
+  recipe_content_snapshot_id?: string | null;
+  recipe_content_snapshots?: { base_servings?: unknown; ingredients_json?: unknown } | Array<{ base_servings?: unknown; ingredients_json?: unknown }> | null;
   recipe_id: string;
   shopping_servings: number;
   planned_servings_total: number;
@@ -144,7 +148,7 @@ interface MealsTable {
   select(columns: string): MealsSelectQuery;
 }
 
-interface ShoppingListDetailDbClient {
+interface ShoppingListDetailDbClient extends Partial<RecipeProductNutritionClient> {
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
   from(table: "meals"): MealsTable;
@@ -273,7 +277,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const recipesResult = await dbClient
     .from("shopping_list_recipes")
-    .select("recipe_id, shopping_servings, planned_servings_total")
+    .select("recipe_id, recipe_content_snapshot_id, shopping_servings, planned_servings_total, recipe_content_snapshots(base_servings, ingredients_json)")
     .eq("shopping_list_id", listId);
 
   if (recipesResult.error || !recipesResult.data) {
@@ -355,6 +359,13 @@ export async function GET(_request: Request, context: RouteContext) {
     });
   }
 
+  const items = itemsResult.data.map((item) => buildItem(item, categoryByIngredientId));
+  const quantityContexts = await readProductQuantityContexts(dbClient, user.id, items).catch(() => new Map());
+  const purchaseAmounts = shoppingProductPurchaseAmounts(recipesResult.data, mealContentResult.data);
+  for (const item of items) if (item.food_product_id && item.food_product_nutrition_version_id) {
+    const pair = productVersionKey(item.food_product_id, item.food_product_nutrition_version_id);
+    item.purchase_suggestion = productPurchaseSuggestion(purchaseAmounts.get(pair) ?? [], quantityContexts.get(pair));
+  }
   return ok({
     id: listResult.data.id,
     title: listResult.data.title,
@@ -378,6 +389,6 @@ export async function GET(_request: Request, context: RouteContext) {
         planned_servings_total: recipe.planned_servings_total,
       }))
       .sort((left, right) => left.recipe_id.localeCompare(right.recipe_id)),
-    items: itemsResult.data.map((item) => buildItem(item, categoryByIngredientId)),
+    items,
   } satisfies ShoppingListDetail);
 }

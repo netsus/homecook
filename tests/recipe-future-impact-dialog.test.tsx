@@ -52,6 +52,35 @@ describe("recipe future impact dialog", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "최신 영향 다시 확인" }));
   });
 
+  it.each([
+    {code:"RECIPE_PRODUCT_UNAVAILABLE",message:"지금은 선택한 제품 재료를 저장할 수 없어요. 입력 내용을 유지한 채 다시 시도해 주세요."},
+    {code:"RECIPE_SOURCE_CONTRACT_REQUIRED",message:"레시피의 재료 정보를 안전하게 저장하려면 최신 레시피를 다시 열어 주세요. 입력 내용을 별도로 보관한 뒤 다시 시도해 주세요."},
+  ])("explains $code without treating it as quantity errors", async ({code,message}) => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onRecheck = vi.fn();
+    const onSave = vi.fn();
+    render(<RecipeFutureImpactDialog errorCode={code} errorPhase="save" impact={impact}
+      onClose={onClose} onRecheck={onRecheck} onSave={onSave} />);
+
+    expect(screen.getByRole("alert").textContent).toContain(message);
+    expect(screen.queryByText(/수량을 0보다 크게/)).toBeNull();
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "저장" }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "취소" }).disabled).toBe(false);
+    await user.click(screen.getByRole("button", { name: "다시 확인" }));
+    expect(onRecheck).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "취소" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("keeps unrecognized server errors generic", () => {
+    render(<RecipeFutureImpactDialog errorCode="PRIVATE_DATABASE_REASON" errorPhase="save" impact={impact}
+      onClose={vi.fn()} onRecheck={vi.fn()} onSave={vi.fn()} />);
+    expect(screen.getByRole("alert").textContent).toContain("저장하지 못했어요. 수정한 내용은 유지");
+    expect(screen.getByRole("alert").textContent).not.toContain("PRIVATE_DATABASE_REASON");
+  });
+
   it("keeps the visible dialog title outside the shell-only header suppression selector", () => {
     render(<RecipeFutureImpactDialog impact={impact} onClose={vi.fn()} onRecheck={vi.fn()} onSave={vi.fn()} />);
     expect(screen.getByRole("heading", { name: "미래 계획 반영 확인" })).toBeTruthy();

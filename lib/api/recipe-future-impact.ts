@@ -1,3 +1,4 @@
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { RecipeFutureImpact } from "@/components/recipe/recipe-future-impact-dialog";
 import type { ApiResponse } from "@/types/api";
@@ -15,9 +16,15 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
 }
 
 export type RecipeFutureDraft = RecipeEditDraft;
+function quantityHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  headers[QUANTITY_CONTRACT_HEADER] = QUANTITY_INPUT_VERSION;
+  return headers;
+}
 export function fetchRecipeFutureImpact(recipeId: string, baseRecipeRevision: number, draft: RecipeFutureDraft) {
-  return request<RecipeFutureImpact>(`/api/v1/recipes/${recipeId}/future-plan-impact`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ base_recipe_revision: baseRecipeRevision, draft }) });
+  return request<RecipeFutureImpact>(`/api/v1/recipes/${recipeId}/future-plan-impact`, { method: "POST", headers: quantityHeaders(), body: JSON.stringify({ base_recipe_revision: baseRecipeRevision, draft }) });
 }
 export function patchRecipeWithFutureStrategy(recipeId: string, input: { baseRecipeRevision: number; draft: RecipeFutureDraft; futurePlanStrategy: "keep" | "replace_all"; impactToken: string; imageObjectId: string | null }, idempotencyKey = crypto.randomUUID()) {
-  return request<{ id: string; revision: number }>(`/api/v1/recipes/${recipeId}`, { method: "PATCH", headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify({ base_recipe_revision: input.baseRecipeRevision, draft: input.draft, future_plan_strategy: input.futurePlanStrategy, impact_token: input.impactToken, image_object_id: input.imageObjectId }) });
+  const headers = quantityHeaders(); headers["Idempotency-Key"] = idempotencyKey;
+  return request<{ id: string; revision: number }>(`/api/v1/recipes/${recipeId}`, { method: "PATCH", headers, body: JSON.stringify({ base_recipe_revision: input.baseRecipeRevision, draft: input.draft, future_plan_strategy: input.futurePlanStrategy, impact_token: input.impactToken, image_object_id: input.imageObjectId }) });
 }

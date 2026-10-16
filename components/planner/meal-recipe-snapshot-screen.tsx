@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatIngredientAmountOnly } from "@/components/cooking/cook-mode-step-model";
 import { ContentState } from "@/components/shared/content-state";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,13 +42,22 @@ export function MealRecipeSnapshotScreen({ mealId }: { mealId: string }) {
         <p className="mt-2 text-sm text-[var(--text-2)]">이 계획에 저장한 내용 · {data.planned_servings}인분</p>
         <section aria-labelledby="planned-ingredients" className="mt-7">
           <h2 id="planned-ingredients" className="mb-2 text-lg font-bold">재료</h2>
-          <ul>{data.ingredients.map((ingredient, index) => <li key={`${ingredient.ingredient_id}:${index}`} className="flex items-start justify-between gap-4 border-b border-[var(--line)] py-3">
-            <div className="min-w-0 break-words">{ingredient.component_label ? <span className="mr-2 text-xs text-[var(--text-2)]">{ingredient.component_label}</span> : null}{ingredient.standard_name}</div>
-            <span className="shrink-0">{ingredient.ingredient_type === "TO_TASTE" ? "적당량" : `${ingredient.amount ?? ""}${ingredient.unit ?? ""}`}</span>
-          </li>)}</ul>
+          <ul>{data.ingredients.map((ingredient, index) => {
+            const quantity = ingredient.quantity_input ? formatIngredientAmountOnly(ingredient)
+              : `${ingredient.amount ?? ""}${ingredient.unit ?? ""}`;
+            const needsQuantity = ingredient.ingredient_type !== "TO_TASTE" && (ingredient.amount === null || !ingredient.unit?.trim());
+            return <li key={`${ingredient.ingredient_id}:${index}`} className="flex items-start justify-between gap-4 border-b border-[var(--line)] py-3">
+              <div className="min-w-0 break-words">{ingredient.component_label ? <span className="mr-2 text-xs text-[var(--text-2)]">{ingredient.component_label}</span> : null}{ingredient.standard_name}</div>
+              <span className="max-w-[50%] shrink-0 break-words text-right">{ingredient.ingredient_type === "TO_TASTE" ? "적당량" : <>
+                {quantity.trim() ? <span>{quantity}</span> : null}
+                {needsQuantity ? <span className="block text-sm text-[var(--text-2)]">분량 확인 필요</span> : null}
+              </>}</span>
+            </li>;
+          })}</ul>
         </section>
         <section aria-labelledby="planned-steps" className="mt-8">
-          <h2 id="planned-steps" className="mb-4 text-lg font-bold">만들기</h2>
+          <h2 id="planned-steps" className="mb-2 text-lg font-bold">만들기</h2>
+          <p className="mb-4 text-sm leading-relaxed text-[var(--text-2)]">재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다</p>
           <ol className="space-y-5">{data.steps.map((step) => {
             const duration = step.duration_text || (step.duration_seconds ? `${step.duration_seconds}초` : null);
             const metadata = [formatHeatLevelLabel(step.heat_level), duration].filter(Boolean).join(" · ");

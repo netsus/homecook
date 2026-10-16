@@ -3580,3 +3580,41 @@ USDA SR Legacy/Foundation 및MEXT공식 자료도 기존 승인 영양 모델에
 공식 표본의 품종·색·크기·재배/등급 차이는 검토한 일반 대표기준으로 사용할 수 있다. 연결별 decision_reason에 `user_approved_representative:`와 적용 범위를 기록하고 공개 definition에도 기본 참고조건을 명시한다. `manual_source` 승인 경로를 재사용하며 실제 제품 등급/원산지·배합을 확정한 것으로 표시하지 않는다. 공유 source_item의 기존 provenance를 고쳐 쓰지 않고 관계별 사유와 운영 감사에 승인 근거를 남긴다.
 
 동일 식품·가식부·생건조·지방 정선·농축 조건은 보존하며 단위/부피/개당 무게를 자동 상속하지 않는다. 제품표가 필요한 항목과 원자료 미확보를 별도 기록하며, 결측/미량을0으로 채우지 않는다. 이번 후속은 데이터만 변경하고 스키마/ledger/기존 ID와 기록은 유지한다. 상세 화면·별도음식제품검색·중복동의어통합은 이번 영양 우선 작업 범위 밖이다. [기준·43개 보완·남은18개](engineering/ingredient-nutrition-representatives-20261008.md)를 따른다.
+
+
+## 2026-10-14 추가 계약 — C03 공공제품 독립 재료(운영 미적용)
+
+미적용 20261013190000_recipe_product_only_identity.sql은 recipe_ingredients의 출처 CHECK·nullable 일반 재료 ID·기본 OFF private 제어와 세 개의 좁은 public reader를 준비한다. amount numeric typemod 제거로 소수 사용량을 보존하되 유한 양수/기존 최대값을 유지한다. 공개 공공제품(public_dataset/public)의 같은 레시피/물리 행/정확 제품쌍인 기존 non-null 연결만 대표 연결 해제 뒤 무관 편집에서도 보존한다. 새 행/다른 조합 및 수동/private 제품의 기존 대표 검사는 유지한다. ON 전 모든 새 marker/명시 row 참조 저장을 막고, OFF의 안전한 기존 입력은 옛 저장 형태를 유지한다. row 수를 보고 old reader 복구를 허용하지 않으며 신규 기록 후 쓰기 OFF와 새 reader 유지가 기본 복구다.
+
+구현·검증과 좁은 공개 권한 및 기존 잔존 위험은 [C03 계약](engineering/mumeok-beta-product-contract-20261014.md)을 따른다. 운영 DB/권한/새 형식 쓰기는 정확 SQL·대상·백업·복구를 확인한 별도 승인 전 적용하지 않는다.
+
+## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
+
+20261013233000_cooked_batch_weight_evidence는 로컬 draft이며 private 제어표 enabled=false·개인 append-only 예측/관찰 표를 준비한다. 기존 완료/weight fresh branch와 meal nutrition_evidence_json의9키 weight_basis·선택 가정은 기존 owner/revision/no-events/receipt 보호 안에서 원자 저장한다. 신규2개 service-role wrapper와 exact scope predecessor chain·검토 postimage 등록이 필요하다. 과거batch/meal/snapshot UPDATE0·quantity event에 evidence 추가0·학습 수집0이다. DB OFF가 새 쓰기 중지 기준이며 이력 reader는 보존한다. 완료/무게 wrapper·개인 근거 기록·cooked-batch 식사 근거 trigger의 제어 행 읽기만 `FOR SHARE`로 transaction 끝까지 고정한다. operator OFF는 이미 승인된 쓰기를 기다리며 stable projection·cook-mode capability는 plain SELECT를 유지한다. 일반 recipe 식사는 이 제어 행을 잠그지 않는다. 두 wrapper는 성공 receipt 재생을 제어 검사보다 먼저 수행하고, 새 쓰기 불가에는 정확한 `COOKED_WEIGHT_EVIDENCE_DISABLED`/SQLSTATE55000을 반환한다. 원 owner·generation·revision·scope/ACL은 유지한다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.
+
+
+## 2026-10-15 — 선택 개인 무게 확인 event/control (로컬·운영 미적용)
+
+현재 소스·SQL 작성 마무리와 격리 검증 단계이며 운영 미적용이다. 같은 v9의 검증 후 반영은 최신 사용자 상시 승인으로 진행한다. 과거의 구현 승인 대기 문장은 당시 기록이며, 여기의 미적용 표시는 배포 완료를 뜻하지 않는다.
+
+- migration `20261014224500_cooked_weight_user_attestation.sql`은 정확 두 표를 추가한다. `private.cooked_weight_user_attestation_control`은 singleton/`enabled=false` 기본이며 새 확인 저장만 제어한다. C01 제어를 대체하지 않고 유효한 read/retract/replay는 별개다.
+- `private.cooked_weight_user_attestations`는 owner/generation/batch, measurement evidence·원 revision, recipe content snapshot, assertion revision/event kind, prior assertion, statement version/context fingerprint, 서버 생성 assertion JSON·operation receipt·observed_at을 결속한다. `attested`는revision1/prior없음, `retracted`는revision2/prior참조이며 측정당 새 확인1개다. UPDATE는 금지하고 철회 event를 추가한다. user/batch/measurement/선행확인 삭제 FK cascade를 따르며 실제 복원·삭제 이행 검증은 별도다.
+- 당시g는 원 `reported_measurement` evidence를 읽고 고정 재료행/입력/제품version·인분과 함께 보존한다. `quantity_origin=planned`와 원 prediction/meals/무게·영양을 덮어쓰지 않는다. C05 표본/모델/새 보유기간이 아니며 물리 검증을 선언하지 않는다.
+- 신규 RPC4: `public.read_cooked_weight_attestation`, `public.complete_snapshot_v2_cooking_session_with_attestation`, `public.mutate_cooked_batch_weight_with_attestation`, `public.retract_cooked_weight_attestation`. public/anon/authenticated EXECUTE는 제거하고 service_role의 검증된 서버 경로만 사용한다. 두 private 표 직접 권한과 private helper는 service_role까지 REVOKE하며 RLS/owner 보호를 유지한다.
+- 기존 `private.verify_full_local_internal_scope()`는 `private.verify_scope_pre_weight_attestation_20261014()`로 보존하고 새 wrapper는 `snapshot-v2-session` scope의 정확4개 POST RPC 경로만 먼저 처리한다. 나머지는 원 alias로 위임하며 R2·C03/C01/worker scope를 일반화하지 않는다. 기본OFF·reader 준비·조건 충족 새 저장과 복구 검증은 후속 배포 경계다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
+
+### 2026-10-15 C04 영양 snapshot 사유 검증 보완
+
+`20261014225000_recipe_nutrition_quantity_v4_warning_contract.sql`은 기존 `public.validate_recipe_nutrition_snapshot_payload(jsonb)` 한 함수의 정확한 사유 검증만 보완한다. `recipe-nutrition-v4`에서 추가 허용하는 경고는 `UNIT_DEFINITION_REQUIRED`, `UNIT_DEFINITION_CONFLICT`, `PIECE_IDENTITY_REQUIRED`, `DENSITY_REQUIRED`, `AMBIGUOUS_EVIDENCE`, `UNIT_MEASUREMENT_ESTIMATE_USED`다. 앞의 5개만 행 ID가 붙은 `missing_reasons`로 허용하며, 평균 측정 경고는 기존 estimated/mixed 검증에 연결하고 direct를 거절한다.
+
+새 테이블·열·RPC·grant는 없다. 기존 owner·ACL·security·search_path와 실제 input guard/source 비교, 원자 공개·receipt·과거 snapshot 불변성을 유지한다. 다른 계산 version의 새 코드·미등록 문자열·중복·잘못된 영양 상태/벡터/출처는 계속 거절한다. 기존 운영 행을 UPDATE하거나 자동 재계산하지 않는다.
+
+## 2026-10-15 — 개인 레시피 HTTP 성공 영수증 결속 (로컬·운영 미적용)
+
+`20261014225300_recipe_future_patch_http_replay.sql`은 기존 `public.mutation_idempotency_keys`에 nullable text `recipe_future_http_request_fingerprint` 한 컬럼을 추가한다. default/backfill0이며 기존 모든 행의 새 값은NULL이다. 기존 컬럼 전체·prepared payload_hash·원 성공 결과·unique/index·RLS/ACL은 보존한다. CHECK는NULL 또는 정확 `recipe_future_patch` scope의 `recipe-future-patch-http-v1:<64hex>`만 허용한다. 새 NULL 필드가 추가된 전체 행 JSON을 과거와 같은 shape/hash라고 주장하지 않는다.
+
+private immutable digest helper1개와 service-only SECURITY DEFINER RPC `read_recipe_future_patch_result`/`write_recipe_future_plan_change_recoverable`을 추가한다. 현재 owner/gen/session·본인 private/nondeleted recipe·원 lock으로 검증하고, 성공은 terminal succeeded·attempt/lease NULL·정확 결과를 요구한다. 신규 원 writer 성공과 지문 UPDATE는 한 transaction이며 연결이 한 건으로 확정되지 않으면 recipe/plan/snapshot/receipt 모두 롤백한다. 기존 NULL 성공에 현재 요청을 소급 연결하지 않으며 원 15인자 writer의 body/signature/prepared hash·직접 재생 계약은 변경하지 않는다.
+
+정확한 DB229 predecessor definition/source/권한 metadata를 먼저 확인한 뒤 원 scope verifier를 alias로 보존하고 `recipe-future-propagation`의 정확2개 POST RPC 경로만 추가한다. 일반/API 역할에 표 접근·private helper 실행 권한을 추가하지 않는다. actual baseline의 broad 표 ACL과 RLS=true/policy0는 그대로 보존하며 source 선언만으로 권한 없음이라 단정하지 않는다. [결속·실제 metadata·격리 검사·배포 한계](engineering/recipe-future-patch-http-replay-20261015.md)를 따른다.
+
+관련 `20261014225200_recipe_snapshot_reason_identity.sql`은 [개인 영양 사유 v5](engineering/recipe-nutrition-semantic-reason-identity-v5.md)의 별도 변경이다. 개인 사유 identity를 보완하되 기존 v4 수치·과거 snapshot은 재작성하지 않는다. 두 SQL의 통합·운영 적용과 새 lineage 이후 복구는 별도 검증 대상이다.

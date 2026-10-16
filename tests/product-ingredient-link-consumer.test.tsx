@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeScreen } from "@/components/home/home-screen";
 import { PantryScreen } from "@/components/pantry/pantry-screen";
+import * as pantryApi from "@/lib/api/pantry";
 import { MOCK_RECIPE_CARD } from "@/lib/mock/recipes";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 
@@ -160,7 +161,7 @@ async function openAndSelectExactProduct() {
   );
   await user.click(
     await within(dialog).findByRole("checkbox", {
-      name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+      name: `${FOOD_PRODUCT.name} · 등록업체 ${FOOD_PRODUCT.brand} · 선택 안 됨`,
     }),
   );
 
@@ -322,13 +323,19 @@ describe("product ingredient link existing consumers", () => {
     expect(screen.queryByText(PRODUCT_ITEM.name)).toBeNull();
   });
 
-  it("displays generic and product pantry rows distinctly with the exact pinned version and no product delete fallback", async () => {
+  it("displays generic and product pantry rows distinctly and deletes only the exact product pantry row", async () => {
     authOverride = true;
+    const pantryDeleteBodies: unknown[] = [];
 
     vi.stubGlobal(
       "fetch",
-      vi.fn((input: RequestInfo | URL) => {
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry" && init?.method === "DELETE") {
+          pantryDeleteBodies.push(JSON.parse(String(init.body)));
+          return jsonResponse({ removed: 1 });
+        }
 
         if (url === "/api/v1/pantry") {
           return jsonResponse({
@@ -346,7 +353,7 @@ describe("product ingredient link existing consumers", () => {
     expect(await screen.findByText(GENERIC_ITEM.standard_name)).toBeTruthy();
     expect(
       screen.getByLabelText(
-        `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand} · 영양 버전 ${PRODUCT_ITEM.food_product_nutrition_version_id}`,
+        `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand}`,
       ),
     ).toBeTruthy();
     expect(
@@ -355,12 +362,21 @@ describe("product ingredient link existing consumers", () => {
 
     await userEvent.setup().click(screen.getByRole("button", { name: "편집" }));
 
-    expect(
-      screen.queryByRole("checkbox", { name: `${PRODUCT_ITEM.name} 선택` }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: `${PRODUCT_ITEM.name} 삭제` }),
-    ).toBeNull();
+    const productCheckbox = screen.getByRole("checkbox", {
+      name: `${PRODUCT_ITEM.name} 선택`,
+    });
+    const deletePantry = vi.spyOn(pantryApi, "deletePantryItems");
+    try {
+      await userEvent.setup().click(productCheckbox);
+      await userEvent.setup().click(screen.getByRole("button", { name: "제거하기" }));
+      await userEvent.setup().click(screen.getByRole("button", { name: "삭제 (1)" }));
+      await waitFor(() => expect(deletePantry).toHaveBeenCalledWith([], [PRODUCT_ITEM.id]));
+      expect(pantryDeleteBodies).toEqual([{ pantry_item_ids: [PRODUCT_ITEM.id] }]);
+      expect(screen.queryByLabelText(`${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand}`)).toBeNull();
+      expect(screen.getByText(GENERIC_ITEM.standard_name)).toBeTruthy();
+    } finally {
+      deletePantry.mockRestore();
+    }
   });
 
   it("adds an exact product and pinned nutrition version through the existing add sheet", async () => {
@@ -422,7 +438,7 @@ describe("product ingredient link existing consumers", () => {
     await userEvent.setup().type(searchbox, "생크림빵");
 
     const productOption = await within(dialog).findByRole("checkbox", {
-      name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+      name: `${FOOD_PRODUCT.name} · 등록업체 ${FOOD_PRODUCT.brand} · 선택 안 됨`,
     });
     await userEvent.setup().click(productOption);
     await userEvent.setup().click(
@@ -640,7 +656,7 @@ describe("product ingredient link existing consumers", () => {
     expect(screen.queryByRole("dialog", { name: "재료 추가" })).toBeNull();
     expect(
       await screen.findByLabelText(
-        `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand} · 영양 버전 ${PRODUCT_ITEM.food_product_nutrition_version_id}`,
+        `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand}`,
       ),
     ).toBeTruthy();
     expect(pantryReadCount).toBe(2);
@@ -709,7 +725,7 @@ describe("product ingredient link existing consumers", () => {
     render(<PantryScreen initialAuthenticated />);
 
     await screen.findByLabelText(
-      `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand} · 영양 버전 ${PRODUCT_ITEM.food_product_nutrition_version_id}`,
+      `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand}`,
     );
     await userEvent.setup().click(
       screen.getByRole("button", { name: /재료 추가/ }),
@@ -722,7 +738,7 @@ describe("product ingredient link existing consumers", () => {
     );
 
     const exactPairOption = await within(dialog).findByRole("checkbox", {
-      name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+      name: `${FOOD_PRODUCT.name} · 등록업체 ${FOOD_PRODUCT.brand} · 보유중`,
     });
     expect((exactPairOption as HTMLButtonElement).disabled).toBe(true);
   });
@@ -775,7 +791,7 @@ describe("product ingredient link existing consumers", () => {
     render(<PantryScreen initialAuthenticated />);
 
     await screen.findByLabelText(
-      `${PREVIOUS_VERSION_PRODUCT_ITEM.name} · ${PREVIOUS_VERSION_PRODUCT_ITEM.brand} · 영양 버전 ${PREVIOUS_VERSION_PRODUCT_ITEM.food_product_nutrition_version_id}`,
+      `${PREVIOUS_VERSION_PRODUCT_ITEM.name} · ${PREVIOUS_VERSION_PRODUCT_ITEM.brand}`,
     );
     await userEvent.setup().click(
       screen.getByRole("button", { name: /재료 추가/ }),
@@ -788,7 +804,7 @@ describe("product ingredient link existing consumers", () => {
     );
 
     const differentVersionOption = await within(dialog).findByRole("checkbox", {
-      name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+      name: `${FOOD_PRODUCT.name} · 등록업체 ${FOOD_PRODUCT.brand} · 선택 안 됨`,
     });
     expect((differentVersionOption as HTMLButtonElement).disabled).toBe(false);
     await userEvent.setup().click(differentVersionOption);
@@ -861,7 +877,7 @@ describe("product ingredient link existing consumers", () => {
     await userEvent.setup().type(searchbox, "생크림빵");
     expect(
       await within(dialog).findByRole("checkbox", {
-        name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+        name: `${FOOD_PRODUCT.name} · 등록업체 ${FOOD_PRODUCT.brand} · 선택 안 됨`,
       }),
     ).toBeTruthy();
 
@@ -872,7 +888,7 @@ describe("product ingredient link existing consumers", () => {
 
     expect(
       within(dialog).queryByRole("checkbox", {
-        name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+        name: `${FOOD_PRODUCT.name} · 등록업체 ${FOOD_PRODUCT.brand} · 선택 안 됨`,
       }),
     ).toBeNull();
     expect(
@@ -987,7 +1003,7 @@ describe("product ingredient link existing consumers", () => {
     });
 
     const newestOption = await within(dialog).findByRole("checkbox", {
-      name: `${NEW_SEARCH_PRODUCT.name} · ${NEW_SEARCH_PRODUCT.brand} · 영양 버전 ${NEW_SEARCH_PRODUCT.nutrition_version_id}`,
+      name: `${NEW_SEARCH_PRODUCT.name} · 등록업체 ${NEW_SEARCH_PRODUCT.brand} · 선택 안 됨`,
     });
     expect((newestOption as HTMLButtonElement).disabled).toBe(false);
 
@@ -1015,12 +1031,12 @@ describe("product ingredient link existing consumers", () => {
 
     expect(
       within(dialog).getByRole("checkbox", {
-        name: `${NEW_SEARCH_PRODUCT.name} · ${NEW_SEARCH_PRODUCT.brand} · 영양 버전 ${NEW_SEARCH_PRODUCT.nutrition_version_id}`,
+        name: `${NEW_SEARCH_PRODUCT.name} · 등록업체 ${NEW_SEARCH_PRODUCT.brand} · 선택 안 됨`,
       }),
     ).toBeTruthy();
     expect(
       within(dialog).queryByRole("checkbox", {
-        name: `${OLD_SEARCH_PRODUCT.name} · ${OLD_SEARCH_PRODUCT.brand} · 영양 버전 ${OLD_SEARCH_PRODUCT.nutrition_version_id}`,
+        name: `${OLD_SEARCH_PRODUCT.name} · 등록업체 ${OLD_SEARCH_PRODUCT.brand} · 선택 안 됨`,
       }),
     ).toBeNull();
   });
@@ -1121,7 +1137,7 @@ describe("product ingredient link existing consumers", () => {
     ).toBeTruthy();
     expect(
       within(reopenedDialog).queryByRole("checkbox", {
-        name: `${OLD_SEARCH_PRODUCT.name} · ${OLD_SEARCH_PRODUCT.brand} · 영양 버전 ${OLD_SEARCH_PRODUCT.nutrition_version_id}`,
+        name: `${OLD_SEARCH_PRODUCT.name} · 등록업체 ${OLD_SEARCH_PRODUCT.brand} · 선택 안 됨`,
       }),
     ).toBeNull();
     expect(consoleError.mock.calls).toHaveLength(
@@ -1132,17 +1148,20 @@ describe("product ingredient link existing consumers", () => {
 
   it("preserves unauthorized and error recovery surfaces for the existing PANTRY consumer", async () => {
     authOverride = false;
+    const pantryFetch = vi.fn(() => jsonResponse({ items: [GENERIC_ITEM], product_items: [PRODUCT_ITEM] }));
+    vi.stubGlobal("fetch", pantryFetch);
     const { rerender } = render(<PantryScreen />);
 
     expect(
-      screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+      screen.getByRole("heading", { name: "팬트리 미리보기 6개" }),
     ).toBeTruthy();
+    expect(screen.getByText("로그인 전 예시예요. 로그인하면 내 재료로 바뀌어요.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "편집" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByText(PRODUCT_ITEM.name)).toBeNull();
+    expect(pantryFetch).not.toHaveBeenCalled();
 
     authOverride = true;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => jsonResponse(null, 500)),
-    );
+    pantryFetch.mockImplementation(() => jsonResponse(null, 500));
     rerender(<PantryScreen initialAuthenticated />);
 
     expect(await screen.findByText("팬트리를 불러올 수 없어요")).toBeTruthy();

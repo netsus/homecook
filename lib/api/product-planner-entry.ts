@@ -1,5 +1,6 @@
 import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   ProductPlannerEntryCreateBody,
@@ -25,7 +26,8 @@ function createApiError(response: Response, payload: ApiResponse<unknown> | null
 }
 
 async function requestEntry<T>(path: string, init: RequestInit) {
-  const response = await fetch(path, withE2EAuthOverrideHeaders(init));
+  const headers = new Headers(init.headers); headers.set(QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION);
+  const response = await fetch(path, withE2EAuthOverrideHeaders({ ...init, headers }));
   let payload: ApiResponse<T> | null = null;
 
   try {

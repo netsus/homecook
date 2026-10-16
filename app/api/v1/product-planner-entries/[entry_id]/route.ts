@@ -2,6 +2,7 @@ import { fail, ok } from "@/lib/api/response";
 import { parseProductPlannerEntryPatchBody } from "@/lib/server/prepared-food-planner-entry";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
+import { quantityInputContractRequested, quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 
 interface RouteContext {
   params: Promise<{ entry_id: string }>;
@@ -38,6 +39,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 function databaseFailure(error: RpcError | null, fallback: string) {
   const detail = `${error?.code ?? ""} ${error?.message ?? ""}`;
+  if (/UNIT_POLICY_INACTIVE/i.test(detail)) return fail("UNIT_POLICY_INACTIVE", "새 단위 입력은 아직 사용할 수 없어요. 입력한 양은 그대로 유지했어요.", 409);
+  if (/NUTRITION_VERSION_CONFLICT/i.test(detail)) return fail("NUTRITION_VERSION_CONFLICT", "저장했던 제품의 영양 버전과 입력 기준이 달라요. 원래 양은 유지했어요.", 409);
   if (/NUTRITION_BASIS_MISMATCH/i.test(detail)) {
     return fail("NUTRITION_BASIS_MISMATCH", "이 수량 단위로 영양을 계산할 수 없어요.", 422);
   }
@@ -133,7 +136,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       { field: "body", reason: "invalid_json" },
     ]);
   }
-  const parsed = parseProductPlannerEntryPatchBody(body);
+  const parsed = parseProductPlannerEntryPatchBody(body, quantityInputWriteEnabled(request));
   if (!parsed.ok) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
@@ -154,16 +157,21 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("FORBIDDEN", "내 완제품 항목만 변경할 수 있어요.", 403);
   }
 
-  const result = await db.rpc("update_product_planner_entry_quantity", {
+  const args: Record<string, unknown> = {
     p_user_id: user.id,
     p_entry_id: entryId,
     p_quantity_amount: parsed.value.quantity.amount,
     p_quantity_unit: parsed.value.quantity.unit,
-  });
+  };
+  if (parsed.value.quantity_input) args.p_quantity_input = parsed.value.quantity_input;
+  const result = await db.rpc("update_product_planner_entry_quantity", args);
   if (result.error || !result.data) {
     return databaseFailure(result.error, "완제품 수량을 변경하지 못했어요.");
   }
-  return ok({ entry: result.data as ProductPlannerEntryData });
+  const entry = { ...(result.data as ProductPlannerEntryData) };
+  if (!quantityInputContractRequested(request) || entry.quantity_input === null) delete entry.quantity_input;
+  if (!quantityInputWriteEnabled(request) || entry.quantity_policy !== "quantity-v4") delete entry.quantity_policy;
+  return ok({ entry });
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {

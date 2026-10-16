@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/v1/recipes/[id]/publish/route";
+import { RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), verified: vi.fn(), rpc: vi.fn(), prepare: vi.fn(), publish: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -29,6 +30,8 @@ describe("explicit publication of an existing authored recipe", () => {
     const response = await POST(request(), context);
     expect(response.status).toBe(200);
     expect(mocks.rpc).toHaveBeenCalledWith("read_owned_manual_recipe_publication_context", expect.objectContaining({ p_owner_uuid: "owner", p_recipe_id: recipeId }));
+    expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({ auth: expect.any(Object) }), recipeId,
+      expect.objectContaining({ rpc: mocks.rpc }), { ownerUuid: "owner" });
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: key, recipeId, expectedUpdatedAt: "version", nutritionSnapshot: { complete: true } }));
     expect((await response.json()).data).toEqual({ id: recipeId, visibility: "public" });
   });
@@ -51,6 +54,15 @@ describe("explicit publication of an existing authored recipe", () => {
   it("rejects a mismatched receipt", async () => {
     mocks.rpc.mockResolvedValue({ data: { recipe_id: key, idempotency_key: key }, error: null });
     expect((await POST(request(), context)).status).toBe(404);
+    expect(mocks.publish).not.toHaveBeenCalled();
+  });
+  it.each(["ACCOUNT_SESSION_STALE", "RESOURCE_NOT_FOUND", "RECIPE_REVISION_CONFLICT", "UNIT_CONTEXT_STALE"] as const)("retains signed preparation error %s for explicit publish", async code => {
+    const error = new RecipeQuantityModeError(code);
+    mocks.prepare.mockRejectedValueOnce(error);
+    const response = await POST(request(), context);
+    expect(response.status).toBe(error.status);
+    expect(await response.json()).toEqual({ success: false, data: null,
+      error: { code, message: error.message, fields: [] } });
     expect(mocks.publish).not.toHaveBeenCalled();
   });
   it("never reports success when publication or nutrition preparation fails", async () => {

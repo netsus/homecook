@@ -1,7 +1,11 @@
+import { cookedWeightResponseHeaders } from "@/lib/cooking/cooked-weight-response-contract";
 import { notifyActionNotificationsChanged } from "@/lib/app-action-notifications";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyCookedBatchChanged } from "@/lib/cooked-batch-events";
+import { isQuantityInputSnapshot } from "@/lib/quantity-input";
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import type { ApiError } from "@/types/api";
+import { isCookedWeightAssumptionCodes, isMealLogWeightBasis } from "@/lib/cooking/cooked-weight-summary";
 import type {
   MealLogDayData,
   MealLogEntry,
@@ -16,6 +20,7 @@ export type MealLogMutationBody = {
   meal_plan_column_id: MealLogMutationInput["mealPlanColumnId"];
   source: MealLogMutationInput["source"];
   quantity: MealLogMutationInput["quantity"];
+  quantity_input?: MealLogMutationInput["quantityInput"];
   expected_revision?: number;
 };
 
@@ -123,9 +128,14 @@ function isApiError(value: unknown): value is ApiError {
 
 function isNutrition(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  const keys = "contains_ai_estimate" in value ? [...NUTRITION_KEYS, "contains_ai_estimate"] : NUTRITION_KEYS;
+  const keys: string[] = [...NUTRITION_KEYS];
+  if ("contains_ai_estimate" in value) keys.push("contains_ai_estimate");
+  if ("weight_basis" in value) keys.push("weight_basis");
+  if ("weight_assumption_codes" in value) keys.push("weight_assumption_codes");
   if (!hasExactKeys(value, keys)
-    || ("contains_ai_estimate" in value && typeof value.contains_ai_estimate !== "boolean")) return false;
+    || ("contains_ai_estimate" in value && typeof value.contains_ai_estimate !== "boolean")
+    || ("weight_basis" in value && !isMealLogWeightBasis(value.weight_basis))
+    || ("weight_assumption_codes" in value && (!isCookedWeightAssumptionCodes(value.weight_assumption_codes) || !isMealLogWeightBasis(value.weight_basis) || value.weight_basis.source !== "conditional_estimate"))) return false;
   return NUTRITION_STATUSES.includes(value.calculation_status as never)
     && NUTRITION_KEYS.slice(1).every((key) => isNullableFiniteNumber(value[key]));
 }
@@ -162,7 +172,14 @@ function isMealLogEntry(value: unknown): value is MealLogEntry {
     "nutrition",
     "created_at",
     "updated_at",
+    ...("quantity_input" in value ? ["quantity_input"] : []),
   ])) return false;
+  if (value.quantity_input !== undefined && (!isQuantity(value.quantity)
+    || !isQuantityInputSnapshot(value.quantity_input, value.quantity as MealLogEntry["quantity"]))) return false;
+  if (isRecord(value.nutrition) && "weight_basis" in value.nutrition) {
+    if (!isMealLogWeightBasis(value.nutrition.weight_basis) || !isRecord(value.source)
+      || value.source.type !== "cooked_batch" || value.nutrition.weight_basis.batch_id !== value.source.id) return false;
+  }
   return isUuid(value.id)
     && isPositiveInteger(value.revision)
     && (value.consumed_at === null || isTimestamp(value.consumed_at))
@@ -234,7 +251,9 @@ function isMealLogDayData(value: unknown): value is MealLogDayData {
       "deleted_column_sections",
       "entries",
       "day_total",
+      ...("quantity_policy" in value ? ["quantity_policy"] : []),
     ])
+    && (value.quantity_policy === undefined || value.quantity_policy === QUANTITY_INPUT_VERSION)
     && isDate(value.date)
     && Array.isArray(value.active_columns)
     && value.active_columns.every(isActiveColumn)
@@ -254,11 +273,14 @@ function isRecentItem(value: unknown): boolean {
       "display_brand",
       "last_quantity",
       "frequency",
+      ...("source_version" in value ? ["source_version"] : []), ...("quantity_input" in value ? ["quantity_input"] : []),
     ])
     && isSource(value.source)
     && isNonEmptyString(value.display_name)
     && (value.display_brand === null || typeof value.display_brand === "string")
     && isQuantity(value.last_quantity)
+    && (value.source_version === undefined || isUuid(value.source_version))
+    && (value.quantity_input === undefined || isQuantityInputSnapshot(value.quantity_input, value.last_quantity as MealLogEntry["quantity"]))
     && isPositiveInteger(value.frequency);
 }
 
@@ -289,7 +311,9 @@ async function requestMealLog<T>(
   validate: (value: unknown) => value is T,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, withE2EAuthOverrideHeaders(init));
+  const headers = cookedWeightResponseHeaders(init?.headers);
+  headers.set(QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION);
+  const response = await fetch(input, withE2EAuthOverrideHeaders({ ...init, headers }));
   let payload: unknown;
 
   try {
@@ -328,7 +352,7 @@ function mutationBody(input: MealLogCreateInput | MealLogUpdateInput): MealLogMu
     ? input.expectedRevision
     : null;
 
-  return {
+  const body: MealLogMutationBody = {
     consumed_local_date: input.consumedLocalDate,
     timezone_name_snapshot: input.timezoneNameSnapshot,
     consumed_at: input.consumedAt,
@@ -337,6 +361,8 @@ function mutationBody(input: MealLogCreateInput | MealLogUpdateInput): MealLogMu
     quantity: input.quantity,
     ...(expectedRevision === null ? {} : { expected_revision: expectedRevision }),
   };
+  if (input.quantityInput) body.quantity_input = input.quantityInput;
+  return body;
 }
 
 function mutationRequest(

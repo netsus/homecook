@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useRecipeViewCountStore } from "@/stores/recipe-view-count-store";
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { MOCK_RECIPE_DETAIL } from "@/lib/mock/recipes";
-import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
+import { PENDING_ACTION_KEY, savePendingAction } from "@/lib/auth/pending-action";
 import { ActionConfirmation } from "@/components/shared/action-confirmation";
 import { useActionConfirmationStore, useAuthGateStore } from "@/stores/ui-store";
 import type {
@@ -27,6 +27,22 @@ function buildEditIngredients(): RecipeEditDraft["ingredients"] {
   return [{ ingredient_id: "550e8400-e29b-41d4-a716-446655440010", amount: 100, unit: "g", ingredient_type: "QUANT", display_text: null, component_label: null, scalable: true, food_product_id: null, food_product_nutrition_version_id: null }];
 }
 
+// Only the additive identity fields come from the submitted draft. Every
+// pre-existing title, amount, unit and step value is still expected exactly.
+function expectedGenericRowDraft(original: RecipeEditDraft, submitted: RecipeEditDraft): RecipeEditDraft {
+  expect(original.ingredients).toHaveLength(1);
+  expect(submitted.ingredients).toHaveLength(1);
+  const rowKey = submitted.ingredients[0].row_key;
+  expect(rowKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  expect(submitted.ingredients[0].source_kind).toBe("ingredient");
+  if (!rowKey) throw new Error("Missing submitted row identity");
+  return { ...original, ingredients: [{ ...original.ingredients[0], row_key: rowKey, source_kind: "ingredient" }],
+    steps: original.steps.map((step) => ({ ...step, ingredients_used: step.ingredients_used.map((reference) => {
+      expect(reference.ingredient_id).toBe(original.ingredients[0].ingredient_id);
+      return { ...reference, row_key: rowKey };
+    }) })) };
+}
+
 const fetchJson = vi.fn();
 const getSession = vi.fn();
 const onAuthStateChange = vi.fn();
@@ -34,6 +50,7 @@ const hasSupabasePublicEnv = vi.fn();
 const fetchPlanner = vi.fn();
 const createMeal = vi.fn();
 const fetchUserProfile = vi.fn();
+const fetchPantryList = vi.fn();
 const fetchUserProgress = vi.fn();
 const fetchUserGamification = vi.fn();
 const mockRouterPush = vi.fn();
@@ -99,6 +116,7 @@ vi.mock("@/lib/api/personal-recipe", () => ({
 vi.mock("@/lib/api/mypage", () => ({
   fetchUserProfile: () => fetchUserProfile(),
 }));
+vi.mock("@/lib/api/pantry", () => ({ fetchPantryList: (...args: unknown[]) => fetchPantryList(...args), isPantryApiError: () => false }));
 
 vi.mock("@/lib/api/user-progress", () => ({
   fetchUserProgress: () => fetchUserProgress(),
@@ -304,6 +322,155 @@ describe("recipe detail screen", () => {
     hasSupabasePublicEnv.mockReturnValue(true);
   });
 
+  describe("B08 detail servings guidance", () => {
+    const guidance = "재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다";
+    it.each([
+      { desktop: false, product: false }, { desktop: true, product: false },
+      { desktop: false, product: true }, { desktop: true, product: true },
+    ])("keeps original quantities beside the scaled table (%j)", async ({ desktop, product }) => {
+      installMatchMedia(desktop);
+      const instruction = product ? "제품 0.125kg을 그릇에 담아 섞습니다." : "물 400ml를 넣고 10분간 끓입니다.";
+      const detail = buildRecipeDetail({
+        base_servings: 2, source_type: product ? "manual" : "system", visibility: "public",
+        ingredients: [{ ...MOCK_RECIPE_DETAIL.ingredients[0], standard_name: product ? "제품" : "물",
+          ingredient_id: product ? null : MOCK_RECIPE_DETAIL.ingredients[0].ingredient_id,
+          source_kind: product ? "food_product" : "ingredient", amount: product ? 0.125 : 400,
+          unit: product ? "kg" : "ml", scalable: true, display_text: null,
+          food_product_id: product ? "550e8400-e29b-41d4-a716-446655440091" : null,
+          food_product_nutrition_version_id: product ? "550e8400-e29b-41d4-a716-446655440092" : null }],
+        steps: [{ ...MOCK_RECIPE_DETAIL.steps[0], instruction, component_label: null }],
+      });
+      const before = JSON.stringify(detail);
+      fetchJson.mockResolvedValue(detail);
+      const { container } = render(<RecipeDetailScreen recipeId={detail.id} />);
+      await screen.findByRole("button", { name: "인분 늘리기" });
+      const servingSection = desktop ? container.querySelector(".web-recipe-nutrition-serving") : null;
+      await userEvent.click((servingSection ? within(servingSection as HTMLElement) : screen).getByRole("button", { name: "인분 늘리기" }));
+      expect(container.textContent).toContain(product ? "0.1875kg" : "600ml");
+      if (!desktop) await userEvent.click(screen.getByRole("tab", { name: "만들기" }));
+      const scope = desktop ? container.querySelector(".web-recipe-reading-grid") : container;
+      if (!scope) throw new Error("Missing detail reading view");
+      const note = within(scope as HTMLElement).getByText(guidance);
+      const step = within(scope as HTMLElement).getByText(instruction);
+      expect(note.compareDocumentPosition(step) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(within(scope as HTMLElement).queryByText(/조리법 원본:/)).toBeNull();
+      expect(JSON.stringify(detail)).toBe(before);
+      if (desktop) expect(screen.getByRole("heading", { name: "선택한 3인분 기준" })).toBeTruthy();
+    });
+
+    it("does not promote an extracted fallback serving count to a known original", async () => {
+      fetchJson.mockResolvedValue(buildRecipeDetail({ source_type: "youtube", base_servings: 1 }));
+      render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      await userEvent.click(await screen.findByRole("tab", { name: "만들기" }));
+      expect(screen.getByText(guidance)).toBeTruthy();
+      expect(screen.queryByText(/조리법 원본:/)).toBeNull();
+    });
+
+    it.each([0, Number.NaN])("does not guess an original serving count from invalid source %s", async base_servings => {
+      fetchJson.mockResolvedValue(buildRecipeDetail({ base_servings }));
+      render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      await userEvent.click(await screen.findByRole("tab", { name: "만들기" }));
+      expect(screen.getByText(guidance)).toBeTruthy();
+      expect(screen.queryByText(/조리법 원본:/)).toBeNull();
+    });
+  });
+
+  describe("browser tab title", () => {
+    let previousTitle: string;
+
+    beforeEach(() => {
+      previousTitle = document.title;
+      document.title = "레시피 상세 | 무엇을 먹든";
+    });
+
+    afterEach(() => {
+      cleanup();
+      document.title = previousTitle;
+    });
+
+    it("uses the authorized private detail title without changing social metadata and restores it after unmount", async () => {
+      const privateRecipe = buildRecipeDetail({ title: "나만 보는 저녁", visibility: "private" });
+      fetchJson.mockResolvedValue(privateRecipe);
+      const socialTitle = document.createElement("meta");
+      socialTitle.setAttribute("property", "og:title");
+      socialTitle.setAttribute("content", "무엇을 먹든");
+      document.head.append(socialTitle);
+
+      try {
+        const view = render(<RecipeDetailScreen initialAuthenticated recipeId={privateRecipe.id} />);
+        await waitFor(() => expect(document.title).toBe("나만 보는 저녁 | 무엇을 먹든"));
+        expect(socialTitle.getAttribute("content")).toBe("무엇을 먹든");
+        view.unmount();
+        expect(document.title).toBe("레시피 상세 | 무엇을 먹든");
+
+        render(<RecipeDetailScreen initialAuthenticated recipeId={privateRecipe.id} />);
+        await waitFor(() => expect(document.title).toBe("나만 보는 저녁 | 무엇을 먹든"));
+      } finally {
+        socialTitle.remove();
+      }
+    });
+
+    it("clears the prior title while a new recipe loads and updates it again on back navigation", async () => {
+      const first = buildRecipeDetail({ id: "title-first", title: "먼저 열었던 레시피" });
+      const second = buildRecipeDetail({ id: "title-second", title: "다음 레시피" });
+      let finishSecond!: (recipe: RecipeDetail) => void;
+      const secondRequest = new Promise<RecipeDetail>((resolve) => { finishSecond = resolve; });
+      fetchJson.mockResolvedValueOnce(first).mockReturnValueOnce(secondRequest);
+      const view = render(<RecipeDetailScreen recipeId={first.id} />);
+      await waitFor(() => expect(document.title).toBe("먼저 열었던 레시피 | 무엇을 먹든"));
+
+      view.rerender(<RecipeDetailScreen recipeId={second.id} />);
+      expect(document.title).toBe("레시피 상세 | 무엇을 먹든");
+      await act(async () => finishSecond(second));
+      await waitFor(() => expect(document.title).toBe("다음 레시피 | 무엇을 먹든"));
+
+      fetchJson.mockResolvedValue(first);
+      view.rerender(<RecipeDetailScreen recipeId={first.id} />);
+      await waitFor(() => expect(document.title).toBe("먼저 열었던 레시피 | 무엇을 먹든"));
+    });
+
+    it("ignores an older recipe response after the current route succeeds", async () => {
+      let finishOlder!: (recipe: RecipeDetail) => void;
+      const olderRequest = new Promise<RecipeDetail>((resolve) => { finishOlder = resolve; });
+      const current = buildRecipeDetail({ id: "title-current", title: "현재 레시피" });
+      fetchJson.mockReturnValueOnce(olderRequest).mockResolvedValue(current);
+      const view = render(<RecipeDetailScreen recipeId="title-older" />);
+      view.rerender(<RecipeDetailScreen recipeId={current.id} />);
+      await waitFor(() => expect(document.title).toBe("현재 레시피 | 무엇을 먹든"));
+
+      await act(async () => finishOlder(buildRecipeDetail({ id: "title-older", title: "옛 비공개 레시피" })));
+      expect(document.title).toBe("현재 레시피 | 무엇을 먹든");
+    });
+
+    it("does not overwrite a destination title or publish a late response after unmount", async () => {
+      fetchJson.mockResolvedValue(buildRecipeDetail({ title: "나만 보는 저녁" }));
+      const view = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      await waitFor(() => expect(document.title).toBe("나만 보는 저녁 | 무엇을 먹든"));
+      document.title = "요리 계획 | 무엇을 먹든";
+      view.unmount();
+      expect(document.title).toBe("요리 계획 | 무엇을 먹든");
+
+      let finishLate!: (recipe: RecipeDetail) => void;
+      fetchJson.mockReturnValue(new Promise<RecipeDetail>((resolve) => { finishLate = resolve; }));
+      const pending = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      pending.unmount();
+      document.title = "요리 계획 | 무엇을 먹든";
+      await act(async () => finishLate(buildRecipeDetail({ title: "늦은 비공개 제목" })));
+      expect(document.title).toBe("요리 계획 | 무엇을 먹든");
+    });
+
+    it.each([
+      { status: 404, heading: "이 레시피를 찾을 수 없어요", title: "레시피를 찾을 수 없어요" },
+      { status: 403, heading: "레시피 상세를 불러오지 못했어요", title: "레시피 상세" },
+      { status: 500, heading: "레시피 상세를 불러오지 못했어요", title: "레시피 상세" },
+    ])("keeps $status detail failures distinct from a private success", async ({ status, heading, title }) => {
+      fetchJson.mockRejectedValue(Object.assign(new Error("detail failed"), { status }));
+      render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+      expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
+      await waitFor(() => expect(document.title).toBe(`${title} | 무엇을 먹든`));
+    });
+  });
+
   it("publishes the server-confirmed view count for a recipe opened from discovery", async () => {
     useRecipeViewCountStore.getState().track(MOCK_RECIPE_DETAIL.id);
     fetchJson.mockResolvedValue(buildRecipeDetail({ view_count: 41 }));
@@ -383,9 +550,50 @@ describe("recipe detail screen", () => {
     });
     expect(fetchJson).toHaveBeenLastCalledWith(
       `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`,
+      { headers: { "X-Homecook-Quantity-Contract": "quantity-v4" } },
     );
   }, 10_000);
 
+  it("opens a guest cook gate without a request and preserves selected servings on explicit login return", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    const guest = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "인분 늘리기" }));
+    await userEvent.click(screen.getByRole("button", { name: "요리하기" }));
+    const gate = await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" });
+    expect(within(gate).getByText("로그인하면 선택한 3인분으로 돌아가요. 요리하기를 다시 눌러 시작해 주세요.")).toBeTruthy();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+    const pending = useAuthGateStore.getState().action;
+    expect(pending).toMatchObject({ type: "cook", cookingServings: 3, recipeRevision: 12 });
+    if (!pending) throw new Error("Missing cook intent");
+    expect(savePendingAction(pending)).toBe(true);
+    guest.unmount(); useAuthGateStore.getState().close();
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    expect(await screen.findByText("로그인 완료. 선택한 3인분을 유지했어요. 요리하기를 다시 눌러 시작해 주세요.")).toBeTruthy();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+    createSnapshotV2CookingSession.mockResolvedValue({ session_id: "550e8400-e29b-41d4-a716-446655440099", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", content_summary: { recipe_id: MOCK_RECIPE_DETAIL.id, title: "레시피", cooking_servings: 3 } });
+    await userEvent.click(screen.getByRole("button", { name: "요리하기" }));
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledTimes(1));
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1);
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledWith({ mode: "standalone", recipe_id: MOCK_RECIPE_DETAIL.id, expected_recipe_revision: 12, cooking_servings: 3 });
+  });
+  it("cancels guest cook without an RPC or leftover pending intent", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" })).getByRole("button", { name: "취소" }));
+    expect(useAuthGateStore.getState().isOpen).toBe(false);
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+  });
+  it("announces a changed recipe after login without creating a session", async () => {
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({ type: "cook", recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`, createdAt: Date.now(), cookingServings: 3, recipeRevision: 11 }));
+    fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    expect(await screen.findByText("레시피가 변경됐어요. 선택한 3인분은 유지했어요. 현재 내용을 확인한 뒤 요리하기를 다시 눌러 주세요.")).toBeTruthy();
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+  });
   it("replaces the existing standalone CTA in place while snapshot start is pending", async () => {
     const pending = createDeferred<{
       session_id: string;
@@ -398,6 +606,7 @@ describe("recipe detail screen", () => {
 
     fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
     render(<RecipeDetailScreen
+      initialAuthenticated
       recipeId={MOCK_RECIPE_DETAIL.id}
       recipeSnapshotUiMode="snapshot_v2"
     />);
@@ -419,7 +628,7 @@ describe("recipe detail screen", () => {
     const result = { session_id: "550e8400-e29b-41d4-a716-446655440099", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", content_summary: { recipe_id: MOCK_RECIPE_DETAIL.id, title: "레시피", cooking_servings: 2 } };
     createSnapshotV2CookingSession.mockResolvedValue(result);
     fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
-    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
     await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
     await waitFor(() => expect(mockRouterPush).toHaveBeenCalledTimes(1));
     await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
@@ -430,13 +639,91 @@ describe("recipe detail screen", () => {
   it("shows a cooking start conflict message and keeps retry available", async () => {
     createSnapshotV2CookingSession.mockRejectedValue({ status: 409, code: "RECIPE_REVISION_CONFLICT", message: "레시피가 수정됐어요. 새로고침해 주세요." });
     fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
-    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
     await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
     expect(await screen.findByText("레시피가 수정됐어요. 새로고침해 주세요.")).toBeTruthy();
     expect((screen.getByRole("button", { name: "요리하기" }) as HTMLButtonElement).disabled).toBe(false);
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
+  it.each([401, "ACCOUNT_SESSION_STALE", "ACCOUNT_GENERATION_STALE"])("keeps a failed authenticated cook as an explicit login intent for %s", async (kind) => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    createSnapshotV2CookingSession.mockRejectedValue({ status: typeof kind === "number" ? kind : 409,
+      code: typeof kind === "number" ? "UNAUTHORIZED" : kind, message: "다시 로그인해 주세요." });
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "인분 늘리기" }));
+    await userEvent.click(screen.getByRole("button", { name: "요리하기" }));
+    expect(await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" })).toBeTruthy();
+    expect(useAuthGateStore.getState().action).toMatchObject({ type: "cook", cookingServings: 3, recipeRevision: 12 });
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+  it.each([{ status: 500, code: "ACCOUNT_SESSION_STALE", message: "서버 오류" }, new Error("network")])("does not turn an unknown cook failure into auth retry %#", async (error) => {
+    fetchJson.mockResolvedValue(buildRecipeDetail()); createSnapshotV2CookingSession.mockRejectedValue(error);
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    await waitFor(() => expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1));
+    expect(useAuthGateStore.getState().isOpen).toBe(false);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(await screen.findByText(error instanceof Error ? "요리를 시작하지 못했어요. 다시 시도해 주세요." : "서버 오류")).toBeTruthy();
+  });
+  it.each(["unmount", "pathname"])("ignores a late cook success after leaving by %s", async (leaveBy) => {
+    fetchJson.mockResolvedValue(buildRecipeDetail()); const pending = createDeferred<unknown>();
+    createSnapshotV2CookingSession.mockReturnValue(pending.promise);
+    const view = render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    const button = await screen.findByRole("button", { name: "요리하기" });
+    await userEvent.dblClick(button); expect(createSnapshotV2CookingSession).toHaveBeenCalledTimes(1);
+    const originalPath = window.location.pathname;
+    if (leaveBy === "unmount") view.unmount(); else window.history.pushState({}, "", "/other-surface");
+    await act(async () => { pending.resolve({ session_id: "550e8400-e29b-41d4-a716-446655440099", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress" }); });
+    expect(mockRouterPush).not.toHaveBeenCalled(); expect(useAuthGateStore.getState().isOpen).toBe(false);
+    window.history.replaceState({}, "", originalPath);
+  });
+  it("keeps the cook gate open without navigation or requests if pending storage fails", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    const gate = await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" });
+    const store = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked storage"); });
+    try {
+      await userEvent.click(within(gate).getByRole("button", { name: "로그인" }));
+      expect((await within(gate).findByRole("alert")).textContent).toContain("선택한 인분을 임시 보관하지 못했어요.");
+      expect(useAuthGateStore.getState().isOpen).toBe(true);
+      expect(createSnapshotV2CookingSession).not.toHaveBeenCalled(); expect(mockRouterPush).not.toHaveBeenCalled();
+    } finally { store.mockRestore(); }
+  });
+  it("does not consume a cook intent until the same authorized recipe loads", async () => {
+    const intent = { type: "cook", recipeId: MOCK_RECIPE_DETAIL.id, redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      cookingServings: 3, recipeRevision: 12, createdAt: Date.now() };
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify(intent));
+    fetchJson.mockRejectedValue({ status: 404, code: "NOT_FOUND", message: "레시피가 없어요." });
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await screen.findByRole("heading", { name: "이 레시피를 찾을 수 없어요" });
+    expect(JSON.parse(window.sessionStorage.getItem(PENDING_ACTION_KEY)!)).toEqual(intent);
+    expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+  });
+  it("ignores a late auth failure after the recipe changes", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    const pending = createDeferred<unknown>();
+    createSnapshotV2CookingSession.mockReturnValue(pending.promise);
+    const view = render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await userEvent.click(await screen.findByRole("button", { name: "요리하기" }));
+    fetchJson.mockResolvedValue(buildRecipeDetail({ id: "other" }));
+    view.rerender(<RecipeDetailScreen initialAuthenticated recipeId="other" recipeSnapshotUiMode="snapshot_v2" />);
+    await act(async () => { pending.reject({ status: 401, code: "UNAUTHORIZED", message: "로그인이 필요해요." }); });
+    expect(useAuthGateStore.getState().isOpen).toBe(false);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+  it.each(["other-recipe", "expired", "invalid"])("does not restore or start a %s cook intent", async (kind) => {
+    const recipeId = kind === "other-recipe" ? "other" : MOCK_RECIPE_DETAIL.id;
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({ type: "cook", recipeId, redirectTo: `/recipe/${recipeId}`,
+      cookingServings: kind === "invalid" ? 0 : 3, recipeRevision: 12, createdAt: Date.now() - (kind === "expired" ? 15 * 60 * 1000 : 0) }));
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await screen.findByRole("button", { name: "요리하기" });
+    expect(screen.queryByText(/로그인 완료. 선택한/)).toBeNull(); expect(createSnapshotV2CookingSession).not.toHaveBeenCalled();
+    if (kind !== "other-recipe") expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
   it("sends the owner-edited full draft unchanged from impact preview to PATCH", async () => {
     const draft: RecipeEditDraft = {
       title: "내 김치찌개",
@@ -506,10 +793,8 @@ describe("recipe detail screen", () => {
     await userEvent.type(title, "내 매콤 김치찌개");
     await userEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
 
-    const editedDraft = {
-      ...draft,
-      title: "내 매콤 김치찌개",
-    };
+    await waitFor(() => expect(fetchRecipeFutureImpact).toHaveBeenCalledTimes(1));
+    const editedDraft = expectedGenericRowDraft({ ...draft, title: "내 매콤 김치찌개" }, fetchRecipeFutureImpact.mock.calls[0][2]);
 
     await waitFor(() => {
       expect(fetchRecipeFutureImpact).toHaveBeenCalledWith(
@@ -520,6 +805,8 @@ describe("recipe detail screen", () => {
     });
     expect(screen.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeTruthy();
     await userEvent.click(screen.getByRole("radio", { name: /기존 계획 유지/ }));
+    fetchJson.mockResolvedValueOnce(buildRecipeDetail({ title: "서버 저장 제목", revision: 13,
+      edit_context: { base_recipe_revision: 13, draft: editedDraft, image_object_id: "550e8400-e29b-41d4-a716-446655440099" } }));
     await userEvent.click(screen.getByRole("button", { name: "저장" }));
 
     expect(patchRecipeWithFutureStrategy).toHaveBeenCalledWith(
@@ -536,6 +823,8 @@ describe("recipe detail screen", () => {
     const previewDraft = fetchRecipeFutureImpact.mock.calls[0]?.[2];
     const patchDraft = patchRecipeWithFutureStrategy.mock.calls[0]?.[1]?.draft;
     expect(JSON.stringify(patchDraft)).toBe(JSON.stringify(previewDraft));
+    await waitFor(() => expect(fetchJson.mock.calls.filter(([url]) => url === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`)).toHaveLength(2));
+    expect((await screen.findAllByText("서버 저장 제목")).length).toBeGreaterThan(0);
   });
 
   it("isolates the owner editor focus, background, scroll, and dirty-close boundary", async () => {
@@ -665,15 +954,21 @@ describe("recipe detail screen", () => {
 
     const title = await screen.findByRole("textbox", { name: "레시피 제목" });
     expect((title as HTMLInputElement).value).toBe(resumedDraft.title);
+    await waitFor(() => expect(fetchRecipeFutureImpact).toHaveBeenCalledTimes(1));
+    const expectedDraft = expectedGenericRowDraft(resumedDraft, fetchRecipeFutureImpact.mock.calls[0][2]);
     await waitFor(() => {
       expect(fetchRecipeFutureImpact).toHaveBeenCalledWith(
         MOCK_RECIPE_DETAIL.id,
         12,
-        resumedDraft,
+        expectedDraft,
       );
     });
     expect(screen.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeTruthy();
     expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    await userEvent.click(within(screen.getByRole("dialog", { name: "미래 계획 반영 확인" })).getByRole("button", { name: "취소" }));
+    await userEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
+    await waitFor(() => expect(fetchRecipeFutureImpact).toHaveBeenCalledTimes(2));
+    expect(fetchRecipeFutureImpact.mock.calls[1][2]).toEqual(expectedDraft);
   });
 
   it("restores the owner draft for save-as-new after login without auto-resuming same-id impact preview", async () => {
@@ -778,6 +1073,9 @@ describe("recipe detail screen", () => {
     expect(document.activeElement).toBe(close);
     await userEvent.tab({ shift: true });
     expect(document.activeElement).toBe(login);
+    const pending = useAuthGateStore.getState().action;
+    if (pending?.type !== "recipe-edit-save" || !pending.editContext) throw new Error("Missing edit return action");
+    const expectedDraft = expectedGenericRowDraft({ ...serverDraft, title: "세션 만료 전 김치찌개" }, pending.editContext.draft);
     expect(useAuthGateStore.getState().action).toEqual({
       type: "recipe-edit-save",
       sourceOwnerUuid: PROFILE_OWNER_UUID,
@@ -786,10 +1084,7 @@ describe("recipe detail screen", () => {
       createdAt: expect.any(Number),
       editContext: {
         base_recipe_revision: 12,
-        draft: {
-          ...serverDraft,
-          title: "세션 만료 전 김치찌개",
-        },
+        draft: expectedDraft,
         image_object_id: null,
       },
     });
@@ -839,6 +1134,10 @@ describe("recipe detail screen", () => {
     const loginGate = await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" });
     expect(screen.getByText(/새 레시피 저장을 계속할 수 있어요/)).toBeTruthy();
     expect(loginGate).toBeTruthy();
+    const action = useAuthGateStore.getState().action;
+    if (action?.type !== "recipe-save-as-new") throw new Error("save-as-new intent was lost");
+    const rowKey = action.editContext.draft.ingredients[0].row_key;
+    expect(rowKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     expect(useAuthGateStore.getState().action).toEqual({
       type: "recipe-save-as-new",
       sourceOwnerUuid: PROFILE_OWNER_UUID,
@@ -850,6 +1149,7 @@ describe("recipe detail screen", () => {
         draft: {
           ...serverDraft,
           title: "세션 만료 전 새 레시피 김치찌개",
+          ingredients: [{ ...serverDraft.ingredients[0], row_key: rowKey, source_kind: "ingredient" }],
         },
         image_object_id: null,
       },
@@ -1186,6 +1486,56 @@ describe("recipe detail screen", () => {
     expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
+  it.each([
+    { mode: "fork", uiMode: "snapshot_v2", qa: false },
+    { mode: "edit", uiMode: "snapshot_v2", qa: false },
+    { mode: "edit", uiMode: "legacy_v1", qa: true },
+  ] as const)("resumes the $mode/$uiMode draft and pantry read without automatic save or impact preview", async ({ mode, uiMode, qa }) => {
+    if (qa) {
+      process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES = "1";
+      window.history.replaceState({}, "", `/recipe/${MOCK_RECIPE_DETAIL.id}?qaFutureImpact=1`);
+    }
+    const serverDraft: RecipeEditDraft = { title: "서버 원본", description: null, base_servings: 2, ingredients: buildEditIngredients(), steps: [] };
+    const resumedDraft = { ...serverDraft, title: "로그인 전 작성한 제품 초안" };
+    const editContext = { base_recipe_revision: 12, draft: serverDraft, image_object_id: null };
+    fetchJson.mockResolvedValue(buildRecipeDetail({ edit_context: mode === "edit" ? editContext : undefined }));
+    fetchUserProfile.mockResolvedValue({ id: PROFILE_OWNER_UUID, account_generation: 3 });
+    fetchPantryList.mockResolvedValue({ items: [], product_items: [] });
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({ type: "recipe-fork", recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`, createdAt: Date.now(), sourceOwnerUuid: PROFILE_OWNER_UUID,
+      sourceAccountGeneration: 3, resumeEditor: { mode, rowKey: null }, editContext: { ...editContext, draft: resumedDraft } }));
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode={uiMode}
+      initialForkContext={mode === "fork" ? editContext : undefined} />);
+    await screen.findByRole("dialog", { name: "제품·재료 선택" });
+    expect(screen.getByRole<HTMLInputElement>("textbox", { name: "레시피 제목", hidden: true }).value).toBe(resumedDraft.title);
+    await waitFor(() => expect(fetchPantryList).toHaveBeenCalled());
+    expect(fetchRecipeFutureImpact).not.toHaveBeenCalled(); expect(patchRecipeWithFutureStrategy).not.toHaveBeenCalled();
+    expect(createPersonalRecipeFromSource).not.toHaveBeenCalled(); expect(createMeal).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
+  it.each([
+    { label: "new generation", owner: PROFILE_OWNER_UUID, generation: 4, revision: 12, ownerContext: true },
+    { label: "different owner", owner: "550e8400-e29b-41d4-a716-446655440097", generation: 3, revision: 12, ownerContext: true },
+    { label: "missing generation", owner: PROFILE_OWNER_UUID, generation: undefined, revision: 12, ownerContext: true },
+    { label: "changed recipe", owner: PROFILE_OWNER_UUID, generation: 3, revision: 13, ownerContext: true },
+    { label: "lost owner context", owner: PROFILE_OWNER_UUID, generation: 3, revision: 12, ownerContext: false },
+  ])("does not replay a private pantry resume for $label", async ({ label, owner, generation, revision, ownerContext }) => {
+    const draft: RecipeEditDraft = { title: "다른 세대의 비공개 초안", description: null, base_servings: 2, ingredients: buildEditIngredients(), steps: [] };
+    fetchJson.mockResolvedValue(buildRecipeDetail({ revision, edit_context: ownerContext ? { base_recipe_revision: revision, draft: { ...draft, title: "현재 서버 제목" }, image_object_id: null } : undefined }));
+    fetchUserProfile.mockResolvedValue({ id: owner, account_generation: generation });
+    const pending = { type: "recipe-fork", recipeId: MOCK_RECIPE_DETAIL.id, redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      createdAt: Date.now(), sourceOwnerUuid: PROFILE_OWNER_UUID, sourceAccountGeneration: 3,
+      resumeEditor: { mode: "edit", rowKey: null }, editContext: { base_recipe_revision: 12, draft, image_object_id: null } };
+    window.sessionStorage.setItem(PENDING_ACTION_KEY, JSON.stringify(pending));
+    render(<RecipeDetailScreen initialAuthenticated recipeId={MOCK_RECIPE_DETAIL.id} recipeSnapshotUiMode="snapshot_v2" />);
+    await screen.findByText(label === "new generation" || label === "different owner" ? /다른 계정으로 로그인해/
+      : label === "missing generation" ? /계정을 잠시 확인하지 못했어요/ : /원래 레시피나 편집 권한이 달라져/);
+    expect(screen.queryByRole("textbox", { name: "레시피 제목" })).toBeNull();
+    expect(screen.queryByDisplayValue(draft.title)).toBeNull();
+    expect(fetchRecipeFutureImpact).not.toHaveBeenCalled(); expect(patchRecipeWithFutureStrategy).not.toHaveBeenCalled();
+    expect(createPersonalRecipeFromSource).not.toHaveBeenCalled();
+  });
+
   it("keeps the public fork editor behind the explicit QA query boundary when server fork context is absent", async () => {
     process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES = "1";
     window.history.pushState({}, "", `/recipe/${MOCK_RECIPE_DETAIL.id}?qaFutureImpact=1`);
@@ -1417,7 +1767,7 @@ describe("recipe detail screen", () => {
 
     const { rerender } = render(<RecipeDetailScreen recipeId={firstRecipeId} />);
     await waitFor(() => {
-      expect(fetchJson).toHaveBeenCalledWith(`/api/v1/recipes/${firstRecipeId}`);
+      expect(fetchJson).toHaveBeenCalledWith(`/api/v1/recipes/${firstRecipeId}`, { headers: { "X-Homecook-Quantity-Contract": "quantity-v4" } });
     });
 
     rerender(<RecipeDetailScreen recipeId={nextRecipeId} />);

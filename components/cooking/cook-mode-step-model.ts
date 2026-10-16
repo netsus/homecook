@@ -15,6 +15,12 @@ export function formatIngredientAmountOnly(
     return "적당량";
   }
 
+  if (!ingredient.quantity_input && ingredient.ingredient_type === "QUANT" && ingredient.food_product_id && ingredient.food_product_nutrition_version_id
+    && ingredient.amount !== null && Number.isFinite(ingredient.amount) && ingredient.amount > 0
+    && ingredient.unit?.trim()) {
+    return `${formatNumber(ingredient.amount)}${ingredient.unit}`;
+  }
+
   if (ingredient.display_text) {
     let normalized =
       stripMatchingSectionPrefix(

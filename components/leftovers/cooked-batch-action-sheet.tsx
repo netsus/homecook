@@ -5,10 +5,15 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppBottomSheet, AppModalFooterActions } from "@/components/shared/app-overlay";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import type {
-  CookedBatchAction,
+  CookedBatchActionView,
   CookedBatchMutationRequest,
 } from "@/components/leftovers/cooked-batch-state";
 import type { CookedBatchProjection } from "@/types/cooking";
+import { useWeightAttestationContext } from "@/components/cooking/use-weight-attestation-context";
+import { weightAttestationInput } from "@/lib/cooking/cooked-weight-attestation";
+import { retractWeightAttestation } from "@/lib/api/cooking";
+import { WEIGHT_ATTESTATION_TEXT } from "@/types/cooked-weight-attestation";
+import { formatQuantityAmount } from "@/lib/quantity-input";
 
 export interface CookedBatchActionError {
   code: string;
@@ -18,7 +23,9 @@ export interface CookedBatchActionError {
 }
 
 interface CookedBatchActionSheetProps {
-  action: CookedBatchAction;
+  returnFocusTarget?: () => HTMLElement | null;
+  restoreFocusWhen?: () => boolean;
+  action: CookedBatchActionView;
   batch: CookedBatchProjection;
   error: CookedBatchActionError | null;
   onClose: () => void;
@@ -26,7 +33,8 @@ interface CookedBatchActionSheetProps {
   pending: boolean;
 }
 
-const titles: Record<CookedBatchAction, string> = {
+const titles: Record<CookedBatchActionView, string> = {
+  view_weight_attestation: "개인 확인 기록",
   set_finished_weight: "완성 중량 입력",
   mark_unrecoverable: "원래 무게를 알 수 없음",
   discard: "버린 양 기록",
@@ -35,7 +43,8 @@ const titles: Record<CookedBatchAction, string> = {
   cancel_current: "방금 종료 취소",
 };
 
-const confirmLabels: Record<CookedBatchAction, string> = {
+const confirmLabels: Record<CookedBatchActionView, string> = {
+  view_weight_attestation: "확인 기록 철회",
   set_finished_weight: "중량 저장",
   mark_unrecoverable: "확인하고 변경",
   discard: "버림 기록",
@@ -57,6 +66,8 @@ function formatGrams(value: number) {
 }
 
 export function CookedBatchActionSheet({
+  returnFocusTarget,
+  restoreFocusWhen,
   action,
   batch,
   error,
@@ -67,18 +78,42 @@ export function CookedBatchActionSheet({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [attested, setAttested] = useState(false);
+  const [retracting, setRetracting] = useState(false);
+  const [retractionError, setRetractionError] = useState<string | null>(null);
+  const retractionAttempt = useRef<{ payload: string; key: string } | null>(null);
+  const retractionInFlight = useRef(false);
+  const retractionSequence = useRef(0);
+  const isRecordView = action === "view_weight_attestation";
+  const attestation = useWeightAttestationContext("batch", batch.id,
+    isRecordView || action === "set_finished_weight" && batch.weight_evidence_enabled === true);
+  const busy = pending || retracting;
+  useEffect(() => { setAttested(false); setRetractionError(null); }, [attestation.context, action]);
+  useEffect(() => {
+    const requests = retractionSequence;
+    setRetracting(false);
+    retractionInFlight.current = false;
+    retractionAttempt.current = null;
+    return () => { ++requests.current; };
+  }, [action, batch.id]);
   const [step, setStep] = useState<"form" | "confirmation">("form");
   const [closureReason, setClosureReason] = useState<"consumed" | "discarded" | "mixed" | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const amountRef = useRef<HTMLInputElement | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
 
-  useDialogBoundary({
-    closeOnEscape: !pending,
+  const { setReturnFocusTarget } = useDialogBoundary({
+    closeOnEscape: !busy,
     dialogRef: panelRef,
     initialFocusRef: titleRef,
     onClose,
+    restoreFocusWhen,
   });
+
+  useEffect(() => {
+    setReturnFocusTarget(returnFocusTarget ?? null);
+  }, [returnFocusTarget, setReturnFocusTarget]);
 
   const parsedAmount = Number(amount);
   const validAmount = amount.trim() !== "" && Number.isFinite(parsedAmount) && parsedAmount !== 0;
@@ -131,7 +166,13 @@ export function CookedBatchActionSheet({
   const submit = () => {
     if (!formValid || pending || batch.revision === null) return;
     if (action === "set_finished_weight") {
-      onSubmit({ action, finished_weight_g: parsedAmount, expected_revision: batch.revision });
+      if (batch.weight_evidence_enabled) {
+        const request: CookedBatchMutationRequest = { action, finished_weight_g: parsedAmount, expected_revision: batch.revision, weight_input_source: "reported_measured" };
+        if (attested && attestation.context?.can_attest && attestation.isCurrentContext(attestation.context)) {
+          request.weight_attestation = weightAttestationInput(attestation.context);
+        }
+        onSubmit(request);
+      } else onSubmit({ action, finished_weight_g: parsedAmount, expected_revision: batch.revision });
     } else if (action === "mark_unrecoverable") {
       onSubmit({ action, expected_revision: batch.revision });
     } else if (action === "discard") {
@@ -142,6 +183,36 @@ export function CookedBatchActionSheet({
       onSubmit({ action, closure_reason: closureReason, expected_revision: batch.revision });
     } else if (action === "cancel_current" && batch.current_unweighed_closure_event_id) {
       onSubmit({ action, reverses_event_id: batch.current_unweighed_closure_event_id, expected_revision: batch.revision });
+    }
+  };
+
+  const retract = async () => {
+    const context = attestation.context;
+    const record = context?.record;
+    if (busy || retractionInFlight.current || !context || record?.status !== "attested" || !attestation.isCurrentContext(context)) return;
+    retractionInFlight.current = true;
+    const request = ++retractionSequence.current;
+    const body = { expected_subject: context.subject, expected_record_id: record.id, expected_revision: record.revision,
+      expected_context_fingerprint: record.context_fingerprint };
+    const payload = JSON.stringify(body);
+    const attempt = retractionAttempt.current?.payload === payload ? retractionAttempt.current : { payload, key: crypto.randomUUID() };
+    retractionAttempt.current = attempt;
+    setRetracting(true);
+    setRetractionError(null);
+    try {
+      const value = await retractWeightAttestation(batch.id, body, attempt.key);
+      if (request !== retractionSequence.current || !attestation.isCurrentContext(context)) return;
+      if (value.record?.status !== "retracted" || value.record.measurement_evidence_id !== record.measurement_evidence_id
+        || value.record.context_fingerprint !== record.context_fingerprint || value.record.measured_g !== record.measured_g
+        || !attestation.accept(value, context)) throw new Error("INVALID_RETRACTION_RESPONSE");
+      retractionAttempt.current = null;
+    } catch {
+      if (request === retractionSequence.current && attestation.isCurrentContext(context)) setRetractionError("확인 기록을 철회하지 못했어요. 다시 시도해 주세요.");
+    } finally {
+      if (request === retractionSequence.current) {
+        retractionInFlight.current = false;
+        setRetracting(false);
+      }
     }
   };
 
@@ -170,9 +241,12 @@ export function CookedBatchActionSheet({
     <AppBottomSheet
       ariaLabelledBy="cooked-batch-action-title"
       bodyClassName="space-y-4"
-      closeDisabled={pending}
+      closeDisabled={busy}
       description={batch.recipe_title}
-      footer={
+      footer={isRecordView ? <div className="flex flex-wrap gap-2">
+        <button className="min-h-11 flex-1 rounded-[var(--radius-control)] border px-4" disabled={busy} onClick={onClose} type="button">닫기</button>
+        {attestation.context?.record?.status === "attested" ? <button className="min-h-11 flex-1 rounded-[var(--radius-control)] border border-[var(--danger-border)] px-4 text-[var(--danger-strong)]" disabled={busy || attestation.loading} onClick={() => void retract()} type="button">{retracting ? "철회 중…" : "확인 기록 철회"}</button> : null}
+      </div> :
         <div
           className={`${destructive ? "[--wave1-mint-contrast:var(--danger-strong)] [--wave1-mint-contrast-deep:var(--foreground)]" : "[--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)]"} [&_button]:text-base`}
           data-testid="cooked-batch-action-actions"
@@ -187,7 +261,7 @@ export function CookedBatchActionSheet({
           />
         </div>
       }
-      onClose={() => { if (!pending) onClose(); }}
+      onClose={() => { if (!busy) onClose(); }}
       panelClassName="max-w-[430px]"
       panelRef={panelRef}
       testId="cooked-batch-action-sheet"
@@ -195,15 +269,38 @@ export function CookedBatchActionSheet({
       titleRef={titleRef}
       titleTabIndex={-1}
     >
+      {isRecordView ? <section aria-label="개인 확인 이력" className="space-y-3">
+        {attestation.loading ? <p role="status">개인 확인 기록을 불러오는 중…</p> : null}
+        {attestation.error ? <p role="alert">{attestation.error}</p> : null}
+        {retractionError ? <p role="alert">{retractionError}</p> : null}
+        {attestation.error ? <button aria-disabled={attestation.loading || undefined} className="min-h-11 text-[var(--brand)]" disabled={busy} onClick={event => void attestation.retry(event.currentTarget, titleRef)} type="button">개인 확인 정보 다시 불러오기</button> : null}
+        {attestation.context?.record ? <>
+          <p className="font-bold">{attestation.context.record.status === "attested" ? "본인이 확인한 개인 기록이에요." : "철회한 개인 확인 기록이에요."}</p>
+          <p>당시 실측 {formatQuantityAmount(attestation.context.record.measured_g)}g</p>
+          <p className="text-sm text-[var(--text-2)]">{new Date(attestation.context.record.observed_at).toLocaleString("ko-KR")}</p>
+          <p className="text-sm leading-5">{WEIGHT_ATTESTATION_TEXT}</p>
+          <p className="text-sm leading-5 text-[var(--text-2)]">측정 정확도를 검증한 기록은 아니에요. 개인 확인을 철회해도 원무게와 식사 기록은 바뀌지 않아요.</p>
+        </> : attestation.context ? <p>개인 확인 기록이 없어요. 기존 실측 무게는 그대로예요.</p> : null}
+      </section> : null}
       {pending ? <p className="rounded-[var(--radius-card)] bg-[var(--brand-primary-soft)] p-3 text-sm" role="status">저장 중…</p> : null}
       {error ? <div className="rounded-[var(--radius-card)] border border-[var(--danger-border)] p-3 text-sm outline-none" id={ERROR_SUMMARY_ID} ref={errorRef} role="alert" tabIndex={-1}>{error.message}</div> : null}
 
       {!isConfirmationStep && action === "set_finished_weight" ? (
         <>
-          <label className="block text-sm font-bold">음식만의 원래 전체 중량(g)
-            <input aria-describedby={amountInvalid ? ERROR_SUMMARY_ID : undefined} aria-invalid={amountInvalid || undefined} aria-label="음식만의 원래 전체 중량" className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base" disabled={pending} inputMode="decimal" min="0" onChange={(event) => setAmount(event.target.value)} type="number" value={amount} />
+          <label className="block text-sm font-bold">{batch.weight_evidence_enabled ? "저울로 잰 전체무게(g)" : "음식만의 원래 전체 중량(g)"}
+            <input aria-describedby={amountInvalid ? ERROR_SUMMARY_ID : undefined} aria-invalid={amountInvalid || undefined} aria-label={batch.weight_evidence_enabled ? "저울로 잰 전체무게" : "음식만의 원래 전체 중량"} className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base" disabled={pending} inputMode="decimal" min="0" onChange={(event) => { setAmount(event.target.value); if (!event.target.value.trim() || Number(event.target.value) <= 0) setAttested(false); }} ref={amountRef} type="number" value={amount} />
           </label>
-          <p className="text-sm leading-5 text-[var(--text-2)]">용기를 제외한, 먹기 전 전체 무게예요.</p>
+          <p className="text-sm leading-5 text-[var(--text-2)]">{batch.weight_evidence_enabled ? "먹거나 버리기 전 음식 전체를 재 주세요. 용기는 빼고 먹을 국물은 포함해 주세요. 남은 양이나 한 접시 무게는 입력하지 않아요." : "용기를 제외한, 먹기 전 전체 무게예요."}</p>
+          {batch.weight_evidence_enabled ? <div className="space-y-2">
+            {attestation.loading ? <p className="text-sm text-[var(--text-2)]" role="status">개인 확인 정보를 불러오는 중…</p> : null}
+            {attestation.context?.can_attest ? <label className="flex items-start gap-3 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm leading-5">
+              <input aria-label={WEIGHT_ATTESTATION_TEXT} checked={attested} className="mt-0.5 h-5 w-5 shrink-0" disabled={pending || !validAmount || parsedAmount <= 0} onChange={event => setAttested(event.target.checked)} type="checkbox" />
+              <span><strong className="mb-1 block">개인 확인 (선택)</strong>{WEIGHT_ATTESTATION_TEXT}</span>
+            </label> : null}
+            {attestation.error || attestation.context && !attestation.context.can_attest ? <p className="text-sm text-[var(--text-2)]">{attestation.error ?? "지금은 개인 확인을 함께 기록할 수 없어요."} 확인 없이 전체무게를 저장할 수 있어요.</p> : null}
+            {attestation.error ? <button aria-disabled={attestation.loading || undefined} className="min-h-11 text-sm text-[var(--brand)]" disabled={pending} onClick={event => void attestation.retry(event.currentTarget, amountRef)} type="button">개인 확인 정보 다시 불러오기</button> : null}
+            {attestation.context?.can_attest ? <p className="text-sm leading-5 text-[var(--text-2)]">본인이 확인한 개인 기록이에요. 측정 정확도를 검증하거나 개선 자료 수집에 참여하는 동의가 아니에요.</p> : null}
+          </div> : null}
         </>
       ) : null}
       {!isConfirmationStep && (action === "discard" || action === "adjust") ? (
@@ -237,7 +334,7 @@ export function CookedBatchActionSheet({
       {action === "mark_unrecoverable" ? <p className="text-sm leading-6">이 변경은 되돌릴 수 없어요. 이후에는 완성 중량 입력, g 영양 계산, g 식사 기록을 사용할 수 없고 0g으로 추정하지 않아요.</p> : null}
       {action === "cancel_current" ? <p className="text-sm leading-6">방금 종료한 상태를 되돌려요.</p> : null}
 
-      {!isConfirmationStep && action !== "discard" && action !== "adjust" ? (
+      {!isRecordView && !isConfirmationStep && action !== "discard" && action !== "adjust" ? (
         <label className="flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm leading-5">
           <input checked={confirmed} className="mt-0.5 h-5 w-5" disabled={pending} onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" />
           <span>{action === "set_finished_weight"

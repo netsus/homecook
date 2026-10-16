@@ -113,14 +113,38 @@ export function prepareSourceBoundQuantitiesForResolution(runtimeResult) {
     return { runtimeResult, ingredientIndexes: [] };
   }
   const ingredientIndexes = [];
+  let changed = false;
   const ingredients = recipe.ingredients.map((value, index) => {
     const ingredient = record(value);
-    if (!ingredient || ingredient.amountBasis !== "source-bound-stated") return value;
-    ingredientIndexes.push(index);
-    return { ...ingredient, amountBasis: "stated" };
+    if (!ingredient) return value;
+    if ("quantity_input" in ingredient || "unit_context" in ingredient
+      || "_quantity_owner_action" in ingredient || "expected_context_fingerprint" in ingredient) {
+      throw new Error("untrusted worker quantity metadata");
+    }
+    let output = ingredient;
+    if (ingredient.amountBasis === "source-bound-stated") {
+      ingredientIndexes.push(index);
+      output = { ...ingredient, amountBasis: "stated" };
+      changed = true;
+    }
+    // Transport literal text only. SQL's existing policy and ingredient
+    // resolver decide whether to persist server-resolved v4 evidence.
+    // Mixed fractions retain their existing source text; this does not extend
+    // the shared v4 parser or approximate them as decimal input.
+    if (output.quantityState === "explicit" && ["stated", "spoken", "onscreen"].includes(output.amountBasis)
+      && Array.isArray(output.evidenceRefs) && output.evidenceRefs.length > 0
+      && typeof output.amount === "string" && output.amount.length <= 64
+      && /^(?:\d+(?:\.\d*)?|\.\d+|\d+\s*\/\s*\d+)$/u.test(output.amount.trim())
+      && typeof output.unit === "string" && output.unit.trim() && output.unit.length <= 20) {
+      output = { ...output, quantity_input: {
+        schema_version: "quantity-v4", raw_value: output.amount, raw_unit: output.unit,
+      } };
+      changed = true;
+    }
+    return output;
   });
   return {
-    runtimeResult: ingredientIndexes.length > 0
+    runtimeResult: changed
       ? { ...result, recipe: { ...recipe, ingredients } }
       : runtimeResult,
     ingredientIndexes,
@@ -148,7 +172,7 @@ export function finalizeResolvedSourceBoundQuantities(resolvedDraft, ingredientI
     if (!ingredient) throw new Error("source-bound ingredient resolution is invalid");
     if (ingredient.resolution_status === "resolved") return ingredient;
     const name = typeof ingredient.standard_name === "string" ? ingredient.standard_name.trim() : "";
-    return {
+    const output = {
       ...ingredient,
       amount: null,
       unit: null,
@@ -160,6 +184,9 @@ export function finalizeResolvedSourceBoundQuantities(resolvedDraft, ingredientI
       quantity_confidence: null,
       quantity_review_required: true,
     };
+    delete output.quantity_input;
+    delete output.quantity_context_fingerprint;
+    return output;
   });
   return { ...resolved, draft: { ...draft, ingredients } };
 }

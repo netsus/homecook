@@ -5810,3 +5810,47 @@ GET /api/v1/users/me/action-notifications는 unseen/archive 페이지와 unread_
 ### 2026-10-09 식사기록 양 초과 오류 구분 (운영 반영: PR #1600)
 
 식사기록 mutation RPC에서 SQLSTATE22003와 CONFLICT가 함께 반환되면 HTTP409/codeCONFLICT를 유지하고 `fields: [{field: "quantity.amount", reason: "exceeds_available_amount"}]`를 제공한다. 이 경우 UI는 양을 줄이라는 안내를 표시하며 ‘다른 변경의 최신 기록 반영’으로 바꾸지 않는다. 실제 revision 충돌과 계정 권한·세대 검사는 유지한다. SQL/DB 변경 없음.
+
+
+## 2026-10-14 추가 계약 — C03 공공제품 독립 재료(운영 미적용)
+
+기존 ingredient_id 필수 계약은 정확한 public_dataset 제품+영양 버전을 가진 food_product 행에 한해 nullable로 확장한다. source_kind(ingredient/food_product)와 UUID row_key를 재료/단계 참조에 추가하며 일반 재료 null은 허용하지 않는다. 옛 편집기의 새 출처/명시 참조 손실은 409 RECIPE_SOURCE_CONTRACT_REQUIRED다. GET /food-catalog/search의 pantry_item_id는 실제 own pantry와 요청 product를 함께 검증하며 과거 공공제품 버전을 기존 RPC로 읽는다. GET /users/me의 선택적 account_generation은 기존 검증 세션에서만 구하고 검증 실패 시 생략한다. 기존 응답·오류 래퍼와 소유권/409 보호를 유지한다.
+
+구현·검증과 좁은 공개 권한 및 기존 잔존 위험은 [C03 계약](engineering/mumeok-beta-product-contract-20261014.md)을 따른다. 운영 DB/권한/새 형식 쓰기는 정확 SQL·대상·백업·복구를 확인한 별도 승인 전 적용하지 않는다.
+
+## 2026-10-14 베타 v9 C01 · 운영 기본 OFF 로컬 통합 준비
+
+공개 endpoint와 `{success,data,error}`는 유지한다. 완료/무게 `set_finished_weight`에만 선택 `weight_input_source=reported_measured`를 허용하고 client 예측/source ID/owner 주입은 거절한다. 정확 `X-Homecook-Cooked-Weight-Contract: evidence-v1`일 때만 additive weight summary/9키 식사 weight_basis·선택 weight_assumption_codes를 반환한다. 서버 wrapper의 정확한 SQLSTATE `55000`/`COOKED_WEIGHT_EVIDENCE_DISABLED` 응답에만, 명시 source 없는 일반 완료·구 수동 무게 요청을 기존 RPC로 처리한다. 실패한 wrapper transaction의 receipt·근거·완료 쓰기는 남지 않는다. `reported_measured` 요청은 헤더 유무와 무관하게409를 유지하며 요리 정보 갱신 후 일반 완료는 새 요청으로 보낸다. 일반 충돌·권한·멱등 오류에는 호환 재시도를 하지 않는다. 이미 성공한 근거 receipt는 OFF 후에도 원결과를 재생한다. 헤더 없음·미지원 판본은 기존 DTO, 새 client는 구 DTO를 읽는다. 헤더는 display opt-in이며 동의/권한/receipt 입력이 아니다. 최종 C03 통합·보안 지문·타입/빌드·독립 리뷰·운영 적용 승인은 별도 대기다. [상세 계약·검사·한계](engineering/cooked-weight-evidence-integration-20261014.md)를 따른다.
+
+
+## 2026-10-15 — cooked weight 개인 확인 API (로컬·운영 미적용)
+
+현재 소스·SQL 작성 마무리와 격리 검증 단계이며 운영 미적용이다. 같은 v9의 검증 후 반영은 최신 사용자 상시 승인으로 진행한다. 과거의 구현 승인 대기 문장은 당시 기록이며, 여기의 미적용 표시는 배포 완료를 뜻하지 않는다. 기본 응답은 `{success,data,error}`, 오류는 `{code,message,fields[]}`를 유지한다.
+
+| 경로 | 요청·응답 계약 |
+| --- | --- |
+| `GET /api/v1/cooked-weight-attestations/{id}?target=session` 또는 `?target=batch` | 인증 필수. id는 target의 session 또는 batch UUID이며 target은 필수다. data는 schema/statement version, 검증된 subject, target kind/id, context fingerprint, recipe content snapshot ID, cooking servings, can_attest, nullable record다. 세션 완료 전 context와 배치의 개인 기록 조회를 구분한다. |
+| `PATCH /api/v1/cooked-weight-attestations/{id}` | id는 batch UUID. UUID `Idempotency-Key`와 아래 철회 precondition4개를 요구하고, data는 batch context와 retracted record다. event ID를 URL target으로 사용하지 않는다. |
+| 기존 `POST /api/v1/cooking/session-attempts/{id}/complete` / `PATCH /api/v1/cooked-batches/{id}/weight` | `set_finished_weight` + 양수 finished_weight_g + `weight_input_source=reported_measured`의 새 저장에만 optional weight_attestation을 허용한다. completion은 weight_action, weight API는 action을 사용한다. 생략하면 기존 요청/RPC/응답 계약이며 명시 확인 성공 때만 data.weight_attestation을 추가한다. |
+
+`weight_attestation`의 exact4필드: `statement_version="pinned-quantities-whole-net-weight-v1"`, `checked=true`, `expected_subject={owner_uuid,account_generation}`, `expected_context_fingerprint=<64hex>`. 미선택은 필드 생략이며 checked=false/null을 보내지 않는다. 신규 저장 지문은 현재 GET context에서 온다. 표시 subject는 권한이 아니라 전제조건이고 서버가 실제 session/owner/generation을 재검증한다.
+
+철회 exact4필드: `expected_subject`, `expected_record_id`, `expected_revision`, `expected_context_fingerprint`. ID/revision/지문은 **GET record의 값**이며 현재 top-level context 지문으로 바꾸지 않는다. 유효한 동일 요청 재생/OFF read·retract는 허용하고 옛 C01 영수증에 새 확인을 덧붙이지 않는다.
+
+record는 id/revision/status(`attested`1 또는 `retracted`2), statement version, measurement_evidence_id/measurement_original_revision, measured_g, recipe_content_snapshot_id, 저장 context_fingerprint, observed_at, row_count와 `provenance=user_attested`, `physical_verification=not_verified`, `record_usage=qa_personal_record`를 제공한다. 새 확인 응답의 지문/측정g는 요청과 저장 결과에 일치해야 한다. C05 동의·수집·기간·모델 적격을 포함하지 않는다.
+
+미로그인401과 없는/타인 target404를 유지한다. 신규 조회의 id/target 형식 오류는422, 철회 본문의 형식/추가필드 오류는422이며 기존 완료·무게 API의 id404/본문422 계약은 유지한다. 새409는 `WEIGHT_ATTESTATION_DISABLED`, `WEIGHT_ATTESTATION_SUBJECT_CHANGED`, `WEIGHT_ATTESTATION_CONTEXT_CHANGED`, `WEIGHT_ATTESTATION_REVISION_CONFLICT`, `WEIGHT_ATTESTATION_OLD_RECEIPT`이며 기존 세대/세션/멱등409·정비503도 유지한다. 잘못된 결과는 서버500 INVALID_RESPONSE/INTERNAL_ERROR 또는 client502 INVALID_RESPONSE로 성공 처리하지 않는다. 세부 구현·검사·남은 배포 경계는 [개인 무게 확인 계약](engineering/cooked-weight-user-attestation-20261015.md)을 따른다.
+
+### 2026-10-15 C04 영양 snapshot 사유 호환 보완
+
+`recipe-nutrition-v4` 계산의 `warnings[]`는 기존 코드에 더해 `UNIT_DEFINITION_REQUIRED`, `UNIT_DEFINITION_CONFLICT`, `PIECE_IDENTITY_REQUIRED`, `DENSITY_REQUIRED`, `AMBIGUOUS_EVIDENCE`, `UNIT_MEASUREMENT_ESTIMATE_USED`만 정확히 허용한다. 앞의 5개는 `<code>:<ingredient-row-id>` 누락 사유도 보존하며, 마지막 코드는 검토된 평균 측정값이 실제 계산에 기여했다는 추정 경고다. 이 경고를 직접값이나 AI 추정으로 해석하지 않는다. unknown은 null/partial/minimum으로 유지한다.
+
+새 쓰기의 JS·SQL 검증은 정확한 `recipe-nutrition-v4`에만 이 추가 코드를 허용한다. 저장된 snapshot 읽기는 기존 조회 필드로 알려진 코드만 해석하며 가짜 projection version을 쓰기 권위로 사용하지 않는다. 경고·누락 사유·벡터·출처의 보존과 기존 v3, 상태·권한·멱등성 계약은 유지한다. 원문 수량의 상세 `quantity_input.reason`을 상위 사유로 치환하지 않는다.
+
+## 2026-10-15 — 개인 레시피 수정 성공 재시도 (로컬·운영 미적용)
+
+기존 `PATCH /api/v1/recipes/{id}` 요청/성공 `{success:true,data:{id,revision},error:null}`와 오류 래퍼를 유지한다. 현재 검증 세션·소유자·세대와 본인 private/nondeleted 대상을 확인한 뒤 같은 UUID 키·정규화된 원 요청 전체에 결속된 성공을 먼저 읽는다. URL UUID의 대소문자는 동일 대상을 뜻한다. 성공 결과는 현재 revision/영양 근거/미리보기 소비 또는 quantity OFF 뒤에도 새 저장 없이 반환하며, 없는 요청만 기존 revision·수량/영양 준비·쓰기 보호를 통과한다.
+
+같은 키의 다른 본문·header 계약, legacy NULL 바인딩·비성공/불완전 영수증은 `409 IDEMPOTENCY_KEY_REUSED`다. reader 오류를 없는 요청으로 처리하지 않으며 미로그인401·없거나 타인 대상404·기존409/422/500과 권한 검사를 유지한다. 새 endpoint·client digest·자동 재시도는 없다. 내부 서비스 전용 POST RPC 두 개는 `read_recipe_future_patch_result`, `write_recipe_future_plan_change_recoverable`이며 기존 writer는 그대로다. [정확한 결속·검사·통합 한계](engineering/recipe-future-patch-http-replay-20261015.md)를 따른다.
+
+같은 릴리즈로 검토하는 [개인 영양 사유 v5](engineering/recipe-nutrition-semantic-reason-identity-v5.md)는 개인 quantity 저장의 사유 identity만 보완한다. 계산 엔진 수치·기존 v4 요청·과거 snapshot은 보존한다. 신규 SQL `20261014225200`과 HTTP 재시도 `20261014225300`의 통합·운영 반영은 별도이며 이 addendum은 적용 완료 기록이 아니다.

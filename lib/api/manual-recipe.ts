@@ -1,3 +1,4 @@
+import { QUANTITY_CONTRACT_HEADER, QUANTITY_INPUT_VERSION } from "@/types/quantity-input";
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type { ManualRecipeCreateBody, ManualRecipeCreateData } from "@/types/recipe";
@@ -255,17 +256,14 @@ export async function createManualRecipe(
   options?: { idempotencyKey: string; expectedOwnerId: string },
 ): Promise<ApiResponse<ManualRecipeCreateData>> {
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (options) { headers["Idempotency-Key"] = options.idempotencyKey; headers["X-Homecook-Draft-Owner"] = options.expectedOwnerId; }
+    headers[QUANTITY_CONTRACT_HEADER] = QUANTITY_INPUT_VERSION;
     const response = await fetch(
       "/api/v1/recipes",
       withE2EAuthOverrideHeaders({
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(options ? {
-            "Idempotency-Key": options.idempotencyKey,
-            "X-Homecook-Draft-Owner": options.expectedOwnerId,
-          } : {}),
-        },
+        headers,
         body: JSON.stringify(body),
       }),
     );

@@ -1618,7 +1618,7 @@ function writeRestoreManifest({
   return restoreManifest;
 }
 
-function restoredPlatformDataSnapshot(runtime, metadata) {
+export function restoredPlatformDataSnapshot(runtime, metadata) {
   const staging = mkdtempSync(join(tmpdir(), "homecook-restored-data-"));
   chmodSync(staging, 0o700);
   try {

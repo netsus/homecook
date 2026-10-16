@@ -34,6 +34,9 @@ const ownerId = "550e8400-e29b-41d4-a716-446655440301";
 const recipeId = "550e8400-e29b-41d4-a716-446655440302";
 const key = "550e8400-e29b-41d4-a716-446655440303";
 const draft = { title: "권한 테스트", base_servings: 2, ingredients: [], steps: [] };
+const quantityContext = { revision: 12, edit_context: {
+  base_recipe_revision: 12, draft: { ...draft, description: null }, image_object_id: null,
+} };
 
 function readFuturePropagationMigration() {
   const candidates = readdirSync(migrationsDir)
@@ -209,6 +212,8 @@ describe("recipe future impact security", () => {
       data: { id: recipeId, revision: 13 },
       error: null,
     });
+    rpc.mockResolvedValueOnce({ data: { state: "absent", result: null }, error: null })
+      .mockResolvedValueOnce({ data: quantityContext, error: null });
     const ingredientId = "550e8400-e29b-41d4-a716-446655440304";
 
     const { PATCH } = await importRecipeRoute();
@@ -233,7 +238,10 @@ describe("recipe future impact security", () => {
     expectPublicError(await failed.json(), "INTERNAL_ERROR");
     expect(readVerifiedAccountGenerationSession).toHaveBeenCalledTimes(1);
     expect(from).toHaveBeenCalledTimes(1);
-    expect(rpc).not.toHaveBeenCalled();
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+      "read_recipe_future_patch_result", "read_recipe_snapshot_entrypoint_context",
+    ]);
+    expect(rpc.mock.calls.some(([name]) => String(name).startsWith("write_"))).toBe(false);
   });
 
   it("maps missing and other-owner preview results to the same non-disclosing 404 wrapper", async () => {
@@ -295,9 +303,14 @@ describe("recipe future impact security", () => {
       if (/capability/i.test(name)) {
         return { data: { state: "generation_active", revision: 4 }, error: null };
       }
-      if (args.p_future_plan_strategy === "keep") {
+      if (name === "read_recipe_snapshot_entrypoint_context") return { data: quantityContext, error: null };
+      const request = args.p_request_body;
+      if (request && typeof request === "object" && "future_plan_strategy" in request && request.future_plan_strategy === "keep") {
         return { data: null, error: { code: "P0001", message: "IDEMPOTENCY_KEY_REUSED" } };
       }
+      if (name === "read_recipe_future_patch_result") return { data: mutationCount
+        ? { state: "succeeded", result: { success: true, data: { id: recipeId, revision: 13 }, error: null } }
+        : { state: "absent", result: null }, error: null };
       mutationCount += mutationCount === 0 ? 1 : 0;
       return { data: { id: recipeId, revision: 13 }, error: null };
     });

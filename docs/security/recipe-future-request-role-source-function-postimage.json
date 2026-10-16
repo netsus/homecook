@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "feature": "recipe-future-request-role",
+  "migration": {
+    "filename": "20261015100000_recipe_future_request_role.sql",
+    "sha256": "2322ccf737382e9738aa2c3d5cb50531c769c1a7902e2f621c8d378f9ce1505e"
+  },
+  "preimage": {
+    "signature": "private.verify_full_local_internal_scope()",
+    "lookupSignature": "private.verify_full_local_internal_scope()",
+    "name": "verify_full_local_internal_scope",
+    "schema": "private",
+    "owner": "postgres",
+    "allowedAcl": "",
+    "sourceHash": "cdba05648213ef145555dfc02fd234c8",
+    "definitionSha256": "59cd9173efa0be26485d26e8c94ff49b816459c6f915b8bf41ade64838526ee4",
+    "configuration": [
+      "search_path=pg_catalog, public, private, pg_temp"
+    ],
+    "searchPath": "pg_catalog,public,private,pg_temp",
+    "volatility": "v",
+    "securityDefiner": true
+  },
+  "postimage": {
+    "signature": "private.verify_full_local_internal_scope()",
+    "lookupSignature": "private.verify_full_local_internal_scope()",
+    "name": "verify_full_local_internal_scope",
+    "schema": "private",
+    "owner": "postgres",
+    "allowedAcl": "",
+    "sourceHash": "e6eb35af2e77538b72d655b16f408967",
+    "definitionSha256": "3b5f09838ffee6b4a2844bc3eebe86cd6eb75601b8ab7fc4703feb8ddeae1320",
+    "configuration": [
+      "search_path=pg_catalog, public, private, pg_temp"
+    ],
+    "searchPath": "pg_catalog,public,private,pg_temp",
+    "volatility": "v",
+    "securityDefiner": true
+  }
+}

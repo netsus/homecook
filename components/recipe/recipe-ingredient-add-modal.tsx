@@ -24,7 +24,8 @@ import {
   WebSkeleton,
   WebIconButton,
 } from "@/components/web";
-import { RecipeFoodCatalogPicker } from "@/components/recipe/recipe-food-catalog-picker";
+import { RecipeFoodCatalogPicker, type RecipeProductSelectionContexts, type RecipeQuantitySelectionContexts } from "@/components/recipe/recipe-food-catalog-picker";
+import type { RecipeIngredientIdentity } from "@/lib/recipe-ingredient-source";
 import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   ALL_INGREDIENT_CATEGORY,
@@ -41,15 +42,20 @@ type IngredientListState = "loading" | "ready" | "empty" | "error";
 interface RecipeIngredientAddModalProps {
   enableProducts?: boolean;
   excludedIngredientIds?: string[];
+  excludedIngredients?: readonly (RecipeIngredientIdentity & { component_label?: string | null })[];
+  componentLabel?: string | null;
+  replacementIngredient?: RecipeIngredientIdentity;
+  replacementProduct?: RecipeProductSelectionContexts[string];
+  initialSource?: "catalog" | "pantry";
+  onRequireLogin?: () => void | string;
   single?: boolean;
   onClose: () => void;
-  onAdd: (ingredients: ManualRecipeIngredientInput[]) => void;
+  onAdd: (ingredients: ManualRecipeIngredientInput[], products?: RecipeProductSelectionContexts, quantities?: RecipeQuantitySelectionContexts) => void;
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
   presentation?: "auto" | "web" | "app";
 }
 
-const DEFAULT_INGREDIENT_AMOUNT = 100;
 const DEFAULT_INGREDIENT_UNIT = "g";
 const INGREDIENT_ADD_DESCRIPTION = "재료를 골라 추가해요";
 
@@ -97,16 +103,17 @@ function buildIngredientInput(
     ingredient_id: ingredient.id,
     standard_name: ingredient.standard_name,
     ingredient_type: "QUANT",
-    amount: DEFAULT_INGREDIENT_AMOUNT,
+    amount: null,
     unit: DEFAULT_INGREDIENT_UNIT,
     scalable: true,
-    display_text: `${ingredient.standard_name} ${DEFAULT_INGREDIENT_AMOUNT}${DEFAULT_INGREDIENT_UNIT}`,
+    display_text: ingredient.standard_name,
     sort_order: sortOrder,
   };
 }
 
 export function RecipeIngredientAddModal(props: RecipeIngredientAddModalProps) {
-  return props.enableProducts ? <RecipeFoodCatalogPicker onAdd={props.onAdd} onClose={props.onClose} single={props.single} excludedIngredientIds={props.excludedIngredientIds} /> : <IngredientOnlyAddModal {...props} />;
+  return props.enableProducts ? <RecipeFoodCatalogPicker onAdd={props.onAdd} onClose={props.onClose} single={props.single} excludedIngredientIds={props.excludedIngredientIds} excludedIngredients={props.excludedIngredients} componentLabel={props.componentLabel}
+    replacementIngredient={props.replacementIngredient} replacementProduct={props.replacementProduct} initialSource={props.initialSource} onRequireLogin={props.onRequireLogin} /> : <IngredientOnlyAddModal {...props} />;
 }
 
 function IngredientOnlyAddModal({
@@ -234,6 +241,7 @@ function IngredientOnlyAddModal({
         <WebDialog
           aria-labelledby="ingredient-picker-title"
           className="web-ingredient-picker-dialog ingredient-search-panel"
+          manageFocus={false}
           ref={dialogRef}
           tabIndex={-1}
           size="narrow"

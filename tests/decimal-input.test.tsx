@@ -6,13 +6,29 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DecimalInput } from "@/components/shared/decimal-input";
 
 afterEach(cleanup);
-function Editor({ changed, initial = 0 }: { changed: (value: number | null) => void; initial?: number }) {
+function Editor({ changed, initial = 0, fractions = false, rawChanged }: { changed: (value: number | null) => void; initial?: number; fractions?: boolean; rawChanged?: (value: string) => void }) {
   const [value, setValue] = useState<number | null>(initial);
-  return <DecimalInput aria-label="수량" min="0" step="any" className="existing-quantity-style" value={value}
+  return <DecimalInput allowFractions={fractions} onRawValueChange={rawChanged} aria-label="수량" min="0" step="any" className="existing-quantity-style" value={value}
     onValueChange={(next) => { changed(next); setValue(next); }} />;
 }
 
 describe("decimal editing", () => {
+  it("preserves a opted-in fraction through blur and publishes its raw input", async () => {
+    const changed = vi.fn(), raw = vi.fn(), user = userEvent.setup();
+    render(<Editor changed={changed} rawChanged={raw} fractions />);
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: "수량" });
+    await user.clear(input); await user.type(input, "1/3"); await user.tab();
+    expect(input.value).toBe("1/3");
+    expect(changed).toHaveBeenLastCalledWith(1 / 3);
+    expect(raw).toHaveBeenLastCalledWith("1/3");
+  });
+  it("does not confirm an invalid opted-in denominator", async () => {
+    const changed = vi.fn(), user = userEvent.setup();
+    render(<Editor changed={changed} fractions />);
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: "수량" });
+    await user.clear(input); await user.type(input, "1/0");
+    expect(input.value).toBe("1/0"); expect(changed).toHaveBeenLastCalledWith(null);
+  });
   it("lets a user replace zero with 12.5 without restoring zero or dropping the decimal point", async () => {
     const changed = vi.fn(); const user = userEvent.setup();
     render(<Editor changed={changed} />);

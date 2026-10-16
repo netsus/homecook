@@ -109,6 +109,7 @@ describe("cooked batch mutation contract", () => {
         action: "set_finished_weight",
         finishedWeightG: 1480,
         expectedRevision: 1,
+        weightInputSource: null,
       },
     });
     expect(parseBatchWeightRequest({

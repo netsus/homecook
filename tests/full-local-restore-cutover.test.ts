@@ -48,6 +48,69 @@ object-a\trecipe-images\tuser-a/a.jpg
 `;
 
 describe("full-local platform restore boundary", () => {
+  it.each(["f", "t"])("preserves the exact personal-attestation write control value %s", enabled => {
+    const control = `COPY private.cooked_weight_user_attestation_control (singleton, enabled) FROM stdin;\nt\t${enabled}\n\\.\n`;
+    const source = buildSanitizedPlatformData(platformData + control);
+    expect(source.sql).toContain(control);
+    expect(source.manifest.relations).toContainEqual(expect.objectContaining({ relation: "private.cooked_weight_user_attestation_control", action: "include" }));
+    expect(() => buildSanitizedPlatformData(platformData + control.replace("private.cooked_weight_user_attestation_control", "private.other_weight_attestation_control"))).toThrow("Unclassified");
+    expect(() => verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: platformData + control.replace(`t\t${enabled}\n`, `t\t${enabled === "t" ? "f" : "t"}\n`),
+      sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+      sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+      sourceRelationClassificationDigest: source.manifest.relation_classification_digest,
+    })).toThrow();
+  });
+  it("preserves personal attestation and retraction rows without admitting other private tables", () => {
+    const attestations = `COPY private.cooked_weight_user_attestations (id, owner_uuid, event_kind, prior_assertion_id) FROM stdin;
+fixture-assert\tfixture-owner\tattested\t\\N
+fixture-retract\tfixture-owner\tretracted\tfixture-assert
+\\.
+`;
+    const source = buildSanitizedPlatformData(platformData + attestations);
+    expect(source.manifest.relations).toContainEqual(expect.objectContaining({ relation: "private.cooked_weight_user_attestations", action: "include" }));
+    expect(source.sql).toContain(attestations);
+    expect(() => buildSanitizedPlatformData(platformData + attestations.replaceAll("private.cooked_weight_user_attestations", "private.other_weight_user_attestations"))).toThrow("Unclassified");
+    for (const altered of [
+      attestations.replace("fixture-owner", "other-owner"),
+      attestations.replace("fixture-retract\tfixture-owner\tretracted\tfixture-assert\n", ""),
+    ]) {
+      expect(() => verifyRestoredPlatformDataSnapshot({
+        restoredDataSql: platformData + altered,
+        sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+        sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+        sourceRelationClassificationDigest: source.manifest.relation_classification_digest,
+      })).toThrow();
+    }
+  });
+  it("preserves exact C04 OFF/ON policy bytes and rejects similar unknown private relations", () => {
+    for (const enabled of ["f", "t"]) {
+      const policy = `COPY private.quantity_input_v4_policy (singleton, enabled) FROM stdin;\nt\t${enabled}\n\\.\n`;
+      const result = buildSanitizedPlatformData(platformData + policy);
+      expect(result.manifest.relations).toContainEqual(expect.objectContaining({ relation: "private.quantity_input_v4_policy", action: "include" }));
+      expect(result.sql).toContain(policy);
+      expect(() => buildSanitizedPlatformData(platformData + policy.replace("private.quantity_input_v4_policy", "private.quantity_input_v5_policy"))).toThrow("Unclassified");
+    }
+  });
+  it("includes only exact C03/C01 controls and private personal weight evidence in the existing restore classification", () => {
+    const additions = `COPY private.recipe_product_only_write_control (singleton, enabled) FROM stdin;
+t\tt
+\\.
+COPY private.cooked_batch_weight_evidence_control (singleton, enabled) FROM stdin;
+t\tf
+\\.
+COPY private.cooked_batch_weight_evidence (id, owner_uuid, account_generation, event_kind, measured_g) FROM stdin;
+fixture-evidence\tfixture-owner\t1\treported_measurement\t225.00
+\\.
+`;
+    const result = buildSanitizedPlatformData(platformData + additions);
+    for (const relation of ["private.recipe_product_only_write_control", "private.cooked_batch_weight_evidence_control", "private.cooked_batch_weight_evidence"]) {
+      expect(result.manifest.relations).toContainEqual(expect.objectContaining({ relation, action: "include" }));
+    }
+    expect(result.sql).toContain("225.00");
+    expect(result.sql).toContain("fixture-owner");
+    expect(() => buildSanitizedPlatformData(platformData + additions.replaceAll("private.cooked_batch_weight_evidence", "private.other_weight_evidence"))).toThrow("Unclassified");
+  });
   it("binds clean restore evidence to the archive's exact sanitized DB/Auth data", () => {
     const sanitized = buildSanitizedPlatformData(platformData);
     const sourceDataSha256 = createHash("sha256").update(sanitized.sql).digest("hex");

@@ -7,6 +7,7 @@ import { formatKoreaCompactDate } from "@/lib/korean-date";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CookedBatchProjection } from "@/types/cooking";
+import { COOKED_MIX_ASSUMPTION_TEXT, cookedWeightSourceLabel } from "@/lib/cooking/cooked-weight-summary";
 
 export type CookedBatchSectionState = "loading" | "empty" | "error" | "ready";
 interface CookedBatchSectionProps {
@@ -49,9 +50,11 @@ export function CookedBatchSection({ error, hasNext, items, onAction, onRecord, 
           <div className="flex items-center gap-2">
             {canRecord ? <button aria-label={`${batch.recipe_title} 식사 기록`} className="min-h-11 rounded-xl bg-[var(--brand)] px-3 font-bold text-white" onClick={() => onRecord(batch)} type="button">식사 기록</button>
               : actions.includes("set_finished_weight") ? <button className="min-h-11 rounded-xl border border-[var(--brand)] px-3 text-[var(--brand)]" onClick={() => onAction(batch, "set_finished_weight")} type="button">무게 입력</button> : null}
-            {actions.length > 0 ? <button aria-label={`${batch.recipe_title} 관리`} aria-expanded={expandedId === batch.id} className="grid h-11 w-11 place-items-center rounded-xl border text-xl" onClick={() => setExpandedId(current => current === batch.id ? null : batch.id)} type="button">⋯</button> : null}
+            {actions.length > 0 ? <button aria-label={`${batch.recipe_title} 관리`} aria-expanded={expandedId === batch.id} data-cooked-batch-manager={batch.id} className="grid h-11 w-11 place-items-center rounded-xl border text-xl" onClick={() => setExpandedId(current => current === batch.id ? null : batch.id)} type="button">⋯</button> : null}
           </div>
         </div>
+        {batch.weight_evidence ? <p className="mt-2 text-sm leading-5 text-[var(--text-2)]">전체무게 근거: {cookedWeightSourceLabel(batch.weight_evidence.source)}</p> : null}
+        {batch.weight_evidence?.source === "conditional_estimate" && batch.weight_evidence.assumption_codes?.length ? <p className="mt-1 text-sm leading-5 text-[var(--text-2)]">{COOKED_MIX_ASSUMPTION_TEXT}</p> : null}
         {expandedId === batch.id ? <div aria-label={`${batch.recipe_title} 관리 메뉴`} className="mt-3 flex flex-wrap gap-2 border-t pt-3">
           {actions.map(action => <button className="min-h-11 rounded-xl border px-3" data-batch-id={batch.id} data-batch-action={action} key={action} onClick={() => onAction(batch, action)} type="button">{action === "set_finished_weight" && batch.weight_status === "known" ? "무게 수정" : actionLabels[action]}</button>)}
         </div> : null}

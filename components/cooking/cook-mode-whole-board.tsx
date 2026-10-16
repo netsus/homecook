@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import styles from "./cook-mode-layout.module.css";
 
 import {
   formatIngredientAmountOnly,
@@ -48,6 +49,9 @@ export function CookModeWholeBoard({
         className="cook-whole-panel cook-whole-step-panel"
       >
         <h2>전체 조리순서</h2>
+        <p className={styles.servingsNote} data-testid="cook-mode-servings-note">
+          재료표는 선택한 인분으로 환산됩니다. 조리법의 수량은 원문 그대로입니다
+        </p>
         <StepList recipe={recipe} />
       </section>
     </div>
@@ -82,14 +86,14 @@ function IngredientList({
         const amountLabel = formatIngredientAmountOnly(ingredient);
 
         return (
-          <React.Fragment key={`${ingredient.ingredient_id}-${index}`}>
+          <React.Fragment key={`${ingredientDisplayKey(ingredient, index)}-${index}`}>
             {showSectionHeading ? (
               <li className="cook-whole-section-label">{sectionLabel}</li>
             ) : null}
             <li data-testid="ingredient-item">
               <div
                 className="cook-whole-ingredient"
-                data-testid={`cook-mode-ingredient-${ingredient.ingredient_id}`}
+                data-testid={`cook-mode-ingredient-${ingredientDisplayKey(ingredient, index)}`}
               >
                 <span className="cook-whole-ingredient-name">
                   {ingredient.standard_name}
@@ -115,12 +119,20 @@ function StepList({ recipe }: { recipe: CookingModeRecipe }) {
     );
   }
 
-  const ingredientsById = new Map(
-    recipe.ingredients.map((ingredient) => [
-      ingredient.ingredient_id,
-      ingredient,
-    ]),
-  );
+  const ingredientsById = new Map<string, CookingModeIngredient[]>();
+  for (const ingredient of recipe.ingredients) {
+    const keys: string[] = [];
+    if (ingredient.row_key) keys.push(`row:${ingredient.row_key}`);
+    if (ingredient.food_product_id && ingredient.food_product_nutrition_version_id) {
+      keys.push(`product:${ingredient.food_product_id}:${ingredient.food_product_nutrition_version_id}`);
+    }
+    if (ingredient.ingredient_id !== null) keys.push(`ingredient:${ingredient.ingredient_id}`);
+    for (const key of keys) {
+      const rows = ingredientsById.get(key);
+      if (rows) rows.push(ingredient);
+      else ingredientsById.set(key, [ingredient]);
+    }
+  }
 
   return (
     <ol
@@ -151,28 +163,38 @@ function StepList({ recipe }: { recipe: CookingModeRecipe }) {
   );
 }
 
-function readIngredientId(value: unknown) {
+function ingredientDisplayKey(ingredient: CookingModeIngredient, index: number) {
+  if (ingredient.row_key) return ingredient.row_key;
+  if (ingredient.food_product_id && ingredient.food_product_nutrition_version_id) {
+    return `product:${ingredient.food_product_id}:${ingredient.food_product_nutrition_version_id}:${ingredient.component_label ?? ""}`;
+  }
+  return ingredient.ingredient_id ?? `unidentified:${index}`;
+}
+
+function readIngredientLookupKey(value: unknown) {
   if (value === null || typeof value !== "object") {
     return null;
   }
-
-  const ingredientId = (value as { ingredient_id?: unknown }).ingredient_id;
-
-  return typeof ingredientId === "string" ? ingredientId : null;
+  if ("row_key" in value && typeof value.row_key === "string") return `row:${value.row_key}`;
+  if ("food_product_id" in value && typeof value.food_product_id === "string") {
+    return "food_product_nutrition_version_id" in value && typeof value.food_product_nutrition_version_id === "string"
+      ? `product:${value.food_product_id}:${value.food_product_nutrition_version_id}` : null;
+  }
+  return "ingredient_id" in value && typeof value.ingredient_id === "string" ? `ingredient:${value.ingredient_id}` : null;
 }
 
 function getStepIngredientNames(
   step: CookingModeStep,
-  ingredientsById: Map<string, CookingModeIngredient>,
+  ingredientsById: Map<string, CookingModeIngredient[]>,
 ) {
   const names = new Set<string>();
 
   step.ingredients_used.forEach((usage) => {
-    const ingredientId = readIngredientId(usage);
-    const ingredientName =
-      ingredientId === null
-        ? null
-        : ingredientsById.get(ingredientId)?.standard_name.trim();
+    const key = readIngredientLookupKey(usage);
+    const rows = key === null ? [] : ingredientsById.get(key) ?? [];
+    const candidates = key?.startsWith("row:") || !step.component_label?.trim() ? rows
+      : rows.filter((ingredient) => ingredient.component_label?.trim() === step.component_label?.trim());
+    const ingredientName = candidates.length === 1 ? candidates[0].standard_name.trim() : null;
 
     if (ingredientName) {
       names.add(ingredientName);
@@ -317,7 +339,7 @@ function CookModeWholeStep({
   ingredientsById,
   step,
 }: {
-  ingredientsById: Map<string, CookingModeIngredient>;
+  ingredientsById: Map<string, CookingModeIngredient[]>;
   step: CookingModeStep;
 }) {
   const instruction = getCookModeStepInstruction(step);

@@ -1,0 +1,384 @@
+{
+  "schema_version": 1,
+  "status": "local-review-draft",
+  "migration": "supabase/migrations/20261014223000_youtube_quantity_input_bridge.sql",
+  "migration_sha256": "f586b27f2f5da5063a7eaa70278c7f00edab762aa27248b91a224411f436c750",
+  "schema_archive_sha256": "15c29821618e9cb7c70bbbe0df2cb2f0bd3246924352667bf8ce047400f48097",
+  "predecessor_219_sha256": "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993",
+  "application_rows_restored": 0,
+  "catalog_before": "81362d758b5138a95b6cbe1d8d7c1f064653b467907a42a7335c00d97dc59ba9",
+  "catalog_after": "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05",
+  "catalog_computation_context": {
+    "role": "youtube_extraction_credential_manager_rpc_owner",
+    "search_path": ""
+  },
+  "functions": [
+    {
+      "preimage": {
+        "acl": [
+          "youtube_extraction_credential_manager_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "youtube_extraction_enqueue_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "youtube_extraction_worker_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "supabase_admin=X/youtube_extraction_credential_manager_rpc_owner"
+        ],
+        "owner": "youtube_extraction_credential_manager_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "private.assert_youtube_extraction_catalog_ready()",
+        "source_md5": "97934bf32eb4630a223b3a0cf6b33844",
+        "volatility": "v",
+        "security_definer": true
+      },
+      "postimage": {
+        "acl": [
+          "youtube_extraction_credential_manager_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "youtube_extraction_enqueue_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "youtube_extraction_worker_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "supabase_admin=X/youtube_extraction_credential_manager_rpc_owner"
+        ],
+        "owner": "youtube_extraction_credential_manager_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "private.assert_youtube_extraction_catalog_ready()",
+        "source_md5": "cdd5fd53c84db1c3e0af5c4c27ad7d25",
+        "volatility": "v",
+        "security_definer": true,
+        "definition_sha256": "2e6c7c52e81116debc853cd71f2b8ab19ecbb31b476a1ddbcc8b107abe874953"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "signature": "private.build_youtube_saved_recipe_content_from_source(jsonb)",
+        "source_md5": "e2511d104711860906a18afc522babe3",
+        "volatility": "v",
+        "security_definer": false
+      },
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "signature": "private.build_youtube_saved_recipe_content_from_source(jsonb)",
+        "source_md5": "2c376895d135ce8aebf8daf19676ceb0",
+        "volatility": "v",
+        "security_definer": false,
+        "definition_sha256": "83d0b640c10852bcdd828d856c952c65d57c364cbde7800189737c3f72034fcd"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "signature": "private.project_youtube_saved_recipe_result(public.youtube_saved_recipe_results)",
+        "source_md5": "53c600a53035b0cb2f0feec4d1abcdf7",
+        "volatility": "s",
+        "security_definer": false
+      },
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "signature": "private.project_youtube_saved_recipe_result(public.youtube_saved_recipe_results)",
+        "source_md5": "f8807215ee3673fe48854a93e7597bd3",
+        "volatility": "s",
+        "security_definer": false,
+        "definition_sha256": "cfefb688c83bc1e18b4706071b8c4481819c22b7990d8fede9d0980da850c99b"
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "signature": "private.validate_youtube_saved_quantity_legacy(jsonb, jsonb)",
+        "source_md5": "795942f95aa4513171a939c7b2e8f5c7",
+        "volatility": "s",
+        "security_definer": false,
+        "definition_sha256": "7794a88e5a6723ade8f308aac5c025fbd81b6c8f53845260c2409a6ca683ec94"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "signature": "private.validate_youtube_saved_recipe_editable_content(jsonb, jsonb)",
+        "source_md5": "795942f95aa4513171a939c7b2e8f5c7",
+        "volatility": "s",
+        "security_definer": false
+      },
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "signature": "private.validate_youtube_saved_recipe_editable_content(jsonb, jsonb)",
+        "source_md5": "ef7a00a87c817439c4be77996025828a",
+        "volatility": "s",
+        "security_definer": false,
+        "definition_sha256": "2d7b8a173d374940204c251daa24f6972c7c0145f386b859117cc775f812ead7"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "postgres=X/postgres",
+          "youtube_extraction_credential_manager_rpc_owner=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "private.youtube_extraction_shared_dependency_contract_v1()",
+        "source_md5": "f2406296b3043d6b2b465d4d31e4ba02",
+        "volatility": "s",
+        "security_definer": true
+      },
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres",
+          "youtube_extraction_credential_manager_rpc_owner=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "private.youtube_extraction_shared_dependency_contract_v1()",
+        "source_md5": "cd307593afcc9fdf57c38f55edae9b7a",
+        "volatility": "s",
+        "security_definer": true,
+        "definition_sha256": "01a664344900e38428fab34281a37a204cc46babe781b07f72ae487fd0efb3b4"
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres",
+          "youtube_extraction_worker_rpc_owner=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ],
+        "signature": "private.youtube_worker_quantity_input_v4(jsonb, jsonb)",
+        "source_md5": "8c6153a878f7ee8062e9bc856adb90e3",
+        "volatility": "s",
+        "security_definer": true,
+        "definition_sha256": "5323d87adbaccc5122436858df490368677c2479d2e1f37c9555c0d92fe063c7"
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres",
+          "youtube_extraction_worker_rpc_owner=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, private, pg_temp"
+        ],
+        "signature": "private.youtube_worker_quantity_write_admission_v4()",
+        "source_md5": "d6a48489a07a4f8b29900bf5f0b12340",
+        "volatility": "v",
+        "security_definer": true,
+        "definition_sha256": "86d8e43078770b7b87e5202d4da707d10f4ff656137c9af3a9b19edbdd1137d7"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "signature": "public.build_recipe_content_snapshot_input(uuid)",
+        "source_md5": "637f02a252d0455a8b0c437f236a9f3d",
+        "volatility": "v",
+        "security_definer": false
+      },
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "signature": "public.build_recipe_content_snapshot_input(uuid)",
+        "source_md5": "3ad0f40335814bd2ee7e24e7b1be6fbf",
+        "volatility": "v",
+        "security_definer": false,
+        "definition_sha256": "405a2a357c0e24ad394dae1c5ab7e93cbd09583f241bbc7a23d562d9dfb3570f"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "youtube_extraction_worker_rpc_owner=X/youtube_extraction_worker_rpc_owner",
+          "postgres=X/youtube_extraction_worker_rpc_owner",
+          "youtube_extraction_worker=X/youtube_extraction_worker_rpc_owner"
+        ],
+        "owner": "youtube_extraction_worker_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "public.finalize_youtube_extraction_job(uuid, text, bigint, jsonb)",
+        "source_md5": "ec6d7c15183b89f49c376974ff80462d",
+        "volatility": "v",
+        "security_definer": true
+      },
+      "postimage": {
+        "acl": [
+          "youtube_extraction_worker_rpc_owner=X/youtube_extraction_worker_rpc_owner",
+          "postgres=X/youtube_extraction_worker_rpc_owner",
+          "youtube_extraction_worker=X/youtube_extraction_worker_rpc_owner"
+        ],
+        "owner": "youtube_extraction_worker_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "public.finalize_youtube_extraction_job(uuid, text, bigint, jsonb)",
+        "source_md5": "c6a89538aedc33762893c0a8c5bf7b74",
+        "volatility": "v",
+        "security_definer": true,
+        "definition_sha256": "9ec27c8b4f9aac87587734584b1b5a47a45556bd0f8091daacaefa5f5a9f6ff6"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "youtube_extraction_credential_manager_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "postgres=X/youtube_extraction_credential_manager_rpc_owner",
+          "authenticated=X/youtube_extraction_credential_manager_rpc_owner"
+        ],
+        "owner": "youtube_extraction_credential_manager_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "public.read_youtube_extraction_enqueue_readiness()",
+        "source_md5": "daa97356918394a01c4ffd31fdb29cf3",
+        "volatility": "v",
+        "security_definer": true
+      },
+      "postimage": {
+        "acl": [
+          "youtube_extraction_credential_manager_rpc_owner=X/youtube_extraction_credential_manager_rpc_owner",
+          "postgres=X/youtube_extraction_credential_manager_rpc_owner",
+          "authenticated=X/youtube_extraction_credential_manager_rpc_owner"
+        ],
+        "owner": "youtube_extraction_credential_manager_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "public.read_youtube_extraction_enqueue_readiness()",
+        "source_md5": "c5baa3d0d1bf50a5ffbc05c690674ab6",
+        "volatility": "v",
+        "security_definer": true,
+        "definition_sha256": "6a25d2003a3caf08edd3d3c6fdf4ed3b8ad9f720cb3e7bec28e8d7c521e0d7ef"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "youtube_extraction_worker_rpc_owner=X/youtube_extraction_worker_rpc_owner",
+          "postgres=X/youtube_extraction_worker_rpc_owner",
+          "youtube_extraction_worker=X/youtube_extraction_worker_rpc_owner"
+        ],
+        "owner": "youtube_extraction_worker_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "public.resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)",
+        "source_md5": "48ed5baa681594da6a0c26587ddf5212",
+        "volatility": "v",
+        "security_definer": true
+      },
+      "postimage": {
+        "acl": [
+          "youtube_extraction_worker_rpc_owner=X/youtube_extraction_worker_rpc_owner",
+          "postgres=X/youtube_extraction_worker_rpc_owner",
+          "youtube_extraction_worker=X/youtube_extraction_worker_rpc_owner"
+        ],
+        "owner": "youtube_extraction_worker_rpc_owner",
+        "config": [
+          "search_path=\"\""
+        ],
+        "signature": "public.resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)",
+        "source_md5": "9521448b3cf572bccc3da789b3b4df57",
+        "volatility": "v",
+        "security_definer": true,
+        "definition_sha256": "3098c65cce703e638525750ded3a658cb5c720935a9f7b612f6df7971da2ed7b"
+      }
+    },
+    {
+      "preimage": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "signature": "public.write_youtube_saved_recipe_result(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, uuid, timestamp with time zone)",
+        "source_md5": "9556a06605e868d4599856806c21b4d7",
+        "volatility": "v",
+        "security_definer": true
+      },
+      "postimage": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=pg_catalog, public, private, extensions, pg_temp"
+        ],
+        "signature": "public.write_youtube_saved_recipe_result(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, uuid, timestamp with time zone)",
+        "source_md5": "2cfc346cf948784ec1b022d86aa078e0",
+        "volatility": "v",
+        "security_definer": true,
+        "definition_sha256": "9f3baf40ea10f198baa5ad3131a537facdaf04eebe918eb71d648d6370732b3f"
+      }
+    }
+  ],
+  "ddl_actor": "supabase_admin (historical YouTube migration administrator; separate rollout)",
+  "recipe_quantity_prerequisite_sha256": "9b15696aa8f33cb6a9c707d1355a90efb07bd929df3943519e58b1d6d6cc2367"
+}

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import styles from "./cook-mode-layout.module.css";
 
 import { CookModeWholeBoard } from "@/components/cooking/cook-mode-whole-board";
 import type { SnapshotV2CookModeData } from "@/types/cooking";
@@ -9,6 +10,7 @@ import type { SnapshotV2CookModeData } from "@/types/cooking";
 interface SnapshotV2CookModeViewProps {
   cancelling?: boolean;
   preparingCompletion?: boolean;
+  completionButtonRef?: React.RefObject<HTMLButtonElement | null>;
   data: SnapshotV2CookModeData;
   onCancel: () => void;
   onComplete?: () => void;
@@ -18,6 +20,7 @@ interface SnapshotV2CookModeViewProps {
 export function SnapshotV2CookModeView({
   cancelling = false,
   preparingCompletion = false,
+  completionButtonRef,
   data,
   onCancel,
   onComplete,
@@ -29,7 +32,7 @@ export function SnapshotV2CookModeView({
   return (
     <div
       aria-label="요리 화면"
-      className="cook-mobile-whole-screen relative mx-auto h-dvh max-w-[430px] overflow-y-auto overscroll-y-contain"
+      className={`${styles.snapshotScreen} cook-mobile-whole-screen relative mx-auto h-dvh max-w-[430px] overflow-y-auto overscroll-y-contain`}
       role="region"
       tabIndex={0}
       data-cook-theme="dark"
@@ -88,6 +91,7 @@ export function SnapshotV2CookModeView({
               disabled={cancelling || preparingCompletion}
               aria-busy={preparingCompletion}
               onClick={onComplete}
+              ref={completionButtonRef}
               type="button"
             >
               요리 완료
