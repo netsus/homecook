@@ -134,6 +134,17 @@ describe("YouTube i031 exact runtime", () => {
     expect(env).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
   });
 
+  it("preserves bounded source priority evidence at the web parsing boundary", () => {
+    const ingredient = exactWorkerOutput.recipe.ingredients[0];
+    const selection = { policy: "authored-source-priority-v1", selectedEvidenceId: "S0001", correctionTargetEvidenceId: null,
+      unresolvedEvidenceRefs: [], alternatives: [{ amount: "250", unit: "g", evidenceRef: ingredient.evidenceRefs?.[0] }] };
+    const parsed = parseYoutubeI031WorkerOutput({ ...exactWorkerOutput, recipe: { ...exactWorkerOutput.recipe,
+      ingredients: [{ ...ingredient, quantitySelection: selection }] } });
+    expect(parsed.recipe.ingredients[0].quantitySelection).toEqual(selection);
+    expect(() => parseYoutubeI031WorkerOutput({ ...exactWorkerOutput, recipe: { ...exactWorkerOutput.recipe,
+      ingredients: [{ ...ingredient, quantitySelection: { ...selection, alternatives: [{ amount: "250", unit: "g", evidenceRef: { source_method: "fake" } }] } }] } })).toThrow();
+  });
+
   it("accepts only the exact identity and returns a safe metadata allowlist", () => {
     const parsed = parseYoutubeI031WorkerOutput({
       ...exactWorkerOutput,

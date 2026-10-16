@@ -18,8 +18,8 @@ export const I031_EXACT_IDENTITY = Object.freeze({
   sourcePromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
   selectorPromptVersion: "deterministic-evidence-v3-ingredient-event-preserving-largest-gap",
   finalPromptVersion: "source-anchored-single-recipe-v17-source-first-quantity",
-  clientVersion: "codex-vision-source-anchored-v74-caption-shared-owner",
-  executionConfigSignature: "06bdcbd216cd40f307ddbb74",
+  clientVersion: "codex-vision-source-anchored-v75-authored-conflict-priority",
+  executionConfigSignature: "e16baf5eaf4207380356eb02",
   frameExtractorVersion: "extract-video-frames-v7-adaptive-screen-ocr",
   frameMode: "hybrid",
   interval: 4,
@@ -61,6 +61,13 @@ export interface YoutubeI031Ingredient {
   originalName?: string;
   alternativeNames?: string[];
   evidenceRefs?: YoutubeI031EvidenceRef[];
+  quantitySelection?: {
+    policy: "authored-source-priority-v1";
+    selectedEvidenceId: string;
+    correctionTargetEvidenceId: string | null;
+    unresolvedEvidenceRefs: YoutubeI031EvidenceRef[];
+    alternatives: Array<{ amount: string; unit: string; evidenceRef: YoutubeI031EvidenceRef }>;
+  };
 }
 
 export interface YoutubeI031EvidenceRef {
@@ -440,7 +447,33 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
       alternativeNames = ingredient.alternativeNames.map((name, alternativeIndex) =>
         boundedEvidenceString(name, `ingredients[${index}].alternativeNames[${alternativeIndex}]`, 160));
     }
-    return {
+    let quantitySelection: YoutubeI031Ingredient["quantitySelection"];
+    if (ingredient.quantitySelection !== undefined) {
+      const selection = ingredient.quantitySelection;
+      if (!isRecord(selection) || selection.policy !== "authored-source-priority-v1"
+        || !Array.isArray(selection.alternatives) || selection.alternatives.length > 16
+        || !Array.isArray(selection.unresolvedEvidenceRefs) || selection.unresolvedEvidenceRefs.length > 2) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid quantity selection");
+      }
+      const selectedEvidenceId = boundedEvidenceString(selection.selectedEvidenceId, "selectedEvidenceId", 80);
+      if (!evidenceRefs?.some((ref) => ref.evidence_id === selectedEvidenceId)) {
+        throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Missing selected evidence");
+      }
+      quantitySelection = {
+        policy: selection.policy,
+        selectedEvidenceId,
+        correctionTargetEvidenceId: nullableString(selection.correctionTargetEvidenceId, "correctionTargetEvidenceId", 80),
+        unresolvedEvidenceRefs: parseEvidenceRefs(selection.unresolvedEvidenceRefs, index) ?? [],
+        alternatives: selection.alternatives.map((alternative) => {
+          if (!isRecord(alternative)) throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Invalid alternative quantity");
+          const refs = parseEvidenceRefs([alternative.evidenceRef], index);
+          if (!refs?.[0]) throw new YoutubeI031RuntimeError("I031_INVALID_OUTPUT", "output", "Missing alternative evidence");
+          return { amount: boundedEvidenceString(alternative.amount, "alternative.amount", 32),
+            unit: boundedEvidenceString(alternative.unit, "alternative.unit", 40), evidenceRef: refs[0] };
+        }),
+      };
+    }
+    const parsed: YoutubeI031Ingredient = {
       name: requiredString(ingredient.name, `ingredients[${index}].name`, 100),
       amount,
       unit,
@@ -452,6 +485,8 @@ function parseRecipe(value: unknown): YoutubeI031Recipe {
       ...(alternativeNames !== undefined ? { alternativeNames } : {}),
       ...(evidenceRefs !== undefined ? { evidenceRefs } : {}),
     };
+    if (quantitySelection !== undefined) parsed.quantitySelection = quantitySelection;
+    return parsed;
   });
 
   return {
