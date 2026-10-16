@@ -225,12 +225,12 @@ export function calculateUserProgressLevel(totalXp: number): UserProgressLevelDa
   const normalizedTotalXp = Math.max(0, Math.floor(totalXp));
   let currentLevel = 1;
 
-  while (getLevelStartXp(currentLevel + 1) <= normalizedTotalXp) {
+  while (levelStartXp(currentLevel + 1) <= normalizedTotalXp) {
     currentLevel += 1;
   }
 
-  const currentLevelStartXp = getLevelStartXp(currentLevel);
-  const nextLevelStartXp = getLevelStartXp(currentLevel + 1);
+  const currentLevelStartXp = levelStartXp(currentLevel);
+  const nextLevelStartXp = levelStartXp(currentLevel + 1);
   const xpIntoCurrentLevel = normalizedTotalXp - currentLevelStartXp;
   const xpToNextLevel = nextLevelStartXp - normalizedTotalXp;
   const levelSpan = nextLevelStartXp - currentLevelStartXp;
@@ -253,10 +253,6 @@ export function calculateUserProgressLevel(totalXp: number): UserProgressLevelDa
 export function levelStartXp(level: number) {
   const normalizedLevel = Math.max(1, Math.floor(level));
   return Math.max(0, 40 * (normalizedLevel - 1) ** 2 + 60 * (normalizedLevel - 1));
-}
-
-function getLevelStartXp(level: number) {
-  return levelStartXp(level);
 }
 
 export function getUserProgressGrade(level: number): UserProgressGradeData {
@@ -659,13 +655,6 @@ function isDuplicateSource(
 ) {
   if (existingEvents.some((event) => event.event_type === input.eventType && event.source_key === sourceKey)) {
     return true;
-  }
-
-  if (input.eventType === "recipe_saved") {
-    const recipeSourceKey = `recipe_saved:${input.userId}:${input.recipeId}`;
-    return existingEvents.some((event) =>
-      event.event_type === "recipe_saved" && event.source_key === recipeSourceKey
-    );
   }
 
   if (input.eventType === "planner_registered") {
