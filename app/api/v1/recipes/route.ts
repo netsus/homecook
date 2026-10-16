@@ -2238,7 +2238,7 @@ async function postRecipe(request: Request) {
     let published: ManualRecipeCreateRpcData;
     try {
       published = await finishManualRecipePublication(
-        dbClient as unknown as RecipeNutritionServiceClient, serviceClient, managedSession, creationKey, row,
+        routeClient, serviceClient, managedSession, creationKey, row,
       );
     } catch (error) {
       return manualRecipePreparationFailure(error);
@@ -2288,7 +2288,7 @@ async function postRecipe(request: Request) {
     }
 
     await writeManualRecipeNutritionSnapshot(
-      dbClient as unknown as RecipeNutritionServiceClient,
+      routeClient,
       recipeResult.data.id,
     );
 
@@ -2359,7 +2359,7 @@ async function postRecipe(request: Request) {
   }
 
   await writeManualRecipeNutritionSnapshot(
-    dbClient as unknown as RecipeNutritionServiceClient,
+    routeClient,
     recipeResult.data.id,
   );
 

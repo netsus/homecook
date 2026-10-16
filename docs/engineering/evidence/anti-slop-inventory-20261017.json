@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "81f0432bed2cecaa80169366e95ddb3b338adc02",
-    "total": 156,
+    "baseCommit": "1b730e2498eb1f766e9fe5f8dcaebb94b64fc170",
+    "total": 153,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -1468,13 +1468,18 @@
       "line": 2243,
       "column": 9,
       "snippet": "dbClient as unknown as RecipeNutritionServiceClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "ManualRecipeDbClient from overloads do not satisfy nutrition owner recipe/ingredient/predecessor read contract. Separate actual capabilities and row contract before direct assignment.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "After exact native owner-row/query contract alignment in PR1773, preserve the original factory routeClient type rather than reasserting its narrowed dbClient alias. Both variables reference the same const object; all writer/authority behavior remains unchanged.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1774",
+        "verification": "before/after6 suites93 PASS; managed/legacyRPC/legacyinsert exact client identity locked; typecheck/ESLint/diff-check PASS; Anti Slop156->153,new0; JS differs only in3 proven same-object argument references"
       }
     },
     {
@@ -1486,13 +1491,18 @@
       "line": 2293,
       "column": 7,
       "snippet": "dbClient as unknown as RecipeNutritionServiceClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "ManualRecipeDbClient from overloads do not satisfy nutrition owner recipe/ingredient/predecessor read contract. Separate actual capabilities and row contract before direct assignment.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "After exact native owner-row/query contract alignment in PR1773, preserve the original factory routeClient type rather than reasserting its narrowed dbClient alias. Both variables reference the same const object; all writer/authority behavior remains unchanged.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1774",
+        "verification": "before/after6 suites93 PASS; managed/legacyRPC/legacyinsert exact client identity locked; typecheck/ESLint/diff-check PASS; Anti Slop156->153,new0; JS differs only in3 proven same-object argument references"
       }
     },
     {
@@ -1504,13 +1514,18 @@
       "line": 2364,
       "column": 5,
       "snippet": "dbClient as unknown as RecipeNutritionServiceClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "ManualRecipeDbClient from overloads do not satisfy nutrition owner recipe/ingredient/predecessor read contract. Separate actual capabilities and row contract before direct assignment.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "After exact native owner-row/query contract alignment in PR1773, preserve the original factory routeClient type rather than reasserting its narrowed dbClient alias. Both variables reference the same const object; all writer/authority behavior remains unchanged.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1774",
+        "verification": "before/after6 suites93 PASS; managed/legacyRPC/legacyinsert exact client identity locked; typecheck/ESLint/diff-check PASS; Anti Slop156->153,new0; JS differs only in3 proven same-object argument references"
       }
     },
     {
