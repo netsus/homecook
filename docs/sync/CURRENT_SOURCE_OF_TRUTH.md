@@ -1,5 +1,11 @@
 # Current Source of Truth
 
+## 2026-10-17 — 완성 무게 안내·오프라인 평가기 공식 반영 완료
+
+[#1746](https://github.com/netsus/homecook/pull/1746)을 병합해 웹 `06a3369f5c5e1c3ca49045f370f0ce12f049c805` / build `prelaunch-06a3369f5c5e-EWuEsS`를 공식 반영했다. 배포 exit0·선택1451 PASS/133 SKIP·build/type/canary/운영 GET·loaded=true/recoveryPending=false다. V2 policy와42추출작업 전체 지문·DB232·동일workerPID49750/gen49·C05/R2 OFF를 보존했다.
+
+사용자 Mac Chrome375/1440에서 양 확인 불가 안내·빈 선택 숫자1개·취소/재진입·팬트리0선택·무게 없이 완료1회·새로고침 유지를 확인했다. 대상 QA batch는weight_status=missing/finished_weight_g=null이며 독립요리 전후 기존plan은registered다. 운영에서 직접 확인한 새 문구 분기는invalid_quantity다. 다른 이유·예상값/실측우선은 표적 검사와 이전 격리 화면 범위이며 실제 음식 정답은0이다. [반영 범위·증거·검증 한계](../engineering/cooked-weight-followup-operating-20261017.md), Library `libfile_75069db9e97c8191933ba09fcb710f50`(화면4장)을 따른다. 정확도·수율 적용범위·W0/W2/W5 전체 완료가 아니며 새 추출기v85와YouTube UI후속은 별개다. 후속master30a/PR1747·1748은 이번운영06a에 포함되지 않았다.
+
 ## 2026-10-17 — 완성 무게 안내·오프라인 평가기 공식 배포 준비
 
 승인된94d718f2a/041fa6908을 최신 master74cc2b1d5와 통합해 관련173 PASS·type/lint/Anti Slop 신규0을 확인했다. 변경은 미확정 양 안내와 오프라인 평가기이며 실제 정답표본0·정확도 unavailable·적용범위 미확대·C05/R2 OFF를 유지한다. DB/키/권한/worker·추출기 버전 변경은 없다. 아래 YouTube 복구 UI 문제는 별도 후속으로 남기며 무게 코드에 섞지 않는다. [범위·검증·한계](../engineering/cooked-weight-validation-followup-20261017.md)를 따르며 공식 배포/Chrome 확인은 아직 대기다.
