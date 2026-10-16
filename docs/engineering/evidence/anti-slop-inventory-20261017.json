@@ -12,8 +12,8 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "2d8103c8bc456f9263909c761ad863ee83b861db",
-    "total": 151,
+    "baseCommit": "224298c619c0495afcd8dd41a9eaae17036ab239",
+    "total": 149,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
   },
@@ -597,13 +597,18 @@
       "line": 431,
       "column": 9,
       "snippet": "dbClient as unknown as UserGamificationDbClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "Progress-only client omits gamification downstream table capabilities. Needs actual caller/callee capability contract alignment, not a cast adapter.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "Declare the progress/gamification capabilities already consumed by the existing writer and pass the same object without reassertion. Core progress reads remain narrow; original factory assertions and SDK compatibility debt remain.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1777",
+        "verification": "Before: 7 existing suites51/runtime full-path7 PASS; capability type2 TS2344. After: 8 suites58/type/lint/diff/verify:anti-slop PASS; typed full fixture without casts, success writes and failure/duplicate preservation. Anti151→149/new0; product3 emitted JS byte-identical. Not an SDK/DB/RLS proof."
       }
     },
     {
@@ -897,13 +902,18 @@
       "line": 164,
       "column": 9,
       "snippet": "dbClient as unknown as UserGamificationDbClient & UserProgressDbClient",
-      "state": "needs-contract-refactor",
-      "holdReason": "Growth-only client omits downstream progress/gamification capabilities. Needs actual caller/callee contract alignment, not broader opaque assertions.",
+      "state": "resolved",
+      "holdReason": null,
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: structural TS2345/related projection errors",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "resolution": {
+        "reason": "Declare the progress/gamification capabilities already consumed by the existing writer and pass the same object without reassertion. Core progress reads remain narrow; original factory assertions and SDK compatibility debt remain.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1777",
+        "verification": "Before: 7 existing suites51/runtime full-path7 PASS; capability type2 TS2344. After: 8 suites58/type/lint/diff/verify:anti-slop PASS; typed full fixture without casts, success writes and failure/duplicate preservation. Anti151→149/new0; product3 emitted JS byte-identical. Not an SDK/DB/RLS proof."
       }
     },
     {

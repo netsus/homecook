@@ -358,7 +358,7 @@ export function buildUserProgressSummary({
 }
 
 export async function awardUserProgressEvent(
-  dbClient: UserProgressDbClient,
+  dbClient: UserProgressDbClient & UserGamificationDbClient,
   input: UserProgressAwardInput,
 ): Promise<UserProgressAwardResult> {
   try {
@@ -428,7 +428,7 @@ export async function awardUserProgressEvent(
       );
 
       await projectUserGamificationAfterProgressEvent(
-        dbClient as unknown as UserGamificationDbClient,
+        dbClient,
         {
           userId: input.userId,
           progressEventId: insertResult.data.id,

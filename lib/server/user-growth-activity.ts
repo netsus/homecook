@@ -64,9 +64,14 @@ interface ActivityTable {
   insert(values: ActivityInsert): ActivityInsertQuery;
 }
 
-export interface UserGrowthActivityDbClient {
+interface UserGrowthActivityInsertDbClient {
   from(table: "user_growth_activity_events"): ActivityTable;
 }
+
+// Recording already invokes the secondary progress/gamification projection.
+// This declares its consumed capabilities; it does not grant runtime access.
+export type UserGrowthActivityDbClient = UserGrowthActivityInsertDbClient &
+  UserGamificationDbClient & UserProgressDbClient;
 
 export interface UserGrowthActivityInput {
   userId: string;
@@ -161,7 +166,7 @@ export async function recordUserGrowthActivityEvent(
       );
 
       await projectUserGamificationAfterActivityEvent(
-        dbClient as unknown as UserGamificationDbClient & UserProgressDbClient,
+        dbClient,
         {
           userId: input.userId,
           activityId: result.data.id,

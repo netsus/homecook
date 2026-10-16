@@ -14,6 +14,10 @@ interface QueryError {
   message: string;
 }
 
+// These legacy fixtures isolate ledger/read behavior, including intentionally
+// unavailable projection tables. Their boundary assertions do not prove full
+// capabilities; progress-projection-capability.test.ts covers that path.
+
 interface QueryResult<T> {
   data: T | null;
   error: QueryError | null;
@@ -98,7 +102,7 @@ describe("user progress event writer", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "shopping_completed",
       sourceTable: "shopping_lists",
@@ -107,6 +111,7 @@ describe("user progress event writer", () => {
     });
 
     expect(result).toMatchObject({ awarded: true, duplicate: false });
+    expect(dbClient.from).toHaveBeenCalledWith("user_progress_notifications");
     expect(progressEventsTable.insert).toHaveBeenCalledWith({
       user_id: "user-1",
       event_type: "shopping_completed",
@@ -152,7 +157,7 @@ describe("user progress event writer", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "recipe_saved",
       sourceTable: "recipe_book_items",
@@ -189,7 +194,7 @@ describe("user progress event writer", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1", eventType: "recipe_saved", sourceTable: "recipe_book_items",
       sourceId: "new-book-item", recipeId: "recipe-1", occurredAt: "2026-06-11T10:00:00.000Z",
     });
@@ -227,7 +232,7 @@ describe("user progress event writer", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "planner_registered",
       sourceTable: "meals",
