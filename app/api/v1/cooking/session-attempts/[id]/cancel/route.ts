@@ -7,7 +7,6 @@ import {
   isUuid,
   projectSnapshotV2CancelData,
   readRequiredIdempotencyKey,
-  type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   createSnapshotV2SessionInternalClient,
@@ -49,7 +48,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("INTERNAL_ERROR", "요리 세션을 취소하지 못했어요.", 500);
   }
   const result = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     "cancel_snapshot_v2_cooking_session",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
