@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `c0afd5511f5990d96af5f3eef3e2686ff0c877c2`, 실제 진단 **157**, baseline **207**, 신규 **0**.
-- 현재 장보기 단발 전달 함수 삭제는 로컬 **157 유지 /신규0**을 확인했다. 진단 감소가 아닌 실제 코드 정리이며 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
+- 마지막 확정 master: `bf549a6853e783664d5802295d9e996db31930ce`, 실제 진단 **157**, baseline **207**, 신규 **0**.
+- 현재 목록 GET 단발 타입 변환 함수 삭제는 로컬 **157 유지 /신규0**을 확인했다. 진단 감소가 아닌 실제 코드 정리이며 현재 배치 절의 검사와 한계를 함께 읽는다. 머지 상태·SHA는 해당 PR과 다음 장부 갱신으로 확정한다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -87,6 +87,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1767](https://github.com/netsus/homecook/pull/1767) | POST fork 영양·RPC 실제 client 직접 전달 | 162→160 | `c06cf4538bfd1c816814782d5867a8b6417dd7cb` |
 | [#1768](https://github.com/netsus/homecook/pull/1768) | 영양 predecessor 실제 읽기 계약 분리 | 160→158 | `017d22faba3ee8a333f8af4a579fe946055fed92` |
 | [#1769](https://github.com/netsus/homecook/pull/1769) | 조리 완료 현대·legacy RPC 실제 client 직접 호출 | 158→157 | `c0afd5511f5990d96af5f3eef3e2686ff0c877c2` |
+| [#1770](https://github.com/netsus/homecook/pull/1770) | 장보기7leaf 단발 전달 함수 삭제·guest 계약 고정 | 157 유지 | `bf549a6853e783664d5802295d9e996db31930ce` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -139,12 +140,19 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 편집 전후 cook-planner-complete.backend / legacy-cooking-complete-routes: 2 suite21 PASS, 전체 typecheck·변경 ESLint·diff-check PASS, Anti Slop158→157/baseline207/신규0. 독립 리뷰 APPROVE: 같은21건·type/lint/diff·JS동일을 직접 확인했다. Anti Slop은 부모 실행 결과와 구분한다. 감소1은 연쇄 단언이며 companion 단일 단언을 추가 감소로 세지 않는다.
 - ES2022/ESNext emitted JS byte-identical SHA256 `73c23053f7bf2ca447886eb02bcc42f2364a4c991b90d54e8991f46ad3949ef6`. 기존 legacy fallback을 제거하거나 권한 정책을 바꾼 배치가 아니다. 실DB·운영·build·화면 검증 미실행이며 기존10실패·49원본미확인 유지다.
 
-## 현재 배치: [#1770](https://github.com/netsus/homecook/pull/1770) 장보기 leaf 단발 전달 함수 삭제
+## 최근 반영: [#1770](https://github.com/netsus/homecook/pull/1770) 장보기 leaf 단발 전달 함수 삭제
 
 - 원본 finding에 대응하는 진단 감소가 아니라 실제 불필요 코드 정리다. `shopping/preview`와 `shopping/lists/[list_id]`의 detail/share-text/complete/items/[item_id]/items/bulk/items/reorder 총7개 route에서 각각 한 번만 사용한 `requireUser` 함수를 삭제한다. 호출점은 같은 client의 auth.getUser1회와 authResult.data.user를 직접 읽는다. root lists의2회 사용 함수는 유지한다.
 - 수정 전 기존5 suite92 PASS, 새 characterization7 PASS. 수정 후6 suite99 PASS: shopping-leaf-auth-read / shopping-preview.backend / shopping-detail.backend / shopping-reorder.backend / shopping-complete.backend / shopping-share-text.backend. 새7건은 실제 route를 호출해 같은 client1회·getUser1회·guest401·from/rpc0을 고정한다.
 - 전체 typecheck·제품7파일/새test ESLint·diff-check PASS, Anti Slop157 유지/baseline207/신규0. 제품 코드 순28줄 감소이며 테스트 추가를 제품 감소로 숨기지 않는다. 독립 리뷰 APPROVE: 동일99건·전체 typecheck·ESLint·diff-check를 직접 확인했다. Anti Slop은 부모 결과와 구분한다.
 - 401 판정·body/ID 검사 순서·bootstrap·조회·read-only409·완료상태·RPC 인수/권한/소유권은 유지한다. auth 보안 설정을 변경하거나 새 auth wrapper를 만들지 않았다. wrapper 제거라 emitted JS 동일 주장은 하지 않는다. 전체 build·화면·실DB·운영 미실행이며 기존10실패·49원본 미확인은 별도다.
+
+## 현재 배치: 목록 GET 단발 타입 변환 함수 삭제
+
+- `app/api/v1/tags/route.ts`의 단일사용 asTagsDbClient와 `app/api/v1/food-products/route.ts` GET의 단일사용 asCatalogDbClient를 삭제한다. unknown으로 넓혀 다시 단언하던 호출을 기존 consumer 타입의 직접 변수 대입으로 바꾼다. 새 wrapper/cast/adapter0, 제품 POST의 별도 create/bootstrap 단언 helper는 그대로 둔다.
+- 원본 finding 감소와 다른 실제 불필요 코드 정리로, 제품 순8줄 감소·Anti Slop157 유지/baseline207/신규0이다. SDK 기본 RPC 결과의 any 경계·DB schema별 행 검증이 해결됐다는 주장은 하지 않는다.
+- 편집 전후 recipe-tags-route / prepared-food-catalog-api / community-prepared-food-catalog-api 3 suite27 PASS. 전체 typecheck·변경 ESLint·diff-check PASS. 독립 리뷰 APPROVE: 동일27건·type/lint/diff와 제품순8줄감소를 직접 확인했다. Anti Slop은 부모 결과와 구분한다.
+- 기존 scope·로그인·RPC 인수·검증·성공/오류 응답/빈 목록 처리는 유지한다. 단발 identity 함수 삭제이므로 전체 emitted JS byte-identical 주장은 하지 않는다. 운영·DB·보안설정 변경0, 전체 build·화면·실DB 미실행이다. 기존10실패·49원본 미확인은 별도다.
 
 ## 보류·기술적 경계
 

@@ -12,7 +12,7 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "c0afd5511f5990d96af5f3eef3e2686ff0c877c2",
+    "baseCommit": "bf549a6853e783664d5802295d9e996db31930ce",
     "total": 157,
     "newFindings": 0,
     "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"

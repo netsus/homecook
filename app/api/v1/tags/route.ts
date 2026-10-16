@@ -40,10 +40,6 @@ interface TagsDbClient {
   }>;
 }
 
-function asTagsDbClient(client: unknown) {
-  return client as TagsDbClient;
-}
-
 function isRecipeTagKind(value: string): value is RecipeTagKind {
   return TAG_KINDS.has(value);
 }
@@ -110,7 +106,7 @@ export async function GET(request: NextRequest) {
     const routeClient = await createRouteHandlerClient({
       anonymousPublicReadScope: "tags",
     });
-    const dbClient = asTagsDbClient(routeClient);
+    const dbClient: TagsDbClient = routeClient;
     const { data, error } = await dbClient.rpc("list_public_recipe_tags", {
       p_q: q,
       p_kind: kindResult.kind,
