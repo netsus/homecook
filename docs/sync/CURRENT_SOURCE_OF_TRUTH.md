@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-16 — gen49 전환 승인 확보·운영 결속 사전 검증 중단
+
+사용자가 gen49 6일·manager 최대300초·DB policy/generation·웹/worker 교체·대표1회 및 등록 후 즉시 구48 복귀 불가를 승인했다. 다만 운영 웹의 과거 descriptor 경로와 원48 고정 보호 권위의 새49 연결 위험을 확인해, 신규 위험 시 중단 조건에 따라 실제 발급·DB·배포·추출은0으로 유지한다. 순수 준비/복구 후보와 원 제어 회귀111개를 통과했지만 실제 전환 adapter 검증은 미완료다. [정확한 중단 사유·후속 검증 범위](../engineering/youtube-v74-gen49-preparation-safety-20261016.md)를 따른다.
+
 ## 2026-10-16 — v74 운영 전환 준비·credential/정책 별도 확인 대기
 
 사용자가 이번 추출기 수정의 배포를 요청했다. 최신 master를 통합하고 v74 bundle·웹 exact identity·pipeline을 일치시켜 검증했다. 운영은 웹0ae67/DB232·worker6b610/gen48/v71 그대로이며, 새 release/snapshot에는 generation49와 DB policy 전환이 필요해 해당 부분의 별도 확인 전에는 교체하지 않는다. [현재 상태·후보 결속·검증·복구 경계](../engineering/youtube-v74-deployment-preparation-20261016.md)를 따른다.
