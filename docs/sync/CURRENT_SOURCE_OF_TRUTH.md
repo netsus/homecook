@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-16 — 설명란·작성자 댓글의 명시 수량 우선 (로컬, 미배포)
+
+사용자 요청에 따라 서버가 결속한 설명란·작성자 댓글의 닫힌 재료 행을 모델 재서술보다 우선한다. 밑줄 목록·숟가락과 g 병기를 보존하고, 같은 목록에 재료 두 개 이상이 확인될 때만 유일한 누락 행을 복구한다. 댓글은 영상 작성자 채널 ID로 필터하며 실제 source 충돌·다른 요리·광고·부분 사용·모호량 보호를 유지한다. 후보는 v72/verifier45이며 운영 v71은 변경하지 않는다. [정책·원인·검증·남은 범위](../engineering/youtube-authored-source-priority-20261016.md)를 따른다. 기존 응답만 재생하며 새 영상·AI 호출·배포·DB 변경은 없다.
+
 ## 2026-10-13 — 유튜브 레시피북·플래너와 v71 운영 전환 최종 확인
 
 유튜브 저장 결과는 신규·기존 4건 모두 `내가 추가한 레시피`의 public canonical recipe로 연결되고 owner 전용 편집 문서는 그대로 유지된다. Google Chrome 실계정에서 기존 유튜브 저장 레시피 재열기·무변경 수정 저장·플래너 추가·새로고침·취소/뒤로가기와 manual private fork 재열기·편집 진입·플래너 모달 취소를 확인했다. manual private 상세의 첫 Data 조회가 세션 refresh보다 빨라 false 404가 되던 회귀는 master `ca7faa8f00867fe5eaab620a45fa959bd6768483`, 운영 웹 `d22217ddc791df79e72c055516bd5cffd6bb69c0`에서 세션 확인을 선행하도록 수정했다. DB는 추가 변경 없이 ledger 219다. worker는 release `8e515a6482a1dfaa292d6f67ae6aa8a06f84d2d4`에 결속된 v71/gen47로 running이며 credential은 `2026-10-19T08:24:41Z` 만료다. manager 임시 credential은 제거됐고 gen48 발급·추출 호출·모델 호출은 모두 0이다. [최종 운영 상태·검증·남은 Low](../engineering/youtube-recipebook-planner-bridge-20261012.md#후속-최종-운영-확인-2026-10-13)를 따른다.
