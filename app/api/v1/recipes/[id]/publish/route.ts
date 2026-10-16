@@ -5,7 +5,7 @@ import { withHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-er
 import { publishManualRecipe } from "@/lib/server/manual-recipe-publication";
 import { buildSessionAuthorityRpcArgs, callFuturePropagationRpc } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import { createRecipeNutritionSnapshotPayload } from "@/lib/server/recipe-nutrition-snapshot";
-import { prepareRecipeNutritionSnapshot, type RecipeNutritionServiceClient } from "@/lib/server/recipe-nutrition-service";
+import { prepareRecipeNutritionSnapshot } from "@/lib/server/recipe-nutrition-service";
 import { RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
 import { createRecipeFuturePropagationInternalClient, createRecipeImageInternalClient, createRouteHandlerClient } from "@/lib/supabase/server";
 
@@ -37,7 +37,7 @@ export const POST = withHybridAuthorityRouteError("공개 등록을 완료하지
   }
   let prepared;
   try {
-    prepared = await prepareRecipeNutritionSnapshot(client as unknown as RecipeNutritionServiceClient, id, rpcClient, verified.sessionAuthority);
+    prepared = await prepareRecipeNutritionSnapshot(client, id, rpcClient, verified.sessionAuthority);
   } catch (error) {
     if (error instanceof RecipeQuantityModeError) return fail(error.code, error.message, error.status);
     throw error;
