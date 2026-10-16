@@ -2,6 +2,16 @@
 
 완성 무게 후속은 PR1746/웹06a3369f5c5e/build `prelaunch-06a3369f5c5e-EWuEsS`로 반영·Chrome 확인을 완료했다. 이 문서는 별도 v85 후보의 통합·배포 준비이며 운영 worker는 여전히3e58467499c6-v74/gen49다.
 
+## 최종 준비 결과 — PR1753 병합, 운영 전환 확인 대기
+
+PR1753을 `1be5eeea5dd946d8a54edf6c5fd0c3c28d1815fa`로 병합했다. 최종 head12483dec4와 파일 내용이 같으며 최신 master1b551630e 포함 상태에서 typecheck/Next build 통과, v85 관련525 + 병행 변경101 = 626 PASS, Anti Slop173/신규0이다. 운영06a 대비 최종 diff는37파일 8,275추가/249삭제, 최신 master 대비26파일이며 대부분의 추가분은 평가 JSON이다. 이 문서의 후속 준비 기록은 제품 소스/artifact를 바꾸지 않는다.
+
+동일 병합 SHA를 release로 한 로컬 worker artifact38파일의 hash와 runtime closure 검증 및 app descriptor 생성을 마쳤다. artifact SHA256 `1a477eea93cccde17e1afc7a2a371195e8dc4ab1c5bf82eed9306766eee13d3e`, descriptor SHA256 `df9f89d3fa1f415d7266cb86a3fec09502e03b466f29b5d2d695209324579457`, source tree `a3791e0d2056b89579a176d2dbe30dde52fdc628`이다. 평가 bundle manifest SHA11290b3c와 같다.
+
+로컬 준비 영수증은 `/tmp/mumeok-youtube-v85-deploy-20261017/artifact-preparation-receipt.json`, artifact는 같은 디렉터리의 `artifact-1be5eeea5dd9-v85/artifact.json`이다. 토큰/manager는 발급하지 않았으며 운영 경로로 설치하지 않았다. 기존48→49 도구를 실행하거나 guard를 완화하지 않았다.49→50 successor/metadata handoff와 CAS·불확실 commit 대조·동일50 복구는 여전히 다음 구현/검증 범위다.
+
+사용자용 최종 범위·필수 확인·권한/만료·기존49 영향·복구조건 보고서는 Library `libfile_2bab86cb9f4081919a1058f72da0b5bd`다. 발급 실행 시점 확인은 **대기**이며 거절·실패·불확실 실행이 아니다. v85 발급/DB전환/웹·worker배포/추가모델은 모두0이고, 기존 운영은 웹06a/v74-gen49다. 사용자 Chrome의 임시375 너비는 해제했다.
+
 ## 통합 범위와 검증
 
 masterf511d3f95 위에67e6d0c2b에서 갈라진 선행93de94d97→9ceae22c5→8b67afed9→47d8e67f4 전체를 merge한다. 세 후속 커밋만 가져와 출처 충돌 우선순위를 빠뜨리지 않는다. SOT 상단의 유일한 충돌에서는 기존 무게/접수 복구 기록과 새 로컬 추출기 기록을 모두 보존했다. 원 사용자 checkout과 별도 원 후보 작업 폴더는 수정하지 않았다.
