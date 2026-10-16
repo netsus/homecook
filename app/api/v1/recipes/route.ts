@@ -55,8 +55,6 @@ import {
   projectRecipePatchData,
   readRequiredIdempotencyKey,
   RecipeDraftNutritionValidationError,
-  type FuturePropagationRpcClient,
-  type RecipeDraftNutritionClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   createHybridAuthorityRouteError,
@@ -1986,7 +1984,7 @@ async function postRecipe(request: Request) {
         sessionAuthority: authority.sessionAuthority, recipeId: parsed.originRecipeId, expectedRevision: parsed.baseRecipeRevision });
       if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를 저장할 수 없어요. 입력은 유지돼요.", 422);
       nutrition = await calculateRecipeDraftNutrition(
-        serviceClient as unknown as RecipeDraftNutritionClient,
+        serviceClient,
         {
           recipeId: parsed.originRecipeId,
           ownerUserId: user.id,
@@ -2006,7 +2004,7 @@ async function postRecipe(request: Request) {
     }
 
     const result = await callFuturePropagationRpc(
-      serviceClient as unknown as FuturePropagationRpcClient,
+      serviceClient,
       "write_personal_recipe_core",
       {
         ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
