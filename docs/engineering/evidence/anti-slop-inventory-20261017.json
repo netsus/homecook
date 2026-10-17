@@ -12,10 +12,10 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb",
+    "baseCommit": "2cd4aab93d5b9f527ce1a8b8de6d434136fc987b",
     "total": 147,
     "newFindings": 0,
-    "verificationState": "local-verified change based on this commit; actual merge is in PR metadata"
+    "verificationState": "confirmed master source at this commit: 20 suites190 PASS/type/lint/verify:anti-slop; separate baseline127 has117 PASS/10 FAIL. No product changes in this checkpoint."
   },
   "findings": [
     {
@@ -136,12 +136,19 @@
       "column": 20,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
       "state": "needs-contract-refactor",
-      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "holdReason": "Precise select literals and single-row query phases alone do not resolve direct assignment: isolated whole-program probe still has TS2589 at untyped SupabaseClient<any> eq/ResolveFilterValue comparison. Native shared-contract proposals also affect protected/cross-domain callers. No new assertion/adapter or protected factory edits; coordinate actual factory/validation contracts first.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "followupInvestigation": {
+        "baseCommit": "81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb",
+        "relatedSourceUnchangedThrough": "2cd4aab93d5b9f527ce1a8b8de6d434136fc987b",
+        "preciseSelectAndPhaseContract": "Contract alone whole-program0; isolated direct assignment TS2589 1 for this finding.",
+        "minimumBoundary": "from(users)/exact select0; eq demand TS2589; insert-only/update-only0.",
+        "limit": "Read-only, product edits0. Does not prove every shared-bootstrap refactoring impossible; new SDK fixture remains unmerged with a known type failure."
       }
     },
     {
@@ -166,12 +173,19 @@
       "column": 20,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
       "state": "needs-contract-refactor",
-      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "holdReason": "Precise select literals and single-row query phases alone do not resolve direct assignment: isolated whole-program probe still has TS2589 at untyped SupabaseClient<any> eq/ResolveFilterValue comparison. Native shared-contract proposals also affect protected/cross-domain callers. No new assertion/adapter or protected factory edits; coordinate actual factory/validation contracts first.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "followupInvestigation": {
+        "baseCommit": "81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb",
+        "relatedSourceUnchangedThrough": "2cd4aab93d5b9f527ce1a8b8de6d434136fc987b",
+        "preciseSelectAndPhaseContract": "Contract alone whole-program0; isolated direct assignment TS2589 1 for this finding.",
+        "minimumBoundary": "from(users)/exact select0; eq demand TS2589; insert-only/update-only0.",
+        "limit": "Read-only, product edits0. Does not prove every shared-bootstrap refactoring impossible; new SDK fixture remains unmerged with a known type failure."
       }
     },
     {
@@ -1848,12 +1862,19 @@
       "column": 29,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
       "state": "needs-contract-refactor",
-      "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "holdReason": "Precise select literals and single-row query phases alone do not resolve direct assignment: isolated whole-program probe still has TS2589 at untyped SupabaseClient<any> eq/ResolveFilterValue comparison. Native shared-contract proposals also affect protected/cross-domain callers. No new assertion/adapter or protected factory edits; coordinate actual factory/validation contracts first.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement: TS2589 (some probes expose further relation/row errors)",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "followupInvestigation": {
+        "baseCommit": "81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb",
+        "relatedSourceUnchangedThrough": "2cd4aab93d5b9f527ce1a8b8de6d434136fc987b",
+        "preciseSelectAndPhaseContract": "Contract alone whole-program0; isolated direct assignment TS2589 1 for this finding.",
+        "minimumBoundary": "from(users)/exact select0; eq demand TS2589; insert-only/update-only0.",
+        "limit": "Read-only, product edits0. Does not prove every shared-bootstrap refactoring impossible; new SDK fixture remains unmerged with a known type failure."
       }
     },
     {
