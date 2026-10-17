@@ -210,7 +210,7 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
     createRecipeSaveInternalClient.mockReset();
-    createRecipeSaveInternalClient.mockImplementation(() => createServiceRoleClient());
+    createRecipeSaveInternalClient.mockReturnValue(null);
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
@@ -1002,7 +1002,7 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     });
   });
 
-  it("saves the recipe and returns the updated save_count", async () => {
+  it.each(["unavailable", "missing_rpc"])("keeps the %s fallback save within user authority", async (capability) => {
     const bookId = "550e8400-e29b-41d4-a716-446655440010";
     const recipeId = "550e8400-e29b-41d4-a716-446655440025";
     const routeRecipesTable = createRecipesTable({
@@ -1012,9 +1012,6 @@ describe("POST /api/v1/recipes/[id]/save", () => {
           error: null,
         },
       ],
-    });
-    const serviceRecipesTable = createRecipesTable({
-      selectResults: [],
       updateResults: [
         {
           data: { id: "recipe-1", save_count: 4 },
@@ -1070,12 +1067,11 @@ describe("POST /api/v1/recipes/[id]/save", () => {
 
     const routeFrom = vi.fn((table: string) => {
       if (table === "recipes") return routeRecipesTable;
+      if (table === "recipe_books") return recipeBooksTable;
+      if (table === "recipe_book_items") return recipeBookItemsTable;
       throw new Error(`unexpected route table: ${table}`);
     });
     const serviceFrom = vi.fn((table: string) => {
-      if (table === "recipes") return serviceRecipesTable;
-      if (table === "recipe_books") return recipeBooksTable;
-      if (table === "recipe_book_items") return recipeBookItemsTable;
       throw new Error(`unexpected service table: ${table}`);
     });
 
@@ -1088,6 +1084,11 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       from: routeFrom,
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+    if (capability === "missing_rpc") {
+      createRecipeSaveInternalClient.mockReturnValue({
+        rpc: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST202", message: "Function not found" } }),
+      });
+    }
 
     const { POST } = await importRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/recipe-1/save", {
@@ -1120,8 +1121,10 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       recipe_id: recipeId,
     });
     expect(routeFrom).toHaveBeenCalledWith("recipes");
-    expect(serviceFrom).toHaveBeenCalledWith("recipe_book_items");
-    expect(serviceRecipesTable.update).toHaveBeenCalledWith({
+    expect(routeFrom).toHaveBeenCalledWith("recipe_book_items");
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(serviceFrom).not.toHaveBeenCalled();
+    expect(routeRecipesTable.update).toHaveBeenCalledWith({
       save_count: 4,
     });
     expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
@@ -1333,7 +1336,7 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     expect(formatBootstrapErrorMessage).toHaveBeenCalled();
   });
 
-  it("returns 404 when the recipe book does not exist", async () => {
+  it.each([null, { code: "42501", message: "permission denied" }])("keeps a missing or denied book hidden without a privileged fallback (%j)", async (error) => {
     const recipesTable = createRecipesTable({
       selectResults: [
         {
@@ -1346,13 +1349,14 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       selectResults: [
         {
           data: null,
-          error: null,
+          error,
         },
       ],
     });
     const recipeBookItemsTable = createRecipeBookItemsTable({
       insertResults: [],
     });
+    createServiceRoleClient.mockReturnValue({ from: vi.fn(() => { throw new Error("Privileged fallback used"); }) });
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -1389,6 +1393,9 @@ describe("POST /api/v1/recipes/[id]/save", () => {
         code: "RESOURCE_NOT_FOUND",
       },
     });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(recipeBookItemsTable.insert).not.toHaveBeenCalled();
+    expect(awardUserProgressEvent).not.toHaveBeenCalled();
   });
 
   it("rolls back saved item and returns 500 when save_count update fails", async () => {

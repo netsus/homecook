@@ -23,7 +23,6 @@ import { buildSessionAuthorityRpcArgs } from "@/lib/server/recipe-content-snapsh
 import {
   createRecipeSaveInternalClient,
   createRouteHandlerClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 import type { RecipeBookType, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
 
@@ -411,7 +410,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     RecipeSaveDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   const recipeBooksResult = await dbClient

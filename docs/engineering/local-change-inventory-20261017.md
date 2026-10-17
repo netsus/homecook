@@ -646,3 +646,12 @@ master 조상324개, 비조상241개 중patch동등104개·고유후보137개다
 PR1681/1707의 소유자 영역이며 현재 9개 요구와 별도다. 정책·보유기간·수집·삭제/복원·모델 수명주기가 미완료이고, UI는 QA 전용/collection 권한은 false인 준비 코드다. 이번에는 후보 코드·SQL을 가져오거나 테스트·활성화하지 않았다. 향후 통합은 최신 authority/scope 체인에 다시 대조해야 한다. C05/R2/lead OFF와 v85 잠금을 유지한다.
 
 미검토 runtime은138→133개로 줄었지만, 이5개는 소유자 보류로 남는다. ‘필요한 로컬 변경 모두 머지’와 운영 반영은 계속 미완료다. 검토 기록만 별도 브랜치에서 공유한다.
+
+
+## Runtime 검토 세 번째 묶음 — 저장 fallback 최소 이식
+
+`444fe1f6f`의 현재 미반영 부분을 확인했다. 저장 RPC 부재/PGRST202 뒤 fallback에서 전역 service-role을 생성하는 코드가 남아 있어 사용자 `routeClient`만 쓰도록 최소 수정했다. 두 조건이 이전 코드에서 실패하는 회귀를 먼저 재현했고, 수정 후 저장 route/SQL24 PASS·독립 route23 PASS다. 원자 RPC·세션 확인·소유권·read-only 정책과 API 응답은 바꾸지 않았다.
+
+원7파일 전체 patch를 머지하지 않는다. public image route 등록/supplemental read scope 및 과거 static gate 변경은 별도 정책으로 보류한다. 따라서 이 후보는 `reviewed_partial_fix_other_policy_deferred`이며 전체 완료/중복으로 닫지 않는다. 미검토 runtime은132개, 검토 후 일부 보류 후보1개는 별도로 남는다.
+
+추가 선택 실행의 `prelaunch-recipe-save-maintenance.test.ts`는 기존 fixture가 임시 복제한 web 모듈의 새 single-quoted 상대 import를 변환하지 못해 collection 단계에서 실패했다(`round2-closed-marker-rotation-bridge.mjs` 누락). 제품 수정과 분리해 보존하며 운영 도구/배포 설정은 수정하지 않는다.
