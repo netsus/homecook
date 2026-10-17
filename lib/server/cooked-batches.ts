@@ -113,11 +113,13 @@ export function parseSnapshotV2CompleteRequest(value: unknown) {
     "finished_weight_g",
     "weight_input_source",
     "weight_attestation",
+    "execution_revision",
   ])) fields.push({ field: "body", reason: "unknown_field" });
   if (value.weight_attestation !== undefined && (!isWeightAttestationInput(value.weight_attestation)
     || value.weight_action !== "set_finished_weight" || value.weight_input_source !== "reported_measured")) {
     fields.push({ field: "weight_attestation", reason: "invalid_attestation" });
   }
+  if (value.execution_revision !== undefined && (!Number.isSafeInteger(value.execution_revision) || Number(value.execution_revision) < 0)) fields.push({field:"execution_revision",reason:"invalid_revision"});
   const ids = Array.isArray(value.consumed_pantry_item_ids)
     ? value.consumed_pantry_item_ids
     : null;
@@ -140,11 +142,12 @@ export function parseSnapshotV2CompleteRequest(value: unknown) {
   }
   if (fields.length > 0 || !ids) return invalid(fields);
   const parsed: { consumedPantryItemIds: string[]; weightAction: "set_finished_weight" | "weigh_later";
-    finishedWeightG: number | null; weightInputSource: "reported_measured" | null; weightAttestation?: WeightAttestationInput } = {
+    finishedWeightG: number | null; weightInputSource: "reported_measured" | null; weightAttestation?: WeightAttestationInput; executionRevision?: number } = {
     consumedPantryItemIds: [...ids] as string[], weightAction: value.weight_action as "set_finished_weight" | "weigh_later",
     finishedWeightG: value.finished_weight_g as number | null,
     weightInputSource: value.weight_input_source === "reported_measured" ? "reported_measured" : null,
   };
+  if (typeof value.execution_revision === "number") parsed.executionRevision = value.execution_revision;
   if (isWeightAttestationInput(value.weight_attestation)) parsed.weightAttestation = value.weight_attestation;
   return { ok: true as const, value: parsed };
 }

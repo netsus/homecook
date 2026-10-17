@@ -1,3 +1,4 @@
+import { executionState, executionWeightSummary } from "@/lib/server/cooking-execution-quantities";
 import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { cookedWeightEvidenceEnabled, readSnapshotWeightPrediction, summarizeWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
@@ -61,9 +62,21 @@ export async function GET(_request: Request, context: RouteContext) {
     return result.response;
   }
 
-  const data = projectSnapshotV2CookModeData(result.data);
+  let rawMode = result.data;
+  let execution: ReturnType<typeof executionState> = null;
+  if (_request.headers.get("X-Homecook-Execution-Quantities") === "execution-v1") {
+    const stored = await callFuturePropagationRpc(serviceClient, "read_cooking_execution_quantities", {
+      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority), p_session_id: sessionId,
+    });
+    if (!stored.ok) return stored.response;
+    execution = executionState(stored.data);
+    if (!execution || !rawMode || typeof rawMode !== "object" || !("recipe" in rawMode)
+      || !rawMode.recipe || typeof rawMode.recipe !== "object") return fail("INTERNAL_ERROR", "요리의 재료 기록을 확인하지 못했어요.", 500);
+    rawMode = { ...rawMode, recipe: { ...rawMode.recipe, ingredients: execution.rows } };
+  }
+  const data = projectSnapshotV2CookModeData(rawMode);
   const metadata: Pick<SnapshotV2CookModeData, "weight_evidence_enabled" | "weight_prediction"> = {};
-  if (data && wantsCookedWeightEvidence(_request) && cookedWeightEvidenceEnabled() && result.data && typeof result.data === "object"
+  if (data && !execution?.revision && wantsCookedWeightEvidence(_request) && cookedWeightEvidenceEnabled() && result.data && typeof result.data === "object"
     && "weight_evidence_enabled" in result.data && result.data.weight_evidence_enabled === true) {
     metadata.weight_evidence_enabled = true;
     try {
@@ -90,7 +103,10 @@ export async function GET(_request: Request, context: RouteContext) {
       // Preview is optional. Completion remains available without a number.
     }
   }
+  if (execution?.revision && execution.prediction && wantsCookedWeightEvidence(_request) && cookedWeightEvidenceEnabled()) metadata.weight_prediction = executionWeightSummary(execution);
+  if (execution && cookedWeightEvidenceEnabled() && result.data && typeof result.data === "object" && "weight_evidence_enabled" in result.data
+    && result.data.weight_evidence_enabled === true) metadata.weight_evidence_enabled = true;
   return data
-    ? ok({ ...data, ...metadata })
+    ? ok({ ...data, ...metadata, ...(execution ? { execution_revision: execution.revision } : {}) })
     : fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
 }

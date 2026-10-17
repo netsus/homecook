@@ -147,3 +147,23 @@ v85 단독 담당의 배포 잠금은 유지한다. 앱 메시지 도구에서 �
 Chrome실제컴포넌트375×812/1440×900에서추정225g·빈실측·가정설명·가로넘침없음을확인했다。190입력은reported_measured 요청,빈칸은weigh_later/null 요청을로컬콜백에서확인했다. 임시fixture route는제거했다. 실행분재료수정(3)은미구현이며9개운영완료로표시하지않는다. 웹+스키마동시반영필요,운영배포0·잠금유지.
 
 무게 후보 최종 typecheck·build exit0, 변경ESLint exit0/경고0, diff check exit0. 기존4개 build경고 유지. evidence web/DB gate의 기존 상태는 변경하지 않았고, 배포시 기능 사용 가능 여부는 담당자가 실제 승인된 설정과 함께 확인해야 한다.
+
+
+## 20:56 UTC 인계
+
+무게복원 [PR1782](https://github.com/netsus/homecook/pull/1782)는20:51:27UTC master `16a0c5466a8b333151da95689d46fa33368cc5f9`로머지됐다. 운영배포0이며SQL운영적용0. 현재독립branch `codex/cooking-run-ingredients-20261017`는16a0기준이다.
+
+실행분수정(3)은아직구현전설계다. 원래 session/content snapshot의불변·public-owner-null보호를완화하지않고별도private실행양overlay를둔다. 원본기준양은보존하고수정한행만현재요리분의고정량으로취급해이중배율을막는다. 영양·예상무게를동일overlay판본으로고정하고완료와경쟁하는수정은revision/소유자/상태/멱등성으로차단해야한다. 취소는원본에반영하지않는다. 구버전완료경로가수정내용을무시하는것도DB에서거절하도록검증할예정이다.
+
+
+## 21:07 UTC 실행분 재료 수정 후보
+
+원본과 session snapshot pointer를바꾸지않는private execution overlay, owner/상태/revision/기존멱등원장, 수정행현재인분fixed·미수정행기존배율, 동일양으로영양/무게계산·완료원자참조를초안구현했다. 구완료우회는수정overlay가있으면DB에서거절한다. 식사분모는완료음식에고정된영양총량을사용한다. 미확인/변환근거없음은결측유지, g↔kg·ml↔L만자동환산한다.
+
+실행PATCH·GET2회refresh·완료route·gateOFF·미인증/위조/infra/충돌·unit/focus/cancel5파일47검사PASS. 별도UI/기존계약5파일50검사PASS(후속추가2개별도). 격리minimalSQLfixture10검사PASS, 재현시소유networkless컨테이너안에새DB만create/drop하고원본SQL의기본validator/receipt함수를사용한다. 별도현재운영validator읽기전용복사fixture에서도10PASS였다. 전체schema/실제인증HTTP종단검증은아니며운영SQL적용0.
+
+독립리뷰3건(수정0개인확인보존·초기focus·DB evidenceOFF완료)을수정하고재리뷰확정finding0. C05/R2/lead OFF불변, 수정실행분에는원본지문의개인확인을잘못붙이지않도록개인확인UI만비노출하며실측저장은유지한다. 수정0은기존개인확인흐름을그대로유지한다.
+
+Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산·0.19kg적용·버튼focus복귀·완료추정143g표시·닫기/재열기값유지·가로넘침0을확인했다. callback형fixture이며운영DB저장/인증HTTP종단이라고세지않는다. 현재미커밋후보이고타입/빌드최종·PR/머지·배포는아직이다.
+
+실행분 후보 최종: 합동14파일159검사PASS, SQL10PASS, typecheck/build exit0(기존4경고), 변경ESLint 오류0/경고0, diff check0. Chrome모바일375/데스크톱1440·최종시트폭640/가로넘침0. 임시route제거·dev서버종료. 실행분/완성무게2 migration 모두운영미적용이며v85잠금유지.

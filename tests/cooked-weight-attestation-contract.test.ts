@@ -63,6 +63,14 @@ describe("optional personal assertion contracts", () => {
     expect(spies.rpc.mock.calls[1][0]).toBe("mutate_cooked_batch_weight_with_attestation");
     expect(spies.rpc.mock.calls[1][1]).not.toHaveProperty("headers");
   });
+  it("keeps unchanged execution revision zero on the existing attestation path",async()=>{
+    spies.rpc.mockResolvedValueOnce({data:completed,error:null});
+    expect((await complete(request("POST",{...completedBody,execution_revision:0}),params)).status).toBe(200);
+    expect(spies.rpc.mock.calls[0][0]).toBe("complete_snapshot_v2_cooking_session_with_attestation");
+  });
+  it("rejects a stale original-quantity attestation after execution edits",async()=>{
+    expect((await complete(request("POST",{...completedBody,execution_revision:1}),params)).status).toBe(409);expect(spies.rpc).not.toHaveBeenCalled();
+  });
   it("does not fallback or silently drop an explicit choice when OFF/context/old-receipt fails", async () => {
     for (const code of ["WEIGHT_ATTESTATION_DISABLED", "WEIGHT_ATTESTATION_CONTEXT_CHANGED", "WEIGHT_ATTESTATION_OLD_RECEIPT"]) {
       spies.rpc.mockResolvedValueOnce({ data: null, error: { code: "55000", message: code } });

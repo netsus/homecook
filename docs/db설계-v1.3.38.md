@@ -3623,3 +3623,10 @@ private immutable digest helper1개와 service-only SECURITY DEFINER RPC `read_r
 ### 2026-10-17 완성무게 질량 fallback 모델 확장 후보
 
 `20261017210000_cooked_weight_mass_fallback.sql`은 기존 private evidence 기록 함수의 허용 모델을 `ingredient-mass-75-v1`까지 확장하고 이 모델의 전체 질량·환산증거·가정·중복행·십진반올림 총량을 검증한다. 기존 테이블/권한/정책/원장/과거 데이터는 변경하지 않는다. 원래의 조건별 추정과 사용자 보고 실측은 별개로 보존한다. 검증된 질량 전체를 모를 때는 새 예측을 만들지 않는다. 웹+스키마 동시 반영이 필요한 미배포 후보이며 운영 DB 적용은 배포 잠금 해제 후 별도 직렬화한다.
+
+
+### 2026-10-17 개인 요리 실행 수량 overlay 후보
+
+`20261017220000_cooking_execution_quantities.sql`은 private.cooking_execution_quantities에 session/owner/원래 content pin/revision/재료JSON/영양근거/무게예측을 보관한다. RLS와 direct grant 거절, owner authority·recipe advisory/session lock·CAS revision·기존 멱등 원장을 사용한다. 변경은 수량 필드로 제한하고 원본 source identity와 행 순서/개수는 유지한다. 수정행은 현재 요리량으로 fixed 처리한다. 원본 recipe/content/nutrition snapshot과 session pointer의 불변 보호는 완화하지 않는다.
+
+완료는 같은 session lock 안에서 기대 판본을 확인해 저장 계산을 참조하고, 원래 완료 함수에 좁은 우회 방지 hook을 더한다. batch nutrition resolver는 private 실행 총량을 사용하되 batch/content pin/owner 일치를 확인한다. 원래 recipe pin과 계획 상태 전이 검증은 그대로다. 새 RPC3종은 snapshot-v2-session scope의 정확한 POST 경로와 service_role execute만 허용한다. 웹+스키마 동시 반영 후보이며 운영 적용0이다.

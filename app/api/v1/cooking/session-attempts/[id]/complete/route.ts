@@ -37,6 +37,8 @@ export async function POST(request: Request, context: RouteContext) {
     const error = attestationOwnerPrecondition(attestation, authorized.user.id);
     if (error) return error;
   }
+  const executionRevision = attestation && parsed.value.executionRevision === 0 ? undefined : parsed.value.executionRevision;
+  if (executionRevision !== undefined && attestation) return fail("CONFLICT", "재료를 수정한 요리는 무게를 다시 확인해 주세요.", 409);
   const evidenceEnabled = cookedWeightEvidenceEnabled();
   const withEvidence = evidenceEnabled || parsed.value.weightInputSource !== null;
   const args: Record<string, unknown> = {
@@ -59,8 +61,8 @@ export async function POST(request: Request, context: RouteContext) {
     } }),
   };
   try {
-    if (withEvidence) {
-      args.p_prediction = await readSnapshotWeightPrediction({
+    if (withEvidence || executionRevision !== undefined) {
+      args.p_prediction = executionRevision && executionRevision > 0 ? null : await readSnapshotWeightPrediction({
         client: sessionClient, weightClient: createRecipeMealWeightReadInternalClient(),
         ownerId: authorized.user.id, sessionId: id, methodClient: authorized.client, authorityArgs: authorized.authorityArgs,
       });
@@ -78,9 +80,16 @@ export async function POST(request: Request, context: RouteContext) {
       ?? fail("INTERNAL_ERROR", "요리 중량 근거를 확인하지 못했어요. 다시 시도해 주세요.", 500);
   }
   if (attestation) Object.assign(args, attestationRpcArgs(attestation));
-  let result = await callCookedBatchRpc(authorized.client, attestation ? "complete_snapshot_v2_cooking_session_with_attestation" : withEvidence
+  if (executionRevision !== undefined) args.p_expected_execution_revision = executionRevision;
+  let result = await callCookedBatchRpc(authorized.client, executionRevision !== undefined ? "complete_cooking_execution" : attestation ? "complete_snapshot_v2_cooking_session_with_attestation" : withEvidence
     ? "complete_snapshot_v2_cooking_session_with_weight_evidence" : "complete_snapshot_v2_cooking_session", args);
-  if (withEvidence && parsed.value.weightInputSource === null && !result.ok && await isCookedWeightEvidenceDisabledResponse(result.response)) {
+  if (executionRevision !== undefined && withEvidence && parsed.value.weightInputSource === null && !result.ok
+    && await isCookedWeightEvidenceDisabledResponse(result.response)) {
+    // Keep the execution revision lock and its frozen nutrition/prediction even
+    // when the independent evidence writer is OFF. Never discard a measurement.
+    result = await callCookedBatchRpc(authorized.client, "complete_cooking_execution", { ...args, p_write_enabled: false });
+  }
+  if (executionRevision === undefined && withEvidence && parsed.value.weightInputSource === null && !result.ok && await isCookedWeightEvidenceDisabledResponse(result.response)) {
     const legacyArgs = { ...args };
     delete legacyArgs.p_prediction;
     delete legacyArgs.p_weight_input_source;
