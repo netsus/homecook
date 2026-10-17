@@ -4637,6 +4637,11 @@ GET /recipe-books
 > **v1.2 변경**: 모든 recipe_books의 `id`는 **uuid로 통일**. 시스템/커스텀 구분은 `book_type`으로만 한다.
 > **2026-06-10 addendum**: `cover_color_key`, `cover_image_url`은 레시피북 다이어리 커버 표시용 메타데이터이다. 저장/권한 정책에는 영향을 주지 않는다.
 
+> **2026-10-17 로컬 후보, 미배포**: 관리 표지는 `cover_image_url`에 `/api/v1/recipe-books/{id}/image`를 반환한다. 내부 Storage signed URL·loopback 주소·object path를 브라우저 응답에 노출하지 않는다. 기존 비관리 표지 URL/null은 유지한다.
+>
+> `GET /recipe-books/{id}/image`: 로그인 사용자에게 소유 레시피북 접근을 매 요청 재확인한 뒤 기존 service-only projection으로 owner/reference/path/state를 검증하고 내부 Storage에서 읽는다. 성공은 기존 레시피 이미지 API처럼 JPEG/PNG/WebP binary(최대5MiB), `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`다. 실패는 표준 JSON error wrapper이며 비로그인401, 소유 레시피북/관리 이미지 없음404, 기존 세션 권위 오류409/계정 정비503, 서비스·검증·파일 형식/크기 오류500을 반환한다. 기존 소유권·Storage 권한·DB 계약은 유지한다.
+
+
 > **시스템 레시피북 = 가상 책 정책**
 >
 > | book_type  | 조회 소스 (Source of Truth)                                                   |

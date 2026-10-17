@@ -14,13 +14,9 @@ import {
 } from "@/lib/server/user-bootstrap";
 import {
   readRecipeBookImageProjections,
-  resolveRecipeBookImageReadUrl,
+  resolveRecipeBookImageReadPath,
   type RecipeBookImageReadRpcClient,
 } from "@/lib/server/recipe-book-image-read";
-import {
-  normalizeExpectedRecipeImageStorageOrigin,
-  type RecipeImageReadStorageClient,
-} from "@/lib/server/recipe-image-read";
 import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
@@ -38,8 +34,6 @@ import type {
 interface QueryError {
   message: string;
 }
-
-const RECIPE_BOOK_IMAGE_READ_URL_TTL_SECONDS = 300;
 
 interface QueryOrderOption {
   ascending: boolean;
@@ -204,21 +198,13 @@ function getCurrentMaxSortOrder(rows: RecipeBookSortOrderRow[] | null) {
   return rows.reduce((maxValue, row) => Math.max(maxValue, row.sort_order), -1);
 }
 
-function readExpectedStorageOrigin() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
-    throw new Error("managed recipe image read configuration is invalid");
-  }
-  return normalizeExpectedRecipeImageStorageOrigin(configuredUrl);
-}
-
 async function resolveRecipeBookCoverUrls({
   books,
   client,
   expectedOwnerUuid,
 }: {
   books: RecipeBookRow[];
-  client: RecipeBookImageReadRpcClient & RecipeImageReadStorageClient;
+  client: RecipeBookImageReadRpcClient;
   expectedOwnerUuid: string;
 }) {
   const chunks: RecipeBookRow[][] = [];
@@ -247,19 +233,10 @@ async function resolveRecipeBookCoverUrls({
   if (projections.length === 0) {
     return books;
   }
-  const expectedStorageOrigin = readExpectedStorageOrigin();
   let resolvedCoverUrls;
   try {
-    resolvedCoverUrls = await Promise.all(
-      projections.map((projection) =>
-        resolveRecipeBookImageReadUrl({
-          client,
-          expectedOwnerUuid,
-          expectedStorageOrigin,
-          projection,
-          signedUrlTtlSeconds: RECIPE_BOOK_IMAGE_READ_URL_TTL_SECONDS,
-        })
-      ),
+    resolvedCoverUrls = projections.map((projection) =>
+      resolveRecipeBookImageReadPath({ expectedOwnerUuid, projection })
     );
   } catch {
     return books;

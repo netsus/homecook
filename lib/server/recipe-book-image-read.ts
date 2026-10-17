@@ -1,6 +1,7 @@
 import {
   isRecipeImageProjectionAuthorityMissing,
   resolveManagedRecipeImageReadUrl,
+  validateManagedRecipeImageReadTarget,
   type RecipeImageReadStorageClient,
 } from "@/lib/server/recipe-image-read";
 
@@ -121,6 +122,37 @@ export async function readRecipeBookImageProjections({
   });
 }
 
+function readLegacyCoverUrl(projection: RecipeBookImageReadProjection) {
+  if (
+    projection.bucket_id !== null
+    || projection.object_path !== null
+    || projection.owner_uuid !== null
+    || projection.account_generation !== null
+    || projection.visibility !== null
+    || projection.state !== null
+    || projection.reference_type !== null
+  ) {
+    throw new Error("managed recipe book image read evidence is invalid");
+  }
+
+  const legacyUrl = projection.legacy_cover_image_url?.trim();
+  return legacyUrl ? legacyUrl : null;
+}
+
+export function resolveRecipeBookImageReadPath({
+  expectedOwnerUuid, projection: rawProjection,
+}: {
+  expectedOwnerUuid: string;
+  projection: RecipeBookImageReadProjection;
+}) {
+  const projection = parseProjection(rawProjection);
+  if (projection.image_object_id === null) return readLegacyCoverUrl(projection);
+  validateManagedRecipeImageReadTarget({
+    expectedOwnerUuid, expectedReferenceType: "recipe_book_cover", projection,
+  });
+  return `/api/v1/recipe-books/${projection.book_id}/image`;
+}
+
 export async function resolveRecipeBookImageReadUrl({
   client,
   expectedOwnerUuid,
@@ -135,22 +167,7 @@ export async function resolveRecipeBookImageReadUrl({
   signedUrlTtlSeconds: number;
 }) {
   const projection = parseProjection(rawProjection);
-  if (projection.image_object_id === null) {
-    if (
-      projection.bucket_id !== null
-      || projection.object_path !== null
-      || projection.owner_uuid !== null
-      || projection.account_generation !== null
-      || projection.visibility !== null
-      || projection.state !== null
-      || projection.reference_type !== null
-    ) {
-      throw new Error("managed recipe book image read evidence is invalid");
-    }
-
-    const legacyUrl = projection.legacy_cover_image_url?.trim();
-    return legacyUrl ? legacyUrl : null;
-  }
+  if (projection.image_object_id === null) return readLegacyCoverUrl(projection);
 
   return resolveManagedRecipeImageReadUrl({
     client,

@@ -320,7 +320,7 @@ describe("/api/v1/recipe-books", () => {
     const signedUrl =
       "http://127.0.0.1:54321/storage/v1/object/sign/recipe-images-private/cover?token=short";
     let ownedBookListCompleted = false;
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://public.example.invalid";
 
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [],
@@ -419,7 +419,7 @@ describe("/api/v1/recipe-books", () => {
       return;
     }
     expect(response.status).toBe(200);
-    expect(body.data.books[0].cover_image_url).toBe(scenario === "owned" ? signedUrl : "https://legacy.example/cover.webp");
+    expect(body.data.books[0].cover_image_url).toBe(scenario === "owned" ? `/api/v1/recipe-books/${bookId}/image` : "https://legacy.example/cover.webp");
     expect(recipeBooksTable.__selectQuery.eq).toHaveBeenCalledWith("user_id", ownerId);
     if (scenario !== "owned") {
       if (scenario === "unavailable") expect(rpc).not.toHaveBeenCalled();
@@ -429,10 +429,7 @@ describe("/api/v1/recipe-books", () => {
     expect(rpc).toHaveBeenCalledWith("read_recipe_book_image_projections", {
       p_book_ids: [bookId],
     });
-    expect(createSignedUrl).toHaveBeenCalledWith(
-      `${ownerId}/1/${objectId}.webp`,
-      300,
-    );
+    expect(createSignedUrl).not.toHaveBeenCalled();
   });
 
   it("GET returns schema guidance when bootstrap fails before listing books", async () => {
