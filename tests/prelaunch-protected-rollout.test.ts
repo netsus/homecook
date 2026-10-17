@@ -2,9 +2,9 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { cpSync, mkdirSync, mkdtempSync, existsSync, readFileSync, writeFileSync, realpathSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, existsSync, readFileSync, writeFileSync, realpathSync, rmSync,symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join,resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { createProtectedPrelaunchDatabaseEngine, createProtectedPrelaunchJournal, createProtectedPrelaunchWriter, planProtectedPrelaunchMigrations, validatePrelaunchMigrationSql } from "../scripts/lib/prelaunch-database.mjs";
@@ -84,7 +84,8 @@ describe("protected rollout CLI authority", () => {
       const review = fixture().review, reviewPath = join(root, "review.json"), modulePath = join(root, "prelaunch-web-deploy.mjs");
       const bytes = JSON.stringify(review);
       writeFileSync(reviewPath, bytes, { mode: 0o600 });
-      const source = readFileSync(join(process.cwd(), "scripts/lib/prelaunch-web-deploy.mjs"), "utf8");
+      const source = readFileSync(join(process.cwd(), "scripts/lib/prelaunch-web-deploy.mjs"), "utf8")
+        .replace(/from (["'])(\.\/[^"'\n]+)\1/gu, (_match,_quote,relativePath:string)=>`from "${pathToFileURL(resolve(process.cwd(),'scripts/lib',relativePath)).href}"`);
       const pattern = /export const PROTECTED_ROLLOUT_REVIEW_PIN = Object\.freeze\(\{[^}]*\}\);/u;
       expect(source.match(pattern)?.length).toBe(1);
       writeFileSync(modulePath, source.replace(pattern, `export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze(${JSON.stringify({ path: reviewPath, sha256: hash(bytes) })});`), { mode: 0o600 });
@@ -95,12 +96,13 @@ describe("protected rollout CLI authority", () => {
       expect(PROTECTED_ROLLOUT_REVIEW_PIN).toEqual(approvedRolloutPin);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
-  it("denies an empty approval pin in the existing pnpm path before private state access", () => {
+  it("denies an empty approval pin in the packaged deploy entrypoint before private state access", () => {
     const home = mkdtempSync(join(tmpdir(), "protected-cli-"));
     try {
       const checkout = join(home, "checkout");
       mkdirSync(join(checkout, "lib/server"), { recursive: true });
       cpSync(join(process.cwd(), "scripts"), join(checkout, "scripts"), { recursive: true });
+      symlinkSync(join(process.cwd(),'node_modules'),join(checkout,'node_modules'),'dir');
       cpSync(join(process.cwd(), "lib/server/youtube-extraction-worker-timing.json"), join(checkout, "lib/server/youtube-extraction-worker-timing.json"));
       const modulePath = join(checkout, "scripts/lib/prelaunch-web-deploy.mjs");
       const source = readFileSync(modulePath, "utf8");
@@ -108,11 +110,11 @@ describe("protected rollout CLI authority", () => {
       expect(source.match(pattern)?.length).toBe(1);
       writeFileSync(modulePath, source.replace(pattern, "export const PROTECTED_ROLLOUT_REVIEW_PIN = Object.freeze({ path: null, sha256: null });"));
       const command = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")).scripts["deploy:dev"];
+      expect(command).toBe('node scripts/deploy-prelaunch-web.mjs deploy');
       writeFileSync(join(checkout, "package.json"), JSON.stringify({ private: true, scripts: { "deploy:dev": command } }));
-      const result = spawnSync("pnpm", ["deploy:dev", "--", "--reviewed-protected-rollout", "--protected-phase", "database",
+      const result = spawnSync(process.execPath, [join(checkout,'scripts/deploy-prelaunch-web.mjs'), "deploy", "--", "--reviewed-protected-rollout", "--protected-phase", "database",
         "--reviewed-ref", "b".repeat(40), "--db-config", "/private/not-a-real-config.env", "--test-script", "test:feedback-batch:web"], {
-        // Shared, already installed dependencies are intentional in this fixture.
-        // pnpm 11 otherwise attempts an unrelated install before invoking the CLI.
+        // Invoke the package's exact Node entrypoint without requiring a global pnpm shim.
         cwd: checkout, encoding: "utf8", env: { ...process.env, HOME: home, HOMECOOK_DEPLOY_REPOSITORY: process.cwd(), pnpm_config_verify_deps_before_run: "false" },
       });
       expect(result.status).toBe(1);

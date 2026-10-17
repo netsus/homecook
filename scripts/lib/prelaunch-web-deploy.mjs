@@ -1,4 +1,5 @@
 import { assertV85Source } from "./youtube-v85-cutover.mjs";
+import { assertPinnedRound2ClosedMarkerRotationBridge } from './round2-closed-marker-rotation-bridge.mjs';
 import { assertV74SourceHandoff } from "./prelaunch-youtube-v74-cutover.mjs";
 import { assertFingerprintSource } from "./youtube-fingerprint-recovery-authority.mjs";
 import { isDeepStrictEqual } from "node:util";
@@ -1597,8 +1598,9 @@ export function protectedRolloutStatus({ review, reviewSha256, guard, reader, wr
       || (ready && readerCompatible && (!writer || ["committed", "not_applied", "closed_after_unknown"].includes(writer.status))), backwardCompatible: false };
 }
 
-export function assertProtectedClosedR2Marker({ state, marker, markerSha256, live, closedReview, rollout, reviewSha256, databaseReceipt, databaseReceiptSha256, readerReceipt, readerReceiptSha256 }) {
+export function assertProtectedClosedR2Marker({ state, marker, markerSha256, live, closedReview, rollout, reviewSha256, databaseReceipt, databaseReceiptSha256, readerReceipt, readerReceiptSha256, rotationBridge = undefined }) {
   assertProtectedRolloutReview(rollout);
+  const bridge=rotationBridge ? assertPinnedRound2ClosedMarkerRotationBridge({...rotationBridge,state,marker,live}) : null;
   const { rolledBack, artifactSha256, ...recorded } = state.closedR2 ?? {};
   const authority = marker?.protectedRollout;
   if (rollout.feature === COOKED_WEIGHT_FEATURE) closedR2Require(isDeepStrictEqual(authority?.predecessorProtected, rollout.predecessorProtected)
@@ -1636,8 +1638,8 @@ export function assertProtectedClosedR2Marker({ state, marker, markerSha256, liv
     && marker.historicalReadinessSha256 === closedReview.historicalReadiness.sha256
     && marker.databasePlanSha256 === closedR2Hash(JSON.stringify({ source: rollout.database.after, applied: rollout.database.after }))
     && state.ref === marker.to && state.checkout === marker.checkout && state.buildId === marker.buildId
-    && state.targetPlistHash === marker.targetPlistSha256 && live.ref === marker.to && live.cwd === marker.checkout
-    && live.buildId === marker.buildId && live.plistHash === marker.targetPlistSha256
+    && state.targetPlistHash === (bridge?.actualPlistSha256 ?? marker.targetPlistSha256) && live.ref === marker.to && live.cwd === marker.checkout
+    && live.buildId === marker.buildId && live.plistHash === (bridge?.actualPlistSha256 ?? marker.targetPlistSha256)
     && CLOSED_R2_FLAGS.every(key => live.plist.EnvironmentVariables[key] === "false"), "보호 승계는 원 R2 history와 정확한 실제 웹을 보존해야 합니다.");
 }
 
@@ -1975,9 +1977,9 @@ export function assertFrontendScope(files, before, after) {
 }
 
 export function parsePrelaunchOptions(args) {
-  /** @type {{ref: string, refOption: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string, testScript?: string, alreadyAppliedDb?: boolean, skipAutomatedTests?: boolean, reviewedRepairReadiness?: boolean, reviewedBetaReadiness?: boolean, reviewedFeedbackReadiness?: boolean, reviewedAiNutritionReadiness?: boolean, reviewedIngredientSearchReadiness?: boolean, reviewedPieceUnitReadiness?: boolean, reviewedYoutubeTrialReadiness?: boolean, reviewedYoutubeResolutionReadiness?: boolean, reviewedNutritionRecoveryReadiness?: boolean, reviewedIntegratedMasterReadiness?: boolean, reviewedClosedR2Maintenance?: boolean, reviewedProtectedRollout?: boolean, protectedPhase?: string}} */
+  /** @type {{ref: string, refOption: string, rotationBridgeToolRef?: string, envFile?: string, dbConfig?: string, dbBaseline?: string, dbCompatible?: boolean, verifyScript?: string, testScript?: string, alreadyAppliedDb?: boolean, skipAutomatedTests?: boolean, reviewedRepairReadiness?: boolean, reviewedBetaReadiness?: boolean, reviewedFeedbackReadiness?: boolean, reviewedAiNutritionReadiness?: boolean, reviewedIngredientSearchReadiness?: boolean, reviewedPieceUnitReadiness?: boolean, reviewedYoutubeTrialReadiness?: boolean, reviewedYoutubeResolutionReadiness?: boolean, reviewedNutritionRecoveryReadiness?: boolean, reviewedIntegratedMasterReadiness?: boolean, reviewedClosedR2Maintenance?: boolean, reviewedProtectedRollout?: boolean, protectedPhase?: string}} */
   const options = { ref: "origin/master", refOption: "--ref" };
-  const names = { "--env-file": "envFile", "--db-config": "dbConfig", "--db-baseline": "dbBaseline", "--verify-script": "verifyScript", "--test-script": "testScript", "--protected-phase": "protectedPhase" };
+  const names = { "--env-file": "envFile", "--db-config": "dbConfig", "--db-baseline": "dbBaseline", "--verify-script": "verifyScript", "--test-script": "testScript", "--protected-phase": "protectedPhase", "--rotation-bridge-tool-ref": "rotationBridgeToolRef" };
   const seen = new Set();
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];

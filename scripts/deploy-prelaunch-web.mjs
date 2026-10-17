@@ -5,6 +5,8 @@ import { loadRecoveredReadiness } from './lib/prelaunch-v85-recovered-readiness.
 import { createRound2EightKeyRestartFence, guardRound2EightKeyRestart, preserveRound2RotationState } from './lib/round2-eight-key-rotation-fence.mjs';
 import { readV85Approval } from './lib/youtube-v85-approval.mjs';
 import { readV85Authority, assertV85Source, assertV85MetadataHandoff, v85Paths } from "./lib/youtube-v85-cutover.mjs";
+import { ROTATION_BRIDGE, assertRotationBridgeToolBinding, confirmRotationBridgeTool } from './lib/round2-closed-marker-rotation-bridge.mjs';
+import { createInterface } from 'node:readline/promises';
 import {
   RECIPE_REQUEST_ROLE_FEATURE, RECIPE_REQUEST_ROLE_MIGRATION, readRecipeRequestRoleAttempt, recipeRequestRolePhaseStatus, assertRecipeRequestRoleReader, verifyRecipeRequestRolePredecessor, verifyRecipeRequestRoleWorkerAdmission, loadRecipeSaveRecoveryMaintenance,
   RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_SAVE_RECOVERY_MIGRATIONS, RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES, recipeSaveRecoveryRuntimeContract, loadCurrentDatabaseMaintenance, readRecipeSaveRecoveryAttempt, recipeSaveRecoveryPhaseStatus, assertRecipeSaveRecoveryReader, verifyRecipeSaveRecoveryPredecessor, verifyRecipeSaveRecoveryWorkerAdmission,
@@ -1051,7 +1053,8 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
   if (marker.protectedRollout) {
     rollout = loadProtectedRolloutReview(repository, { reviewSha256: marker.protectedRollout.reviewSha256 });
     assertProtectedClosedR2Marker({ ...recorded, marker, markerSha256: hash(bytes), live: { ...live, plistHash: hash(live.bytes) },
-      closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout) });
+      closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout),
+      rotationBridge: closedMarkerRotationBridge(recorded.state,marker,live) });
     if (!approvedSourceAncestor(rollout.to, live.ref)) throw new DeploymentError("Protected source ancestry/receipt differs");
     const maintenance = maintenanceAttempt?.review.feature === RECIPE_REQUEST_ROLE_FEATURE && maintenanceAttempt.record.status !== "committed"
       ? loadRecipeSaveRecoveryMaintenance(repository) : maintenanceAttempt?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE && maintenanceAttempt.record.status !== "committed"
@@ -1075,6 +1078,40 @@ function requireClosedR2Mode(options, live = current(), rollback = false) {
     if (!approvedSourceAncestor(review.to, live.ref)) throw new DeploymentError("Closed source ancestry/receipt differs"); // Continuation starts from the reviewed F01 lineage, never a bootstrap predecessor.
   }
   return { ...recorded, marker, markerPath: path, review, rollout };
+}
+function closedMarkerRotationBridge(state,marker,live) {
+  if(!state.round2EightKeyRotation||state.targetPlistHash===marker.targetPlistSha256)return undefined;
+  const read=path=>readClosedR2PrivateBytes(path,repository,524288);
+  const op=join(root,'round2-eight-key-rotation-apply-20261017'),stage=join(root,'round2-eight-key-rotation-stage-20261017');
+  const beforePlistBytes=read(join(root,'releases/7b4b74d12eb1-f1VAGt/previous.plist'));
+  const env=live.plist.EnvironmentVariables;
+  return {authority:v85Authority(),stateBytes:read(statePath),beforeBytes:read(join(op,'state-before.json')),afterBytes:read(join(op,'state-after.json')),
+    receiptBytes:read(join(stage,'receipt.json')),journalBytes:read(join(op,'journal.json')),
+    fenceBytes:read(join(root,'round2-eight-key-rotation-fence.json')),controlBytes:read(env.MUMEOK_ROUND2_CONTROL_PATH),
+    armExists:Boolean(env.MUMEOK_ROUND2_PREFLIGHT_ARM_PATH&&existsSync(env.MUMEOK_ROUND2_PREFLIGHT_ARM_PATH)),
+    beforePlistBytes,beforePlist:parsePlist(beforePlistBytes)};
+}
+async function reviewRotationBridgeTool(action,options) {
+  if(!existsSync(statePath)){if(options.rotationBridgeToolRef)throw new DeploymentError('Rotation bridge state missing');return;}
+  const state=JSON.parse(readClosedR2PrivateBytes(statePath,repository,524288));
+  const required=state.round2EightKeyRotation&&state.targetPlistHash!==state.closedR2?.targetPlistSha256;
+  if(!required){if(options.rotationBridgeToolRef)throw new DeploymentError('Rotation bridge is only for the exact rotated06a predecessor');return;}
+  const authority=v85Authority();
+  git(['merge-base','--is-ancestor',ROTATION_BRIDGE.target,'HEAD']);
+  const paths=git(['diff','--name-only',ROTATION_BRIDGE.target,'HEAD']).split('\n').filter(Boolean).sort();
+  const digests=Object.fromEntries(paths.map(path=>[path,[ROTATION_BRIDGE.target,'HEAD'].map(ref=>git(['ls-tree',ref,'--',path])
+    ?hash(execFileSync('git',['-C',repository,'show',`${ref}:${path}`],{maxBuffer:524288,stdio:['ignore','pipe','pipe']})):null)]));
+  const review=assertRotationBridgeToolBinding({toolRef:git(['rev-parse','HEAD']),requestedToolRef:options.rotationBridgeToolRef,
+    targetRef:options.ref,capsuleSha256:authority?.planSha256,clean:git(['status','--porcelain'])==='',
+    untrackedPaths:git(['ls-files','--others','--exclude-standard']).split('\n').filter(Boolean),
+    ownRepository:realpathSync(resolve(dirname(fileURLToPath(import.meta.url)),'..'))===repository,digests});
+  if(action!=='deploy'){if(action==='plan')say(JSON.stringify({...review,readOnly:true}));return review;}
+  await confirmRotationBridgeTool(review,{platform:process.platform,stdinTTY:Boolean(process.stdin.isTTY),stdoutTTY:Boolean(process.stdout.isTTY),stderrTTY:Boolean(process.stderr.isTTY)},
+    value=>say(JSON.stringify(value)),async()=>{
+      const terminal=createInterface({input:process.stdin,output:process.stdout});
+      try{return await terminal.question('Type V85-BRIDGE to confirm this exact web tool and capsule; no worker credential is issued here: ');}
+      finally{terminal.close();}
+    });
 }
 async function verifyClosedR2Web(port) {
   await verifyClosedR2Collector(port);
@@ -1442,6 +1479,7 @@ process.exit(result.status ?? 1);`;
       if (readerFence && (await readerFence.query(protectedReaderFenceSql(rollout).check)).trim() !== "t") throw new DeploymentError("새 reader 활성화 직전 OFF fence가 바뀌었습니다.");
       if (protectedReader && rollout.feature === COOKED_WEIGHT_ATTESTATION_FEATURE
         && (await readerFence.query("SELECT NOT EXISTS(SELECT 1 FROM private.cooked_weight_user_attestations);")).trim() !== "t") throw new DeploymentError("Personal attestation first reader requires empty facts under the OFF fence");
+      if(options.rotationBridgeToolRef)await reviewRotationBridgeTool('check',options);
       say("웹 프로세스 교체 중"); await switchWeb(nextBytes);
     },
     verify: async () => {
@@ -1757,6 +1795,7 @@ async function main() {
     return;
   }
   if (action === "plan") {
+    await reviewRotationBridgeTool(action,options);
     if (protectedReview && options.protectedPhase !== "reader") {
       if (options.protectedPhase.startsWith("writer-")) await runProtectedWriterPhase(options, action, protectedReview);
       else await runProtectedDatabasePhase(options, action, protectedReview);
@@ -1787,6 +1826,7 @@ async function main() {
     say(JSON.stringify({ ...selection, environmentKeys, database: { required: selection.scope.database.length > 0 || Boolean(options.dbConfig), configProvided: Boolean(options.dbConfig), readOnly: Boolean(options.alreadyAppliedDb || options.reviewedIntegratedMasterReadiness), requiresCompatibilityConfirmation: (selection.scope.database.length > 0 || Boolean(options.dbConfig)) && !options.dbCompatible && !options.alreadyAppliedDb && !options.reviewedIntegratedMasterReadiness, note: options.reviewedIntegratedMasterReadiness ? "DB218 선행 상태를 읽기 전용으로 고정하고 웹만 먼저 배포합니다." : "DB 이력·현재 스키마·추가형 변경 여부는 배포 시 대상 커밋에서 검사합니다." } }, null, 2));
     return;
   }
+  if(action==='deploy')await reviewRotationBridgeTool(action,options); // Before logs, locks, install or restart.
   mkdirSync(join(root, "releases"), { recursive: true, mode: 0o700 });
   chmodSync(root, 0o700);
   const lock = acquirePrelaunchDeployLock();

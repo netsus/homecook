@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-17 — 회전 후 v85 웹 plan marker 연속성 보완
+
+사용자 후속 승인 anchor 결속과 stage/preflight는 통과했으나, 새8키 plist와 과거 불변 R2 marker의 지문 차이로 공식 웹 plan이 중단됐다. 원 marker/승인을 보존하고 committed 회전 증거·전후 state·원본/실제 plist의8종 한정 차이를 명시적으로 검증하는 최소 운영 도구 수정이다. 도구 새 SHA와 기존 웹 target15/capsule은 별도로 결속하고 실제 deploy는 사용자 Terminal 확인을 요구한다. [검증 경계·실행 순서](../engineering/youtube-v85-rotation-marker-bridge-20261017.md)를 따른다. 운영 웹06a/v74-gen49·DB232·C05/R2 OFF이며 실제 v85/gen50 전환은 미실행이다.
+
 ## 2026-10-17 — v85 후속 전환 준비, 원42개 보존·현재43개/일반자료 변화 미확정
 
 읽기 전용 대조에서 원42개 작업 전체 행 지문은 원 계획과 같고, 이후 성공 작업1개와 일반·인증 집계 지문 변화가 확인됐다. 행별 과거 원본이 없어 원인은 미확정이다. 원 plan/anchor를 보존하며 별도 정확한 현황 capsule·새8키 fence·사용자 직접 Terminal 승인을 요구하는 최소 후속 경로를 준비했다. 관련292검사·Node17/Python23·격리PG17 7검사·type/build/lint·Anti Slop 신규0과 독립 검토를 완료했다. [정확한 변화·권한·검증 경계](../engineering/youtube-v85-continuation-20261017.md)를 따른다. 실제 v85/gen50 발급·등록·배포는 아직 미실행이며 운영06a/v74-gen49·DB232·C05/R2 OFF다.

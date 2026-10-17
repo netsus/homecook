@@ -63,14 +63,14 @@ describe("closed R2 F01 review boundary", () => {
     }
     const libraryPath = join(root, "prelaunch-web-deploy.mjs");
     const library = readFileSync(join(repository, "scripts/lib/prelaunch-web-deploy.mjs"), "utf8")
-      .replace('from "./youtube-v85-cutover.mjs"',`from "${pathToFileURL(join(repository,"scripts/lib/youtube-v85-cutover.mjs")).href}"`);
+      .replace(/from (["'])(\.\/[^"'\n]+)\1/gu, (_match,_quote,relativePath:string)=>`from "${pathToFileURL(resolve(repository,'scripts/lib',relativePath)).href}"`);
     const pinPattern = /export const CLOSED_R2_REVIEW_PIN = Object\.freeze\(\{[\s\S]*?\}\);/u;
     expect(library.match(pinPattern)?.length).toBe(1);
     writeFileSync(libraryPath, library.replace(pinPattern,
       "export const CLOSED_R2_REVIEW_PIN = Object.freeze({ path: null, sha256: null });"));
     const cliPath = join(root, "deploy-prelaunch-web.mjs");
     const cli = readFileSync(join(repository, "scripts/deploy-prelaunch-web.mjs"), "utf8");
-    writeFileSync(cliPath, cli.replace(/from "(\.\/lib\/[^"\n]+)"/gu, (_match, relativePath: string) => {
+    writeFileSync(cliPath, cli.replace(/from (["'])(\.\/lib\/[^"'\n]+)\1/gu, (_match,_quote, relativePath: string) => {
       const target = relativePath === "./lib/prelaunch-web-deploy.mjs"
         ? libraryPath : resolve(repository, "scripts", relativePath);
       return `from "${pathToFileURL(target).href}"`;
