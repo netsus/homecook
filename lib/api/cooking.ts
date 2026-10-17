@@ -82,7 +82,7 @@ export async function createSnapshotV2CookingSession(body: { mode: "planner"; me
 
 export async function fetchSnapshotV2CookMode(sessionId: string): Promise<SnapshotV2CookModeData> {
   snapshotV2SessionModes.delete(sessionId);
-  const data = await requestCooking<SnapshotV2CookModeData>(`/api/v1/cooking/session-attempts/${sessionId}/cook-mode`);
+  const data = await requestCooking<SnapshotV2CookModeData>(`/api/v1/cooking/session-attempts/${sessionId}/cook-mode`, {headers:{"X-Homecook-Execution-Quantities":"execution-v1"},cache:"no-store"});
   if (
     data.session_id !== sessionId
     || data.contract_version !== "snapshot_v2"
@@ -576,4 +576,9 @@ export async function retractWeightAttestation(id: string, body: WeightAttestati
     || data.record?.status !== "retracted" || data.record.context_fingerprint !== body.expected_context_fingerprint) throw createCookingApiError({ status: 502,
     code: "INVALID_RESPONSE", fields: [], message: "개인 확인 취소 결과를 읽지 못했어요." });
   return data;
+}
+
+export async function saveCookingExecutionQuantities(sessionId:string,body:{expected_revision:number;changes:Array<{row_index:number;amount:number|null;unit:string|null}>},idempotencyKey:string){
+  const data=await requestCooking<{revision:number}>(`/api/v1/cooking/session-attempts/${sessionId}/ingredients`,{method:"PATCH",headers:{"content-type":"application/json","Idempotency-Key":idempotencyKey},body:JSON.stringify(body)});
+  if(!Number.isSafeInteger(data.revision)||data.revision!==body.expected_revision+1)throw createCookingApiError({status:502,code:"INVALID_RESPONSE",fields:[],message:"재료 수정 결과를 확인하지 못했어요."});return data;
 }

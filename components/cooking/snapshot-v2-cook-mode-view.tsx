@@ -13,6 +13,8 @@ interface SnapshotV2CookModeViewProps {
   completionButtonRef?: React.RefObject<HTMLButtonElement | null>;
   data: SnapshotV2CookModeData;
   onCancel: () => void;
+  onEditIngredients?: () => void;
+  editButtonRef?: React.RefObject<HTMLButtonElement | null>;
   onComplete?: () => void;
   returnHref?: string;
 }
@@ -23,6 +25,8 @@ export function SnapshotV2CookModeView({
   completionButtonRef,
   data,
   onCancel,
+  onEditIngredients,
+  editButtonRef,
   onComplete,
   returnHref,
 }: SnapshotV2CookModeViewProps) {
@@ -72,6 +76,7 @@ export function SnapshotV2CookModeView({
         </nav>
       ) : null}
 
+        {!terminal && onEditIngredients ? <button className="mb-3 min-h-11 rounded-xl border border-[var(--surface-alpha-24)] px-4 font-bold" ref={editButtonRef} type="button" disabled={cancelling || preparingCompletion} onClick={onEditIngredients}>이번 요리 재료 수정</button> : null}
         <CookModeWholeBoard className={terminal ? "mt-4" : undefined} density="mobile" recipe={data.recipe} />
       </main>
 

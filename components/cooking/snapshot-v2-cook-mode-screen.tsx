@@ -1,4 +1,5 @@
 "use client";
+import { ExecutionQuantitySheet } from "@/components/cooking/execution-quantity-sheet";
 
 import { useMobileFullscreenPage } from "@/components/shared/use-mobile-fullscreen-page";
 
@@ -9,7 +10,7 @@ import { MobileCookModeLoadingBoard } from "@/components/cooking/cook-mode-loadi
 import { SnapshotV2CookModeView } from "@/components/cooking/snapshot-v2-cook-mode-view";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { useAppReturn } from "@/components/shared/use-app-return";
-import { cancelSnapshotV2CookingSession, completeSnapshotV2CookingSession, fetchSnapshotV2CookMode, isCookingApiError } from "@/lib/api/cooking";
+import { cancelSnapshotV2CookingSession, completeSnapshotV2CookingSession, fetchSnapshotV2CookMode, saveCookingExecutionQuantities, isCookingApiError } from "@/lib/api/cooking";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import type { SnapshotV2CompleteBody, SnapshotV2CookModeData } from "@/types/cooking";
 
@@ -17,6 +18,9 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   useMobileFullscreenPage(true, sessionId);
   const [data, setData] = useState<SnapshotV2CookModeData | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "unauthorized">(initialAuthenticated ? "loading" : "unauthorized");
+  const [editing, setEditing] = useState(false);
+  const editButtonRef = useRef<HTMLButtonElement | null>(null);
+  const editAttemptRef = useRef<{key:string;payload:string}|null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [completionOpen, setCompletionOpen] = useState(false);
   const [completionPreparing, setCompletionPreparing] = useState(false);
@@ -84,6 +88,7 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
 
   const submitCompletion = (body: SnapshotV2CompleteBody) => {
     if (completeInFlightRef.current || data.status !== "in_progress") return;
+    body = { ...body, ...(data.execution_revision !== undefined ? { execution_revision: data.execution_revision } : {}) };
     const payload = JSON.stringify(body);
     const attempt = completeAttemptRef.current?.payload === payload
       ? completeAttemptRef.current
@@ -157,6 +162,8 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   return (
     <>
       <SnapshotV2CookModeView
+        onEditIngredients={data.execution_revision !== undefined ? () => setEditing(true) : undefined}
+        editButtonRef={editButtonRef}
         cancelling={cancelling}
         completionButtonRef={completionButtonRef}
         data={data}
@@ -165,10 +172,19 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
         preparingCompletion={completionPreparing}
         returnHref={appReturn.href}
       />
+      {editing ? <ExecutionQuantitySheet ingredients={data.recipe.ingredients} returnFocusRef={editButtonRef} onClose={() => setEditing(false)} onSave={async changes => {
+        const body = {expected_revision:data.execution_revision ?? 0, changes};
+        const payload=JSON.stringify(body);
+        const attempt=editAttemptRef.current?.payload===payload?editAttemptRef.current:{key:crypto.randomUUID(),payload};
+        editAttemptRef.current=attempt;
+        await saveCookingExecutionQuantities(sessionId,body,attempt.key);
+        const fresh=await fetchSnapshotV2CookMode(sessionId);
+        setData(fresh);editAttemptRef.current=null;
+      }} /> : null}
       {preparationError ? <AppFeedbackToast message={preparationError} position="bottom" tone="error" /> : null}
       {completionOpen ? (
         <CookedBatchCompletionSheet
-          sessionId={sessionId}
+          sessionId={data.execution_revision ? undefined : sessionId}
           candidates={data.pantry_candidates}
           returnFocusRef={completionButtonRef}
           restoreFocusWhen={restoreCompletionFocusWhen}

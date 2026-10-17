@@ -118,6 +118,7 @@ export interface SnapshotV2StartData {
 }
 
 export interface SnapshotV2CookModeData {
+  execution_revision?: number;
   session_id: string;
   contract_version: "snapshot_v2";
   mode: "planner" | "standalone";
@@ -143,6 +144,7 @@ export interface SnapshotV2PantryCandidate {
 
 export type SnapshotV2CompleteBody =
   | {
+      execution_revision?: number;
       consumed_pantry_item_ids: string[];
       weight_action: "set_finished_weight";
       finished_weight_g: number;
@@ -150,6 +152,7 @@ export type SnapshotV2CompleteBody =
       weight_attestation?: WeightAttestationInput;
     }
   | {
+      execution_revision?: number;
       consumed_pantry_item_ids: string[];
       weight_action: "weigh_later";
       finished_weight_g: null;

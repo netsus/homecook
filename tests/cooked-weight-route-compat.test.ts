@@ -109,6 +109,13 @@ describe("DB-disabled evidence and compatible personal writes", () => {
     const response = await complete(request("POST", "cooking/session-attempts/fixture/complete", "evidence-v1", skipped), context);
     expect(response.status).toBe(status); expect(spies.rpc).toHaveBeenCalledTimes(1);
   });
+  it.each([0,1])("keeps the execution revision wrapper on exact evidence-disabled fallback: %s",async execution_revision=>{
+    spies.rpc.mockResolvedValueOnce(disabled).mockResolvedValueOnce({error:null,data:completedLegacy});
+    const response=await complete(request("POST","cooking/session-attempts/fixture/complete","evidence-v1",{...skipped,execution_revision}),context);
+    expect(response.status).toBe(200);expect(spies.rpc.mock.calls.map(call=>call[0])).toEqual(["complete_cooking_execution","complete_cooking_execution"]);
+    expect(spies.rpc.mock.calls[1][1]).toMatchObject({p_expected_execution_revision:execution_revision,p_write_enabled:false,p_weight_input_source:null});
+    expect(spies.rpc.mock.calls[1][1]).toEqual({...spies.rpc.mock.calls[0][1],p_write_enabled:false});
+  });
   it("does not mistake a generic result envelope for the exact disabled SQL exception", async () => {
     spies.rpc.mockResolvedValue({ error: null, data: { success: false, error: disabled.error } });
     const response = await complete(request("POST", "cooking/session-attempts/fixture/complete", "evidence-v1", skipped), context);
@@ -130,4 +137,27 @@ describe("DB-disabled evidence and compatible personal writes", () => {
     expect((await complete(fresh, context)).status).toBe(200);
     expect(spies.rpc.mock.calls[2][1].p_idempotency_key).not.toBe(spies.rpc.mock.calls[0][1].p_idempotency_key);
   });
+});
+
+describe("execution quantities through actual cook-mode and completion routes",()=>{
+ it("reads adjusted rows once on refresh without exposing private calculation inputs",async()=>{
+  const ingredient="550e8400-e29b-41d4-a716-446655440803",pin="550e8400-e29b-41d4-a716-446655440804";
+  const original={ingredient_id:ingredient,standard_name:"food",amount:100,unit:"g",ingredient_type:"QUANT",scalable:true,display_text:null};
+  const edited={...original,amount:190,scalable:false};
+  const mode={session_id:batch.id,contract_version:"snapshot_v2",mode:"standalone",status:"in_progress",recipe:{id:batch.recipe_id,title:"food",base_servings:2,cooking_servings:4,ingredients:[original],steps:[]},pantry_candidates:[],weight_evidence_enabled:true};
+  const state={revision:1,snapshot_id:pin,base_servings:2,cooking_servings:4,original_rows:[original],rows:[edited],steps:[],nutrition_snapshot:{private_calculation:true},prediction:{prediction:{totalGrams:142.5,modelVersion:"ingredient-mass-75-v1",reasons:[],assumptions:["ingredient_mass_seventy_five_percent"],input:{private_rows:true}}}};
+  for(let refresh=0;refresh<2;refresh++){
+   spies.rpc.mockResolvedValueOnce({data:mode,error:null}).mockResolvedValueOnce({data:state,error:null});
+   const req=request("GET","cooking/session-attempts/fixture/cook-mode","evidence-v1");req.headers.set("X-Homecook-Execution-Quantities","execution-v1");
+   const result=await(await cookMode(req,context)).json();expect(result.success).toBe(true);expect(result.data.execution_revision).toBe(1);expect(result.data.recipe.ingredients[0]).toMatchObject({amount:190,unit:"g",scalable:false});expect(result.data.weight_prediction.predicted_g).toBe(142.5);
+   expect(JSON.stringify(result)).not.toMatch(/private_calculation|private_rows|original_rows|nutrition_snapshot/);
+  }
+  expect(spies.prediction).not.toHaveBeenCalled();
+ });
+ it("delegates a changed completion to the atomic execution wrapper and preserves its expected revision",async()=>{
+  spies.rpc.mockResolvedValueOnce({error:null,data:completedLegacy});
+  const response=await complete(request("POST","cooking/session-attempts/fixture/complete","evidence-v1",{...skipped,execution_revision:1}),context);
+  expect(response.status).toBe(200);expect(spies.rpc.mock.calls[0][0]).toBe("complete_cooking_execution");expect(spies.rpc.mock.calls[0][1]).toMatchObject({p_expected_execution_revision:1,p_prediction:null,p_weight_action:"weigh_later"});expect(spies.prediction).not.toHaveBeenCalled();
+ });
+ it("rejects invalid execution revision before reading or mutating a session",async()=>{const response=await complete(request("POST","cooking/session-attempts/fixture/complete","evidence-v1",{...skipped,execution_revision:.5}),context);expect(response.status).toBe(422);expect(spies.rpc).not.toHaveBeenCalled();});
 });

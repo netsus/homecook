@@ -5863,3 +5863,12 @@ record는 id/revision/status(`attested`1 또는 `retracted`2), statement version
 ### 2026-10-17 완성무게 75% 호환 모델
 
 기존 evidence-v1 응답과 완료 요청 형태는 유지한다. 서버 모델 `ingredient-mass-75-v1`와 assumption `ingredient_mass_seventy_five_percent`를 허용하며 source는 `conditional_estimate`다. 서버 고정 입력의 모든 검증된 질량을 합하고75%를 소수2자리 양수 half-up으로 계산한다. 직렬화된 개별 재료값의 십진수 합계를 사용해 JS/SQL 반올림을 일치시킨다. 기존 `bounded-weight-v2` 성공 예측이 우선한다. DB 저장 함수는 모델·단일가정·환산증거·중복행·총량을 검증하며 owner·revision·gate·멱등성 보호는 유지한다. 실측 입력은 `reported_measured`로 별도 보존하고 미확인 질량은 unavailable/null로 둔다. 웹과 해당 migration을 함께 반영해야 하며 운영 적용은 미실행이다.
+
+
+### 2026-10-17 요리 실행분 수량 계약
+
+GET `/cooking/session-attempts/{id}/cook-mode`의 `X-Homecook-Execution-Quantities: execution-v1` 요청은 `execution_revision`과 해당 실행분 재료표를 제공한다. private 원본/계산입력은 응답에 포함하지 않는다. 기존 요청은 기존 응답을 유지한다.
+
+PATCH `/cooking/session-attempts/{id}/ingredients`는 Idempotency-Key와 `{expected_revision,changes:[{row_index,amount,unit}]}`만 받는다. amount는 양수 또는null(양 미확인), source/영양/예측은 client가 넣을 수 없다. server가 승인된 원천과 고정 제품판본을 읽어 계산하며 실패를 성공으로 만들지 않는다. 현재 실행 소유자만 진행 중 상태에서 수정하고 오래된 판본은409, 부정 입력은422, 원천 읽기 장애는503이다.
+
+완료 요청은 optional `execution_revision`을 받는다. 수정 실행은 DB의 고정 계산값과 판본 lock을 사용하는 원자 wrapper로 완료한다. 구버전 완료가 수정내용을 무시하면DB에서409다. 정확한 evidence-disabled 응답에만 source-null 요청을 같은 실행 wrapper의 evidence-write OFF로 재호출하며 판본/영양/예측 보호를 유지한다. 명시실측/개인확인은 강등하지 않는다. 기존 `{success,data,error}`·error code/message/fields 형식은 유지한다.
