@@ -6,7 +6,8 @@ function isWeightSource(value: unknown): value is CookedWeightSummary["source"] 
   return typeof value === "string" && sources.has(value);
 }
 
-export function cookedWeightSourceLabel(source: CookedWeightSummary["source"]): string {
+export function cookedWeightSourceLabel(source: CookedWeightSummary["source"], modelVersion?: string | null): string {
+  if (source === "conditional_estimate" && modelVersion === "ingredient-mass-75-v1") return "재료량 75% 추정";
   return {
     conditional_estimate: "조건별 추정", unavailable: "근거 부족", historical_estimate: "이전 방식의 추정",
     reported_measured: "사용자가 보고한 실측", manual_estimate: "직접 입력 · 실측 여부 미확인", legacy_unknown: "이전 기록 · 출처 미확인",
@@ -19,6 +20,13 @@ export function isCookedWeightAssumptionCodes(value: unknown): value is string[]
 }
 
 export const COOKED_MIX_ASSUMPTION_TEXT = "가열 없는 섞기 단계와 적힌 재료가 모두 남는다는 가정이에요. 따로 버린 물·기름, 남긴 재료, 용기 무게나 적히지 않은 추가 물·기름은 확인하지 못했어요.";
+
+export const COOKED_MASS_FALLBACK_ASSUMPTION_TEXT = "재료 무게 합계의 75%로 계산한 대략적인 추정이에요. 실측값이 아니며, 조리 중 더한 물·기름이나 버린 양은 반영하지 못해요.";
+
+export function cookedWeightAssumptionText(codes: readonly string[] = []): string | null {
+  if (codes.includes("ingredient_mass_seventy_five_percent")) return COOKED_MASS_FALLBACK_ASSUMPTION_TEXT;
+  return codes.includes("all_declared_inputs_retained") ? COOKED_MIX_ASSUMPTION_TEXT : null;
+}
 
 export function cookedWeightUnavailableReasonText(reasonCodes: readonly string[] = []): string {
   if (reasonCodes.includes("unquantified_ingredient")) {

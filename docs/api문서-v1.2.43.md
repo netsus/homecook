@@ -5858,3 +5858,8 @@ record는 id/revision/status(`attested`1 또는 `retracted`2), statement version
 
 ## 2026-10-17 실제 요리 경험 — 영양 읽기/표시·일반 오일 (로컬 후보)
 레시피·끼니 상세의 영양 그래프는 총 선택량(레시피) 또는 계획 전체량(끼니)과 1인분 기준을 명시한 공통 영양성분표로 표시한다. 기존 레시피 기본1인분 계산 계약을 유지하고 부분합·미확인·AI/환산 추정·출처를 보존한다. 100g 영양이나 법정 라벨 완전성을 주장하지 않는다. 공개 canonical YouTube의 원문 투영이 승인되고 기존current 영양snapshot이 없는 경우에만 기존 승인 DB원천으로 읽기 전용 계산한다. GET의 저장/원본수정은 없고 private/기존snapshot/상품/v4량핀의 경계는 유지한다. 원천조회 장애는 temporary, account authority 오류는 기존409/503이다. API wrapper/field shape는 유지하고 동적계산에는 영속snapshot_id를 만들지 않는다. 추출 일반명 ‘오일’ 전체 이름만 식용유 lookup으로 연결하며 원문·수량과 명시 특수오일은 보존한다. [검증·남은영양결측·배포잠금](engineering/cooking-experience-20261017.md)을 따른다.
+
+
+### 2026-10-17 완성무게 75% 호환 모델
+
+기존 evidence-v1 응답과 완료 요청 형태는 유지한다. 서버 모델 `ingredient-mass-75-v1`와 assumption `ingredient_mass_seventy_five_percent`를 허용하며 source는 `conditional_estimate`다. 서버 고정 입력의 모든 검증된 질량을 합하고75%를 소수2자리 양수 half-up으로 계산한다. 직렬화된 개별 재료값의 십진수 합계를 사용해 JS/SQL 반올림을 일치시킨다. 기존 `bounded-weight-v2` 성공 예측이 우선한다. DB 저장 함수는 모델·단일가정·환산증거·중복행·총량을 검증하며 owner·revision·gate·멱등성 보호는 유지한다. 실측 입력은 `reported_measured`로 별도 보존하고 미확인 질량은 unavailable/null로 둔다. 웹과 해당 migration을 함께 반영해야 하며 운영 적용은 미실행이다.

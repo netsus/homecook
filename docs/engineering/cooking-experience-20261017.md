@@ -127,4 +127,23 @@ PR/merge/배포는아직진행전. PR1780master병합과v85실제전환은별개
 
 최종 합동 회귀: 15파일312 PASS/FAIL0/SKIP0, exit0. 별도 계산기+상세185 PASS. typecheck·build exit0, 변경lint 오류0/기존경고1. 운영배포0.
 
+## 20:42 UTC 중간 인계 — 운영 배포0
+
+첫 묶음 [PR1781](https://github.com/netsus/homecook/pull/1781)은 20:34:33 UTC에 master `f4c677671f86821008134f8c2aa4c85562840ebb`로 머지됐다. 독립 worktree는 같은 경로에서 후속 branch `codex/cooking-execution-quantity-20261017`로 전환했고 기준 HEAD는 f4c677671이다.
+
+승인/로그인 대기가 아니다. 후속 무게 후보는 전체 재료의 질량을 확인할 수 있을 때만75%를 적용하고, 기존 조건별 추정·실측 구분을 보존한다. 관련49검사 PASS. 새로 만든 소유자 표시·네트워크 없음·영속 볼륨 없음·빈 PostgreSQL fixture에서 새 SQL의 추정/실측 저장 구분·위조/owner/gate 거절8검사 PASS. 운영 DB에는 새 SQL을 적용하지 않았다. 전체 schema·완료 HTTP·화면·독립 리뷰는 아직이며 현재 후속 코드는 미커밋 후보다. 실행분 재료 수정(3)은 아직 구현 전이다.
+
+v85 단독 담당의 배포 잠금은 유지한다. 앱 메시지 도구에서 부모 목적지를 찾지 못해 중간 보고는 commentary와 이 파일로 기록한다.
+
 최신 master PR1780 `8e83c485d`를 통합했고 SOURCE_OF_TRUTH의 양쪽 새 절을 보존해 문서 충돌만 해결했다. v85 운영 전환·배포 잠금은 여전히 별개다.
+
+
+## 20:49 UTC 무게 묶음 후보
+
+전체 검증질량을 아는 경우75% 추정 모델을 추가했다. 기존 bounded 조건별 성공값 우선, 미확인/적당량/환산근거 없음은null 보존, 배율1회, 실측별도 우선. 완료/남은음식/식사preview/식사기록에 모델과가정 설명이전달된다. original recipe·과거기록 수정0. SQL은모델/가정/증거/중복/총량만추가검증하고기존owner·receipt·gate를유지한다.
+
+독립리뷰에서가정코드검증과JS/SQL소수반올림2건을찾아수정했다. 영문가정코드+실제summary/meal/preview회귀, 직렬화된개별재료십진수합산+half-up2자리로통일했다. 재리뷰확정finding0, reviewer7파일109검사PASS. 합동8파일128검사PASS. 격리된소유fixture의실SQL12검사PASS(추정/실측구분,미확인null,위조/다른owner/gate거절,100.3/14.7/101.1g·소수배율·환산). 운영DB/전체schema/인증HTTP저장종단검사는아니다.
+
+Chrome실제컴포넌트375×812/1440×900에서추정225g·빈실측·가정설명·가로넘침없음을확인했다。190입력은reported_measured 요청,빈칸은weigh_later/null 요청을로컬콜백에서확인했다. 임시fixture route는제거했다. 실행분재료수정(3)은미구현이며9개운영완료로표시하지않는다. 웹+스키마동시반영필요,운영배포0·잠금유지.
+
+무게 후보 최종 typecheck·build exit0, 변경ESLint exit0/경고0, diff check exit0. 기존4개 build경고 유지. evidence web/DB gate의 기존 상태는 변경하지 않았고, 배포시 기능 사용 가능 여부는 담당자가 실제 승인된 설정과 함께 확인해야 한다.
