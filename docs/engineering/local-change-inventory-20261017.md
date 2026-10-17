@@ -683,3 +683,10 @@ PR1681/1707의 소유자 영역이며 현재 9개 요구와 별도다. 정책·�
 알림 UI17개도 현재 background/session 재진입·API/store·ActiveJobRow·pagination·ACK·archive분리·seen 성공 후 갱신·mixed 구분·focus·planner context·global toast/narrow grant·disabled CSS의 후속 구현을 독립 대조해 재머지 불필요로 분류했다. 기존 합성48 PASS를 근거로 보존하며 독립 재실행이라고 표시하지 않는다.
 
 현재 판정 대기67개(미착수59개+조사중8개), 별도 추출 prototype소유자 보류6개, C05보류5개와 부분/기타 파일 보류는 계속 열린 항목이다. 지금까지133개 후보에서 필요한 최소 이식1개와 분류65개를 진행했으며, 후보 수는 수정 필요 수가 아니다. 운영·DB 쓰기·키/배포/worker 설정 변경0이다.
+
+
+## Runtime 표지 읽기 최소 이식
+
+`ce7d9dbe8`의 runtime 공백을 확인했다. 현재 GET은 소유 레시피북 목록을 사용자 권한으로 승인한 뒤에도 service-role 전용 `read_recipe_book_image_projections`와 Storage를 사용자 클라이언트로 호출했다. 기존 테스트가 service 기능을 user mock에 합쳐 이 권한 차이를 가렸다. mock을 실제처럼 분리하자1FAIL/10PASS로 재현됐고, 표지 읽기만 기존 `recipe-image` 내부 클라이언트로 처리하도록 최소 이식했다.
+
+인증/소유 목록 조회 실패면 내부 호출0, 타인 owner projection이면 서명0, 내부 클라이언트 부재면 기존 목록 유지, 정상 소유 표지 서명을 합성으로 확인했다. 관련2파일23 PASS·독립23 PASS·타입/lint 통과다. 실제 인증 HTTP/Storage/운영 검증은 아니다. SQL·권한·owner/registry/parser 검사는 불변이며 원6파일의 과거 gate까지 가져오지 않았다. 최신 판정 대기66개(미착수58+조사중8), 필요한 최소 이식2개와 분류65개다. 원 브랜치/다른 미커밋은 보존한다.

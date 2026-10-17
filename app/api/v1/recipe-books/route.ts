@@ -26,7 +26,7 @@ import {
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { createRecipeImageInternalClient, createRouteHandlerClient } from "@/lib/supabase/server";
 import type {
   RecipeBookCoverColorKey,
   RecipeBookCreateBody,
@@ -449,6 +449,7 @@ export async function GET(request: Request) {
   const countedBookIds = booksResult.data
     .filter((book: RecipeBookRow) => book.book_type === "saved" || book.book_type === "custom")
     .map((book: RecipeBookRow) => book.id);
+  const imageClient = createRecipeImageInternalClient();
   const readResults = await Promise.all([
       readRecipeBookItemCounts(dbClient, countedBookIds),
       dbClient
@@ -460,11 +461,11 @@ export async function GET(request: Request) {
         .select("id", { count: "exact", head: true })
         .eq("created_by", user.id)
         .in("source_type", ["youtube", "manual"]),
-      resolveRecipeBookCoverUrls({
+      imageClient ? resolveRecipeBookCoverUrls({
         books: booksResult.data,
-        client: routeClient,
+        client: imageClient,
         expectedOwnerUuid: user.id,
-      }),
+      }) : Promise.resolve(booksResult.data),
     ] as const).catch(() => null);
   if (!readResults) {
     return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);

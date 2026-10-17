@@ -6429,11 +6429,24 @@
       "branches": [
         "chore/current-mac-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_needed_runtime_fix_applied",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/recipe-books/route.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "462f07f94f99c95d16419ef4f928cf24c7c55c87",
+        "reason": "현재 owned recipe-book list 뒤 service-only 표지 projection/Storage를 사용자 클라이언트로 호출하는 공백 재현. 기존 recipe-image 내부 클라이언트만 표지 읽기에 사용하도록 최소 이식. 사용자 목록/CRUD와 owner·registry 검증 불변. 원6파일 전체 이식 아님.",
+        "applied_runtime_paths": [
+          "app/api/v1/recipe-books/route.ts"
+        ],
+        "independent_review": true,
+        "verification": "Faithful separated clients first1FAIL/10PASS, after fix route+image23PASS and independent23PASS; typecheck/lint. Synthetic only, no real authenticated HTTP/Storage.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "ceb1d712a409333c3d0102d2b45f3263725c5067",
@@ -8074,7 +8087,7 @@
   ],
   "semantic_review_summary": {
     "batch1_reviewed": 5,
-    "runtime_semantic_review_pending": 67,
+    "runtime_semantic_review_pending": 66,
     "historical_all_postimage_presence_is_not_current_semantic_equivalence": true,
     "batch2_c05_owner_deferred": 5,
     "deferred_is_not_completed_or_unnecessary": true,
@@ -8089,7 +8102,8 @@
     "batch8_forward_still_pending_with_notes": 4,
     "batch9_notification_current_successor": 17,
     "still_pending_with_investigation_notes": 8,
-    "pending_unstarted": 59,
-    "pending_investigating": 8
+    "pending_unstarted": 58,
+    "pending_investigating": 8,
+    "needed_runtime_fixes_applied": 2
   }
 }

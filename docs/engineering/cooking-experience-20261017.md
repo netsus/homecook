@@ -256,3 +256,6 @@ Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산
 
 
 추가 역사SQL7개·알림UI17개의 현재 보호/후속 구현을 대조해 최신 판정 대기67개(미착수59+조사중8)다. 조사 메모8개는 그대로 pending이며, cached schema232와 저장소 SQL의 정의/volatility 차이는 현재 운영 장애로 단정하지 않는다. 표지 읽기 후보ce7d9dbe8는 별도 독립 worktree에서 재현·검증 중이고 아직 이 분류에 완료 반영하지 않았다.
+
+
+표지 후보ce7d9dbe8의 누락은 별도 worktree에서1FAIL로 재현 후 최소 수정했다. 소유 목록은 사용자 권한, 표지의 service-only RPC/Storage만 기존 이미지 내부 scope로 처리한다. 관련23 PASS·독립23 PASS·타입/lint, 실제 운영/Storage접근0이다. 최신 판정 대기66개(미착수58+조사중8)이며 원 SQL/권한 변경은 없다. 분류 기록 PR1790은 `462f07f94`로 병합했다.
