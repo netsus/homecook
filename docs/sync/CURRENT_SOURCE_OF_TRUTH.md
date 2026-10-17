@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-17 — v85 후속 전환 준비, 원42개 보존·현재43개/일반자료 변화 미확정
+
+읽기 전용 대조에서 원42개 작업 전체 행 지문은 원 계획과 같고, 이후 성공 작업1개와 일반·인증 집계 지문 변화가 확인됐다. 행별 과거 원본이 없어 원인은 미확정이다. 원 plan/anchor를 보존하며 별도 정확한 현황 capsule·새8키 fence·사용자 직접 Terminal 승인을 요구하는 최소 후속 경로를 준비했다. 관련292검사·Node17/Python23·격리PG17 7검사·type/build/lint·Anti Slop 신규0과 독립 검토를 완료했다. [정확한 변화·권한·검증 경계](../engineering/youtube-v85-continuation-20261017.md)를 따른다. 실제 v85/gen50 발급·등록·배포는 아직 미실행이며 운영06a/v74-gen49·DB232·C05/R2 OFF다.
+
 ## 2026-10-17 — v85 웹 선배포 중단의 정확한06a 웹 전용 복구 완료
 
 웹7b 반영 후 gen50 발급 전 자료 보존 검사가 중단됐다. 원 plan/anchor를 바꾸지 않고 [별도 공식 웹 전용 복구](../engineering/youtube-v85-web-only-recovery-20261017.md)를 실행 소스79f0660b2에서 완료했다. 웹06a/build prelaunch-06a3369f5c5e-EWuEsS·loaded/recoveryPending=false·실제06a 접수readiness를 확인했다. fresh 전후 전체관찰 동일, workerPID49750/gen49·V2·DB232·원42작업/guard 보존, 기존33 V2 HMAC 재현, DB/자격/worker변경·새신청/모델0이다. 선택293 PASS·type/lint·Anti Slop신규0·독립리뷰, 사용자Mac Chrome1440/375 초기화면 확인이다. gen50/v85 운영 전환은 계속 미실행이다.

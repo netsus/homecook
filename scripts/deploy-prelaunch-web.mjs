@@ -2,6 +2,7 @@
 import { V85_WEB_RECOVERY,assertRecoveryBinding,assertRecoveryPreserved,assertRecoveryWebProcess,assertRecoveredEnqueue,runV85WebRecovery,recoveryCheck } from './lib/prelaunch-v85-web-recovery.mjs';
 import { createV85WebRecoveryObserver } from './lib/prelaunch-v85-web-recovery-observation.mjs';
 import { loadRecoveredReadiness } from './lib/prelaunch-v85-recovered-readiness.mjs';
+import { createRound2EightKeyRestartFence, guardRound2EightKeyRestart, preserveRound2RotationState } from './lib/round2-eight-key-rotation-fence.mjs';
 import { readV85Approval } from './lib/youtube-v85-approval.mjs';
 import { readV85Authority, assertV85Source, assertV85MetadataHandoff, v85Paths } from "./lib/youtube-v85-cutover.mjs";
 import {
@@ -86,6 +87,29 @@ const service = `${domain}/com.homecook.production`;
 let logFd;
 const cancellation = createCancellation();
 const say = (message) => process.stdout.write(`${message}\n`);
+const assertRound2RestartFence = createRound2EightKeyRestartFence(() => {
+  const path = join(root, 'round2-eight-key-rotation-fence.json');
+  const rotation = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation : null;
+  const operation = join(root, 'round2-eight-key-rotation-apply-20261017/journal.json');
+  if (existsSync(operation) && JSON.parse(readClosedR2PrivateBytes(operation, repository)).phase !== 'committed') {
+    throw new DeploymentError('R2_ROTATION_FORWARD_REPAIR_PENDING');
+  }
+  try { lstatSync(path); } catch (error) {
+    if (error.code === 'ENOENT' && !rotation) return null;
+    throw error;
+  }
+  const bytes = readClosedR2PrivateBytes(path, repository);
+  if (rotation && createHash('sha256').update(bytes).digest('hex') !== rotation.fenceSha256) {
+    throw new DeploymentError('R2_ROTATION_FENCE_CHANGED');
+  }
+  return JSON.parse(bytes);
+});
+
+function rotationSafeState(value) {
+  const previous = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository, 524288)) : null;
+  return preserveRound2RotationState(previous, value);
+}
+const rotationSafeStateBytes = bytes => JSON.stringify(rotationSafeState(JSON.parse(bytes)));
 
 function command(bin, args, options = {}) {
   const { trimOutput = true, ...spawnOptions } = options;
@@ -973,7 +997,7 @@ async function completeProtectedReaderRecovery(options, review) {
     const pointer = state.closedR2.protectedRollout.readerReceipt, bytes = readClosedR2PrivateBytes(pointer.path, repository, 524288);
     if (hash(bytes) !== pointer.sha256) throw new DeploymentError("보호 reader candidate receipt가 바뀌었습니다.");
     await durableJson(protectedReaderReceiptPath, JSON.parse(bytes));
-    await durableJson(statePath, state); durableUnlink(recoveryPath);
+    await durableJson(statePath, rotationSafeState(state)); durableUnlink(recoveryPath);
     say(JSON.stringify({ status: "reader_ready", readerFloor: review.to, serviceChanges: 0, databaseWrites: 0 }));
   } finally { await lease.release(); }
 }
@@ -1141,13 +1165,18 @@ async function preview(plist, checkout, buildId, closedR2 = false) {
 
 }
 async function switchWeb(bytes) {
-  await restartLaunchAgent({
+  const assertTarget = () => assertRound2RestartFence(parsePlist(bytes).EnvironmentVariables);
+  // deploy, rollback, compensation and the fixed v85 recovery share this boundary.
+  await restartLaunchAgent(guardRound2EightKeyRestart({
     isLoaded: async () => spawnSync("/bin/launchctl", ["print", service], { stdio: "ignore" }).status === 0,
     bootout: async () => { command("/bin/launchctl", ["bootout", service], { stdio: ["ignore", logFd, logFd] }); },
     writePlist: async () => { atomicWrite(plistPath, bytes); },
-    bootstrap: async () => spawnSync("/bin/launchctl", ["bootstrap", domain, plistPath], { stdio: ["ignore", logFd, logFd] }).status,
+    bootstrap: async () => {
+      if (!readFileSync(plistPath).equals(bytes)) throw new DeploymentError('R2_ROTATION_INSTALLED_TARGET_CHANGED');
+      return spawnSync("/bin/launchctl", ["bootstrap", domain, plistPath], { stdio: ["ignore", logFd, logFd] }).status;
+    },
     wait: delay,
-  });
+  }, assertTarget));
 }
 async function verifyAppliedDatabase(options, checkout) {
   if (options.reviewedNutritionRecoveryReadiness) return verifyNutritionRecoveryAppliedDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, releaseSha: options.ref });
@@ -1259,7 +1288,7 @@ async function deploy(options) {
         // records still need the separately applied incompatible DB boundary.
         if (existsSync(statePath)) {
           const previousState = JSON.parse(readFileSync(statePath, "utf8"));
-          atomicWrite(statePath, JSON.stringify({ ...previousState, database: pieceUnitDatabase }));
+          atomicWrite(statePath, JSON.stringify(rotationSafeState({ ...previousState, database: pieceUnitDatabase })));
         }
       }
       if (options.reviewedYoutubeResolutionReadiness) {
@@ -1269,7 +1298,7 @@ async function deploy(options) {
         atomicWrite(databaseStatePath, JSON.stringify(youtubeResolutionDatabase));
         if (existsSync(statePath)) {
           const previousState = JSON.parse(readFileSync(statePath, "utf8"));
-          atomicWrite(statePath, JSON.stringify({ ...previousState, database: youtubeResolutionDatabase }));
+          atomicWrite(statePath, JSON.stringify(rotationSafeState({ ...previousState, database: youtubeResolutionDatabase })));
         }
       }
       const buildOptions = { cwd: checkout, env: prelaunchBuildEnvironment(nextPlist, basename(release)) };
@@ -1455,11 +1484,11 @@ process.exit(result.status ?? 1);`;
     },
     verifyRestored: async () => {
       await smoke(3100, live.cwd, live.buildId, true);
-      if (closedLease) { await verifyClosedR2Web(3100); closedLease.verify(); atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview))); }
+      if (closedLease) { await verifyClosedR2Web(3100); closedLease.verify(); atomicWrite(statePath, JSON.stringify(rotationSafeState(closedR2RestoredState(state, closedReview)))); }
       unlinkSync(recoveryPath);
     },
   });
-  atomicWrite(statePath, JSON.stringify(state));
+  atomicWrite(statePath, JSON.stringify(rotationSafeState(state)));
   if (options.reviewedNutritionRecoveryReadiness || options.reviewedPieceUnitReadiness || options.reviewedYoutubeResolutionReadiness) atomicWrite(databaseStatePath, JSON.stringify(state.database));
   unlinkSync(recoveryPath);
   say(`웹 배포 완료: ${selection.target}\n빌드 ID: ${buildId}`);
@@ -1551,11 +1580,11 @@ async function rollback() {
       await smoke(3100, live.cwd, live.buildId, true);
       if (closedLease) {
         await verifyClosedR2Web(3100); closedLease.verify();
-        if (live.ref === state.closedR2.from) atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview)));
+        if (live.ref === state.closedR2.from) atomicWrite(statePath, JSON.stringify(rotationSafeState(closedR2RestoredState(state, closedReview))));
       }
     },
   });
-  if (closedReview) atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview)));
+  if (closedReview) atomicWrite(statePath, JSON.stringify(rotationSafeState(closedR2RestoredState(state, closedReview))));
   if (record !== statePath || !closedReview) unlinkSync(record);
   // A recovery may supersede an older successful record; do not offer it as current rollback.
   if (recovering && existsSync(statePath) && !closedReview) unlinkSync(statePath);
@@ -1630,9 +1659,9 @@ async function recoverV85Web(planOnly=false) {
         assertRecoveryPreserved(before,await observe());webProcess(phase==='compensation',phase==='before'?originalWebPid:undefined);},
       activate:async()=>{cancellation.check();await switchWeb(previousBytes);cancellation.check();},
       verify:async()=>{cancellation.check();await smoke(3100,previousPlist.WorkingDirectory,p.toBuild);webProcess();await verifyClosedR2Web(3100);lease.verify();const after=await observe();assertRecoveryPreserved(before,after);await checkReady(after);cancellation.check();await save('verified',{after});},
-      publishState:async()=>{recoveryCheck(hash(readFileSync(statePath))===p.fromState,'state changed before publication');atomicWrite(statePath,previousStateBytes);},
+      publishState:async()=>{recoveryCheck(hash(readFileSync(statePath))===p.fromState,'state changed before publication');atomicWrite(statePath,rotationSafeStateBytes(previousStateBytes));},
       verifyPublished:async()=>{const actual=current();recoveryCheck(actual.ref===p.to&&hash(actual.bytes)===p.toPlist&&hash(readFileSync(statePath))===p.toState,'restored official state');requireClosedR2Mode({reviewedClosedR2Maintenance:true},actual,true);},
-      restore:async()=>{await switchWeb(live.bytes);atomicWrite(statePath,stateBytes);},
+      restore:async()=>{await switchWeb(live.bytes);atomicWrite(statePath,rotationSafeStateBytes(stateBytes));},
       verifyRestored:async()=>{await smoke(3100,live.cwd,live.buildId,true);webProcess();assertRecoveryPreserved(before,await observe());recoveryCheck(hash(readFileSync(statePath))===p.fromState&&hash(current().bytes)===p.fromPlist,'compensated web/state');},
     });say(JSON.stringify({...result,operation}));
   }finally{if(lease)await lease.release();}
@@ -1650,7 +1679,7 @@ async function recordYoutubeResolutionDatabase(options) {
   atomicWrite(databaseStatePath, JSON.stringify(database));
   if (existsSync(statePath)) {
     const state = JSON.parse(readFileSync(statePath, "utf8"));
-    atomicWrite(statePath, JSON.stringify({ ...state, database }));
+    atomicWrite(statePath, JSON.stringify(rotationSafeState({ ...state, database })));
   }
   say(JSON.stringify({ recorded: true, database }, null, 2));
 }
@@ -1674,7 +1703,7 @@ async function recordIntegratedMasterDatabase(options) {
   assertIntegratedMasterWebFirstState({ state, live, releaseSha: live.ref, descriptor });
   loadIntegratedDatabaseGuard(live.ref, descriptor.database.migration.sha256, true);
   await durableJson(databaseStatePath, database);
-  await durableJson(statePath, { ...state, databaseVerification: databasePlan, database });
+  await durableJson(statePath, rotationSafeState({ ...state, databaseVerification: databasePlan, database }));
   durableUnlink(integratedDatabaseGuardPath);
   say(JSON.stringify({ recorded: true, database }, null, 2));
 }
@@ -1691,8 +1720,8 @@ async function main() {
     return;
   }
   if (process.platform !== "darwin") throw new DeploymentError("macOS 웹 서버에서 실행해야 합니다.");
-  if (!["plan", "deploy", "status", "record-youtube-resolution-database", "record-integrated-master-database", "rollback", "recover-v85-web", "plan-v85-web-recovery"].includes(action)
-    || (["status", "rollback", "recover-v85-web", "plan-v85-web-recovery"].includes(action) && args.length)
+  if (!["plan", "deploy", "status", "record-youtube-resolution-database", "record-integrated-master-database", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys"].includes(action)
+    || (["status", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys"].includes(action) && args.length)
     || (["record-youtube-resolution-database", "record-integrated-master-database"].includes(action)
       && (args.length !== 2 || args[0] !== "--db-config"))) throw new DeploymentError("잘못된 명령입니다. --help를 확인하세요.");
   const options = parsePrelaunchOptions(args);
@@ -1706,6 +1735,12 @@ async function main() {
   }
   if (options.reviewedClosedR2Maintenance) loadClosedR2Review(repository); // Fail before live/env access while the pin is empty.
   if (git(["rev-parse", "--show-toplevel"]) !== repository || !/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)netsus\/homecook(?:\.git)?$/u.test(git(["remote", "get-url", "origin"]))) throw new DeploymentError("배포 저장소는 netsus/homecook Git 저장소여야 합니다.");
+  if (action === 'plan-round2-eight-keys' || action === 'apply-round2-eight-keys') {
+    const result = spawnSync('/usr/bin/python3', [join(repository, 'scripts/round2-eight-key-user-apply.py'),
+      ...(action === 'plan-round2-eight-keys' ? ['--check'] : [])], { stdio: 'inherit' });
+    if (result.status !== 0) throw new DeploymentError('R2_APPLY_STOPPED_REVIEW_REQUIRED');
+    return; // The user-TTY helper owns the same deploy/control locks. No nested lock or secret output.
+  }
   if (action === "status") {
     const live = current(), { cwd, ref, buildId } = live;
     const loaded = spawnSync("/bin/launchctl", ["print", service], { stdio: "ignore" }).status === 0;
