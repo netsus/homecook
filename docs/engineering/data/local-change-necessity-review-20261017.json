@@ -65,13 +65,24 @@
       "branches": [
         "feature/be-marketing-demand-validation-round2"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/marketing/round2/route.ts",
         "lib/marketing/round2-session.ts",
         "lib/server/marketing-round2.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "동일 SQL/context/runtime/storage/Turnstile과 후속 loopback preview·session outbox·rate 경계가 존재. R2 OFF/운영 활성화는 별도 보류.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "02f462dee413871aafaec57fad360c3e85cdd8ea",
@@ -80,13 +91,23 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/gamification/growth-toast-stack.tsx",
         "components/shared/global-toast-presentation-slot.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재359px이하 channel grant·실제표시만 delivered·growth대기timer중지/개수제한 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "034f03cf6043c4de05352c0918004bfffe5bcfe4",
@@ -180,14 +201,24 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/layout.tsx",
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/api/youtube-extraction-jobs.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 전역 center/header trigger·기본 background 접수·session 재진입·API/store 계약 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "0764d108e3c50fe8475cf22642364169ab0f022d",
@@ -288,13 +319,24 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_extraction_prototype_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "후반 선택 재료 전체 ledger 점검 prompt는 현재 일반 포함 지시와 다름. 실험 보존·소유자 검토 보류.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": true
+      }
     },
     {
       "sha": "0bf33c6f9c333b025a86c5789160e3f8eab08eb0",
@@ -360,7 +402,14 @@
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "인접 이름 인용 복구/approximate suffix 보완의 완전 대체 미확인. 원 인접 penne파스타/200g fixture도 현재 unknown/source-name-not-anchored. 안전 거절이므로 숫자 복구 승인 아님.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "0ce3f69badf19b13fec9ccf75441004c68645e7f",
@@ -422,13 +471,24 @@
       "branches": [
         "fix/beta-returning-session-flow"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [
         "42f601959249be990b9efe48f35124d26e658f60"
       ],
       "unmatched_runtime_paths": [
         "components/marketing/marketing-demand-validation-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "분리된 recording-flow-views.tsx의 eager WebP 이미지로 후속 구현.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "101cebb7bcd7e7b57b32415a9099ccbc2dda7186",
@@ -571,11 +631,21 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "14edcf55518c0a3529c85699c2f99da38d97a167",
@@ -584,12 +654,23 @@
       "branches": [
         "chore/recipe-loop-iter4-6-resume"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/extract.mjs",
         "lib/server/recipe-extraction-lab/prompt.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "iter4 debug/단계 밀도 실패 checkpoint. 현 normalize 일부만으로 옛 prompt 전체 승격하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "156b0f8d2aa57dee14ea01b9cfd76642c0693ef7",
@@ -647,7 +728,7 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_extraction_prototype_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction.ts",
@@ -657,7 +738,18 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/worker.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "stable OCR probe 재인식/확인 후 프레임 교체가 현재 없음. 실제 프레임 효과 미검증, 후보 보존·소유자 검토 보류.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": true
+      }
     },
     {
       "sha": "17ef00f44800fe34f382191c3850722f9d3929bf",
@@ -794,11 +886,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "오류별 재시도 문구·재접수 후 trackYoutubeExtractionJob 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "1af93ab59f176cb9d6e2ca5141443e6774ed81c9",
@@ -837,11 +940,21 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "1c50377dd6cf454de9e089bd3906bd978d23ad8b",
@@ -933,13 +1046,24 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_extraction_prototype_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "분리된 소유/확인 근거로 슬래시 선택지를 확정하는 prototype. 현재 경로 미반영이며 확장 필요성부터 별도 검토.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": true
+      }
     },
     {
       "sha": "1dbd85ffd19a3926f1ce2f4e237fb1d1c8ca3bd9",
@@ -1019,13 +1143,24 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_extraction_prototype_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "공통 선택 수량 prototype. 현재 합성 선택 원문은 source-name-is-choice로 보수적 unknown. 확장 승인/완전 대체로 간주하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": true
+      }
     },
     {
       "sha": "2017a593bdeb74939497b72e445cfa3d47429070",
@@ -1248,11 +1383,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "오류별 재시도 문구·재접수 후 trackYoutubeExtractionJob 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "2631bffd2e2f25204171e40b5a983fb38663b179",
@@ -1261,11 +1407,22 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "오류별 재시도 문구·재접수 후 trackYoutubeExtractionJob 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "2651b96bd76128a9acc561192e4d39db6281913f",
@@ -1298,12 +1455,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 ActiveJobRow·pagination/dedupe·그룹 toast·planner의 명시적 sync submission 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "277f21614d481d30385e349303bd4bc4b147796a",
@@ -1369,14 +1536,25 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_extraction_prototype_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction.ts",
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "정확 인용/최대2개 일부는 있으나 최소 인용 선택 prompt의 완전 대체 미확인. 실험 보존·소유자 검토 보류.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": true
+      }
     },
     {
       "sha": "2bc8ce58ae27a22fd6fcee8829780587fc8e78de",
@@ -1571,11 +1749,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "서울 시간 formatToParts 조합 유지. 옛 보안 inventory/CI 복원은 불필요.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "32ab591babf7ec30b7f56b0cbddce65ec1e46e3a",
@@ -2023,7 +2212,14 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/worker.mjs",
         "supabase/migrations/20261009004000_youtube_saved_recipe_quantity_provenance.sql"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "표시·출처SQL·프레임 성능·정체성 보완이 혼재. provenance map/formatter·sampled fallback 등 미반영 부분은 분해 검토 필요.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "3eddef5aa3e29c03ee13d8d76f5be8c9c1602d6b",
@@ -2094,14 +2290,24 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/layout.tsx",
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/api/youtube-extraction-jobs.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 전역 center/header trigger·기본 background 접수·session 재진입·API/store 계약 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "41294ff4406bb79cbce472a5b84cfda205c21b35",
@@ -2121,13 +2327,23 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/youtube-extraction-client-state.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 작업ID최대20개보관/custom event·등록ACK·나가기/작업보기 흐름 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "42e6d6991532dafaf3fb49a59533e3fde377128b",
@@ -2183,7 +2399,14 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "P2: 반복 기름 투입 근거에도 explicit1T/issues[]/total-review없음. 원천·adapter/UI·저장 경계의 소유자 검토 필요. 현재 v85와 옛 동명v85는 다른 계보.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "44370410e0e40d31324bd1a1661ca87b086ea7b8",
@@ -2192,12 +2415,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "archive/items/cursor 분리, background가 archive를 덮지 않음. review heading focus와 safe-area 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "444fe1f6fe23d532246c82fb541b14b54a3d859c",
@@ -2260,12 +2493,22 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 ActiveJobRow·pagination/dedupe·그룹 toast·planner의 명시적 sync submission 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "479531b270701b78b82cc35c3cfb2a2342436d79",
@@ -2274,12 +2517,23 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "등록 ACK 첫 페이지 재조회/cursor 순회·완료 문구·break-keep 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "4876aa5e83c15aaa044a8b470576155280da8546",
@@ -2299,14 +2553,24 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/layout.tsx",
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/api/youtube-extraction-jobs.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 전역 center/header trigger·기본 background 접수·session 재진입·API/store 계약 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "49cadf3421cc38adc3e8cb4d6d4b06196cccf4fa",
@@ -2344,7 +2608,7 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/globals.css",
@@ -2352,7 +2616,17 @@
         "components/gamification/growth-toast-stack.tsx",
         "components/shared/global-toast-presentation-slot.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 shared toast portal/provider와 globals.css disabled 스타일 존재.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "4aaa440d4ea881100661e52be7e68656287b9975",
@@ -2398,7 +2672,14 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "stable OCR 신뢰 승격과 unitless amountRawText 전달 미반영. 원문 snippet 보존과 동등하지 않음. 필요성 조사 유지.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "4bb48856c878fe0d3d176141eac9a1a69bbec92e",
@@ -2612,11 +2893,21 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "5127794368d1d094c54ede291619f7b0938efdf0",
@@ -2648,11 +2939,22 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "등록 성공 ACK 저장·정확 job 대조·실패 재시도 유지, archive 대조 후속 추가.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "53aa669ae754ccaab411d1d38ebb1e2257c3e573",
@@ -2695,13 +2997,24 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_extraction_prototype_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "선택 수량 prototype의 충돌 보호. 현재 선택 수량 자체를 보수적 거절하므로 해당 확장의 필요성부터 검토.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": true
+      }
     },
     {
       "sha": "5577134039078753aa55a4ca2d644a46b1c1e3c2",
@@ -2751,7 +3064,14 @@
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20261009190000_youtube_saved_recipe_quantity_provenance.sql"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "옛 provenance migration과 source.ingredient_quantity_sources projection 부재. 후속 quantity-v4와 원 출처 구분의 동등성 미입증, forward 필요성 조사.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "56b819caa5c9977eea5063bccdf71b6bddb1abeb",
@@ -2760,13 +3080,23 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/youtube-extraction-client-state.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 작업ID최대20개보관/custom event·등록ACK·나가기/작업보기 흐름 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "56fe60c6725395bee54853cad5ef4fe196cbb818",
@@ -2975,11 +3305,22 @@
       "branches": [
         "chore/current-mac-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "재추출 attempt 증가/effect 의존성 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "6141bba8d5ced200b85e3f9a23486eabcd32bb7a",
@@ -3137,14 +3478,24 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/layout.tsx",
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/api/youtube-extraction-jobs.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 전역 center/header trigger·기본 background 접수·session 재진입·API/store 계약 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "68a7d338d5df003b41a07c5fc0426d463a2ddd52",
@@ -3154,11 +3505,21 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 table/sequence/schema owner·owner role 속성·membership 지문과 artifact reader의 중복JSON key/정확 component 검증이 존재.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "6a434b18829958ded247d12417e2b4a2fdbc29d2",
@@ -3182,7 +3543,14 @@
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260906020000_meal_log_runtime_authority.sql"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "저장소 replay gap 조사: scope는 후속 보존, 원3reader STABLE에 대한 VOLATILE 보완 SQL 부재. cached schema232에는3개 모두VOLATILE. 현재 운영 검증/장애 주장은 아님.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "6ad2013bf6d29f5b75b008744248ad41c1f3ad92",
@@ -3226,11 +3594,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "등록 성공 ACK 저장·정확 job 대조·실패 재시도 유지, archive 대조 후속 추가.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "6c6be60b6bde10513695a743121b2d444c60cad1",
@@ -3307,11 +3686,21 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "68a7d338d와 같은 SQL patch-id. 현재 owner/role/membership 전체 catalog 검증의 후속 보호를 확인.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "6fc0c4baa6a86788183f18a7622f9b31c8cf061f",
@@ -3385,11 +3774,21 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "74f383d0e4f75941315831e8c26e5b49700f8a1b",
@@ -3398,11 +3797,22 @@
       "branches": [
         "chore/recipe-loop-iter4-6-resume"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/prompt.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "iter6 단계 분할 max-iter 실패 prompt 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "7506691c1c3b9417101d32fcf179427f33be1f9b",
@@ -3425,13 +3835,24 @@
       "branches": [
         "chore/youtube-recipe-loop-one-iter-observe"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [
         "82b613fc588e738045e671fc1e62e6c18f948aba"
       ],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/prompt.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "시각 재료 첫 투입·step token 실험. 독립 성공 근거 없이 현재 배포 prompt로 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "753c2d25a8c32c6b7a7f4954d1760c671880eb96",
@@ -3685,11 +4106,21 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "7bfe0d3b48f771bf5c3fa26421fac54ad6e53e77",
@@ -3768,14 +4199,24 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/layout.tsx",
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/api/youtube-extraction-jobs.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "위 background/알림 통합과 extractionId 로그인 복귀·결과 재진입이 현재 존재.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "7eaf836ba9b826a4e4bd3a79bcd7974d7bed3323",
@@ -3843,11 +4284,21 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "80d2cbf309a0dbe94dbb7ce4cce5c2aff81c8ea4",
@@ -3868,12 +4319,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 ActiveJobRow·pagination/dedupe·그룹 toast·planner의 명시적 sync submission 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "825bf70ba7f9b8f7b0965b593da11160bf7ce649",
@@ -3947,11 +4408,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "옛 floating bell은 현재 header trigger로 대체. 옛 위치를 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "84b12152aae08017f4a4eb16a8f4a1aec4f569f6",
@@ -3971,12 +4443,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "서버 seen 성공 후 로컬 갱신·실패 재시도·archiveACK·mixed 결과·중복 접수 안내 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "85bcfcc7d67eeeebd3a0cce18de487586d05490e",
@@ -4260,11 +4742,21 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "90e4de9338865678040f24e57a0554f0314b1e46",
@@ -4420,13 +4912,24 @@
       "branches": [
         "fix/beta-returning-session-flow"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [
         "3e198adc538d01829c1b1adb9f495167d0e02e8d"
       ],
       "unmatched_runtime_paths": [
         "components/marketing/marketing-demand-validation-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "screen serverState/queue·exact client-session·beta notification 차단 후속 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "949c54c90aa760fd005a1b88cae322d9d546b400",
@@ -4608,11 +5111,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "서울 시간 formatToParts 조합 유지. 옛 보안 inventory/CI 복원은 불필요.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "9b853b5e34832cd9195a6b0f3d47606c93f89359",
@@ -4796,11 +5310,21 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "인증 만료 안내 heading focus, planner 날짜/column/slot, 끼니 한글 표시 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "a427a98ff9da2b1ed5fb6a3ae2e5a2a0d2085e65",
@@ -4838,11 +5362,21 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 helper5개 외부 권한 회수/필요 owner만 재부여, transaction 안 일시 membership/CREATE/종료 회수를 확인.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "a55a653104796c7044ce57dd4479310edc81f06b",
@@ -4897,11 +5431,21 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "a52ccda71와 같은 SQL patch-id. 현재 helper 최소 권한과 일시 role lease 회수가 존재.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "a7ff5145ac9a7469bbbe4da1a70a3dd6cf9fbc5a",
@@ -4989,12 +5533,23 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "등록 ACK 첫 페이지 재조회/cursor 순회·완료 문구·break-keep 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "aee818a1b6399c02d2f6206311c4666d75a62025",
@@ -5061,11 +5616,21 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 원20260812160000과 후속 계약에 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership/grantor별 회수·guard principal ledger가 보존/강화됨. 과거 지문 값은 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original patch/current migration and authorization manifest comparison. No new DB or operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "b1ea33f984b7175c633941525a53629a05c3d5b8",
@@ -5074,11 +5639,21 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 worker fence/finalize의 job→permit 잠금 순서, 성공 retry 조기 return, 같은 worker의 active permit 중복 거절 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "b33eef4cbb9d8c481499365e2a22f5fa83e35a35",
@@ -5149,11 +5724,22 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "서울 시간 formatToParts 조합 유지. 옛 보안 inventory/CI 복원은 불필요.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "b70c9305b06c8e99610aebb39be2c26d6a8cbfb0",
@@ -5279,12 +5865,23 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "등록 ACK 첫 페이지 재조회/cursor 순회·완료 문구·break-keep 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "bb5fd32583741cacfed1321c1b86d1e3f3bb3aba",
@@ -5323,11 +5920,22 @@
       "branches": [
         "chore/recipe-loop-iter4-6-resume"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "9개 함수 중7개 AST-print 동일, visual config2개는 같은 후보키/exhausted set에 후속 gate. 실험 lab 변경으로 묶지 않음. 키 유효성/구키 fallback/운영 정책 승인 근거는 아님.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "bd6c07e0ba9304df1d1a591abebd787a1c6f7ca7",
@@ -5374,12 +5982,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "consumed 결과 문구·중복 안내 제거·방향키순환/Home/End 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "be52242cd051a919a911a04f1fb2624ddb53ce4a",
@@ -5565,11 +6183,22 @@
       "branches": [
         "feature/be-marketing-demand-validation-round2"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/marketing-round2.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 marketing-round2.ts의 HTTP200 검증3곳 보존. RPC 전송 실패를 참여 성공으로 처리하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "c3e1f97652f1f01dcbcdfd1ede33d25b1045d5fc",
@@ -5641,11 +6270,21 @@
       "branches": [
         "feature/full-local-auth-app-adapter"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_runtime_successor_other_files_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260801150000_full_local_account_bootstrap.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "이번 unmatched bootstrap SQL 범위만 확인. 원본과 search_path의 private 제거1행 차이, local authority/session/generation/잠금 보호 유지. 원52파일 전체 완료 판정은 아님.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "ca315a04f77713dabdd85896eab793b40b86275e",
@@ -5892,7 +6531,14 @@
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260906010000_gamification_projection_writer.sql"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "저장소 replay gap 조사: 현재 writer caller/scope는 있으나 CREATE SQL 부재. cached schema232에는 write_user_gamification_projection 존재. body/현재운영 동등성 metadata만으로 미입증.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "d24f9dc3daa5c9836e72214e607bd25ad62952ab",
@@ -5901,12 +6547,23 @@
       "branches": [
         "chore/youtube-recipe-loop-one-iter-observe"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/extract.mjs",
         "lib/server/recipe-extraction-lab/prompt.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "iter2 embedded amount와 prompt 회귀 checkpoint 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "d2a6576588c62801c52a98a75dfc7349a5f34395",
@@ -5977,11 +6634,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/youtube-extraction/youtube-extraction-notification-center.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "등록 성공 ACK 저장·정확 job 대조·실패 재시도 유지, archive 대조 후속 추가.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "d45f32c07b86527d2b9600d5230c98d20912e1e1",
@@ -6115,11 +6783,21 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "현재 pre-request/enqueue catalog assertion, 함수/scope body hash, start-attempt 잠금/lease 검증이 존재. 과거 fingerprint 복원 불필요.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "d8356e5ba87d54ea268d21b17da4671f46e7db74",
@@ -6360,13 +7038,23 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "lib/youtube-extraction-client-state.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "같은 patch-id. 현재 작업ID최대20개보관/custom event·등록ACK·나가기/작업보기 흐름 유지.",
+        "independent_review": true,
+        "verification": "Read-only source/current contract comparison. Current notification2suites48 PASS applies to UI, not an independent rerun; no new DB/operating test.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "dc9b1e450b8c1500f38475fb87bcc4085be9d397",
@@ -6390,13 +7078,24 @@
       "branches": [
         "fix/recipe-loop-iter13-performance-recovery"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [
         "cd80bf651b78c84f637c8bc395b62c36e4a142a9"
       ],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/extract.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "비교 provider/meta 기능 후속 존재. 현재 GPT keyframes 기본/다른 provider fallback 없음으로 진화해 옛 Gemini 기본 복원 불필요. 옛 실험 증거는 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "dddd019ace9bddf35852ac11e6f2619741bfe076",
@@ -6427,12 +7126,23 @@
       "branches": [
         "chore/recipe-loop-iter4-6-resume"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/extract.mjs",
         "lib/server/recipe-extraction-lab/prompt.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "iter3 모듈을 iter4 기준으로 복원한 checkpoint 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "df6cee1972a46c7f765321f43aefc60af0e70d17",
@@ -6790,11 +7500,22 @@
       "branches": [
         "chore/recipe-loop-iter4-6-resume"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/prompt.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "iter5 단위/붙은 수량과 max-iter prompt 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "e9c470cd6652b8d6a5e4a1485efe90a06f435887",
@@ -7157,11 +7878,22 @@
       "branches": [
         "chore/youtube-recipe-loop-one-iter-observe"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_experiment_preserved_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/recipe-extraction-lab/prompt.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+        "reason": "iter1 원 단위/한 동작 prompt 실험 보존.",
+        "independent_review": true,
+        "verification": "Read-only source/patch comparison. Current notification suites48 PASS for UI groups; historical test counts are not fresh evidence. Pure synthetic validator5 cases only for extraction investigation; no model/DB/external calls.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "unresolved_or_deferred_is_not_unnecessary": false
+      }
     },
     {
       "sha": "fa75808b4a697ea6415d000fff3d82e1f379a672",
@@ -7208,7 +7940,14 @@
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "supabase/migrations/20260906010000_gamification_projection_writer.sql"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "reason": "d22ddb447와 같은 patch-id. writer CREATE의 checked-in replay gap 조사 유지. cached schema232 존재와 현재운영을 구분.",
+        "independent_review": true,
+        "candidate_code_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "fc7c91b31717c85f0e581831e35a35e9b3b0644e",
@@ -7335,11 +8074,22 @@
   ],
   "semantic_review_summary": {
     "batch1_reviewed": 5,
-    "runtime_semantic_review_pending": 132,
+    "runtime_semantic_review_pending": 67,
     "historical_all_postimage_presence_is_not_current_semantic_equivalence": true,
     "batch2_c05_owner_deferred": 5,
     "deferred_is_not_completed_or_unnecessary": true,
     "batch3_partial_needed_fix": 1,
-    "reviewed_partial_candidates_still_open": 1
+    "reviewed_partial_candidates_still_open": 1,
+    "batch4_marketing_lab_reviewed": 13,
+    "batch5_extraction_prototype_deferred": 6,
+    "batch5_extraction_still_pending_with_notes": 4,
+    "batch6_notification_current_successor": 14,
+    "batch7_historical_guards_present": 8,
+    "batch8_historical_guards_present": 7,
+    "batch8_forward_still_pending_with_notes": 4,
+    "batch9_notification_current_successor": 17,
+    "still_pending_with_investigation_notes": 8,
+    "pending_unstarted": 59,
+    "pending_investigating": 8
   }
 }

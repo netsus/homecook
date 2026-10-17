@@ -246,3 +246,13 @@ Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산
 ## Runtime 저장 fallback 검토
 
 기존 후보 `444fe1f6f` 중 저장 RPC 부재/PGRST202 뒤 전역 service-role fallback만 사용자 권한으로 좁혔다. 이전 두 회귀 실패를 확인하고 최소 수정 후 관련24 PASS·독립 route23 PASS·타입/lint를 확인했다. 원자 RPC/세션 경로와 API 계약은 불변이다. 기존 public read 정책 두 경로는 별도 보류이며 전체 옛 patch를 가져오지 않았다. 미검토132건은 수정 필요 건수와 다르며 부분 검토 보류1건도 열린 상태다. 실제 인증/운영 쓰기/Chrome 접근·배포0이다. 배포 도구 fixture의 import collection 실패는 [별도 기록](local-change-inventory-20261017.md#runtime-검토-세-번째-묶음--저장-fallback-최소-이식)을 따른다.
+
+
+## 로컬 후보 후속 분류와 남은 조사
+
+- 저장 fallback 보완은 PR1789(`634fa5b99`)로 병합/운영 미반영이다. 마케팅/lab13개·추출 prototype6개·알림 UI14개·역사SQL8개의 읽기 검토를 [근거와 함께 기록](local-change-inventory-20261017.md#runtime-검토-네-번째일곱-번째-묶음--재머지와-보류-구분)했다. 당시 판정 대기91건은 필요 수정 건수가 아니며 조사4건과 별도 보류/부분 후보는 열려 있다.
+- 반복 기름 투입에서 총량 확인 경고가 없는 P2 합성 사례를 재현했다. 기존 후보4420a222c를 중복으로 닫지 않고 원천·adapter/UI·저장 경계 조사에 남겼다. 추출기/worker 변경과 모델 호출0이다.
+- fresh214에는 역사 실행 actor/함수owner·ACL 차이의 단서가 있다. 보존된 schema-only228의 helper3개 owner는 supabase_admin이고 postgres EXECUTE가 별도이지만 진단runner는 postgres로 만든다. 기존 verifier의 actor8개를 격리 재현한 [별도 시도](data/fresh-historical-actor-attempt-20261017.json)는177에서 합성 bootstrap의 ADMIN-option 차이로 멈췄다. 214 해결/원인 확정이라고 주장하지 않는다. 시도 코드만 /tmp에 보존하고 진단runner·역사SQL·fence는 원상태를 유지했다. 개인 자료/운영 접근0, 소유 컨테이너cleanup 확인이다.
+
+
+추가 역사SQL7개·알림UI17개의 현재 보호/후속 구현을 대조해 최신 판정 대기67개(미착수59+조사중8)다. 조사 메모8개는 그대로 pending이며, cached schema232와 저장소 SQL의 정의/volatility 차이는 현재 운영 장애로 단정하지 않는다. 표지 읽기 후보ce7d9dbe8는 별도 독립 worktree에서 재현·검증 중이고 아직 이 분류에 완료 반영하지 않았다.

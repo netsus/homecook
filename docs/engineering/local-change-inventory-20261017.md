@@ -655,3 +655,31 @@ PR1681/1707의 소유자 영역이며 현재 9개 요구와 별도다. 정책·�
 원7파일 전체 patch를 머지하지 않는다. public image route 등록/supplemental read scope 및 과거 static gate 변경은 별도 정책으로 보류한다. 따라서 이 후보는 `reviewed_partial_fix_other_policy_deferred`이며 전체 완료/중복으로 닫지 않는다. 미검토 runtime은132개, 검토 후 일부 보류 후보1개는 별도로 남는다.
 
 추가 선택 실행의 `prelaunch-recipe-save-maintenance.test.ts`는 기존 fixture가 임시 복제한 web 모듈의 새 single-quoted 상대 import를 변환하지 못해 collection 단계에서 실패했다(`round2-closed-marker-rotation-bridge.mjs` 누락). 제품 수정과 분리해 보존하며 운영 도구/배포 설정은 수정하지 않는다.
+
+
+## Runtime 검토 네 번째~일곱 번째 묶음 — 재머지와 보류 구분
+
+저장 fallback 최소 수정은 [PR1789](https://github.com/netsus/homecook/pull/1789), `634fa5b997dadb346cf37e241ffa1fce4b0e5eb0`로 병합했다. 후보 전체/운영 반영은 아니다.
+
+- 마케팅4개는 현재 R2/화면 후속 구현을 대조해 재머지 불필요로 분류했다. R2/lead OFF와 수집 보류는 유지한다.
+- recipe-loop 관련9개 중8개는 실패/max-iter checkpoint·프롬프트 실험·후속 비교기 실험 기록을 보존한다. `bcde21c64`는 lab 실험이 아닌 운영 import failover의 기존 반영 코드다. 9함수 중7개 AST-print 동일과 나머지2개 후속 gate를 확인했으며 키 유효성/구키 fallback 정책까지 승인한 것은 아니다.
+- extraction prototype6개는 원 기능이 현재에 완전히 대체됐다고 확인하지 못해 소유자 보류로 남겼다. 단순 중복·불필요 판정이 아니다. 나머지4개(`0c98a367d`, `3ea568317`, `4420a222c`, `4b4ccbf90`)는 필요성 조사 pending 상태와 원인 메모를 유지한다. 현재 coupled-text-first/schema-v5/verifier-v54와 옛 repeated-total-review/schema-v3/verifier-v51의 같은 v85 숫자를 동일 계보로 보지 않는다.
+- 알림 UI14개는 원patch와 현재 재시도 추적·서울 날짜 포맷·등록 ACK 첫 페이지/cursor·실패 재시도·재추출 attempt·header trigger를 독립 대조했다. 현재 합성 UI2파일48 PASS이며 새 UI/제품 변경은 없다.
+- 역사 SQL-only8개는 worker 양방향 membership·owner별 ACL/revoke·transaction-local ownership·grantor별 회수·guard principal ledger가 현재 원 migration과 후속 계약에 보존/강화된 것을 독립 읽기로 확인했다. 과거 지문은 복원하지 않으며 migration/fence 변경0이다.
+
+당시 분류 후 의미 판정 대기91개였다(필요성 조사 메모4개 포함). 검토 후 보류·실험 보존·일부 수정 후보는 별도 집계하며, 이 숫자는 수정 필요 건수가 아니다. 원 브랜치/worktree/미커밋은 모두 보존한다.
+
+### 반복 기름 투입 총량 경고 조사
+
+[합성 재현](data/repeated-oil-total-review-repro-20261017.json)은 실제 레시피/UUID/건강자료 없이 pure validator만 호출한다. ledger `기름 1T`@90s와 `기름 1T를 다시 넣습니다`@122s에서 proposal1T가 현재 explicit1T/issues[]로 유지되고 total-review 경고가 없다. `4420a222c`의 adapter/UI/저장 전달 보호가 온전히 반영됐다고 닫을 수 없어 P2 필요성 조사로 보존한다. 모델 추출 결과 자체/운영 레시피를 검증한 것은 아니며 자동2T 확정으로 대체할 근거도 아니다. worker 소유자와 원천·표시·저장 경계를 검토해야 한다. 모듈과 bundle·manifest·worker 설정은 변경하지 않았다.
+
+
+## Runtime 검토 여덟 번째·아홉 번째 묶음 — 최신 판정 대기67개
+
+역사SQL11개 중7개는 현재 catalog authority·최소 권한·job→permit 잠금·bootstrap·worker drift 보호가 보존/강화돼 재머지 불필요다. `c8c1b61df`는 이번 unmatched bootstrap SQL 범위 판정이며 원52파일 전체가 완료됐다는 뜻은 아니다.
+
+나머지4개는 pending이다. `55e8a3651`의 출처별 수량 투영과 v4 후속 계약의 동등성이 미입증이다. `6abe9f0aa`(meal reader3개 VOLATILE), `d22ddb447`/`fb7b364ad`(gamification writer CREATE)는 caller/scope는 있으나 checked-in migration의 보완 정의가 없다. 이전 cached schema232 metadata에는 reader3개 VOLATILE과 writer 존재가 확인된다. 저장소 replay gap의 단서이며 현재 운영 장애·현재 운영 동등성을 주장하지 않는다. 원 SQL을 재작성하지 않고 forward 필요성을 조사한다.
+
+알림 UI17개도 현재 background/session 재진입·API/store·ActiveJobRow·pagination·ACK·archive분리·seen 성공 후 갱신·mixed 구분·focus·planner context·global toast/narrow grant·disabled CSS의 후속 구현을 독립 대조해 재머지 불필요로 분류했다. 기존 합성48 PASS를 근거로 보존하며 독립 재실행이라고 표시하지 않는다.
+
+현재 판정 대기67개(미착수59개+조사중8개), 별도 추출 prototype소유자 보류6개, C05보류5개와 부분/기타 파일 보류는 계속 열린 항목이다. 지금까지133개 후보에서 필요한 최소 이식1개와 분류65개를 진행했으며, 후보 수는 수정 필요 수가 아니다. 운영·DB 쓰기·키/배포/worker 설정 변경0이다.
