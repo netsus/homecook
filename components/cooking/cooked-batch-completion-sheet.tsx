@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { ConsumedSelectionToolbar } from "@/components/cooking/consumed-ingredient-sheet";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
-import { COOKED_MIX_ASSUMPTION_TEXT, cookedWeightUnavailableReasonText } from "@/lib/cooking/cooked-weight-summary";
+import { cookedWeightAssumptionText, cookedWeightUnavailableReasonText } from "@/lib/cooking/cooked-weight-summary";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { useWeightAttestationContext } from "@/components/cooking/use-weight-attestation-context";
 import { weightAttestationInput } from "@/lib/cooking/cooked-weight-attestation";
@@ -189,10 +189,10 @@ export function CookedBatchCompletionSheet({
           <h3 className="text-base font-bold" id="cooked-batch-weight-heading">완성 음식 전체무게</h3>
           <p className="text-sm leading-5 text-[var(--text-2)]">
             {weightPrediction?.source === "conditional_estimate" && weightPrediction.predicted_g !== null
-              ? `조건별 예상 무게는 약 ${Math.round(weightPrediction.predicted_g).toLocaleString("ko-KR")}g이에요. 실측값이 아니에요.`
+              ? `${weightPrediction.model_version === "ingredient-mass-75-v1" ? "재료량 75% 추정 무게" : "조건별 예상 무게"}는 약 ${Math.round(weightPrediction.predicted_g).toLocaleString("ko-KR")}g이에요. 실측값이 아니에요.`
               : cookedWeightUnavailableReasonText(weightPrediction?.reason_codes)}
           </p>
-          {weightPrediction?.assumption_codes?.length ? <p className="text-sm leading-5 text-[var(--text-2)]">{COOKED_MIX_ASSUMPTION_TEXT}</p> : null}
+          {weightPrediction?.assumption_codes?.length ? <p className="text-sm leading-5 text-[var(--text-2)]">{cookedWeightAssumptionText(weightPrediction?.assumption_codes)}</p> : null}
           <label className="block text-sm font-bold" htmlFor="cooked-batch-reported-weight">저울로 잰 전체무게 (선택, g)</label>
           <input aria-describedby="cooked-batch-weight-help cooked-batch-weight-validation" aria-invalid={Boolean(weightError) || serverError?.fields.some(field => field.field === "finished_weight_g") || undefined}
             className="h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base"

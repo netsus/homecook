@@ -105,7 +105,7 @@ interface PredictionReason {
 }
 
 export interface CookedWeightPrediction {
-  readonly modelVersion: typeof COOKED_WEIGHT_PREDICTION_VERSION;
+  readonly modelVersion: typeof COOKED_WEIGHT_PREDICTION_VERSION | "ingredient-mass-75-v1";
   readonly status: "estimated" | "unavailable";
   readonly totalGrams: number | null;
   /** Test-supplied coefficients remain explicitly outside a service candidate. */

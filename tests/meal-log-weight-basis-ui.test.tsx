@@ -34,3 +34,12 @@ it("keeps historical missing provenance missing and preserves the current detail
   await userEvent.click(await screen.findByRole("button", { name: "아침의 저장된 요리 식사 기록 상세" }));
   expect(screen.queryByRole("region", { name: "기록 당시 전체무게 근거" })).toBeNull();
 });
+
+it("explains the mass fallback on a frozen meal without implying the MIX model", async () => {
+  const nutrition: MealLogNutritionEvidence={...scalar,weight_basis:{schema_version:"cooked-weight-basis-v1",batch_id:batchId,recipe_content_snapshot_id:null,finished_weight_g:225,source:"conditional_estimate",model_version:"ingredient-mass-75-v1",prediction_id:null,observation_id:null,batch_revision:1},weight_assumption_codes:["ingredient_mass_seventy_five_percent"]};
+  api.fetch.mockImplementation(async(date:string)=>date==="2026-09-07"?day(nutrition):{...day(scalar,date),active_sections:[],entries:[]});
+  render(<MealLogScreen date="2026-09-07" onDateChange={vi.fn()} onUnauthorized={vi.fn()} />);
+  await userEvent.click(await screen.findByRole("button",{name:"아침의 저장된 요리 식사 기록 상세"}));
+  const basis=screen.getByRole("region",{name:"기록 당시 전체무게 근거"});
+  expect(basis.textContent).toContain("재료량 75% 추정");expect(basis.textContent).toContain("재료 무게 합계의 75%");expect(basis.textContent).not.toContain("가열 없는 섞기");
+});

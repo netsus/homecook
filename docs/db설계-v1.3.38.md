@@ -3618,3 +3618,8 @@ private immutable digest helper1개와 service-only SECURITY DEFINER RPC `read_r
 정확한 DB229 predecessor definition/source/권한 metadata를 먼저 확인한 뒤 원 scope verifier를 alias로 보존하고 `recipe-future-propagation`의 정확2개 POST RPC 경로만 추가한다. 일반/API 역할에 표 접근·private helper 실행 권한을 추가하지 않는다. actual baseline의 broad 표 ACL과 RLS=true/policy0는 그대로 보존하며 source 선언만으로 권한 없음이라 단정하지 않는다. [결속·실제 metadata·격리 검사·배포 한계](engineering/recipe-future-patch-http-replay-20261015.md)를 따른다.
 
 관련 `20261014225200_recipe_snapshot_reason_identity.sql`은 [개인 영양 사유 v5](engineering/recipe-nutrition-semantic-reason-identity-v5.md)의 별도 변경이다. 개인 사유 identity를 보완하되 기존 v4 수치·과거 snapshot은 재작성하지 않는다. 두 SQL의 통합·운영 적용과 새 lineage 이후 복구는 별도 검증 대상이다.
+
+
+### 2026-10-17 완성무게 질량 fallback 모델 확장 후보
+
+`20261017210000_cooked_weight_mass_fallback.sql`은 기존 private evidence 기록 함수의 허용 모델을 `ingredient-mass-75-v1`까지 확장하고 이 모델의 전체 질량·환산증거·가정·중복행·십진반올림 총량을 검증한다. 기존 테이블/권한/정책/원장/과거 데이터는 변경하지 않는다. 원래의 조건별 추정과 사용자 보고 실측은 별개로 보존한다. 검증된 질량 전체를 모를 때는 새 예측을 만들지 않는다. 웹+스키마 동시 반영이 필요한 미배포 후보이며 운영 DB 적용은 배포 잠금 해제 후 별도 직렬화한다.
