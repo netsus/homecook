@@ -12,3 +12,11 @@
 - activation 이후 확인 실패 시 자신의 정확한7b/06a plist/state와 원 worker·DB/guard만 소유함을 재검증하고7b bytes/state로 보상한다. foreign/newer 상태나 자료 차이는 덮어쓰지 않고 unresolved로 기록한다. SIGINT/SIGTERM은 확인 후 보상 경로로 전달한다. SIGKILL/전원 상실로 남은 intent는 자동 재시도하지 않는다. 원 state/plist 및 pending journal의 수동 대조가 필요하며 성공을 주장하지 않는다.
 
 완료 조건은06a 실제 loaded 웹/정적 build·DB232/원42/gen49/V2·전후 전체 보존·06a 실제 접수 readiness와 production HMAC 일치다. 실제 신청은 별도 승인된 대표1건이 필요할 때만 중복 여부 확인 후 수행한다. 이 복구가 v85 배포 완료나 추출 품질 검증을 뜻하지 않는다.
+
+## 실제 복구 완료 — 2026-10-16 23:59 UTC / 10-17 08:59 KST
+
+실행 소스 `79f0660b2b23c9fca55d97204712d85737baf0bc`에서 read-only plan exit0 후 공식 복구도 exit0했다. 실제 웹은 `06a3369f5c5e1c3ca49045f370f0ce12f049c805`, build `prelaunch-06a3369f5c5e-EWuEsS`이며 공식 상태 `loaded=true/recoveryPending=false`다. `intent/verified/complete` 영수증은 `~/.homecook/prelaunch-web/v85-web-only-recovery-e0b4ba6a-b5dc-48e0-bdb0-0a80d9888acf`에 있다.
+
+fresh before/after 전체 관찰값이 동일했다. worker PID49750/gen49·DB232·V2 ON/previous 없음·원42개 작업 전체행 SHA·guard·원 plan/anchor를 보존했다.06a 실제 readiness가 통과했고 실제 production 환경에서 원33개 V2 HMAC을 재현했다. DB/인증/정책/worker/토큰 변경0, 새 신청·모델0이다. 사용자 Mac Chrome의1440/375에서 유튜브 가져오기 초기 화면을 확인하고 임시 viewport를 해제했다. 실제 enqueue→결과 전체 흐름을 새로 반복한 검증은 아니다.
+
+선택4파일293 PASS, typecheck/lint 통과, Anti Slop 신규0, 독립 리뷰 HIGH 해소다. 최초 read-only plan에서 원 history map의 키가 UUID가 아닌 SHA256(id)인 형식 차이로 중단됐고 기존 해시 형식을 그대로 사용하는 조회로 보완했다. 당시 운영 변경0이었다. 원50 전환은 계속 미실행이며 과거 auth 보호행 차이와 v85 품질·UI 후속은 별도 미해결 범위다.

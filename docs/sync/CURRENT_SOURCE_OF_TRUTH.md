@@ -1,8 +1,8 @@
 # Current Source of Truth
 
-## 2026-10-17 — v85 웹 선배포 중단의 정확한06a 웹 전용 복구 준비
+## 2026-10-17 — v85 웹 선배포 중단의 정확한06a 웹 전용 복구 완료
 
-웹7b 반영 후 gen50 발급 전 자료 보존 검사가 중단됐다. 일반 자료는 레시피 조회수1 차이를 가상 계산으로 입증했고 인증 보호행 갱신도 있어 원 plan/anchor를 바꿔50을 진행하지 않는다. 기존 DB rollback guard를 유지하며 정확한7b→06a·v74/gen49·V2·DB232·원42작업을 검증하는 [별도 공식 웹 전용 복구](../engineering/youtube-v85-web-only-recovery-20261017.md)를 준비한다. 이 문단 시점 복구는 아직 미실행이며 실제 실행·readiness 결과로 갱신해야 한다.
+웹7b 반영 후 gen50 발급 전 자료 보존 검사가 중단됐다. 원 plan/anchor를 바꾸지 않고 [별도 공식 웹 전용 복구](../engineering/youtube-v85-web-only-recovery-20261017.md)를 실행 소스79f0660b2에서 완료했다. 웹06a/build prelaunch-06a3369f5c5e-EWuEsS·loaded/recoveryPending=false·실제06a 접수readiness를 확인했다. fresh 전후 전체관찰 동일, workerPID49750/gen49·V2·DB232·원42작업/guard 보존, 기존33 V2 HMAC 재현, DB/자격/worker변경·새신청/모델0이다. 선택293 PASS·type/lint·Anti Slop신규0·독립리뷰, 사용자Mac Chrome1440/375 초기화면 확인이다. gen50/v85 운영 전환은 계속 미실행이다.
 
 ## 2026-10-17 — v85 고정49→50 전환 도구 준비, 실제 발급/운영 전환 보류
 
