@@ -35,7 +35,7 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
@@ -44,7 +44,17 @@
         "lib/server/youtube-extraction-worker-rpc.ts",
         "lib/server/youtube-import.ts",
         "lib/supabase/server.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "020bfbb5fd0fcfef5f060a7d68495ef6c00ef1c6",
@@ -250,13 +260,23 @@
         "chore/current-mac-production",
         "feature/fe-hybrid-auth-local-data-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/recipes/images/route.ts",
         "components/recipe/manual-recipe-create-screen.tsx",
         "lib/api/manual-recipe.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "이미지 race 보호는 발전했으나 옛 legacy upload 제거는 현재 guarded runLegacyExternalWrite/시작·종료 receipt와 다른 호환 정책. 전체 복원 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "0909538bb79647bf7f5286c0337ece9d85027b70",
@@ -266,11 +286,21 @@
         "chore/current-mac-production",
         "feature/fe-hybrid-auth-local-data-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/manual-recipe-create-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable draft/create-owned/unknown 보존 및 재시도 key 교체/신규 업로드 뒤 old cleanup이 후속 보호. 옛 즉시 cancel은 현재 unmounted rejection draft 보존과 상충.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "09413ba38ee6d1c69925b1c479ce44e03e6885cd",
@@ -610,12 +640,22 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "14e1b1563a9ec5c8661a9a360aaa40063402200d",
@@ -778,12 +818,22 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "18373258b1904793456dbd6ae04dec8f7370431d",
@@ -1349,14 +1399,24 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "lib/server/youtube-async-extraction.ts",
         "lib/server/youtube-extraction-worker-rpc.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "25e8da8b04c2322f68d8f54837135399d7586da7",
@@ -1642,14 +1702,24 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-worker-rpc.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/worker.mjs",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "2e199fbb738e075b0f9d92a998f43d0286f05fc2",
@@ -1889,7 +1959,7 @@
         "chore/current-mac-production",
         "feature/fe-hybrid-auth-local-data-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/auth/linked-auth-providers.tsx",
@@ -1912,7 +1982,17 @@
         "components/settings/settings-screen.tsx",
         "lib/supabase/browser.ts",
         "supabase/migrations/20260730223000_hybrid_storage_browser_mutation_deny.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "57파일 frozen facade/Auth-only fetch/Storage SQL 리팩토링은 현재 Proxy denylist와 전체 동등하지 않음. 기존 계약 리팩토링 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "35abe2e697a3bc7467564ca02b4a4bc49f0b6640",
@@ -2169,12 +2249,22 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "3ea5683174ffeff9884a8e5bb8e198e4e16cfa1e",
@@ -2257,7 +2347,16 @@
         "lib/server/youtube-import.ts",
         "lib/server/youtube-saved-recipes.ts",
         "supabase/migrations/20261010030000_youtube_optional_ingredient_preservation.sql"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "optional ingredient flag의 UI/source/save 필드가 현재에 없음. 후속 완전 대체로 닫지 않고 요구/저장 계약 필요성 조사.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "403ee59190a3e13fa25d2890d71055c2d66324ef",
@@ -2699,7 +2798,16 @@
         "lib/server/recipe-image-managed-upload.ts",
         "lib/server/recipe-image-storage-origin.ts",
         "lib/supabase/data-env.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 이미지 경로에 legacy public URL이 남고 옛 Data-origin adapter 부재. 내부 Data URL과 브라우저 반환 Storage origin 계약을 구분해야 하며 자동 origin 변경 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "4c1e2ab6a187a684b08d82d85047f662a62ed3b6",
@@ -2737,7 +2845,7 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
@@ -2746,7 +2854,17 @@
         "lib/server/youtube-extraction-worker-rpc.ts",
         "lib/server/youtube-import.ts",
         "lib/supabase/server.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "4d2c09a2cc32ea9ada607e926b08f6b61adbb01e",
@@ -3153,12 +3271,22 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "5a36b86fc11e9902581f1b14276ccf0bf2b8bd51",
@@ -3231,7 +3359,16 @@
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-registration-notification.ts",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "옛 server QuickImport ACK helper 부재, 현재 UI client ACK 존재. RPC authority 계약이 달라 server ACK 필요성 조사; 옛 userId-only helper 복원 금지.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "5dec4835cbacc87871f9819a3ea9354fda79ebda",
@@ -3263,11 +3400,21 @@
       "branches": [
         "codex/shopping-rpc-client-inference-20261017"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/shopping/lists/route.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "shopping RPC type cast 제거1건은 런타임 동작 수정 아님. 명시 보류 draft PR1745 유지; 과거 workpack gate 복원 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "5fc8036ae6f0f8a9e0ba1e673a0a2077d681d441",
@@ -3425,14 +3572,24 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction.ts",
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "optional ingredient/minimum evidence의 구체 프롬프트는 현재 일반 completeness와 다름. 추출 정책/소유자 검토 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "64efed9055208564f1696604e4ecae622c9972cf",
@@ -3463,13 +3620,23 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction.ts",
         "lib/server/youtube-extraction-worker-rpc.ts",
         "lib/server/youtube-extraction-worker-timing.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "673b671dcd9b93f350416d9c39339d8fc078c099",
@@ -3670,7 +3837,16 @@
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "P2 합성 재현: model_analysis producer는 raw durationSec를 전달하고 reportProgress는 정수만 허용.303.8초는 false/send0,304초는 true/send1. 실제IPC/worker 동작 검증 아님; sealed bundle 수정은 v85 소유자 조율 대기.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "6eb52189b306ec21dc1c273c674715068895c1c6",
@@ -3735,13 +3911,23 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "동일5개(420g) 반복 근거도 현재 conflicting/null. 제한 복구 prototype이며 보수 거절을 자동 결함으로 단정하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "704d2f39ef61f6ec35f624dafceb33ef4dd25f2b",
@@ -3821,12 +4007,22 @@
       "branches": [
         "chore/current-mac-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/auth/social-login-buttons.tsx",
         "lib/auth/oauth-callback-url.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "옛 configured-origin 우선 LAN callback과 현재 server flow/window origin은 다른 정책. 실제 LAN 회귀 미입증, 원점 선택 정책 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "753883465b03d38e89d82892cfed2e4d3bb7e803",
@@ -3933,12 +4129,22 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "783ae392c648ed43d481e2166c6f42f0cc0a7912",
@@ -3971,14 +4177,24 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "lib/server/youtube-async-extraction.ts",
         "lib/server/youtube-extraction-worker-rpc.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "78b0a38825b48129b9c6f12d42cbaa5d038a08a7",
@@ -4024,7 +4240,16 @@
       "unmatched_runtime_paths": [
         "lib/ingredient-search.ts",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "옛 source alias context(amount/originalName/sourceTexts)와 현재 name/unit/rawText 계약 차이. 옛 exact-source amount/current mass regex만으로 완전 대체 미입증.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "799b4e9630c7f3f9260d66275ba642786a0274ec",
@@ -4243,7 +4468,7 @@
       "branches": [
         "chore/current-mac-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/auth/callback/route.ts",
@@ -4252,7 +4477,17 @@
         "lib/auth/public-request-url.ts",
         "lib/server/youtube-i031-runtime-config.mjs",
         "lib/server/youtube-i031-runtime.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "public origin rewrite/고정 CLI/Mac 전환 설정이 혼재한 옛 baseline. 운영 소유자/배포 정책 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "7f5b45af53472c003285cbb1aee116fe984c32c5",
@@ -4485,14 +4720,24 @@
         "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
         "fix/youtube-async-local-only-rebase"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "lib/server/youtube-async-extraction.ts",
         "lib/server/youtube-extraction-worker-rpc.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "860467f126dd413b5e0d46c10c1469ca4830130c",
@@ -4732,7 +4977,16 @@
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-registration-notification.ts",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "5dd595d02와 동일 patch. server ACK/current client ACK의 필요성 및 authority 계약 조사 유지.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "8ef2c379af342d6b3ba6853c522feb82c578a123",
@@ -4848,11 +5102,21 @@
         "chore/current-mac-production",
         "feature/fe-hybrid-auth-local-data-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/manual-recipe-create-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable draft/create-owned/unknown 보존 및 재시도 key 교체/신규 업로드 뒤 old cleanup이 후속 보호. 옛 즉시 cancel을 복원하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "9306ae464432021df93ecc635e8947b933e46325",
@@ -5010,7 +5274,7 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction.ts",
@@ -5019,7 +5283,17 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-quantity-owner-hints.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 owner hints v1은 sourceName을 제거하며 옛 v2 safe-name 노출 미반영. 후속 대체가 아닌 원천 정책/소유자 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "98839cf50f4f9952562f04a1189ff51085be21e4",
@@ -5486,7 +5760,16 @@
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/worker.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "반복 기름 투입에서 explicit1T/issues[] 유지. repeated-step abstention/unitless raw 수량 정책이 후속 구현과 완전 동등하지 않아 필요성 조사.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "aad3135bca56870eb8f2da5ccce7be9d63d0fb29",
@@ -5577,7 +5860,16 @@
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "action-separated sourceName+quantity suffix 복구 미대체. 기름1T/팬에 기름을 두르고 (1T) 합성은 unknown/source-name-not-anchored. saved UI 복원 완료 판정 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "af670a78b8930445d25cc59231d3857cf9994a1c",
@@ -5783,12 +6075,22 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/worker.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "bounded validation issue code/parser 전달 부재. 진단 정책/소유자 검토 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "b7eb64a49d57904c87d50e358049a66c521e3bff",
@@ -5911,7 +6213,16 @@
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "qualified quantity/direct source recovery 미대체. Add a heaped 1 tbsp of flour 합성은 unknown. 불확실한 계량의 보수적 거절이며 정확 수치 복구 승인 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "bcde21c641833b7c2fada58c8ed1109991f9f8a5",
@@ -5957,12 +6268,22 @@
       "branches": [
         "chore/current-mac-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/users/me/gamification/_helpers.ts",
         "lib/supabase/server.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 gamification route의 verified session/owner+RPC writer가 옛 broad scope.from write보다 좁음. 전체 옛 patch 재머지 불필요.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "bda41d5383f4a5ef3e1f2884358f3ee780decd37",
@@ -6019,7 +6340,16 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/screen-ocr-scout.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "low-confidence selection-only hint 미대체. confidence.5 반복 기름 OCR 합성 events[]; 실제 프레임/모델 결과는 미검증.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "be9ea8dc0d54efd6986ca952db618329197c2b4e",
@@ -6037,7 +6367,16 @@
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "merged-caption final action/양방향 인접 인용 미대체. 마지막 설탕 문장 합성 unknown/quantity-not-bound-to-name. 근거 복구 필요성 조사.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "beeeb72fcc964eaa077c8feaf70eb779db6fc678",
@@ -6100,11 +6439,21 @@
       "branches": [
         "chore/current-mac-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/supabase/auth-env.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 auth-env의 직접 NEXT_PUBLIC 참조가 보존됨. legacy/cloud fallback 복원 불필요.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "c12102df57df54808f7ae940241ae4e34907f169",
@@ -6118,7 +6467,16 @@
       "unmatched_runtime_paths": [
         "lib/server/youtube-import.ts",
         "lib/supabase/server.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "scoped extraction client는 있으나 sessions delete/update/upsert의 옛 Proxy 차단은 부재. SQL scope PATCH/DELETE 제한은 존재해 실제 보호 공백 여부 추가 조사.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "c1e7c7a7a0fb905d57eaf09cc7b5444633c90516",
@@ -6174,7 +6532,16 @@
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 source-bound recovery v6는 다른 설계. parenthetical owner/citation position/container/qualified 복구의 전체 대체 미입증; 새송이버섯5개(420g)는 conflicting.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "c3659cb81cc2a481f7a401c9b624e7ebdaf42f94",
@@ -6293,12 +6660,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-worker-rpc.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "ca3f4f79a7f35941b190363ab7783f9667ceea28",
@@ -6504,7 +6881,16 @@
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-registration-notification.ts",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "5dd595d02와 동일 patch. server ACK/current client ACK의 필요성 및 authority 계약 조사 유지.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "d20eebbfdee56c8625191ab889eff899462cd7f5",
@@ -6513,13 +6899,23 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx",
         "components/youtube-extraction/youtube-extraction-notification-center.tsx",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "d22d9e22ca01c5a46aa3642767115c07b5bb2f95",
@@ -6672,12 +7068,22 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "d50c1fa9d56b296c34b7894c294b30e5aaba491a",
@@ -6765,7 +7171,16 @@
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "alternativeOptions의 validator→sanitizer→runtime parser→import 전달이 없고 대안 수량은 unknown. 원천 구조와 후속 저장 계약 조사.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "d74f3f315fbb0f2ef6f4f3fcb894d1c77adfd0f9",
@@ -6967,7 +7382,16 @@
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/screen-ocr-scout.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "confidence>=.3 closed-label selection hint 미대체. 기름1T confidence.4 합성 events[]; 실제 프레임 미검증.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "db6b3d317af00448602471625ca60e25ea28ad01",
@@ -7005,7 +7429,16 @@
         "components/recipe/youtube-import-screen.tsx",
         "lib/recipe-quantity-display.ts",
         "supabase/migrations/20261010020000_youtube_saved_recipe_quantity_provenance.sql"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "saved source quantity/provenance projection과 옛 recipe-quantity-display helper 부재. quantity-v4는 다른 계약이므로 동등성 미입증.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "dbf750556014af7b6204b64dd1311f6173fb1f4f",
@@ -7077,12 +7510,22 @@
         "chore/current-mac-production",
         "feature/fe-hybrid-auth-local-data-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_runtime_successor_other_files_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/recipe-media-runtime.mjs",
         "lib/server/recipe-media.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "이번 unmatched runtime2파일은5MiB 상수 추출/재노출로 현재 inline5MiB/API와 동등. 원 gateway/tooling 변경은 별도 보류하며 전체 commit 완료 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "dd2efedc8ab450feda359c256876d824f4331491",
@@ -7186,12 +7629,22 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "optional/garnish/최대2근거/step matching의 구체 프롬프트는 현재 generic completeness와 다름. 원천 정책 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "e0a6ca8be17300f43fd78918cfbca318afb865ea",
@@ -7212,12 +7665,22 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v3-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "e10d96ec92cc743fdfe2235c8c7f73b8ca57a6f5",
@@ -7264,13 +7727,23 @@
       "branches": [
         "feature/recipio-youtube-import-parity"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [
         "9de8af18a0231473422a6473931b720ef5e42040"
       ],
       "unmatched_runtime_paths": [
         "lib/server/youtube-description-parser.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 leading numeric parser/stepComponentLabels/만드는과정 정리/쿠기→쿠키/중복 prefix 없는 포맷/구조 component 집계에 후속 반영. 일반 heading 결합·의미있는 component 구분 추가 정책도 존재.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "e23d811ad8aa9052f4fea3398f3d89ed137438ba",
@@ -7385,13 +7858,23 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "alternative identity 일부는 투영되나 single-source choice row/shared quantity 전체 계약 미입증. 소유자 정책 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "e869582b45ea78f86cde4595816a68735a7e6cd1",
@@ -7414,7 +7897,16 @@
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "cited unit heading에 근거한 bare amount suffix 복구 부재. 간마늘1/밥숟갈 heading 합성 unknown. 안전 복구 범위 조사.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "e87c0c64762cd01003b058e27a179b41c11bd4a5",
@@ -7487,13 +7979,23 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "모든 step의 consistent on-screen identity 명시 정책 부재. 일반 이름 보존과 동등하지 않아 소유자 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "e971b99956a861a6cbb21a39b200ba1cf9ef917b",
@@ -7657,7 +8159,7 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction-routes.ts",
@@ -7665,7 +8167,17 @@
         "lib/server/youtube-extraction-worker-rpc.ts",
         "lib/supabase/server.ts",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "f09a85c8fe7afd4c952f17cd0e19a00749d5b0d3",
@@ -7741,7 +8253,7 @@
         "codex/youtube-source-quantity-recovery-20261012",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-async-extraction.ts",
@@ -7749,7 +8261,17 @@
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-quantity-owner-hints.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 ledger512/row1000문자와 옛1024/frame+총문자+후보별 예산은 다른 정책. 작은 한도를 자동 결함으로 간주하지 않음.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "f433a8e87684c30913848a0abf5f3c0a1efe4f00",
@@ -7844,14 +8366,24 @@
         "feature/be-youtube-async-extraction-notification",
         "fix/youtube-async-merge-gates"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-worker-rpc.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/worker.mjs",
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 durable job/background 기본값·strict body/route-user RPC·guarded local fetch·readiness role/artifact/schema hash/expiry·policy409·기한 있는 previous fingerprint·lease/permit generation/applied===true·quota reserved/cache 제외·job→permit 잠금/성공 replay/list503의 관련 보호가 후속 반영됨. 원 runtime/manifest/policy/hash 복원 및 키 승인 근거 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "f87f50eebf65fc8b960580c4fcb0bc22d5ba03d6",
@@ -7871,7 +8403,16 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
         "lib/server/youtube-i031-runtime/bundle/worker.mjs"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "text-first OCR representative 확장은120개 합성 프레임 중96개 선택. 옛 full OCR과 다르고 repeated-step abstention 삭제도 혼재하여 전체 patch 통합 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "f9d922cf81ae929e14ce133815d2089735720171",
@@ -8025,7 +8566,16 @@
         "lib/server/youtube-i031-runtime/bundle/lib/server/recipe-extraction-lab/extract.mjs",
         "lib/server/youtube-i031-runtime/bundle/lib/server/recipe-extraction-lab/quantity-evidence.mjs",
         "lib/server/youtube-i031-runtime/bundle/manifest.json"
-      ]
+      ],
+      "review_in_progress": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "유효 quantityTotalReviewRequired/Basis/EvidenceRef가 sanitizer/normalizer에서 사라짐.4420a222c의 생성→표시/저장 전달 조사와 연관; 새 영양 숫자 확정 아님.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "fe838035e3efc5b934df08ccff8be6a1eebd28b5",
@@ -8076,18 +8626,28 @@
         "codex/youtube-v79-identical-pair-20261011",
         "codex/youtube-v86-source-name-quantity-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-i031-runtime.ts",
         "lib/server/youtube-i031-runtime/bundle/manifest.json",
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+        "reason": "현재 보수적 unknown choice quantity와 옛 shared-choice 복구/correction/comment/context guards는 다른 확장 정책. 소유자 보류.",
+        "independent_review": true,
+        "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     }
   ],
   "semantic_review_summary": {
     "batch1_reviewed": 5,
-    "runtime_semantic_review_pending": 66,
+    "runtime_semantic_review_pending": 28,
     "historical_all_postimage_presence_is_not_current_semantic_equivalence": true,
     "batch2_c05_owner_deferred": 5,
     "deferred_is_not_completed_or_unnecessary": true,
@@ -8101,9 +8661,31 @@
     "batch8_historical_guards_present": 7,
     "batch8_forward_still_pending_with_notes": 4,
     "batch9_notification_current_successor": 17,
-    "still_pending_with_investigation_notes": 8,
-    "pending_unstarted": 58,
-    "pending_investigating": 8,
-    "needed_runtime_fixes_applied": 2
+    "still_pending_with_investigation_notes": 28,
+    "pending_unstarted": 0,
+    "pending_investigating": 28,
+    "needed_runtime_fixes_applied": 2,
+    "batch10_worker_reviewed": 10,
+    "batch11_auth_image_reviewed": 12,
+    "batch12_worker_reviewed": 11,
+    "batch13_core_misc_reviewed": 25,
+    "initial133_final_partition": {
+      "initial_candidates": 133,
+      "baseline_commit": "d55f2056249e1f77a5a6b5f174cfea8ef15b3a5f",
+      "needed_runtime_fixes_applied": 2,
+      "current_runtime_no_remerge": 75,
+      "experiments_preserved": 8,
+      "policy_or_owner_deferred": 20,
+      "pending_investigating": 28,
+      "pending_unstarted": 0,
+      "partial_fix_other_policy_remains": 1,
+      "runtime_successor_other_files_remain": 2,
+      "all_candidates_read_and_independently_reviewed": true,
+      "all_needed_work_completed": false,
+      "candidate_count_is_not_required_fix_count": true,
+      "source_refs_and_other_worktrees_preserved": true,
+      "operating_actions": 0,
+      "final_document_independent_review": "No findings; counts,28 pending table,58 latest classifications,artifact SHA,links and diff check verified. No new tests or operating/model/DB access."
+    }
   }
 }
