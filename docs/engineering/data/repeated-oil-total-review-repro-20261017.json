@@ -1,0 +1,138 @@
+{
+  "schema": "homecook.synthetic-repeated-oil-review.v1",
+  "scope": "Pure validator only; no actual recipe, UUID, health data, credentials, model, external request, DB, deployment or worker configuration.",
+  "source": {
+    "repository_root": "/private/tmp/homecook-cooking-experience-20261017",
+    "review_base": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+    "module": "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
+    "export": "validateSourceAnchoredResult",
+    "export_line": 2453,
+    "sha256": "85479f5b0f389f4e9aceaa7f6ea6b807ccf9919a1291e7255e34cdf50e104fa2",
+    "client_version": "codex-vision-source-anchored-v85-coupled-procedure-source-citations",
+    "verifier_version": "source-anchor-fidelity-v54-equivalent-authored-citations"
+  },
+  "input": {
+    "proposal": {
+      "recipes": [
+        {
+          "title": "합성 검토",
+          "ingredients": [
+            {
+              "name": "기름",
+              "optional": false,
+              "sourceName": "기름",
+              "amount": "1",
+              "unit": "T",
+              "quantityState": "explicit",
+              "evidence": [
+                {
+                  "id": "O1",
+                  "quote": "기름 1T"
+                }
+              ]
+            }
+          ],
+          "steps": []
+        }
+      ]
+    },
+    "ledger": [
+      {
+        "kind": "ocr",
+        "scopeLabel": null,
+        "scopeContext": null,
+        "ingredientSection": false,
+        "inheritedUnit": null,
+        "inheritedOriginalUnit": null,
+        "unitEvidenceId": null,
+        "scopeKind": null,
+        "measurementBasis": null,
+        "source_method": "visual",
+        "source_provider": "macos-vision-ocr",
+        "line_index": null,
+        "id": "O1",
+        "text": "기름 1T",
+        "timestampSec": 90
+      },
+      {
+        "kind": "ocr",
+        "scopeLabel": null,
+        "scopeContext": null,
+        "ingredientSection": false,
+        "inheritedUnit": null,
+        "inheritedOriginalUnit": null,
+        "unitEvidenceId": null,
+        "scopeKind": null,
+        "measurementBasis": null,
+        "source_method": "visual",
+        "source_provider": "macos-vision-ocr",
+        "line_index": null,
+        "id": "O2",
+        "text": "기름 1T를 다시 넣습니다",
+        "timestampSec": 122
+      }
+    ],
+    "options": {}
+  },
+  "actual_output": {
+    "json": {
+      "recipes": [
+        {
+          "title": "합성 검토",
+          "ingredients": [
+            {
+              "name": "기름",
+              "originalName": "기름",
+              "nameAliases": [],
+              "amount": "1",
+              "unit": "T",
+              "amountBasis": "onscreen",
+              "amountRawText": "1T",
+              "quantityState": "explicit",
+              "optional": false,
+              "groupLabel": null,
+              "evidenceRefs": [
+                {
+                  "evidence_id": "O1",
+                  "source_method": "visual",
+                  "source_provider": "macos-vision-ocr",
+                  "line_index": null,
+                  "start_ms": null,
+                  "frame_ts_ms": 90000,
+                  "snippet": "기름 1T",
+                  "locator_hash": "5bccafe6566a8ae0e01bbd1a"
+                }
+              ]
+            }
+          ],
+          "steps": []
+        }
+      ]
+    },
+    "issues": [],
+    "corrections": [],
+    "statistics": {
+      "modelNumericCount": 1,
+      "verifiedExplicitCount": 1,
+      "retainedEstimatedCount": 0,
+      "reclassifiedVisualEstimateCount": 0,
+      "rejectedNumericCount": 0,
+      "literalQuoteCount": 1,
+      "citationRepairCount": 0,
+      "literalUnitRepairCount": 0,
+      "measurementBasisUnitRepairCount": 0,
+      "measurementBasisRejectedCount": 0,
+      "retainedSourceQualifiedCount": 0,
+      "combinedAmountPairNormalizationCount": 0,
+      "parentheticalPrimaryUnitNormalizationCount": 0,
+      "authoredSourceAddedRowCount": 0
+    }
+  },
+  "observed_gap": "Retains explicit1T with no issue and no quantityTotalReviewRequired despite a distinct later repeated-use cue. Does not establish an actual recipe total or authorize merging old worker candidates.",
+  "owner_candidate_commit": "4420a222c",
+  "classification": "reviewed_but_need_owner_investigation",
+  "reproduce": {
+    "cwd": "/private/tmp/homecook-cooking-experience-20261017",
+    "command": "/Users/cwj/.nvm/versions/node/v22.19.0/bin/node --input-type=module - <<'REPRO'\nimport fs from 'node:fs';\nimport path from 'node:path';\nimport {createHash} from 'node:crypto';\nconst a=JSON.parse(fs.readFileSync('/tmp/homecook-repeated-oil-review-repro-20261017.json','utf8'));\nconst target=path.join(a.source.repository_root,a.source.module);\nif(createHash('sha256').update(fs.readFileSync(target)).digest('hex')!==a.source.sha256)throw new Error('Reviewed module has changed');\nglobalThis.fetch=()=>{throw new Error('External requests disabled for synthetic review');};\nconst m=await import(target);\nconsole.log(JSON.stringify(m[a.source.export](a.input.proposal,a.input.ledger,a.input.options),null,2));\nREPRO"
+  }
+}

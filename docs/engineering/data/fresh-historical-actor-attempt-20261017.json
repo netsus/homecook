@@ -1,0 +1,23 @@
+{
+  "runId": "cea2d6ffb1717f851a75e326b59780e7",
+  "status": "FAIL",
+  "tests": [],
+  "network": "none",
+  "productionConnections": 0,
+  "historicalAdminActors": [
+    "20260919001000_ingredient_search_normalization.sql",
+    "20260922000000_youtube_catalog_after_ingredient_search.sql",
+    "20260922010000_youtube_fractional_quantity.sql",
+    "20260922021000_recipe_product_nutrition.sql",
+    "20261009090000_ingredient_canonical_search.sql",
+    "20261009200000_youtube_ingredient_resolution.sql",
+    "20261010120000_ingredient_exclusion_recovery_selection.sql",
+    "20261011140000_retire_unused_ingredients.sql"
+  ],
+  "failedMigration": "20260922000000_youtube_catalog_after_ingredient_search.sql",
+  "error": "docker: WARNING:  there is already a transaction in progress\nERROR:  permission denied to grant privileges as role \"supabase_admin\"\nDETAIL:  The grantor must have the ADMIN option on role \"youtube_extraction_credential_manager_rpc_owner\".\nCONTEXT:  SQL statement \"grant youtube_extraction_credential_manager_rpc_owner to supabase_admin with inherit false, set true granted by supabase_admin\"\nPL/pgSQL function inline_code_block line 4 at EXECUTE\n\n\n3 !== 0\n",
+  "cleanupCompleted": true,
+  "diagnosis_scope": "Historical actor experiment only. Current synthetic bootstrap does not give supabase_admin the historical dedicated-role ADMIN options; first177 fails before214. This does not establish that changing actors alone resolves214. No migration/fence/operating state was changed.",
+  "completed_migration_count": 176,
+  "source_sha256": "04f84ff734c1d25fc5f01cfdeef09a86d30b7df03a2c6c8828d6e9265575fc99"
+}
