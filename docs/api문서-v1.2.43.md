@@ -5872,3 +5872,8 @@ GET `/cooking/session-attempts/{id}/cook-mode`의 `X-Homecook-Execution-Quantiti
 PATCH `/cooking/session-attempts/{id}/ingredients`는 Idempotency-Key와 `{expected_revision,changes:[{row_index,amount,unit}]}`만 받는다. amount는 양수 또는null(양 미확인), source/영양/예측은 client가 넣을 수 없다. server가 승인된 원천과 고정 제품판본을 읽어 계산하며 실패를 성공으로 만들지 않는다. 현재 실행 소유자만 진행 중 상태에서 수정하고 오래된 판본은409, 부정 입력은422, 원천 읽기 장애는503이다.
 
 완료 요청은 optional `execution_revision`을 받는다. 수정 실행은 DB의 고정 계산값과 판본 lock을 사용하는 원자 wrapper로 완료한다. 구버전 완료가 수정내용을 무시하면DB에서409다. 정확한 evidence-disabled 응답에만 source-null 요청을 같은 실행 wrapper의 evidence-write OFF로 재호출하며 판본/영양/예측 보호를 유지한다. 명시실측/개인확인은 강등하지 않는다. 기존 `{success,data,error}`·error code/message/fields 형식은 유지한다.
+
+
+### 2026-10-17 최근 공개 YouTube 영양 부분 복구 후속
+
+공개 canonical 레시피에 기존 영양 snapshot이 없을 때, quantity-v4 행 하나 때문에 전체 계산을 중단하지 않는다. 직접 g/kg/ml/L의 원문·현재량·정규화량이 일치하고 direct/실패사유없음/frozen-batch없음을 검증한 행과 기존 직접량만 계산한다. 불량·추정·미확인 수량은 해당 행의 결측으로 유지한다. v4가 섞인 레시피는 v4 단위 규칙만 사용하며 옛 숟가락/개 환산으로 재해석하지 않는다. 부분값은 확인된 일부이며 전체 열량으로 주장하지 않는다. 기존 snapshot 우선·제품/비공개/권한·GET쓰기0 경계는 유지한다. 최근 source/연결 보완 및 운영 데이터 적용은 [작업 기록](engineering/cooking-experience-20261017.md)의 별도 미완료 범위다.

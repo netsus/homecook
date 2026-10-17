@@ -1,5 +1,19 @@
 # 실제 요리 경험 개선 — 2026-10-17
 
+현재 판정: PR1781(화면/오일/공개영양), PR1782(75%무게), PR1784(이번요리수정)가 master에 병합됐다. 운영 배포·새스키마 적용·영양데이터 쓰기는0회다. 최근 quantity-v4 부분영양 후속은 로컬 검증 완료 후보이며 현재 v85 보존 검사 때문에 운영 접근을 중단했다. 기존 운영 Chrome 탭은 닫기 연결 오류로 닫힘을 확인하지 못했다. 아래21:18보고가 현재 인증 관련 경계다.
+
+| 요구 | 코드/검증 | 운영 |
+|---|---|---|
+|1 완성무게 추정/실측|PR1782 merged, 검증질량75%·조건별우선·미확인보존|미반영, schema+web 필요|
+|2 전체 남색 배경|PR1781 merged|미반영|
+|3 이번 요리 재료 수정|PR1784 merged, owner/판본/영양/무게/완료 연결|미반영, schema+web 필요|
+|4 완료 모달 안내|PR1781 merged|미반영|
+|5 정확 일반명 오일 연결|PR1781 merged, 특수오일 보존|미반영, 최근2행 data수정 별도대기|
+|6 원입력 표시 제거|PR1781 merged, 원문·양 보존|미반영|
+|7 공통 영양성분표|PR1781 merged, 부분/결측 보존|미반영|
+|8 최근 영양 누락|원인분류·부분복구, 추가 v4 후보 로컬84검사/type/build/review0finding|source/연결 보완·최소backup/data쓰기·운영검증 미완료|
+|9 목차 탐색|PR1781 merged, desktop8행/탐색·mobile유지|미반영|
+
 ## 시작 상태와 경계
 - origin/master `36fbf9535b8bfe46ba323943ed4cf70640a3ca98` fetch 완료. 로컬 master `b257148d0`는 282 commits 뒤(고유 commit 0). 기본 폴더 `codex/gabia-direct-prelaunch` / `f970bc1d1`: 개인정보/가비아 문서·테스트 미커밋. 복사·삭제·reset 없이 보존.
 - 독립 `/tmp/homecook-cooking-experience-20261017`, `codex/cooking-experience-20261017`. 다른 작업트리 변경을 가져오지 않음.
@@ -167,3 +181,32 @@ Chrome실제컴포넌트375×812/1440×900에서추정225g·빈실측·가정설
 Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산·0.19kg적용·버튼focus복귀·완료추정143g표시·닫기/재열기값유지·가로넘침0을확인했다. callback형fixture이며운영DB저장/인증HTTP종단이라고세지않는다. 현재미커밋후보이고타입/빌드최종·PR/머지·배포는아직이다.
 
 실행분 후보 최종: 합동14파일159검사PASS, SQL10PASS, typecheck/build exit0(기존4경고), 변경ESLint 오류0/경고0, diff check0. Chrome모바일375/데스크톱1440·최종시트폭640/가로넘침0. 임시route제거·dev서버종료. 실행분/완성무게2 migration 모두운영미적용이며v85잠금유지.
+
+
+## 21:17 UTC 최근 영양 후속 후보와 제한
+
+실행분수정 [PR1784](https://github.com/netsus/homecook/pull/1784)는21:11:24UTC master `0faf17976b68ddaaabc33f5ca9d667066e18aabb`로머지됐다. 운영배포0·스키마적용0. 새후속branch `codex/recent-youtube-nutrition-partial-20261017`는0faf기준이다.
+
+최근공개6개에는quantity-v4가섞여있어첫묶음의보수적whole-recipe guard로여전히전체계산을멈추는원인이남았다. 후속은확실한직접질량/부피만복구하고불량/estimated/unavailable/failure-reason/frozen-batch수량은그행의amountnull로둔다. raw→현재량→normalized의단위/수량일치도검증한다. anyv4이면v4계산기를사용해옛숟가락/개환산으로바꾸지않고, 제품은기존별도원천준비상태를유지한다. 기존persistedsnapshot·private·권한경계는변경0이다.
+
+기존공개audit응답+로컬DB승인profile35행을읽기전용으로대조한기본레시피전체량개발계산: 카레6/12·바비큐1/8·두부볶음1/13·잡채1/15반영으로partial복구. 만둣국0/11·소갈비찜0/14는확실한질량과정확원천조합이없어unavailable유지했다. 원audit는행별scalable를보관하지않아이진단은기본전체량만검사했으며선택인분벡터/실시간운영결과나실측전체영양으로세지않는다. 임시개발검사는제거했고결과 `/tmp/homecook-recent-partial-local-results.json`에보존했다.
+
+최신공개상세재조회는자동승인검토가‘식별자의운영도메인전송에별도승인이없음’으로거절했다. 해당재조회는실행되지않았고재시도/우회하지않았다. 기존공개자료와local-read-only계산으로독립검증을계속했다. 운영수정·외부건강정보전송·새영양숫자채우기0.
+
+최근최소연결후보: 만둣국의옛식용유 `93a5ea7e-4880-5940-af82-6bbc8d6ee680`와바비큐의일반오일 `22d40e7b-f3f2-54a7-a594-0962ed1c2ad1`을현재식용유 `d6d92b38-853f-43c2-b2e1-2b4a591de334`로정확연결하는2행만우선대상이다. 원문/양/특수오일/과거pin은보존하고실제쓰기전target·원본JSON/판본·백업·dryrun을담당자가확인해야한다. 지금은준비후보이며적용0이다. 냉동만두/해물육수코인은실제catalog가있어도승인profile없음, 조청도profile없음. 기존공공원천의여러브랜드만두/배주스/조청유과를이재료와동일하다고매칭하지않았다.
+
+[농촌진흥청공식DB안내](https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562)는2026-10-17확인했다. 개별식품/제조사기준량을확인하지못한영양숫자를이안내만으로채우지않는다. source/profile보완·최근대상최소데이터쓰기·실제인증저장종단·운영반영은미완료다.
+
+
+## 21:18 UTC v85 보존 검사 관련 즉시 보고
+
+부모의운영인증/프로필변경충돌질문에기존기록만대조했다. 첫묶음PR1781의20:34:33UTC머지전에이작업이운영Chrome의기존로그인된요리화면과공개레시피상세를읽었다. 정확한탭오픈시각은현재기록에없다. 로그인/프로필수정/요리완료저장클릭은하지않았다. 페이지진입만으로브라우저내Auth background갱신이일어났을가능성은배제할수없고요청별network로그가없어auth.users지문변화의원인이라고단정하지않는다.
+
+그후화면QA는127.0.0.1:3187의QA더미환경으로진행했고개발서버는종료했다. 운영API재조회는승인검토에서실행전거절됐으며최근SQL은모두끝난READ ONLY/rollback조회뿐이다. 진행중인운영shell/API요청은없다. 하위reviewer는로컬코드/검사만수행했고운영DB/Chrome접근없음을보고했다.
+
+현재부터운영접근/로그인/세션갱신QA/운영쓰기를중지한다. 남아있을수있는자기소유운영확인탭의닫기를시도했지만Chrome연결이Debugger unattached로닫힘을확인하지못했다. 재연결/새로운운영페이지진입은하지않는다. 부모/사용자가기존운영요리확인탭을직접닫아주어야백그라운드갱신가능성을확실히제거할수있다. 정확한계정/사용자식별자/토큰/환경값은출력하지않았다.
+
+
+최근부분영양 후속 최종:4파일84검사PASS, typecheck/build exit0(기존4경고),변경ESLint0·diffcheck0,독립리뷰1건수정후finding0. 운영중지요청뒤새운영접근0. 검사용자기소유networkless/tmpfs PostgreSQL컨테이너는exactID·label·networknone재확인후제거했고기존운영/dev컨테이너는건드리지않았다. 임시route와진단test도제거했다.
+
+배포 인계 주의: 두 새 migration 중 실행분 수정에는 function-body hook을 위한 동적SQL과scope-chain변경이 있어일반추가형fastDB분류로바로통과한다고가정하면안된다. `scripts/lib/prelaunch-database.mjs`는procedural/dynamic SQL을별도reviewedDB절차대상으로분류한다. 현재별도운영DB readiness·전체schema·실제인증HTTP종단은미준비/미실행이며배포설정/validator를완화하지않았다. 잠금해제후담당자가정확한기준DB/head와백업을확인해검토된DB반영을직렬화하고웹은승인된pnpm deploy:dev경로를사용해야한다.

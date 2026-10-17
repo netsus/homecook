@@ -23,12 +23,25 @@ describe("authorized public canonical recipe nutrition",()=>{
   evidence.hydrate.mockImplementation(rows=>rows);const missing=await calculatePublicYoutubeRecipeNutrition(input);
   expect(missing.values.energy_kcal).toMatchObject({amount:null,known_amount:null,status:"unavailable"});expect(missing.warnings).toContain("NUTRITION_PROFILE_MISSING");
  });
- it("does not reinterpret frozen v4 quantity or product identities through legacy conversions",async()=>{
-  for(const extra of [{quantity_input:{}},{food_product_id:"product"}]){
-   const result=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[{...row,...extra} as RecipeIngredient]});
-   expect(result.availability_reason).toBe("missing");
+ it("keeps an unresolved v4 count missing while recovering other exact gram rows",async()=>{
+  const quantity={schema_version:"quantity-v4",raw_value:"2",raw_unit:"개",numerator:"2",denominator:"1",normalized:null,display_quantity:{amount:2,unit:"개"},quality:"unavailable",reason:"PIECE_IDENTITY_REQUIRED",evidence_ids:[],source_versions:[],batch_basis:null};
+  const result=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[row,{...row,id:"row-b",amount:2,unit:"개",quantity_input:quantity} as RecipeIngredient]});
+  expect(result.calculation_status).toBe("partial");expect(result.values.energy_kcal).toMatchObject({status:"partial",known_amount:200,amount:null});expect(result.availability_reason).toBeNull();
+ });
+ it("recovers exact frozen kg input but rejects a forged normalization or estimated spoon grams",async()=>{
+  const quantity={schema_version:"quantity-v4",raw_value:"1/10",raw_unit:"kg",numerator:"1",denominator:"10",normalized:{amount:100,unit:"g"},display_quantity:{amount:100,unit:"g"},quality:"direct",reason:null,evidence_ids:[],source_versions:[],batch_basis:null};
+  const result=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[{...row,quantity_input:quantity} as RecipeIngredient]});expect(result.values.energy_kcal.amount).toBe(200);
+  for(const patch of [{normalized:{amount:200,unit:"g"}},{quality:"estimated",raw_unit:"큰술"},{reason:"INVALID_QUANTITY"}]){
+   const unknown=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[{...row,quantity_input:{...quantity,...patch}} as RecipeIngredient]});expect(unknown.values.energy_kcal.amount).toBeNull();expect(unknown.values.energy_kcal.known_amount).toBeNull();
   }
-  expect(evidence.load).not.toHaveBeenCalled();
+ });
+ it("never uses legacy spoon conversion just because another row has a v4 pin",async()=>{
+  const quantity={schema_version:"quantity-v4",raw_value:"1",raw_unit:"g",numerator:"1",denominator:"1",normalized:{amount:1,unit:"g"},display_quantity:{amount:1,unit:"g"},quality:"direct",reason:null,evidence_ids:[],source_versions:[],batch_basis:null};
+  const result=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[{...row,amount:1,quantity_input:quantity} as RecipeIngredient,{...row,id:"spoon",amount:2,unit:"큰술"}]});
+  expect(result.values.energy_kcal).toMatchObject({status:"partial",known_amount:2});
+ });
+ it("keeps products out of the generic source resolver",async()=>{
+  const result=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[{...row,food_product_id:"product"}]});expect(result.availability_reason).toBe("missing");expect(evidence.load).not.toHaveBeenCalled();
  });
  it("propagates evidence infrastructure errors instead of inventing zero nutrition",async()=>{
   evidence.load.mockRejectedValue(new Error("READ_FAILED"));await expect(calculatePublicYoutubeRecipeNutrition(input)).rejects.toThrow("READ_FAILED");
