@@ -2206,13 +2206,30 @@
       "branches": [
         "codex/hybrid-static-contract-repair-20261012"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_partial_fix_other_policy_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/recipes/[id]/save/route.ts",
         "lib/server/hybrid-auth/public-read-policy-runtime.mjs",
         "lib/server/hybrid-auth/public-read-policy.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "d55f2056249e1f77a5a6b5f174cfea8ef15b3a5f",
+        "reason": "현재 recipe-save fallback의 전역 service-role 하강이 남아 있어 사용자 routeClient로만 처리하도록 최소 이식. 원7파일 patch 전체 병합은 아님. public image/supplemental scope 변경은 별도 정책 검토 보류.",
+        "applied_runtime_paths": [
+          "app/api/v1/recipes/[id]/save/route.ts"
+        ],
+        "remaining_deferred_runtime_paths": [
+          "lib/server/hybrid-auth/public-read-policy-runtime.mjs",
+          "lib/server/hybrid-auth/public-read-policy.ts"
+        ],
+        "independent_review": true,
+        "verification": "Two missing-capability cases failed before product change. Focused route/SQL24 PASS; reviewer route23 PASS. Synthetic authority only; no authenticated operating HTTP.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      }
     },
     {
       "sha": "44d7e297926b4ffe3f32428a5936afd96afd3552",
@@ -7318,9 +7335,11 @@
   ],
   "semantic_review_summary": {
     "batch1_reviewed": 5,
-    "runtime_semantic_review_pending": 133,
+    "runtime_semantic_review_pending": 132,
     "historical_all_postimage_presence_is_not_current_semantic_equivalence": true,
     "batch2_c05_owner_deferred": 5,
-    "deferred_is_not_completed_or_unnecessary": true
+    "deferred_is_not_completed_or_unnecessary": true,
+    "batch3_partial_needed_fix": 1,
+    "reviewed_partial_candidates_still_open": 1
   }
 }

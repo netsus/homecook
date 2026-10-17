@@ -241,3 +241,8 @@ Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산
 - 검증/문서 묶음 [PR1787](https://github.com/netsus/homecook/pull/1787)은 `de177e14ca878a24f94db5a1741c1e7dff77394e`로 master 병합했다. 원 migration 파일 변경0, 운영 조회/쓰기·배포0이다.
 - C05 관련 runtime 후보5개를 독립 읽기 검토해 소유자 보류로 분류했다. 현재 기능 대체/불필요 판정이 아니며 후보 코드·SQL은 머지하지 않았다. [분류 근거](local-change-inventory-20261017.md#runtime-의미-검토-두-번째-묶음--c05-5개-소유자-보류). 미검토133개와 별도 보류 항목은 계속 열려 있다.
 - 9개 개선의 코드 병합과 운영 완료를 구분한다. 최근 영양2행의 현재 before-image/백업/CAS 반영, 현재 운영232 동등성/실제 인증 HTTP, DB233/234와 웹 배포는 v85 잠금 해제 및 부모 직렬 조율 전 대기다.
+
+
+## Runtime 저장 fallback 검토
+
+기존 후보 `444fe1f6f` 중 저장 RPC 부재/PGRST202 뒤 전역 service-role fallback만 사용자 권한으로 좁혔다. 이전 두 회귀 실패를 확인하고 최소 수정 후 관련24 PASS·독립 route23 PASS·타입/lint를 확인했다. 원자 RPC/세션 경로와 API 계약은 불변이다. 기존 public read 정책 두 경로는 별도 보류이며 전체 옛 patch를 가져오지 않았다. 미검토132건은 수정 필요 건수와 다르며 부분 검토 보류1건도 열린 상태다. 실제 인증/운영 쓰기/Chrome 접근·배포0이다. 배포 도구 fixture의 import collection 실패는 [별도 기록](local-change-inventory-20261017.md#runtime-검토-세-번째-묶음--저장-fallback-최소-이식)을 따른다.
