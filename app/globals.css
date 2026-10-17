@@ -17749,3 +17749,16 @@ html[data-mobile-fullscreen-page="true"] body {
   --nutrition-fat: #FFD477;
   font-weight: 400;
 }
+
+/* Match the surrounding desktop viewport to the active cooking canvas. */
+body:has([data-cook-theme="dark"]) {
+  background: #111923;
+}
+
+@media (min-width: 1024px) {
+  .web-recipebook-toc ol {
+    max-height: min(48dvh, 480px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

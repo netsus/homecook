@@ -1,3 +1,4 @@
+import { calculatePublicYoutubeRecipeNutrition } from "@/lib/server/youtube-public-recipe-nutrition";
 import { readRecipeQuantityMode, RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
 import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 import { quantityInputContractRequested } from "@/lib/server/quantity-input";
@@ -58,6 +59,7 @@ import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
 import { createHybridAuthorityRouteError } from "@/lib/server/hybrid-auth/route-error";
 import {
   createRecipeFuturePropagationInternalClient,
+  createRecipeMealWeightReadInternalClient,
   createRecipeImageInternalClient,
   createRecipeViewInternalClient,
   createRemoteCompatibilityServiceRoleClient,
@@ -471,6 +473,21 @@ export async function GET(request: Request, context: RouteContext) {
       ingredients = projection.ingredients;
       steps = projection.steps;
     }
+    let canonicalNutrition: RecipeDetail["nutrition"] | null = null;
+    if (!nutritionSnapshotResult.error && !nutritionSnapshotResult.data
+      && recipeResult.data.visibility === "public" && recipeResult.data.source_type === "youtube"
+      && hasYoutubeSavedCanonicalBridgeMarker(sourceResult.data?.extraction_meta_json)) {
+      try {
+        const evidenceClient = createRecipeMealWeightReadInternalClient();
+        if (evidenceClient) canonicalNutrition = await calculatePublicYoutubeRecipeNutrition({ client: evidenceClient,
+          recipeId: id, revision: Number(revision), baseServings: recipeResult.data.base_servings, ingredients });
+        else canonicalNutrition = buildTemporarilyUnavailableRecipeNutrition();
+      } catch (error) {
+        const authorityFailure = createHybridAuthorityRouteError(error);
+        if (authorityFailure) return authorityFailure;
+        canonicalNutrition = buildTemporarilyUnavailableRecipeNutrition();
+      }
+    }
     let viewCount = recipeResult.data.view_count;
     let planCount = recipeResult.data.plan_count;
 
@@ -536,11 +553,11 @@ export async function GET(request: Request, context: RouteContext) {
       cook_count: recipeResult.data.cook_count,
       ingredients,
       steps,
-      nutrition: nutritionSnapshotResult.error
+      nutrition: canonicalNutrition ?? (nutritionSnapshotResult.error
         ? buildTemporarilyUnavailableRecipeNutrition()
         : nutritionSnapshotResult.data
           ? projectRecipeNutritionSnapshot(nutritionSnapshotResult.data)
-          : buildUnavailableRecipeNutrition(),
+          : buildUnavailableRecipeNutrition()),
       user_status: userStatus,
       revision: Number(revision),
     };

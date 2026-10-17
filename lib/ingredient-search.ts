@@ -55,7 +55,9 @@ export function buildIngredientLookupNameCandidates(
     return [];
   }
 
-  const candidates = [exactName];
+  // Only the whole generic name is redirected; source text remains unchanged.
+  // A legacy catalog row named "오일" must not outrank this approved identity.
+  const candidates = normalizeIngredientSearchName(exactName) === "오일" ? ["식용유"] : [exactName];
   const normalizedSpacing = stripIngredientFormatCharacters(exactName.normalize("NFKC"))
     .replace(/\s+/gu, " ")
     .trim();

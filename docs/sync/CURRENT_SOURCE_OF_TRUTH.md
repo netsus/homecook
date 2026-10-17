@@ -1,5 +1,10 @@
 # Current Source of Truth
 
+## 2026-10-17 — 실제 요리 경험9개 개선 착수 (로컬, 미배포)
+
+최신master에서독립worktree를만들고기존미커밋/병행v85변경을보존했다. 화면정리부터작은묶음으로진행하며배포는v85담당잠금해제와부모조율전수행하지않는다. [상태·우선순위·검증·남은경계](../engineering/cooking-experience-20261017.md)를따른다.
+
+
 ## 2026-10-17 — v85 고정49→50 전환 도구 준비, 실제 발급/운영 전환 보류
 
 원 C04/v74/V2 권위와 봉인1be5eeea/artifact38파일을 유지하는 별도 전환 도구를 구현했다. metadata3경로·독립create-only승인anchor·fresh RC잠금/CAS·불확실commit대조·동일50복구를 fixture405 PASS와 격리PG17 7 PASS로 확인했다. type/build/lint·Anti Slop173/신규0, 재생성artifact hash 동일이며 제품/번들diff0이다. [정확한권한/만료·실행순서·일시503·복구/수동대조경계](../engineering/youtube-v85-controlled-cutover-20261017.md)를 따른다. 실제50/manager·새승인anchor·DB/웹/worker변경·추가모델은0이며 실행시점확인 전이다. 운영06a/v74-gen49·V2·DB232·C05/R2OFF를 유지한다.

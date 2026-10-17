@@ -149,71 +149,46 @@ describe("recipe nutrition display", () => {
     })).toBe(false);
   });
 
-  it("renders calories and macros as a graph while keeping per-serving calories visible", () => {
+  it("shows a common nutrition facts table with explicit total and base serving columns", () => {
     renderCard(buildNutrition());
-
-    expect(screen.getByLabelText("레시피 영양성분")).toBeTruthy();
-    expect(screen.queryByText("직접 계산")).toBeNull();
-    expect(screen.queryByText("예상값")).toBeNull();
-    expect(screen.queryByText("1인분 기준 예상 영양")).toBeNull();
-    expect(screen.getByText("4인분")).toBeTruthy();
-    expect(screen.getByText("1,400")).toBeTruthy();
-    expect(screen.getByText(/1인분 400 kcal/)).toBeTruthy();
-    expect(screen.getByRole("img", { name: "탄수화물 단백질 지방 비율" })).toBeTruthy();
-    expect(screen.getByText("탄")).toBeTruthy();
-    expect(screen.getByText("단")).toBeTruthy();
-    expect(screen.getByText("지")).toBeTruthy();
-    expect(screen.getByText("180")).toBeTruthy();
-    expect(screen.getByText("72")).toBeTruthy();
-    expect(screen.getByText("36")).toBeTruthy();
+    const table = screen.getByRole("table", {name:"영양성분표"});
+    expect(within(table).getByRole("columnheader", {name:"선택 4인분"})).toBeTruthy();
+    expect(within(table).getByRole("columnheader", {name:"기본 1인분"})).toBeTruthy();
+    expect(within(table).getByText("1,400 kcal")).toBeTruthy();
+    expect(within(table).getByText("400 kcal")).toBeTruthy();
+    expect(within(table).getByText("180 g")).toBeTruthy();
+    expect(screen.queryByRole("img", {name:"탄수화물 단백질 지방 비율"})).toBeNull();
   });
 
-  it("rounds visible totals without rounding the serving calculation or macro shares", () => {
+  it("retains decimal macro totals without rounding intermediate calculations", () => {
     renderCard(buildNutrition({
       scalable_values: { energy_kcal: 600.4, carbohydrate_g: 80.2, protein_g: 32.3, fat_g: 16.4 },
       fixed_values: { energy_kcal: 200.2, carbohydrate_g: 20.2, protein_g: 8.2, fat_g: 4.2 },
     }));
-
-    expect(screen.getByText("1,401")).toBeTruthy();
-    expect(screen.getByText("181")).toBeTruthy();
-    expect(screen.getByText("73")).toBeTruthy();
-    expect(screen.getByText("37")).toBeTruthy();
-    const graph = screen.getByRole("img", { name: "탄수화물 단백질 지방 비율" });
-    const carbohydrateShare = (180.6 * 4) / (180.6 * 4 + 72.8 * 4 + 37 * 9) * 100;
-    expect(parseFloat((graph.children[0] as HTMLElement).style.width)).toBeCloseTo(carbohydrateShare, 8);
-    expect(Array.from(graph.children).map(child => (child as HTMLElement).style.backgroundColor)).toEqual([
-      "rgb(148, 201, 255)", "rgb(255, 167, 194)", "rgb(255, 212, 119)",
-    ]);
+    expect(screen.getByText("1,401 kcal")).toBeTruthy();
+    expect(screen.getByText("180.6 g")).toBeTruthy();
+    expect(screen.getByText("72.8 g")).toBeTruthy();
+    expect(screen.getByText("37 g")).toBeTruthy();
   });
 
-  it("keeps known partial macros visible and preserves the AI estimate notice", () => {
-    renderCard(buildNutrition({
-      calculation_status: "partial",
-      warnings: ["AI_NUTRITION_ESTIMATE_USED"],
-      values: {
-        ...COMPLETE_VALUES,
-        carbohydrate_g: { amount: null, known_amount: 100, status: "partial", display_mode: "minimum" },
-      },
-    }));
-
-    expect(screen.getByText("180")).toBeTruthy();
-    expect(screen.getByRole("img", { name: "탄수화물 단백질 지방 비율" })).toBeTruthy();
+  it("labels partial nutrient sums and preserves the AI estimate notice", () => {
+    renderCard(buildNutrition({ calculation_status:"partial", warnings:["AI_NUTRITION_ESTIMATE_USED"],
+      values:{...COMPLETE_VALUES, carbohydrate_g:{amount:null,known_amount:100,status:"partial",display_mode:"minimum"}} }));
+    expect(screen.getByText("180 g")).toBeTruthy();
+    expect(screen.getByText("확인된 일부")).toBeTruthy();
     expect(screen.getByText("AI 추정값 포함 · 일부 영양정보가 빠진 추정값")).toBeTruthy();
   });
 
-  it("does not draw a complete macro ratio for missing or invalid calculation inputs", () => {
+  it("retains unknowns for missing or invalid calculation inputs rather than displaying zero", () => {
     for (const invalid of [undefined, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      const fixed = { ...buildNutrition().fixed_values };
-      if (invalid === undefined) delete fixed.protein_g;
-      else fixed.protein_g = invalid;
-      renderCard(buildNutrition({ fixed_values: fixed }));
-      expect(screen.queryByRole("img", { name: "탄수화물 단백질 지방 비율" })).toBeNull();
-      expect(screen.getByText("정보 준비 중")).toBeTruthy();
-      cleanup();
+      const fixed = {...buildNutrition().fixed_values};
+      if (invalid === undefined) delete fixed.protein_g; else fixed.protein_g = invalid;
+      renderCard(buildNutrition({fixed_values:fixed}));
+      const table = screen.getByRole("table", {name:"영양성분표"});
+      expect(within(table).getByText("정보 준비 중")).toBeTruthy(); cleanup();
     }
-    renderCard(buildNutrition({ base_servings: Number.POSITIVE_INFINITY }));
-    expect(screen.queryByRole("img", { name: "탄수화물 단백질 지방 비율" })).toBeNull();
-    expect(screen.queryByText("0")).toBeNull();
+    renderCard(buildNutrition({base_servings:Number.POSITIVE_INFINITY}));
+    expect(screen.queryByText("0 g")).toBeNull();
   });
 
   it("moves sodium and optional nutrients behind nutrition details", async () => {
@@ -293,8 +268,8 @@ describe("recipe nutrition display", () => {
     );
 
     expect(screen.queryByText("환산값 포함 · 예상치")).toBeNull();
-    expect(screen.getByText("900")).toBeTruthy();
-    expect(screen.getByText(/1인분 250 kcal/)).toBeTruthy();
+    expect(screen.getByText("900 kcal")).toBeTruthy();
+    expect(screen.getByText("250 kcal")).toBeTruthy();
     expect(screen.queryByText(/최소/)).toBeNull();
 
     await userEvent.click(screen.getByText("영양성분 더 보기"));

@@ -1788,7 +1788,6 @@ export function RecipeDetailScreen({
                     </span>
                     <span className="text-sm text-[var(--text-2)]">
                       {quantityText}
-                      {ingredient.quantity_input ? <span className="mt-1 block text-xs">원입력 {recipeRawQuantityLabel(ingredient.quantity_input)}</span> : null}
                     </span>
                   </li>
                 </React.Fragment>
@@ -2187,7 +2186,6 @@ export function RecipeDetailScreen({
                       </span>
                       <span className="text-[14px] text-[var(--text-2)]">
                         {quantityText}
-                        {ingredient.quantity_input ? <span className="mt-1 block text-xs">원입력 {recipeRawQuantityLabel(ingredient.quantity_input)}</span> : null}
                       </span>
                     </li>
                   </React.Fragment>
@@ -2723,7 +2721,6 @@ function RecipeDetailWebView({
                             ) : null}
                           </span>
                           <span className="web-ingredient-amount">{quantityText}
-                            {ingredient.quantity_input ? <span className="mt-1 block text-xs">원입력 {recipeRawQuantityLabel(ingredient.quantity_input)}</span> : null}
                           </span>
                         </li>
                       </React.Fragment>

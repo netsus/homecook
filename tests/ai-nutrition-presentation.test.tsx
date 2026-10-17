@@ -38,7 +38,7 @@ describe("AI nutrition provenance is separate from completeness and quantity con
   it.each(["app", "web"] as const)("labels complete %s recipe estimates without changing numbers", variant => {
     render(<RecipeNutritionCard nutrition={recipe} selectedServings={1} onRetry={vi.fn()} variant={variant} />);
     expect(screen.getByText("AI 추정값 포함")).toBeTruthy();
-    expect(screen.getByText((_, element) => element?.tagName === "P" && /^100\s*kcal$/.test(element.textContent ?? ""))).toBeTruthy();
+    expect(screen.getAllByText((_, element) => element?.tagName === "TD" && /^100\s*kcal$/.test(element.textContent ?? "")).length).toBeGreaterThan(0);
   });
   it("does not describe partial AI recipe values as only verified values", () => {
     render(<RecipeNutritionCard nutrition={{ ...recipe, calculation_status: "partial", values: { ...values, protein_g: { ...value, amount: null, known_amount: 20, status: "partial" } } }} selectedServings={1} onRetry={vi.fn()} />);
@@ -117,14 +117,14 @@ it("keeps ordinary incomplete notices screen-reader-only but AI provenance visib
   expect(screen.queryByText("확인된 정보 기준")).toBeNull();
 });
 
-it("preserves the new detailed plan card while carrying AI provenance into its macro bar", () => {
+it("preserves AI provenance and partial amounts in the detailed plan nutrition table", () => {
   const handlers = { onOpen: vi.fn(), onRecipe: vi.fn(), onDelete: vi.fn(), onStepDown: vi.fn(), onStepUp: vi.fn(), onAction: vi.fn(), onShopping: vi.fn() };
   const item = { id: "meal", recipe_id: "recipe", recipe_title: "볶음밥", recipe_thumbnail_url: null, planned_servings: 1, status: "registered" as const, is_leftover: false, revision: 1 };
   const partialValues = { ...values, protein_g: { amount: null, known_amount: 12, status: "partial" as const, display_mode: "minimum" as const } };
   render(<PlannedMealCard meal={item} nutrition={{ plannedServings: 1, values: partialValues, containsAiEstimate: true }} detailed conflictError={null} isPending={false} {...handlers} />);
   expect(screen.getByRole("region", { name: "볶음밥 계획 영양정보" }).className).toContain("bg-[var(--ui-sky-50)]");
-  expect(screen.getByRole("img", { name: /AI 추정 탄단지 기준/ })).toBeTruthy();
-  expect(screen.getByText("AI 추정 탄단지 기준").className).toBe("sr-only");
+  expect(screen.getByRole("table", { name: "영양성분표" })).toBeTruthy();
+  expect(screen.getByText("확인된 일부")).toBeTruthy();
   expect(screen.queryByRole("img", { name: /확인된/ })).toBeNull();
   expect(screen.getAllByText(/AI 추정값 포함/)).toHaveLength(1);
   expect(screen.getByText(/AI 추정값 포함/).className).not.toContain("sr-only");
