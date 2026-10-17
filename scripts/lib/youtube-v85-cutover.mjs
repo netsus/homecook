@@ -85,7 +85,8 @@ export function assertV85Source({plan,from,to,digests}) {
         &&v85Hash(evidence.before)===pair[0]&&v85Hash(evidence.after)===pair[1],'exact public package bytes evidence');
       assertV85PackageContinuation(JSON.parse(evidence.before),JSON.parse(evidence.after));
     }else check(plan.continuation.packageEvidence===undefined,'unexpected package evidence');
-    return new Set(Object.keys(digests).filter(p => p.startsWith('scripts/')));
+    // The package delta above has already passed exact-byte and four-alias-only checks.
+    return new Set(Object.keys(digests).filter(p => p.startsWith('scripts/') || p==='package.json'&&delta[p]));
   }
   check(from===V85.from&&to===plan.webRef&&REF.test(to)&&same(plan.sources,digests),'complete reviewed source');
   for(const [file,pair] of Object.entries(digests)) {

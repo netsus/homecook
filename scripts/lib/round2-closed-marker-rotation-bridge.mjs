@@ -10,6 +10,7 @@ export const ROTATION_BRIDGE = Object.freeze({
 });
 const toolFiles=new Set(['scripts/deploy-prelaunch-web.mjs','scripts/lib/prelaunch-web-deploy.mjs',
   'scripts/lib/round2-closed-marker-rotation-bridge.mjs','tests/round2-closed-marker-rotation-bridge.test.mjs',
+  'scripts/lib/youtube-v85-cutover.mjs','tests/youtube-v85-cutover.test.ts',
   'tests/prelaunch-protected-rollout.test.ts','tests/prelaunch-closed-r2-maintenance.test.ts',
   'docs/engineering/youtube-v85-rotation-marker-bridge-20261017.md','docs/sync/CURRENT_SOURCE_OF_TRUTH.md']);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');

@@ -10,7 +10,7 @@
 
 ## 도구 SHA와 웹 target의 별도 승인
 
-이 운영 도구의 새 SHA는 기존 capsule의 웹 target15와 다르다. 배포할 제품은 여전히 target15다. 기존15 checkout은 worker stage/preflight/apply용으로 그대로 남겨 HEAD 검사를 생략하지 않는다. 새 도구는 source15 대비 나열한 운영 스크립트3개·회귀 검사3개·관련 문서만 달라야 하며, 사용자가 전달한 `--rotation-bridge-tool-ref <정확한 도구 SHA>`가 실제 clean HEAD와 일치해야 한다. 미추적 helper를 포함한 모든 미추적 파일도 거절한다. capsule/target도 고정값과 원 승인 anchor에 결속한다.
+이 운영 도구의 새 SHA는 기존 capsule의 웹 target15와 다르다. 배포할 제품은 여전히 target15다. 기존15 checkout은 worker stage/preflight/apply용으로 그대로 남겨 HEAD 검사를 생략하지 않는다. 새 도구는 source15 대비 나열한 운영 스크립트4개·회귀 검사4개·관련 문서만 달라야 하며, 사용자가 전달한 `--rotation-bridge-tool-ref <정확한 도구 SHA>`가 실제 clean HEAD와 일치해야 한다. 미추적 helper를 포함한 모든 미추적 파일도 거절한다. capsule/target도 고정값과 원 승인 anchor에 결속한다.
 
 읽기 전용 `plan`은 같은 source/proof 검사를 수행하고 상태·승인·서비스를 쓰지 않는다. 실제 `deploy`는 로그/lock/설치/재시작 전에 Mac의 세 TTY를 확인하고 정확한 tool SHA·target15·capsule hash를 표시한 후 사용자 입력 `V85-BRIDGE`를 요구한다. 거절/nonTTY는 그 지점에서 중단한다. 웹 교체 직전에도 도구 결속을 다시 확인한다. 이 확인은 기존 capsule 승인과 구분되는 정확한 도구 명령 실행 승인이고, 새 영구 anchor나 토큰은 만들지 않는다.
 
@@ -22,4 +22,4 @@
 
 ## 검사 범위
 
-회전/bridge Node48개와 관련 보호 배포·v85 Vitest387개, typecheck·변경 lint를 확인한다. 격리 복사 fixture의 local import와 설치된 의존성 연결도 갱신해 보호 핀 부재 시 실제 CLI가 운영 접근 전에 거절되는지 검사한다. 실제 공식 plan의 결과와 최종 도구 SHA는 PR 실행 증거에 기록한다. 제품/DB/의존성 변경은 없다.
+회전/bridge Node48개와 관련 보호 배포·v85 Vitest387개, typecheck·변경 lint를 확인한다. 격리 복사 fixture의 local import와 설치된 의존성 연결도 갱신해 보호 핀 부재 시 실제 CLI가 운영 접근 전에 거절되는지 검사한다. 실제 공식 plan의 결과와 최종 도구 SHA는 PR 실행 증거에 기록한다. 승인 capsule의 package 원문 SHA 및 별칭4개만의 차이를 검증한 뒤 그 package 경로를 R2 승계 검사로 전달한다. 의존성/build hook 변화는 계속 거부한다. 제품/DB/의존성 변경은 없다.
