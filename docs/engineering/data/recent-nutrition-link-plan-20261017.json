@@ -1,0 +1,138 @@
+{
+  "schema_version": "homecook.recent-nutrition-link-plan.v1",
+  "checked_on": "2026-10-17",
+  "status": "review_plan_only_operating_access_locked",
+  "production_reads_after_lock": 0,
+  "production_writes": 0,
+  "backup_taken": false,
+  "cached_quantity_summary": [
+    {
+      "recipe_title": "얼큰 만둣국",
+      "unknown_quantity_rows": 0,
+      "to_taste_rows": 1
+    },
+    {
+      "recipe_title": "뼈 없는 순살 소갈비찜",
+      "unknown_quantity_rows": 8,
+      "to_taste_rows": 0
+    },
+    {
+      "recipe_title": "맛있는 돼지고기 카레",
+      "unknown_quantity_rows": 1,
+      "to_taste_rows": 1
+    },
+    {
+      "recipe_title": "허니갈릭 통삼겹살 바비큐",
+      "unknown_quantity_rows": 4,
+      "to_taste_rows": 0
+    },
+    {
+      "recipe_title": "꽈리고추 두부볶음 · 연결 검증 · 감사1013",
+      "unknown_quantity_rows": 5,
+      "to_taste_rows": 0
+    },
+    {
+      "recipe_title": "하루가 지나도 불지 않는 잡채 · 배포 확인",
+      "unknown_quantity_rows": 1,
+      "to_taste_rows": 0
+    }
+  ],
+  "exact_link_candidates": [
+    {
+      "recipe_title": "얼큰 만둣국",
+      "observed_row": {
+        "ingredient_id": "93a5ea7e-4880-5940-af82-6bbc8d6ee680",
+        "standard_name": "식용유",
+        "amount": 10,
+        "unit": "g",
+        "ingredient_type": "QUANT",
+        "display_text": "식용유 10g",
+        "food_product_id": null,
+        "quantity_input": null
+      },
+      "proposed_ingredient_id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+      "target_standard_name": "식용유",
+      "target_profile_provider": "HOMECOOK_USER_STANDARD",
+      "target_profile_version": "2026-09-15",
+      "target_basis": {
+        "amount": 100,
+        "unit": "g"
+      },
+      "preserve_quantity_and_raw_text": true,
+      "immutable_history_updates": false,
+      "ready_to_execute": false
+    },
+    {
+      "recipe_title": "허니갈릭 통삼겹살 바비큐",
+      "observed_row": {
+        "ingredient_id": "22d40e7b-f3f2-54a7-a594-0962ed1c2ad1",
+        "standard_name": "오일",
+        "amount": null,
+        "unit": null,
+        "ingredient_type": "QUANT",
+        "display_text": "오일 수량 미확인",
+        "food_product_id": null,
+        "quantity_input": null
+      },
+      "proposed_ingredient_id": "d6d92b38-853f-43c2-b2e1-2b4a591de334",
+      "target_standard_name": "식용유",
+      "target_profile_provider": "HOMECOOK_USER_STANDARD",
+      "target_profile_version": "2026-09-15",
+      "target_basis": {
+        "amount": 100,
+        "unit": "g"
+      },
+      "preserve_quantity_and_raw_text": true,
+      "immutable_history_updates": false,
+      "ready_to_execute": false
+    }
+  ],
+  "source_identity_holds": [
+    {
+      "name": "냉동만두",
+      "requires": "제품 또는 고기/김치/물만두 유형·포장 라벨",
+      "rejected_substitutes": [
+        "임의 브랜드 만두 프로필",
+        "완성 만둣국"
+      ]
+    },
+    {
+      "name": "해물육수코인",
+      "requires": "실제 제품·희석전 질량·영양 라벨",
+      "rejected_substitutes": [
+        "육수100ml",
+        "코인 포함 완성 요리"
+      ]
+    },
+    {
+      "name": "조청",
+      "requires": "쌀/고구마/도라지 등 원료와 제품",
+      "rejected_substitutes": [
+        "조청유과",
+        "조청고추장"
+      ]
+    },
+    {
+      "name": "갈아만든배",
+      "requires": "제조사 제품·일반/제로/포장버전·기준량 라벨",
+      "rejected_substitutes": [
+        "자연마을 배주스",
+        "일반 생배100g"
+      ]
+    }
+  ],
+  "apply_prerequisites": [
+    "v85 전환 완료 및 부모의 운영 접근·배포 잠금 해제",
+    "정확 canonical→editable source 및 row key/revision 확인",
+    "두 대상만 비공개 before-image 백업 및 decode 확인",
+    "preview에서 ID만 변경되고 원문·양·특수오일·미확인 값이 보존되는지 확인",
+    "기존 권한/RPC와 revision CAS로 최소 반영",
+    "과거 meal/cooking pin 불변 및 반영 후 영양 readback 확인"
+  ],
+  "new_source_storage_contract": [
+    "provider/dataset/식품 또는 제품 코드",
+    "원자료 URL/버전/기준량/단위/조리상태",
+    "조회일/검토상태/출처 품질",
+    "추정인 경우 별도 근거·표시, 없는 영양소 null 유지"
+  ]
+}

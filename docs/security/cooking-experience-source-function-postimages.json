@@ -1,0 +1,256 @@
+{
+  "schema_version": "homecook.cooking-experience-postimages.v1",
+  "status": "isolated-reviewed-candidate-not-operating-approval",
+  "schema_fixture_sha256": "b92a1bc300f66f533c95fc3d05f09aa31e7d88a076cb62d56c4516c592e31ca0",
+  "migration_files": [
+    {
+      "filename": "20261017210000_cooked_weight_mass_fallback.sql",
+      "sha256": "9709397e9031ca28a1ae6dbb934502ef9092ca7bc0d6ba96d568121672ac7f2e"
+    },
+    {
+      "filename": "20261017220000_cooking_execution_quantities.sql",
+      "sha256": "34b2947952f4eedb55234ddf330ca0029c080d7c8d887542e8880a56106cbaa6"
+    }
+  ],
+  "predecessor_source_inventory": {
+    "acl": 0,
+    "body": 0,
+    "owner": 0,
+    "missing": 0,
+    "security": 0,
+    "volatility": 0,
+    "search_path": 0,
+    "required_functions": 109
+  },
+  "unchanged_functions": 432,
+  "changed_existing_functions": 4,
+  "added_functions": 6,
+  "scope_alias_body_oid_and_metadata_preserved": true,
+  "functions": [
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": "",
+        "body": "7d6681a922a1ebf9ccd22537779015cf",
+        "name": "assert_execution_completion_revision",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.assert_execution_completion_revision(uuid,uuid)",
+        "definition": "f6c420b18a1595c6743c54e643408b2aa7e69d1167bb2040b8762f171662ac88",
+        "volatility": "s",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": {
+        "acl": "",
+        "body": "3cd68570668545224cf20cd1734abfb0",
+        "name": "record_cooked_weight_evidence",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.record_cooked_weight_evidence(uuid,uuid,bigint,bigint,text,timestamp with time zone)",
+        "definition": "14526c9edb65f7639e2ffc69eac3e670bef12b491f86f384fc8060339d350d48",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "postimage": {
+        "acl": "",
+        "body": "0b3943d77ae8685d3f89d20f929fe813",
+        "name": "record_cooked_weight_evidence",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.record_cooked_weight_evidence(uuid,uuid,bigint,bigint,text,timestamp with time zone)",
+        "definition": "ed1026e6818a1addc8f13fc1e9dcbd3b38ef96d3c007ab24f0c0b9448f493723",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": {
+        "acl": "",
+        "body": "c3558905fc2c9e500da5bd7d94a7f096",
+        "name": "resolve_cooked_batch_nutrition",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.resolve_cooked_batch_nutrition(uuid,uuid)",
+        "definition": "208d10828909193b521208f7080538148e320c5db2b922c316ce5fd3de396a57",
+        "volatility": "s",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "postimage": {
+        "acl": "",
+        "body": "b7f989cdaf6538c97aa1602133964e69",
+        "name": "resolve_cooked_batch_nutrition",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.resolve_cooked_batch_nutrition(uuid,uuid)",
+        "definition": "cfaa2e2c6d415f0ab9447b3fa8f1ceb60ecc6da53c7c3ae737d7bc9bee67fce4",
+        "volatility": "s",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": "",
+        "body": "31a2200bf4a35d11d24bd8eac9f302c5",
+        "name": "resolve_execution_batch_nutrition",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.resolve_execution_batch_nutrition(uuid,uuid)",
+        "definition": "d726baba1b5d09a2826b34283062dceaa23821fff4a1bab87d2927c93edd2efa",
+        "volatility": "s",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": {
+        "acl": "",
+        "body": "e6eb35af2e77538b72d655b16f408967",
+        "name": "verify_full_local_internal_scope",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.verify_full_local_internal_scope()",
+        "definition": "3b5f09838ffee6b4a2844bc3eebe86cd6eb75601b8ab7fc4703feb8ddeae1320",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "postimage": {
+        "acl": "",
+        "body": "c14ae3538a84fd5bd260fe29e907351a",
+        "name": "verify_full_local_internal_scope",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.verify_full_local_internal_scope()",
+        "definition": "b75f0f2f993a4760cb4d794628790fb31ad43ed1949435ea9837c0afb0731fb7",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": "",
+        "body": "e6eb35af2e77538b72d655b16f408967",
+        "name": "verify_scope_pre_cooking_execution_20261017",
+        "owner": "postgres",
+        "schema": "private",
+        "security": true,
+        "signature": "private.verify_scope_pre_cooking_execution_20261017()",
+        "definition": "39e7bb73a14b110a61ca8997b7265b198f21b881cd0000dbb5b1d1749dd062f9",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": "service_role:EXECUTE:false",
+        "body": "2b54c0222ab213f804e359e6db0d3607",
+        "name": "complete_cooking_execution",
+        "owner": "postgres",
+        "schema": "public",
+        "security": true,
+        "signature": "complete_cooking_execution(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,uuid[],text,numeric,text,jsonb,boolean,bigint,timestamp with time zone)",
+        "definition": "5bbe9ab4288a791cc8ae44391b4324b5d25c5c31bcb15646dde2ae608f74132d",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": {
+        "acl": "service_role:EXECUTE:false",
+        "body": "ae76f0df6d9000108b65828b46344f57",
+        "name": "complete_snapshot_v2_cooking_session",
+        "owner": "postgres",
+        "schema": "public",
+        "security": true,
+        "signature": "complete_snapshot_v2_cooking_session(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,uuid[],text,numeric,timestamp with time zone)",
+        "definition": "bc805104221c9fe46f94b53d8d997b6e2297812b4901c8978c579602e1a3e017",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      },
+      "postimage": {
+        "acl": "service_role:EXECUTE:false",
+        "body": "bbdff6b6d33e34a636945a63704ed1d6",
+        "name": "complete_snapshot_v2_cooking_session",
+        "owner": "postgres",
+        "schema": "public",
+        "security": true,
+        "signature": "complete_snapshot_v2_cooking_session(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,uuid[],text,numeric,timestamp with time zone)",
+        "definition": "1f33e33be9ce3302ea94c0ae6e41c2c2246647c29ce8a89c9cadf97660b4f9c1",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": "service_role:EXECUTE:false",
+        "body": "e0a2dd8a4ac140fde4d45dcea68556ab",
+        "name": "read_cooking_execution_quantities",
+        "owner": "postgres",
+        "schema": "public",
+        "security": true,
+        "signature": "read_cooking_execution_quantities(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,timestamp with time zone)",
+        "definition": "d3ddb6cbf1738ebc33cfede419a19f927d666ba90972b6fc79439a7defe5a054",
+        "volatility": "s",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    },
+    {
+      "preimage": null,
+      "postimage": {
+        "acl": "service_role:EXECUTE:false",
+        "body": "3bfa37846fbc467d90dd254b2932166c",
+        "name": "save_cooking_execution_quantities",
+        "owner": "postgres",
+        "schema": "public",
+        "security": true,
+        "signature": "save_cooking_execution_quantities(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,bigint,uuid,jsonb,jsonb,jsonb,jsonb,timestamp with time zone)",
+        "definition": "21b7284fe1bc94516e8e321d497fab9dbd4c856048a3faa26bc5fa71eaa3a89b",
+        "volatility": "v",
+        "configuration": [
+          "search_path=pg_catalog, public, private, pg_temp"
+        ]
+      }
+    }
+  ],
+  "operating_reads_after_lock": 0,
+  "operating_applied": false,
+  "deploy_ledger_transition_tested": false
+}
