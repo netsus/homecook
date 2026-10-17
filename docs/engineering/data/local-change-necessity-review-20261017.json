@@ -1370,12 +1370,23 @@
       "branches": [
         "codex/youtube-generic-oil-resolution-20261011"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/ingredient-search.ts",
         "lib/server/youtube-import.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "reason": "옛 패치는 기름 synonym 단독 일치를 needs_review로 두는 별도 정책. PR1781의 정확 오일→식용유와 동등하지 않다. 요구5는 새 구현으로 충족, 기름 정책은 미반영·정책/소유자 검토 보류.",
+        "current_evidence_paths": [
+          "lib/ingredient-search.ts",
+          "lib/server/youtube-import.ts"
+        ],
+        "independent_review": true,
+        "verification": "recipe-detail-screen / youtube-result-first.ui / recipe-nutrition-calculator: 196 PASS; overlaps are not unique count."
+      }
     },
     {
       "sha": "2d335a4ec9c0aff18f115a8c2abf28cf54e40cfa",
@@ -6234,11 +6245,21 @@
         "codex/youtube-optional-preservation-20261010",
         "codex/youtube-saved-quantity-compose-20261010"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/youtube-import-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "reason": "현재 needsQuantityReview=required && !confirmed가 경고 표시에 적용됨.",
+        "current_evidence_paths": [
+          "components/recipe/youtube-import-screen.tsx"
+        ],
+        "independent_review": true,
+        "verification": "recipe-detail-screen / youtube-result-first.ui / recipe-nutrition-calculator: 196 PASS; overlaps are not unique count."
+      }
     },
     {
       "sha": "dc5fae33301e0e22707dc9aa5e9404934b15844a",
@@ -6616,11 +6637,21 @@
         "codex/mumeok-recipe-role-source-release",
         "codex/mumeok-recipe-save-release"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/recipe-detail-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "reason": "현재 recipe-detail title effect 보존. 나머지14개 파일도 현재 또는 병합3e02203a7의 과거 blob으로 확인.",
+        "current_evidence_paths": [
+          "components/recipe/recipe-detail-screen.tsx"
+        ],
+        "independent_review": true,
+        "verification": "recipe-detail-screen / youtube-result-first.ui / recipe-nutrition-calculator: 196 PASS; overlaps are not unique count."
+      }
     },
     {
       "sha": "e917927b95412d7a7b240230960c5cf9977ecc46",
@@ -6730,11 +6761,22 @@
       "branches": [
         "codex/demo-planner-status-hotfix-20260917"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/nutrition/recipe-nutrition-calculator.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "reason": "현재 ingredient-piece-units.mjs의 줌/꼬집 family·size·승인관측 근거 검증으로 후속 대체. 전역 임의 중량을 되살리지 않는다.",
+        "current_evidence_paths": [
+          "lib/nutrition/ingredient-piece-units.mjs",
+          "lib/nutrition/recipe-nutrition-calculator.ts"
+        ],
+        "independent_review": true,
+        "verification": "recipe-detail-screen / youtube-result-first.ui / recipe-nutrition-calculator: 196 PASS; overlaps are not unique count."
+      }
     },
     {
       "sha": "ed85475d41e458e65b5276156795bfa6c6cf3840",
@@ -6952,11 +6994,21 @@
       "branches": [
         "codex/mumeok-beta-v9-navigation"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_current_successor_no_merge",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "components/recipe/recipe-detail-screen.tsx"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "reason": "e8fa17a1a와 동일 패치의 별도 계보. title effect 및 나머지14파일 보존 확인.",
+        "current_evidence_paths": [
+          "components/recipe/recipe-detail-screen.tsx"
+        ],
+        "independent_review": true,
+        "verification": "recipe-detail-screen / youtube-result-first.ui / recipe-nutrition-calculator: 196 PASS; overlaps are not unique count."
+      }
     },
     {
       "sha": "f7c48364d5b90bc294c78a1137132e938769da3f",
@@ -7188,5 +7240,10 @@
         "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs"
       ]
     }
-  ]
+  ],
+  "semantic_review_summary": {
+    "batch1_reviewed": 5,
+    "runtime_semantic_review_pending": 138,
+    "historical_all_postimage_presence_is_not_current_semantic_equivalence": true
+  }
 }

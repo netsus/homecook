@@ -303,7 +303,7 @@ master 조상324개, 비조상241개 중patch동등104개·고유후보137개다
 | `codex/youtube-choice-quantity-20261010` | `55351544a` | 고유검토대기 | 9/0 | 필요성·후속대체·소유자미확정; 현재9개를선행하고필요분만별도리뷰후머지 |
 | `codex/youtube-contract-test-sync-20261012` | `650c7bedc` | master포함 | 0/— | 재머지불필요; 미커밋은 아래별도 |
 | `codex/youtube-display-release-20261008` | `5fa2561b0` | master포함 | 0/— | 재머지불필요; 미커밋은 아래별도 |
-| `codex/youtube-generic-oil-resolution-20261011` | `2bc8ce58a` | 필요기능흡수 | 1/0 | 오일정확이름연결을이번branch에재구현; 과거기름review정책까지무조건가져오지않음 |
+| `codex/youtube-generic-oil-resolution-20261011` | `2bc8ce58a` | 별도정책보류 | 1/0 | 과거패치는 기름 synonym검토정책이며 정확 오일연결과 동등하지 않음. 요구5는PR1781로충족, 기름정책은미반영·정책/소유자검토대기 |
 | `codex/youtube-human-reviewed-source-20261011` | `84003a19b` | 고유검토대기 | 35/0 | 필요성·후속대체·소유자미확정; 현재9개를선행하고필요분만별도리뷰후머지 |
 | `codex/youtube-ingredient-resolution-20261009` | `55e8a3651` | 고유검토대기 | 2/0 | 필요성·후속대체·소유자미확정; 현재9개를선행하고필요분만별도리뷰후머지 |
 | `codex/youtube-integrated-local-20261013` | `b30ee9e00` | master포함 | 0/— | 재머지불필요; 미커밋은 아래별도 |
@@ -631,3 +631,9 @@ master 조상324개, 비조상241개 중patch동등104개·고유후보137개다
 - 최근 runtime 후보 중 줌/꼬집은 현재 `ingredient-piece-units.mjs`의 family/size/evidence 비교로 후속 구현됐다. 과거 대파1줌/소금1꼬집의 user제공무게를 전역 기본값처럼 되살리지 않는다. recipe-detail 페이지 title복원은 현재컴포넌트에존재한다. 일반오일은 PR1781의정확전체명규칙으로이번요구를반영했으므로옛branch전체를머지하지않는다.
 - `codex/hybrid-static-contract-repair-20261012`의 recipe-save fallback user-scope 후보는 현재 legacy fallback에 service-role 호출이남아있음을확인했다. 현재9개요구에필수인확정결함으로승격하지않았으며 기존29계약/refactor보류와별도검토가필요하다. 삭제된DELETE endpoint·옛전체보안inventory를복구하지않는다.
 - 나머지 unmatched runtime의미검토·다른소유자승인·필요성검증은진행중이다. 사용자 ‘필요한로컬변경모두머지’요청을완료로닫지않는다. 기존소유자작업과동시운영전환을침범하지않는다.
+
+## Runtime 의미 검토 첫 묶음 —5개
+
+`ecd87372b`(줌/꼬집), `e8fa17a1a`/`f76d37241`(제목복원), `dbfd3642d`(수량확인경고)는 현재 후속 구현과 독립 대조해 전체 재머지가 불필요하다고 판정했다. 제목복원 외14개 파일의 현재/병합3e02203a7 과거 blob도 확인했다. 기존 관련196회귀 PASS.
+
+`2bc8ce58a`는 별도 ‘기름 synonym 단독일치를 needs_review로 유지’ 정책이다. 정확 ‘오일’ 연결과 동등하다고 분류한 초기 표현을 정정한다. 요구5 구현과 분리해 정책/소유자 검토 보류로 남기며 전체 옛 branch를 머지하지 않는다. 남은 미검토 runtime커밋은138개다. 필요한로컬변경전체머지 요청은 계속 열린 항목이다.

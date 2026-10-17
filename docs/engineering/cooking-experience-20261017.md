@@ -1,12 +1,12 @@
 # 실제 요리 경험 개선 — 2026-10-17
 
-현재 판정: PR1781(화면/오일/공개영양), PR1782(75%무게), PR1784(이번요리수정), PR1785(v4 부분영양)가 master에 병합됐다. 운영 배포·새스키마 적용·영양데이터 쓰기는0회다. PR1785 병합 기준 master는 `3e3e18b5961e5154e09bc33a30e6682521f40095`다. 현재 v85 보존 검사 때문에 운영 접근을 중단했다. 전체 스키마 재생은 기존 `20261009130000` preimage 검사에서 차단되어 새 두 migration의 전체 스키마 통과는 미확인이다. 기존 운영 Chrome 탭은 닫기 연결 오류로 닫힘을 확인하지 못했다. 아래21:18보고가 현재 인증 관련 경계다.
+현재 판정: PR1781(화면/오일/공개영양), PR1782(75%무게), PR1784(이번요리수정), PR1785(v4 부분영양)가 master에 병합됐다. 운영 배포·새스키마 적용·영양데이터 쓰기는0회다. PR1785 병합 기준 master는 `3e3e18b5961e5154e09bc33a30e6682521f40095`다. 현재 v85 보존 검사 때문에 운영 접근을 중단했다. 기존 fresh replay 실패 원인을 분리했고, 고정 schema-only228+원본229–232에서 새233/234 전체 회귀25 PASS를 확인했다. 현재 운영232의 새 관측·실제 인증 HTTP·배포 ledger 전환은 아직 미확인이다. 기존 운영 Chrome 탭은 닫기 연결 오류로 닫힘을 확인하지 못했다. 아래21:18보고가 현재 인증 관련 경계다.
 
 | 요구 | 코드/검증 | 운영 |
 |---|---|---|
-|1 완성무게 추정/실측|PR1782 merged, 검증질량75%·조건별우선·미확인보존|미반영, schema+web 필요|
+|1 완성무게 추정/실측|PR1782/1786 merged, 검증질량75%·조건별우선·미확인보존, 격리SQL25 PASS|미반영, schema+web 필요|
 |2 전체 남색 배경|PR1781 merged|미반영|
-|3 이번 요리 재료 수정|PR1784 merged, owner/판본/영양/무게/완료 연결|미반영, schema+web 필요|
+|3 이번 요리 재료 수정|PR1784 merged, owner/판본/영양/무게/완료 연결, 격리SQL25 PASS|미반영, schema+web 필요|
 |4 완료 모달 안내|PR1781 merged|미반영|
 |5 정확 일반명 오일 연결|PR1781 merged, 특수오일 보존|미반영, 최근2행 data수정 별도대기|
 |6 원입력 표시 제거|PR1781 merged, 원문·양 보존|미반영|
@@ -222,3 +222,15 @@ Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산
 - [최근 재료 연결·출처 검토](recent-nutrition-source-review-20261017.md): 운영 backup/data 변경0. 정확 식용유 연결2행은 차후 최소 백업·현재 revision 확인 후 반영 후보다. 제품/원료 불명 항목은 source 확보 전 보류한다.
 
 후속 veto 검증: 작성자58 PASS, 독립 리뷰63 PASS·finding0, typecheck/build exit0(기존4경고), 변경 ESLint0. 화면 구성 변경은 없으며 앞선375/1440 Chrome 흐름 검증에 더해 서버의 가열·배수 판정만 보완한다. 전체 격리 재생 [기계 기록](data/cooking-full-schema-validation-20261017.json)은 기존 fence 실패와 미도달233/234를 그대로 보존한다.
+
+## 격리232→233/234 후속 검증
+
+- 원 migration 파일은 변경하지 않았다. fresh212→213 실패는 기존 검증기의 exact fixture로 분리했다. 같은 본문/owner/ACL에 `search_path`의pg_temp가추가된차이이며, before정의md5 `4afb4fcc…`·본문SHA `12d47c74…`·속성을확인한뒤 역사형으로복원하면 원 fence `86f9d5ec…`를통과한다. 다음214는schema/함수/owner/ACL등의정확catalog지문불일치로실패한다(expected81362d75…,actual67e4a441…). 재료데이터누락이원인이라는초기추정은철회한다. 현재진단runner는기존catalog검증기의역사별실행role/단일backend를완전히재현하지않아그차이까지원인으로확정하지않았다. [fresh 진단](data/cooking-fresh-replay-diagnosis-20261017.json)은 이 실패를유지한다.
+- 이미보존된 schema-only228 dump `b92a1bc3…`와password없는roles `a37b4386…`를검증해새PG17 networknone/port0/mount0에복원했다.153테이블/0행확인후 원본229–232를적용하고 기존승인109함수inventory의body/owner/ACL/config/security/volatility 누락·차이0을확인했다.
+- 원본233/234 실제DDL을적용한전체schema 회귀25 PASS. 실제service_role 호출·실행분저장/새조회·원본불변·배율1회·g/kg동등성·실측/추정/미확인·부분영양·식사영양저장·멱등·취소/완료상태·stale/타인/위조·철회/탈퇴중/세대교체·read-only·수정/완료경합을확인했다.
+- 기존public/private함수432개는정의와메타데이터가모두같다. 의도한기존4개만body변경, 신규6개이며 기존owner/ACL/config/volatility보존·scopealias OID/본문보존을검사했다. [후보postimage](../security/cooking-experience-source-function-postimages.json)는운영승인또는기존보안gate대체가아니다.
+- 실제DDL뒤강제오류after233/after234는전체rollback했다. COMMIT후연결종료복제본은읽기로committed상태를확인하고DDL재전송0이었다. COMMIT ACK유실재현은아니다. 개인확인수집control OFF/0행·소유컨테이너cleanup확인. [검증보고](data/cooking-schema232-regression-20261017.json).
+- 독립리뷰지적2개는수정했다: ACK검증범위표현정정, 실행시작RUNNING/runId및실패/cleanup실패의최종FAIL기록. Docker없는PATH실패에서이전PASS가남지않고새FAIL이기록되는것을확인했다. 초기회귀fixture의source·완료시간·응답shape/경고계약을수정했으며제품/SQL제약완화는0이다.
+- 관련API/UI/계산기70 PASS, 로컬runtime의미검토기존회귀196 PASS(서로중복가능). 타입/변경lint통과. 이번후속은검증도구/문서만변경하며기존375/1440 Chrome증거범위를확대하지않는다.
+- 이fixture의과거canonical pack에는 `beforeMatchesApproved=false`가있다. 이번109함수의실제PASS와구분하며, 현재운영232전체동등성·원deployledger/PIN·실제인증HTTP까지통과했다고주장하지않는다. 운영접근/배포잠금·C05/R2/lead OFF·공개UUID GET보류는유지한다.
+- 최근영양연결2행·원천보류의 [구체반영계획](data/recent-nutrition-link-plan-20261017.json)을기록했다. backup/운영쓰기0이며실행가능UPDATE가아니다. 나머지runtime의미검토는첫5개분류후138개남는다.
