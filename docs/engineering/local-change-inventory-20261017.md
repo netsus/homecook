@@ -697,3 +697,12 @@ PR1681/1707의 소유자 영역이며 현재 9개 요구와 별도다. 정책·�
 필요한 최소 수정2건(PR1789·1791)은 master에 병합했고 운영 미반영이다. [최종 근거/조사28개](local-runtime-review-final-20261017.md)와 [커밋별 기계 기록](data/local-change-necessity-review-20261017.json)에 최신 집계를 남겼다. 초기133개는 runtime 재머지 불필요75·실험 보존8·정책/소유자 보류20·추가 조사28·최소 수정2개로 나뉜다. 미착수0은 모두 읽고 독립 리뷰했다는 뜻이며 필요한 변경 전체 완료는 아니다. 앞선 C055개/첫5개와 부분 수정 뒤 public-read 정책, runtime 외 나머지 파일 보류는 별도다.
 
 async/parser 선택 회귀는67 PASS/2 기존 기대값 FAIL이며 정책/지문을 임의 변경하지 않았다. 반복 기름 총량 경고와 소수점 진행 이벤트는 pure 합성 재현만 확인했다. 현재 운영/키/DB/Chrome/배포/worker/bundle 변경0, 원 브랜치/타 작업 보존이다. 현재 운영232 동등성·실제 인증 흐름·최근 영양2행 백업/적용·233/234 DB 및 웹 배포는 v85 잠금 해제와 부모 직렬 조율 대기다.
+
+
+## 직접 연관28개 후속 — 독립 조사 범위 종료
+
+[28개/13단위의 구체 결과·중복·재개 조건](cooking-related-runtime-followup-20261017.md)을 기록했다. 현재 수량UI/서버34 PASS·정확연결/ACK87 PASS·순수AST7개는 사용자 수량권위 보존을 뒷받침하며 optional 선택정보 소실은 additive 계약 보류다. v85 봉인worker15개·DB source/cached 차이3개 등은 구체 재개조건으로 남긴다.
+
+표지 origin 공백만 추가 최소 수정해 PR1793(`4446d01fc`)으로 병합했다. same-origin GET은 매 요청 현재 책 소유권/registry/path/state와 파일한도를 확인하며 reader 상대경로도 유지한다. 관련57 PASS·독립57 PASS·type/lint/build0. 실제auth/Storage/Chrome·운영반영0이다. Anti Slop는 기준master와같은 기존5개로exit1/신규표지0/baseline변경0이다.
+
+초기133개 최신분할은 최소수정3·runtime재머지불필요75·실험8·정책/owner보류23·추가조사24이며 미착수0이다. ACK동일3개만 새server확장보류로 옮겼고 기존실험8/정책20은 활성화0이다. 필요한변경전체/운영완료는false다. core는수정전d55f20562·중간14464a83c·최종4446d01fc 모두67 PASS/2동일기대FAIL이며 마지막실패본문도정확동일하다. 현재잠금에서독립실행가능한조사범위는끝났고 표의source/worker/catalog/운영조건을따라재개한다.

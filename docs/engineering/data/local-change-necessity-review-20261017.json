@@ -439,6 +439,18 @@
         "independent_review": true,
         "candidate_code_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "source_bound_recovery",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_source_recovery_policy_pending",
+        "reason": "인접 이름/approximate suffix, stable OCR/unitless amountRawText, qualified amount, merged-caption final action, parenthetical owner, inherited-unit heading의 연결된 원천 복구 계열. 현재 보수적 unknown/conflicting 합성 사례를 확인했지만 정확 수치가 무조건 복원되어야 한다는 근거는 아님.",
+        "resume_condition": "v85 source fidelity 계약과 current schema-v5/verifier-v54에서 각 근거 소유권·모호량 정책을 검증한 뒤 최소 적용. 다른 계보의 동명v85/옛수치 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -2309,6 +2321,18 @@
         "independent_review": true,
         "candidate_code_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "saved_quantity_provenance",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "quantity_authority_no_immediate_fix_reproduced_other_paths_deferred",
+        "reason": "옛 provenance projection/formatter 하나의 겹치는 계열. 현재 unknown 재진입, confirmed quantity, v4 1/3→2/3/fingerprint 보존을 pure AST로 확인. 옛 추정 출처를 주입해도 사용자 확인량을 미확인으로 덮지 않음. #6 원입력 보조행 복원 근거 없음.3ea의 worker/media 부문은 별도 봉인 owner 범위.",
+        "resume_condition": "현재 saved reader/API→HTTP→실제 SQL 전 구간은 운영 잠금 해제 뒤 확인. provenance 상태가 user 확인권위를 덮는 구체 재현 또는 additive 출처 계약 필요.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -2355,6 +2379,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "optional_source_contract",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "confirmed_source_fidelity_gap_contract_pending",
+        "reason": "숫자 optional true/false가 현재 parser에서 같아지고 saved row에 optional을 넣으면 invalid_shape. 선택가능과 실제 미사용은 다름. 실행분0은 현재 계약상 거절/null은 양미확인. 자동 제외·0·완성무게 축소로 바꾸지 않음.",
+        "resume_condition": "원천 선택성의 UI/저장/canonical/실행분 의미를 additive 계약으로 확정한 뒤 구현. 이번9개가 선택 재료 자동 영양 제외를 요구한 것으로 확대하지 않음.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -2504,6 +2540,18 @@
         "reason": "P2: 반복 기름 투입 근거에도 explicit1T/issues[]/total-review없음. 원천·adapter/UI·저장 경계의 소유자 검토 필요. 현재 v85와 옛 동명v85는 다른 계보.",
         "independent_review": true,
         "candidate_code_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "repeated_quantity_total",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "confirmed_synthetic_gap_sealed_worker_owner_pending",
+        "reason": "4420/aacc/fe460은 반복 투입 총량 확인/전달의 겹치는 계열. 현재 반복1T@90s/다시1T@122s가 explicit1T/issues[]이며 sanitizer 경고 필드 전달도 부재. af1은 같은 제목이지만 action-separated sourceName+suffix 복구 diff이며 별개 숫자 덧셈 fix가 아님. 이번 기준의 소스SHA/validator 결과 일치 재확인.",
+        "resume_condition": "v85 소유자가 봉인 source/schema/adapter/UI/저장 계약과 총량 미확인 정책을 함께 검토. 자동2T 확정·옛manifest/worker patch 통합 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -2778,6 +2826,18 @@
         "independent_review": true,
         "candidate_code_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "source_bound_recovery",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_source_recovery_policy_pending",
+        "reason": "인접 이름/approximate suffix, stable OCR/unitless amountRawText, qualified amount, merged-caption final action, parenthetical owner, inherited-unit heading의 연결된 원천 복구 계열. 현재 보수적 unknown/conflicting 합성 사례를 확인했지만 정확 수치가 무조건 복원되어야 한다는 근거는 아님.",
+        "resume_condition": "v85 source fidelity 계약과 current schema-v5/verifier-v54에서 각 근거 소유권·모호량 정책을 검증한 뒤 최소 적용. 다른 계보의 동명v85/옛수치 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -2788,7 +2848,7 @@
         "chore/current-mac-production",
         "feature/fe-hybrid-auth-local-data-production"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_partial_fix_other_policy_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/recipe-books/route.ts",
@@ -2799,7 +2859,19 @@
         "lib/server/recipe-image-storage-origin.ts",
         "lib/supabase/data-env.ts"
       ],
-      "review_in_progress": {
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "image_origin",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "partial_needed_runtime_fix_merged_other_origin_policies_deferred",
+        "reason": "recipe managed thumbnail은 이미same-origin download proxy. book list만loopback/public origin이 불일치하는 공백을 재현해 매요청재인가 same-origin book proxy와 reader exact relative path를 최소 보완. origin분리1FAIL/13PASS·reader1FAIL/17PASS→4파일57PASS/독립57PASS/finding0·type/lint/build0. PR1793 master4446d01fc 병합, 운영 미반영. 옛7파일 전체 merge 아님.",
+        "resume_condition": "실제auth/Storage/모바일·데스크톱흐름은운영잠금해제후부모직렬조율. 다른legacy upload/create origin 정책은별도보존.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
+      },
+      "first_pass_investigation": {
         "reviewed_on": "2026-10-17",
         "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
         "reason": "현재 이미지 경로에 legacy public URL이 남고 옛 Data-origin adapter 부재. 내부 Data URL과 브라우저 반환 Storage origin 계약을 구분해야 하며 자동 origin 변경 보류.",
@@ -2807,6 +2879,29 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "reason": "recipe managed thumbnail은 이미same-origin download proxy. book list만loopback/public origin이 불일치하는 공백을 재현해 매요청재인가 same-origin book proxy와 reader exact relative path를 최소 보완. origin분리1FAIL/13PASS·reader1FAIL/17PASS→4파일57PASS/독립57PASS/finding0·type/lint/build0. PR1793 master4446d01fc 병합, 운영 미반영. 옛7파일 전체 merge 아님.",
+        "independent_review": true,
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0,
+        "applied_runtime_paths": [
+          "app/api/v1/recipe-books/route.ts",
+          "app/api/v1/recipe-books/[book_id]/image/route.ts",
+          "lib/server/recipe-book-image-read.ts",
+          "lib/recipebook-cover.ts"
+        ],
+        "remaining_deferred_runtime_paths": [
+          "app/api/v1/recipes/images/route.ts",
+          "app/api/v1/recipes/route.ts",
+          "lib/server/recipe-image-managed-upload.ts",
+          "lib/supabase/data-env.ts"
+        ],
+        "merged_pr": 1793,
+        "merge_commit": "4446d01fc372dcdbcd30704723f1269d4c87104f"
       }
     },
     {
@@ -3189,6 +3284,18 @@
         "independent_review": true,
         "candidate_code_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "saved_quantity_provenance",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "quantity_authority_no_immediate_fix_reproduced_other_paths_deferred",
+        "reason": "옛 provenance projection/formatter 하나의 겹치는 계열. 현재 unknown 재진입, confirmed quantity, v4 1/3→2/3/fingerprint 보존을 pure AST로 확인. 옛 추정 출처를 주입해도 사용자 확인량을 미확인으로 덮지 않음. #6 원입력 보조행 복원 근거 없음.3ea의 worker/media 부문은 별도 봉인 owner 범위.",
+        "resume_condition": "현재 saved reader/API→HTTP→실제 SQL 전 구간은 운영 잠금 해제 뒤 확인. provenance 상태가 user 확인권위를 덮는 구체 재현 또는 additive 출처 계약 필요.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -3354,18 +3461,39 @@
       "branches": [
         "feature/fe-youtube-async-extraction-notification-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-registration-notification.ts",
         "lib/server/youtube-import.ts"
       ],
-      "review_in_progress": {
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "quick_import_server_ack",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "current_ui_verified_distinct_server_extension_owner_deferred",
+        "reason": "동일 patch3개를 하나로 묶음. 현재 Recipio 성공 시 notify→durable local ack→notification center의 first/cursor/archive owner-scoped 조회→정확 job seen 성공 뒤 제거/실패 재시도 경로 존재.87회귀 중 관련 ACK 회귀 통과. 옛 server bookkeeping 전체 동등성은 아니며 현재9개 수량/완료/영양에 즉시 server helper 필요성 미확인.",
+        "resume_condition": "헤드리스/API 성공까지 server ACK가 필요한 별도 요구 또는 구체 실패 확보 뒤 최신세션RPC로 재설계. 옛 userId-only helper 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
+      },
+      "first_pass_investigation": {
         "reviewed_on": "2026-10-17",
         "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
         "reason": "옛 server QuickImport ACK helper 부재, 현재 UI client ACK 존재. RPC authority 계약이 달라 server ACK 필요성 조사; 옛 userId-only helper 복원 금지.",
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "reason": "동일 patch3개를 하나로 묶음. 현재 Recipio 성공 시 notify→durable local ack→notification center의 first/cursor/archive owner-scoped 조회→정확 job seen 성공 뒤 제거/실패 재시도 경로 존재.87회귀 중 관련 ACK 회귀 통과. 옛 server bookkeeping 전체 동등성은 아니며 현재9개 수량/완료/영양에 즉시 server helper 필요성 미확인.",
+        "independent_review": true,
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
       }
@@ -3717,6 +3845,18 @@
         "independent_review": true,
         "candidate_code_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "meal_readers_replay",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "source_cached_schema_gap_forward_contract_pending",
+        "reason": "checked-in get_meal_log_day/get_recent_meal_log_sources/list_cooked_batches는 STABLE이며 잠금 가능한 assert_recipe_future_session_authority 호출. cached232 세함수는VOLATILE. 완료 후 기록/잔여요리와 직접 관련하나 현재운영/233·234 실패로 단정 불가.",
+        "resume_condition": "현재운영 상태 확인은 잠금 해제 뒤 담당자만. faithful fresh actor/canonical baseline과 catalog 지문 결속 포함한 격리 forward 검증 전 새DDL 추가/옛scopewrapper 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -3845,6 +3985,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "fractional_duration_progress",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "confirmed_synthetic_gap_sealed_worker_owner_pending",
+        "reason": "raw303.8초 progress가 정수 계약에 막혀 send0, ceil304초 send1. 영양량 숫자 결함과 구분. pure fake IPC이며 실제 worker/event 전달 검증 아님.",
+        "resume_condition": "봉인된 single-pass/worker/artifact version을 v85 소유자가 함께 갱신할 때 bounded duration 계약 보완. 현재 배포 target 변경0.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -4248,6 +4400,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "catalog_lookup_context",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "current_exact_lookup_verified_source_context_policy_pending",
+        "reason": "현재 정확 오일→식용유/size wrapper/Spaghetti mass rawText/정확 우선/동명이항목 문맥 분리 회귀 통과. 옛 amount/originalName/sourceTexts 신뢰 계약은 다름. 기존 정규화 rawText만으로 옛 source evidence 전체 동등성 주장 불가. 최근6개 최소 oil2행 계획과 제품/원천 미상 보류는 별도이며 새로운 연결/영양값 쓰기0.",
+        "resume_condition": "출처 진위/별칭 확장 추가 사례와 원문 컨텍스트 계약이 확보될 때 검토. 전역 substring alias·특수오일 치환 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -4972,18 +5136,39 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-registration-notification.ts",
         "lib/server/youtube-import.ts"
       ],
-      "review_in_progress": {
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "quick_import_server_ack",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "current_ui_verified_distinct_server_extension_owner_deferred",
+        "reason": "동일 patch3개를 하나로 묶음. 현재 Recipio 성공 시 notify→durable local ack→notification center의 first/cursor/archive owner-scoped 조회→정확 job seen 성공 뒤 제거/실패 재시도 경로 존재.87회귀 중 관련 ACK 회귀 통과. 옛 server bookkeeping 전체 동등성은 아니며 현재9개 수량/완료/영양에 즉시 server helper 필요성 미확인.",
+        "resume_condition": "헤드리스/API 성공까지 server ACK가 필요한 별도 요구 또는 구체 실패 확보 뒤 최신세션RPC로 재설계. 옛 userId-only helper 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
+      },
+      "first_pass_investigation": {
         "reviewed_on": "2026-10-17",
         "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
         "reason": "5dd595d02와 동일 patch. server ACK/current client ACK의 필요성 및 authority 계약 조사 유지.",
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "reason": "동일 patch3개를 하나로 묶음. 현재 Recipio 성공 시 notify→durable local ack→notification center의 first/cursor/archive owner-scoped 조회→정확 job seen 성공 뒤 제거/실패 재시도 경로 존재.87회귀 중 관련 ACK 회귀 통과. 옛 server bookkeeping 전체 동등성은 아니며 현재9개 수량/완료/영양에 즉시 server helper 필요성 미확인.",
+        "independent_review": true,
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
       }
@@ -5769,6 +5954,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "repeated_quantity_total",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "confirmed_synthetic_gap_sealed_worker_owner_pending",
+        "reason": "4420/aacc/fe460은 반복 투입 총량 확인/전달의 겹치는 계열. 현재 반복1T@90s/다시1T@122s가 explicit1T/issues[]이며 sanitizer 경고 필드 전달도 부재. af1은 같은 제목이지만 action-separated sourceName+suffix 복구 diff이며 별개 숫자 덧셈 fix가 아님. 이번 기준의 소스SHA/validator 결과 일치 재확인.",
+        "resume_condition": "v85 소유자가 봉인 source/schema/adapter/UI/저장 계약과 총량 미확인 정책을 함께 검토. 자동2T 확정·옛manifest/worker patch 통합 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -5868,6 +6065,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "repeated_quantity_total",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "confirmed_synthetic_gap_sealed_worker_owner_pending",
+        "reason": "4420/aacc/fe460은 반복 투입 총량 확인/전달의 겹치는 계열. 현재 반복1T@90s/다시1T@122s가 explicit1T/issues[]이며 sanitizer 경고 필드 전달도 부재. af1은 같은 제목이지만 action-separated sourceName+suffix 복구 diff이며 별개 숫자 덧셈 fix가 아님. 이번 기준의 소스SHA/validator 결과 일치 재확인.",
+        "resume_condition": "v85 소유자가 봉인 source/schema/adapter/UI/저장 계약과 총량 미확인 정책을 함께 검토. 자동2T 확정·옛manifest/worker patch 통합 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -6222,6 +6431,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "source_bound_recovery",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_source_recovery_policy_pending",
+        "reason": "인접 이름/approximate suffix, stable OCR/unitless amountRawText, qualified amount, merged-caption final action, parenthetical owner, inherited-unit heading의 연결된 원천 복구 계열. 현재 보수적 unknown/conflicting 합성 사례를 확인했지만 정확 수치가 무조건 복원되어야 한다는 근거는 아님.",
+        "resume_condition": "v85 source fidelity 계약과 current schema-v5/verifier-v54에서 각 근거 소유권·모호량 정책을 검증한 뒤 최소 적용. 다른 계보의 동명v85/옛수치 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -6349,6 +6570,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "ocr_selection_budget",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_evidence_budget_policy_pending",
+        "reason": "앞2개 low-confidence selection hint .5/.4 events[]와 f87 text-first representative120중96 선택을 확인. 실제 프레임/모델을 검증하지 않았으며 낮은 신뢰를 숫자 확정으로 승격하지 않음. f87은 repeated-step abstention 제거도 혼재.",
+        "resume_condition": "v85 owner source-first 품질/비용/프레임 선택 정책과 실제 허용 평가 범위를 정한 뒤 검토. 추가 영상/모델 호출0.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -6375,6 +6608,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "source_bound_recovery",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_source_recovery_policy_pending",
+        "reason": "인접 이름/approximate suffix, stable OCR/unitless amountRawText, qualified amount, merged-caption final action, parenthetical owner, inherited-unit heading의 연결된 원천 복구 계열. 현재 보수적 unknown/conflicting 합성 사례를 확인했지만 정확 수치가 무조건 복원되어야 한다는 근거는 아님.",
+        "resume_condition": "v85 source fidelity 계약과 current schema-v5/verifier-v54에서 각 근거 소유권·모호량 정책을 검증한 뒤 최소 적용. 다른 계보의 동명v85/옛수치 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -6476,6 +6721,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "extraction_session_mutation_scope",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "no_current_mutation_caller_boundary_present_defense_policy_pending",
+        "reason": "current import의session table호출은insert/select. old Proxy update/delete/upsert 차단은없지만SQL youtube-extraction scope의session POST만허용하고PATCH목록에session없음/DELETE없음. actualRPC/HTTP경계시험미실행이므로방어완전동등성주장불가.",
+        "resume_condition": "확인된session mutation caller/권한실패또는추가defense-in-depth요구가있을때최신scopechain격리검증. 전역servicefallback이나불필요정책변경금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -6540,6 +6797,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "source_bound_recovery",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_source_recovery_policy_pending",
+        "reason": "인접 이름/approximate suffix, stable OCR/unitless amountRawText, qualified amount, merged-caption final action, parenthetical owner, inherited-unit heading의 연결된 원천 복구 계열. 현재 보수적 unknown/conflicting 합성 사례를 확인했지만 정확 수치가 무조건 복원되어야 한다는 근거는 아님.",
+        "resume_condition": "v85 source fidelity 계약과 current schema-v5/verifier-v54에서 각 근거 소유권·모호량 정책을 검증한 뒤 최소 적용. 다른 계보의 동명v85/옛수치 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -6876,18 +7145,39 @@
       "branches": [
         "fix/youtube-async-extraction-notification-final-v2-superseding-draft"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_distinct_policy_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/youtube-extraction-registration-notification.ts",
         "lib/server/youtube-import.ts"
       ],
-      "review_in_progress": {
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "quick_import_server_ack",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "current_ui_verified_distinct_server_extension_owner_deferred",
+        "reason": "동일 patch3개를 하나로 묶음. 현재 Recipio 성공 시 notify→durable local ack→notification center의 first/cursor/archive owner-scoped 조회→정확 job seen 성공 뒤 제거/실패 재시도 경로 존재.87회귀 중 관련 ACK 회귀 통과. 옛 server bookkeeping 전체 동등성은 아니며 현재9개 수량/완료/영양에 즉시 server helper 필요성 미확인.",
+        "resume_condition": "헤드리스/API 성공까지 server ACK가 필요한 별도 요구 또는 구체 실패 확보 뒤 최신세션RPC로 재설계. 옛 userId-only helper 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
+      },
+      "first_pass_investigation": {
         "reviewed_on": "2026-10-17",
         "master_review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
         "reason": "5dd595d02와 동일 patch. server ACK/current client ACK의 필요성 및 authority 계약 조사 유지.",
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
+        "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "reason": "동일 patch3개를 하나로 묶음. 현재 Recipio 성공 시 notify→durable local ack→notification center의 first/cursor/archive owner-scoped 조회→정확 job seen 성공 뒤 제거/실패 재시도 경로 존재.87회귀 중 관련 ACK 회귀 통과. 옛 server bookkeeping 전체 동등성은 아니며 현재9개 수량/완료/영양에 즉시 server helper 필요성 미확인.",
+        "independent_review": true,
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
       }
@@ -6946,6 +7236,18 @@
         "reason": "저장소 replay gap 조사: 현재 writer caller/scope는 있으나 CREATE SQL 부재. cached schema232에는 write_user_gamification_projection 존재. body/현재운영 동등성 metadata만으로 미입증.",
         "independent_review": true,
         "candidate_code_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "gamification_writer_replay",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "duplicate_source_cached_schema_gap_forward_contract_pending",
+        "reason": "동일 patch2개. current caller/scope와 cached232 writer 존재는 확인했으나 checked-in CREATE SQL 없음. 요리/영양의 즉시 동작 결함으로 확대하지 않음.",
+        "resume_condition": "writer 원 body/authority/owner/ACL/postimage와 repository replay inventory를 소유자와 일치시킨 뒤 forward 검증. cached 존재만으로 현재운영 동등성 주장 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -7180,6 +7482,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "alternative_quantity_options",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_additive_choice_contract_pending",
+        "reason": "alternativeOptions validator→sanitizer→parser→import 전달이 현재 없고 대안 수량은 unknown. 옵션을 합산하거나 임의 하나를 영양에 포함할 근거 없음.",
+        "resume_condition": "worker/schema와 웹/저장 row의 선택 수량 additive 계약을 함께 정한 뒤 검토. 현 미확인 수량 유지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -7391,6 +7705,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "ocr_selection_budget",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_evidence_budget_policy_pending",
+        "reason": "앞2개 low-confidence selection hint .5/.4 events[]와 f87 text-first representative120중96 선택을 확인. 실제 프레임/모델을 검증하지 않았으며 낮은 신뢰를 숫자 확정으로 승격하지 않음. f87은 repeated-step abstention 제거도 혼재.",
+        "resume_condition": "v85 owner source-first 품질/비용/프레임 선택 정책과 실제 허용 평가 범위를 정한 뒤 검토. 추가 영상/모델 호출0.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -7437,6 +7763,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "saved_quantity_provenance",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "quantity_authority_no_immediate_fix_reproduced_other_paths_deferred",
+        "reason": "옛 provenance projection/formatter 하나의 겹치는 계열. 현재 unknown 재진입, confirmed quantity, v4 1/3→2/3/fingerprint 보존을 pure AST로 확인. 옛 추정 출처를 주입해도 사용자 확인량을 미확인으로 덮지 않음. #6 원입력 보조행 복원 근거 없음.3ea의 worker/media 부문은 별도 봉인 owner 범위.",
+        "resume_condition": "현재 saved reader/API→HTTP→실제 SQL 전 구간은 운영 잠금 해제 뒤 확인. provenance 상태가 user 확인권위를 덮는 구체 재현 또는 additive 출처 계약 필요.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -7905,6 +8243,18 @@
         "independent_review": true,
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
+        "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "source_bound_recovery",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_source_recovery_policy_pending",
+        "reason": "인접 이름/approximate suffix, stable OCR/unitless amountRawText, qualified amount, merged-caption final action, parenthetical owner, inherited-unit heading의 연결된 원천 복구 계열. 현재 보수적 unknown/conflicting 합성 사례를 확인했지만 정확 수치가 무조건 복원되어야 한다는 근거는 아님.",
+        "resume_condition": "v85 source fidelity 계약과 current schema-v5/verifier-v54에서 각 근거 소유권·모호량 정책을 검증한 뒤 최소 적용. 다른 계보의 동명v85/옛수치 복원 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
         "operating_actions": 0
       }
     },
@@ -8412,6 +8762,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "ocr_selection_budget",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "sealed_worker_evidence_budget_policy_pending",
+        "reason": "앞2개 low-confidence selection hint .5/.4 events[]와 f87 text-first representative120중96 선택을 확인. 실제 프레임/모델을 검증하지 않았으며 낮은 신뢰를 숫자 확정으로 승격하지 않음. f87은 repeated-step abstention 제거도 혼재.",
+        "resume_condition": "v85 owner source-first 품질/비용/프레임 선택 정책과 실제 허용 평가 범위를 정한 뒤 검토. 추가 영상/모델 호출0.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -8501,6 +8863,18 @@
         "independent_review": true,
         "candidate_code_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "gamification_writer_replay",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "duplicate_source_cached_schema_gap_forward_contract_pending",
+        "reason": "동일 patch2개. current caller/scope와 cached232 writer 존재는 확인했으나 checked-in CREATE SQL 없음. 요리/영양의 즉시 동작 결함으로 확대하지 않음.",
+        "resume_condition": "writer 원 body/authority/owner/ACL/postimage와 repository replay inventory를 소유자와 일치시킨 뒤 forward 검증. cached 존재만으로 현재운영 동등성 주장 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -8575,6 +8949,18 @@
         "verification": "Read-only original/current source comparison; bounded synthetic reproductions where stated. No new model, authenticated HTTP, DB or operating test. Core selected suites67PASS/2 existing stale policy expectations; not all green.",
         "candidate_whole_commit_merged": false,
         "operating_actions": 0
+      },
+      "focused_followup": {
+        "reviewed_on": "2026-10-17",
+        "group": "repeated_quantity_total",
+        "source_review_base": "14464a83c100797474183a398fbeadf87f95bf30",
+        "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+        "disposition": "confirmed_synthetic_gap_sealed_worker_owner_pending",
+        "reason": "4420/aacc/fe460은 반복 투입 총량 확인/전달의 겹치는 계열. 현재 반복1T@90s/다시1T@122s가 explicit1T/issues[]이며 sanitizer 경고 필드 전달도 부재. af1은 같은 제목이지만 action-separated sourceName+suffix 복구 diff이며 별개 숫자 덧셈 fix가 아님. 이번 기준의 소스SHA/validator 결과 일치 재확인.",
+        "resume_condition": "v85 소유자가 봉인 source/schema/adapter/UI/저장 계약과 총량 미확인 정책을 함께 검토. 자동2T 확정·옛manifest/worker patch 통합 금지.",
+        "evidence_index": "cooking-related-runtime-followup-20261017.json",
+        "independent_review": true,
+        "operating_actions": 0
       }
     },
     {
@@ -8647,12 +9033,12 @@
   ],
   "semantic_review_summary": {
     "batch1_reviewed": 5,
-    "runtime_semantic_review_pending": 28,
+    "runtime_semantic_review_pending": 24,
     "historical_all_postimage_presence_is_not_current_semantic_equivalence": true,
     "batch2_c05_owner_deferred": 5,
     "deferred_is_not_completed_or_unnecessary": true,
     "batch3_partial_needed_fix": 1,
-    "reviewed_partial_candidates_still_open": 1,
+    "reviewed_partial_candidates_still_open": 2,
     "batch4_marketing_lab_reviewed": 13,
     "batch5_extraction_prototype_deferred": 6,
     "batch5_extraction_still_pending_with_notes": 4,
@@ -8661,10 +9047,10 @@
     "batch8_historical_guards_present": 7,
     "batch8_forward_still_pending_with_notes": 4,
     "batch9_notification_current_successor": 17,
-    "still_pending_with_investigation_notes": 28,
+    "still_pending_with_investigation_notes": 24,
     "pending_unstarted": 0,
-    "pending_investigating": 28,
-    "needed_runtime_fixes_applied": 2,
+    "pending_investigating": 24,
+    "needed_runtime_fixes_applied": 3,
     "batch10_worker_reviewed": 10,
     "batch11_auth_image_reviewed": 12,
     "batch12_worker_reviewed": 11,
@@ -8685,7 +9071,24 @@
       "candidate_count_is_not_required_fix_count": true,
       "source_refs_and_other_worktrees_preserved": true,
       "operating_actions": 0,
-      "final_document_independent_review": "No findings; counts,28 pending table,58 latest classifications,artifact SHA,links and diff check verified. No new tests or operating/model/DB access."
+      "final_document_independent_review": "No findings; counts,28 pending table,58 latest classifications,artifact SHA,links and diff check verified. No new tests or operating/model/DB access.",
+      "historical_first_pass_snapshot": true
+    },
+    "focused_followup_partition": {
+      "initial_candidates": 133,
+      "baseline_commit": "d55f2056249e1f77a5a6b5f174cfea8ef15b3a5f",
+      "verification_master": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+      "needed_runtime_fixes_applied": 3,
+      "current_runtime_no_remerge": 75,
+      "experiments_preserved": 8,
+      "policy_or_owner_deferred": 23,
+      "pending_investigating": 24,
+      "pending_unstarted": 0,
+      "focused_candidate_count": 28,
+      "focused_groups": 13,
+      "focused_all_reviewed": true,
+      "all_needed_work_completed": false,
+      "operating_actions": 0
     }
   }
 }

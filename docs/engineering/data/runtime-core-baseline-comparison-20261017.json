@@ -1,0 +1,48 @@
+{
+  "schema": "homecook.core-baseline-comparison.v1",
+  "scope": "Two isolated source checkouts, same dependencies and Node; synthetic tests only; no operating/DB/model/credential reads. Existing shared dependency directory read, no installs.",
+  "command": "node node_modules/vitest/vitest.mjs run tests/youtube-async-extraction-backend.test.ts tests/youtube-async-extraction-jobs.backend.test.ts tests/youtube-extraction-worker.test.ts tests/youtube-description-parser.test.ts tests/ingredient-search-formatting.test.ts",
+  "runs": [
+    {
+      "checkout": "baseline",
+      "commit": "d55f2056249e1f77a5a6b5f174cfea8ef15b3a5f",
+      "exit_code": 1,
+      "passed_tests": 67,
+      "failed_tests": 2,
+      "passed_files": 3,
+      "failed_files": 2,
+      "log_sha256": "0cc79205f56bfbc6dcbef6ae7af213cc3635fc6435e47be87de19d911bba92cd",
+      "failure_block_sha256": "a0e83af4d4f905f323dbae7d9c1f450389d885695ca81bd5af3566e97a261317"
+    },
+    {
+      "checkout": "current",
+      "commit": "4446d01fc372dcdbcd30704723f1269d4c87104f",
+      "exit_code": 1,
+      "passed_tests": 67,
+      "failed_tests": 2,
+      "passed_files": 3,
+      "failed_files": 2,
+      "log_sha256": "920ace5b40c03ad217ad0dfef2a5bb13a6c8d88d6f1c8579dbfd7ee821ce7467",
+      "failure_block_sha256": "a0e83af4d4f905f323dbae7d9c1f450389d885695ca81bd5af3566e97a261317"
+    }
+  ],
+  "same_failure_block": true,
+  "failure_block": "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  tests/youtube-async-extraction-backend.test.ts > YTASYNC-CONTRACT/API > materializes the upgraded policy and purpose-bound fingerprint\nAssertionError: expected { policyKey: 'primary', …(9) } to match object { policyKey: 'primary', …(5) }\n(21 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  {\n    \"enabled\": false,\n    \"extractorMode\": \"i031_codex_vision\",\n    \"fingerprintKeyVersion\": \"1\",\n-   \"pipelineIdentity\": \"85fbf4877e6f2894841bfd160f2d9a63894eb709fd63e897483efe71fd4016cd\",\n+   \"pipelineIdentity\": \"6dd494410f160937b550bc23fb355d6669b3abe7805c00eabd40fed1e799c618\",\n    \"policyKey\": \"primary\",\n    \"policyVersion\": 3,\n  }\n\n ❯ tests/youtube-async-extraction-backend.test.ts:61:34\n     59|\n     60|   it(\"materializes the upgraded policy and purpose-bound fingerprint\",…\n     61|     expect(YOUTUBE_ASYNC_POLICY).toMatchObject({\n       |                                  ^\n     62|       policyKey: \"primary\",\n     63|       policyVersion: 3,\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  tests/youtube-async-extraction-jobs.backend.test.ts > YTASYNC-API exact job contract > uses refreshed user-session authority and the immutable policy snapshot\nAssertionError: expected \"vi.fn()\" to be called with arguments: [ …(2) ]\n\nReceived:\n\n  1st vi.fn() call:\n\n@@ -1,12 +1,12 @@\n  [\n    \"enqueue_youtube_extraction_job\",\n    {\n-     \"current_digest\": StringMatching /^[0-9a-f]{64}$/u,\n+     \"current_digest\": \"93c75d8caac38840f4e74d7862f9946c776f4188ee685e1826607a0bb395a468\",\n      \"current_key_version\": \"1\",\n      \"expected_policy_snapshot_digest\": \"9307203ad29f0048655a62e6d2f430ef977dad75405ce606fbf68319a7a36d51\",\n-     \"expected_policy_version\": 2,\n+     \"expected_policy_version\": 3,\n      \"previous_digest\": null,\n      \"previous_key_version\": null,\n      \"submission_mode\": \"background_notify\",\n      \"video_id\": \"abc123DEF45\",\n    },\n\n\nNumber of calls: 1\n\n ❯ tests/youtube-async-extraction-jobs.backend.test.ts:73:22\n     71|\n     72|     expect(response.status).toBe(202);\n     73|     expect(deps.rpc).toHaveBeenCalledWith(\"enqueue_youtube_extraction_…\n       |                      ^\n     74|       video_id: \"abc123DEF45\",\n     75|       expected_policy_version: 2,\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯",
+  "changed_product_test_paths": [
+    "app/api/v1/recipe-books/[book_id]/image/route.ts",
+    "app/api/v1/recipe-books/route.ts",
+    "app/api/v1/recipes/[id]/save/route.ts",
+    "lib/recipebook-cover.ts",
+    "lib/server/recipe-book-image-read.ts",
+    "tests/recipe-book-image-route.test.ts",
+    "tests/recipe-books-route.test.ts",
+    "tests/recipe-save-route.test.ts"
+  ],
+  "result": "The two selected failures reproduce identically before the save/cover fixes and on current master. No additional selected failure observed. This does not assert all tests or operating readiness.",
+  "policy_and_fingerprint_modified": false,
+  "operating_actions": 0,
+  "earlier_current_master_run": {
+    "commit": "14464a83c100797474183a398fbeadf87f95bf30",
+    "same67PASS2FAIL": true
+  }
+}
