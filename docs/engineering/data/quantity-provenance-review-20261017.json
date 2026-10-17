@@ -1,0 +1,602 @@
+{
+  "kind": "local-pure-source-extraction-review",
+  "head": "14464a83c",
+  "runtime": "v22.19.0",
+  "command": "/Users/cwj/.nvm/versions/node/v22.19.0/bin/node /tmp/homecook-quantity-provenance-review-20261017.mjs",
+  "restrictions": {
+    "repositoryWrites": 0,
+    "operatingAccess": 0,
+    "databaseAccess": 0,
+    "models": 0,
+    "network": 0
+  },
+  "limits": [
+    "Functions/callbacks are AST-extracted from current source and transpiled, not full React/HTTP modules.",
+    "Synthetic identities and source evidence only.",
+    "SQL preservation/projection, RPC authorization, nutrition/weight calculation and completion persistence are static review, not executed by this artifact.",
+    "The historical ingredient_quantity_sources field is intentionally injected to show the current reopen mapper ignores it; this does not assert the live response contains it."
+  ],
+  "sourceFiles": [
+    {
+      "file": "lib/server/youtube-import.ts",
+      "sha256": "e8a1ab649d743d72310c8adb3122c4bb23b1a52502db4430aa8c16a989a850b7"
+    },
+    {
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "sha256": "9dc48468c1536d93108e11d9294ec08c5912745f33cb500f43add532d0ab7918"
+    },
+    {
+      "file": "lib/quantity-input.ts",
+      "sha256": "12d7133738e8993601768d889059bd7496a22b2bced00ca4df18f2de7718faae"
+    },
+    {
+      "file": "lib/youtube-saved-quantity-input.ts",
+      "sha256": "c5a5444a5358443e10f24f9e1f674b75261942c1134ddfd8e8455a95d82fe2ca"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "sha256": "1da3923050c8968a79683c2bf5999c9d55053fb8d82302f95b1c4acab0d6160e"
+    },
+    {
+      "file": "lib/server/cooking-execution-quantities.ts",
+      "sha256": "958e54d8803917e701c70ea26cfaaf9f42291f9ae4193173a4a1f738d150bb9b"
+    },
+    {
+      "file": "lib/server/youtube-public-recipe-nutrition.ts",
+      "sha256": "1b6afe266821f344cdfb99179ed0f7d5561cf632a0a5be9eb177acc51d34b00a"
+    }
+  ],
+  "extracted": [
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "normalizeNullableString",
+      "line": 1416,
+      "sha256": "d8847d5f57d5c3e2e2598e41a34bf7cb9ec1281cf36c30d6f5096be483af2f20"
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "normalizeParsedIngredientName",
+      "line": 2674,
+      "sha256": "eff94dd3f18307cb389d3309f336311b6609246608c4e7e2f06621f374df9470"
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "parseRecipeAmount",
+      "line": 2654,
+      "sha256": "3e6dd786fba4ac0cb09ee6a63262dae21479953551297ed72eca15ac6de01333"
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "normalizeLlmAmount",
+      "line": 5723,
+      "sha256": "319d06c675c6e717861455be53c87b5a465655b2f50e02437c58ea8927a9f240"
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "normalizeI031QuantityEvidenceRefs",
+      "line": 9115,
+      "sha256": "f1dbbd93eb634e076a7060c0c98ea09f02e6b9df07e503af191a5fc1228731eb"
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "i031QuantitySource",
+      "line": 9130,
+      "sha256": "d08dcb814ebc9b01da3380da54f199087cbb9ba8f960bb49a018bada5d50dada"
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "isConsistentI031QuantityMetadata",
+      "line": 9137,
+      "sha256": "c703e8a7c3017417f6b0f552a33f834c97372c382deb3831451eacfa15415810"
+    },
+    {
+      "file": "lib/server/youtube-import.ts",
+      "name": "buildI031ParsedRecipe",
+      "line": 9164,
+      "sha256": "883d7ee9f29531b19ffb5dceb61599e9144376893279138280f73c7fc242416d"
+    },
+    {
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "name": "isRecord",
+      "line": 40,
+      "sha256": "63fadc97fdd5f2a8f17fe42b0070ef8f799992c533d6890a48556e6d29d0ef5b"
+    },
+    {
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "name": "hasExactKeys",
+      "line": 44,
+      "sha256": "4bb97d58b9b140142aed7551c1db413fb9402b1efc6538ec4e6a31706e1a6396"
+    },
+    {
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "name": "isUuid",
+      "line": 51,
+      "sha256": "089c7fe63718916e3feaf7358eccd28caae6b1371c24485900bd93df5af7730a"
+    },
+    {
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "name": "isNullableString",
+      "line": 55,
+      "sha256": "fda85deaaabd3719ed6dfa8d49b63442a9099a9ae3f9877cd428489f5cad1c6f"
+    },
+    {
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "name": "parseIngredient",
+      "line": 59,
+      "sha256": "268245cd5185ae3442d64b8d54052ea68e72ccae206abd72437267e2ff63d95b"
+    },
+    {
+      "file": "lib/quantity-input.ts",
+      "name": "gcd",
+      "line": 10,
+      "sha256": "693aae9b4e9117aa07e48ef5d679329cac70aaf5c2d680e02b2e2755c7441f00"
+    },
+    {
+      "file": "lib/quantity-input.ts",
+      "name": "parseQuantityInput",
+      "line": 15,
+      "sha256": "aaedb5ed47fc5ecb712eb6b570ea90801ec4796287383462fb82fbdcf0d565a1"
+    },
+    {
+      "file": "lib/quantity-input.ts",
+      "name": "record",
+      "line": 36,
+      "sha256": "64e8ca6d8c3674afe89272fc093ae1bb88811c389689ef379120d7d9b6489a42"
+    },
+    {
+      "file": "lib/quantity-input.ts",
+      "name": "exact",
+      "line": 39,
+      "sha256": "a2b681bb4fd20bc574e7f460d626263ef5e88b66b925bbfe17fdbdfbc4dbd9ce"
+    },
+    {
+      "file": "lib/quantity-input.ts",
+      "name": "isQuantityInputDraft",
+      "line": 43,
+      "sha256": "200c8f0c5353ef5b099183be092654954fd3e57b7d5cdf5d880914159d21c450"
+    },
+    {
+      "file": "lib/quantity-input.ts",
+      "name": "isQuantityInputSnapshot",
+      "line": 60,
+      "sha256": "1af3813704cdcafaefbcdabd643d3444d568e3244ade05a3e7bfb5d6ebe33cf1"
+    },
+    {
+      "file": "lib/youtube-saved-quantity-input.ts",
+      "name": "savedQuantityText",
+      "line": 6,
+      "sha256": "f7e67f8d484e3d4f2a62e5ad3230f1d57aee26ec0e7e2eb52add33a23a6046df"
+    },
+    {
+      "file": "lib/youtube-saved-quantity-input.ts",
+      "name": "savedQuantitySnapshot",
+      "line": 11,
+      "sha256": "463c56094993b565329ddbb46fa77a81f220a280ef3bd17e5b9f8ffe23e807ed"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "name": "getIngredientName",
+      "line": 393,
+      "sha256": "324f9844b9f274d497fc3a04a1e2d24aa22f1d67ac09886998f7ad9267c7119a"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "name": "getQuantityEditPatch",
+      "line": 418,
+      "sha256": "a5e79c79cafc7caecea54feff5154c958a1b2b97514ec5f8a26680c5fa88f9be"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "name": "formatIngredientDisplayText",
+      "line": 199,
+      "sha256": "a7b36a71f07fc38fdff0b02d5c73422d4df21f9f65201f1e286f166c039316fc"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "name": "normalizeIngredient",
+      "line": 213,
+      "sha256": "924bb13dbc630c9368bf62e6cbab75a77a5f695fd41370f84e42cbd2c41d3b09"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "name": "applyIngredientQuantityPatch",
+      "line": 231,
+      "sha256": "9e72a646d3cfb626c6b78d536c39dafbfce7cfddca4766a7453e50fd602f2307"
+    },
+    {
+      "file": "lib/server/cooking-execution-quantities.ts",
+      "name": "parseExecutionQuantityChanges",
+      "line": 13,
+      "sha256": "4567b001b606429fb0e2b23b08d67b7efae25418c23521c902f8711c3ec09834"
+    },
+    {
+      "file": "lib/server/cooking-execution-quantities.ts",
+      "name": "applyExecutionQuantityChanges",
+      "line": 31,
+      "sha256": "5871579b15cf5614769390f7d500e2e8c6656b89fb39fd3a78a55e461236e39d"
+    },
+    {
+      "file": "lib/server/youtube-public-recipe-nutrition.ts",
+      "name": "hasExactFrozenQuantity",
+      "line": 10,
+      "sha256": "cf9da06089166e76a31c3bba14e5937863ecc4c443321e5fc2ce682a49b8459e"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "name": "saved content reopen mapper",
+      "line": 2655,
+      "sha256": "fd05ed558b16ffc5fdd65c779e42998167bbcf150bd6990e8a6f6e687d53ddd2"
+    },
+    {
+      "file": "components/recipe/youtube-import-screen.tsx",
+      "name": "saved content payload mapper",
+      "line": 3515,
+      "sha256": "7a3277345746aef06c365da84e703563b8230bb4bcdc8a930f58b0387a2e11dd"
+    }
+  ],
+  "count": 7,
+  "cases": [
+    {
+      "name": "optional numeric source flag is lost at current parser",
+      "input": {
+        "name": "합성 재료",
+        "amount": "10",
+        "unit": "g",
+        "optional": true,
+        "quantityState": "explicit",
+        "amountBasis": "stated",
+        "evidenceRefs": [
+          {
+            "source_method": "description",
+            "source_provider": "synthetic",
+            "snippet": "합성 재료 10g (선택)"
+          }
+        ]
+      },
+      "output": {
+        "name": "합성 재료",
+        "amount": 10,
+        "unit": "g",
+        "ingredientType": "QUANT",
+        "displayText": "합성 재료 10g",
+        "rawText": "합성 재료 10g",
+        "scalable": true,
+        "confidence": 0.9,
+        "quantitySource": "text_explicit",
+        "quantityConfidence": 0.9,
+        "quantityRawText": "합성 재료 10g (선택)",
+        "quantityEvidenceRefs": [
+          {
+            "source_method": "description",
+            "source_provider": "synthetic",
+            "line_index": null,
+            "start_ms": null,
+            "end_ms": null,
+            "frame_ts_ms": null,
+            "snippet": "합성 재료 10g (선택)",
+            "locator_hash": null
+          }
+        ],
+        "quantityReviewRequired": false,
+        "quantityRequiresResolvedIngredient": false
+      },
+      "passed": true
+    },
+    {
+      "name": "optional is not accepted by current saved row contract",
+      "input": {
+        "row_id": "00000000-0000-4000-8000-000000000001",
+        "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+        "standard_name": "합성 재료",
+        "quantity_mode": "quantity",
+        "amount": 25,
+        "unit": "g",
+        "display_text": "합성 재료 약 25g",
+        "component_label": null,
+        "optional": true
+      },
+      "output": {
+        "fields": [
+          {
+            "field": "content.ingredients[0]",
+            "reason": "invalid_shape"
+          }
+        ]
+      },
+      "passed": true
+    },
+    {
+      "name": "legacy unknown is not promoted after saved reopen",
+      "input": {
+        "row_id": "00000000-0000-4000-8000-000000000001",
+        "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+        "standard_name": "합성 재료",
+        "quantity_mode": "unknown",
+        "amount": 25,
+        "unit": "g",
+        "display_text": "합성 재료 약 25g",
+        "component_label": null
+      },
+      "output": {
+        "reopened": {
+          "tempId": "00000000-0000-4000-8000-000000000001",
+          "draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "ingredient_id": "",
+          "standard_name": "합성 재료",
+          "amount": 25,
+          "unit": "g",
+          "ingredient_type": "QUANT",
+          "display_text": "합성 재료 약 25g",
+          "component_label": null,
+          "sort_order": 1,
+          "scalable": false,
+          "confidence": null,
+          "resolution_status": "unresolved",
+          "candidates": [],
+          "raw_text": "합성 재료",
+          "quantity_review_required": true,
+          "quantity_user_confirmed": false
+        },
+        "payload": {
+          "row_id": "00000000-0000-4000-8000-000000000001",
+          "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "standard_name": "합성 재료",
+          "quantity_mode": "unknown",
+          "amount": 25,
+          "unit": "g",
+          "display_text": "합성 재료 약 25g",
+          "component_label": null
+        }
+      },
+      "passed": true
+    },
+    {
+      "name": "historical inferred provenance does not revoke current user quantity",
+      "input": {
+        "row_id": "00000000-0000-4000-8000-000000000001",
+        "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+        "standard_name": "합성 재료",
+        "quantity_mode": "quantity",
+        "amount": 25,
+        "unit": "g",
+        "display_text": "합성 재료 약 25g",
+        "component_label": null
+      },
+      "output": {
+        "reopened": {
+          "tempId": "00000000-0000-4000-8000-000000000001",
+          "draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "ingredient_id": "",
+          "standard_name": "합성 재료",
+          "amount": 25,
+          "unit": "g",
+          "ingredient_type": "QUANT",
+          "display_text": "합성 재료 약 25g",
+          "component_label": null,
+          "sort_order": 1,
+          "scalable": true,
+          "confidence": null,
+          "resolution_status": "unresolved",
+          "candidates": [],
+          "raw_text": "합성 재료",
+          "quantity_review_required": false,
+          "quantity_user_confirmed": true
+        },
+        "payload": {
+          "row_id": "00000000-0000-4000-8000-000000000001",
+          "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "standard_name": "합성 재료",
+          "quantity_mode": "quantity",
+          "amount": 25,
+          "unit": "g",
+          "display_text": "합성 재료 약 25g",
+          "component_label": null
+        }
+      },
+      "passed": true
+    },
+    {
+      "name": "current v4 raw fraction and user edit payload survive without historical projection",
+      "input": {
+        "row_id": "00000000-0000-4000-8000-000000000001",
+        "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+        "standard_name": "합성 재료",
+        "quantity_mode": "quantity",
+        "amount": 0.3333333333333333,
+        "unit": "g",
+        "display_text": "합성 재료 1/3g",
+        "component_label": null,
+        "quantity_input": {
+          "schema_version": "quantity-v4",
+          "raw_value": "1/3",
+          "raw_unit": "g",
+          "numerator": "1",
+          "denominator": "3",
+          "normalized": {
+            "amount": 0.3333333333333333,
+            "unit": "g"
+          },
+          "quality": "direct",
+          "reason": null,
+          "evidence_ids": [
+            "synthetic-evidence"
+          ],
+          "source_versions": [
+            "synthetic-version"
+          ],
+          "batch_basis": null
+        },
+        "quantity_context_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "output": {
+        "reopened": {
+          "tempId": "00000000-0000-4000-8000-000000000001",
+          "draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "ingredient_id": "",
+          "standard_name": "합성 재료",
+          "amount": 0.3333333333333333,
+          "unit": "g",
+          "ingredient_type": "QUANT",
+          "display_text": "합성 재료 1/3g",
+          "component_label": null,
+          "sort_order": 1,
+          "scalable": true,
+          "confidence": null,
+          "resolution_status": "unresolved",
+          "candidates": [],
+          "raw_text": "합성 재료",
+          "quantity_review_required": false,
+          "quantity_user_confirmed": true,
+          "savedQuantity": {
+            "text": "1/3",
+            "input": {
+              "schema_version": "quantity-v4",
+              "raw_value": "1/3",
+              "raw_unit": "g",
+              "numerator": "1",
+              "denominator": "3",
+              "normalized": {
+                "amount": 0.3333333333333333,
+                "unit": "g"
+              },
+              "quality": "direct",
+              "reason": null,
+              "evidence_ids": [
+                "synthetic-evidence"
+              ],
+              "source_versions": [
+                "synthetic-version"
+              ],
+              "batch_basis": null
+            },
+            "context": {
+              "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "options": null
+            },
+            "storedFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "enabled": true,
+            "changed": false,
+            "invalid": false,
+            "error": null
+          }
+        },
+        "unchangedPayload": {
+          "row_id": "00000000-0000-4000-8000-000000000001",
+          "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "standard_name": "합성 재료",
+          "quantity_mode": "quantity",
+          "amount": 0.3333333333333333,
+          "unit": "g",
+          "display_text": "합성 재료 1/3g",
+          "component_label": null
+        },
+        "editedPayload": {
+          "row_id": "00000000-0000-4000-8000-000000000001",
+          "source_draft_ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "standard_name": "합성 재료",
+          "quantity_mode": "quantity",
+          "amount": 0.6666666666666666,
+          "unit": "g",
+          "display_text": "합성 재료 2/3g",
+          "component_label": null,
+          "quantity_input": {
+            "schema_version": "quantity-v4",
+            "raw_value": "2/3",
+            "raw_unit": "g",
+            "expected_context_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "name": "run edit removes stale proof and scaling, preserves original and identity, zero is outside contract",
+      "input": {
+        "originals": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "ingredient_id": "00000000-0000-4000-8000-000000000002",
+            "amount": 100,
+            "unit": "g",
+            "ingredient_type": "QUANT",
+            "scalable": true,
+            "display_text": "합성 재료 100g",
+            "quantity_input": {
+              "schema_version": "quantity-v4",
+              "raw_value": "100",
+              "raw_unit": "g",
+              "numerator": "100",
+              "denominator": "3",
+              "normalized": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "quality": "direct",
+              "reason": null,
+              "evidence_ids": [
+                "synthetic-evidence"
+              ],
+              "source_versions": [
+                "synthetic-version"
+              ],
+              "batch_basis": null
+            }
+          }
+        ],
+        "changes": {
+          "expected_revision": 0,
+          "changes": [
+            {
+              "row_index": 0,
+              "amount": 190,
+              "unit": "g"
+            }
+          ]
+        }
+      },
+      "output": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "ingredient_id": "00000000-0000-4000-8000-000000000002",
+          "amount": 190,
+          "unit": "g",
+          "ingredient_type": "QUANT",
+          "scalable": false,
+          "display_text": null
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "public fallback distinguishes exact from estimated/count frozen proof",
+      "input": {
+        "input": {
+          "schema_version": "quantity-v4",
+          "raw_value": "1/3",
+          "raw_unit": "g",
+          "numerator": "1",
+          "denominator": "3",
+          "normalized": {
+            "amount": 0.3333333333333333,
+            "unit": "g"
+          },
+          "quality": "direct",
+          "reason": null,
+          "evidence_ids": [
+            "synthetic-evidence"
+          ],
+          "source_versions": [
+            "synthetic-version"
+          ],
+          "batch_basis": null
+        }
+      },
+      "output": {
+        "exact": true,
+        "estimated": false,
+        "count": false
+      },
+      "passed": true
+    }
+  ]
+}
