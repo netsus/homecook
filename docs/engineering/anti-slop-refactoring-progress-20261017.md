@@ -255,9 +255,10 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 공통 bootstrap의 native3표와 각1표 native.from 교집합안은 보호 meals/route.ts:762의 TS2589 1건으로 미채택했다. users만 native로 바꾸고 ensurePublicUserRow/readUserRow를1표로 좁힌 안도 cooking/sessions/route.ts:144 TS2589 1건이다. 동일 const 객체의 원 factory 인수를 전달해도 그1건이 남았다. 제품/보호 파일 변경0이며, 이 실패를 해결로 세지 않는다.
 - 위 bootstrap 조사 선언에서 interface Row를 섞어 생긴 never 오류와 SDK Views overload를 잘못 특수화한 TS2344는 probe 자체 오류로 정정·분리했다. 실제 DB의 social_id/settings_json NOT NULL과 JSONB 전체 타입은 기존 소비 계약과 구별한다. 이 특정 native 교체안의 실패는 다른 정확 계약안이나 전체26개 bootstrap 관련 후속 작업의 불가능 증거가 아니다.
 
-## 147 checkpoint: 확인 결과와 조율할 다음 경계
+## [#1779](https://github.com/netsus/homecook/pull/1779) 147 checkpoint: 확인 결과와 조율할 다음 경계
 
 - 기준2cd4aab93에서 통합20 suite190 PASS·전체 typecheck·verify:anti-slop(규칙fixture/도구type/baseline147·신규0)·diff PASS. 이번6제품PR의 변경TS19파일을 포함한24파일 lint도 PASS했다. 추가5개 test는 별도 작업 변경이며 이 작업 성과로 귀속하지 않는다.
+- 독립 통합검토도 동일190건·전체typecheck·diff exit0을 확인했다. 아래127건의 실패 묶음과 실험WT69건은 그 독립 실행에 포함하지 않았으며, Anti Slop은 부모 결과와 구분한다.
 - 같은 기준에서 넓은 기존5 suite127건은117 PASS/같은10 FAIL(exit1)이다. 성공190건과 별도 집계하며 보호 검사나 기대값을 완화하지 않았다. 아래 기존 실패 원인·1745/1749/444·49원본 미확인은 그대로다.
 
 | 계약 후보29의 현재 구성 | 개수 | 다음 판단에 필요한 근거 |
