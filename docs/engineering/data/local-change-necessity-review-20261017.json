@@ -496,14 +496,29 @@
         "codex/mumeok-weight-joined",
         "codex/mumeok-weight-source-binding"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_c05_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/weight-improvement-source-reader.ts",
         "lib/server/weight-improvement-source-repository.ts",
         "lib/supabase/server.ts",
         "supabase/migrations/20261014231000_weight_improvement_source_read.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "de177e14ca878a24f94db5a1741c1e7dff77394e",
+        "reason": "소유자·세대·현재 동의와 원 완료/실측 receipt를 결속하는 C05 source-read 준비. 현재9개 요구와 별도이며 소유자 통합 검토 보류.",
+        "independent_review": true,
+        "verification": "Read-only source and branch provenance review only; no new tests, merge of candidate code, or activation. Historical test claims are not fresh evidence.",
+        "current_replacement_confirmed": false,
+        "candidate_code_merged": false,
+        "operating_actions": 0,
+        "owner_prs": [
+          1681,
+          1707
+        ]
+      }
     },
     {
       "sha": "13268132468d2595e996ce7d32befdf3eec75c18",
@@ -1840,12 +1855,27 @@
         "codex/mumeok-weight-participation",
         "codex/mumeok-weight-source-binding"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_c05_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/weight-improvement-sample-gate.ts",
         "lib/server/weight-improvement-source-reader.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "de177e14ca878a24f94db5a1741c1e7dff77394e",
+        "reason": "정책/동의 불완전 시 원천 조회 전에 차단하는 기본 OFF C05 gate. 현재 기능의 후속 대체나 불필요 판정이 아님.",
+        "independent_review": true,
+        "verification": "Read-only source and branch provenance review only; no new tests, merge of candidate code, or activation. Historical test claims are not fresh evidence.",
+        "current_replacement_confirmed": false,
+        "candidate_code_merged": false,
+        "operating_actions": 0,
+        "owner_prs": [
+          1681,
+          1707
+        ]
+      }
     },
     {
       "sha": "3bc4c24ffac0ec2bd6e5cf25937d2e7b4a69a48e",
@@ -5395,7 +5425,7 @@
         "codex/mumeok-weight-participation",
         "codex/mumeok-weight-source-binding"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_c05_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/users/me/weight-improvement-participation/route.ts",
@@ -5411,7 +5441,22 @@
         "lib/supabase/server.ts",
         "lib/weight-improvement-participation.ts",
         "supabase/migrations/20261014230000_weight_improvement_participation.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "de177e14ca878a24f94db5a1741c1e7dff77394e",
+        "reason": "계정·세대별 선택 참여 UI/API 및 SQL 준비. UI는 QA 전용이고 기본 참여 OFF/collection CHECK(false). 정책·수명주기와 소유자 검토 보류.",
+        "independent_review": true,
+        "verification": "Read-only source and branch provenance review only; no new tests, merge of candidate code, or activation. Historical test claims are not fresh evidence.",
+        "current_replacement_confirmed": false,
+        "candidate_code_merged": false,
+        "operating_actions": 0,
+        "owner_prs": [
+          1681,
+          1707
+        ]
+      }
     },
     {
       "sha": "c118c291f5176a93d71aad51903564fadedec5dc",
@@ -6093,11 +6138,26 @@
         "codex/mumeok-weight-participation",
         "codex/mumeok-weight-source-binding"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_c05_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "lib/server/weight-improvement-sample-gate.ts"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "de177e14ca878a24f94db5a1741c1e7dff77394e",
+        "reason": "private lineage와 prospective model features를 분리한 메모리 초안. collection/storage 권한은 항상 false이며 별도 C05 준비로 보류.",
+        "independent_review": true,
+        "verification": "Read-only source and branch provenance review only; no new tests, merge of candidate code, or activation. Historical test claims are not fresh evidence.",
+        "current_replacement_confirmed": false,
+        "candidate_code_merged": false,
+        "operating_actions": 0,
+        "owner_prs": [
+          1681,
+          1707
+        ]
+      }
     },
     {
       "sha": "d9d23fb04abbd0845056ea5f655e935725f7f98f",
@@ -6118,7 +6178,7 @@
       "branches": [
         "codex/mumeok-weight-participation-integration"
       ],
-      "status": "runtime_semantic_review_pending",
+      "status": "reviewed_c05_owner_deferred",
       "same_subject_master_commits": [],
       "unmatched_runtime_paths": [
         "app/api/v1/users/me/weight-improvement-participation/route.ts",
@@ -6137,7 +6197,22 @@
         "lib/weight-improvement-participation.ts",
         "supabase/migrations/20261014230000_weight_improvement_participation.sql",
         "supabase/migrations/20261014231000_weight_improvement_source_read.sql"
-      ]
+      ],
+      "initial_status": "runtime_semantic_review_pending",
+      "semantic_review": {
+        "reviewed_on": "2026-10-17",
+        "master_review_base": "de177e14ca878a24f94db5a1741c1e7dff77394e",
+        "reason": "개인 실측/확인 취소 및 기존 scope 체인을 보존하는 C05 통합 후보. 보유기간·수집·삭제/복원·모델 수명주기 미완료. 최신 authority/scope와 향후 재대조 필요.",
+        "independent_review": true,
+        "verification": "Read-only source and branch provenance review only; no new tests, merge of candidate code, or activation. Historical test claims are not fresh evidence.",
+        "current_replacement_confirmed": false,
+        "candidate_code_merged": false,
+        "operating_actions": 0,
+        "owner_prs": [
+          1681,
+          1707
+        ]
+      }
     },
     {
       "sha": "db0b838a7e4d568c4e11a6ff9c5117fef4c8d476",
@@ -7243,7 +7318,9 @@
   ],
   "semantic_review_summary": {
     "batch1_reviewed": 5,
-    "runtime_semantic_review_pending": 138,
-    "historical_all_postimage_presence_is_not_current_semantic_equivalence": true
+    "runtime_semantic_review_pending": 133,
+    "historical_all_postimage_presence_is_not_current_semantic_equivalence": true,
+    "batch2_c05_owner_deferred": 5,
+    "deferred_is_not_completed_or_unnecessary": true
   }
 }
