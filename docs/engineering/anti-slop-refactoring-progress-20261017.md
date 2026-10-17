@@ -4,8 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb`, 실제 진단 **149**, baseline **207**, 신규 **0**.
-- 후속 재료 검색 계약은 로컬 **149→147/신규0**을 확인했다. 단순 삭제 실패를 전체 종료 사유로 보지 않고 실제 query/행 계약과 shape 회귀로 검증한다.
+- 마지막 확정 master: `2cd4aab93d5b9f527ce1a8b8de6d434136fc987b`, 실제 진단 **147**, baseline **207**, 신규 **0**.
+- 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
 - 과거 PR 본문과 merge의 first-parent 이력으로 확인한 숫자만 기록한다. `?`는 미확인, `유지`는 진단 감소 없이 실질 코드만 정리한 경우다. 과거 표의 수치는 당시 실제 진단이며 현재 checker 실행 결과를 대신하지 않는다.
@@ -95,6 +95,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 | [#1775](https://github.com/netsus/homecook/pull/1775) | 카드 저장상태 native 조인·선택행 계약 | 153→152 | `2d8103c8bc456f9263909c761ad863ee83b861db` |
 | [#1776](https://github.com/netsus/homecook/pull/1776) | 검색 목록 native 선택행·RPC 계약 | 152→151 | `224298c619c0495afcd8dd41a9eaae17036ab239` |
 | [#1777](https://github.com/netsus/homecook/pull/1777) | 진행/활동 writer의 실제 projection capability 계약 | 151→149 | `81563d1f7b7e71a9abddbb2ea8a1ab6009f249cb` |
+| [#1778](https://github.com/netsus/homecook/pull/1778) | 재료 검색 카탈로그/레시피 native 소비 계약 | 149→147 | `2cd4aab93d5b9f527ce1a8b8de6d434136fc987b` |
 
 최근 검증: #1760 관련21, #1761 관련53, #1762 관련35 각각 PASS·typecheck·변경 lint·독립 리뷰 APPROVE. `be8101c9a` 통합 10 suite /109 PASS. #1761/#1762는 emitted JS byte-identical도 독립 확인했다. 위 표가 모든 전체 테스트·운영 검증의 성공을 뜻하지 않는다.
 
@@ -176,7 +177,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 
 ## 후속 재개: 실제 계약 보강과 현재 범주
 
-재개 당시 master81f0432be의 잔여157은 계약 보강39+보호99(추출기52/보안24/플래너23)+기존 보류5(명시4/like기술1)+병행조율1+유지13(prototype8/근거없음5)이다. 해결6은 이157에 합산하지 않는다. native owner1·수동 호출3·카드1·검색1·진행/활동2의 머지와 재료 검색2의 로컬 해결을 반영한 현재 후보는 다음과 같다.
+재개 당시 master81f0432be의 잔여157은 계약 보강39+보호99(추출기52/보안24/플래너23)+기존 보류5(명시4/like기술1)+병행조율1+유지13(prototype8/근거없음5)이다. 해결6은 이157에 합산하지 않는다. native owner1·수동 호출3·카드1·검색1·진행/활동2·재료 검색2의 실제 머지를 반영한 현재 후보는 다음과 같다.
 
 | 상태 | 건수 | 처리 |
 | --- | --- | --- |
@@ -238,7 +239,7 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 리뷰 APPROVE: 동일58건·전체typecheck·변경8파일 lint·diff·제품3파일JS동일을 직접 확인했다. typed fixture의 성공 쓰기/실패 흡수/중복 경로와 core read 보존을 검토했으며 SDK/외부 경계 한계도 그대로다. Anti Slop은 부모 실행 결과와 구분한다.
 - 보호99·기존 보류5·조율1·유지13, 기존10실패·49원본미확인·1745/1749/444는 유지한다. 실제 DB 쓰기·grant/RLS·인증설정·제품정책·운영배포·전체 build/화면/실DB 검증0이다.
 
-### 현재 배치: [#1778](https://github.com/netsus/homecook/pull/1778) 재료 검색의 카탈로그/레시피 native 소비 계약
+### 최근 반영: [#1778](https://github.com/netsus/homecook/pull/1778) 재료 검색의 카탈로그/레시피 native 소비 계약
 
 - 원본ID는 `app/api/v1/recipes/route.ts::anti-slop(no-chained-type-assertions)::618b2074248421401bfdc85e35f73bdf1ff1b63afb3393caf1bd1612c5090a72#1` (checkpoint1749), 같은 파일 hash `598a39d3f5bf77409ff13897fb9870725912ac3348c52e72eb2afa3339aadb32#1` (checkpoint1750)이다.
 - 실제 카탈로그 ingredients/ingredient_synonyms·alias view와 recipe_ingredients/선택 RPC 기능을 분리한다. FK·category_code nullable·alias view5열·저장 ingredient_id nullable·RPC link의 nonnull ID를 기존 migration과 대조했다. 잘못된 양쪽 동일 client 요구를 제거하고 실제 factory를 직접 전달하며 fixture의 기존 연쇄 단언도 제거했다.
@@ -254,11 +255,30 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 공통 bootstrap의 native3표와 각1표 native.from 교집합안은 보호 meals/route.ts:762의 TS2589 1건으로 미채택했다. users만 native로 바꾸고 ensurePublicUserRow/readUserRow를1표로 좁힌 안도 cooking/sessions/route.ts:144 TS2589 1건이다. 동일 const 객체의 원 factory 인수를 전달해도 그1건이 남았다. 제품/보호 파일 변경0이며, 이 실패를 해결로 세지 않는다.
 - 위 bootstrap 조사 선언에서 interface Row를 섞어 생긴 never 오류와 SDK Views overload를 잘못 특수화한 TS2344는 probe 자체 오류로 정정·분리했다. 실제 DB의 social_id/settings_json NOT NULL과 JSONB 전체 타입은 기존 소비 계약과 구별한다. 이 특정 native 교체안의 실패는 다른 정확 계약안이나 전체26개 bootstrap 관련 후속 작업의 불가능 증거가 아니다.
 
+## [#1779](https://github.com/netsus/homecook/pull/1779) 147 checkpoint: 확인 결과와 조율할 다음 경계
+
+- 기준2cd4aab93에서 통합20 suite190 PASS·전체 typecheck·verify:anti-slop(규칙fixture/도구type/baseline147·신규0)·diff PASS. 이번6제품PR의 변경TS19파일을 포함한24파일 lint도 PASS했다. 추가5개 test는 별도 작업 변경이며 이 작업 성과로 귀속하지 않는다.
+- 독립 통합검토도 동일190건·전체typecheck·diff exit0을 확인했다. 아래127건의 실패 묶음과 실험WT69건은 그 독립 실행에 포함하지 않았으며, Anti Slop은 부모 결과와 구분한다.
+- 같은 기준에서 넓은 기존5 suite127건은117 PASS/같은10 FAIL(exit1)이다. 성공190건과 별도 집계하며 보호 검사나 기대값을 완화하지 않았다. 아래 기존 실패 원인·1745/1749/444·49원본 미확인은 그대로다.
+
+| 계약 후보29의 현재 구성 | 개수 | 다음 판단에 필요한 근거 |
+| --- | --- | --- |
+| 공유 bootstrap과 각 local query 계약 | 26 | 아래 직접3개 분해에서 확인한 SDK any/eq 경계와 각 실제 row 계약. 공통 factory는 보호 소스이므로 부모 조율 없이 변경하지 않음 |
+| 영양 refresh memory | 1 | native builder 흉내 대신 pure-core/bundle 입력·guard·오류 경계 분리 설계. bundle에 없는 필드를 만들지 않음 |
+| recipe detail/standalone cook-mode 소비 view | 2 | canonical·quantity 연결 코드와 병행 소유 범위 조율, 실제 public/auth·legacy fallback 행 계약 |
+
+- bootstrap 추가 read-only probe: 정확 select literal7개 자체와 insert/update→select→SingleRowQuery 단계 분리 자체는 각각 whole-program0이다. 하지만 keep/uneat/meal-log의 기존 단언을 직접 대입으로 바꾸면 각각 TS2589 1건이다. from(users)와 정확 select까지는0, eq 요구에서 재현되고 insert-only/update-only는0이었다. 원인은 SupabaseClient<any>의 ResolveFilterValue 비교 경계다. 단계 정리는 가치가 있어도 직접 대입3개를 해결한 충분조건은 아니므로 이번에 제품 반영하지 않았다.
+- 부모의 2cd4aab93 combined literal/phase+3direct probe도 keep의 TS2589 1건이었다. 이는 세 항목 모두 성공이라는 증거가 아니며, 독립 각1개 probe 결과와 구분한다. 보호 factory 타입 또는 검증 경계 설계 없이 새 단언/adapter로 숨기지 않는다.
+- 실험 WT `.worktrees/bootstrap-select-projection-contract-20261017`에는 미추적 `tests/bootstrap-sdk-projection-contract.test.ts`만 남겼다. 제품 편집/커밋/PR은0이다. 새 실제SDK7+기존4 suite62 =5 suite69 runtime PASS지만 직접 SDK client 대입 typecheck는 TS2589 1/exit2다. 최초 fixture의 POST/PATCH object Accept 누락3실패는 제품 수정 없이 정정했다. 이 파일은 미완료 실험이며 master의190건·typecheck 성공에 포함하지 않는다.
+- standalone cook-mode의 별도 native3표+join3표/FK/public-auth 동일문자열/소비view안은 전체 compiler3진단(ParserError 전파)으로 미채택했다. legacy step fallback과 canonical productIngredients/cookingSteps 재대입까지 타입 영향이 가므로, 단순 한 줄 삭제가 아닌 병행 소유자 조율과 별도 회귀 범위가 필요하다. source/DB 변경0이며 이 특정안 실패를 전체 native 계약 불가로 확대하지 않는다.
+- 이 checkpoint는 원본163 ID/hash를 보존한다. 해결16·계약29·보호99·명시4·기술1·조율1·고정참조8·근거없음5의 합163, 현재진단147이다. 보호99와 기존 보류를 스스로 해제하지 않는다. 전체 build·화면·실DB·운영 배포를 실행하지 않았다.
+
 ## 보류·기술적 경계
 
 - [#1745](https://github.com/netsus/homecook/pull/1745): OPEN DRAFT, head `5fc7dd78678a6d321bc689f7f3f74c6b02940e1e`. 완료 표에 넣지 않는다.
 - [#1749](https://github.com/netsus/homecook/pull/1749): OPEN DRAFT, head `d551ff06ac2eeb368789dd67cd701ce36433e1f0`. response-boundary 강한 목록 검사 후보지만 미반영이다.
 - `444fe1f6f`: 구형 save service-role fallback 제거의 접근 결과 변경 위험 때문에 보류. 분리 시도도 철회했으며 적용하지 않는다.
+- 최초 승계 사용자 기록의 “검사만 분리해도 실제 권한위반3개가 남아 분리 시도를 철회”한 사실도 유지한다. 이번 작업은 그3개를 해결하거나 재판정한 것이 아니며, 아래10개 실패 테스트 수와 정책 항목 수를1:1로 합산하지 않는다.
 - 최신 재확인: #1745/#1749는 위 exact head의 OPEN DRAFT다. 444는 master의 ancestor가 아니며 save의 기존 generic fallback도 남아 있다. 사용자 메인 checkout은 codex/gabia-direct-prelaunch·privacy/공식문서/관련test/미추적파일 dirty 그대로 보존했다.
 - 좋아요 client 직접 대입과 과거 progress 직접 대입의 TS2589 실험은 원복/철회했다. 복잡한 adapter·새 단언으로 우회하지 않는다. 최초 DB client 경계가 남은 배치는 이를 해결한 것으로 과장하지 않는다.
 - v85 추출기 전환·보안 승계·무게 후속·저장/UI/플래너 병행 변경은 이 작업의 수정 범위 밖이다. 운영 배포는 부모 조율이며 이 장부는 실행 승인이 아니다.
