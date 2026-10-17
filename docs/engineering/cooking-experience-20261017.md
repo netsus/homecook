@@ -234,3 +234,10 @@ Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산
 - 관련API/UI/계산기70 PASS, 로컬runtime의미검토기존회귀196 PASS(서로중복가능). 타입/변경lint통과. 이번후속은검증도구/문서만변경하며기존375/1440 Chrome증거범위를확대하지않는다.
 - 이fixture의과거canonical pack에는 `beforeMatchesApproved=false`가있다. 이번109함수의실제PASS와구분하며, 현재운영232전체동등성·원deployledger/PIN·실제인증HTTP까지통과했다고주장하지않는다. 운영접근/배포잠금·C05/R2/lead OFF·공개UUID GET보류는유지한다.
 - 최근영양연결2행·원천보류의 [구체반영계획](data/recent-nutrition-link-plan-20261017.json)을기록했다. backup/운영쓰기0이며실행가능UPDATE가아니다. 나머지runtime의미검토는첫5개분류후138개남는다.
+
+
+## 격리 검증 병합과 로컬 검토 후속
+
+- 검증/문서 묶음 [PR1787](https://github.com/netsus/homecook/pull/1787)은 `de177e14ca878a24f94db5a1741c1e7dff77394e`로 master 병합했다. 원 migration 파일 변경0, 운영 조회/쓰기·배포0이다.
+- C05 관련 runtime 후보5개를 독립 읽기 검토해 소유자 보류로 분류했다. 현재 기능 대체/불필요 판정이 아니며 후보 코드·SQL은 머지하지 않았다. [분류 근거](local-change-inventory-20261017.md#runtime-의미-검토-두-번째-묶음--c05-5개-소유자-보류). 미검토133개와 별도 보류 항목은 계속 열려 있다.
+- 9개 개선의 코드 병합과 운영 완료를 구분한다. 최근 영양2행의 현재 before-image/백업/CAS 반영, 현재 운영232 동등성/실제 인증 HTTP, DB233/234와 웹 배포는 v85 잠금 해제 및 부모 직렬 조율 전 대기다.
