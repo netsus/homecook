@@ -1,0 +1,33 @@
+{
+  "schema": "homecook.local-runtime-source-review-checks.v1",
+  "review_base": "3cf169063b94c3a8b6500c8137186261e0b28837",
+  "command": "node node_modules/vitest/vitest.mjs run tests/youtube-async-extraction-backend.test.ts tests/youtube-async-extraction-jobs.backend.test.ts tests/youtube-extraction-worker.test.ts tests/youtube-description-parser.test.ts tests/ingredient-search-formatting.test.ts",
+  "passed_tests": 67,
+  "failed_tests": 2,
+  "passed_files": 3,
+  "failed_files": 2,
+  "failure_kind": "Existing expectation mismatch; not corrected in this review; no all-green claim",
+  "failures": [
+    {
+      "test": "tests/youtube-async-extraction-backend.test.ts",
+      "expected_pipeline_identity": "85fbf4877e6f2894841bfd160f2d9a63894eb709fd63e897483efe71fd4016cd",
+      "actual_pipeline_identity": "6dd494410f160937b550bc23fb355d6669b3abe7805c00eabd40fed1e799c618"
+    },
+    {
+      "test": "tests/youtube-async-extraction-jobs.backend.test.ts",
+      "expected_policy_version": 2,
+      "actual_policy_version": 3
+    }
+  ],
+  "unchanged_since": "634fa5b997dadb346cf37e241ffa1fce4b0e5eb0",
+  "scope": "Synthetic source-contract tests, no operating/model/DB/credential access",
+  "independent_review": "Source-only reviewer did not rerun or claim these tests passed",
+  "log_sha256": "b533a40347021e6ccd27f051961fcaf5d6cb7ceeb292b77a1b108cf7e5ef5125",
+  "source_hashes": {
+    "tests/youtube-async-extraction-backend.test.ts": "2fac3b44b7f059966e6640c76ce4c6f323999b771554d065259e4524c7d6edca",
+    "tests/youtube-async-extraction-jobs.backend.test.ts": "c25b3d9d9d5378dfc3e90b33f1f2798ff586d7d96ca9045bf80244333e076e86",
+    "lib/server/youtube-async-extraction.ts": "1d3261c9e8c9259c291fa2a727534fa91986aca148ebe35f7f0d0f00d5ed34ad",
+    "lib/server/youtube-async-extraction-routes.ts": "a81b56601ee984c5740c190fd1e70306c852fcedcff3a1a3083de7051fa23fe4",
+    "lib/server/youtube-extraction-worker-rpc.ts": "e3047e621caae2cc817a786df183cab0475f7e36b3bd9bb85717a2496c49ea10"
+  }
+}

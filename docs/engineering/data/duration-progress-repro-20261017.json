@@ -1,0 +1,58 @@
+{
+  "schema": "homecook.synthetic-duration-progress-review.v1",
+  "scope": "Pure extraction of the existing reportProgress function with a fake process.send collector. No actual IPC, worker process, model, media, environment/credential read, DB, network or operating access.",
+  "review_base": "8a15313c1",
+  "repository_root": "/private/tmp/homecook-cooking-experience-20261017",
+  "candidate": "6e99bc4f2",
+  "sources": [
+    {
+      "path": "lib/server/youtube-i031-runtime/bundle/worker.mjs",
+      "line": 95,
+      "sha256": "d256fa53e0b131565573e05731c17d78e2af174a628e5788b40eea9f6b69e445"
+    },
+    {
+      "path": "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/single-pass-vision.mjs",
+      "line": 986,
+      "sha256": "c2bb2b5d4e22e9e890d91b70fe7263c3bd083d3eb3557bf13a2d18c8623c4f1b"
+    },
+    {
+      "path": "lib/server/youtube-i031-runtime/bundle/scripts/recipe-loop/lib/source-anchored-vision.mjs",
+      "sha256": "85479f5b0f389f4e9aceaa7f6ea6b807ccf9919a1291e7255e34cdf50e104fa2"
+    }
+  ],
+  "versions": {
+    "SOURCE_ANCHORED_CLIENT_VERSION": "codex-vision-source-anchored-v85-coupled-procedure-source-citations",
+    "SOURCE_ANCHORED_SCHEMA_VERSION": "source-anchored-quotes-v5-coupled-text-first-steps",
+    "SOURCE_ANCHORED_VERIFIER_VERSION": "source-anchor-fidelity-v54-equivalent-authored-citations"
+  },
+  "producer_call": "try { options.onProgress?.(\"model_analysis\", meta.durationSec); } catch { /* telemetry */ }",
+  "extracted_function_sha256": "22186389b6263f2426df6ec3138933486b16495181a4225bafa8a605222581b1",
+  "synthetic_inputs": [
+    {
+      "stage": "model_analysis",
+      "videoDurationSeconds": 303.8
+    },
+    {
+      "stage": "model_analysis",
+      "videoDurationSeconds": 304
+    }
+  ],
+  "actual_output": {
+    "acceptedRaw": false,
+    "afterRaw": [],
+    "acceptedCeil": true,
+    "afterCeil": [
+      {
+        "type": "homecook-worker-progress",
+        "sequence": 1,
+        "stage": "model_analysis",
+        "videoDurationSeconds": 304
+      }
+    ]
+  },
+  "finding": "P2: source-anchored model_analysis passes raw durationSec; the IPC producer rejects fractional seconds. Historical candidate rounds upward and bounds to 1..86400. This pure contract replay does not establish operating event delivery or authorize changing the sealed bundle.",
+  "reproduce": {
+    "cwd": "/private/tmp/homecook-cooking-experience-20261017",
+    "command": "/Users/cwj/.nvm/versions/node/v22.19.0/bin/node --input-type=module - <<'REPRO'\nimport fs from 'node:fs';\nimport path from 'node:path';\nimport {createHash} from 'node:crypto';\nconst a=JSON.parse(fs.readFileSync('/tmp/homecook-duration-progress-repro-20261017.json','utf8'));\nconst hash=(s)=>createHash('sha256').update(s).digest('hex');\nfor(const s of a.sources){if(hash(fs.readFileSync(path.join(a.repository_root,s.path)))!==s.sha256)throw new Error('Reviewed source has changed: '+s.path);}\nconst worker=fs.readFileSync(path.join(a.repository_root,a.sources[0].path),'utf8');\nconst start=worker.indexOf('  function reportProgress(');const end=worker.indexOf('\\n  return Object.freeze({',start);\nif(start<0||end<start)throw new Error('Progress function boundary changed');\nconst source=worker.slice(start,end);if(hash(source)!==a.extracted_function_sha256)throw new Error('Function changed');\nconst messages=[];\nconst report=Function('process','let progressSequence=0;const PROGRESS_STAGES=new Set([\"model_analysis\"]);'+source+';return reportProgress;')({connected:true,send:(message,cb)=>{messages.push(message);cb?.();}});\nconst acceptedRaw=report('model_analysis',303.8);const afterRaw=structuredClone(messages);const acceptedCeil=report('model_analysis',304);\nconsole.log(JSON.stringify({acceptedRaw,afterRaw,acceptedCeil,afterCeil:messages},null,2));\nREPRO"
+  }
+}
