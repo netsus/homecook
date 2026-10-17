@@ -5,6 +5,7 @@ const createServiceRoleClient = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRecipeImageInternalClient: () => null,
+  createRecipeViewInternalClient: () => null,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
@@ -219,6 +220,7 @@ describe("recipe nutrition API boundaries", () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
       from: routeFrom,
+      rpc: vi.fn(async (name: string) => { if (name !== "read_public_recipe_product_sources") throw new Error("unexpected RPC"); return {data: [], error: null}; }),
     });
     createServiceRoleClient.mockReturnValue({
       from: serviceFrom,

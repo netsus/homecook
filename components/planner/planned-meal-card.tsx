@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { MealLogMacroBar } from "@/components/planner/meal-log-nutrition-chart";
-import type { MealLogNutritionEvidence } from "@/types/meal-log";
+import { NutritionFactsTable } from "@/components/shared/nutrition-facts-table";
+import { PLANNER_NUTRITION_LABELS } from "@/lib/planner/planner-nutrition-presentation";
+import type { PlannerNutritionCoreCode } from "@/types/planner-nutrition";
 
 import type { MealListItemData } from "@/types/meal";
 import type { PlannerMealNutritionViewMap } from "@/types/planner-meal-nutrition";
@@ -37,20 +38,16 @@ export function PlannedMealCard({ meal, nutrition, detailed, conflictError, isPe
     amount: energy.amount === null ? null : energy.amount / meal.planned_servings,
     known_amount: energy.known_amount === null ? null : energy.known_amount / meal.planned_servings,
   } : null;
-  // Use the pinned plan totals only while they match the current serving count.
-  const knownValue = (code: string) => {
+  const factsRows = (["energy_kcal", "carbohydrate_g", "protein_g", "fat_g", "sodium_mg"] as PlannerNutritionCoreCode[]).map(code => {
     const value = matches ? nutrition?.values[code] : undefined;
-    return value?.status === "complete" ? value.amount : value?.status === "partial" ? value.known_amount : null;
-  };
-  const macroEvidence: MealLogNutritionEvidence = {
-    contains_ai_estimate: matches && nutrition?.containsAiEstimate === true,
-    calculation_status: !matches || !nutrition ? "unavailable" : Object.values(nutrition.values).every(value => value.status === "complete") ? "complete" : "partial",
-    calories_kcal: knownValue("energy_kcal"),
-    carbohydrate_g: knownValue("carbohydrate_g"),
-    protein_g: knownValue("protein_g"),
-    fat_g: knownValue("fat_g"),
-    sodium_mg: knownValue("sodium_mg"),
-  };
+    const perServing = value && meal.planned_servings > 0 ? { ...value,
+      amount: value.amount === null ? null : value.amount / meal.planned_servings,
+      known_amount: value.known_amount === null ? null : value.known_amount / meal.planned_servings,
+    } : null;
+    return { code, label: PLANNER_NUTRITION_LABELS[code], status: value?.status,
+      totalText: value ? formatPlannerNutritionValue(code, value) : "정보 준비 중",
+      perServingText: perServing ? formatPlannerNutritionValue(code, perServing) : "정보 준비 중" };
+  });
   const actionLabel = meal.status === "cook_done" ? "완성한 음식 보기" : meal.status === "shopping_done" ? "요리 시작" : meal.shopping_list_id ? "장보기 이어가기" : "장보기";
   return <article aria-label={`${meal.recipe_title} 식사 카드`} className="min-w-0 border-b border-[var(--line)] py-5 last:border-0">
     <div className="flex items-start gap-3">
@@ -72,13 +69,12 @@ export function PlannedMealCard({ meal, nutrition, detailed, conflictError, isPe
         </div>
       </div>
       <section aria-label={`${meal.recipe_title} 계획 영양정보`} className={detailed ? "rounded-2xl bg-[var(--ui-sky-50)] p-5" : "pb-2"}>
-        <div className={detailed ? "space-y-3" : "flex min-h-11 items-center justify-between gap-3"}>
+        {detailed ? <NutritionFactsTable rows={factsRows} totalLabel={`계획 ${meal.planned_servings}인분`} /> : <div className="flex min-h-11 items-center justify-between gap-3">
           <span className="text-sm font-medium">예상 영양 · {meal.planned_servings}인분</span>
           <span className={detailed ? "block" : "text-right"}><span className={detailed ? "block text-3xl font-semibold tabular-nums" : "block text-lg font-normal tabular-nums"}>{energy ? formatPlannerNutritionValue("energy_kcal", energy) : "정보 준비 중"}</span>{perServingEnergy ? <span className="text-sm font-normal text-[var(--text-2)]">1인분 {formatPlannerNutritionValue("energy_kcal", perServingEnergy)}</span> : null}</span>
-        </div>
+        </div>}
         {aiNotice ? <p className="mt-2 text-xs text-[var(--brand-primary-text)]">{aiNotice}</p> : null}
-        {detailed && matches && nutrition ? <div className="mt-4"><MealLogMacroBar nutrition={macroEvidence} showAiNotice={false} /></div> : null}
-        {matches && nutrition ? <dl className={detailed ? "mt-4 grid grid-cols-3 gap-3 text-center text-sm" : "mt-3 grid grid-cols-3 gap-3 text-sm"}>{([['carbohydrate_g', '탄수화물'], ['protein_g', '단백질'], ['fat_g', '지방']] as const).map(([code, label]) => <div key={code}><dt className="font-normal text-[var(--text-2)]">{label}</dt><dd className={detailed ? "mt-1 text-lg font-normal tabular-nums" : "mt-1 font-normal"}>{nutrition.values[code] ? formatPlannerNutritionValue(code, nutrition.values[code]) : '정보 없음'}</dd></div>)}</dl> : null}
+        {!detailed && matches && nutrition ? <dl className={detailed ? "mt-4 grid grid-cols-3 gap-3 text-center text-sm" : "mt-3 grid grid-cols-3 gap-3 text-sm"}>{([['carbohydrate_g', '탄수화물'], ['protein_g', '단백질'], ['fat_g', '지방']] as const).map(([code, label]) => <div key={code}><dt className="font-normal text-[var(--text-2)]">{label}</dt><dd className={detailed ? "mt-1 text-lg font-normal tabular-nums" : "mt-1 font-normal"}>{nutrition.values[code] ? formatPlannerNutritionValue(code, nutrition.values[code]) : '정보 없음'}</dd></div>)}</dl> : null}
       </section>
       {detailed ? <>
       <button className="my-3 flex min-h-14 w-full items-center justify-between gap-3 text-left font-medium" data-testid={`meal-recipe-link-${meal.id}`} onClick={onRecipe} type="button">이 계획의 레시피 · 재료와 만들기 <span aria-hidden="true">›</span></button>

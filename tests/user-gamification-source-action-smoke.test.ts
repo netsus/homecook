@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   awardUserProgressEvent,
-  type UserProgressDbClient,
   USER_PROGRESS_XP_AWARDS,
 } from "@/lib/server/user-progress";
+
+// This fixture intentionally lacks projection tables and verifies best-effort
+// failure absorption, not successful full projection capability.
 
 function createMaybeSingleQuery<T>(data: T | null, error: { message: string; code?: string } | null = null) {
   return {
@@ -74,7 +76,7 @@ describe("source action gamification smoke", () => {
       }),
     };
 
-    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+    const result = await awardUserProgressEvent(dbClient as unknown as Parameters<typeof awardUserProgressEvent>[0], {
       userId: "user-1",
       eventType: "recipe_saved",
       sourceTable: "recipe_book_items",
@@ -83,6 +85,7 @@ describe("source action gamification smoke", () => {
       occurredAt: "2026-06-10T12:00:00.000Z",
     });
 
+    expect(dbClient.from).toHaveBeenCalledWith("user_progress_notifications");
     expect(result).toMatchObject({
       awarded: true,
       duplicate: false,

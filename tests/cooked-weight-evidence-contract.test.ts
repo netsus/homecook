@@ -54,6 +54,19 @@ describe("compatible frozen meal weight evidence", () => {
   const basis = { schema_version: "cooked-weight-basis-v1" as const, batch_id: batch.id, recipe_content_snapshot_id: batch.recipe_id,
     finished_weight_g: 200, source: "conditional_estimate" as const, model_version: "bounded-weight-v2", prediction_id: batch.id, observation_id: null, batch_revision: 1 };
   const assumptions = ["mix_tags_imply_no_heat", "all_declared_inputs_retained", "unreported_drainage_leftovers_container_added_media_unknown"];
+  it("keeps the new disclosed fallback through summary, meal and preview parsers", async () => {
+    const codes=["ingredient_mass_seventy_five_percent"];
+    const summary={source:"conditional_estimate",predicted_g:225,model_version:"ingredient-mass-75-v1",reason_codes:["missing_segments"],assumption_codes:codes};
+    expect(isCookedWeightSummary(summary)).toBe(true);
+    expect(projectCookedBatch({...batch,weight_evidence:summary},true)?.weight_evidence).toEqual(summary);
+    const fallbackBasis={...basis,finished_weight_g:225,model_version:"ingredient-mass-75-v1"};
+    const evidence={...nutrition,weight_basis:fallbackBasis,weight_assumption_codes:codes};
+    const entry={id:batch.recipe_id,revision:1,consumed_at:null,consumed_local_date:"2026-10-13",timezone_name_snapshot:"Asia/Seoul",meal_plan_column_id:null,slot_name_snapshot:"식사",source:input.source,quantity:input.quantity,display_name:"요리",display_brand:null,nutrition:evidence,created_at:"2026-10-13T00:00:00Z",updated_at:"2026-10-13T00:00:00Z"};
+    expect(projectMealLogData({entry},false,true)).toEqual({entry});
+    expect(projectMealLogNutritionPreview(evidence,input,true)?.nutrition).toEqual(evidence);
+    vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:true,status:200,json:async()=>({success:true,data:{...input,nutrition:evidence},error:null})}));
+    expect((await fetchMealLogNutritionPreview(input)).nutrition).toEqual(evidence);
+  });
   it("validates a conditional frozen denominator independently of the predicted-g summary", () => {
     expect(isMealLogWeightBasis(basis)).toBe(true);
     const evidence = { ...nutrition, weight_basis: basis, weight_assumption_codes: assumptions };

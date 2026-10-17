@@ -3,7 +3,7 @@ import { SMALL_ENERGY_DISPLAY_NOTICE } from "@/lib/nutrition/energy-display";
 import type { ReactNode } from "react";
 
 import type { RecipeNutrition } from "@/types/recipe";
-import { MEAL_LOG_MACROS } from "@/lib/planner/meal-log-nutrition-presentation";
+import { NutritionFactsTable } from "@/components/shared/nutrition-facts-table";
 
 import {
   buildRecipeNutritionDisplay,
@@ -76,10 +76,10 @@ export function RecipeNutritionCard({
         </p>
       ) : null}
 
-      <NutritionGraph
-        coreNutrients={display.nutrients}
-        nutrition={nutrition}
-        selectedServings={selectedServings}
+      <NutritionFactsTable
+        rows={display.nutrients.map(item => ({ code: item.code, label: item.label, totalText: item.selectedTotalText, perServingText: item.perServingText, status: nutrition.values[item.code]?.status }))}
+        totalLabel={`선택 ${selectedServings}인분`}
+        perServingLabel="기본 1인분"
       />
 
       {display.aiEstimateText ? (
@@ -123,98 +123,6 @@ export function RecipeNutritionCard({
 
     </section>
   );
-}
-
-function NutritionGraph({
-  coreNutrients,
-  nutrition,
-  selectedServings,
-}: {
-  coreNutrients: RecipeNutrientDisplayItem[];
-  nutrition: RecipeNutrition;
-  selectedServings: number;
-}) {
-  const baseServings = nutrition.base_servings;
-  const coreByCode = new Map(coreNutrients.map((item) => [item.code, item]));
-  const energyDisplay = coreByCode.get("energy_kcal");
-  const energyText = energyDisplay?.selectedTotalText ?? "정보 준비 중";
-  const macroValues = MEAL_LOG_MACROS.map((macro) => ({
-    ...macro,
-    amount: selectedNutritionAmount(nutrition, macro.key, selectedServings, baseServings),
-  }));
-  const macroEnergy = macroValues.every((macro) => macro.amount !== null)
-    ? macroValues.reduce((sum, macro) => sum + macro.amount! * macro.factor, 0)
-    : 0;
-
-  return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--text-2)]">
-        <span>{selectedServings}인분</span>
-        {energyDisplay ? <span>1인분 {energyDisplay.perServingText}</span> : null}
-      </div>
-      <p className="mt-3 break-words text-3xl font-semibold leading-tight tabular-nums text-[var(--foreground)]">
-        {energyText.endsWith(" kcal") ? <>{energyText.slice(0, -5)}<span className="ml-1 text-base font-normal">kcal</span></> : energyText}
-      </p>
-      {macroEnergy > 0 && Number.isFinite(macroEnergy) ? (
-        <div aria-label="탄수화물 단백질 지방 비율" className="mt-4 flex h-3 overflow-hidden rounded-full" role="img">
-          {macroValues.map((macro) => (
-            <span
-              aria-hidden="true"
-              className="block h-full"
-              key={macro.key}
-              style={{ backgroundColor: macro.color, width: `${(macro.amount! * macro.factor / macroEnergy) * 100}%` }}
-            />
-          ))}
-        </div>
-      ) : null}
-      <dl className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
-        {macroValues.map((macro) => (
-          <div className="min-w-0" key={macro.key}>
-            <dt className="text-[var(--text-2)]">
-              <span aria-hidden="true" className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: macro.color }} />
-              <span aria-label={macro.label}>{macro.short}</span>
-            </dt>
-            <dd className="mt-1 text-lg font-normal tabular-nums text-[var(--foreground)]">
-              {macro.amount === null ? <span className="text-sm">정보 준비 중</span> : <>{formatNutritionNumber(macro.amount)}<span className="ml-0.5 text-sm text-[var(--text-2)]">g</span></>}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
-function selectedNutritionAmount(
-  nutrition: RecipeNutrition,
-  code: string,
-  selectedServings: number,
-  baseServings: number | undefined,
-) {
-  const value = nutrition.values[code];
-  const scalableValue = nutrition.scalable_values?.[code];
-  const fixedValue = nutrition.fixed_values?.[code];
-  if (
-    !baseServings ||
-    !Number.isFinite(baseServings) ||
-    baseServings <= 0 ||
-    !Number.isFinite(selectedServings) ||
-    selectedServings <= 0 ||
-    (value?.status !== "complete" && value?.status !== "partial") ||
-    typeof scalableValue !== "number" ||
-    !Number.isFinite(scalableValue) ||
-    scalableValue < 0 ||
-    typeof fixedValue !== "number" ||
-    !Number.isFinite(fixedValue) ||
-    fixedValue < 0
-  ) {
-    return null;
-  }
-  const amount = scalableValue * selectedServings / baseServings + fixedValue;
-  return Number.isFinite(amount) ? amount : null;
-}
-
-function formatNutritionNumber(amount: number) {
-  return Math.round(amount).toLocaleString("ko-KR");
 }
 
 function NutritionTable({

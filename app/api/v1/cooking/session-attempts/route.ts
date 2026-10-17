@@ -7,7 +7,6 @@ import {
   parseSnapshotV2StartRequest,
   projectSnapshotV2StartData,
   readRequiredIdempotencyKey,
-  type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   createSnapshotV2SessionInternalClient,
@@ -61,7 +60,7 @@ export async function POST(request: Request) {
   const planner = parsed.value.mode === "planner" ? parsed.value : null;
   const standalone = parsed.value.mode === "standalone" ? parsed.value : null;
   const result = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     "start_snapshot_v2_cooking_session",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),

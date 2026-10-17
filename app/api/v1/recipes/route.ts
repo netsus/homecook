@@ -9,6 +9,7 @@ import { createRecipeNutritionSnapshotPayload } from "@/lib/server/recipe-nutrit
 import { recipeIngredientGroupKey } from "@/lib/recipe-editor-ingredients";
 import { isRecipeIngredientUnitAllowed } from "@/lib/recipe-ingredient-units";
 import { NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fail, ok } from "@/lib/api/response";
 import { isSelectableIngredientId } from "@/lib/ingredient-catalog-policy";
@@ -55,8 +56,6 @@ import {
   projectRecipePatchData,
   readRequiredIdempotencyKey,
   RecipeDraftNutritionValidationError,
-  type FuturePropagationRpcClient,
-  type RecipeDraftNutritionClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   createHybridAuthorityRouteError,
@@ -70,14 +69,13 @@ import {
 } from "@/lib/server/recipe-tags";
 import {
   readRecipeCardUserStatuses,
-  type RecipeCardUserStatusDbClient,
 } from "@/lib/server/recipe-card-user-status";
 import {
   createRecipeFuturePropagationInternalClient,
   createRecipeImageInternalClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
-import { createRecipeIngredientSearch, type RecipeIngredientSearchClient } from "@/lib/server/recipe-ingredient-search";
+import { createRecipeIngredientSearch } from "@/lib/server/recipe-ingredient-search";
 import type {
   ManualRecipeCreateData,
   ManualRecipeIngredientInput,
@@ -123,36 +121,50 @@ interface IdLookupRow {
 }
 
 interface RecipeRowsQuery {
-  eq(column: string, value: string): RecipeRowsQuery;
-  is(column: string, value: null): RecipeRowsQuery;
-  limit(count: number): RecipeRowsQuery;
-  order(column: string, options: { ascending: boolean }): RecipeRowsQuery;
-  in(column: string, values: string[]): RecipeRowsQuery;
-  ilike(column: string, pattern: string): RecipeRowsQuery;
-  or(filters: string): RecipeRowsQuery;
-  then: ArrayQueryResult<RecipeListRow>["then"];
+  order(column: string, options: { ascending: boolean }): this;
+  or(filters: string): this;
 }
 
-interface RecipesSelectTable {
-  select(columns: string): RecipeRowsQuery;
-}
-
-interface RecipeSearchDbClient {
-  rpc(functionName: "find_public_recipe_ids_by_product_name", args: { p_q: string }): PromiseLike<{
-    data: RecipeIdRow[] | null; error: QueryError | null;
-  }>;
-  rpc(
-    functionName: "find_recipe_ids_by_public_tags",
-    args: {
-      p_q: string | null;
-      p_tag: string | null;
-    },
-  ): PromiseLike<{
-    data: RecipeIdRow[] | null;
-    error: QueryError | null;
-  }>;
-  from(table: "recipes"): RecipesSelectTable;
-}
+// Local consumed read projection, not a replacement DB schema or a permission grant.
+// Native builders still expose delete; Insert/Update:never is not runtime readonly.
+type RecipeSearchDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipes: {
+        Row: {
+          id: string;
+          title: string;
+          thumbnail_url: string | null;
+          tags: string[];
+          base_servings: number;
+          view_count: number;
+          like_count: number;
+          save_count: number;
+          plan_count: number;
+          cook_count: number;
+          created_at: string;
+          source_type: "system" | "youtube" | "manual";
+          visibility: "public" | "private";
+          deleted_at: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: {
+      find_public_recipe_ids_by_product_name: {
+        Args: { p_q: string };
+        Returns: RecipeIdRow[];
+      };
+      find_recipe_ids_by_public_tags: {
+        Args: { p_q: string | null; p_tag: string | null };
+        Returns: RecipeIdRow[];
+      };
+    };
+  };
+}>, "from" | "rpc">;
 
 interface ManualRecipeRow {
   id: string;
@@ -1193,7 +1205,7 @@ async function finishManualRecipePublication(
   if (!row.id || row.created_by !== authority.ownerUuid || row.source_type !== "manual") {
     throw new Error("Invalid manual recipe receipt");
   }
-  const prepared = await prepareRecipeNutritionSnapshot(dbClient, row.id, rpcClient as unknown as RecipeNutritionServiceClient, authority);
+  const prepared = await prepareRecipeNutritionSnapshot(dbClient, row.id, rpcClient, authority);
   const storageClient = createRecipeImageInternalClient();
   if (!storageClient) throw new Error("Recipe image publication is unavailable");
   const published = await publishManualRecipe({
@@ -1496,7 +1508,7 @@ async function findRecipeIdsByPublicTags({
   };
 }
 
-function applyRecipeListSort(query: RecipeRowsQuery, sort: RecipeSortKey) {
+function applyRecipeListSort<Query extends RecipeRowsQuery>(query: Query, sort: RecipeSortKey) {
   if (sort === "latest") {
     return query
       .order("created_at", { ascending: false })
@@ -1508,8 +1520,8 @@ function applyRecipeListSort(query: RecipeRowsQuery, sort: RecipeSortKey) {
     .order("id", { ascending: true });
 }
 
-function applyRecipeListCursor(
-  query: RecipeRowsQuery,
+function applyRecipeListCursor<Query extends RecipeRowsQuery>(
+  query: Query,
   sort: RecipeSortKey,
   cursor: ReturnType<typeof parseRecipeListCursor>,
 ) {
@@ -1586,7 +1598,7 @@ async function readRecipeRows({
   const { data, error } = await recipeQuery;
 
   return {
-    rows: ((data ?? []) as RecipeListRow[]),
+    rows: data ?? [],
     error,
   };
 }
@@ -1743,11 +1755,11 @@ export async function GET(request: NextRequest) {
     const routeClient = await createRouteHandlerClient({
       anonymousPublicReadScope: "recipes",
     });
-    const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient;
+    const recipeSearchDbClient: RecipeSearchDbClient = routeClient;
     const ingredientSearch = listQuery.q || listQuery.ingredient_ids?.length
       ? createRecipeIngredientSearch(
-          await createRouteHandlerClient({ anonymousPublicReadScope: "ingredients" }) as unknown as RecipeIngredientSearchClient,
-          routeClient as unknown as RecipeIngredientSearchClient,
+          await createRouteHandlerClient({ anonymousPublicReadScope: "ingredients" }),
+          routeClient,
         )
       : null;
     const [ingredientFilterIds, ingredientQueryIds]: [string[] | null, string[]] = ingredientSearch
@@ -1829,7 +1841,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userStatusByRecipeId = await readRecipeCardUserStatuses({
-      dbClient: routeClient as unknown as RecipeCardUserStatusDbClient,
+      dbClient: routeClient,
       recipeIds: pageRows.map((recipe) => recipe.id),
       userId,
     });
@@ -1986,7 +1998,7 @@ async function postRecipe(request: Request) {
         sessionAuthority: authority.sessionAuthority, recipeId: parsed.originRecipeId, expectedRevision: parsed.baseRecipeRevision });
       if (quantityMode && !quantityInputWriteEnabled(request)) return fail("VALIDATION_ERROR", "지금은 새 수량 정보를 저장할 수 없어요. 입력은 유지돼요.", 422);
       nutrition = await calculateRecipeDraftNutrition(
-        serviceClient as unknown as RecipeDraftNutritionClient,
+        serviceClient,
         {
           recipeId: parsed.originRecipeId,
           ownerUserId: user.id,
@@ -2006,7 +2018,7 @@ async function postRecipe(request: Request) {
     }
 
     const result = await callFuturePropagationRpc(
-      serviceClient as unknown as FuturePropagationRpcClient,
+      serviceClient,
       "write_personal_recipe_core",
       {
         ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
@@ -2240,7 +2252,7 @@ async function postRecipe(request: Request) {
     let published: ManualRecipeCreateRpcData;
     try {
       published = await finishManualRecipePublication(
-        dbClient as unknown as RecipeNutritionServiceClient, serviceClient, managedSession, creationKey, row,
+        routeClient, serviceClient, managedSession, creationKey, row,
       );
     } catch (error) {
       return manualRecipePreparationFailure(error);
@@ -2290,7 +2302,7 @@ async function postRecipe(request: Request) {
     }
 
     await writeManualRecipeNutritionSnapshot(
-      dbClient as unknown as RecipeNutritionServiceClient,
+      routeClient,
       recipeResult.data.id,
     );
 
@@ -2361,7 +2373,7 @@ async function postRecipe(request: Request) {
   }
 
   await writeManualRecipeNutritionSnapshot(
-    dbClient as unknown as RecipeNutritionServiceClient,
+    routeClient,
     recipeResult.data.id,
   );
 

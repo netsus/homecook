@@ -2,7 +2,11 @@
 
 ## 2026-10-17 — 회전 후 v85 웹 plan marker 연속성 보완
 
-사용자 후속 승인 anchor 결속과 stage/preflight는 통과했으나, 새8키 plist와 과거 불변 R2 marker의 지문 차이로 공식 웹 plan이 중단됐다. 원 marker/승인을 보존하고 committed 회전 증거·전후 state·원본/실제 plist의8종 한정 차이를 명시적으로 검증하는 최소 운영 도구 수정이다. 도구 새 SHA와 기존 웹 target15/capsule은 별도로 결속하고 실제 deploy는 사용자 Terminal 확인을 요구한다. [검증 경계·실행 순서](../engineering/youtube-v85-rotation-marker-bridge-20261017.md)를 따른다. 운영 웹06a/v74-gen49·DB232·C05/R2 OFF이며 실제 v85/gen50 전환은 미실행이다.
+사용자 후속 승인 anchor 결속과 stage/preflight 후 새8키 plist와 과거 불변 R2 marker의 지문 차이를 보완했다. 관련 Vitest387·Node48·type/lint·독립 검토와 정확한 도구f7f64997f에서 실제 공식 웹 plan exit0을 확인했다. 원 marker/승인을 보존하고 committed 회전 증거·전후 state·원본/실제 plist의8종 한정 차이를 명시적으로 검증하는 최소 운영 도구 수정이다. 도구 새 SHA와 기존 웹 target15/capsule은 별도로 결속하고 실제 deploy는 사용자 Terminal 확인을 요구한다. [검증 경계·실행 순서](../engineering/youtube-v85-rotation-marker-bridge-20261017.md)를 따른다. 운영 웹06a/v74-gen49·DB232·C05/R2 OFF이며 실제 v85/gen50 전환은 미실행이다.
+
+## 2026-10-17 — 실제 요리 경험9개 개선 착수 (로컬, 미배포)
+
+최신 master에서 독립 worktree를 만들고 기존 미커밋·병행 v85 변경을 보존했다. 첫 화면·영양 읽기 묶음은 관련312검사·타입·빌드·독립 리뷰와 로컬 Chrome375/1440을 확인했다. 배포는 v85 담당 잠금 해제와 부모 조율 전 수행하지 않는다. [상태·우선순위·검증·남은경계](../engineering/cooking-experience-20261017.md)를따른다.
 
 ## 2026-10-17 — v85 후속 전환 준비, 원42개 보존·현재43개/일반자료 변화 미확정
 
@@ -1857,3 +1861,8 @@ desktop HOME의 네 개 빠른 이동 menu 아래에 `/beta?ad_variant=a` banner
 출시 전 소셜 로그인 버튼과 앱 로그인 시작/콜백을 차단한다. 시작은 기존 AUTH_FLOW_UNAVAILABLE/503, 콜백은 교환 전에 준비 안내로 반환한다. 기존 세션·로컬 password QA·인증된 계정 연결은 보존한다. Supabase 외부 직접 인증 API 설정을 변경하는 것은 범위 밖이다. 로컬 랜딩은 허용 origin·공식 캠페인 기간 설정 누락을 로컬 전용으로 보완하고 실제 저장 인증 오류와 구분한다. 새 계정/리드 저장 성공을 가짜로 처리하지 않는다.
 
 - C04 레시피 원문 수량 소비자 비활성 로컬 계약: `docs/engineering/recipe-quantity-input-v4-20261014.md`. 운영 적용/worker 끝단/C01 전체 통합 완료로 확대하지 않는다.
+
+
+### 2026-10-17 요리 완성무게 75% 복원 후보
+
+사용자 요청으로 전체 재료 질량을 확인할 수 있을 때의 대략적75% fallback을 별도 모델로 복원한다. 기존 조건별 추정 우선·미확인 보존·실측 구분·과거 기록 불변을 유지한다. 이전 ‘새0.75 fallback0’ 준비기록은 이 후보의 요구사항보다 우선하지 않는다. 웹+스키마 검증과 운영 적용은 구분하며 진행·검증·잠금은 [작업 기록](../engineering/cooking-experience-20261017.md)을 따른다.

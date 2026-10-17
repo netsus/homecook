@@ -359,8 +359,8 @@ function mutationBody(input: MealLogCreateInput | MealLogUpdateInput): MealLogMu
     meal_plan_column_id: input.mealPlanColumnId,
     source: input.source,
     quantity: input.quantity,
-    ...(expectedRevision === null ? {} : { expected_revision: expectedRevision }),
   };
+  if (expectedRevision !== null) body.expected_revision = expectedRevision;
   if (input.quantityInput) body.quantity_input = input.quantityInput;
   return body;
 }

@@ -45,11 +45,11 @@ describe("recipe visibility security inventory", () => {
     const tags = read("app/api/v1/tags/route.ts");
 
     expect(listGet).toContain(
-      "const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient",
+      "const recipeSearchDbClient: RecipeSearchDbClient = routeClient;",
     );
-    expect(listGet).toContain(
-      "dbClient: routeClient as unknown as RecipeCardUserStatusDbClient",
-    );
+    expect(listGet).not.toContain("routeClient as unknown as RecipeSearchDbClient");
+    expect(listGet).toMatch(/readRecipeCardUserStatuses\(\{\s*dbClient: routeClient,/);
+    expect(listGet).not.toContain("RecipeCardUserStatusDbClient");
     expect(detail).not.toContain(
       "const dbClient = serviceClient ?? routeClient",
     );

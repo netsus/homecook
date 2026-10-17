@@ -81,11 +81,6 @@ async function parseCompleteBody(request: Request) {
   }
 }
 
-async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
-  const authResult = await routeClient.auth.getUser();
-  return authResult.data.user;
-}
-
 function statusFromRpcErrorCode(code: string | undefined) {
   switch (code) {
     case "VALIDATION_ERROR":
@@ -162,7 +157,8 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const routeClient = await createRouteHandlerClient();
-  const user = await requireUser(routeClient);
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
 
   if (!user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);

@@ -1,3 +1,4 @@
+import { withIngredientMassFallback } from "@/lib/server/cooked-weight-mass-fallback";
 import { snapshotIngredients, type CookingWeightSessionClient, type CookingWeightSnapshotIngredient } from "@/lib/server/cooked-batch-weight-estimate";
 import { hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import { predictSnapshotWeight } from "@/lib/server/cooked-weight-snapshot-prediction";
@@ -74,9 +75,9 @@ export async function readSnapshotWeightPrediction({ client, weightClient, owner
     weighted.push(weightRow);
   }
   if (weighted.length !== ingredients.length) return null;
-  return predictSnapshotWeight({ snapshotId: snapshot.id, baseServings: snapshot.base_servings,
+  return withIngredientMassFallback(predictSnapshotWeight({ snapshotId: snapshot.id, baseServings: snapshot.base_servings,
     cookingServings: session.cooking_servings, ingredients: weighted,
-    snapshotSteps: Array.isArray(snapshot.steps_json) ? snapshot.steps_json : [], cookingSteps: steps });
+    snapshotSteps: Array.isArray(snapshot.steps_json) ? snapshot.steps_json : [], cookingSteps: steps }));
 }
 
 export function summarizeWeightPrediction(evidence: SnapshotWeightPrediction): CookedWeightSummary {

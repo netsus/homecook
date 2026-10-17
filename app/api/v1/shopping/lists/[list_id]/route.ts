@@ -228,11 +228,6 @@ function buildItem(
   };
 }
 
-async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
-  const authResult = await routeClient.auth.getUser();
-  return authResult.data.user;
-}
-
 export async function GET(_request: Request, context: RouteContext) {
   const { list_id: listId } = await context.params;
 
@@ -241,7 +236,8 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const routeClient = await createRouteHandlerClient();
-  const user = await requireUser(routeClient);
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
 
   if (!user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);

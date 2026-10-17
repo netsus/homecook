@@ -462,8 +462,7 @@ export async function GET(request: Request) {
         .in("source_type", ["youtube", "manual"]),
       resolveRecipeBookCoverUrls({
         books: booksResult.data,
-        client: routeClient as unknown as
-          RecipeBookImageReadRpcClient & RecipeImageReadStorageClient,
+        client: routeClient,
         expectedOwnerUuid: user.id,
       }),
     ] as const).catch(() => null);
@@ -613,7 +612,7 @@ export async function POST(request: Request) {
   };
 
   try {
-    await awardUserProgressEvent(auth.dbClient as RecipeBookDbClient & UserProgressDbClient, {
+    await awardUserProgressEvent(auth.dbClient, {
       userId: auth.user.id,
       eventType: "custom_book_created",
       sourceTable: "recipe_books",

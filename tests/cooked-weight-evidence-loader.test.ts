@@ -47,10 +47,11 @@ describe("server-owned pinned weight input", () => {
     const result = await readSnapshotWeightPrediction({ client: reader, weightClient: { from: () => null }, ownerId: owner, sessionId, methodClient: methods, authorityArgs: { p_owner_uuid: owner } });
     expect(result).not.toBeNull(); expect(loaders.load).not.toHaveBeenCalled(); expect(methods.rpc).not.toHaveBeenCalled(); expect(reader.rpc).not.toHaveBeenCalled();
   });
-  it("treats a missing method or conversion as unknown and propagates actual session read errors", async () => {
+  it("falls back for known mass with missing method context and propagates actual session read errors", async () => {
     const reader = client(source());
     const result = await readSnapshotWeightPrediction({ client: reader, weightClient: null, ownerId: owner, sessionId });
-    expect(result?.prediction.totalGrams).toBeNull();
+    expect(result?.prediction.totalGrams).toBe(225);
+    expect(result?.prediction.modelVersion).toBe("ingredient-mass-75-v1");
     const failure = new Error("READ_FAILED");
     await expect(readSnapshotWeightPrediction({ client: client(null, failure), weightClient: null, ownerId: owner, sessionId })).rejects.toBe(failure);
   });

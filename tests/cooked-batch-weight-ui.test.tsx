@@ -31,10 +31,22 @@ describe("optional explicit whole-dish measurement", () => {
     expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
     expect(screen.getByRole("spinbutton").getAttribute("value")).toBe("");
     expect(screen.getByRole("spinbutton").hasAttribute("required")).toBe(false);
-    expect(screen.getByText(/용기 무게를 빼고, 먹을 국물은 포함/)).toBeTruthy();
+    expect(screen.getByText(/용기를 뺀 음식 전체무게/)).toBeTruthy();
+    await userEvent.click(screen.getByText("무게 재는 방법"));
+    expect(screen.getByText(/먹을 국물은 포함/)).toBeTruthy();
     expect(screen.getByText(/추정하지 못했어요/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "완료 저장" }));
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith({ consumed_pantry_item_ids: [], weight_action: "weigh_later", finished_weight_g: null });
+  });
+  it("discloses the mass fallback separately and lets a measured weight override it", async () => {
+    const user=userEvent.setup();const onSubmit=vi.fn();
+    render(<CookedBatchCompletionSheet {...defaults} onSubmit={onSubmit} weightPrediction={{source:"conditional_estimate",predicted_g:225,model_version:"ingredient-mass-75-v1",reason_codes:["missing_segments"],assumption_codes:["ingredient_mass_seventy_five_percent"]}} />);
+    expect(screen.getByText(/재료량 75% 추정/)).toBeTruthy();
+    expect(screen.getByText(/재료 무게 합계의 75%/)).toBeTruthy();
+    expect(screen.queryByText(/가열 없는 섞기/)).toBeNull();
+    expect(screen.getByRole("spinbutton").getAttribute("value")).toBe("");
+    await user.type(screen.getByRole("spinbutton"),"190");await user.click(screen.getByRole("button",{name:"완료 저장"}));
+    expect(onSubmit).toHaveBeenCalledWith({consumed_pantry_item_ids:[],weight_action:"set_finished_weight",finished_weight_g:190,weight_input_source:"reported_measured"});
   });
   it("never prefills an estimate and marks even the same explicit value by its input path", async () => {
     const user = userEvent.setup(); const onSubmit = vi.fn();
