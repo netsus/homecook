@@ -1,0 +1,86 @@
+{
+  "schema": "homecook.recipebook-cover-proxy-checks.v1",
+  "base": "14464a83c100797474183a398fbeadf87f95bf30",
+  "red": {
+    "passed_tests": 13,
+    "failed_tests": 1,
+    "exit_code": 1,
+    "cause": "Public HTTPS and internal loopback origins were previously stubbed identical; owned cover fell back to legacy instead of same-origin path."
+  },
+  "final": {
+    "files": 4,
+    "passed_tests": 57,
+    "failed_tests": 0,
+    "exit_code": 0,
+    "typecheck": 0,
+    "changed_eslint": 0,
+    "build": 0,
+    "existing_build_warnings": 4
+  },
+  "independent_review": {
+    "findings": 0,
+    "tests": 57,
+    "exit_code": 0,
+    "initial_tests": 52,
+    "later_recommendation_and_reader_tests": 5
+  },
+  "anti_slop": {
+    "whole_command_exit": 1,
+    "direct_exit": 1,
+    "baseline_direct_exit": 1,
+    "same_sorted_five_existing_findings": true,
+    "new_cover_findings": 0,
+    "baseline_modified": false,
+    "existing_findings": [
+      "app/api/v1/recipes/[id]/save/route.ts:413:20 anti-slop(no-chained-type-assertions) This assertion chain discards type evidence. Keep the original precise type, or parse untrusted input at its boundary before narrowing it.",
+      "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts:110:34 anti-slop(no-conditional-empty-object-spread) This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "lib/server/cooking-execution-quantities.ts:59:5 anti-slop(no-conditional-empty-object-spread) This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "lib/server/youtube-public-recipe-nutrition.ts:48:5 anti-slop(no-conditional-empty-object-spread) This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "components/cooking/snapshot-v2-cook-mode-screen.tsx:91:23 anti-slop(no-conditional-empty-object-spread) This conditional spread hides property omission behind an empty object. Build the object in separate statements and add the property only when present.",
+      "Anti Slop verification failed: 5 finding(s) exceed the checked-in baseline"
+    ]
+  },
+  "source_hashes": {
+    "app/api/v1/recipe-books/route.ts": "c701cdf7d48690886831b2e9a305cf93e130023bebee0fb33e0092d4ddccff23",
+    "app/api/v1/recipe-books/[book_id]/image/route.ts": "a2e64b96f24b492c79fc47dcd4c9557d55b40bf0e1adb9a04d5858d7985ddfae",
+    "lib/server/recipe-book-image-read.ts": "f1f01617bef7be67b67950d546a92511726eca64c114778aff737383b1921693",
+    "tests/recipe-books-route.test.ts": "7526b09641bf518a83bf41bd23cc8fc80d92b70cdce4d4363fc0b9c7f22c789f",
+    "tests/recipe-book-image-route.test.ts": "c90f4153d8df0b2f65c63cbacd97c5d826faad98db991cce35726fb3cf3b9739",
+    "lib/recipebook-cover.ts": "1c7c12e415e30a346f0929eed4f75651c59d5b6800b2945b15fe9a6265e161c6"
+  },
+  "logs": {
+    "red": {
+      "sha256": "60b8488f7d1e46068ccae4552497d1066c1101733cbcad2474b5f2fbc47661fe"
+    },
+    "final-tests": {
+      "sha256": "eb09556bd8d6e916cea9fdea1d67006e38bc307ae3602efe1b2635a122c25f65"
+    },
+    "final-typecheck": {
+      "sha256": "3f80ccc94f19e94606b6f5c8d4103a1dfe18d562133467bd57ed2687e207fb9e"
+    },
+    "final-lint": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build": {
+      "sha256": "5d2cb8a642f08e5922f81d0bacf26edb0a675bbf4f310378b363a86832ef89bf"
+    },
+    "anti-slop": {
+      "sha256": "b30e36c407c8e09911d3b16264e633ab1b7d177e00e92fa0d9626666bd9acfd0"
+    },
+    "reader_path_red": {
+      "sha256": "5e286e9231e01230785f9527f05b57c7f48de8a71e328c0401b471b9d7d0fb54"
+    }
+  },
+  "limits": [
+    "Synthetic auth/RLS/RPC/Storage mocks only; no actual authenticated HTTP, Storage, mobile/desktop Chrome flow.",
+    "Build validates route compilation, not operating authorization or image delivery.",
+    "No schema, scopes, credentials, worker, manifest or deployment changes."
+  ],
+  "operating_actions": 0,
+  "reader_path_red": {
+    "passed_tests": 17,
+    "failed_tests": 1,
+    "exit_code": 1,
+    "cause": "Reader query coverImage normalizer previously rejected the exact app-relative image endpoint."
+  }
+}

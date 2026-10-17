@@ -81,6 +81,11 @@ export function normalizeRecipeBookCoverImageUrl(value: unknown): string | null 
     return null;
   }
 
+  // Only the registry-backed app image endpoint is a valid relative cover.
+  if (/^\/api\/v1\/recipe-books\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/image$/i.test(trimmed)) {
+    return trimmed;
+  }
+
   try {
     const url = new URL(trimmed);
     if (url.protocol !== "http:" && url.protocol !== "https:") {
