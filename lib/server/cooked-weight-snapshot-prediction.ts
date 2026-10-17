@@ -45,8 +45,10 @@ function record(value: unknown): value is Record<string, unknown> {
 // Text may veto a structured MIX tag, but never establishes a positive method.
 function mixInstructionConflicts(instruction: string): string[] {
   const conflicts: string[] = [];
-  if (/가열|끓|볶|데우|굽|불에|불을|전자레인지|오븐|\b(?:heat|boil|fry|bake|reheat)\b/iu.test(instruction)) conflicts.push("explicit_heat");
-  if (/물기|배수|건져|버리|따라\s*내|짜\s*내|\b(?:drain|discard|strain|squeeze)\b/iu.test(instruction)) conflicts.push("external_outflow");
+  // Match cooking actions without treating prepared names as a new heat step.
+  if (/가열|끓|볶|데우|데워|굽|구워|삶(?:아|고|는다|으세요|기)|데(?:쳐|치(?:고|면서|세요|기))|튀(?:겨|기(?:고|면서|세요|기))|쪄|찌(?:고|면서|세요|기)|불에|불을|전자레인지|오븐|\b(?:heat|boil|fry|bake|reheat)\b/iu.test(instruction)
+    || /(?:구운|삶은|데친|튀긴|찐)\s+(?:후|뒤|다음)(?:에)?(?:\s|[,.;]|$)/u.test(instruction)) conflicts.push("explicit_heat");
+  if (/물기|배수|건져|버리|버려|버린다|따라\s*(?:내|낸)|짜\s*내|체(?:에|로)\s*(?:거르|걸러|거른다|거른\s+(?:후|뒤|다음)(?:에)?(?:\s|[,.;]|$))|(?:물|국물|기름)(?:을|를)?\s*(?:빼|뺀)|\b(?:drain|discard|strain|squeeze)\b/iu.test(instruction)) conflicts.push("external_outflow");
   if (/(?:물|기름)(?:을|를)?\s*(?:더|추가)|\badd\s+(?:more\s+)?(?:water|oil)\b/iu.test(instruction)) conflicts.push("added_media");
   return conflicts;
 }

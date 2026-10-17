@@ -54,6 +54,39 @@ describe("existing snapshot weight mapping", () => {
     expect(result.methodSteps[0].conflicts.length).toBeGreaterThan(0);
     expect(JSON.stringify(result)).not.toContain(instruction);
   });
+  it.each([
+    "재료를 구워 섞는다", "재료를 삶아 섞는다", "채소를 데쳐 섞는다",
+    "재료를 튀겨 섞는다", "재료를 쪄 섞는다", "재료를 데워 섞는다",
+    "물은 체에 걸러 버린 뒤 섞는다", "국물을 뺀 뒤 섞는다", "물을 따라낸 뒤 섞는다",
+  ])("rejects active heat or outflow hidden behind a MIX tag: %s", instruction => {
+    const result = mapped([ingredient()], step("MIX", instruction));
+    expect(result.prediction.totalGrams).toBeNull();
+    expect(result.prediction.status).toBe("unavailable");
+    expect(result.methodSteps[0].conflicts).not.toEqual([]);
+    expect(result.prediction.assumptions).toEqual([]);
+    expect(JSON.stringify(result)).not.toContain(instruction);
+  });
+  it.each([
+    "재료를 구운 후 섞는다", "면을 삶은 뒤 섞는다", "체에 거른 뒤 섞는다",
+    "시금치를 데친 다음 섞는다", "두부를 튀긴 후 섞는다",
+  ])("rejects an explicit completed cooking action before mixing: %s", instruction => {
+    const result = mapped([ingredient()], step("MIX", instruction));
+    expect(result.prediction.totalGrams).toBeNull();
+    expect(result.prediction.status).toBe("unavailable");
+    expect(result.methodSteps[0].conflicts).not.toEqual([]);
+    expect(result.prediction.assumptions).toEqual([]);
+  });
+  it.each([
+    "삶은 달걀을 섞는다", "구운 참깨를 섞는다", "데친 시금치를 섞는다",
+    "튀긴 두부를 섞는다", "찐 감자를 섞는다", "체에 거른 소스를 섞는다",
+  ])("keeps an already prepared ingredient distinct from a new cooking action: %s", instruction => {
+    const result = mapped([ingredient()], step("MIX", instruction));
+    expect(result.prediction.totalGrams).toBe(200);
+    expect(result.prediction.status).toBe("estimated");
+    expect(result.methodSteps[0].conflicts).toEqual([]);
+    expect(result.prediction.input?.rows[0].preparationState.status).toBe("unknown");
+    expect(result.prediction.learningEligible).toBe(false);
+  });
   it("does not interpret absent, empty, untagged, unmatched or heated steps as no heat", () => {
     const context = step();
     const missing = predictSnapshotWeight({ snapshotId, baseServings: 2, cookingServings: 4, ingredients: [ingredient()] });

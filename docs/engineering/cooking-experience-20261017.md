@@ -1,6 +1,6 @@
 # 실제 요리 경험 개선 — 2026-10-17
 
-현재 판정: PR1781(화면/오일/공개영양), PR1782(75%무게), PR1784(이번요리수정)가 master에 병합됐다. 운영 배포·새스키마 적용·영양데이터 쓰기는0회다. 최근 quantity-v4 부분영양 후속은 로컬 검증 완료 후보이며 현재 v85 보존 검사 때문에 운영 접근을 중단했다. 기존 운영 Chrome 탭은 닫기 연결 오류로 닫힘을 확인하지 못했다. 아래21:18보고가 현재 인증 관련 경계다.
+현재 판정: PR1781(화면/오일/공개영양), PR1782(75%무게), PR1784(이번요리수정), PR1785(v4 부분영양)가 master에 병합됐다. 운영 배포·새스키마 적용·영양데이터 쓰기는0회다. PR1785 병합 기준 master는 `3e3e18b5961e5154e09bc33a30e6682521f40095`다. 현재 v85 보존 검사 때문에 운영 접근을 중단했다. 전체 스키마 재생은 기존 `20261009130000` preimage 검사에서 차단되어 새 두 migration의 전체 스키마 통과는 미확인이다. 기존 운영 Chrome 탭은 닫기 연결 오류로 닫힘을 확인하지 못했다. 아래21:18보고가 현재 인증 관련 경계다.
 
 | 요구 | 코드/검증 | 운영 |
 |---|---|---|
@@ -11,7 +11,7 @@
 |5 정확 일반명 오일 연결|PR1781 merged, 특수오일 보존|미반영, 최근2행 data수정 별도대기|
 |6 원입력 표시 제거|PR1781 merged, 원문·양 보존|미반영|
 |7 공통 영양성분표|PR1781 merged, 부분/결측 보존|미반영|
-|8 최근 영양 누락|원인분류·부분복구, 추가 v4 후보 로컬84검사/type/build/review0finding|source/연결 보완·최소backup/data쓰기·운영검증 미완료|
+|8 최근 영양 누락|PR1785 merged, 원인분류·부분복구, 84검사/type/build/review0finding|source/연결 보완·최소backup/data쓰기·운영검증 미완료|
 |9 목차 탐색|PR1781 merged, desktop8행/탐색·mobile유지|미반영|
 
 ## 시작 상태와 경계
@@ -210,3 +210,15 @@ Chrome실제컴포넌트375/1440에서수정titlefocus·200g→0.2kg자동환산
 최근부분영양 후속 최종:4파일84검사PASS, typecheck/build exit0(기존4경고),변경ESLint0·diffcheck0,독립리뷰1건수정후finding0. 운영중지요청뒤새운영접근0. 검사용자기소유networkless/tmpfs PostgreSQL컨테이너는exactID·label·networknone재확인후제거했고기존운영/dev컨테이너는건드리지않았다. 임시route와진단test도제거했다.
 
 배포 인계 주의: 두 새 migration 중 실행분 수정에는 function-body hook을 위한 동적SQL과scope-chain변경이 있어일반추가형fastDB분류로바로통과한다고가정하면안된다. `scripts/lib/prelaunch-database.mjs`는procedural/dynamic SQL을별도reviewedDB절차대상으로분류한다. 현재별도운영DB readiness·전체schema·실제인증HTTP종단은미준비/미실행이며배포설정/validator를완화하지않았다. 잠금해제후담당자가정확한기준DB/head와백업을확인해검토된DB반영을직렬화하고웹은승인된pnpm deploy:dev경로를사용해야한다.
+
+## 21:25 이후 후속 — 운영 접근 중단 유지
+
+- PR1785를 `3e3e18b5961e5154e09bc33a30e6682521f40095`로 머지했다. 부모 메시지 전달 도구는 다시 `thread not found`라 직접 전달되지 않았으며 본 기록과 최종 응답으로 인계한다.
+- 거절된 읽기는 canonical recipe UUID 6개를 `https://app.mumeok.kr/api/v1/recipes/<UUID>` 경로로 보내 최신 공개 영양 payload를 확인하려던 Python urllib GET이다. 인증/user/session/token은 보내지 않는 요청이었으나 자동 승인 검토가 로컬 DB 유래 식별자의 외부 전송에 대한 명시 승인이 없다고 거절했다. 실행 전 거절, 출력 파일 없음, 재시도·우회0. 이후 운영 사이트·DB·Chrome·인증 재접근0이다.
+- 전체 스키마 격리 재생은 고정 PG17 이미지, network none·port0·mount0·실제 credential0의 새 컨테이너만 사용했다. 파일별 transaction·UTF8·표준 플랫폼 fixture를 맞춘 후 기존 `20261009130000_ingredient_piece_unit_evidence.sql`의 `PIECE_UNIT_FUNCTION_BASELINE_MISMATCH: build_recipe_nutrition_input_guard_pre_product_20260922`에서 중단됐다. 새233/234에 아직 도달하지 않아 전체 스키마 성공이라고 표시하지 않는다. 실패 직전 스키마는 합성 데이터 없는 schema-only `/tmp/homecook-cooking-full-schema-before-failure.sql`, 결과는 `/tmp/homecook-cooking-full-schema-report.json`, 로그는 `/tmp/homecook-cooking-full-schema.log`다. 새 소유 컨테이너 모두 정리 확인.
+- 기존 최소 fixture의 mass12·execution10 PASS와 전체 스키마 차단은 별개다. 기존 migration의 hash fence를 완화하거나 skip하지 않았다. [적용·복구 계획](cooking-experience-database-transition-20261017.md)을 따로 남겼으며 fastDB 적용은 하지 않는다.
+- 로컬 미반영 cooked-weight-veto의 두 코드 hunk와20개 회귀를 독립 worktree에 이식했다. 단순 MIX 태그라도 실제 가열/배수 지시가 있으면 100% 폐쇄혼합 추정을 거절한다. 이미 준비된 ‘구운 참깨/삶은 달걀’ 명사는 가열 지시로 확대하지 않는다. 관련58 PASS, typecheck/lint 성공. 원 worktree·과거 증거 문서는 수정하지 않았다. PR/merge 상태는 후속 기록 참조.
+- 137개 고유 후보 브랜치는 중복 커밋 제거 후511개다. [커밋별 읽기 대조](data/local-change-necessity-review-20261017.json)에 master 역사상 postimage 존재와 미일치 runtime 경로를 남겼다. 역사에 있다는 것은 현재 동작 검증을 대신하지 않는다. 필요 변경 모두 머지 요청은 계속 열린 항목이며 미검토 후보를 완료로 처리하지 않는다.
+- [최근 재료 연결·출처 검토](recent-nutrition-source-review-20261017.md): 운영 backup/data 변경0. 정확 식용유 연결2행은 차후 최소 백업·현재 revision 확인 후 반영 후보다. 제품/원료 불명 항목은 source 확보 전 보류한다.
+
+후속 veto 검증: 작성자58 PASS, 독립 리뷰63 PASS·finding0, typecheck/build exit0(기존4경고), 변경 ESLint0. 화면 구성 변경은 없으며 앞선375/1440 Chrome 흐름 검증에 더해 서버의 가열·배수 판정만 보완한다. 전체 격리 재생 [기계 기록](data/cooking-full-schema-validation-20261017.json)은 기존 fence 실패와 미도달233/234를 그대로 보존한다.

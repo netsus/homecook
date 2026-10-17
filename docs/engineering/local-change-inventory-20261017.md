@@ -623,3 +623,11 @@ master 조상324개, 비조상241개 중patch동등104개·고유후보137개다
 분류집계: {"실험/보존후보": 5, "master포함": 324, "고유검토대기": 124, "patch동등": 104, "명시보류PR": 4, "필요기능흡수": 1, "진행중소유자": 3}.
 
 이파일은목록화/보존단계다. 고유검토대기전체가필요없음또는모두머지완료라는판정은아니다.
+
+## 후속 읽기 검토 — master3e3e18b59
+
+- [미커밋26개 독립 리뷰](local-uncommitted-necessity-review-20261017.md): 확장5711파일, exact-master80개. v85는 소유자 후속 커밋으로 현재clean이다. 가열/배수 veto 코드+회귀2파일은 필요 후보로 확인해 최신 독립 브랜치에 이식했다. 원본 worktree 수정/삭제/reset0.
+- [고유 커밋511개 인덱스](data/local-change-necessity-review-20261017.json):137개 브랜치의 중복제거다.107개 커밋은 전체 변경 후image가master역사에 있고, runtime만그대로있는것과 비runtime증거를별도분류했다. 이는현재동작·삭제의미까지동등하다는뜻이아니다.
+- 최근 runtime 후보 중 줌/꼬집은 현재 `ingredient-piece-units.mjs`의 family/size/evidence 비교로 후속 구현됐다. 과거 대파1줌/소금1꼬집의 user제공무게를 전역 기본값처럼 되살리지 않는다. recipe-detail 페이지 title복원은 현재컴포넌트에존재한다. 일반오일은 PR1781의정확전체명규칙으로이번요구를반영했으므로옛branch전체를머지하지않는다.
+- `codex/hybrid-static-contract-repair-20261012`의 recipe-save fallback user-scope 후보는 현재 legacy fallback에 service-role 호출이남아있음을확인했다. 현재9개요구에필수인확정결함으로승격하지않았으며 기존29계약/refactor보류와별도검토가필요하다. 삭제된DELETE endpoint·옛전체보안inventory를복구하지않는다.
+- 나머지 unmatched runtime의미검토·다른소유자승인·필요성검증은진행중이다. 사용자 ‘필요한로컬변경모두머지’요청을완료로닫지않는다. 기존소유자작업과동시운영전환을침범하지않는다.
