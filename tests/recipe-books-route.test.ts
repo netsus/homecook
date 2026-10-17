@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createRecipeImageInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -15,22 +16,8 @@ const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient: async (...args: unknown[]) => {
-    const routeClient = await createRouteHandlerClient(...args);
-    const createDataClient = createServiceRoleClient.getMockImplementation();
-    const dataClient = createDataClient?.();
-    return {
-      ...routeClient,
-      ...dataClient,
-      auth: routeClient.auth,
-      rpc: dataClient?.rpc
-        ?? routeClient.rpc
-        ?? vi.fn(async () => ({
-          data: null,
-          error: { code: "PGRST202" },
-        })),
-    };
-  },
+  createRouteHandlerClient,
+  createRecipeImageInternalClient,
   createServiceRoleClient,
 }));
 
@@ -148,6 +135,8 @@ describe("/api/v1/recipe-books", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createRecipeImageInternalClient.mockReset();
+    createRecipeImageInternalClient.mockImplementation(() => createServiceRoleClient());
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
@@ -186,6 +175,7 @@ describe("/api/v1/recipe-books", () => {
         code: "UNAUTHORIZED",
       },
     });
+    expect(createRecipeImageInternalClient).not.toHaveBeenCalled();
   });
 
   it("GET returns system and custom books with recipe_count", async () => {
@@ -323,7 +313,7 @@ describe("/api/v1/recipe-books", () => {
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 
-  it("GET resolves a managed private cover from local Supabase only after the owned book list is authorized", async () => {
+  it.each(["owned", "unavailable", "foreign_owner", "list_denied"])("GET keeps managed cover reads behind the owned list (%s)", async (scenario) => {
     const bookId = "11111111-1111-4111-8111-111111111111";
     const ownerId = "22222222-2222-4222-8222-222222222222";
     const objectId = "33333333-3333-4333-8333-333333333333";
@@ -341,7 +331,7 @@ describe("/api/v1/recipe-books", () => {
     ) => {
       ownedBookListCompleted = true;
       return Promise.resolve({
-        data: [{
+        data: scenario === "list_denied" ? null : [{
           id: bookId,
           name: "비공개 표지",
           book_type: "custom",
@@ -349,7 +339,7 @@ describe("/api/v1/recipe-books", () => {
           cover_image_url: "https://legacy.example/cover.webp",
           sort_order: 0,
         }],
-        error: null,
+        error: scenario === "list_denied" ? { code: "42501", message: "permission denied" } : null,
       }).then(onFulfilled, onRejected);
     };
 
@@ -378,7 +368,7 @@ describe("/api/v1/recipe-books", () => {
           image_object_id: objectId,
           bucket_id: "recipe-images-private",
           object_path: `${ownerId}/1/${objectId}.webp`,
-          owner_uuid: ownerId,
+          owner_uuid: scenario === "foreign_owner" ? "44444444-4444-4444-8444-444444444444" : ownerId,
           account_generation: 1,
           visibility: "private",
           state: "attached_private",
@@ -409,16 +399,33 @@ describe("/api/v1/recipe-books", () => {
         })),
       },
       from,
+      rpc: vi.fn(async () => ({ data: null, error: { code: "42501", message: "permission denied for function read_recipe_book_image_projections" } })),
     });
     createServiceRoleClient.mockReturnValue(serviceClient);
+    createRecipeImageInternalClient.mockImplementation(() => {
+      expect(ownedBookListCompleted).toBe(true);
+      return scenario === "unavailable" ? null : serviceClient;
+    });
 
     const { GET } = await importRoute();
     const response = await GET(new Request("http://localhost:3000/api/v1/recipe-books"));
     const body = await response.json();
 
+    if (scenario === "list_denied") {
+      expect(response.status).toBe(500);
+      expect(createRecipeImageInternalClient).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalled();
+      expect(createSignedUrl).not.toHaveBeenCalled();
+      return;
+    }
     expect(response.status).toBe(200);
-    expect(body.data.books[0].cover_image_url).toBe(signedUrl);
+    expect(body.data.books[0].cover_image_url).toBe(scenario === "owned" ? signedUrl : "https://legacy.example/cover.webp");
     expect(recipeBooksTable.__selectQuery.eq).toHaveBeenCalledWith("user_id", ownerId);
+    if (scenario !== "owned") {
+      if (scenario === "unavailable") expect(rpc).not.toHaveBeenCalled();
+      expect(createSignedUrl).not.toHaveBeenCalled();
+      return;
+    }
     expect(rpc).toHaveBeenCalledWith("read_recipe_book_image_projections", {
       p_book_ids: [bookId],
     });
