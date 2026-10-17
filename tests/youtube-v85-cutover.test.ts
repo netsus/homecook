@@ -4,38 +4,136 @@ import { join } from 'node:path';
 import {generateKeyPairSync,sign} from 'node:crypto';
 import { V85,V85_BEGIN_SQL,V85_LOCK_SQL,assertV85Plan,assertV85Source,assertV85MetadataHandoff,v85MetadataPatch,assertV85Preserved,assertV85WorkerCredential,verifyV85IssuedToken,
   classifyV85Registration,ownsV85Registration,buildV85RegistrationSql,assertV85Successor,readV85Authority,v85Hash } from '../scripts/lib/youtube-v85-cutover.mjs';
-import { V74_ACTIVATION_SHA256 } from '../scripts/lib/prelaunch-youtube-v74-cutover.mjs';
-import { DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS } from '../scripts/lib/youtube-extraction-worker-artifact.mjs';
+import { assertV85ExecutionPlan,v85ContinuationDataDeltas,readV85ExecutionApproval,assertV85ActivatedRuntime,assertV85After,assertV85PackageContinuation } from '../scripts/lib/youtube-v85-cutover.mjs';
 import { classifyPrelaunchScope,assertClosedR2ContinuationOptions,assertRound2InheritanceBoundaries,retargetPlist } from '../scripts/lib/prelaunch-web-deploy.mjs';
-import { runV85Cutover,resumeV85Cutover,createV85PrivateFile } from '../scripts/youtube-v85-controlled-cutover.mjs';
-const now=new Date('2026-10-17T00:00:00Z'),h='a'.repeat(64),other='b'.repeat(64),ref='c'.repeat(40);
-const reviewed=JSON.parse(readFileSync('scripts/manifests/youtube-v85-reviewed-source.json','utf8'));
-function fixture() {
-  const origin={personal:{path:'/owned/original.json',sha256:h}},pointer={path:'/owned/fingerprint-authority.json',sha256:h};
-  const policy={version:3,extractorMode:'i031_codex_vision',pipelineIdentity:String(V85.predecessorPipelineIdentity),resultAffectingOptions:{...DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS,interval:Number(DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS.interval)},
-    fingerprintKeyVersion:'2',previousFingerprintKeyVersion:null,previousFingerprintValidUntil:null,enabled:true};
-  const raw={policy_key:'primary',policy_version:3,extractor_mode:policy.extractorMode,pipeline_identity:String(policy.pipelineIdentity),result_affecting_options:policy.resultAffectingOptions,
-    fingerprint_key_version:'2',previous_fingerprint_key_version:null,previous_fingerprint_valid_until:null,enabled:true,updated_at:'2026-10-16T20:58:46Z'};
-  const worker={credentialGeneration:49,credentialRowSha256:h,policyRowSha256:h,policyStableSha256:h,schemaIdentity:V85.schemaIdentity,snapshotDigest:V85.predecessorSnapshotDigest,
-    workerPolicyEnabled:true,workerReleaseSha:V85.predecessorReleaseSha,catalogFingerprint:V85.catalogSha256,credentialActive:true,queued:0,processing:0,permitHeld:false,activeEnqueueSessions:0};
-  const credential={generation:49,jtiSha256:h,expiresAt:String(V85.expiresAt),releaseSha:String(V85.predecessorReleaseSha),schemaIdentity:V85.schemaIdentity,snapshotDigest:V85.predecessorSnapshotDigest};
-  const before={full:{ledger:Array.from({length:232},(_,i)=>({filename:`${i}.sql`,sha256:h})),fingerprintPolicy:raw,worker},worker,policy,credential,jobCount:42,jobsSha256:h,
-    targetSha256:h,normalDataSha256:h,controlsSha256:h,catalogSha256:h,immutableSha256:h,authoritySha256:h};
-  const plan={schema:'homecook.youtube-v85-plan.v1',webRef:ref,releaseSha:String(V85.releaseSha),artifactSha256:V85.artifactSha256,descriptorSha256:V85.descriptorSha256,expiresAt:String(V85.expiresAt),
-    before,beforeService:{plistSha256:h,pid:123,configSha256:h},origin:{authority:origin,v74ActivationSha256:V74_ACTIVATION_SHA256,fingerprintAuthority:pointer,fingerprintReceiptSha256:h},sources:reviewed};
-  const claims={role:'youtube_extraction_worker',scope:'youtube-extraction-worker',iss:'https://worker.mumeok.kr',aud:'youtube-extraction',generation:50,release_sha:V85.releaseSha,
-    schema_identity:V85.schemaIdentity,allowed_snapshot_digest:V85.snapshotDigest,jti_hash:other,iat:now.getTime()/1000,exp:Date.parse(V85.expiresAt)/1000};
-  const metadata={generation:50,jti_sha256:other,expires_at:V85.expiresAt,release_sha:V85.releaseSha,schema_identity:V85.schemaIdentity,allowed_snapshot_digest:V85.snapshotDigest};
-  const off=structuredClone(before);off.policy.enabled=false;off.full.fingerprintPolicy.enabled=false;off.full.fingerprintPolicy.updated_at='2026-10-17T00:00:01Z';off.worker.workerPolicyEnabled=false;off.worker.policyRowSha256=other;
-  const after=structuredClone(off);after.policy.pipelineIdentity=V85.pipelineIdentity;after.full.fingerprintPolicy.pipeline_identity=V85.pipelineIdentity;
-  Object.assign(after.worker,{credentialGeneration:50,workerReleaseSha:V85.releaseSha,snapshotDigest:V85.snapshotDigest,credentialRowSha256:other,policyStableSha256:other});
-  Object.assign(after.credential,{generation:50,jtiSha256:other,releaseSha:V85.releaseSha,snapshotDigest:V85.snapshotDigest});
-  const intent={planSha256:h,metadataSha256:h,beforeSha256:h,before:off};
-  const activated=structuredClone(after);activated.policy.enabled=true;activated.full.fingerprintPolicy.enabled=true;activated.worker.workerPolicyEnabled=true;
-  const proof={schema:'homecook.youtube-v85-activation.v1',planSha256:h,before,after:activated,metadata,web:{releaseSha:ref,plistSha256:h},registrationSha256:h,verificationSha256:h,
-    health:{authenticatedStatus:200,emptyClaimDenied:true,ready:true,pid:234,secondPid:234},service:{plistSha256:h}};
-  return {plan,claims,metadata,off,after,intent,proof,origin,recovery:{pointer,authority:{receiptSha256:h}}};
+import { runV85Cutover,resumeV85Cutover,createV85PrivateFile,requireV85UserExecution,v85RemainingTimeout,confirmV85ReviewedOperation } from '../scripts/youtube-v85-controlled-cutover.mjs';
+import { fixture,now,h,other,ref,reviewed } from './fixtures/youtube-v85-cutover.fixture';
+describe('user-owned credential and access boundary',()=>{
+  const tty={platform:'darwin' as const,stdinTTY:true,stdoutTTY:true,stderrTTY:true};
+  it.each(['apply','resume','approve-plan'])('requires direct user Terminal and exact confirmation for %s',async action=>{
+    const confirm=vi.fn().mockResolvedValue('V85-GEN50');
+    await expect(requireV85UserExecution(action,{...tty,stdinTTY:false},confirm)).rejects.toThrow('user local Terminal');
+    await expect(requireV85UserExecution(action,{...tty,stdoutTTY:false},confirm)).rejects.toThrow('user local Terminal');
+    await expect(requireV85UserExecution(action,{...tty,stderrTTY:false},confirm)).rejects.toThrow('user local Terminal');
+    await expect(requireV85UserExecution(action,{...tty,platform:'linux'},confirm)).rejects.toThrow('user local Terminal');
+    expect(confirm).not.toHaveBeenCalled();
+    await expect(requireV85UserExecution(action,tty,async()=> 'CANCEL')).rejects.toThrow('cancelled');
+    await expect(requireV85UserExecution(action,tty,confirm)).resolves.toBeUndefined();
+    expect(confirm).toHaveBeenCalledOnce();
+  });
+  it.each(['prepare','preflight','stage','reconcile'])('does not prompt for %s',async action=>{
+    const confirm=vi.fn();await requireV85UserExecution(action,{...tty,stdinTTY:false},confirm);expect(confirm).not.toHaveBeenCalled();
+  });
+  it('caps commands to their remaining deadline and rejects expiration',()=>{
+    expect(v85RemainingTimeout(30000,null,100)).toBe(30000);
+    expect(v85RemainingTimeout(30000,1500,1000)).toBe(500);
+    expect(()=>v85RemainingTimeout(30000,1000,1000)).toThrow('deadline');
+  });
+});
+
+function continuationFixture(){
+  const original=fixture().plan,before=structuredClone(original.before);
+  before.full.normalDataSha256=other;before.full.preservedRowsSha256=other;before.normalDataSha256=other;before.jobsSha256=other;before.jobCount=43;
+  const current={...before,originalJobsSha256:original.before.jobsSha256,approvedJobsSha256:other};
+  const file='scripts/lib/round2-eight-key-rotation-fence.mjs';
+  const sources:Record<string,[string|null,string|null]>={...original.sources,[file]:[null,other]};
+  const sourceDelta:Record<string,[string|null,string|null]>={[file]:[null,other]};
+  const plan={...structuredClone(original),schema:'homecook.youtube-v85-continuation-plan.v1',webRef:'d'.repeat(40),originalPlan:original,before:current,
+    sources,
+    round2Binding:{marker:{version:1,fenceSha256:h,candidatePlistSha256:h,stageReceiptSha256:h,collectionEnabled:false,leadEnabled:false,reactivationReady:false},fenceSha256:h,controlSha256:h},
+    continuation:{schema:'homecook.youtube-v85-continuation.v1',originalPlanSha256:h,originalCanonicalSha256:v85Hash(JSON.stringify(original)),sourceDelta,
+      requiresExplicitUnattributedDataAcknowledgement:true,rawBeforeImagesAvailable:false,classification:'unattributed-prior-auth-normal-and-extra-job',dataDeltas:v85ContinuationDataDeltas(original,current)}};
+  return plan;
 }
+describe('independent immutable original plus exact continuation authority',()=>{
+  it('displays the exact capsule hash and unattributed-data warning before user confirmation',async()=>{
+    const p=continuationFixture(),bytes=Buffer.from(JSON.stringify(p)),events:string[]=[],display=vi.fn(value=>events.push(value.warning?'warning':'review'));
+    await confirmV85ReviewedOperation('approve-plan',bytes,{platform:'darwin',stdinTTY:true,stdoutTTY:true,stderrTTY:true},display,async()=>{events.push('confirm');return 'V85-GEN50';});
+    expect(events).toEqual(['review','warning','confirm']);
+    expect(display.mock.calls[0][0]).toMatchObject({planSha256:v85Hash(bytes),currentJobs:43,priorDataChangesUnattributed:true,workerExpiresAt:V85.expiresAt,managerMaximumSeconds:300});
+  });
+  it('binds exact public package bytes and rejects dependency or build-hook changes',()=>{
+    const p=continuationFixture(),after=readFileSync('package.json','utf8');
+    const before=after.split('\n').filter(line=>!/"deploy:dev:(?:recover-v85-web|plan-v85-web-recovery|plan-round2-eight-keys|apply-round2-eight-keys)"/u.test(line)).join('\n');
+    const originalPackage=v85Hash(before);
+    p.sources['package.json']=[originalPackage,v85Hash(after)];
+    p.continuation.sourceDelta['package.json']=[v85Hash(before),v85Hash(after)];
+    const evidence={before,after};
+    const capsule={...p,continuation:{...p.continuation,packageEvidence:evidence}};
+    expect(assertV85ExecutionPlan(capsule,now)).toBe(capsule);
+    for(const mutate of [(v: {scripts:Record<string,string>})=>{v.scripts.build='fixture-unreviewed-build';},
+      (v:{dependencies:Record<string,string>})=>{v.dependencies['fixture-new-dependency']='1.0.0';}]){
+      const next=JSON.parse(after);mutate(next);
+      expect(()=>assertV85PackageContinuation(JSON.parse(before),next)).toThrow();
+      const changed=JSON.stringify(next),bad={...capsule,sources:{...capsule.sources,'package.json':[originalPackage,v85Hash(changed)]},
+        continuation:{...capsule.continuation,sourceDelta:{...p.continuation.sourceDelta,'package.json':[v85Hash(before),v85Hash(changed)]},packageEvidence:{before,after:changed}}};
+      expect(()=>assertV85ExecutionPlan(bad,now)).toThrow();
+    }
+  });
+  it('accepts a separately acknowledged incident capsule without changing original42 or evaluated product',()=>{
+    const plan=continuationFixture(),original=JSON.stringify(plan.originalPlan);
+    expect(assertV85ExecutionPlan(plan,now)).toBe(plan);
+    expect(JSON.stringify(plan.originalPlan)).toBe(original);
+    expect(assertV85Plan(plan.originalPlan,now)).toBeTruthy();
+    expect(()=>assertV85Plan(plan,now)).toThrow();
+  });
+  it.each(['original','canonical','catalog','worker','expiry','jobs44','old42','unattributed','delta','marker','fence','product','unrelated','source-delta'])('rejects capsule change %s',change=>{
+    const p=continuationFixture();
+    if(change==='original')p.originalPlan.before.jobCount=43;
+    if(change==='canonical')p.continuation.originalCanonicalSha256=other;
+    if(change==='catalog')p.before.full.ledger.pop();
+    if(change==='worker')p.before.worker.credentialGeneration=50;
+    if(change==='expiry')p.expiresAt='2026-10-23T14:27:30Z';
+    if(change==='jobs44')p.before.jobCount=44;
+    if(change==='old42')p.before.originalJobsSha256=other;
+    if(change==='unattributed')p.continuation.requiresExplicitUnattributedDataAcknowledgement=false;
+    if(change==='delta')p.continuation.dataDeltas=[];
+    if(change==='marker')p.round2Binding.marker.leadEnabled=true;
+    if(change==='fence')p.round2Binding.fenceSha256=other;
+    if(change==='source-delta')p.continuation.sourceDelta={};
+    if(change==='product'||change==='unrelated'){
+      const f=change==='product'?'lib/server/youtube-async-extraction.ts':'scripts/unrelated-runtime.mjs';
+      const pair=p.sources[f]??[null,null];p.sources[f]=[pair[0],other];p.continuation.sourceDelta[f]=[pair[1],other];
+    }
+    expect(()=>assertV85ExecutionPlan(p,now)).toThrow();
+  });
+  it('rejects any further data drift including changes to a single original row digest',()=>{
+    const p=continuationFixture(),after=structuredClone(p.before);
+    after.full.normalDataSha256=h;
+    expect(()=>assertV85Preserved(p.before,after)).toThrow();
+    const originalChanged=structuredClone(p.before);originalChanged.originalJobsSha256=other;
+    expect(()=>assertV85Preserved(p.before,originalChanged)).toThrow('original42');
+  });
+  it('reads both independent anchors and exact original bytes without writing',()=>{
+    const dir=mkdtempSync('/tmp/v85-continuation-authority-');
+    try{
+      const p=continuationFixture(),originalBytes=Buffer.from(JSON.stringify(p.originalPlan));
+      p.continuation.originalPlanSha256=v85Hash(originalBytes);
+      const bytes=Buffer.from(JSON.stringify(p));writeFileSync(join(dir,'plan.json'),originalBytes);writeFileSync(join(dir,'continuation-plan.json'),bytes);
+      const approval=vi.fn(account=>account==='approved-continuation-sha256'?v85Hash(bytes):v85Hash(originalBytes));
+      expect(readV85ExecutionApproval((file:string)=>readFileSync(file),approval,dir,now)?.planSha256).toBe(v85Hash(bytes));
+      expect(approval.mock.calls).toEqual([[],['approved-continuation-sha256']]);
+      expect(()=>readV85ExecutionApproval((file:string)=>readFileSync(file),()=>h,dir,now)).toThrow();
+      expect(readFileSync(join(dir,'plan.json'))).toEqual(originalBytes);
+    }finally{rmSync(dir,{recursive:true,force:true});}
+  });
+  it('keeps initial data preservation strict while allowing a later new job in owned-runtime readback',()=>{
+    const p=continuationFixture(),f=fixture(),activated=structuredClone(p.before);
+    activated.worker=structuredClone(f.proof.after.worker);activated.full.worker=activated.worker;
+    activated.policy=structuredClone(f.proof.after.policy);activated.full.fingerprintPolicy=structuredClone(f.proof.after.full.fingerprintPolicy);
+    activated.credential=structuredClone(f.proof.after.credential);
+    const proof={...f.proof,before:p.before,after:activated},current=structuredClone(activated);
+    current.jobCount=44;current.jobsSha256='e'.repeat(64);current.normalDataSha256='e'.repeat(64);
+    current.full.normalDataSha256=current.normalDataSha256;current.full.preservedRowsSha256='e'.repeat(64);
+    current.worker.processing=1;current.full.worker=current.worker;
+    expect(assertV85ActivatedRuntime(p,proof,current,f.metadata,now)).toEqual({historicalJobsPreserved:true,postActivationJobs:1});
+    expect(()=>assertV85After(p,current,f.metadata,true)).toThrow();
+    const corrupt=structuredClone(current);corrupt.approvedJobsSha256=h;
+    expect(()=>assertV85ActivatedRuntime(p,proof,corrupt,f.metadata,now)).toThrow('historical');
+    const wrongPolicy=structuredClone(current);wrongPolicy.policy.enabled=false;
+    expect(()=>assertV85ActivatedRuntime(p,proof,wrongPolicy,f.metadata,now)).toThrow();
+  });
+});
 describe('v85 approved source and immutable worker boundary',()=>{
   it('accepts evaluated artifact, V2/42/DB232 and unchanged credential duration',()=>expect(assertV85Plan(fixture().plan,now)).toBeTruthy());
   it.each(['generation','release','expiry','fingerprint','previous','options','jobs','ledger','service','view','source'])('rejects changed %s',change=>{

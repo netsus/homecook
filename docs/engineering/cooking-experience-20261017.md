@@ -126,3 +126,5 @@
 PR/merge/배포는아직진행전. PR1780master병합과v85실제전환은별개다. v85담당승인대기·배포잠금유지, 공유설정/운영DB쓰기/키fallback/worker교체/새모델호출0. 부모app메시지도구는source_thread_id를찾지못해중간report전송실패1회이며commentary와이문서로진행상태를남긴다.
 
 최종 합동 회귀: 15파일312 PASS/FAIL0/SKIP0, exit0. 별도 계산기+상세185 PASS. typecheck·build exit0, 변경lint 오류0/기존경고1. 운영배포0.
+
+최신 master PR1780 `8e83c485d`를 통합했고 SOURCE_OF_TRUTH의 양쪽 새 절을 보존해 문서 충돌만 해결했다. v85 운영 전환·배포 잠금은 여전히 별개다.

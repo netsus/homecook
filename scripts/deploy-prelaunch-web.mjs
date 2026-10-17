@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+import { V85_WEB_RECOVERY,assertRecoveryBinding,assertRecoveryPreserved,assertRecoveryWebProcess,assertRecoveredEnqueue,runV85WebRecovery,recoveryCheck } from './lib/prelaunch-v85-web-recovery.mjs';
+import { createV85WebRecoveryObserver } from './lib/prelaunch-v85-web-recovery-observation.mjs';
+import { loadRecoveredReadiness } from './lib/prelaunch-v85-recovered-readiness.mjs';
+import { createRound2EightKeyRestartFence, guardRound2EightKeyRestart, preserveRound2RotationState } from './lib/round2-eight-key-rotation-fence.mjs';
+import { readV85Approval } from './lib/youtube-v85-approval.mjs';
 import { readV85Authority, assertV85Source, assertV85MetadataHandoff, v85Paths } from "./lib/youtube-v85-cutover.mjs";
 import {
   RECIPE_REQUEST_ROLE_FEATURE, RECIPE_REQUEST_ROLE_MIGRATION, readRecipeRequestRoleAttempt, recipeRequestRolePhaseStatus, assertRecipeRequestRoleReader, verifyRecipeRequestRolePredecessor, verifyRecipeRequestRoleWorkerAdmission, loadRecipeSaveRecoveryMaintenance,
@@ -82,6 +87,29 @@ const service = `${domain}/com.homecook.production`;
 let logFd;
 const cancellation = createCancellation();
 const say = (message) => process.stdout.write(`${message}\n`);
+const assertRound2RestartFence = createRound2EightKeyRestartFence(() => {
+  const path = join(root, 'round2-eight-key-rotation-fence.json');
+  const rotation = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation : null;
+  const operation = join(root, 'round2-eight-key-rotation-apply-20261017/journal.json');
+  if (existsSync(operation) && JSON.parse(readClosedR2PrivateBytes(operation, repository)).phase !== 'committed') {
+    throw new DeploymentError('R2_ROTATION_FORWARD_REPAIR_PENDING');
+  }
+  try { lstatSync(path); } catch (error) {
+    if (error.code === 'ENOENT' && !rotation) return null;
+    throw error;
+  }
+  const bytes = readClosedR2PrivateBytes(path, repository);
+  if (rotation && createHash('sha256').update(bytes).digest('hex') !== rotation.fenceSha256) {
+    throw new DeploymentError('R2_ROTATION_FENCE_CHANGED');
+  }
+  return JSON.parse(bytes);
+});
+
+function rotationSafeState(value) {
+  const previous = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository, 524288)) : null;
+  return preserveRound2RotationState(previous, value);
+}
+const rotationSafeStateBytes = bytes => JSON.stringify(rotationSafeState(JSON.parse(bytes)));
 
 function command(bin, args, options = {}) {
   const { trimOutput = true, ...spawnOptions } = options;
@@ -969,7 +997,7 @@ async function completeProtectedReaderRecovery(options, review) {
     const pointer = state.closedR2.protectedRollout.readerReceipt, bytes = readClosedR2PrivateBytes(pointer.path, repository, 524288);
     if (hash(bytes) !== pointer.sha256) throw new DeploymentError("보호 reader candidate receipt가 바뀌었습니다.");
     await durableJson(protectedReaderReceiptPath, JSON.parse(bytes));
-    await durableJson(statePath, state); durableUnlink(recoveryPath);
+    await durableJson(statePath, rotationSafeState(state)); durableUnlink(recoveryPath);
     say(JSON.stringify({ status: "reader_ready", readerFloor: review.to, serviceChanges: 0, databaseWrites: 0 }));
   } finally { await lease.release(); }
 }
@@ -1137,13 +1165,18 @@ async function preview(plist, checkout, buildId, closedR2 = false) {
 
 }
 async function switchWeb(bytes) {
-  await restartLaunchAgent({
+  const assertTarget = () => assertRound2RestartFence(parsePlist(bytes).EnvironmentVariables);
+  // deploy, rollback, compensation and the fixed v85 recovery share this boundary.
+  await restartLaunchAgent(guardRound2EightKeyRestart({
     isLoaded: async () => spawnSync("/bin/launchctl", ["print", service], { stdio: "ignore" }).status === 0,
     bootout: async () => { command("/bin/launchctl", ["bootout", service], { stdio: ["ignore", logFd, logFd] }); },
     writePlist: async () => { atomicWrite(plistPath, bytes); },
-    bootstrap: async () => spawnSync("/bin/launchctl", ["bootstrap", domain, plistPath], { stdio: ["ignore", logFd, logFd] }).status,
+    bootstrap: async () => {
+      if (!readFileSync(plistPath).equals(bytes)) throw new DeploymentError('R2_ROTATION_INSTALLED_TARGET_CHANGED');
+      return spawnSync("/bin/launchctl", ["bootstrap", domain, plistPath], { stdio: ["ignore", logFd, logFd] }).status;
+    },
     wait: delay,
-  });
+  }, assertTarget));
 }
 async function verifyAppliedDatabase(options, checkout) {
   if (options.reviewedNutritionRecoveryReadiness) return verifyNutritionRecoveryAppliedDatabase({ repositoryRoot: checkout, configPath: options.dbConfig, releaseSha: options.ref });
@@ -1255,7 +1288,7 @@ async function deploy(options) {
         // records still need the separately applied incompatible DB boundary.
         if (existsSync(statePath)) {
           const previousState = JSON.parse(readFileSync(statePath, "utf8"));
-          atomicWrite(statePath, JSON.stringify({ ...previousState, database: pieceUnitDatabase }));
+          atomicWrite(statePath, JSON.stringify(rotationSafeState({ ...previousState, database: pieceUnitDatabase })));
         }
       }
       if (options.reviewedYoutubeResolutionReadiness) {
@@ -1265,7 +1298,7 @@ async function deploy(options) {
         atomicWrite(databaseStatePath, JSON.stringify(youtubeResolutionDatabase));
         if (existsSync(statePath)) {
           const previousState = JSON.parse(readFileSync(statePath, "utf8"));
-          atomicWrite(statePath, JSON.stringify({ ...previousState, database: youtubeResolutionDatabase }));
+          atomicWrite(statePath, JSON.stringify(rotationSafeState({ ...previousState, database: youtubeResolutionDatabase })));
         }
       }
       const buildOptions = { cwd: checkout, env: prelaunchBuildEnvironment(nextPlist, basename(release)) };
@@ -1451,11 +1484,11 @@ process.exit(result.status ?? 1);`;
     },
     verifyRestored: async () => {
       await smoke(3100, live.cwd, live.buildId, true);
-      if (closedLease) { await verifyClosedR2Web(3100); closedLease.verify(); atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview))); }
+      if (closedLease) { await verifyClosedR2Web(3100); closedLease.verify(); atomicWrite(statePath, JSON.stringify(rotationSafeState(closedR2RestoredState(state, closedReview)))); }
       unlinkSync(recoveryPath);
     },
   });
-  atomicWrite(statePath, JSON.stringify(state));
+  atomicWrite(statePath, JSON.stringify(rotationSafeState(state)));
   if (options.reviewedNutritionRecoveryReadiness || options.reviewedPieceUnitReadiness || options.reviewedYoutubeResolutionReadiness) atomicWrite(databaseStatePath, JSON.stringify(state.database));
   unlinkSync(recoveryPath);
   say(`웹 배포 완료: ${selection.target}\n빌드 ID: ${buildId}`);
@@ -1547,17 +1580,91 @@ async function rollback() {
       await smoke(3100, live.cwd, live.buildId, true);
       if (closedLease) {
         await verifyClosedR2Web(3100); closedLease.verify();
-        if (live.ref === state.closedR2.from) atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview)));
+        if (live.ref === state.closedR2.from) atomicWrite(statePath, JSON.stringify(rotationSafeState(closedR2RestoredState(state, closedReview))));
       }
     },
   });
-  if (closedReview) atomicWrite(statePath, JSON.stringify(closedR2RestoredState(state, closedReview)));
+  if (closedReview) atomicWrite(statePath, JSON.stringify(rotationSafeState(closedR2RestoredState(state, closedReview))));
   if (record !== statePath || !closedReview) unlinkSync(record);
   // A recovery may supersede an older successful record; do not offer it as current rollback.
   if (recovering && existsSync(statePath) && !closedReview) unlinkSync(statePath);
   say(`이전 웹 복구 완료: ${git(["rev-parse", "HEAD"], plist.WorkingDirectory)}`);
   if (database) say("DB 구조와 데이터는 유지했습니다. 웹만 이전 버전으로 복구했습니다.");
   } finally { if (closedLease) await closedLease.release(); }
+}
+// A separate, fixed 7b -> 06a recovery. General rollback guards remain unchanged.
+async function recoverV85Web(planOnly=false) {
+  const p=V85_WEB_RECOVERY,live=current(),stateBytes=readClosedR2PrivateBytes(statePath,repository,524288),state=JSON.parse(stateBytes);
+  recoveryCheck(!existsSync(recoveryPath),'no unresolved ordinary deployment');
+  const previousStateBytes=readClosedR2PrivateBytes(join(dirname(state.checkout),'previous-closed-state.json'),repository,524288);
+  const previousState=JSON.parse(previousStateBytes),previousBytes=readClosedR2PrivateBytes(state.backup,repository),previousPlist=parsePlist(previousBytes);
+  assertRecoveryBinding({live,state,previousState,previousPlist,home:homedir(),hashes:{currentPlist:hash(live.bytes),previousPlist:hash(previousBytes),state:hash(stateBytes),previousState:hash(previousStateBytes)}});
+  const webProcess=(allowStopped=false,expectedPid=undefined)=>{
+    const result=spawnSync('/bin/launchctl',['print',service],{encoding:'utf8'});
+    const listeners=spawnSync('/usr/sbin/lsof',['-nP','-t','-iTCP:3100','-sTCP:LISTEN'],{encoding:'utf8'});
+    if(result.status!==0){recoveryCheck(allowStopped&&listeners.status===1&&!listeners.stdout.trim(),'foreign listener/unconfirmed web');return null;}
+    const actual=current(),loaded=assertV74LoadedService({stdout:result.stdout,plist:actual.plist,plistPath,serviceTarget:service,requireRunning:!allowStopped});
+    if(allowStopped&&loaded.state!=='running'){recoveryCheck(listeners.status===1&&!listeners.stdout.trim(),'listener without owned running web');return null;}
+    const pids=[...new Set(listeners.stdout.trim().split(/\s+/u))];recoveryCheck(listeners.status===0&&pids.length===1&&/^\d+$/u.test(pids[0]),'unique production listener');
+    const pid=Number(pids[0]),parentPid=Number(command('/bin/ps',['-p',String(pid),'-o','ppid='])),uid=Number(command('/bin/ps',['-p',String(pid),'-o','uid=']));
+    const names=command('/usr/sbin/lsof',['-a','-p',String(pid),'-d','cwd','-Fn']).split('\n').filter(line=>line.startsWith('n'));
+    recoveryCheck(names.length===1,'listener cwd identity');
+    return assertRecoveryWebProcess({loaded,listener:{pid,parentPid,uid,cwd:names[0].slice(1)},uid:process.getuid(),cwd:actual.cwd,expectedPid});
+  };
+  const originalWebPid=webProcess();
+  const originalPlanPath=join(homedir(),'.homecook/operations/youtube-v85-gen50-20261017/plan.json');
+  recoveryCheck(hash(readClosedR2PrivateBytes(originalPlanPath,repository,524288))===p.plan&&readV85Approval()===p.plan,'original plan/anchor unchanged');
+  for(const file of ['issue-intent.json','issued.json','quiesced.json','registration-intent.json','registration.json','activation.json']) recoveryCheck(!existsSync(join(dirname(originalPlanPath),file)),'no attempted50');
+  for(const file of ['worker-v85-gen50.jwt','manager-v85-gen50.jwt','worker-credential-v85-gen50.json']) recoveryCheck(!existsSync(join(homedir(),'.homecook/youtube-extraction',file)),'no issued50');
+  const allowed=new Set(['package.json','scripts/deploy-prelaunch-web.mjs','scripts/lib/prelaunch-v85-web-recovery.mjs','scripts/lib/prelaunch-v85-web-recovery-observation.mjs','scripts/lib/prelaunch-v85-recovered-readiness.mjs','tests/prelaunch-v85-web-recovery.test.ts','docs/engineering/youtube-v85-web-only-recovery-20261017.md','docs/sync/CURRENT_SOURCE_OF_TRUTH.md']);
+  recoveryCheck(git(['rev-parse','HEAD'])!==p.from&&git(['status','--porcelain','--untracked-files=no'])==='','committed clean recovery source');
+  recoveryCheck(git(['diff','--name-only',p.from,'HEAD']).split('\n').every(f=>allowed.has(f)),'recovery-only source changes');
+  assertClean(live.cwd);assertClean(previousPlist.WorkingDirectory);
+  recoveryCheck(git(['rev-parse','HEAD'],previousPlist.WorkingDirectory)===p.to&&readFileSync(join(previousPlist.WorkingDirectory,'.next/BUILD_ID'),'utf8').trim()===p.toBuild,'previous source/build');
+  recoveryCheck(git(['diff','--name-only',p.to,p.from,'--','supabase/migrations'])==='','no intervening schema source changes');
+  const closed=requireClosedR2Mode({reviewedClosedR2Maintenance:true},live,true);
+  recoveryCheck(closed&&isDeepStrictEqual(previousClosedR2State(state,closed.review),previousState),'original closed reader receipt');
+  const observer=await createV85WebRecoveryObserver(repository);
+  // 06a must retain every exact currently-applied DB232 migration; no SQL is applied.
+  for(const row of observer.maintenance.review.database.after) recoveryCheck(hash(readFileSync(join(previousPlist.WorkingDirectory,'supabase/migrations',row.filename)))===row.sha256,'06a applied migration bytes');
+  const oldArtifact=await import(new URL(`file://${join(previousPlist.WorkingDirectory,'scripts/lib/youtube-extraction-worker-artifact.mjs')}`).href);
+  const manifest=oldArtifact.verifyYoutubeExtractionWorkerArtifact(v74Paths().manifest);
+  recoveryCheck(manifest.release_sha===p.workerRelease&&manifest.artifact_sha256===p.workerArtifact&&hash(readClosedR2PrivateBytes(v74Paths().descriptor,repository))===p.descriptor,'original v74 artifact/descriptor');
+  const workerPlist=readQuantityV4InstalledWorkerPlist(),workerStatus=()=>{
+    const target=`${domain}/com.homecook.youtube-extraction-worker`;
+    return assertV74LoadedService({stdout:command('/bin/launchctl',['print',target]),plist:parsePlist(readQuantityV4InstalledWorkerPlist()),plistPath:join(homedir(),'Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist'),serviceTarget:target});
+  };
+  const worker=workerStatus();await verifyV74ActiveWorker(observer.proof);
+  const observe=async()=>({database:await observer.observe(),worker:{plistSha256:hash(readQuantityV4InstalledWorkerPlist()),pid:workerStatus().pid},planAnchor:readV85Approval(),planSha256:hash(readClosedR2PrivateBytes(originalPlanPath,repository,524288))});
+  const checkReady=async observation=>{
+    const ready=await assertRecoveredEnqueue({loadReadiness:async()=>loadRecoveredReadiness(previousPlist.WorkingDirectory,previousPlist.EnvironmentVariables,observation.database.readiness),rpc:null,env:null,verifySecrets:value=>verifyOperatingYoutubeEnqueueRuntime({codeRoot:previousPlist.WorkingDirectory,plist:previousPlist,readiness:value})});
+    await observer.verifyHistoricalKey(previousPlist,ready);return ready;
+  };
+  await preview(previousPlist,previousPlist.WorkingDirectory,p.toBuild,true);
+  let before=await observe();await checkReady(before);
+  recoveryCheck(worker.pid>0&&before.worker.pid===worker.pid&&hash(workerPlist)===before.worker.plistSha256,'same untouched worker PID');
+  if(planOnly){say(JSON.stringify({ready:true,webFrom:p.from,webTo:p.to,generation:49,dbLedger:232,jobs:42,credentialIssued:false,databaseWrites:0,operatingChanged:false}));return;}
+  const operation=join(root,`v85-web-only-recovery-${randomUUID()}`);mkdirSync(operation,{mode:0o700});
+  const save=(name,value)=>durableJson(join(operation,`${name}.json`),value,true);
+  let lease;
+  try{
+    lease=await acquireClosedR2ControlLease(closed.review,repository);
+    const result=await runV85WebRecovery({
+      prepare:async()=>{lease.verify();before=await observe();await checkReady(before);return {sourceRef:git(['rev-parse','HEAD']),from:p.from,to:p.to,before,previousStateSha256:hash(previousStateBytes),previousPlistSha256:hash(previousBytes)};},
+      journal:save,
+      assertOwned:async phase=>{lease.verify();const actual=current(),actualState=hash(readFileSync(statePath));
+        recoveryCheck([p.fromPlist,p.toPlist].includes(hash(actual.bytes))&&[p.fromState,p.toState].includes(actualState),'foreign web/state; no compensation');
+        recoveryCheck(phase!=='before'||actual.ref===p.from&&actualState===p.fromState,'current web changed');
+        recoveryCheck(workerStatus().pid===worker.pid&&hash(readQuantityV4InstalledWorkerPlist())===hash(workerPlist),'worker changed');
+        assertRecoveryPreserved(before,await observe());webProcess(phase==='compensation',phase==='before'?originalWebPid:undefined);},
+      activate:async()=>{cancellation.check();await switchWeb(previousBytes);cancellation.check();},
+      verify:async()=>{cancellation.check();await smoke(3100,previousPlist.WorkingDirectory,p.toBuild);webProcess();await verifyClosedR2Web(3100);lease.verify();const after=await observe();assertRecoveryPreserved(before,after);await checkReady(after);cancellation.check();await save('verified',{after});},
+      publishState:async()=>{recoveryCheck(hash(readFileSync(statePath))===p.fromState,'state changed before publication');atomicWrite(statePath,rotationSafeStateBytes(previousStateBytes));},
+      verifyPublished:async()=>{const actual=current();recoveryCheck(actual.ref===p.to&&hash(actual.bytes)===p.toPlist&&hash(readFileSync(statePath))===p.toState,'restored official state');requireClosedR2Mode({reviewedClosedR2Maintenance:true},actual,true);},
+      restore:async()=>{await switchWeb(live.bytes);atomicWrite(statePath,rotationSafeStateBytes(stateBytes));},
+      verifyRestored:async()=>{await smoke(3100,live.cwd,live.buildId,true);webProcess();assertRecoveryPreserved(before,await observe());recoveryCheck(hash(readFileSync(statePath))===p.fromState&&hash(current().bytes)===p.fromPlist,'compensated web/state');},
+    });say(JSON.stringify({...result,operation}));
+  }finally{if(lease)await lease.release();}
 }
 async function recordYoutubeResolutionDatabase(options) {
   if (existsSync(recoveryPath)) throw new DeploymentError("복구가 진행 중일 때 DB 상태 메타데이터를 갱신할 수 없습니다.");
@@ -1572,7 +1679,7 @@ async function recordYoutubeResolutionDatabase(options) {
   atomicWrite(databaseStatePath, JSON.stringify(database));
   if (existsSync(statePath)) {
     const state = JSON.parse(readFileSync(statePath, "utf8"));
-    atomicWrite(statePath, JSON.stringify({ ...state, database }));
+    atomicWrite(statePath, JSON.stringify(rotationSafeState({ ...state, database })));
   }
   say(JSON.stringify({ recorded: true, database }, null, 2));
 }
@@ -1596,7 +1703,7 @@ async function recordIntegratedMasterDatabase(options) {
   assertIntegratedMasterWebFirstState({ state, live, releaseSha: live.ref, descriptor });
   loadIntegratedDatabaseGuard(live.ref, descriptor.database.migration.sha256, true);
   await durableJson(databaseStatePath, database);
-  await durableJson(statePath, { ...state, databaseVerification: databasePlan, database });
+  await durableJson(statePath, rotationSafeState({ ...state, databaseVerification: databasePlan, database }));
   durableUnlink(integratedDatabaseGuardPath);
   say(JSON.stringify({ recorded: true, database }, null, 2));
 }
@@ -1613,8 +1720,8 @@ async function main() {
     return;
   }
   if (process.platform !== "darwin") throw new DeploymentError("macOS 웹 서버에서 실행해야 합니다.");
-  if (!["plan", "deploy", "status", "record-youtube-resolution-database", "record-integrated-master-database", "rollback"].includes(action)
-    || (["status", "rollback"].includes(action) && args.length)
+  if (!["plan", "deploy", "status", "record-youtube-resolution-database", "record-integrated-master-database", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys"].includes(action)
+    || (["status", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys"].includes(action) && args.length)
     || (["record-youtube-resolution-database", "record-integrated-master-database"].includes(action)
       && (args.length !== 2 || args[0] !== "--db-config"))) throw new DeploymentError("잘못된 명령입니다. --help를 확인하세요.");
   const options = parsePrelaunchOptions(args);
@@ -1628,6 +1735,12 @@ async function main() {
   }
   if (options.reviewedClosedR2Maintenance) loadClosedR2Review(repository); // Fail before live/env access while the pin is empty.
   if (git(["rev-parse", "--show-toplevel"]) !== repository || !/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)netsus\/homecook(?:\.git)?$/u.test(git(["remote", "get-url", "origin"]))) throw new DeploymentError("배포 저장소는 netsus/homecook Git 저장소여야 합니다.");
+  if (action === 'plan-round2-eight-keys' || action === 'apply-round2-eight-keys') {
+    const result = spawnSync('/usr/bin/python3', [join(repository, 'scripts/round2-eight-key-user-apply.py'),
+      ...(action === 'plan-round2-eight-keys' ? ['--check'] : [])], { stdio: 'inherit' });
+    if (result.status !== 0) throw new DeploymentError('R2_APPLY_STOPPED_REVIEW_REQUIRED');
+    return; // The user-TTY helper owns the same deploy/control locks. No nested lock or secret output.
+  }
   if (action === "status") {
     const live = current(), { cwd, ref, buildId } = live;
     const loaded = spawnSync("/bin/launchctl", ["print", service], { stdio: "ignore" }).status === 0;
@@ -1694,6 +1807,7 @@ async function main() {
     }
     else if (action === "record-youtube-resolution-database") await recordYoutubeResolutionDatabase(options);
     else if (action === "record-integrated-master-database") await recordIntegratedMasterDatabase(options);
+    else if(action==='recover-v85-web'||action==='plan-v85-web-recovery')await recoverV85Web(action==='plan-v85-web-recovery');
     else await rollback();
   } finally {
     await cancellation.drain();
@@ -1704,6 +1818,6 @@ async function main() {
   }
 }
 main().catch((error) => {
-  process.stderr.write(`${error instanceof DeploymentError ? error.message : "배포 도구 실패. 비공개 로그와 웹 상태를 확인하세요."}\n`);
+  process.stderr.write(`${error instanceof DeploymentError || error.message?.startsWith('v85 web recovery:') ? error.message : "배포 도구 실패. 비공개 로그와 웹 상태를 확인하세요."}\n`);
   process.exitCode = 1;
 });
