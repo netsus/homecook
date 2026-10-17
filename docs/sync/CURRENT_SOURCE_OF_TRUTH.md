@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-17 — 회전 후 v85 웹 plan marker 연속성 보완
+
+사용자 후속 승인 anchor 결속과 stage/preflight 후 새8키 plist와 과거 불변 R2 marker의 지문 차이를 보완했다. 관련 Vitest387·Node48·type/lint·독립 검토와 정확한 도구f7f64997f에서 실제 공식 웹 plan exit0을 확인했다. 이후 사용자 preflight에서 보호 지문이 달라져 전환을 중단했다. 읽기 전용 재구성은 캡슐 관측~현재 사이 auth.users 행 지문 차이를 가리키며, 사용자 수7명은 같다. 과거 행 원본이 없어 변경 컬럼 전체와 주체는 미확정이다. 원43개 기준은 갱신하지 않았다. 원 marker/승인을 보존하고 committed 회전 증거·전후 state·원본/실제 plist의8종 한정 차이를 명시적으로 검증하는 최소 운영 도구 수정이다. 도구 새 SHA와 기존 웹 target15/capsule은 별도로 결속하고 실제 deploy는 사용자 Terminal 확인을 요구한다. [검증 경계·실행 순서](../engineering/youtube-v85-rotation-marker-bridge-20261017.md)를 따른다. 운영 웹06a/v74-gen49·DB232·C05/R2 OFF이며 실제 v85/gen50 전환은 미실행이다.
+
 ## 2026-10-17 — 실제 요리 경험9개 개선 착수 (로컬, 미배포)
 
 최신 master에서 독립 worktree를 만들고 기존 미커밋·병행 v85 변경을 보존했다. 첫 화면·영양 읽기 묶음은 관련312검사·타입·빌드·독립 리뷰와 로컬 Chrome375/1440을 확인했다. 배포는 v85 담당 잠금 해제와 부모 조율 전 수행하지 않는다. [상태·우선순위·검증·남은경계](../engineering/cooking-experience-20261017.md)를따른다.

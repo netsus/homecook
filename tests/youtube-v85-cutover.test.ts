@@ -61,6 +61,11 @@ describe('independent immutable original plus exact continuation authority',()=>
     const evidence={before,after};
     const capsule={...p,continuation:{...p.continuation,packageEvidence:evidence}};
     expect(assertV85ExecutionPlan(capsule,now)).toBe(capsule);
+    const source={plan:capsule,from:V85.from,to:capsule.webRef,digests:capsule.sources};
+    expect(assertV85Source(source).has('package.json')).toBe(true);
+    const previous={Label:'com.homecook.production',WorkingDirectory:'/fixture/web',ProgramArguments:['fixture-node','/fixture/web/scripts/start-production.mjs','-H','127.0.0.1','-p','3100'],
+      EnvironmentVariables:{MUMEOK_ROUND2_ENABLED:'false',MUMEOK_ROUND2_LEADS_ENABLED:'false'}};
+    expect(()=>assertRound2InheritanceBoundaries({previous,next:previous,files:['package.json'],reviewedV85Source:source})).not.toThrow();
     for(const mutate of [(v: {scripts:Record<string,string>})=>{v.scripts.build='fixture-unreviewed-build';},
       (v:{dependencies:Record<string,string>})=>{v.dependencies['fixture-new-dependency']='1.0.0';}]){
       const next=JSON.parse(after);mutate(next);
@@ -68,6 +73,7 @@ describe('independent immutable original plus exact continuation authority',()=>
       const changed=JSON.stringify(next),bad={...capsule,sources:{...capsule.sources,'package.json':[originalPackage,v85Hash(changed)]},
         continuation:{...capsule.continuation,sourceDelta:{...p.continuation.sourceDelta,'package.json':[v85Hash(before),v85Hash(changed)]},packageEvidence:{before,after:changed}}};
       expect(()=>assertV85ExecutionPlan(bad,now)).toThrow();
+      expect(()=>assertRound2InheritanceBoundaries({previous,next:previous,files:['package.json'],reviewedV85Source:{...source,plan:bad,digests:bad.sources}})).toThrow();
     }
   });
   it('accepts a separately acknowledged incident capsule without changing original42 or evaluated product',()=>{
