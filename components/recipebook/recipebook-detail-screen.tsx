@@ -1081,6 +1081,8 @@ export function RecipeBookDetailScreen({
             hasNext={hasNext}
             items={items}
             onSelectRecipe={setActiveDesktopRecipeId}
+            onLoadMore={() => void loadMore()}
+            isLoadingMore={isLoadingMore}
             recipeCount={recipeCount}
           />
           <section className="web-recipebook-detail-main" aria-label="레시피 목록">
@@ -1366,7 +1368,6 @@ export function RecipeBookDetailScreen({
       onPlannerAdd={(item) => void openPlannerAddSheet(item)}
       onRemove={handleRemoveRequest}
       onSave={(item) => void openSaveModal(item)}
-      onSelectRecipe={setActiveDesktopRecipeId}
       removeLabel={removeLabel}
       removingId={removingId}
     >
@@ -1393,6 +1394,8 @@ function DesktopRecipeBookRail({
   hasNext,
   items,
   onSelectRecipe,
+  onLoadMore,
+  isLoadingMore,
   recipeCount,
 }: {
   activeRecipeId: string | null;
@@ -1404,8 +1407,15 @@ function DesktopRecipeBookRail({
   hasNext: boolean;
   items: RecipeBookRecipeItem[];
   onSelectRecipe: (recipeId: string) => void;
+  onLoadMore: () => void;
+  isLoadingMore: boolean;
   recipeCount: number | null;
 }) {
+  const pageSize = 8;
+  const activeIndex = Math.max(0, items.findIndex(item => item.recipe_id === activeRecipeId));
+  const page = Math.floor(activeIndex / pageSize);
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const pageStart = page * pageSize;
   const coverItem = items[0];
   const loadedImageSrc =
     bookCoverImageSrc === undefined
@@ -1450,7 +1460,9 @@ function DesktopRecipeBookRail({
         <h2>목차</h2>
         {items.length > 0 ? (
           <ol>
-            {items.map((item, index) => (
+            {items.slice(pageStart, pageStart + pageSize).map((item, offset) => {
+              const index = pageStart + offset;
+              return (
               <li key={item.recipe_id}>
                 <button
                   aria-current={
@@ -1469,16 +1481,17 @@ function DesktopRecipeBookRail({
                   <em>{String(index + 1).padStart(2, "0")}쪽</em>
                 </button>
               </li>
-            ))}
+            ); })}
           </ol>
         ) : (
           <p>레시피가 담기면 목차가 표시돼요.</p>
         )}
-        {hasNext ? (
-          <p className="web-recipebook-toc-more">
-            아래로 스크롤하면 더 많은 레시피를 이어서 불러와요.
-          </p>
-        ) : null}
+        <div aria-label="목차 페이지" className="mt-3 flex items-center justify-between gap-2">
+          <button className="min-h-11 rounded-lg border px-3 disabled:opacity-40" disabled={page === 0} onClick={() => onSelectRecipe(items[(page - 1) * pageSize]!.recipe_id)} type="button">이전 목차</button>
+          <span aria-live="polite" className="text-sm tabular-nums">{page + 1} / {pageCount}</span>
+          <button className="min-h-11 rounded-lg border px-3 disabled:opacity-40" disabled={page + 1 >= pageCount} onClick={() => onSelectRecipe(items[(page + 1) * pageSize]!.recipe_id)} type="button">다음 목차</button>
+        </div>
+        {hasNext ? <button className="mt-2 min-h-11 w-full rounded-lg border px-3 text-sm" disabled={isLoadingMore} onClick={onLoadMore} type="button">{isLoadingMore ? "불러오는 중…" : "목차 더 불러오기"}</button> : null}
       </nav>
     </aside>
   );
@@ -2874,7 +2887,6 @@ function DesktopRecipeBookReader({
   onPlannerAdd,
   onRemove,
   onSave,
-  onSelectRecipe,
   readerDetailsById,
   removeLabel,
   removingId,
@@ -2895,7 +2907,6 @@ function DesktopRecipeBookReader({
   onPlannerAdd: (item: RecipeBookRecipeItem) => void;
   onRemove: (recipeId: string) => void;
   onSave: (item: RecipeBookRecipeItem) => void;
-  onSelectRecipe: (recipeId: string) => void;
   readerDetailsById: Record<string, ReaderDetailState>;
   removeLabel: string;
   removingId: string | null;
@@ -2965,25 +2976,6 @@ function DesktopRecipeBookReader({
 
         {mode === "book" ? (
         <div className="web-recipebook-page-controls">
-          <div
-            aria-label="페이지 선택"
-            className="web-recipebook-page-dots"
-            role="group"
-          >
-            {items.map((item, index) => (
-              <button
-                className={index === activeIndex ? "is-active" : undefined}
-                key={item.recipe_id}
-                onClick={() => {
-                  onSelectRecipe(item.recipe_id);
-                  onModeChange("book");
-                }}
-                type="button"
-              >
-                {String(index + 1).padStart(2, "0")}쪽
-              </button>
-            ))}
-          </div>
           <div className="web-recipebook-reader-actions">
             <button
               className="web-recipebook-secondary-button"

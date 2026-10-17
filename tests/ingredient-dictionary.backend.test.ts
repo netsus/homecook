@@ -563,3 +563,18 @@ describe("21 ingredient dictionary backend", () => {
     expect(seed).toContain("where ingredients.standard_name = '대파'");
   });
 });
+
+describe("generic extracted oil identity", () => {
+  it("connects the whole generic name to the existing cooking-oil representative without rewriting quantity evidence", async () => {
+    const oil = {id:"550e8400-e29b-41d4-a716-446655440301",standard_name:"카놀라유"};
+    const {dbClient} = createIngredientDb({ingredients:[oil,{id:"550e8400-e29b-41d4-a716-446655440302",standard_name:"오일"}],synonyms:[{synonym:"식용유",ingredients:oil}]});
+    const {matchesByName} = await findIngredientIds(dbClient,["오일"]);
+    const row = buildExtractedIngredient({matchesByName,name:"오일",amount:2,unit:"T",ingredientType:"QUANT",displayText:"오일 2큰술",sortOrder:1,scalable:true,confidence:0.95,rawText:"오일 2큰술"});
+    expect(row).toMatchObject({ingredient_id:oil.id,standard_name:"카놀라유",resolution_status:"resolved",amount:2,unit:"T",display_text:"오일 2큰술",raw_text:"오일 2큰술"});
+  });
+  it.each(["올리브오일","참기름","고추기름","트러플 오일","오일파스타","코코넛 오일"])("does not turn explicit or compound %s into generic oil",async name => {
+    const oil={id:"550e8400-e29b-41d4-a716-446655440301",standard_name:"카놀라유"};
+    const {dbClient} = createIngredientDb({ingredients:[oil],synonyms:[{synonym:"식용유",ingredients:oil}]});
+    const {matchesByName} = await findIngredientIds(dbClient,[name]); expect(matchesByName.get(name)?.size ?? 0).toBe(0);
+  });
+});

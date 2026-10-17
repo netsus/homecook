@@ -198,8 +198,12 @@ export function CookedBatchCompletionSheet({
             className="h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base"
             disabled={submitting} id="cooked-batch-reported-weight" inputMode="decimal" min="0" onChange={event => { setFinishedWeight(event.target.value); setWeightError(null); if (!event.target.value.trim() || Number(event.target.value) <= 0) setAttested(false); }}
             ref={weightRef} step="any" type="number" value={finishedWeight} />
-          <p className="text-sm leading-5 text-[var(--text-2)]" id="cooked-batch-weight-help">먹거나 버리기 전 음식 전체를 재 주세요. 용기 무게를 빼고, 먹을 국물은 포함해 주세요. 남은 양이나 한 접시 무게는 입력하지 않아요. 빈칸으로 두어도 완료할 수 있어요.</p>
+          <p className="text-sm leading-5 text-[var(--text-2)]" id="cooked-batch-weight-help">용기를 뺀 음식 전체무게예요. 빈칸으로 두어도 저장돼요.</p>
           <p className="text-sm text-[var(--danger-strong)]" id="cooked-batch-weight-validation" role={weightError ? "alert" : undefined}>{weightError}</p>
+          <details className="text-sm leading-5 text-[var(--text-2)]">
+            <summary className="min-h-11 cursor-pointer py-3">무게 재는 방법</summary>
+            <p>먹거나 버리기 전 전체를 재고, 먹을 국물은 포함해 주세요. 남은 양이나 한 접시 무게는 입력하지 않아요.</p>
+          </details>
           {sessionId ? <div className="space-y-2">
             {attestation.loading ? <p className="text-sm text-[var(--text-2)]" role="status">개인 확인 정보를 불러오는 중…</p> : null}
             {attestation.context?.can_attest ? <label className="flex items-start gap-3 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm leading-5">
@@ -209,7 +213,7 @@ export function CookedBatchCompletionSheet({
             </label> : null}
             {attestation.error || attestation.context && !attestation.context.can_attest ? <p className="text-sm text-[var(--text-2)]">{attestation.error ?? "지금은 개인 확인을 함께 기록할 수 없어요."} 확인 없이 무게를 저장하거나 건너뛸 수 있어요.</p> : null}
             {attestation.error ? <button aria-disabled={attestation.loading || undefined} className="min-h-11 text-sm text-[var(--brand)]" disabled={submitting} onClick={event => void attestation.retry(event.currentTarget, weightRef)} type="button">개인 확인 정보 다시 불러오기</button> : null}
-            {attestation.context?.can_attest ? <p className="text-sm leading-5 text-[var(--text-2)]">본인이 확인한 개인 기록이에요. 측정 정확도를 검증하거나 개선 자료 수집에 참여하는 동의가 아니에요.</p> : null}
+            {attestation.context?.can_attest ? <p className="text-sm leading-5 text-[var(--text-2)]">개인 기록용 확인이며, 정확도 검증이나 개선 자료 수집 동의가 아니에요.</p> : null}
           </div> : null}
         </section>
       ) : null}

@@ -31,7 +31,9 @@ describe("optional explicit whole-dish measurement", () => {
     expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
     expect(screen.getByRole("spinbutton").getAttribute("value")).toBe("");
     expect(screen.getByRole("spinbutton").hasAttribute("required")).toBe(false);
-    expect(screen.getByText(/용기 무게를 빼고, 먹을 국물은 포함/)).toBeTruthy();
+    expect(screen.getByText(/용기를 뺀 음식 전체무게/)).toBeTruthy();
+    await userEvent.click(screen.getByText("무게 재는 방법"));
+    expect(screen.getByText(/먹을 국물은 포함/)).toBeTruthy();
     expect(screen.getByText(/추정하지 못했어요/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "완료 저장" }));
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith({ consumed_pantry_item_ids: [], weight_action: "weigh_later", finished_weight_g: null });

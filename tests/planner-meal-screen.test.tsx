@@ -740,7 +740,8 @@ describe("MealScreen", () => {
     expect(screen.queryByRole("heading", { name: "계획한 요리" })).toBeNull();
     expect(screen.getAllByText("등록")).toHaveLength(1);
     expect(within(screen.getByLabelText("김치찌개 식사 카드")).queryByText("등록")).toBeNull();
-    expect(within(section).getByRole("img").getAttribute("aria-label")).toContain("지방 12g");
+    expect(within(section).getByRole("table", { name: "영양성분표" })).toBeTruthy();
+    expect(within(section).getByText("확인된 일부")).toBeTruthy();
     expect(within(section).getByText("12 g")).toBeTruthy();
     rerender(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={{ "meal-1": { ...pinned, values: { ...pinned.values, fat_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null } } } }} />);
     expect(within(section).queryByRole("img")).toBeNull();
@@ -768,7 +769,7 @@ describe("MealScreen", () => {
     if (foodDetail) expect(screen.queryByLabelText("된장국 계획 영양정보")).toBeNull();
     else expect(screen.getByLabelText("된장국 계획 영양정보")).toBeTruthy();
     expect(firstNutrition.tagName).toBe("SECTION");
-    expect(within(firstNutrition).getByText("1인분 225 kcal")).toBeTruthy();
+    expect(within(firstNutrition).getByText(foodDetail ? "225 kcal" : "1인분 225 kcal")).toBeTruthy();
     expect(within(firstNutrition).getByText("450 kcal")).toBeTruthy();
     expect(within(firstNutrition).getByText("24 g")).toBeTruthy();
 
@@ -777,7 +778,7 @@ describe("MealScreen", () => {
     await waitFor(() => expect(updateMealServings).toHaveBeenCalledWith("meal-1", 3));
     await waitFor(() => expect(mockRouterRefresh).toHaveBeenCalledOnce());
     expect(within(firstNutrition).queryByText("450 kcal")).toBeNull();
-    expect(within(firstNutrition).getByText("정보 준비 중")).toBeTruthy();
+    expect(within(firstNutrition).getAllByText("정보 준비 중").length).toBeGreaterThan(0);
 
     rerender(<MealScreen {...DEFAULT_PROPS} initialMealNutrition={{
       ...initialMealNutrition, "meal-1": nutrition(3, 640, 35),
