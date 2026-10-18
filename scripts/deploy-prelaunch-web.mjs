@@ -6,6 +6,7 @@ import { createRound2EightKeyRestartFence, guardRound2EightKeyRestart, preserveR
 import { readV85Approval } from './lib/youtube-v85-approval.mjs';
 import { readV85Authority, assertV85Source, assertV85MetadataHandoff, v85Paths } from "./lib/youtube-v85-cutover.mjs";
 import { ROTATION_BRIDGE, assertRotationBridgeToolBinding, confirmRotationBridgeTool } from './lib/round2-closed-marker-rotation-bridge.mjs';
+import { verifyV85AuthSuccessorWebBoundary } from './youtube-v85-controlled-cutover.mjs';
 import { createInterface } from 'node:readline/promises';
 import {
   RECIPE_REQUEST_ROLE_FEATURE, RECIPE_REQUEST_ROLE_MIGRATION, readRecipeRequestRoleAttempt, recipeRequestRolePhaseStatus, assertRecipeRequestRoleReader, verifyRecipeRequestRolePredecessor, verifyRecipeRequestRoleWorkerAdmission, loadRecipeSaveRecoveryMaintenance,
@@ -1102,16 +1103,19 @@ async function reviewRotationBridgeTool(action,options) {
   const digests=Object.fromEntries(paths.map(path=>[path,[ROTATION_BRIDGE.target,'HEAD'].map(ref=>git(['ls-tree',ref,'--',path])
     ?hash(execFileSync('git',['-C',repository,'show',`${ref}:${path}`],{maxBuffer:524288,stdio:['ignore','pipe','pipe']})):null)]));
   const review=assertRotationBridgeToolBinding({toolRef:git(['rev-parse','HEAD']),requestedToolRef:options.rotationBridgeToolRef,
-    targetRef:options.ref,capsuleSha256:authority?.planSha256,clean:git(['status','--porcelain'])==='',
+    targetRef:options.ref,capsuleSha256:authority?.planSha256,authority,clean:git(['status','--porcelain'])==='',
     untrackedPaths:git(['ls-files','--others','--exclude-standard']).split('\n').filter(Boolean),
     ownRepository:realpathSync(resolve(dirname(fileURLToPath(import.meta.url)),'..'))===repository,digests});
-  if(action!=='deploy'){if(action==='plan')say(JSON.stringify({...review,readOnly:true}));return review;}
+  if(action!=='deploy'){await verifyV85AuthSuccessorWebBoundary(authority);if(action==='plan')say(JSON.stringify({...review,readOnly:true}));return review;}
   await confirmRotationBridgeTool(review,{platform:process.platform,stdinTTY:Boolean(process.stdin.isTTY),stdoutTTY:Boolean(process.stdout.isTTY),stderrTTY:Boolean(process.stderr.isTTY)},
     value=>say(JSON.stringify(value)),async()=>{
       const terminal=createInterface({input:process.stdin,output:process.stdout});
       try{return await terminal.question('Type V85-BRIDGE to confirm this exact web tool and capsule; no worker credential is issued here: ');}
       finally{terminal.close();}
     });
+  const confirmedAuthority=v85Authority();
+  if(confirmedAuthority?.planSha256!==review.capsuleSha256)throw new DeploymentError('Capsule changed after web user confirmation');
+  await verifyV85AuthSuccessorWebBoundary(confirmedAuthority);
 }
 async function verifyClosedR2Web(port) {
   await verifyClosedR2Collector(port);

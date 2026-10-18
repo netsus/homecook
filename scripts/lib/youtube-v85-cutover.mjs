@@ -20,6 +20,22 @@ export const V85=Object.freeze({from:'06a3369f5c5e1c3ca49045f370f0ce12f049c805',
 export const V85_OPERATION_DIRECTORY=join(homedir(),'.homecook/operations/youtube-v85-gen50-20261017');
 export const v85Hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const SHA=/^[a-f0-9]{64}$/u,REF=/^[a-f0-9]{40}$/u;
+export const V85_AUTH_SUCCESSOR=Object.freeze({
+  target:'15b1a36f9b4c4c293cd8f92c6f2824b13ba7eaf9',
+  priorSha256:'cf5a80513d4e532c2319344af8d72c23375d2fc24fdabc2864dee318dfe11ad5',
+  filename:'auth-successor-plan-20261018.json',account:'approved-auth-successor-20261018-sha256',
+});
+export const V85_AUTH_TABLES=Object.freeze(['auth.users','auth.identities','public.marketing_validation_sessions','public.marketing_validation_events',
+  'public.marketing_round2_participations','public.marketing_round2_events','public.marketing_round2_lead_requests',
+  'public.youtube_extraction_jobs','public.youtube_saved_recipe_results','public.youtube_extractor_permits']);
+const authTables=V85_AUTH_TABLES;
+const authToolFiles=new Set(['scripts/deploy-prelaunch-web.mjs','scripts/lib/prelaunch-web-deploy.mjs',
+  'scripts/lib/round2-closed-marker-rotation-bridge.mjs','tests/round2-closed-marker-rotation-bridge.test.mjs',
+  'scripts/lib/youtube-v85-cutover.mjs','scripts/lib/youtube-v85-approval.mjs','scripts/youtube-v85-controlled-cutover.mjs',
+  'tests/youtube-v85-cutover.test.ts','tests/youtube-v85-approval.test.ts','tests/youtube-v85-auth-successor.test.ts',
+  'tests/prelaunch-protected-rollout.test.ts','tests/prelaunch-closed-r2-maintenance.test.ts',
+  'docs/engineering/youtube-v85-rotation-marker-bridge-20261017.md','docs/engineering/youtube-v85-auth-successor-20261018.md',
+  'docs/sync/CURRENT_SOURCE_OF_TRUTH.md']);
 export const v85Check=(ok,reason)=>{if(!ok)throw new Error(`v85: ${reason}`);};
 const check=v85Check;
 const fields=['credentialGeneration','credentialRowSha256','policyRowSha256','policyStableSha256','schemaIdentity','snapshotDigest','workerPolicyEnabled','workerReleaseSha'];
@@ -123,6 +139,61 @@ export function v85ContinuationDataDeltas(original, current) {
     { path: 'before.jobCount', before: original.before.jobCount, after: current.jobCount },
   ]);
 }
+export function v85AuthTableProjection(tables,full) {
+  check(SHA.test(full.normalDataSha256)&&SHA.test(full.ledgerPreservedRowsSha256),'auth successor complete data/ledger projections');
+  check(same(Object.keys(tables),authTables),'auth successor complete ordered table evidence');
+  const rows=authTables.map(table=>{
+    const entry=tables[table];
+    check(entry&&((entry.absent===true&&entry.count===null&&entry.sha256===undefined)
+      ||entry.absent===undefined&&Number.isSafeInteger(entry.count)&&entry.count>=0&&SHA.test(entry.sha256)), 'auth successor table evidence');
+    return [table,entry.absent?'absent':entry.sha256];
+  });
+  return v85Hash(JSON.stringify([v85Hash(JSON.stringify(rows)),full.normalDataSha256,full.ledgerPreservedRowsSha256]));
+}
+export function assertV85AuthSuccessor(plan,now=new Date()) {
+  const next=plan.authSuccessor;
+  check(next?.schema==='homecook.youtube-v85-auth-successor.v1'&&next.priorPlan?.authSuccessor===undefined,
+    'single exact auth successor');
+  const prior=assertV85ExecutionPlan(next.priorPlan,now);
+  check(next.priorPlanSha256===V85_AUTH_SUCCESSOR.priorSha256
+    &&next.priorCanonicalSha256===v85Hash(JSON.stringify(prior))&&plan.webRef===V85_AUTH_SUCCESSOR.target,
+    'fixed prior auth authority and web15');
+  check(next.requiresExplicitUnattributedAuthAcknowledgement===true&&next.rawBeforeImagesAvailable===false
+    &&next.classification==='unattributed-auth-row-change','explicit unattributed auth acknowledgement');
+  const expected=structuredClone(prior),actual=structuredClone(plan);delete actual.authSuccessor;
+  check(plan.before.full.preservedRowsSha256!==prior.before.full.preservedRowsSha256,'auth successor must describe exact observed drift');
+  expected.before.full.preservedRowsSha256=plan.before.full.preservedRowsSha256;
+  expected.continuation.dataDeltas=v85ContinuationDataDeltas(expected.originalPlan,expected.before);
+  check(same(actual,expected),'auth successor changes only complete protected row fingerprint');
+  const evidence=next.tableEvidence;
+  check(evidence?.priorComponentsReconstructed===true&&evidence.rawRowsAvailable===false
+    &&v85AuthTableProjection(evidence.priorTables,prior.before.full)===prior.before.full.preservedRowsSha256
+    &&v85AuthTableProjection(evidence.currentTables,plan.before.full)===plan.before.full.preservedRowsSha256,
+    'auth successor complete aggregate reconstruction');
+  for(const table of authTables){
+    const before=evidence.priorTables[table],after=evidence.currentTables[table];
+    check(table==='auth.users'?before.count===7&&after.count===7&&before.sha256!==after.sha256:same(before,after),
+      'auth successor preserves all other tables and auth population');
+  }
+  check(REF.test(next.toolRef)&&next.toolRef!==plan.webRef&&next.toolSources&&Object.keys(next.toolSources).length>=8,
+    'auth successor exact separate tool source');
+  for(const [path,pair]of Object.entries(next.toolSources))check(authToolFiles.has(path)&&Array.isArray(pair)&&pair.length===2
+    &&pair[0]!==pair[1]&&pair[1]!==null&&pair.every(value=>value===null||SHA.test(value)), 'auth successor finite operation-only tool delta');
+  for(const path of ['scripts/youtube-v85-controlled-cutover.mjs','scripts/lib/youtube-v85-cutover.mjs',
+    'scripts/lib/youtube-v85-approval.mjs','scripts/lib/round2-closed-marker-rotation-bridge.mjs',
+    'tests/youtube-v85-auth-successor.test.ts'])check(Object.hasOwn(next.toolSources,path),'auth successor required tool protections');
+  return plan;
+}
+export function assertV85AuthSuccessorTool({plan,toolRef,digests,clean,untrackedPaths,ownRepository},now=new Date()) {
+  assertV85ExecutionPlan(plan,now);check(plan.authSuccessor&&toolRef===plan.authSuccessor.toolRef
+    &&same(digests,plan.authSuccessor.toolSources)&&clean===true&&ownRepository===true
+    &&Array.isArray(untrackedPaths)&&untrackedPaths.length===0,'auth successor reviewed tool checkout');
+}
+export function v85RotationBridgeAuthority(authority,now=new Date()) {
+  if(!authority?.plan?.authSuccessor)return authority;
+  assertV85ExecutionPlan(authority.plan,now);check(SHA.test(authority.planSha256),'auth successor authority hash');
+  return {plan:authority.plan.authSuccessor.priorPlan,planSha256:authority.plan.authSuccessor.priorPlanSha256};
+}
 // Two authorities: the immutable original plan remains independently valid. Only this
 // incident's exact prior-data differences can be adopted after a distinct human approval.
 export function assertV85ExecutionPlan(plan, now = new Date()) {
@@ -153,6 +224,7 @@ export function assertV85ExecutionPlan(plan, now = new Date()) {
   assertPolicyViews(plan.before);
   check(plan.before.worker.credentialActive === true && plan.before.policy.enabled === true && v85Zero(plan.before.worker), 'continuation active idle49');
   assertV85Source({ plan, from: V85.from, to: plan.webRef, digests: plan.sources });
+  if(Object.hasOwn(plan,'authSuccessor'))assertV85AuthSuccessor(plan,now);
   return plan;
 }
 export function assertV85MetadataHandoff({plan,options,liveRef,patch,previous,next,home=homedir(),now=new Date()}) {
@@ -252,7 +324,13 @@ export function readV85ExecutionApproval(read,readApproval=readV85Approval,direc
   const bytes=read(continuationPath),planSha256=v85Hash(bytes),plan=assertV85ExecutionPlan(JSON.parse(bytes),now);
   check(readApproval('approved-continuation-sha256')===planSha256 && plan.continuation.originalPlanSha256===originalSha256
     && same(plan.originalPlan,original),'independent continuation and original authorities');
-  return {plan,planSha256};
+  const successorPath=join(directory,V85_AUTH_SUCCESSOR.filename);
+  if(!existsSync(successorPath))return {plan,planSha256};
+  const nextBytes=read(successorPath),nextSha256=v85Hash(nextBytes),nextPlan=assertV85ExecutionPlan(JSON.parse(nextBytes),now);
+  check(planSha256===V85_AUTH_SUCCESSOR.priorSha256&&readApproval(V85_AUTH_SUCCESSOR.account)===nextSha256
+    &&nextPlan.authSuccessor?.priorPlanSha256===planSha256&&same(nextPlan.authSuccessor.priorPlan,plan),
+    'independent auth successor and both immutable prior authorities');
+  return {plan:nextPlan,planSha256:nextSha256};
 }
 export function readV85Authority(read,readApproval=readV85Approval,directory=V85_OPERATION_DIRECTORY,now=new Date()) {
   const authority=readV85ExecutionApproval(read,readApproval,directory,now);if(!authority)return null;
