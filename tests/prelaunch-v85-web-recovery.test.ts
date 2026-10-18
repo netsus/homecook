@@ -76,5 +76,5 @@ describe('actual application readiness boundary',()=>{
    await expect(loadRecoveredReadiness(dir,env,{...row,release_sha:'foreign'})).resolves.toBeNull();
   }finally{rmSync(dir,{recursive:true,force:true});}
  });
- it('keeps the existing generic rollback guard and rejects action arguments',()=>{const source=readFileSync('scripts/deploy-prelaunch-web.mjs','utf8');expect(source).toContain('보호 DB 전환 guard/reader floor가 있어 수동 구 웹 rollback을 거부합니다.');expect(source).toContain('["status", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys"].includes(action) && args.length');});
+ it('keeps the existing generic rollback guard and rejects action arguments',()=>{const source=readFileSync('scripts/deploy-prelaunch-web.mjs','utf8');expect(source).toContain('보호 DB 전환 guard/reader floor가 있어 수동 구 웹 rollback을 거부합니다.');expect(source).toContain('["status", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys", "plan-v85-unstarted-closeout", "close-v85-unstarted"].includes(action) && args.length');});
 });
