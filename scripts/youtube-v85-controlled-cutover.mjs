@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Fixed DB232, V2, same-scope49 ->50. No real credential action in prepare/preflight.
 import { spawnSync } from 'node:child_process';
+import { readerRepairInvocation, verifyReaderRepairWebBoundary } from './lib/v85-web-reader-repair.mjs';
 import { randomUUID } from 'node:crypto';
 import { chmodSync,closeSync,existsSync,fsyncSync,lstatSync,linkSync,mkdirSync,openSync,readFileSync,realpathSync,renameSync,unlinkSync,writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -177,6 +178,7 @@ function assertAuthSuccessorUnissued(){
     check(!existsSync(path),'partial gen50 attempt; no new approval');
 }
 export async function verifyV85AuthSuccessorWebBoundary(authority){
+  if (readerRepairInvocation()) return verifyReaderRepairWebBoundary(authority);
   if(!authority?.plan?.authSuccessor)return;
   check(!authority.proof,'auth successor web handoff is only before gen50 activation');
   assertAuthTool(authority.plan);assertAuthSuccessorUnissued();

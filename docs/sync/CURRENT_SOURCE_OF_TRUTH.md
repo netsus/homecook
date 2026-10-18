@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-18 — v85 웹 reader 수정의 별도 비자격 실행 결속
+
+원 d397/승인3개/d69 발급 경로/고정웹15를 보존하고, 웹CLI reader1줄과 정확한 웹 결속 plumbing만 별도 source pin으로 검증한다. 익명 pipe와 실제 부모/source에 묶인 이번 invocation만 내부 웹 확인을 대신하며 자격 경계는 유지한다. [고정 범위·실행기·검증·다음 gen50 단계](../engineering/v85-web-reader-repair-20261018.md)를 따른다. 아직 이 경로로 웹 전환하지 않았다.
+
 ## 2026-10-18 — v85 웹 미전환 실패 기록 종결 도구
 
 웹06a→15 교체 직전75KB state가 기본64KiB reader에 거부된 오류를 해당 읽기 한 곳의512KiB 상한으로 수정했다. 실제06a·동일previous plist·새8키/OFF·승인3개·DB232/worker49/43jobs·gen50 미발급을 재검증하고 실패 원문 보존·기록 종결을 완료했다. 기존PID·보호8파일·DB guard는 그대로이며 서비스 재시작·DB 쓰기·자격 변경은0이다. [최소 수정·실제 receipt·중단 처리·다음 전환 경계](../engineering/v85-unstarted-web-closeout-20261018.md)를 따른다. 다음 웹15/worker50 전환은 아직 하지 않았다.
