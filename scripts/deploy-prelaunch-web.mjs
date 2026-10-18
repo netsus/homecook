@@ -92,7 +92,7 @@ const cancellation = createCancellation();
 const say = (message) => process.stdout.write(`${message}\n`);
 const assertRound2RestartFence = createRound2EightKeyRestartFence(() => {
   const path = join(root, 'round2-eight-key-rotation-fence.json');
-  const rotation = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation : null;
+  const rotation = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository, 524288)).round2EightKeyRotation : null;
   const operation = join(root, 'round2-eight-key-rotation-apply-20261017/journal.json');
   if (existsSync(operation) && JSON.parse(readClosedR2PrivateBytes(operation, repository)).phase !== 'committed') {
     throw new DeploymentError('R2_ROTATION_FORWARD_REPAIR_PENDING');
