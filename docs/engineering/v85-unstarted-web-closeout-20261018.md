@@ -49,3 +49,10 @@
 보존 recovery SHA256=`bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e`, intent=`389efc11162efb6c5503d30f2add4d847a6bbf609fabf6248cb3aaf19f08eab3`, complete=`07eba6c533b813e0a63311fbc9c6c7d03e0e8e3979b3749616567fb5488ac7c6`다. 이는 배포 완료 receipt가 아니다.
 
 최신master 통합 작업트리의 관련7개 Vitest suite326검사, 별도 Node40검사, 타입 검사·린트와 독립 코드 리뷰를 통과했다. 제품/DB/의존성 변경은 없다. 다음06a→15 전환은 아직 실행하지 않았으며 위 source 결속 경계를 먼저 해결해야 한다. 최신master의 별도 제품·스키마 변경을 이번 실행 후보에 섞지 않았다.
+
+## 10:31 UTC reader 시도
+
+
+독립 source 결속 도구 bf38/e92의 준비 후 검증이 state 원본과 durableJson의 줄바꿈을 같은 지문으로 간주해 웹 교체 전에 중단됐다. 현재 서비스 PID/시작시각/state/new8/DB232/43/active49를 재검증하고 build `prelaunch-15b1a36f9b4c-0owBF1`, recovery SHA `1631d134cdfe455540605836d21435010b72d44480b1386d44f07c0f91c0d627`만 별도 `v85-reader-attempt-closeout-20261018`에 보존한다. 첫 closeout의 원본 3개 지문도 유지한다. 실행 웹 재시작, DB 변경, 자격 발급은 없다.
+
+실제 종결 source는 `e057c61d1`이며 세 차례 전체 상태 검증 후 recovery 없음이 확인됐다. 기존 서비스 재시작·DB 쓰기·자격 변경은 없었다. 새 archive intent=`9f218d01276fed875d2958e6f4c3a3fb41e93850e2dd8f8af96f4136e24826f0`, complete=`61505f3177d3cbdd29e38d30d1488d2e7cf866e4d97a10892ee736cd0e62ccb7`다.

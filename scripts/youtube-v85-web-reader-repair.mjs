@@ -6,7 +6,7 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { READER_REPAIR as R, readerRepairEnvironment, readerRepairArguments, readerRepairGit, verifyReaderRepairLauncher, readReaderRepairAuthority, verifyReaderRepairWebAfter } from './lib/v85-web-reader-repair.mjs';
+import { READER_REPAIR as R, readerRepairEnvironment, readerRepairArguments, readerRepairGit, verifyReaderRepairLauncher, readReaderRepairAuthority, verifyReaderRepairWebAfter, verifyReaderRepairCompensationPreflight } from './lib/v85-web-reader-repair.mjs';
 import { spawnSync } from 'node:child_process';
 const root = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), '..'));
 async function main() {
@@ -22,6 +22,7 @@ async function main() {
   });
   if (preflight.status !== 0 || JSON.parse(preflight.stdout).ready !== true) throw Error('original d69 noncredential preflight failed; no web change');
   verifyReaderRepairLauncher(pin); readReaderRepairAuthority();
+  verifyReaderRepairCompensationPreflight();
   const start = spawnSync('/bin/ps', ['-p', String(process.pid), '-o', 'lstart='], { env: readerRepairEnvironment(), encoding: 'utf8', timeout: 5000 });
   if (start.status !== 0) throw Error('launcher identity');
   const proof = { schema: 'homecook.v85-web-reader-repair-invocation.v1', pin, parentRoot: root, parentRef,

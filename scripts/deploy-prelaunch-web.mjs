@@ -1164,8 +1164,10 @@ function previousClosedR2State(state, review) {
       || previous.ref !== state.closedR2.from || previous.checkout !== state.previousCwd || previous.buildId !== state.previousBuildId
       || previous.targetPlistHash !== hash(plistBytes)) throw new DeploymentError("직전 보호 reader state/marker/plist가 다릅니다.");
     const rollout = loadProtectedRolloutReview(repository, { reviewSha256: marker.protectedRollout.reviewSha256 });
-    assertProtectedClosedR2Marker({ state: previous, marker, markerSha256: hash(markerBytes), live: { ref: previous.ref, cwd: previous.checkout, buildId: previous.buildId,
-      plistHash: hash(plistBytes), plist: parsePlist(plistBytes) }, closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout) });
+    const previousLive = { ref: previous.ref, cwd: previous.checkout, buildId: previous.buildId, plistHash: hash(plistBytes), plist: parsePlist(plistBytes) };
+    assertProtectedClosedR2Marker({ state: previous, marker, markerSha256: hash(markerBytes), live: previousLive,
+      closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout),
+      rotationBridge: closedMarkerRotationBridge(previous, marker, previousLive) });
     return previous;
   }
   return assertClosedR2PredecessorState({ state, previousBytes: bytes, markerBytes, plist: parsePlist(plistBytes), plistSha256: hash(plistBytes),

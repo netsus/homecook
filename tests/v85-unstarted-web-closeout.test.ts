@@ -17,8 +17,8 @@ function observation() {
     recovery: { ref: String(UNSTARTED.to), buildId: String(UNSTARTED.toBuild), previousCwd: cwd,
       previousBuildId: UNSTARTED.fromBuild, previousPlistHash: pins.files['Library/LaunchAgents/com.homecook.production.plist'],
       targetPlistHash: 'c2258cb1513b1276950212ae73dc70cf9b73d82253e55ef8a10b35f6c97058d4',
-      checkout: join(home, '.homecook/prelaunch-web/releases/15b1a36f9b4c-8dYuqq/checkout'),
-      backup: join(home, '.homecook/prelaunch-web/releases/15b1a36f9b4c-8dYuqq/previous.plist') },
+      checkout: join(home, '.homecook/prelaunch-web/releases/15b1a36f9b4c-0owBF1/checkout'),
+      backup: join(home, '.homecook/prelaunch-web/releases/15b1a36f9b4c-0owBF1/previous.plist') },
     live: { ref: String(UNSTARTED.from), buildId: String(UNSTARTED.fromBuild), cwd },
     authorityVerified: true, readinessVerified: true, httpVerified: true };
 }

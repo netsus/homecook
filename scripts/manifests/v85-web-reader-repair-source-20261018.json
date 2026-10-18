@@ -1,20 +1,20 @@
 {
   "schema": "homecook.v85-web-reader-repair-source.v1",
   "baseToolRef": "d69fb50afe5d61530c3a3e0427ca4b477582792e",
-  "executorRef": "bf38deefc22520b09717df84c3f5d58cb8a376d2",
-  "executorTree": "4ed46e6910150ff81254f1749287857ac40dafcc",
+  "executorRef": "aa477759f46dd1973593a50867070e98f0ab68c9",
+  "executorTree": "11c1fbc44c522c9d37c055232fb00989b9decd31",
   "files": {
     "docs/engineering/v85-web-reader-repair-20261018.md": [
       null,
-      "c7fde3fdd78e5d65500cdf632c08ba5193227c54d6cad25b93ae6beb0bae0d93"
+      "5fcf6634a4f25956ace6f0d4cd2ee796ef152173764c3b5651d2edb14394e261"
     ],
     "docs/sync/CURRENT_SOURCE_OF_TRUTH.md": [
       "bb06bf1000a6b768acff691f423eb3597f23ade9123ef8cc201df4b55b4a80c8",
-      "58abaf5e3c5ac607a1494a99abf0a95940a502b66d2f4735f42783aa0fb83fd3"
+      "7f7f86c947a555f387e84cd0d0af4b2777661b9c85ae4126ee585a91c881cc30"
     ],
     "scripts/deploy-prelaunch-web.mjs": [
       "8d6fa4d85ceb11fbfa47867d79766602d613ba1b6b9ce288b8cfb0821ab8b569",
-      "ea751d9e159f81f718fc5d3d35089b61b07bca92dffa93a656ec0c59145921df"
+      "e7e11ece2acd1e74316955c2cde346810a32eb0ce61972c21c95e50a6eb2ac5b"
     ],
     "scripts/lib/round2-closed-marker-rotation-bridge.mjs": [
       "7ffa60fe669daf10e24d114a85c42338232e3e6ed5453358a68e92c57d400ea6",
@@ -22,7 +22,7 @@
     ],
     "scripts/lib/v85-web-reader-repair.mjs": [
       null,
-      "bff6046161cf2bf8e0c44794d5a4e46508ebe387458e62d7409cf37f59fefd87"
+      "bad67175768dd71a6a3c31ced4800ce215599999664b86d428e9b6535e636253"
     ],
     "scripts/youtube-v85-controlled-cutover.mjs": [
       "3df16ed7bce062043526f4c67f61d3f2f221e1a03a1780108f49b3af18f21095",
@@ -30,11 +30,19 @@
     ],
     "scripts/youtube-v85-web-reader-repair.mjs": [
       null,
-      "3fc5fcf7da84c9713a132ea160118b7b00cb071a5e9d83392da722164c858554"
+      "8e92c31384b9da5802c45575092b513565a849b980fc8944ac70b8133f8e6c75"
+    ],
+    "tests/fixtures/v85-reader-state-shape-20261018.json": [
+      null,
+      "9518c582a7e0ae0b3b29659f5f1de1362bcb70b078384a925d8c5bbf26a76b45"
+    ],
+    "tests/v85-web-reader-compensation.test.mjs": [
+      null,
+      "e94c0b06471416869f5b24b932ad74d5886146b94afd475e8044addbd5f97e8d"
     ],
     "tests/v85-web-reader-repair.test.ts": [
       null,
-      "da711c81258711bcac9bc65dc69fd48008a2f8e27e64b756cef84a2363a6e623"
+      "5de830b65446a65f169fb3064d83f47930e616210128b29a8f545f1cda56df92"
     ],
     "tests/youtube-v85-auth-successor.test.ts": [
       "872b1901ad15a508bf171fd77a20ec982586fc607eae432566892dd54c8e8559",
