@@ -1,0 +1,44 @@
+{
+  "schema": "homecook.v85-web-reader-repair-source.v1",
+  "baseToolRef": "d69fb50afe5d61530c3a3e0427ca4b477582792e",
+  "executorRef": "bf38deefc22520b09717df84c3f5d58cb8a376d2",
+  "executorTree": "4ed46e6910150ff81254f1749287857ac40dafcc",
+  "files": {
+    "docs/engineering/v85-web-reader-repair-20261018.md": [
+      null,
+      "c7fde3fdd78e5d65500cdf632c08ba5193227c54d6cad25b93ae6beb0bae0d93"
+    ],
+    "docs/sync/CURRENT_SOURCE_OF_TRUTH.md": [
+      "bb06bf1000a6b768acff691f423eb3597f23ade9123ef8cc201df4b55b4a80c8",
+      "58abaf5e3c5ac607a1494a99abf0a95940a502b66d2f4735f42783aa0fb83fd3"
+    ],
+    "scripts/deploy-prelaunch-web.mjs": [
+      "8d6fa4d85ceb11fbfa47867d79766602d613ba1b6b9ce288b8cfb0821ab8b569",
+      "ea751d9e159f81f718fc5d3d35089b61b07bca92dffa93a656ec0c59145921df"
+    ],
+    "scripts/lib/round2-closed-marker-rotation-bridge.mjs": [
+      "7ffa60fe669daf10e24d114a85c42338232e3e6ed5453358a68e92c57d400ea6",
+      "248fcb93a2f5c293ccba9df6d661848c0db0d9ef3602373d724ffbf7842fd158"
+    ],
+    "scripts/lib/v85-web-reader-repair.mjs": [
+      null,
+      "bff6046161cf2bf8e0c44794d5a4e46508ebe387458e62d7409cf37f59fefd87"
+    ],
+    "scripts/youtube-v85-controlled-cutover.mjs": [
+      "3df16ed7bce062043526f4c67f61d3f2f221e1a03a1780108f49b3af18f21095",
+      "d7a9b2c1db7e605dfd817691dda13a454bf2b9b10bb76dee2629d007f4984e7e"
+    ],
+    "scripts/youtube-v85-web-reader-repair.mjs": [
+      null,
+      "3fc5fcf7da84c9713a132ea160118b7b00cb071a5e9d83392da722164c858554"
+    ],
+    "tests/v85-web-reader-repair.test.ts": [
+      null,
+      "da711c81258711bcac9bc65dc69fd48008a2f8e27e64b756cef84a2363a6e623"
+    ],
+    "tests/youtube-v85-auth-successor.test.ts": [
+      "872b1901ad15a508bf171fd77a20ec982586fc607eae432566892dd54c8e8559",
+      "bfe402965652e6ab810bd805df924c7d9e9ccd97fb2390b132ce02edf76a28d2"
+    ]
+  }
+}
