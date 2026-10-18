@@ -44,7 +44,11 @@ describe('a separately reviewed noncredential web source bundle', () => {
   });
   it('changes the official web CLI by exactly the reviewed private reader line', () => {
     const path = 'scripts/deploy-prelaunch-web.mjs', before = execFileSync('git', ['show', `${R.base}:${path}`]);
-    const actual = readFileSync(path), old = 'JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation';
+    // The integrated master also contains the separate closeout commands. Verify
+    // the exact operating executor named by the source pin, rather than master.
+    const pinnedRef = existsSync(R.manifest) ? JSON.parse(readFileSync(R.manifest, 'utf8')).executorRef : null;
+    const actual = pinnedRef ? execFileSync('git', ['show', `${pinnedRef}:${path}`]) : readFileSync(path);
+    const old = 'JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation';
     expect(before.toString().split(old)).toHaveLength(2);
     expect(actual.toString()).toBe(before.toString().replace(old, 'JSON.parse(readClosedR2PrivateBytes(statePath, repository, 524288)).round2EightKeyRotation'));
     expect(readerRepairHash(before)).toBe(R.cliBefore); expect(readerRepairHash(actual)).toBe(R.cliAfter);
