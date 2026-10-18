@@ -1,5 +1,13 @@
 # Current Source of Truth
 
+## 2026-10-18 — v85 웹 미전환 실패 기록 종결 도구
+
+웹06a→15 교체 직전75KB state가 기본64KiB reader에 거부된 오류를 해당 읽기 한 곳의512KiB 상한으로 수정했다. 실제06a·동일previous plist·새8키/OFF·승인3개·DB232/worker49/43jobs·gen50 미발급을 재검증하고 실패 원문 보존·기록 종결을 완료했다. 기존PID·보호8파일·DB guard는 그대로이며 서비스 재시작·DB 쓰기·자격 변경은0이다. [최소 수정·실제 receipt·중단 처리·다음 전환 경계](../engineering/v85-unstarted-web-closeout-20261018.md)를 따른다. 다음 웹15/worker50 전환은 아직 하지 않았다.
+
+## 2026-10-18 — v85 인증 지문 변화의 별도 한 번 승계 준비 (미승인·미전환)
+
+사용자 운영 탭 종료 확인 뒤 읽기 전용259.641초 관측에서 보호 전체와 테이블 구성 지문이 같았다. 첫43개 승인 뒤 auth.users 변화의 컬럼·주체는 여전히 미확정이다. 원42개/43개 파일과 anchor를 보존하고 정확한 현재 전체 지문만 세 번째 create-only 승인에 결속하는 [이번 전환 전용 최소 경로](../engineering/youtube-v85-auth-successor-20261018.md)를 준비한다. 웹15·봉인worker50·고정만료·새키/OFF·원43개 작업 보존 검사를 유지하며 요리 변경/DB migration은 섞지 않는다. 현재 운영06a/v74-gen49/DB232이고 실제 새 승인·발급·배포는 미실행이다.
+
 ## 2026-10-17 — 회전 후 v85 웹 plan marker 연속성 보완
 
 사용자 후속 승인 anchor 결속과 stage/preflight 후 새8키 plist와 과거 불변 R2 marker의 지문 차이를 보완했다. 관련 Vitest387·Node48·type/lint·독립 검토와 정확한 도구f7f64997f에서 실제 공식 웹 plan exit0을 확인했다. 이후 사용자 preflight에서 보호 지문이 달라져 전환을 중단했다. 읽기 전용 재구성은 캡슐 관측~현재 사이 auth.users 행 지문 차이를 가리키며, 사용자 수7명은 같다. 과거 행 원본이 없어 변경 컬럼 전체와 주체는 미확정이다. 원43개 기준은 갱신하지 않았다. 원 marker/승인을 보존하고 committed 회전 증거·전후 state·원본/실제 plist의8종 한정 차이를 명시적으로 검증하는 최소 운영 도구 수정이다. 도구 새 SHA와 기존 웹 target15/capsule은 별도로 결속하고 실제 deploy는 사용자 Terminal 확인을 요구한다. [검증 경계·실행 순서](../engineering/youtube-v85-rotation-marker-bridge-20261017.md)를 따른다. 운영 웹06a/v74-gen49·DB232·C05/R2 OFF이며 실제 v85/gen50 전환은 미실행이다.

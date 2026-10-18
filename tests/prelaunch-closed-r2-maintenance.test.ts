@@ -70,7 +70,7 @@ describe("closed R2 F01 review boundary", () => {
       "export const CLOSED_R2_REVIEW_PIN = Object.freeze({ path: null, sha256: null });"));
     const cliPath = join(root, "deploy-prelaunch-web.mjs");
     const cli = readFileSync(join(repository, "scripts/deploy-prelaunch-web.mjs"), "utf8");
-    writeFileSync(cliPath, cli.replace(/from (["'])(\.\/lib\/[^"'\n]+)\1/gu, (_match,_quote, relativePath: string) => {
+    writeFileSync(cliPath, cli.replace(/from (["'])(\.\/(?:lib\/[^"'\n]+|youtube-v85-controlled-cutover\.mjs))\1/gu, (_match,_quote, relativePath: string) => {
       const target = relativePath === "./lib/prelaunch-web-deploy.mjs"
         ? libraryPath : resolve(repository, "scripts", relativePath);
       return `from "${pathToFileURL(target).href}"`;

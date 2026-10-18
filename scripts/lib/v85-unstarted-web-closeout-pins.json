@@ -1,0 +1,30 @@
+{
+  "files": {
+    ".homecook/operations/youtube-v85-gen50-20261017/auth-successor-plan-20261018.json": "d3979df6deca56efa906655fef86d29b1ec96e9e473f69625486e6a40594212e",
+    ".homecook/operations/youtube-v85-gen50-20261017/continuation-plan.json": "cf5a80513d4e532c2319344af8d72c23375d2fc24fdabc2864dee318dfe11ad5",
+    ".homecook/operations/youtube-v85-gen50-20261017/plan.json": "b887fbdc2d2bb1b80241d3abfef9ca56c95e796cc65d6def52825c57877a1342",
+    ".homecook/prelaunch-web/database-state.json": "9d0eeed7b02fb15e7c04d351ebf194016f4ba934b0e4670367dc1b314f87cf44",
+    ".homecook/prelaunch-web/protected-cooked-weight-attestation-database-guard.json": "4dd512619c1a3718bcc10e580a95c14a6c9ed3ea120a37ee9b7f733bab186338",
+    ".homecook/prelaunch-web/protected-cooked-weight-database-guard.json": "d926fc6312d7435e8abf42dc3d27bab667788a98faf6adf8c62d0cf35b5fffb5",
+    ".homecook/prelaunch-web/protected-database-guard.json": "89e62848c202faee8a23b9f011416caed69ac0864563d90c4fcb85def9130740",
+    ".homecook/prelaunch-web/protected-nutrition-validator-database-guard.json": "fc443e136d318e6064e986a31d62d3ddb74c3fee65e7f219297f2dbb36ed0f6f",
+    ".homecook/prelaunch-web/protected-quantity-v4-consumers-database-guard.json": "ea7887576f0fac6062d265eead00ba5329b4e94bad4262dc1174d1e9575a4c28",
+    ".homecook/prelaunch-web/protected-quantity-v4-worker-database-guard.json": "9b93efd7f166c41f6c2c6333ee36b5cd4ce6414e8e314684bf3ad84cb72106ca",
+    ".homecook/prelaunch-web/protected-recipe-request-role-database-guard.json": "5849ecc133f41d41cfc0d59bf03a945d3577315471d3b4f67261e3d02589536f",
+    ".homecook/prelaunch-web/protected-recipe-save-recovery-database-guard.json": "94af841ff642dfff0fa79db72bf937b6b31a98120e52d63bfe4e1b63f70968b7",
+    ".homecook/prelaunch-web/r2-operations/8ab04405-d207-4a14-9a49-d83211131693/control.json": "1588ea56971890f71d04d9fa0fb50a5ceaafa7b39e686024797a5c5009b2f992",
+    ".homecook/prelaunch-web/recovery.json": "bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e",
+    ".homecook/prelaunch-web/releases/15b1a36f9b4c-8dYuqq/closed-rollback.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
+    ".homecook/prelaunch-web/releases/15b1a36f9b4c-8dYuqq/previous.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
+    ".homecook/prelaunch-web/round2-eight-key-rotation-apply-20261017/journal.json": "6ddf4e4b76772b0654fa8a3da84bb097c651a04286ffbb521680c64eea0108b4",
+    ".homecook/prelaunch-web/round2-eight-key-rotation-fence.json": "9ad1100bd48e6d0e3e603f90fa915ca3229a558f1b306c86f3991e2e96c581fd",
+    ".homecook/prelaunch-web/state.json": "2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f",
+    "Library/LaunchAgents/com.homecook.production.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
+    "Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist": "9beb1655e88f5311fb76ff00e137111c78e2b5b77bea47ecf1700c5ff43b7359"
+  },
+  "processes": [
+    {"pid": 68884, "ppid": 1, "start": "Sat Oct 17 02:01:05 2026"},
+    {"pid": 68891, "ppid": 68884, "start": "Sat Oct 17 02:01:05 2026"}
+  ],
+  "workerPid": 49750
+}

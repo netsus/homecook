@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual as same } from 'node:util';
 import { assertRound2EightKeyFence, preserveRound2RotationState, ROUND2_ROTATION_NAMES } from './round2-eight-key-rotation-fence.mjs';
+import { assertV85AuthSuccessorTool,v85RotationBridgeAuthority } from './youtube-v85-cutover.mjs';
 
 export const ROTATION_BRIDGE = Object.freeze({
   web: '06a3369f5c5e1c3ca49045f370f0ce12f049c805',
@@ -27,7 +28,14 @@ export function assertPinnedRound2ClosedMarkerRotationBridge(input){
   }catch{throw new Error('R2_ROTATION_CLOSED_MARKER_BRIDGE_INVALID');}
 }
 
-export function assertRotationBridgeToolBinding({toolRef,requestedToolRef,targetRef,capsuleSha256,clean,ownRepository,digests,untrackedPaths}) {
+export function assertRotationBridgeToolBinding({toolRef,requestedToolRef,targetRef,capsuleSha256,clean,ownRepository,digests,untrackedPaths,authority}) {
+  if(authority?.plan?.authSuccessor){
+    check(requestedToolRef===toolRef&&targetRef===ROTATION_BRIDGE.target&&capsuleSha256===authority.planSha256);
+    assertV85AuthSuccessorTool({plan:authority.plan,toolRef,digests,clean,untrackedPaths,ownRepository});
+    check(v85RotationBridgeAuthority(authority).planSha256===ROTATION_BRIDGE.capsule);
+    return {toolRef,targetRef,capsuleSha256,historicalCapsuleSha256:ROTATION_BRIDGE.capsule,
+      sourceDeltaSha256:hash(JSON.stringify(digests)),operatingChanged:false};
+  }
   check(/^[a-f0-9]{40}$/u.test(toolRef)&&toolRef!==ROTATION_BRIDGE.target&&requestedToolRef===toolRef
     &&targetRef===ROTATION_BRIDGE.target&&capsuleSha256===ROTATION_BRIDGE.capsule&&clean===true&&ownRepository===true
     &&Array.isArray(untrackedPaths)&&untrackedPaths.length===0);
@@ -49,6 +57,7 @@ export async function confirmRotationBridgeTool(review,boundary,display,confirm)
 export function assertRound2ClosedMarkerRotationBridge({ state, marker, live, authority, stateBytes, beforeBytes, afterBytes,
   receiptBytes, journalBytes, fenceBytes, controlBytes, armExists, beforePlistBytes, beforePlist }) {
   try {
+    authority=v85RotationBridgeAuthority(authority);
     const before=JSON.parse(beforeBytes),after=JSON.parse(afterBytes),receipt=JSON.parse(receiptBytes),journal=JSON.parse(journalBytes);
     const binding=authority?.plan?.round2Binding,rotation=preserveRound2RotationState(state,{}).round2EightKeyRotation;
     check(authority?.planSha256===ROTATION_BRIDGE.capsule&&authority.plan.webRef===ROTATION_BRIDGE.target

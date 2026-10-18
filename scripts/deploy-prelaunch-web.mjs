@@ -6,6 +6,8 @@ import { createRound2EightKeyRestartFence, guardRound2EightKeyRestart, preserveR
 import { readV85Approval } from './lib/youtube-v85-approval.mjs';
 import { readV85Authority, assertV85Source, assertV85MetadataHandoff, v85Paths } from "./lib/youtube-v85-cutover.mjs";
 import { ROTATION_BRIDGE, assertRotationBridgeToolBinding, confirmRotationBridgeTool } from './lib/round2-closed-marker-rotation-bridge.mjs';
+import { verifyV85AuthSuccessorWebBoundary } from './youtube-v85-controlled-cutover.mjs';
+import { runUnstartedWebCloseout, assertNoUnstartedCloseoutPending } from './lib/v85-unstarted-web-closeout.mjs';
 import { createInterface } from 'node:readline/promises';
 import {
   RECIPE_REQUEST_ROLE_FEATURE, RECIPE_REQUEST_ROLE_MIGRATION, readRecipeRequestRoleAttempt, recipeRequestRolePhaseStatus, assertRecipeRequestRoleReader, verifyRecipeRequestRolePredecessor, verifyRecipeRequestRoleWorkerAdmission, loadRecipeSaveRecoveryMaintenance,
@@ -91,7 +93,7 @@ const cancellation = createCancellation();
 const say = (message) => process.stdout.write(`${message}\n`);
 const assertRound2RestartFence = createRound2EightKeyRestartFence(() => {
   const path = join(root, 'round2-eight-key-rotation-fence.json');
-  const rotation = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation : null;
+  const rotation = existsSync(statePath) ? JSON.parse(readClosedR2PrivateBytes(statePath, repository, 524288)).round2EightKeyRotation : null;
   const operation = join(root, 'round2-eight-key-rotation-apply-20261017/journal.json');
   if (existsSync(operation) && JSON.parse(readClosedR2PrivateBytes(operation, repository)).phase !== 'committed') {
     throw new DeploymentError('R2_ROTATION_FORWARD_REPAIR_PENDING');
@@ -1102,16 +1104,19 @@ async function reviewRotationBridgeTool(action,options) {
   const digests=Object.fromEntries(paths.map(path=>[path,[ROTATION_BRIDGE.target,'HEAD'].map(ref=>git(['ls-tree',ref,'--',path])
     ?hash(execFileSync('git',['-C',repository,'show',`${ref}:${path}`],{maxBuffer:524288,stdio:['ignore','pipe','pipe']})):null)]));
   const review=assertRotationBridgeToolBinding({toolRef:git(['rev-parse','HEAD']),requestedToolRef:options.rotationBridgeToolRef,
-    targetRef:options.ref,capsuleSha256:authority?.planSha256,clean:git(['status','--porcelain'])==='',
+    targetRef:options.ref,capsuleSha256:authority?.planSha256,authority,clean:git(['status','--porcelain'])==='',
     untrackedPaths:git(['ls-files','--others','--exclude-standard']).split('\n').filter(Boolean),
     ownRepository:realpathSync(resolve(dirname(fileURLToPath(import.meta.url)),'..'))===repository,digests});
-  if(action!=='deploy'){if(action==='plan')say(JSON.stringify({...review,readOnly:true}));return review;}
+  if(action!=='deploy'){await verifyV85AuthSuccessorWebBoundary(authority);if(action==='plan')say(JSON.stringify({...review,readOnly:true}));return review;}
   await confirmRotationBridgeTool(review,{platform:process.platform,stdinTTY:Boolean(process.stdin.isTTY),stdoutTTY:Boolean(process.stdout.isTTY),stderrTTY:Boolean(process.stderr.isTTY)},
     value=>say(JSON.stringify(value)),async()=>{
       const terminal=createInterface({input:process.stdin,output:process.stdout});
       try{return await terminal.question('Type V85-BRIDGE to confirm this exact web tool and capsule; no worker credential is issued here: ');}
       finally{terminal.close();}
     });
+  const confirmedAuthority=v85Authority();
+  if(confirmedAuthority?.planSha256!==review.capsuleSha256)throw new DeploymentError('Capsule changed after web user confirmation');
+  await verifyV85AuthSuccessorWebBoundary(confirmedAuthority);
 }
 async function verifyClosedR2Web(port) {
   await verifyClosedR2Collector(port);
@@ -1748,6 +1753,7 @@ async function recordIntegratedMasterDatabase(options) {
 async function main() {
   const { action, args } = parsePrelaunchArgs(process.argv.slice(2));
   if (action === "help" || action === "--help") {
+    say('plan-v85-unstarted-closeout | close-v85-unstarted: 2026-10-18 exact06a→15 미전환 실패 건만 검증·보존·종결합니다. 웹 재시작·DB 쓰기·자격 변경은 없습니다. 인수는 받지 않습니다.');
     say("--reviewed-protected-rollout --protected-phase database|database-retry|reader|reconcile|writer-on|writer-off|writer-on-reconcile|writer-off-reconcile|writer-on-retry|writer-off-retry: 정확한 보호 DB/reader 승인과 별도 ON/OFF 승인 경로. 코드에 고정된 승인 자료와 정확히 일치해야 실행할 수 있습니다.");
     say("레시피 요청 역할 metadata-only exact231→232: 기존 nutrition-* phase, 별도 fixed PIN/ref와 current231 terminal이 필요하며 웹 runtime은 교체하지 않습니다.");
     say("레시피 수정 저장·재시도 exact229→231: 같은 nutrition-* phase와 별도 코드 고정 ref/review가 필요합니다. 미결속 PIN에서는 거절하며 두 SQL commit 뒤에만 exact full-source를 반영합니다.");
@@ -1758,8 +1764,8 @@ async function main() {
     return;
   }
   if (process.platform !== "darwin") throw new DeploymentError("macOS 웹 서버에서 실행해야 합니다.");
-  if (!["plan", "deploy", "status", "record-youtube-resolution-database", "record-integrated-master-database", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys"].includes(action)
-    || (["status", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys"].includes(action) && args.length)
+  if (!["plan", "deploy", "status", "record-youtube-resolution-database", "record-integrated-master-database", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys", "plan-v85-unstarted-closeout", "close-v85-unstarted"].includes(action)
+    || (["status", "rollback", "recover-v85-web", "plan-v85-web-recovery", "plan-round2-eight-keys", "apply-round2-eight-keys", "plan-v85-unstarted-closeout", "close-v85-unstarted"].includes(action) && args.length)
     || (["record-youtube-resolution-database", "record-integrated-master-database"].includes(action)
       && (args.length !== 2 || args[0] !== "--db-config"))) throw new DeploymentError("잘못된 명령입니다. --help를 확인하세요.");
   const options = parsePrelaunchOptions(args);
@@ -1773,6 +1779,11 @@ async function main() {
   }
   if (options.reviewedClosedR2Maintenance) loadClosedR2Review(repository); // Fail before live/env access while the pin is empty.
   if (git(["rev-parse", "--show-toplevel"]) !== repository || !/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)netsus\/homecook(?:\.git)?$/u.test(git(["remote", "get-url", "origin"]))) throw new DeploymentError("배포 저장소는 netsus/homecook Git 저장소여야 합니다.");
+  if (action === 'plan-v85-unstarted-closeout' || action === 'close-v85-unstarted') {
+    say(JSON.stringify(await runUnstartedWebCloseout(repository, action === 'plan-v85-unstarted-closeout')));
+    return;
+  }
+  if (action !== 'status') assertNoUnstartedCloseoutPending(repository);
   if (action === 'plan-round2-eight-keys' || action === 'apply-round2-eight-keys') {
     const result = spawnSync('/usr/bin/python3', [join(repository, 'scripts/round2-eight-key-user-apply.py'),
       ...(action === 'plan-round2-eight-keys' ? ['--check'] : [])], { stdio: 'inherit' });
@@ -1858,6 +1869,6 @@ async function main() {
   }
 }
 main().catch((error) => {
-  process.stderr.write(`${error instanceof DeploymentError || error.message?.startsWith('v85 web recovery:') ? error.message : "배포 도구 실패. 비공개 로그와 웹 상태를 확인하세요."}\n`);
+  process.stderr.write(`${error instanceof DeploymentError || error.message?.startsWith('v85 web recovery:') || error.message?.startsWith('V85_UNSTARTED_') ? error.message : "배포 도구 실패. 비공개 로그와 웹 상태를 확인하세요."}\n`);
   process.exitCode = 1;
 });
