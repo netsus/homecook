@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { isDeepStrictEqual as same } from 'node:util';
 import { assertRound2EightKeyFence, preserveRound2RotationState, ROUND2_ROTATION_NAMES } from './round2-eight-key-rotation-fence.mjs';
 import { assertV85AuthSuccessorTool,v85RotationBridgeAuthority } from './youtube-v85-cutover.mjs';
+import { readerRepairInvocation, bindReaderRepairWebTool, consumeReaderRepairReview } from './v85-web-reader-repair.mjs';
 
 export const ROTATION_BRIDGE = Object.freeze({
   web: '06a3369f5c5e1c3ca49045f370f0ce12f049c805',
@@ -29,6 +30,7 @@ export function assertPinnedRound2ClosedMarkerRotationBridge(input){
 }
 
 export function assertRotationBridgeToolBinding({toolRef,requestedToolRef,targetRef,capsuleSha256,clean,ownRepository,digests,untrackedPaths,authority}) {
+  if (readerRepairInvocation()) return bindReaderRepairWebTool({toolRef,requestedToolRef,targetRef,capsuleSha256,clean,ownRepository,digests,untrackedPaths,authority});
   if(authority?.plan?.authSuccessor){
     check(requestedToolRef===toolRef&&targetRef===ROTATION_BRIDGE.target&&capsuleSha256===authority.planSha256);
     assertV85AuthSuccessorTool({plan:authority.plan,toolRef,digests,clean,untrackedPaths,ownRepository});
@@ -48,6 +50,7 @@ export function assertRotationBridgeToolBinding({toolRef,requestedToolRef,target
 }
 
 export async function confirmRotationBridgeTool(review,boundary,display,confirm) {
+  if (consumeReaderRepairReview(review, display)) return;
   check(boundary.platform==='darwin'&&boundary.stdinTTY&&boundary.stdoutTTY&&boundary.stderrTTY);
   display({...review,userExecutionRequired:true,keysRemainNew:true,collectionAndLeadRemainOff:true,credentialIssued:false});
   check(await confirm()==='V85-BRIDGE');

@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-18 — v85 웹 reader 수정의 별도 비자격 실행 결속
+
+원 d397/승인3개/d69 발급 경로/고정웹15를 보존하고, 웹CLI reader1줄과 정확한 웹 결속 plumbing만 별도 source pin으로 검증한다. 익명 pipe와 실제 부모/source에 묶인 이번 invocation만 내부 웹 확인을 대신하며 자격 경계는 유지한다. [고정 범위·실행기·검증·다음 gen50 단계](../engineering/v85-web-reader-repair-20261018.md)를 따른다. 아직 이 경로로 웹 전환하지 않았다.
+
 ## 2026-10-18 — v85 인증 지문 변화의 별도 한 번 승계 준비 (미승인·미전환)
 
 사용자 운영 탭 종료 확인 뒤 읽기 전용259.641초 관측에서 보호 전체와 테이블 구성 지문이 같았다. 첫43개 승인 뒤 auth.users 변화의 컬럼·주체는 여전히 미확정이다. 원42개/43개 파일과 anchor를 보존하고 정확한 현재 전체 지문만 세 번째 create-only 승인에 결속하는 [이번 전환 전용 최소 경로](../engineering/youtube-v85-auth-successor-20261018.md)를 준비한다. 웹15·봉인worker50·고정만료·새키/OFF·원43개 작업 보존 검사를 유지하며 요리 변경/DB migration은 섞지 않는다. 현재 운영06a/v74-gen49/DB232이고 실제 새 승인·발급·배포는 미실행이다.
@@ -1861,3 +1865,7 @@ desktop HOME의 네 개 빠른 이동 menu 아래에 `/beta?ad_variant=a` banner
 출시 전 소셜 로그인 버튼과 앱 로그인 시작/콜백을 차단한다. 시작은 기존 AUTH_FLOW_UNAVAILABLE/503, 콜백은 교환 전에 준비 안내로 반환한다. 기존 세션·로컬 password QA·인증된 계정 연결은 보존한다. Supabase 외부 직접 인증 API 설정을 변경하는 것은 범위 밖이다. 로컬 랜딩은 허용 origin·공식 캠페인 기간 설정 누락을 로컬 전용으로 보완하고 실제 저장 인증 오류와 구분한다. 새 계정/리드 저장 성공을 가짜로 처리하지 않는다.
 
 - C04 레시피 원문 수량 소비자 비활성 로컬 계약: `docs/engineering/recipe-quantity-input-v4-20261014.md`. 운영 적용/worker 끝단/C01 전체 통합 완료로 확대하지 않는다.
+
+- 2026-10-18 10:31 UTC reader 재시도는 교체 전 guard 직렬화 비교 오류로 중단됐다. 기존06a/DB232/worker49/new8/OFF를 유지하고 실패 기록을 별도 원본 보존·종결했다. [reader 도구 기록](../engineering/v85-web-reader-repair-20261018.md)의 raw/internal 지문 구분 수정과 보상 bridge 누락에 따른 재시도 보류를 따른다.
+
+- reader 복구 범위는 부모의 후속 지시에 따라 previousClosedR2State 회전 bridge 누락까지만 확장한다. 원 승인3개·d397·발급d69·웹15는 유지하며 reader/bridge 정확한 두 변경 외 CLI 변경은 source 검증에서 거부한다.
