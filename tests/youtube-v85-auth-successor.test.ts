@@ -152,7 +152,7 @@ describe('one create-only exact auth successor with both prior authorities prese
   it('executes the actual web boundary helper against isolated memory and refuses auth drift, issued files, activation or fence changes',async()=>{
     const p=successorFixture(),fresh=structuredClone(p.before),files=new Set<string>(),snapshot=vi.fn(async()=>fresh);
     let binding=p.round2Binding;
-    const deps={P:{token:'/fixture/token',credential:'/fixture/credential',secrets:'/fixture/secrets'},OP:'/fixture/op',join,
+    const deps={readerRepairInvocation:()=>false,P:{token:'/fixture/token',credential:'/fixture/credential',secrets:'/fixture/secrets'},OP:'/fixture/op',join,
       existsSync:(path:string)=>files.has(path),check:v85Check,assertAuthTool:()=>{},context:async()=>({}),readSnapshot:snapshot,
       assertBefore:()=>{},preserved:assertV85Preserved,isDeepStrictEqual,sha:()=>h,readFileSync:()=>Buffer.from('fixture launcher'),
       PLIST:'/fixture/launcher',round2Binding:()=>binding};
