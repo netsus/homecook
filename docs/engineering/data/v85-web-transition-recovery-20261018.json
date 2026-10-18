@@ -1,0 +1,93 @@
+{
+  "webTransitioned": true,
+  "webRef": "15b1a36f9b4c4c293cd8f92c6f2824b13ba7eaf9",
+  "buildId": "prelaunch-15b1a36f9b4c-DVzl4n",
+  "stateSha256": "3bb03e719eee11fb9331d6289ff95b773f3648a10d764d5751853de2bbe324af",
+  "processes": [
+    {
+      "pid": 39019,
+      "ppid": 1,
+      "start": "Sun Oct 18 11:06:56 2026"
+    },
+    {
+      "pid": 39025,
+      "ppid": 39019,
+      "start": "Sun Oct 18 11:06:57 2026"
+    }
+  ],
+  "actualStartupEightMatch": true,
+  "round2Off": true,
+  "publicHttp200": true,
+  "dbLedger": 232,
+  "jobs": 43,
+  "workerGeneration": 49,
+  "workerPid": 49750,
+  "originalAuthoritiesPreserved": true,
+  "credentialIssued": false,
+  "recoveryPending": false,
+  "serviceRestarts": 0,
+  "plistWrites": 0,
+  "schema": "homecook.v85-web-transition-recovery-evidence.v1",
+  "finalizationScriptSha256": "4cec469ed13069183a2fcc5eb279b5bec9e8a2bd9345e4cbccb8ac14a1d46d26",
+  "bootstrapScriptSha256": "68b9dc6c5bd460d1840b910bb200af9042b59278c63842954e4c9085d60bc7ae",
+  "sourceExecutorRef": "aa477759f46dd1973593a50867070e98f0ab68c9",
+  "sourceLauncherRef": "76f80934feb35be59c86d9217f55b1c6d08fada7",
+  "originalCredentialToolRef": "d69fb50afe5d61530c3a3e0427ca4b477582792e",
+  "publicHttps": {
+    "/": 200,
+    "/login": 200,
+    "/privacy": 200
+  },
+  "round2Http": {
+    "status": 503,
+    "code": "ROUND2_DISABLED"
+  },
+  "modelCalls": 0,
+  "databaseWrites": 0,
+  "credentialChanges": 0,
+  "cookingDeploymentHeld": true,
+  "extractionActivationComplete": false,
+  "archiveSha256": {
+    "intent.json": "d42f0dab056132fc49a8479999bcae0752b0efebb83ebfc2106be43d1a13325c",
+    "state-before.json": "2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f",
+    "recovery.json": "e572a73fa3b0fdd8f783fd2c9320ecbe2e4a289b12b6f8bf9e573cddd3ebfc2f",
+    "state-after.json": "3bb03e719eee11fb9331d6289ff95b773f3648a10d764d5751853de2bbe324af",
+    "complete.json": "708c25685d5423c3207140e9d6f4cebebe3fd5161880ff63238f4da741cc2e6f"
+  },
+  "serviceRestartsScope": "metadata-finalization-only",
+  "failedOriginalDeploy": {
+    "previousWebBootoutOccurred": true,
+    "targetPlistInstalled": true,
+    "bootstrapBlockedBeforeRegistration": true
+  },
+  "bootstrapExistingTarget": {
+    "serviceRegistrations": 1,
+    "plistWrites": 0,
+    "databaseWrites": 0,
+    "credentialChanges": 0,
+    "initialProbeClientMismatch": true
+  },
+  "youtubeEnqueueReadiness": {
+    "status": "blocked",
+    "code": "READINESS_UNAVAILABLE",
+    "authenticatedEnqueueSubmitted": false,
+    "newJobs": 0,
+    "modelCalls": 0
+  },
+  "postVerifier": {
+    "passed": true,
+    "usesOfficialHostPreservingHttpProbe": true,
+    "actualStartupEightMatch": true,
+    "round2Off": true,
+    "dbLedger": 232,
+    "jobs": 43,
+    "workerGeneration": 49,
+    "workerPid": 49750,
+    "credentialIssued": false,
+    "recoveryPending": false
+  },
+  "originalD69PreflightAfterWeb": {
+    "ready": true,
+    "credentialIssued": false
+  }
+}
