@@ -11,7 +11,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createInterface } from 'node:readline/promises';
 import { V85 as V,V85_OPERATION_DIRECTORY as OP,v85Paths,v85MetadataPatch,v85Hash as sha,v85Check as check,v85Zero as zero,assertV85Plan,assertV85Source,
   assertV85Preserved as preserved,assertV85WorkerCredential,verifyV85IssuedToken,assertV85After,classifyV85Registration,ownsV85Registration,assertV85Successor,buildV85RegistrationSql,V85_BEGIN_SQL,V85_LOCK_SQL,
-  assertV85ExecutionPlan,readV85ExecutionApproval,v85ContinuationDataDeltas,assertV85ActivatedRuntime } from './lib/youtube-v85-cutover.mjs';
+  assertV85ExecutionPlan,readV85ExecutionApproval,v85ContinuationDataDeltas,assertV85ActivatedRuntime,
+  V85_AUTH_SUCCESSOR,V85_AUTH_TABLES,assertV85AuthSuccessorTool } from './lib/youtube-v85-cutover.mjs';
 import { assertRound2EightKeyFence,preserveRound2RotationState } from './lib/round2-eight-key-rotation-fence.mjs';
 import { readV85Approval,registerV85Approval } from './lib/youtube-v85-approval.mjs';
 import { V74_ACTIVATION_SHA256,V74_OPERATION_DIRECTORY,v74Paths,assertV74WorkerSuccessor,assertV74LoadedService } from './lib/prelaunch-youtube-v74-cutover.mjs';
@@ -60,7 +61,17 @@ export async function confirmV85ReviewedOperation(action,bytes,boundary,display,
   display({userReviewRequired:true,planSha256:sha(bytes),toolAndWebSha:review.webRef,workerRelease:V.releaseSha,generation:50,workerExpiresAt:V.expiresAt,managerMaximumSeconds:300,
     priorDataChangesUnattributed:review.schema==='homecook.youtube-v85-continuation-plan.v1',originalJobs:42,currentJobs:review.before.jobCount,old49InvalidAfterRegistration:true,round2LeadRemainOff:true});
   if(review.schema==='homecook.youtube-v85-continuation-plan.v1')display({warning:'Approval preserves the exact current data despite unattributed prior auth/normal changes and one extra job. It does not classify those changes as normal or overwrite the original authority.'});
+  if(review.authSuccessor)display({toolRef:review.authSuccessor.toolRef,priorCapsuleSha256:review.authSuccessor.priorPlanSha256,
+    warning:'This separate create-only approval adopts the exact current auth row fingerprint despite unknown changed columns/actor. Both prior approvals remain unchanged. Future auth drift still aborts.'});
   await requireV85UserExecution(action,boundary,confirm);
+  return sha(bytes);
+}
+export function assertV85ConfirmedHash(reviewedSha256,actualSha256){
+  check(/^[a-f0-9]{64}$/u.test(reviewedSha256)&&reviewedSha256===actualSha256,'capsule changed after user confirmation');
+}
+export function readV85ConfirmedPlan(path,expectedSha256,reviewedSha256,read=p=>readClosedR2PrivateBytes(p,ROOT,524288)){
+  const bytes=read(path),actual=sha(bytes);assertV85ConfirmedHash(reviewedSha256,actual);
+  check(actual===expectedSha256,'explicit approved plan hash');return bytes;
 }
 function command(bin, args, input) {
   const result = spawnSync(bin, args, { encoding: 'utf8', input, timeout: v85RemainingTimeout(30000), maxBuffer: 16 * 1024 * 1024 });
@@ -119,10 +130,15 @@ function assertBefore(c,o) {
   check(o.worker.credentialGeneration===49&&o.worker.workerReleaseSha===V.predecessorReleaseSha&&o.policy.enabled&&zero(o.worker),'original49 active/drained');
   assertCookedWeightAttestationCurrentObservation(c.s,o.full,{quantityWriterState:'on',approvedWorkerPolicy:c.c.observation,approvedWorkerSuccessor:c.legacy,databaseMaintenance:c.m});
 }
-async function readSnapshot(c) {
+async function readSnapshot(c,withAuthEvidence=false) {
   const s=openDedicatedAdminSession(c.target.postgresContainerId,'youtube-resolution-v85-readonly');
   try {await s.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL ROLE postgres; SET LOCAL statement_timeout='45s'; SET LOCAL search_path=public,extensions; SET LOCAL TIME ZONE 'UTC';");
-    const result=await observation(c,sql=>s.query(sql));await s.query('COMMIT;');check(await s.close()===0,'read-only snapshot close');return result;
+    const result=await observation(c,sql=>s.query(sql)),tableEvidence={};
+    if(withAuthEvidence)for(const table of V85_AUTH_TABLES){
+      const present=(await s.query(`SELECT to_regclass('${table}') IS NOT NULL;`)).trim()==='t';
+      tableEvidence[table]=present?JSON.parse((await s.query(`SELECT jsonb_build_object('count',count(*),'sha256',encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text,'UTF8')),'hex')) FROM ${table} t;`)).trim()):{count:null,absent:true};
+    }
+    await s.query('COMMIT;');check(await s.close()===0,'read-only snapshot close');return withAuthEvidence?{before:result,tableEvidence}:result;
   }finally{s.stop();}
 }
 async function transaction(c,callback) {
@@ -138,9 +154,37 @@ async function transaction(c,callback) {
 }
 function approvedPlan() {
   const authority=readV85ExecutionApproval(p=>readClosedR2PrivateBytes(p,ROOT,524288)),plan=authority?.plan;check(plan,'approved original/continuation required');
-  check(command('git',['-C',ROOT,'rev-parse','HEAD'])===plan.webRef,'exact reviewed tooling/web source');
+  if(plan.authSuccessor)assertAuthTool(plan);
+  else check(command('git',['-C',ROOT,'rev-parse','HEAD'])===plan.webRef,'exact reviewed tooling/web source');
   check(!command('git',['-C',ROOT,'status','--porcelain','--untracked-files=no']),'clean tooling checkout');
   assertV85Source({plan,from:V.from,to:plan.webRef,digests:sourceDigests(plan.webRef)});return authority;
+}
+function authToolDigests(){
+  command('git',['-C',ROOT,'merge-base','--is-ancestor',V85_AUTH_SUCCESSOR.target,'HEAD']);
+  const paths=command('git',['-C',ROOT,'diff','--name-only',V85_AUTH_SUCCESSOR.target,'HEAD']).split('\n').filter(Boolean).sort();
+  return Object.fromEntries(paths.map(path=>[path,[V85_AUTH_SUCCESSOR.target,'HEAD'].map(ref=>
+    command('git',['-C',ROOT,'ls-tree',ref,'--',path])?sha(commandBytes('git',['-C',ROOT,'show',`${ref}:${path}`])):null)]));
+}
+function assertAuthTool(plan){
+  assertV85AuthSuccessorTool({plan,toolRef:command('git',['-C',ROOT,'rev-parse','HEAD']),digests:authToolDigests(),
+    clean:command('git',['-C',ROOT,'status','--porcelain'])==='',
+    untrackedPaths:command('git',['-C',ROOT,'ls-files','--others','--exclude-standard']).split('\n').filter(Boolean),
+    ownRepository:realpathSync(command('git',['-C',ROOT,'rev-parse','--show-toplevel']))===realpathSync(ROOT)});
+}
+function assertAuthSuccessorUnissued(){
+  for(const path of [P.token,P.credential,join(P.secrets,'manager-v85-gen50.jwt'),
+    join(OP,'generation-49.plist'),...['backup','issue-intent','issued','quiesced','registration-intent','registration','activation'].map(n=>join(OP,n+'.json'))])
+    check(!existsSync(path),'partial gen50 attempt; no new approval');
+}
+export async function verifyV85AuthSuccessorWebBoundary(authority){
+  if(!authority?.plan?.authSuccessor)return;
+  check(!authority.proof,'auth successor web handoff is only before gen50 activation');
+  assertAuthTool(authority.plan);assertAuthSuccessorUnissued();
+  const c=await context(),fresh=await readSnapshot(c);assertBefore(c,fresh);preserved(authority.plan.before,fresh);
+  check(isDeepStrictEqual(fresh.worker,authority.plan.before.worker)&&isDeepStrictEqual(fresh.credential,authority.plan.before.credential)
+    &&isDeepStrictEqual(fresh.policy,authority.plan.before.policy)
+    &&sha(readFileSync(PLIST))===authority.plan.beforeService.plistSha256,'fresh49 before exact auth successor web handoff');
+  check(isDeepStrictEqual(round2Binding(),authority.plan.round2Binding),'fresh web auth successor new8/fence/OFF');
 }
 function sourceDigests(ref) {
   const files=command('git',['-C',ROOT,'diff','--name-only',V.from,ref]).split('\n').filter(Boolean).sort();
@@ -336,14 +380,38 @@ async function adapters(c,authority) {
   };return a;
 }
 async function main() {
-  const [action,arg1,arg2]=process.argv.slice(2);check(process.argv.length===(['prepare','prepare-continuation','approve-plan'].includes(action)?5:3),'exact arguments only');check(['prepare','prepare-continuation','approve-plan','stage','preflight','apply','reconcile','resume'].includes(action),'usage: prepare|prepare-continuation REF OUTPUT_DIR | approve-plan PLAN SHA | stage | preflight | apply | reconcile | resume');
+  const [action,arg1,arg2]=process.argv.slice(2);check(process.argv.length===(['prepare','prepare-continuation','prepare-auth-successor','approve-plan'].includes(action)?5:3),'exact arguments only');check(['prepare','prepare-continuation','prepare-auth-successor','approve-plan','stage','preflight','apply','reconcile','resume'].includes(action),'usage: prepare|prepare-continuation|prepare-auth-successor REF OUTPUT_DIR | approve-plan PLAN SHA | stage | preflight | apply | reconcile | resume');
+  let userReviewedSha256=null;
   if(['approve-plan','apply','resume'].includes(action)){
     const boundary={platform:process.platform,stdinTTY:Boolean(process.stdin.isTTY),stdoutTTY:Boolean(process.stdout.isTTY),stderrTTY:Boolean(process.stderr.isTTY)};
     assertV85UserTerminal(boundary);
-    const path=action==='approve-plan'?arg1:join(OP,existsSync(join(OP,'continuation-plan.json'))?'continuation-plan.json':'plan.json');
-    await confirmV85ReviewedOperation(action,readClosedR2PrivateBytes(path,ROOT,524288),boundary,output);
+    const path=action==='approve-plan'?arg1:join(OP,existsSync(join(OP,V85_AUTH_SUCCESSOR.filename))?V85_AUTH_SUCCESSOR.filename:existsSync(join(OP,'continuation-plan.json'))?'continuation-plan.json':'plan.json');
+    userReviewedSha256=await confirmV85ReviewedOperation(action,readClosedR2PrivateBytes(path,ROOT,524288),boundary,output);
   }
   if(action==='apply'||action==='resume')operationDeadline=performance.now()+600000;
+  if(action==='prepare-auth-successor'){
+    check(arg1===V85_AUTH_SUCCESSOR.target&&arg2&&resolve(arg2).startsWith('/tmp/')&&!existsSync(arg2),'new exact auth successor review directory');
+    const authority=readV85ExecutionApproval(p=>readClosedR2PrivateBytes(p,ROOT,524288));
+    check(authority?.planSha256===V85_AUTH_SUCCESSOR.priorSha256&&!authority.plan.authSuccessor,'unchanged prior43 authority');
+    assertAuthSuccessorUnissued();
+    mkdirSync(arg2,{mode:0o700});const c=await context(realpathSync(arg2)),snapshot=await readSnapshot(c,true);assertBefore(c,snapshot.before);
+    verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);check(sha(readFileSync(PLIST))===authority.plan.beforeService.plistSha256,'same original worker launcher');
+    const web=parsePlist(readFileSync(WEB_PLIST));check(command('git',['-C',web.WorkingDirectory,'rev-parse','HEAD'])===V.from,'unchanged web06a');
+    const historicalPath='/tmp/v85-drift-private-20261017/observation-1792267288723.json',historicalStat=lstatSync(historicalPath);
+    check(historicalStat.isFile()&&!historicalStat.isSymbolicLink()&&historicalStat.uid===process.getuid()&&(historicalStat.mode&0o777)===0o600,'owned historical diagnostic metadata');
+    const historical=JSON.parse(readFileSync(historicalPath,'utf8')),priorTables=structuredClone(snapshot.tableEvidence);
+    priorTables['auth.users']=historical.tableDigests['auth.users'];
+    const plan=structuredClone(authority.plan);plan.before=snapshot.before;plan.continuation.dataDeltas=v85ContinuationDataDeltas(plan.originalPlan,plan.before);
+    plan.authSuccessor={schema:'homecook.youtube-v85-auth-successor.v1',priorPlan:authority.plan,priorPlanSha256:authority.planSha256,
+      priorCanonicalSha256:sha(JSON.stringify(authority.plan)),requiresExplicitUnattributedAuthAcknowledgement:true,rawBeforeImagesAvailable:false,
+      classification:'unattributed-auth-row-change',toolRef:command('git',['-C',ROOT,'rev-parse','HEAD']),toolSources:authToolDigests(),
+      tableEvidence:{priorComponentsReconstructed:true,rawRowsAvailable:false,priorTables,currentTables:snapshot.tableEvidence}};
+    check(isDeepStrictEqual(round2Binding(),plan.round2Binding),'unchanged exact new8/fence/OFF');assertAuthTool(plan);await candidate();
+    privateCreate(join(realpathSync(arg2),'plan.json'),JSON.stringify(plan,null,2)+'\n');
+    output({prepared:true,planPath:join(realpathSync(arg2),'plan.json'),planSha256:sha(readFileSync(join(realpathSync(arg2),'plan.json'))),
+      toolRef:plan.authSuccessor.toolRef,webRef:plan.webRef,priorCapsulePreserved:true,original42Preserved:true,currentJobs:43,
+      authChangedColumnsAndActorUnknown:true,issued:false,operatingChanged:false});return;
+  }
   if(action==='prepare'||action==='prepare-continuation'){
     check(/^[a-f0-9]{40}$/u.test(arg1??'')&&arg2&&resolve(arg2).startsWith('/tmp/'),'prepare exact SHA and new /tmp directory');
     check(!existsSync(arg2),'output exists');command('git',['-C',ROOT,'merge-base','--is-ancestor',V.releaseSha,arg1]);
@@ -369,9 +437,21 @@ async function main() {
       priorDataChangesUnattributed:action==='prepare-continuation',originalJobsPreserved:before.originalJobsSha256===plan.originalPlan?.before.jobsSha256});return;
   }
   if(action==='approve-plan'){
-    const bytes=readClosedR2PrivateBytes(arg1,ROOT,524288);check(sha(bytes)===arg2,'explicit approved plan hash');const review=assertV85ExecutionPlan(JSON.parse(bytes));
+    const bytes=readV85ConfirmedPlan(arg1,arg2,userReviewedSha256);const review=assertV85ExecutionPlan(JSON.parse(bytes));
     // Run only after the human confirms the exact issuance/transition package. No token is created here.
     mkdirSync(OP,{mode:0o700,recursive:true});check(lstatSync(OP).isDirectory()&&!lstatSync(OP).isSymbolicLink()&&lstatSync(OP).uid===process.getuid(),'owned approval directory');chmodSync(OP,0o700);
+    if(review.authSuccessor){
+      assertAuthTool(review);const prior=readV85ExecutionApproval(p=>readClosedR2PrivateBytes(p,ROOT,524288));
+      check(prior?.planSha256===V85_AUTH_SUCCESSOR.priorSha256&&isDeepStrictEqual(prior.plan,review.authSuccessor.priorPlan),'both existing prior anchors preserved');
+      assertAuthSuccessorUnissued();const c=await context(),fresh=await readSnapshot(c);assertBefore(c,fresh);preserved(review.before,fresh);
+      check(isDeepStrictEqual(fresh.worker,review.before.worker)&&isDeepStrictEqual(fresh.credential,review.before.credential)
+        &&isDeepStrictEqual(fresh.policy,review.before.policy)&&sha(readFileSync(PLIST))===review.beforeService.plistSha256,
+        'fresh exact49 and worker launcher before auth approval');
+      check(isDeepStrictEqual(round2Binding(),review.round2Binding),'fresh auth approval fence/OFF');
+      const destination=join(OP,V85_AUTH_SUCCESSOR.filename);check(!existsSync(destination),'auth successor approval file already exists');
+      registerV85Approval(arg2,V85_AUTH_SUCCESSOR.account);privateCreate(destination,bytes);
+      output({approvedAuthSuccessorBound:true,priorApprovalsPreserved:true,credentialIssued:false});return;
+    }
     const continuation=review.schema==='homecook.youtube-v85-continuation-plan.v1',destination=join(OP,continuation?'continuation-plan.json':'plan.json');
     if(continuation){const original=readClosedR2PrivateBytes(join(OP,'plan.json'),ROOT,524288);check(readV85Approval()===sha(original)&&review.continuation.originalPlanSha256===sha(original)&&isDeepStrictEqual(JSON.parse(original),review.originalPlan),'preserved original approval before continuation');}
     if(existsSync(destination))check(sha(readFileSync(destination))===arg2,'existing different plan');
@@ -379,7 +459,8 @@ async function main() {
     if(!existsSync(destination))privateCreate(destination,bytes);
     output({approvedPlanBound:true,credentialIssued:false});return;
   }
-  const authority=approvedPlan();check(lstatSync(OP).isDirectory()&&!lstatSync(OP).isSymbolicLink()&&lstatSync(OP).uid===process.getuid()&&(lstatSync(OP).mode&0o777)===0o700,'owned private operation directory');
+  const authority=approvedPlan();if(['apply','resume'].includes(action))assertV85ConfirmedHash(userReviewedSha256,authority.planSha256);
+  check(lstatSync(OP).isDirectory()&&!lstatSync(OP).isSymbolicLink()&&lstatSync(OP).uid===process.getuid()&&(lstatSync(OP).mode&0o777)===0o700,'owned private operation directory');
   if(action==='reconcile'){
     const c=await context(),a=await adapters(c,authority),r=await a.reconcile();
     output({...r.result,credentialIssued:false,readOnly:true});return;
