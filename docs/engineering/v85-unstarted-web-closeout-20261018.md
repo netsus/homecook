@@ -32,3 +32,20 @@
 관련 회귀 검사는512KiB 경계, 보호 필드, 고정 파일/프로세스 변경 거부, 실제 임시 파일의 원문·권한·덮어쓰기 거부, 게시 전후 중단·재진입, 제거 전후 drift와 기존 rollback/승인 가드를 검증한다. Python 검증은 `-B`, 하위 프로세스는 preload 옵션 없는 제한 환경과 제한시간을 사용한다. 원본 비밀 값이나 DB 행은 출력하지 않는다.
 
 기록 종결은 서비스 복구/배포/세대50 활성화와 다르다. 현재 d397 승인은 d69 도구에 결속되어 있으므로 이번 수정 도구로 다음 웹 전환을 자동 재개하지 않는다. 다음 실제 전환은 수정 도구의 source 결속을 명시적으로 해결한 후 기존 공식 배포 경로를 사용해야 한다. credential 발급·등록은 별도 기존 확인 경계를 유지한다.
+
+## 실제 실행 결과 — 2026-10-18 09:48 UTC 확인
+
+깨끗한 고정 source `e860b66b20b6dd088d4ce77a7d79f3c1683b0907`에서 공식 plan을 통과한 뒤 종결을 실행했다. 제거 전후 전체 운영 검증과 최종 status가 모두 통과했다. 실패 recovery 원문은 위 디렉터리에 보존됐고 active recovery는 없다. intent/complete는0600, 디렉터리는0700이다. deploy/control 잠금은 모두 해제됐다.
+
+| 확인 대상 | 결과 |
+| --- | --- |
+| 웹 |06a·빌드EWuEsS, launcher68884/HTTP68891와 원 시작시각 유지 |
+| worker |v74·gen49·PID49750 유지, gen50 미발급 |
+| DB |232개 이력·43jobs·원42·full 보호 projection 및 승인3개 일치 |
+| R2 |새8키·fence·OFF·arm 닫힘 유지 |
+| 기존 보호 자료 |원 state/plist/worker/승인/fence/journal8개 해시 모두 불변, 전체 DB guard 불변 |
+| 쓰기 범위 |실패 기록 archive/intent/complete와 active recovery 제거만 실행; DB 쓰기0·서비스 재시작0·자격 변경0 |
+
+보존 recovery SHA256=`bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e`, intent=`389efc11162efb6c5503d30f2add4d847a6bbf609fabf6248cb3aaf19f08eab3`, complete=`07eba6c533b813e0a63311fbc9c6c7d03e0e8e3979b3749616567fb5488ac7c6`다. 이는 배포 완료 receipt가 아니다.
+
+최신master 통합 작업트리의 관련7개 Vitest suite326검사, 별도 Node40검사, 타입 검사·린트와 독립 코드 리뷰를 통과했다. 제품/DB/의존성 변경은 없다. 다음06a→15 전환은 아직 실행하지 않았으며 위 source 결속 경계를 먼저 해결해야 한다. 최신master의 별도 제품·스키마 변경을 이번 실행 후보에 섞지 않았다.

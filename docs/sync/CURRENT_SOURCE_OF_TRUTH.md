@@ -2,7 +2,7 @@
 
 ## 2026-10-18 — v85 웹 미전환 실패 기록 종결 도구
 
-웹06a→15 교체 직전75KB state가 기본64KiB reader에 거부된 오류를 해당 읽기 한 곳의512KiB 상한으로 수정했다. 실제06a·동일previous plist·새8키/OFF·승인3개·DB232/worker49/43jobs·gen50 미발급이 정확히 유지된 사건만 원문 보존 후 기록을 종결한다. 서비스 재시작·DB 쓰기·자격 변경은 없으며 기존 보호 가드를 유지한다. [최소 수정·고정 근거·중단 처리·다음 전환 경계](../engineering/v85-unstarted-web-closeout-20261018.md)를 따른다. 실제 종결 실행 결과는 별도 운영 receipt로 확인한다.
+웹06a→15 교체 직전75KB state가 기본64KiB reader에 거부된 오류를 해당 읽기 한 곳의512KiB 상한으로 수정했다. 실제06a·동일previous plist·새8키/OFF·승인3개·DB232/worker49/43jobs·gen50 미발급을 재검증하고 실패 원문 보존·기록 종결을 완료했다. 기존PID·보호8파일·DB guard는 그대로이며 서비스 재시작·DB 쓰기·자격 변경은0이다. [최소 수정·실제 receipt·중단 처리·다음 전환 경계](../engineering/v85-unstarted-web-closeout-20261018.md)를 따른다. 다음 웹15/worker50 전환은 아직 하지 않았다.
 
 ## 2026-10-18 — v85 인증 지문 변화의 별도 한 번 승계 준비 (미승인·미전환)
 
