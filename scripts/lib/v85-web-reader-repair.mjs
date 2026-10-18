@@ -6,7 +6,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual as same } from 'node:util';
-import { DeploymentError, readClosedR2PrivateBytes, loadProtectedRolloutReview, protectedRolloutPins, assertProtectedClosedR2Marker, loadClosedR2Review } from './prelaunch-web-deploy.mjs';
+import { DeploymentError, readClosedR2PrivateBytes, loadProtectedRolloutReview, protectedRolloutPins, assertProtectedClosedR2Marker, loadClosedR2Review, verifyClosedR2Collector } from './prelaunch-web-deploy.mjs';
 import { readV85Authority } from './youtube-v85-cutover.mjs';
 
 export const READER_REPAIR = Object.freeze({
@@ -254,9 +254,7 @@ export async function verifyReaderRepairWebAfter(pin) {
   for (const p of ['/', '/login', '/privacy']) check((await fetch('http://127.0.0.1:3100' + p, { signal: AbortSignal.timeout(5000) })).ok, 'POST_HTTP');
   const manifest = `/_next/static/${state.buildId}/_buildManifest.js`, response = await fetch('http://127.0.0.1:3100' + manifest, { signal: AbortSignal.timeout(5000) });
   check(response.ok && readerRepairHash(Buffer.from(await response.arrayBuffer())) === readerRepairHash(readFileSync(join(state.checkout, '.next/static', state.buildId, '_buildManifest.js'))), 'POST_MANIFEST');
-  const closed = await fetch('http://127.0.0.1:3100/api/v1/marketing/round2', { method: 'POST', body: '{}', signal: AbortSignal.timeout(5000),
-    headers: { Host: 'app.mumeok.kr', Origin: 'https://app.mumeok.kr', 'Content-Type': 'application/json' } });
-  check(closed.status === 503 && (await closed.json()).error?.code === 'ROUND2_DISABLED', 'POST_R2_OFF');
+  await verifyClosedR2Collector(3100); // Official HTTP probe preserves the strict Host/Origin boundary.
   const script = `import importlib.util,json,sys\nfrom pathlib import Path\ns=importlib.util.spec_from_file_location('r2apply',sys.argv[1]);a=importlib.util.module_from_spec(s);s.loader.exec_module(a)\ncwd=Path(sys.argv[2]);rows=a.census(cwd);f=json.loads(a.stage.private_file(Path.home()/'.homecook/prelaunch-web/round2-eight-key-rotation-fence.json'))\nfor row in rows: a.require(a.process_fingerprints(row,cwd)==f['approved_fingerprints'],'PROCESS_KEYS_NOT_LOADED')\na.require(a.census(cwd)==rows,'POST_PROCESS_CHANGED');print(json.dumps(rows))`;
   const processes = JSON.parse(run('/usr/bin/python3', ['-B', '-c', script, join(R.frozen, 'scripts/round2-eight-key-user-apply.py'), state.checkout]));
   const before = { stateSha256: readerRepairHash(stateBytes), plistSha256: readerRepairHash(bytes), ref: R.target,

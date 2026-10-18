@@ -45,7 +45,7 @@ describe('a separately reviewed noncredential web source bundle', () => {
     const { pin, observed } = fixture(); observed.files[file][1] = 'f'.repeat(64);
     expect(() => assertReaderRepairPin(pin, observed)).toThrow('EXACT_SOURCE_BUNDLE');
   });
-  it('changes the official web CLI only by the reviewed private reader and predecessor bridge', () => {
+  it('preserves the exact historical operating executor CLI in its source pin', () => {
     const path = 'scripts/deploy-prelaunch-web.mjs', before = execFileSync('git', ['show', `${R.base}:${path}`]);
     const pinnedRef = existsSync(R.manifest) ? JSON.parse(readFileSync(R.manifest, 'utf8')).executorRef : null;
     const actual = pinnedRef ? execFileSync('git', ['show', `${pinnedRef}:${path}`]) : readFileSync(path), old = 'JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation';

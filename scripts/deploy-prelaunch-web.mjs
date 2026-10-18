@@ -1209,6 +1209,7 @@ async function preview(plist, checkout, buildId, closedR2 = false) {
 
 }
 async function switchWeb(bytes) {
+  bytes = Buffer.from(bytes); // plistBytes produces UTF-8 text; compensation also accepts Buffer.
   const assertTarget = () => assertRound2RestartFence(parsePlist(bytes).EnvironmentVariables);
   // deploy, rollback, compensation and the fixed v85 recovery share this boundary.
   await restartLaunchAgent(guardRound2EightKeyRestart({
@@ -1521,8 +1522,8 @@ process.exit(result.status ?? 1);`;
             await verifyProtectedBaseline(rollout, currentPlan, options);
           }
           const receipt = JSON.parse(readClosedR2PrivateBytes(protectedReaderReceiptPath, repository, 524288));
-          if (maintenance) git(["merge-base", "--is-ancestor", maintenance.review.sourceReaderRef, state.closedR2.from]);
-          assertProtectedReaderRollback({ receipt, targetSha: state.closedR2.from, isDescendant: spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", receipt.readerFloor, state.closedR2.from]).status === 0 });
+          if (maintenance && !approvedSourceAncestor(maintenance.review.sourceReaderRef, state.closedR2.from)) throw new DeploymentError("보상 reader는 승인된 source handoff를 보존해야 합니다.");
+          assertProtectedReaderRollback({ receipt, targetSha: state.closedR2.from, isDescendant: approvedSourceAncestor(receipt.readerFloor, state.closedR2.from) });
         }
       }
       await switchWeb(closedRollbackBytes ?? live.bytes);
