@@ -13,18 +13,30 @@
     ".homecook/prelaunch-web/protected-recipe-request-role-database-guard.json": "5849ecc133f41d41cfc0d59bf03a945d3577315471d3b4f67261e3d02589536f",
     ".homecook/prelaunch-web/protected-recipe-save-recovery-database-guard.json": "94af841ff642dfff0fa79db72bf937b6b31a98120e52d63bfe4e1b63f70968b7",
     ".homecook/prelaunch-web/r2-operations/8ab04405-d207-4a14-9a49-d83211131693/control.json": "1588ea56971890f71d04d9fa0fb50a5ceaafa7b39e686024797a5c5009b2f992",
-    ".homecook/prelaunch-web/recovery.json": "bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e",
-    ".homecook/prelaunch-web/releases/15b1a36f9b4c-8dYuqq/closed-rollback.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
-    ".homecook/prelaunch-web/releases/15b1a36f9b4c-8dYuqq/previous.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
+    ".homecook/prelaunch-web/recovery.json": "1631d134cdfe455540605836d21435010b72d44480b1386d44f07c0f91c0d627",
+    ".homecook/prelaunch-web/releases/15b1a36f9b4c-0owBF1/closed-rollback.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
+    ".homecook/prelaunch-web/releases/15b1a36f9b4c-0owBF1/previous.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
     ".homecook/prelaunch-web/round2-eight-key-rotation-apply-20261017/journal.json": "6ddf4e4b76772b0654fa8a3da84bb097c651a04286ffbb521680c64eea0108b4",
     ".homecook/prelaunch-web/round2-eight-key-rotation-fence.json": "9ad1100bd48e6d0e3e603f90fa915ca3229a558f1b306c86f3991e2e96c581fd",
     ".homecook/prelaunch-web/state.json": "2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f",
     "Library/LaunchAgents/com.homecook.production.plist": "7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4",
-    "Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist": "9beb1655e88f5311fb76ff00e137111c78e2b5b77bea47ecf1700c5ff43b7359"
+    "Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist": "9beb1655e88f5311fb76ff00e137111c78e2b5b77bea47ecf1700c5ff43b7359",
+    ".homecook/prelaunch-web/v85-unstarted-web-closeout-20261018/intent.json": "389efc11162efb6c5503d30f2add4d847a6bbf609fabf6248cb3aaf19f08eab3",
+    ".homecook/prelaunch-web/v85-unstarted-web-closeout-20261018/recovery.json": "bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e",
+    ".homecook/prelaunch-web/v85-unstarted-web-closeout-20261018/complete.json": "07eba6c533b813e0a63311fbc9c6c7d03e0e8e3979b3749616567fb5488ac7c6",
+    ".homecook/prelaunch-web/releases/15b1a36f9b4c-0owBF1/previous-closed-state.json": "192df7b3c45244c45b03e5af57e0020e8d03124bbf065576e38a9df05c601098"
   },
   "processes": [
-    {"pid": 68884, "ppid": 1, "start": "Sat Oct 17 02:01:05 2026"},
-    {"pid": 68891, "ppid": 68884, "start": "Sat Oct 17 02:01:05 2026"}
+    {
+      "pid": 68884,
+      "ppid": 1,
+      "start": "Sat Oct 17 02:01:05 2026"
+    },
+    {
+      "pid": 68891,
+      "ppid": 68884,
+      "start": "Sat Oct 17 02:01:05 2026"
+    }
   ],
   "workerPid": 49750
 }

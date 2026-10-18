@@ -15,9 +15,9 @@ import { verifyOperatingYoutubeEnqueueRuntime } from './youtube-enqueue-runtime-
 
 export const UNSTARTED = Object.freeze({
   from: '06a3369f5c5e1c3ca49045f370f0ce12f049c805', fromBuild: 'prelaunch-06a3369f5c5e-EWuEsS',
-  to: '15b1a36f9b4c4c293cd8f92c6f2824b13ba7eaf9', toBuild: 'prelaunch-15b1a36f9b4c-8dYuqq',
+  to: '15b1a36f9b4c4c293cd8f92c6f2824b13ba7eaf9', toBuild: 'prelaunch-15b1a36f9b4c-0owBF1',
   tool: 'd69fb50afe5d61530c3a3e0427ca4b477582792e', frozen: '/tmp/homecook-v85-auth-successor-20261018',
-  directory: 'v85-unstarted-web-closeout-20261018', maximum: 524288,
+  directory: 'v85-reader-attempt-closeout-20261018', maximum: 524288,
 });
 const sha = value => createHash('sha256').update(value).digest('hex');
 const check = (value, code) => { if (!value) throw new Error(`V85_UNSTARTED_${code}`); };
@@ -42,7 +42,7 @@ export function assertUnstartedIncident(o, home = homedir()) {
   check(r.ref === UNSTARTED.to && r.buildId === UNSTARTED.toBuild && r.previousCwd === cwd
     && r.previousBuildId === s.buildId && r.previousPlistHash === pins.files[liveName]
     && s.targetPlistHash === pins.files[liveName] && r.targetPlistHash !== r.previousPlistHash
-    && r.checkout === join(home, '.homecook/prelaunch-web/releases/15b1a36f9b4c-8dYuqq/checkout')
+    && r.checkout === join(home, '.homecook/prelaunch-web/releases/15b1a36f9b4c-0owBF1/checkout')
     && r.backup === join(dirname(r.checkout), 'previous.plist'), 'FOREIGN_OR_PARTIAL_RECOVERY');
   check(o.authorityVerified === true && o.readinessVerified === true && o.httpVerified === true, 'LIVE_EVIDENCE_REQUIRED');
   return { schema: 'homecook.v85-unstarted-web-closeout.v1', incident: UNSTARTED.directory,

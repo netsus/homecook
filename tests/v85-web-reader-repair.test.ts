@@ -5,10 +5,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { READER_REPAIR as R, readerRepairFiles, readerRepairArguments, assertReaderRepairPin,
   assertReaderRepairPlumbing, assertReaderRepairInvocation, consumeReaderRepairReview, readerRepairEnvironment,
-  readerRepairInvocation, readerRepairHash, bindReaderRepairWebTool, assertOwnedReaderRepairRecovery, assertReaderRepairPostUnchanged } from '../scripts/lib/v85-web-reader-repair.mjs';
+  readerRepairInvocation, readerRepairHash, bindReaderRepairWebTool, assertOwnedReaderRepairRecovery, assertReaderRepairPostUnchanged, assertReaderRepairPredecessor, reviewedReaderRepairCli } from '../scripts/lib/v85-web-reader-repair.mjs';
 import { confirmRotationBridgeTool } from '../scripts/lib/round2-closed-marker-rotation-bridge.mjs';
 import { assertV85AuthSuccessorTool } from '../scripts/lib/youtube-v85-cutover.mjs';
-import { readClosedR2PrivateBytes } from '../scripts/lib/prelaunch-web-deploy.mjs';
+import { durableJson } from '../scripts/lib/marketing-round2-controlled-deploy.mjs';
+import { readClosedR2PrivateBytes, deployTransaction } from '../scripts/lib/prelaunch-web-deploy.mjs';
+const stateShape = JSON.parse(readFileSync('tests/fixtures/v85-reader-state-shape-20261018.json', 'utf8'));
+const fixtureState = JSON.stringify(stateShape.state);
 const h = 'a'.repeat(64), other = 'b'.repeat(64), tool = 'c'.repeat(40), tree = 'd'.repeat(40);
 function fixture() {
   const files: Record<string, (string | null)[]> = Object.fromEntries(readerRepairFiles.map(p => [p, p.startsWith('docs/') ? [h, other] : [null, h]]));
@@ -42,15 +45,13 @@ describe('a separately reviewed noncredential web source bundle', () => {
     const { pin, observed } = fixture(); observed.files[file][1] = 'f'.repeat(64);
     expect(() => assertReaderRepairPin(pin, observed)).toThrow('EXACT_SOURCE_BUNDLE');
   });
-  it('changes the official web CLI by exactly the reviewed private reader line', () => {
+  it('changes the official web CLI only by the reviewed private reader and predecessor bridge', () => {
     const path = 'scripts/deploy-prelaunch-web.mjs', before = execFileSync('git', ['show', `${R.base}:${path}`]);
-    // The integrated master also contains the separate closeout commands. Verify
-    // the exact operating executor named by the source pin, rather than master.
     const pinnedRef = existsSync(R.manifest) ? JSON.parse(readFileSync(R.manifest, 'utf8')).executorRef : null;
-    const actual = pinnedRef ? execFileSync('git', ['show', `${pinnedRef}:${path}`]) : readFileSync(path);
-    const old = 'JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation';
+    const actual = pinnedRef ? execFileSync('git', ['show', `${pinnedRef}:${path}`]) : readFileSync(path), old = 'JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation';
     expect(before.toString().split(old)).toHaveLength(2);
-    expect(actual.toString()).toBe(before.toString().replace(old, 'JSON.parse(readClosedR2PrivateBytes(statePath, repository, 524288)).round2EightKeyRotation'));
+    expect(actual.toString()).toBe(reviewedReaderRepairCli(before.toString()));
+    expect(actual.toString()).toContain('rotationBridge: closedMarkerRotationBridge(previous, marker, previousLive)');
     expect(readerRepairHash(before)).toBe(R.cliBefore); expect(readerRepairHash(actual)).toBe(R.cliAfter);
   });
   it('allows only explicit bridge and exported web-boundary plumbing, leaving actual issuer main/functions untouched', () => {
@@ -152,7 +153,7 @@ describe('only this invocation may admit its newly prepared fixed15 recovery', (
       backup: '/fixture/.homecook/prelaunch-web/releases/15b1a36f9b4c-ABC123/previous.plist',
       previousPlistHash: '7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4', targetPlistHash: h,
       closedR2: { schema: 'homecook.prelaunch-closed-r2-state.v1', kind: 'continuation', from: String(R.from), to: String(R.target), activationAuthorized: false,
-        previousStateSha256: '2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f', targetPlistSha256: h,
+        previousStateSha256: '192df7b3c45244c45b03e5af57e0020e8d03124bbf065576e38a9df05c601098', targetPlistSha256: h,
         rollbackPlistSha256: '7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4' } };
     return { home, record };
   }
@@ -180,12 +181,16 @@ describe('actual recovery filesystem transition in the exact pre-switch guard', 
     const home = mkdtempSync(join(realpathSync(tmpdir()), 'v85-attempt-')); directories.push(home); chmodSync(home, 0o700);
     const root = join(home, '.homecook/prelaunch-web'), closed = join(root, 'v85-unstarted-web-closeout-20261018');
     mkdirSync(closed, { recursive: true, mode: 0o700 });
+    mkdirSync(join(root, 'v85-reader-attempt-closeout-20261018'), { mode: 0o700 });
     const overrides = new Map<string, string>();
     for (const [name, bytes, hash] of [
-      ['state.json', 'fixture current state', '2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f'],
+      ['state.json', fixtureState, '2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f'],
       ['v85-unstarted-web-closeout-20261018/complete.json', '{"phase":"complete"}', '07eba6c533b813e0a63311fbc9c6c7d03e0e8e3979b3749616567fb5488ac7c6'],
       ['v85-unstarted-web-closeout-20261018/intent.json', 'fixture old intent', '389efc11162efb6c5503d30f2add4d847a6bbf609fabf6248cb3aaf19f08eab3'],
       ['v85-unstarted-web-closeout-20261018/recovery.json', 'fixture archived recovery', 'bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e'],
+      ['v85-reader-attempt-closeout-20261018/intent.json', 'fixture second intent', '9f218d01276fed875d2958e6f4c3a3fb41e93850e2dd8f8af96f4136e24826f0'],
+      ['v85-reader-attempt-closeout-20261018/recovery.json', 'fixture second archived recovery', '1631d134cdfe455540605836d21435010b72d44480b1386d44f07c0f91c0d627'],
+      ['v85-reader-attempt-closeout-20261018/complete.json', 'fixture second completion', '61505f3177d3cbdd29e38d30d1488d2e7cf866e4d97a10892ee736cd0e62ccb7'],
     ]) { writeFileSync(join(root, name), bytes, { mode: 0o600 }); overrides.set(bytes, hash); }
     overrides.set('fixture same-new-eight-previous-plist', '7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4');
     const checkout = join(root, 'releases/15b1a36f9b4c-ABC123/checkout'), buildId = 'prelaunch-15b1a36f9b4c-ABC123';
@@ -193,28 +198,33 @@ describe('actual recovery filesystem transition in the exact pre-switch guard', 
       previousBuildId: 'prelaunch-06a3369f5c5e-EWuEsS', backup: join(dirname(checkout), 'previous.plist'),
       previousPlistHash: '7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4', targetPlistHash: h,
       closedR2: { schema: 'homecook.prelaunch-closed-r2-state.v1', kind: 'continuation', from: R.from, to: R.target, activationAuthorized: false,
-        previousStateSha256: '2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f', targetPlistSha256: h,
+        previousStateSha256: '192df7b3c45244c45b03e5af57e0020e8d03124bbf065576e38a9df05c601098', targetPlistSha256: h,
         rollbackPlistSha256: '7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4' } };
     const prepare = () => {
       mkdirSync(join(root, 'deploy.lock'), { mode: 0o700 }); mkdirSync(join(checkout, '.next'), { recursive: true, mode: 0o700 });
       writeFileSync(join(checkout, '.next/BUILD_ID'), buildId, { mode: 0o600 });
       for (const file of [record.backup, join(dirname(record.backup), 'closed-rollback.plist')]) writeFileSync(file, 'fixture same-new-eight-previous-plist', { mode: 0o600 });
       writeFileSync(join(root, 'recovery.json'), JSON.stringify(record), { mode: 0o600 });
+      const predecessor = fixtureState + '\n';
+      writeFileSync(join(dirname(checkout), 'previous-closed-state.json'), predecessor, { mode: 0o600 });
+      overrides.set(predecessor, record.closedR2.previousStateSha256);
     };
     const source = readFileSync('scripts/lib/v85-web-reader-repair.mjs', 'utf8'), start = source.indexOf('function assertUntransitionedIncident() {');
     const closure = source.slice(start, source.indexOf('\nexport function bindReaderRepairWebTool', start));
+    const runtime = [{ pid: 68884, ppid: 1, start: 'Sat Oct 17 02:01:05 2026' }, { pid: 68891, ppid: 68884, start: 'Sat Oct 17 02:01:05 2026' }];
     const deps = { HOME: home, join, dirname, R, privateRead: (p: string) => readClosedR2PrivateBytes(p, process.cwd(), 524288),
       readerRepairHash: (bytes: Buffer) => overrides.get(bytes.toString()) ?? readerRepairHash(bytes),
       check: (ok: boolean, code: string) => { if (!ok) throw Error(code); }, existsSync, lstatSync, readFileSync,
+      assertReaderRepairPredecessor: (state: Buffer, previous: Buffer, r: {closedR2: {previousStateSha256: string}}) => assertReaderRepairPredecessor(state, previous, {closedR2:{previousStateSha256:r.closedR2.previousStateSha256 === stateShape.productionPredecessorSha256 ? readerRepairHash(Buffer.from(fixtureState+'\n')) : r.closedR2.previousStateSha256}}),
       process, invocation: { action }, assertOwnedReaderRepairRecovery: (r: unknown) => assertOwnedReaderRepairRecovery(r, home),
       readerRepairGit: (_root: string, args: string[]) => args[0] === 'status' ? '' : R.target,
-      run: () => JSON.stringify([{ pid: 68884, ppid: 1, start: 'Sat Oct 17 02:01:05 2026' }, { pid: 68891, ppid: 68884, start: 'Sat Oct 17 02:01:05 2026' }]), same: (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b) };
+      run: () => JSON.stringify(runtime), same: (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b) };
     const guard = new Function(...Object.keys(deps), 'let originalNoRecovery=false,ownedAttempt;\n' + closure + ';return assertUntransitionedIncident;')(...Object.values(deps));
-    return { home, root, record, guard, prepare };
+    return { home, root, record, guard, prepare, runtime };
   }
   it('runs no-pending -> own prepare -> final check twice without changing state or deleting recovery', () => {
     const f = fixtureGuard(); f.guard(); f.prepare(); f.guard(); f.guard();
-    expect(readFileSync(join(f.root, 'state.json'), 'utf8')).toBe('fixture current state'); expect(existsSync(join(f.root, 'recovery.json'))).toBe(true);
+    expect(readFileSync(join(f.root, 'state.json'), 'utf8')).toBe(fixtureState); expect(existsSync(join(f.root, 'recovery.json'))).toBe(true);
   });
   it('rejects an existing pending record on the first check', () => {
     const f = fixtureGuard(); f.prepare(); expect(() => f.guard()).toThrow('PREEXISTING_RECOVERY');
@@ -222,12 +232,82 @@ describe('actual recovery filesystem transition in the exact pre-switch guard', 
   it('rejects preparation during a readonly plan', () => {
     const f = fixtureGuard('plan'); f.guard(); f.prepare(); expect(() => f.guard()).toThrow('PREEXISTING_RECOVERY');
   });
-  for (const mutation of ['backup-old', 'changed-record', 'changed-lock', 'removed-recovery']) it('rejects ' + mutation + ' at the next check', () => {
+  for (const mutation of ['backup-old', 'changed-record', 'changed-lock', 'removed-recovery', 'changed-predecessor', 'raw-predecessor', 'compensation-restarted-pid', 'published-state']) it('rejects ' + mutation + ' at the next check', () => {
     const f = fixtureGuard(); f.guard(); f.prepare(); f.guard();
     if (mutation === 'backup-old') writeFileSync(f.record.backup, 'old exposed-key plist');
     if (mutation === 'changed-record') { const r = { ...f.record, extra: 'foreign attempt' }; writeFileSync(join(f.root, 'recovery.json'), JSON.stringify(r)); }
     if (mutation === 'changed-lock') { renameSync(join(f.root, 'deploy.lock'), join(f.root, 'old.lock')); mkdirSync(join(f.root, 'deploy.lock'), { mode: 0o700 }); }
     if (mutation === 'removed-recovery') rmSync(join(f.root, 'recovery.json'));
+    if (mutation === 'changed-predecessor') writeFileSync(join(dirname(f.record.checkout), 'previous-closed-state.json'), '{}\n');
+    if (mutation === 'raw-predecessor') writeFileSync(join(dirname(f.record.checkout), 'previous-closed-state.json'), fixtureState);
+    if (mutation === 'compensation-restarted-pid') f.runtime[0].pid++;
+    if (mutation === 'published-state') writeFileSync(join(f.root, 'state.json'), JSON.stringify({ ...stateShape.state, ref: R.target }));
     expect(() => f.guard()).toThrow();
+  });
+});
+
+describe('official predecessor serialization is distinct from raw state', () => {
+  const state = Buffer.from('{"ref":"old","rotation":{"preserved":true}}');
+  const bytes = Buffer.concat([state, Buffer.from('\n')]);
+  const record = { closedR2: { previousStateSha256: readerRepairHash(bytes) } };
+  it('accepts exactly the official LF-terminated snapshot of unchanged full state', () => {
+    expect(readerRepairHash(state)).not.toBe(readerRepairHash(bytes));
+    expect(() => assertReaderRepairPredecessor(state, bytes, record)).not.toThrow();
+  });
+  for (const [name, changed] of Object.entries({ 'raw state without LF': state,
+    'additional LF': Buffer.concat([bytes, Buffer.from('\n')]),
+    'same object pretty printed': Buffer.from(JSON.stringify(JSON.parse(state.toString()), null, 2) + '\n'),
+    'changed full state': Buffer.from('{"ref":"old","rotation":{"preserved":false}}\n') }))
+    it('rejects ' + name + ' even if its record hash is updated', () => {
+      expect(() => assertReaderRepairPredecessor(state, changed,
+        { closedR2: { previousStateSha256: readerRepairHash(changed) } })).toThrow('PREDECESSOR_SERIALIZATION_CHANGED');
+    });
+  it('rejects a record hash pointing at the raw bytes', () => {
+    expect(() => assertReaderRepairPredecessor(state, bytes,
+      { closedR2: { previousStateSha256: readerRepairHash(state) } })).toThrow('PREDECESSOR_SERIALIZATION_CHANGED');
+  });
+});
+
+describe('real state shape through official deployment stages', () => {
+  const directories: string[] = [];
+  afterEach(() => { for (const d of directories.splice(0)) rmSync(d, { recursive: true, force: true }); });
+  it('uses actual durableJson bytes and preserves the whole predecessor until successful verification', async () => {
+    const root = mkdtempSync(join(realpathSync(tmpdir()), 'v85-state-stages-')); directories.push(root); chmodSync(root, 0o700);
+    const stateFile = join(root, 'state.json'), predecessorFile = join(root, 'previous-closed-state.json');
+    const raw = Buffer.from(fixtureState), before = readerRepairHash(raw), events: string[] = [];
+    writeFileSync(stateFile, raw, { mode: 0o600 });
+    let live = 'old';
+    const record = { closedR2: { previousStateSha256: '' } };
+    await deployTransaction({
+      prepare: async () => {
+        await durableJson(predecessorFile, JSON.parse(readFileSync(stateFile, 'utf8')), true);
+        record.closedR2.previousStateSha256 = readerRepairHash(readFileSync(predecessorFile));
+        expect(record.closedR2.previousStateSha256).not.toBe(before);
+        expect(readFileSync(predecessorFile)).toEqual(Buffer.concat([raw, Buffer.from('\n')]));
+        events.push('prepared');
+      },
+      activate: async () => {
+        assertReaderRepairPredecessor(readFileSync(stateFile), readFileSync(predecessorFile), record);
+        expect(readerRepairHash(readFileSync(stateFile))).toBe(before); expect(live).toBe('old');
+        live = 'fixed15'; events.push('activated');
+      },
+      verify: async () => {
+        expect(live).toBe('fixed15'); expect(readerRepairHash(readFileSync(stateFile))).toBe(before);
+        assertReaderRepairPredecessor(readFileSync(stateFile), readFileSync(predecessorFile), record); events.push('verified');
+      },
+      restore: async () => { throw Error('unexpected restore'); }, verifyRestored: async () => { throw Error('unexpected restore'); },
+    });
+    // Official deploy commits state only after activate and verify both finish.
+    await durableJson(stateFile, { ...stateShape.state, fixtureNewWeb: 'fixed15' });
+    expect(events).toEqual(['prepared', 'activated', 'verified']);
+    expect(JSON.parse(readFileSync(predecessorFile, 'utf8'))).toEqual(stateShape.state);
+    expect(JSON.parse(readFileSync(stateFile, 'utf8')).fixtureNewWeb).toBe('fixed15');
+  });
+  it('records the production raw and internal snapshot as distinct byte meanings', () => {
+    expect(stateShape.productionScalarValuesIncluded).toBe(false);
+    expect(stateShape.productionRawBytes + 1).toBe(stateShape.productionPredecessorBytes);
+    expect(stateShape.productionRawSha256).not.toBe(stateShape.productionPredecessorSha256);
+    expect(stateShape.productionRawSha256).toBe('2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f');
+    expect(stateShape.productionPredecessorSha256).toBe('192df7b3c45244c45b03e5af57e0020e8d03124bbf065576e38a9df05c601098');
   });
 });

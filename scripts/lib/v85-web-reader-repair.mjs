@@ -6,7 +6,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual as same } from 'node:util';
-import { DeploymentError, readClosedR2PrivateBytes } from './prelaunch-web-deploy.mjs';
+import { DeploymentError, readClosedR2PrivateBytes, loadProtectedRolloutReview, protectedRolloutPins, assertProtectedClosedR2Marker, loadClosedR2Review } from './prelaunch-web-deploy.mjs';
 import { readV85Authority } from './youtube-v85-cutover.mjs';
 
 export const READER_REPAIR = Object.freeze({
@@ -15,7 +15,7 @@ export const READER_REPAIR = Object.freeze({
   target: '15b1a36f9b4c4c293cd8f92c6f2824b13ba7eaf9',
   capsule: 'd3979df6deca56efa906655fef86d29b1ec96e9e473f69625486e6a40594212e',
   cliBefore: '8d6fa4d85ceb11fbfa47867d79766602d613ba1b6b9ce288b8cfb0821ab8b569',
-  cliAfter: 'ea751d9e159f81f718fc5d3d35089b61b07bca92dffa93a656ec0c59145921df',
+  cliAfter: 'e7e11ece2acd1e74316955c2cde346810a32eb0ce61972c21c95e50a6eb2ac5b',
   frozen: '/private/tmp/homecook-v85-auth-successor-20261018',
   executor: '/private/tmp/homecook-v85-web-reader-repair-20261018',
   launcher: '/private/tmp/homecook-v85-web-reader-launcher-20261018',
@@ -28,7 +28,7 @@ const check = (ok, code) => { if (!ok) throw new DeploymentError(`V85_WEB_READER
 export const readerRepairFiles = Object.freeze(['scripts/deploy-prelaunch-web.mjs',
   'scripts/lib/round2-closed-marker-rotation-bridge.mjs', 'scripts/youtube-v85-controlled-cutover.mjs',
   'scripts/lib/v85-web-reader-repair.mjs', R.launcherFile, 'tests/v85-web-reader-repair.test.ts',
-  'tests/youtube-v85-auth-successor.test.ts', 'docs/engineering/v85-web-reader-repair-20261018.md', 'docs/sync/CURRENT_SOURCE_OF_TRUTH.md'].sort());
+  'tests/youtube-v85-auth-successor.test.ts', 'tests/v85-web-reader-compensation.test.mjs', 'tests/fixtures/v85-reader-state-shape-20261018.json', 'docs/engineering/v85-web-reader-repair-20261018.md', 'docs/sync/CURRENT_SOURCE_OF_TRUTH.md'].sort());
 export const readerRepairEnvironment = () => ({ HOME, USER: process.env.USER ?? 'cwj', LOGNAME: process.env.LOGNAME ?? 'cwj',
   PATH: `${HOME}/.nvm/versions/node/v22.19.0/bin:${HOME}/.nvm/versions/node/v22.19.0/lib/node_modules/corepack/shims:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin`, LANG: 'C', LC_ALL: 'C', TZ: 'UTC' });
 const run = (bin, args, options = {}) => {
@@ -59,8 +59,17 @@ export function assertReaderRepairPin(pin, observed) {
     && observed.clean === true && observed.ownRepository === true, 'EXACT_SOURCE_BUNDLE');
   for (const pair of Object.values(pin.files)) check(Array.isArray(pair) && pair.length === 2
     && pair[0] !== pair[1] && pair[1] !== null && pair.every(h => h === null || /^[a-f0-9]{64}$/u.test(h)), 'SOURCE_DIGEST');
-  check(same(pin.files['scripts/deploy-prelaunch-web.mjs'], [R.cliBefore, R.cliAfter]), 'EXACT_READER_ONE_LINE');
+  check(same(pin.files['scripts/deploy-prelaunch-web.mjs'], [R.cliBefore, R.cliAfter]), 'EXACT_READER_AND_PREDECESSOR_BRIDGE');
   return pin;
+}
+
+export function reviewedReaderRepairCli(base) {
+  const oldReader = 'JSON.parse(readClosedR2PrivateBytes(statePath, repository)).round2EightKeyRotation';
+  const oldPredecessor = '    assertProtectedClosedR2Marker({ state: previous, marker, markerSha256: hash(markerBytes), live: { ref: previous.ref, cwd: previous.checkout, buildId: previous.buildId,\n      plistHash: hash(plistBytes), plist: parsePlist(plistBytes) }, closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout) });';
+  const newPredecessor = '    const previousLive = { ref: previous.ref, cwd: previous.checkout, buildId: previous.buildId, plistHash: hash(plistBytes), plist: parsePlist(plistBytes) };\n    assertProtectedClosedR2Marker({ state: previous, marker, markerSha256: hash(markerBytes), live: previousLive,\n      closedReview: review, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256, ...protectedMarkerAuthority(marker, rollout),\n      rotationBridge: closedMarkerRotationBridge(previous, marker, previousLive) });';
+  check(base.split(oldReader).length === 2 && base.split(oldPredecessor).length === 2, 'EXACT_CLI_BASE');
+  return base.replace(oldReader, 'JSON.parse(readClosedR2PrivateBytes(statePath, repository, 524288)).round2EightKeyRotation')
+    .replace(oldPredecessor, newPredecessor);
 }
 
 export function assertReaderRepairPlumbing(base, current) {
@@ -91,6 +100,7 @@ export function verifyReaderRepairLauncher(pin, parentRoot = R.launcher) {
   check(same(JSON.parse(readFileSync(join(parentRoot, R.manifest), 'utf8')), pin)
     && readerRepairHash(readFileSync(join(parentRoot, R.launcherFile))) === pin.files[R.launcherFile][1], 'LAUNCHER_PIN');
   assertReaderRepairPin(pin, observeReaderRepairSource(R.executor));
+  check(readFileSync(join(R.executor, 'scripts/deploy-prelaunch-web.mjs'), 'utf8') === reviewedReaderRepairCli(gitBytes(R.executor, R.base, 'scripts/deploy-prelaunch-web.mjs').toString()), 'ONLY_READER_AND_PREDECESSOR_BRIDGE');
   const base = { bridge: gitBytes(R.executor, R.base, 'scripts/lib/round2-closed-marker-rotation-bridge.mjs').toString(), runner: gitBytes(R.executor, R.base, 'scripts/youtube-v85-controlled-cutover.mjs').toString() };
   assertReaderRepairPlumbing(base, { bridge: readFileSync(join(R.executor, 'scripts/lib/round2-closed-marker-rotation-bridge.mjs'), 'utf8'), runner: readFileSync(join(R.executor, 'scripts/youtube-v85-controlled-cutover.mjs'), 'utf8') });
   check(readerRepairGit(R.frozen, ['rev-parse', 'HEAD']) === R.base && readerRepairGit(R.frozen, ['status', '--porcelain']) === '', 'ORIGINAL_TOOL_CHANGED');
@@ -151,16 +161,25 @@ export function assertOwnedReaderRepairRecovery(record, home = HOME) {
     && /^[a-f0-9]{64}$/u.test(record.targetPlistHash) && record.targetPlistHash !== record.previousPlistHash
     && record.closedR2?.schema === 'homecook.prelaunch-closed-r2-state.v1' && record.closedR2.kind === 'continuation'
     && record.closedR2.from === R.from && record.closedR2.to === R.target && record.closedR2.activationAuthorized === false
-    && record.closedR2.previousStateSha256 === '2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f'
+    && record.closedR2.previousStateSha256 === '192df7b3c45244c45b03e5af57e0020e8d03124bbf065576e38a9df05c601098'
     && record.closedR2.targetPlistSha256 === record.targetPlistHash && record.closedR2.rollbackPlistSha256 === record.previousPlistHash,
     'FOREIGN_PREPARED_RECOVERY');
+}
+export function assertReaderRepairPredecessor(stateBytes, predecessorBytes, record) {
+  // The official durableJson persists JSON.stringify(value) plus exactly one LF.
+  // Keep the raw incident fingerprint and this independently pinned serialization.
+  check(Buffer.from(predecessorBytes).equals(Buffer.from(JSON.stringify(JSON.parse(stateBytes)) + '\n'))
+    && readerRepairHash(predecessorBytes) === record.closedR2.previousStateSha256, 'PREDECESSOR_SERIALIZATION_CHANGED');
 }
 function assertUntransitionedIncident() {
   const root = join(HOME, '.homecook/prelaunch-web'), directory = join(root, 'v85-unstarted-web-closeout-20261018');
   for (const [name, hash] of [['state.json', '2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f'],
     ['v85-unstarted-web-closeout-20261018/complete.json', '07eba6c533b813e0a63311fbc9c6c7d03e0e8e3979b3749616567fb5488ac7c6'],
     ['v85-unstarted-web-closeout-20261018/intent.json', '389efc11162efb6c5503d30f2add4d847a6bbf609fabf6248cb3aaf19f08eab3'],
-    ['v85-unstarted-web-closeout-20261018/recovery.json', 'bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e']])
+    ['v85-unstarted-web-closeout-20261018/recovery.json', 'bddb7e174b80ecc4512dcc845933e75d81222e475eb450bfe600ba38cb7fb44e'],
+    ['v85-reader-attempt-closeout-20261018/intent.json', '9f218d01276fed875d2958e6f4c3a3fb41e93850e2dd8f8af96f4136e24826f0'],
+    ['v85-reader-attempt-closeout-20261018/recovery.json', '1631d134cdfe455540605836d21435010b72d44480b1386d44f07c0f91c0d627'],
+    ['v85-reader-attempt-closeout-20261018/complete.json', '61505f3177d3cbdd29e38d30d1488d2e7cf866e4d97a10892ee736cd0e62ccb7']])
     check(readerRepairHash(privateRead(join(root, name))) === hash, 'INCIDENT_CHANGED');
   check(JSON.parse(privateRead(join(directory, 'complete.json'))).phase === 'complete', 'CLOSEOUT_REQUIRED');
   const recovery = join(root, 'recovery.json');
@@ -173,6 +192,7 @@ function assertUntransitionedIncident() {
     const lock = lstatSync(join(root, 'deploy.lock'));
     check(lock.isDirectory() && !lock.isSymbolicLink() && lock.uid === process.getuid() && (lock.mode & 0o777) === 0o700, 'DEPLOY_LOCK_REQUIRED');
     const bytes = privateRead(recovery), record = JSON.parse(bytes); assertOwnedReaderRepairRecovery(record);
+    assertReaderRepairPredecessor(privateRead(join(root, 'state.json')), privateRead(join(dirname(record.checkout), 'previous-closed-state.json')), record);
     check(readerRepairHash(privateRead(record.backup)) === record.previousPlistHash
       && readerRepairHash(privateRead(join(dirname(record.backup), 'closed-rollback.plist'))) === record.previousPlistHash
       && readerRepairGit(record.checkout, ['rev-parse', 'HEAD']) === R.target
@@ -257,4 +277,46 @@ export async function verifyReaderRepairWebAfter(pin) {
   return { webTransitioned: true, webRef: R.target, buildId: state.buildId, processes, dbLedger: 232, jobs: 43,
     workerGeneration: 49, workerPid: 49750, credentialIssued: false, originalAuthoritiesPreserved: true,
     actualStartupEightMatch: true, round2Off: true, recoveryPending: false, waitingForOriginalCredentialBoundary: true };
+}
+
+// Read-only rehearsal against the exact preserved incident and actual pinned bridge.
+// This does not call switchWeb or write any service/DB/credential state.
+export function verifyReaderRepairCompensationPreflight() {
+  const root = join(HOME, '.homecook/prelaunch-web'), statePath = join(root, 'state.json');
+  const raw = privateRead(statePath), state = JSON.parse(raw);
+  check(readerRepairHash(raw) === '2703ca7a444bae6015c80664ef859b35858cf039e22a3c7f4668d30ad7437b6f', 'COMPENSATION_RAW_STATE');
+  const record = JSON.parse(privateRead(join(root, 'v85-reader-attempt-closeout-20261018/recovery.json')));
+  assertOwnedReaderRepairRecovery(record);
+  const previous = privateRead(join(dirname(record.checkout), 'previous-closed-state.json'));
+  assertReaderRepairPredecessor(raw, previous, record);
+  const markerBytes = privateRead(join(dirname(state.checkout), 'round2-closed-maintenance.json')), marker = JSON.parse(markerBytes);
+  check(readerRepairHash(markerBytes) === state.closedR2.artifactSha256
+    && readerRepairHash(markerBytes) === record.closedR2.previousArtifactSha256, 'COMPENSATION_MARKER');
+  const plistBytes = privateRead(record.backup);
+  check(readerRepairHash(plistBytes) === '7cc55b987327bd7eab11d44225e86af122481c701ce5dc153dc8284a00ce40d4'
+    && privateRead(join(dirname(record.backup), 'closed-rollback.plist')).equals(plistBytes), 'COMPENSATION_NEW_EIGHT_ONLY');
+  const parse = bytes => JSON.parse(run('/usr/bin/plutil', ['-convert', 'json', '-o', '-', '--', '-'], { input: bytes }));
+  const plist = parse(plistBytes), env = plist.EnvironmentVariables;
+  const rollout = loadProtectedRolloutReview(ROOT, { reviewSha256: marker.protectedRollout.reviewSha256 });
+  const pointer = marker.protectedRollout;
+  const db = privateRead(pointer.databaseReceipt.path), reader = privateRead(pointer.readerReceipt.path);
+  check(readerRepairHash(db) === pointer.databaseReceipt.sha256 && readerRepairHash(db) === pointer.databaseReceiptSha256
+    && readerRepairHash(reader) === pointer.readerReceipt.sha256 && readerRepairHash(reader) === pointer.readerReceiptSha256, 'COMPENSATION_RECEIPTS');
+  const beforePlistBytes = privateRead(join(root, 'releases/7b4b74d12eb1-f1VAGt/previous.plist'));
+  const stage = join(root, 'round2-eight-key-rotation-stage-20261017'), op = join(root, 'round2-eight-key-rotation-apply-20261017');
+  const bridge = { authority: readReaderRepairAuthority(), stateBytes: raw,
+    beforeBytes: privateRead(join(op, 'state-before.json')), afterBytes: privateRead(join(op, 'state-after.json')),
+    receiptBytes: privateRead(join(stage, 'receipt.json')), journalBytes: privateRead(join(op, 'journal.json')),
+    fenceBytes: privateRead(join(root, 'round2-eight-key-rotation-fence.json')), controlBytes: privateRead(env.MUMEOK_ROUND2_CONTROL_PATH),
+    armExists: Boolean(env.MUMEOK_ROUND2_PREFLIGHT_ARM_PATH && existsSync(env.MUMEOK_ROUND2_PREFLIGHT_ARM_PATH)),
+    beforePlistBytes, beforePlist: parse(beforePlistBytes) };
+  // Use the same protected marker validator as previousClosedR2State, including its
+  // independent event hashes. The canonical predecessor is never used as raw bytes.
+  const closedReview = loadClosedR2Review(ROOT);
+  assertProtectedClosedR2Marker({ state, marker, markerSha256: readerRepairHash(markerBytes),
+    live: { ref: state.ref, cwd: state.checkout, buildId: state.buildId, plistHash: readerRepairHash(plistBytes), plist },
+    closedReview, rollout, reviewSha256: protectedRolloutPins(rollout).rollout.sha256,
+    databaseReceipt: JSON.parse(db), databaseReceiptSha256: readerRepairHash(db), readerReceipt: JSON.parse(reader), readerReceiptSha256: readerRepairHash(reader), rotationBridge: bridge });
+  check(privateRead(statePath).equals(raw), 'COMPENSATION_STATE_CHANGED');
+  return { compensationPreflightVerified: true, startupOrDatabaseChanged: false, newEightOnly: true, collectionAndLeadOff: true };
 }

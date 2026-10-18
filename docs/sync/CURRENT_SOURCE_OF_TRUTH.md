@@ -1890,3 +1890,5 @@ desktop HOME의 네 개 빠른 이동 menu 아래에 `/beta?ad_variant=a` banner
 ### 2026-10-17 최근 공개 YouTube 영양 부분 복구 후속
 
 공개 canonical 레시피에 기존 영양 snapshot이 없을 때, quantity-v4 행 하나 때문에 전체 계산을 중단하지 않는다. 직접 g/kg/ml/L의 원문·현재량·정규화량이 일치하고 direct/실패사유없음/frozen-batch없음을 검증한 행과 기존 직접량만 계산한다. 불량·추정·미확인 수량은 해당 행의 결측으로 유지한다. v4가 섞인 레시피는 v4 단위 규칙만 사용하며 옛 숟가락/개 환산으로 재해석하지 않는다. 부분값은 확인된 일부이며 전체 열량으로 주장하지 않는다. 기존 snapshot 우선·제품/비공개/권한·GET쓰기0 경계는 유지한다. 최근 source/연결 보완 및 운영 데이터 적용은 [작업 기록](../engineering/cooking-experience-20261017.md)의 별도 미완료 범위다.
+
+- 2026-10-18 reader 재시도는 raw state와 공식 LF 스냅샷 지문 오류로 교체 전에 중단됐고, e057c61d1 전용 closeout으로 원본 보존·종결했다. 기존06a/DB232/worker49/43jobs/new8/OFF/원 승인3개는 유지됐다. [reader 복구 기록](../engineering/v85-web-reader-repair-20261018.md)의 raw/canonical 분리, 부모가 좁게 확장한 previousClosedR2State 회전 bridge 수정과 독립 리뷰·고정 source pin을 따른다. 운영 target은15이며 자격 발급은 원d69 경계에 남는다.
