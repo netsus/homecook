@@ -1,7 +1,7 @@
 // Only the 2026-10-18 failed 06a -> 15 web attempt. No rollback, restart or issuance.
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { closeSync, constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { isDeepStrictEqual as same } from 'node:util';
@@ -124,6 +124,26 @@ function privateDirectory(path) {
   return s;
 }
 
+// LaunchAgents is normally0755, unlike private operation directories. Permit only
+// these two existing0600 files, retaining ownership/no-symlink/inode/bounded I/O.
+export function readUnstartedLaunchAgent(path, home = homedir()) {
+  check(['com.homecook.production.plist', 'com.homecook.youtube-extraction-worker.plist']
+    .some(name => path === join(home, 'Library/LaunchAgents', name)), 'LAUNCH_AGENT_PATH');
+  const parent = dirname(path), directory = lstatSync(parent);
+  check(realpathSync(parent) === parent && directory.isDirectory() && !directory.isSymbolicLink()
+    && directory.uid === process.getuid() && (directory.mode & 0o022) === 0, 'LAUNCH_AGENT_DIRECTORY');
+  const valid = s => s.isFile() && !s.isSymbolicLink() && s.uid === process.getuid()
+    && (s.mode & 0o777) === 0o600 && s.nlink === 1 && s.size <= UNSTARTED.maximum;
+  const before = lstatSync(path); check(valid(before), 'LAUNCH_AGENT_FILE');
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const opened = fstatSync(fd); check(valid(opened) && sameIdentity(before, opened), 'LAUNCH_AGENT_IDENTITY');
+    const buffer = Buffer.alloc(UNSTARTED.maximum + 1); let offset = 0;
+    while (offset < buffer.length) { const length = readSync(fd, buffer, offset, buffer.length - offset, null); if (!length) break; offset += length; }
+    check(offset <= UNSTARTED.maximum, 'LAUNCH_AGENT_SIZE'); return buffer.subarray(0, offset);
+  } finally { closeSync(fd); }
+}
+
 // Small file-I/O seam; the official caller always supplies the fixed incident hash/paths.
 export function createUnstartedArchive({ directory, active, read, expectedSha256, verifyLease }) {
   check(/^[a-f0-9]{64}$/u.test(expectedSha256), 'ARCHIVE_HASH');
@@ -192,6 +212,8 @@ export async function runUnstartedWebCloseout(repository, planOnly) {
   const home = homedir(), root = join(home, '.homecook/prelaunch-web'), directory = join(root, UNSTARTED.directory);
   const active = join(root, 'recovery.json');
   const read = p => readClosedR2PrivateBytes(p, repository, UNSTARTED.maximum);
+  const evidence = p => [liveName, 'Library/LaunchAgents/com.homecook.youtube-extraction-worker.plist']
+    .some(name => p === join(home, name)) ? readUnstartedLaunchAgent(p, home) : read(p);
   // Do not inherit preload options, cookies, provider credentials or caller-controlled search paths.
   const env = { HOME: home, USER: process.env.USER ?? basename(home), LOGNAME: process.env.LOGNAME ?? basename(home),
     PATH: `${home}/.nvm/versions/node/v22.19.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`,
@@ -240,11 +262,11 @@ await verifyV85AuthSuccessorWebBoundary(a);process.stdout.write('V85_UNSTARTED_A
     };
     const observe = async () => {
       lease.verify();
-      const hashes = Object.fromEntries(Object.entries(pins.files).map(([name]) => [name, sha(name === recoveryName ? recoveryBytes() : read(join(home, name)))]));
+      const hashes = Object.fromEntries(Object.entries(pins.files).map(([name]) => [name, sha(name === recoveryName ? recoveryBytes() : evidence(join(home, name)))]));
       const expectedGuards = Object.keys(pins.files).filter(p => p.endsWith('-guard.json')).map(p => basename(p)).sort();
       check(same(readdirSync(root).filter(p => p.endsWith('-guard.json')).sort(), expectedGuards), 'GUARD_SET_CHANGED');
       const state = JSON.parse(read(join(home, stateName))), recovery = JSON.parse(recoveryBytes());
-      const plist = JSON.parse(run('/usr/bin/plutil', ['-convert', 'json', '-o', '-', '--', '-'], { input: read(join(home, liveName)) }));
+      const plist = JSON.parse(run('/usr/bin/plutil', ['-convert', 'json', '-o', '-', '--', '-'], { input: evidence(join(home, liveName)) }));
       preserveRound2RotationState(state, {});
       assertRound2EightKeyFence(plist.EnvironmentVariables, JSON.parse(read(join(root, 'round2-eight-key-rotation-fence.json'))));
       const live = { cwd: plist.WorkingDirectory, ref: git(['rev-parse', 'HEAD'], plist.WorkingDirectory),
@@ -258,7 +280,7 @@ await verifyV85AuthSuccessorWebBoundary(a);process.stdout.write('V85_UNSTARTED_A
       const readinessVerified = await readiness(live);
       lease.verify();
       // Full DB proof can take seconds; re-read files and live process at its end.
-      for (const [name, digest] of Object.entries(hashes)) check(sha(name === recoveryName ? recoveryBytes() : read(join(home, name))) === digest, 'POST_PROOF_FILE_DRIFT');
+      for (const [name, digest] of Object.entries(hashes)) check(sha(name === recoveryName ? recoveryBytes() : evidence(join(home, name))) === digest, 'POST_PROOF_FILE_DRIFT');
       check(same(JSON.parse(run('/usr/bin/python3', ['-B', '-c', runtimeScript, join(UNSTARTED.frozen, 'scripts/round2-eight-key-user-apply.py'), live.cwd])), runtime), 'POST_PROOF_PROCESS_DRIFT');
       return { hashes, state, recovery, live, ...runtime, readinessVerified, authorityVerified: true };
     };

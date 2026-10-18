@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assertUnstartedIncident, closeUnstartedWebAttempt, createUnstartedArchive, UNSTARTED } from '../scripts/lib/v85-unstarted-web-closeout.mjs';
+import { assertUnstartedIncident, closeUnstartedWebAttempt, createUnstartedArchive, readUnstartedLaunchAgent, UNSTARTED } from '../scripts/lib/v85-unstarted-web-closeout.mjs';
 import { readClosedR2PrivateBytes } from '../scripts/lib/prelaunch-web-deploy.mjs';
 import { preserveRound2RotationState } from '../scripts/lib/round2-eight-key-rotation-fence.mjs';
 
@@ -139,6 +139,31 @@ describe('bounded private state read', () => {
   });
 });
 function dirnameForTest(path: string) { return path.slice(0, path.lastIndexOf('/')); }
+
+describe('the two existing private LaunchAgent files in a normal0755 directory', () => {
+  const roots: string[] = [];
+  afterEach(() => { for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true }); });
+  function fixture() {
+    const home = mkdtempSync(join(realpathSync(tmpdir()), 'v85-launchagent-')); roots.push(home);
+    const directory = join(home, 'Library/LaunchAgents'); mkdirSync(directory, { recursive: true, mode: 0o755 }); chmodSync(directory, 0o755);
+    const path = join(directory, 'com.homecook.production.plist'); writeFileSync(path, '<plist/>', { mode: 0o600 });
+    return { home, directory, path };
+  }
+  it('reads an owned600 plist without changing the normal directory permissions', () => {
+    const f = fixture(); expect(readUnstartedLaunchAgent(f.path, f.home).toString()).toBe('<plist/>'); expect(lstatSync(f.directory).mode & 0o777).toBe(0o755);
+  });
+  for (const kind of ['other-path', 'group-writable-dir', 'readable-file', 'file-symlink', 'directory-symlink', 'hardlink', 'oversize']) it('rejects ' + kind, () => {
+    const f = fixture(); let path = f.path;
+    if (kind === 'other-path') { path = join(f.directory, 'other.plist'); writeFileSync(path, 'x', { mode: 0o600 }); }
+    if (kind === 'group-writable-dir') chmodSync(f.directory, 0o775);
+    if (kind === 'readable-file') chmodSync(f.path, 0o644);
+    if (kind === 'file-symlink') { renameSync(f.path, f.path + '.old'); symlinkSync(f.path + '.old', f.path); }
+    if (kind === 'directory-symlink') { renameSync(f.directory, f.directory + '.old'); symlinkSync(f.directory + '.old', f.directory); }
+    if (kind === 'hardlink') linkSync(f.path, f.path + '.link');
+    if (kind === 'oversize') writeFileSync(f.path, Buffer.alloc(UNSTARTED.maximum + 1));
+    expect(() => readUnstartedLaunchAgent(path, f.home)).toThrow('V85_UNSTARTED_LAUNCH_AGENT_');
+  });
+});
 
 describe('actual create-only private archive I/O', () => {
   const directories: string[] = [];

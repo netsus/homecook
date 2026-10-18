@@ -19,6 +19,8 @@
 
 공통 deploy/control 잠금을 보유한다. 검증 중 변화, 다른 PID, 후보15의 부분 전환, auth/일반 데이터/작업/스키마/승인/키/guard drift는 종결을 거부한다. 별도 도구는 기존 d397의 d69 source 결속을 대체하지 않는다.
 
+일반0755 `LaunchAgents` 폴더는 권한을 바꾸지 않는다. 고정된 기존 웹/worker plist 두 파일만 별도 bounded reader로 읽으며 소유권·0600·단일 링크·O_NOFOLLOW·inode·512KiB 상한과 상위 폴더의 비쓰기/정규 경로 검사를 적용한다. 그 밖의 비공개 자료에는 기존0700 폴더 reader를 그대로 사용한다.
+
 ## 보존과 중단 처리
 
 `~/.homecook/prelaunch-web/v85-unstarted-web-closeout-20261018/`에0600 intent와 실패 recovery 원문을 보존한다.0700 디렉터리·소유권·허용 파일명을 확인하고 파일/디렉터리를 fsync한다. private scratch를 완성한 뒤 macOS `renamex_np(RENAME_EXCL)`로 기존 파일을 덮어쓰지 않고 원자 게시한다. 중단된 scratch는 기대 bytes의 정확한 prefix일 때만 이어 쓰며 다른 내용은 거부한다.
