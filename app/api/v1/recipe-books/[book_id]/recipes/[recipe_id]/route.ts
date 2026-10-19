@@ -42,6 +42,83 @@ import type {
   RecipeStep,
 } from "@/types/recipe";
 import type { YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Consumed read columns and real FK joins only; the request client's RLS and
+// the route's ownership checks remain authoritative for GET and DELETE reads.
+export type RecipeBookReaderDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_books: {
+        Row: { id: string; user_id: string; book_type: RecipeBookType };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_book_items: {
+        Row: { id: string; book_id: string; recipe_id: string; added_at: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_likes: {
+        Row: { id: string; user_id: string; recipe_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; title: string; thumbnail_url: string | null; tags: string[];
+          view_count: number; base_servings: number; created_by: string | null;
+          source_type: "system" | "youtube" | "manual" };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_sources: {
+        Row: { recipe_id: string; extraction_meta_json: unknown };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_sources_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: true;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+      recipe_ingredients: {
+        Row: { id: string; recipe_id: string; ingredient_id: string | null;
+          source_kind: "ingredient" | "food_product" | null;
+          food_product_id: string | null; food_product_nutrition_version_id: string | null;
+          quantity_input: unknown; amount: number | null; unit: string | null;
+          ingredient_type: "QUANT" | "TO_TASTE"; display_text: string | null;
+          component_label: string | null; scalable: boolean; sort_order: number };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_ingredients_ingredient_id_fkey";
+          columns: ["ingredient_id"]; isOneToOne: false;
+          referencedRelation: "ingredients"; referencedColumns: ["id"]; }];
+      };
+      ingredients: {
+        Row: { id: string; standard_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_steps: {
+        Row: { id: string; recipe_id: string; step_number: number; instruction: string;
+          component_label: string | null; ingredients_used: unknown; heat_level: string | null;
+          duration_seconds: number | null; duration_text: string | null; cooking_method_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_steps_cooking_method_id_fkey";
+          columns: ["cooking_method_id"]; isOneToOne: false;
+          referencedRelation: "cooking_methods"; referencedColumns: ["id"]; }];
+      };
+      cooking_methods: {
+        Row: { id: string; code: string; label: string; color_key: string; category_code: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_step_cooking_methods: {
+        Row: { step_id: string; method_id: string; position: number };
+        Insert: never; Update: never;
+        Relationships: [
+          { foreignKeyName: "recipe_step_cooking_methods_step_id_fkey";
+            columns: ["step_id"]; isOneToOne: false;
+            referencedRelation: "recipe_steps"; referencedColumns: ["id"]; },
+          { foreignKeyName: "recipe_step_cooking_methods_method_id_fkey";
+            columns: ["method_id"]; isOneToOne: false;
+            referencedRelation: "cooking_methods"; referencedColumns: ["id"]; },
+        ];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 interface RouteContext {
   params: Promise<{
@@ -86,50 +163,6 @@ interface RecipeReaderRow {
     | null;
 }
 
-interface RecipeIngredientRow {
-  id: string;
-  ingredient_id: string | null;
-  source_kind?: "ingredient" | "food_product" | null;
-  food_product_id?: string | null;
-  food_product_nutrition_version_id?: string | null;
-  quantity_input?: unknown;
-  amount: number | string | null;
-  unit: string | null;
-  ingredient_type: "QUANT" | "TO_TASTE";
-  display_text: string | null;
-  component_label?: string | null;
-  scalable: boolean;
-  sort_order: number;
-  ingredients:
-    | { standard_name?: string | null }
-    | Array<{ standard_name?: string | null }>
-    | null;
-}
-
-interface RecipeStepRow {
-  id: string;
-  step_number: number;
-  instruction: string;
-  component_label?: string | null;
-  ingredients_used: RecipeStep["ingredients_used"] | null;
-  heat_level: string | null;
-  duration_seconds: number | null;
-  duration_text: string | null;
-  cooking_methods:
-    | RecipeStep["cooking_method"]
-    | Array<RecipeStep["cooking_method"]>
-    | null;
-  recipe_step_cooking_methods?:
-    | Array<{
-        position?: number | null;
-        cooking_methods:
-          | RecipeStep["cooking_method"]
-          | Array<RecipeStep["cooking_method"]>
-          | null;
-      }>
-    | null;
-}
-
 type MaybeSingleResult<T> = PromiseLike<{
   data: T | null;
   error: QueryError | null;
@@ -139,11 +172,6 @@ type ArrayResult<T> = PromiseLike<{
   data: T[] | null;
   error: QueryError | null;
 }>;
-
-interface RecipeBooksSelectQuery {
-  eq(column: string, value: string): RecipeBooksSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeBookRow>;
-}
 
 interface RecipeBookItemsSelectQuery {
   eq(column: string, value: string): RecipeBookItemsSelectQuery;
@@ -175,27 +203,6 @@ interface RecipesUpdateQuery {
   maybeSingle(): MaybeSingleResult<RecipeCountRow>;
 }
 
-interface RecipesSelectQuery {
-  eq(column: string, value: string): RecipesSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeReaderRow>;
-}
-
-interface RecipeIngredientsSelectQuery {
-  eq(column: string, value: string): RecipeIngredientsSelectQuery;
-  order(column: string, options: { ascending: boolean }): RecipeIngredientsSelectQuery;
-  then: ArrayResult<RecipeIngredientRow>["then"];
-}
-
-interface RecipeStepsSelectQuery {
-  eq(column: string, value: string): RecipeStepsSelectQuery;
-  order(column: string, options: { ascending: boolean }): RecipeStepsSelectQuery;
-  then: ArrayResult<RecipeStepRow>["then"];
-}
-
-interface RecipeBooksTable {
-  select(columns: string): RecipeBooksSelectQuery;
-}
-
 interface RecipeBookItemsTable {
   select(columns: string): RecipeBookItemsSelectQuery;
   delete(): RecipeBookItemsDeleteQuery;
@@ -207,25 +214,13 @@ interface RecipeLikesTable {
 }
 
 interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
   update(values: { like_count?: number; save_count?: number }): RecipesUpdateQuery;
 }
 
-interface RecipeIngredientsTable {
-  select(columns: string): RecipeIngredientsSelectQuery;
-}
-
-interface RecipeStepsTable {
-  select(columns: string): RecipeStepsSelectQuery;
-}
-
 interface RecipeBookRecipeRemoveDbClient {
-  from(table: "recipe_books"): RecipeBooksTable;
   from(table: "recipe_book_items"): RecipeBookItemsTable;
   from(table: "recipe_likes"): RecipeLikesTable;
   from(table: "recipes"): RecipesTable;
-  from(table: "recipe_ingredients"): RecipeIngredientsTable;
-  from(table: "recipe_steps"): RecipeStepsTable;
 }
 
 type RecipeBookRecipeRemoveAuthedDbClient =
@@ -369,7 +364,7 @@ function mapQaFixtureReaderData(addedAt: string | null): RecipeBookReaderRecipeD
 }
 
 async function readRecipeBook(
-  dbClient: RecipeBookRecipeRemoveDbClient,
+  dbClient: RecipeBookReaderDbClient,
   bookId: string,
 ) {
   return dbClient
@@ -385,7 +380,7 @@ async function readBookRecipeMembership({
   recipeId,
   userId,
 }: {
-  dbClient: RecipeBookRecipeRemoveDbClient;
+  dbClient: RecipeBookReaderDbClient;
   book: RecipeBookRow;
   recipeId: string;
   userId: string;
@@ -428,7 +423,7 @@ async function readBookRecipeMembership({
 }
 
 async function readReaderRecipe(
-  dbClient: RecipeBookRecipeRemoveDbClient,
+  dbClient: RecipeBookReaderDbClient,
   recipeId: string,
 ) {
   return dbClient
@@ -439,7 +434,7 @@ async function readReaderRecipe(
 }
 
 async function readReaderIngredients(
-  dbClient: RecipeBookRecipeRemoveDbClient,
+  dbClient: RecipeBookReaderDbClient,
   recipeId: string,
 ) {
   const result = await dbClient
@@ -466,10 +461,10 @@ async function readReaderIngredients(
 }
 
 async function readReaderSteps(
-  dbClient: RecipeBookRecipeRemoveDbClient,
+  dbClient: RecipeBookReaderDbClient,
   recipeId: string,
 ) {
-  let result = await dbClient
+  let result: { data: Parameters<typeof normalizeRecipeSteps>[0]; error: QueryError | null } = await dbClient
     .from("recipe_steps")
     .select(RECIPE_STEP_SELECT_WITH_METHODS)
     .eq("recipe_id", recipeId)
@@ -528,9 +523,8 @@ export async function GET(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient;
-  const recipeReaderClient: RecipeBookRecipeRemoveDbClient = dbClient;
+  const dbClient: UserBootstrapDbClient = routeClient;
+  const recipeReaderClient: RecipeBookReaderDbClient = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -543,7 +537,7 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  const bookResult = await readRecipeBook(dbClient, bookId);
+  const bookResult = await readRecipeBook(recipeReaderClient, bookId);
 
   if (bookResult.error || !bookResult.data) {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
@@ -554,7 +548,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const membershipResult = await readBookRecipeMembership({
-    dbClient,
+    dbClient: recipeReaderClient,
     book: bookResult.data,
     recipeId,
     userId: user.id,
@@ -853,7 +847,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   const dbClient = routeClient as unknown as
     RecipeBookRecipeRemoveAuthedDbClient;
-  const recipeReaderClient: RecipeBookRecipeRemoveDbClient = dbClient;
+  const recipeReaderClient: RecipeBookReaderDbClient = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -866,7 +860,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     );
   }
 
-  const bookResult = await readRecipeBook(dbClient, bookId);
+  const bookResult = await readRecipeBook(recipeReaderClient, bookId);
 
   if (bookResult.error || !bookResult.data) {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
