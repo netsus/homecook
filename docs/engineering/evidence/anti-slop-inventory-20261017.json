@@ -20,10 +20,10 @@
   "candidateObservation": {
     "baseCommit": "64112be4bec14e29f88449214140250685210f15",
     "branch": "codex/cook-mode-row-contract-20261019",
-    "total": 136,
+    "total": 135,
     "newFindings": 0,
-    "contractCandidatesAfterAdoption": 19,
-    "status": "local commits a30be1a6a(cook-mode),ad298ab0b(memory),0c9320a80(bootstrap-only3),a8537bbfa(leftovers2),c6b6654b9(share-text1) plus verified reorder1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
+    "contractCandidatesAfterAdoption": 18,
+    "status": "local commits through bb551e102(reorder1) plus verified bulk1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
   },
   "findings": [
     {
@@ -1088,6 +1088,12 @@
       "snippet": "routeClient as unknown as ShoppingBulkItemUpdateDbClient & UserBootstrapDbClient",
       "state": "needs-contract-refactor",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "pendingLocalResolution": {
+        "branch": "codex/cook-mode-row-contract-20261019",
+        "reason": "Native two-table rows and check-only Update/select phases, same request client directly assigned to bootstrap and reader; amounts JSON remains unknown until existing normalization. Preserve one update, owner/completed gates, list/item/pantry-excluded filters and sorted response.",
+        "verification": "Baseline25 PASS; SDK9+existing25+bootstrap11=45 PASS, whole typecheck, ESLint max-warnings0, Anti135/new0 and diff PASS; independent45 PASS/nonincremental typecheck/diff APPROVE. No new assertion/wrapper/suppression/SQL/auth/operational changes.",
+        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption18"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",

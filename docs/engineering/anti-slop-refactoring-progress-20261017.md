@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 독립요리·영양memory·bootstrap-only3·leftovers2·share-text1·reorder1의 별도 로컬 후보를 함께 채택하면136/계약19이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면135/계약18이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -342,6 +342,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 수정 전2 suite16 PASS, 최종 SDK9+기존16+bootstrap11=4 suite36 PASS, 전체 typecheck·변경 lint(max-warnings0)·Anti136/baseline207/신규0·diff PASS다. 새 실제 SDK 요청 fixture는 guest401/owner403/완료409/누락404/조회500/update409·500, 실제 소속 item만 정확히 한 번 PATCH, update의 list/id 필터와 sort_order만 전달을 고정했다. 실제 DB 쓰기는0이다.
 - 독립 리뷰도 최종4 suite36 PASS·전체 nonincremental typecheck/diff PASS 및 실제 SQL/반환 없는 update/owner·완료·소속 필터 보존을 확인해 APPROVE했다. root와 중복된 성공 수는 합산하지 않는다.
 - master 계약28과 로컬 채택 후19를 구분한다. 새 단언·wrapper·검사 억제·DB/권한/운영 변경0, 원격 반영과 승계 도구·배포는 대기한다.
+
+## Bootstrap 후속: 장보기 일괄 체크1건 로컬 완료
+
+- reorder1은 `bb551e102`로 보존했다. bulk의 실제 두 표·check-only update→select 반환 행을 native SDK에 맞추고 같은 request client를 bootstrap/reader에 직접 대입했다. 기존 `amounts_json` unknown 정규화와 반환 sort_order/id 정렬·구매 제외 false 필터·owner/완료 보호·단일 update를 유지했다. 새 단언·억제·wrapper·공통 계층0이다.
+- 수정 전25 PASS, 최종 SDK9+기존25+bootstrap11=4 suite45 PASS, 전체 typecheck·변경 lint(max-warnings0)·Anti135/baseline207/신규0·diff PASS다. SDK 회귀는 true/false/빈반환·소유403/완료409/누락404/guest401/update500 및 정확 payload/선택문/list/item/pantry-excluded 필터·정규화/동률정렬을 고정한다.
+- 독립 리뷰도4 suite45 PASS·전체 nonincremental typecheck/diff PASS와 실제 SQL·단일 쓰기/필터 보존을 확인해 APPROVE했다. 중복 성공 수는 합산하지 않는다.
+- master 계약28과 로컬 채택 후18을 구분한다. 실제 DB 쓰기·SQL/권한/도구·운영 변경과 원격 반영0, 승계 도구·배포는 승인 대기를 유지한다.
 
 ## 보류·기술적 경계
 
