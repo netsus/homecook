@@ -1298,6 +1298,8 @@ export function RecipeBookDetailScreen({
     return (
       <>
         <MobileRecipeBookDetailView
+          activeRecipeId={activeDesktopRecipeId}
+          onSelectRecipe={setActiveDesktopRecipeId}
           backHref={appReturn.href}
           bookMenuOpen={bookMenuOpen}
           bookName={currentBookName}
@@ -1950,6 +1952,8 @@ function RecipeRemoveConfirmDialog({
 }
 
 function MobileRecipeBookDetailView({
+  activeRecipeId,
+  onSelectRecipe,
   backHref,
   buildRecipeCookHref,
   buildRecipeHref,
@@ -1981,6 +1985,8 @@ function MobileRecipeBookDetailView({
   scrollSentinelRef,
   toast,
 }: {
+  activeRecipeId: string | null;
+  onSelectRecipe: (recipeId: string) => void;
   backHref: string;
   buildRecipeCookHref: (
     item: RecipeBookRecipeItem,
@@ -2016,7 +2022,6 @@ function MobileRecipeBookDetailView({
   toast: { message: string; tone: "success" | "error" } | null;
 }) {
   const searchParams = useSearchParams();
-  const [activeRecipeId, setActiveRecipeId] = useState(() => searchParams.get("readerRecipe") ?? items[0]?.recipe_id ?? null);
   const [readerMode, setReaderMode] = useState<"book" | "list">(() => searchParams.get("readerMode") === "list" ? "list" : "book");
   const [isTocOpen, setIsTocOpen] = useState(false);
   const activeIndex = Math.max(
@@ -2029,12 +2034,6 @@ function MobileRecipeBookDetailView({
     : undefined;
   const visibleItems = readerMode === "list" ? items : activeItem ? [activeItem] : [];
 
-  useEffect(() => {
-    if (!hasNext && !items.some((item) => item.recipe_id === activeRecipeId)) {
-      setActiveRecipeId(items[0]?.recipe_id ?? null);
-    }
-  }, [activeRecipeId, hasNext, items]);
-
   const handleModeChange = useCallback((mode: "book" | "list") => {
     setReaderMode(mode);
     if (mode === "list") {
@@ -2042,31 +2041,27 @@ function MobileRecipeBookDetailView({
     }
   }, []);
 
-  const handleSelectRecipe = useCallback((recipeId: string) => {
-    setActiveRecipeId(recipeId);
-  }, []);
-
   const handleSelectRecipeFromToc = useCallback(
     (recipeId: string) => {
-      handleSelectRecipe(recipeId);
+      onSelectRecipe(recipeId);
       setIsTocOpen(false);
     },
-    [handleSelectRecipe],
+    [onSelectRecipe],
   );
 
   const handlePreviousRecipe = useCallback(() => {
     const previousItem = items[activeIndex - 1];
     if (previousItem) {
-      setActiveRecipeId(previousItem.recipe_id);
+      onSelectRecipe(previousItem.recipe_id);
     }
-  }, [activeIndex, items]);
+  }, [activeIndex, items, onSelectRecipe]);
 
   const handleNextRecipe = useCallback(() => {
     const nextItem = items[activeIndex + 1];
     if (nextItem) {
-      setActiveRecipeId(nextItem.recipe_id);
+      onSelectRecipe(nextItem.recipe_id);
     }
-  }, [activeIndex, items]);
+  }, [activeIndex, items, onSelectRecipe]);
 
   return (
     <div

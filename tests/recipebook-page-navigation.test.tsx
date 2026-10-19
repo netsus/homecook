@@ -3,6 +3,7 @@ import React from "react";
 import userEvent from "@testing-library/user-event";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 import RecipeBookDetailPage from "@/app/mypage/recipe-books/[book_id]/page";
 const mocks = vi.hoisted(() => ({ authenticated: true, mobile: true, read: vi.fn(), detail: vi.fn(), router: { push: vi.fn(), replace: vi.fn() }, query: new URLSearchParams() }));
 vi.mock("@/lib/auth/server-initial-auth", () => ({ getInitialAuthenticatedFromServer: async () => mocks.authenticated }));
@@ -51,4 +52,29 @@ it("pages desktop contents with the selection, preserves keyboard access and omi
   await user.click(within(nav).getByRole("button", {name:"이전 목차"}));
   expect(within(nav).getAllByRole("listitem")).toHaveLength(8);
   expect(screen.queryByRole("group", {name:"페이지 선택"})).toBeNull();
+});
+
+it("keeps the selected recipe across mobile/desktop round trips", async () => {
+  vi.stubGlobal("React", React); mocks.query = new URLSearchParams();
+  const items = Array.from({length: 17}, (_, index) => ({ recipe_id: `recipe-${index}`, title: `요리 ${index + 1}`, base_servings: 2, tags: [], thumbnail_url: null, view_count: 0, added_at: "2026-10-17", total_duration_text: null, total_duration_seconds: null }));
+  mocks.read.mockResolvedValue({ success: true, data: { items, has_next: false, next_cursor: null }, error: null });
+  mocks.detail.mockImplementation(async (_book: string, id: string) => ({success: true, data: {...items.find(item => item.recipe_id === id), ingredients: [], steps: []}, error: null}));
+  const book = () => <RecipeBookDetailScreen bookId="book" bookName="QA" bookType="custom" initialAuthenticated />;
+  const view = render(book()), user = userEvent.setup();
+  await user.click(await screen.findByRole("button", {name:"목차 열기"}));
+  await user.click(screen.getByTestId("recipebook-mobile-toc-card-recipe-12"));
+  expect(screen.getByRole("heading", {name:"요리 13"})).toBeTruthy();
+  mocks.mobile = false; view.rerender(book());
+  const nav = await screen.findByRole("navigation", {name:"QA 목차"});
+  expect(within(nav).getByText("2 / 3")).toBeTruthy();
+  expect(within(nav).getByRole("button", {name:/13.*요리 13.*13쪽/}).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("heading", {name:"요리 13"})).toBeTruthy();
+  await user.click(within(nav).getByRole("button", {name:"다음 목차"}));
+  expect(screen.getByRole("heading", {name:"요리 17"})).toBeTruthy();
+  mocks.mobile = true; view.rerender(book());
+  expect(screen.getByRole("heading", {name:"요리 17"})).toBeTruthy();
+  await user.click(screen.getByRole("button", {name:"이전 레시피"}));
+  expect(screen.getByRole("heading", {name:"요리 16"})).toBeTruthy();
+  await user.click(screen.getByRole("button", {name:"다음 레시피"}));
+  expect(screen.getByRole("heading", {name:"요리 17"})).toBeTruthy();
 });
