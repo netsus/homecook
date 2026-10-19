@@ -12,10 +12,18 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "2cd4aab93d5b9f527ce1a8b8de6d434136fc987b",
-    "total": 147,
+    "baseCommit": "f02e0bb8976a928ee7104bd2e55e3dad71f9142c",
+    "total": 146,
     "newFindings": 0,
-    "verificationState": "confirmed master source at this commit: 20 suites190 PASS/type/lint/verify:anti-slop; separate baseline127 has117 PASS/10 FAIL. No product changes in this checkpoint."
+    "verificationState": "2026-10-19 resumption: fresh verify:anti-slop PASS/146/new0 at master f02e0bb89. All29 original contract IDs remain. Upstream PR1789 removed generic save fallback; PR1807 reused userDbClient and removed the old extra assertion. Historical190 PASS/10 FAIL counts are not fresh runs at this commit. Local detail candidate below is unmerged and excluded from this master observation."
+  },
+  "candidateObservation": {
+    "baseCommit": "f02e0bb8976a928ee7104bd2e55e3dad71f9142c",
+    "branch": "codex/detail-row-contract-20261019",
+    "total": 145,
+    "newFindings": 0,
+    "contractCandidatesAfterAdoption": 28,
+    "status": "local verified, unmerged, undeployed; original contract state stays pending until adoption"
   },
   "findings": [
     {
@@ -1174,8 +1182,13 @@
       "line": 414,
       "column": 20,
       "snippet": "(createServiceRoleClient() ?? routeClient) as unknown as RecipeSaveDbClient & UserProgressDbClient & UserGrowthActivityDbClient",
-      "state": "held-explicit",
-      "holdReason": "명시 보류444fe1f6f 및 구형 save fallback 접근 결과 위험. 관련 파일 변경하지 않음."
+      "state": "resolved",
+      "holdReason": null,
+      "resolution": {
+        "reason": "Upstream PR1789 separately removed the generic service-role fallback; PR1807 then reused the existing userDbClient and removed this extra assertion. Not a change by this contract slice and not application of held commit444fe1f6f.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1807",
+        "verification": "Fresh source diff from2cd4aab93 to masterf02e0bb89 and original source-span fingerprint comparison; current Anti146/new0. No fresh save permission/runtime verdict or resolution of the other held save assertions is claimed."
+      }
     },
     {
       "id": "app/api/v1/recipes/[id]/like/route.ts::anti-slop(no-chained-type-assertions)::3ad1ddccb50e5086af927f31cadc2fd2e474318f0036351292fb4c0aea4546bf#1",
@@ -1242,6 +1255,12 @@
       "snippet": "(ingredientsResult.data ?? []) as unknown as NonNullable< Parameters<typeof normalizeRecipeIngredients>[0] >",
       "state": "needs-contract-refactor",
       "holdReason": "Ingredients result has no runtime normalized-row guard and inferred product/ingredient rows do not guarantee required normalized fields. Needs real projection/validation contract, not assertion relocation.",
+      "pendingLocalResolution": {
+        "branch": "codex/detail-row-contract-20261019",
+        "reason": "Native consumed table/FK and four literal select projections structurally satisfy the existing normalizer; remove this result assertion without a wrapper/new assertion/any or runtime permissions change.",
+        "verification": "Local candidate: new8 native SDK/type/product-null-join tests PASS plus existing detail23 PASS (67 filtered); quantity13 and canonical nutrition7 PASS separately, unique51 tests. Whole typecheck/lint/verify:anti-slop145/new0/diff PASS. Independent8/typecheck nonincremental/diff APPROVE. Initial union-select TS2590 and test-only type-variable lint warnings failed and were corrected, not suppressed.",
+        "status": "unmerged and undeployed; do not subtract from master contract29 yet"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
