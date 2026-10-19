@@ -172,6 +172,21 @@ export function openRecordingSession(container, env, applicationName, database =
   return openDatabaseSession(container, env, applicationName, database, "postgres");
 }
 
+// Cooking's fixed catalog/data projections can exceed the legacy five-second
+// CLI budget. Keep the existing async session and a server-enforced read-only
+// transaction; the SQL/host budgets are fixed, never an operator argument.
+export async function readCookingRecordingObservation(container, env, sql) {
+  const session = openRecordingSession(container, env, `cooking-observe-${randomUUID()}`);
+  try {
+    const result = await session.query(`BEGIN READ ONLY; SET LOCAL statement_timeout='90s'; SET LOCAL transaction_timeout='90s'; ${sql}\nCOMMIT;`, 95000);
+    requireValue(await session.close() === 0, "Cooking read-only observation session failed; output withheld");
+    return result;
+  } catch {
+    session.stop();
+    throw new Error("Cooking read-only observation failed; output withheld");
+  }
+}
+
 /** Only the protected migration engine uses the existing ledger owner's connection. */
 export function openProtectedMigrationSession(container, env, applicationName, database = "postgres") {
   return openDatabaseSession(container, env, applicationName, database, "supabase_admin");
@@ -304,7 +319,7 @@ export async function backupRecordingSnapshot({run,container,directory,snapshot,
 }
 
 /** No fallback target, no remote Docker context, no generic migration engine. */
-export async function createRecordingDockerAdapter({configPath,backupDirectory,responsiveBackup=false}) {
+export async function createRecordingDockerAdapter({configPath,backupDirectory,responsiveBackup=false,responsiveReads=false}) {
   await privatePath(configPath); await privatePath(backupDirectory,true);
   const config=parseFullLocalProductionConfig(await fs.readFile(configPath,"utf8"));
   requireValue(config.FULL_LOCAL_COMPOSE_PROJECT_NAME==="homecook-full-local-isolated" && config.FULL_LOCAL_POSTGRES_VOLUME_NAME==="homecook-full-local-postgres","Wrong configured production target");
@@ -343,7 +358,7 @@ export async function createRecordingDockerAdapter({configPath,backupDirectory,r
       const database=JSON.parse(query("SELECT jsonb_build_object('systemIdentifier',(pg_control_system()).system_identifier::text,'database',current_database(),'role',current_user,'major',current_setting('server_version_num')::int/10000,'pgdata',current_setting('data_directory'));"));
       return {...selected,imageId:c.Image,mountSource:mounts[0].Source,volumeLabels:volumes.map(v=>({name:v.Name,labels:v.Labels})),database};
     },
-    query:async sql=>query(sql),
+    query:async sql=>responsiveReads ? readCookingRecordingObservation(selected.postgresContainerId,env,sql) : query(sql),
     session:applicationName=>openRecordingSession(selected.postgresContainerId,env,applicationName),
     migrationSession:applicationName=>{
       const postgresContext=JSON.parse(query("SELECT jsonb_build_object('searchPath',current_setting('search_path'),'timeZone',current_setting('TimeZone'));"));

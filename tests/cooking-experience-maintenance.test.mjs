@@ -150,7 +150,7 @@ test('present unknown235 guard fails closed before any original232 private autho
  r.isolatedEvidenceSha256=r.isolatedEvidence.sha256;
  const reviewPath=join(root,'owned-review.json'),reviewBytes=JSON.stringify(r);writeFileSync(reviewPath,reviewBytes,{mode:0o600});
  const localHelper=join(root,'guard-cooking.mjs'),localWeb=join(root,'guard-web.mjs'),state=join(root,'guard-state');
- writeFileSync(localHelper,readFileSync('scripts/lib/cooking-experience-maintenance.mjs','utf8').replace('Object.freeze({ path: null, sha256: null })',`Object.freeze(${JSON.stringify({path:reviewPath,sha256:hash(reviewBytes)})})`));
+ writeFileSync(localHelper,createOwnedCookingReviewModule(productionHelperSource).replace(`Object.freeze({path:null,sha256:"${sha('8')}"})`,`Object.freeze(${JSON.stringify({path:reviewPath,sha256:hash(reviewBytes)})})`));
  let code=ownedImports(readFileSync('scripts/lib/prelaunch-web-deploy.mjs','utf8')).replace(pathToFileURL(helperPath).href,pathToFileURL(localHelper).href);
  code=code.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',`function prelaunchStateRoot() { return ${JSON.stringify(state)}; }`);
  writeFileSync(localWeb,code,{mode:0o600});const scoped=await import(pathToFileURL(localWeb).href);
@@ -227,4 +227,11 @@ test('owned PIN seam yields identical bytes before/after a future production bin
  assert.equal(hash(readFileSync(helperPath)),hash(originalNullCopy));
  assert.throws(()=>createOwnedCookingReviewModule('export const unrelated = 1;'),/Exactly one/u);
  assert.throws(()=>createOwnedCookingReviewModule(nullSource+'\n'+nullSource),/Exactly one/u);
+});
+
+
+test('cooking235 explicitly preserves writer states rather than retargeting historical toggle authority',()=>{
+ assert.throws(()=>web.assertCookingWriterStatePreserved({review:{feature:cooking.COOKING_EXPERIENCE_FEATURE}}),/writer.*별도 권위/u);
+ assert.doesNotThrow(()=>web.assertCookingWriterStatePreserved(null));
+ assert.doesNotThrow(()=>web.assertCookingWriterStatePreserved({review:{feature:'cooked-weight-user-attestation'}}));
 });

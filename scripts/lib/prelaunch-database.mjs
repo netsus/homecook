@@ -438,7 +438,7 @@ export async function openProtectedPrelaunchTarget({ repositoryRoot, configPath,
     || digest(readClosedR2PrivateBytes(review.platformInventory.path, repositoryRoot, 524288)) !== review.platformInventory.sha256) {
     throw new Error("Protected platform backup/current inventory bindings differ");
   }
-  const base = await createRecordingDockerAdapter({ configPath, backupDirectory, responsiveBackup: review.feature===COOKING_EXPERIENCE_FEATURE });
+  const base = await createRecordingDockerAdapter({ configPath, backupDirectory, responsiveBackup: review.feature===COOKING_EXPERIENCE_FEATURE, responsiveReads: review.feature===COOKING_EXPERIENCE_FEATURE });
   const target = await base.inspect();
   if (digest(JSON.stringify(target)) !== review.database.targetSha256) throw new Error("Protected database identity differs from approved config target");
   const { loadFullLocalBackupReadiness } = await import("../full-local-production-runtime.mjs");
