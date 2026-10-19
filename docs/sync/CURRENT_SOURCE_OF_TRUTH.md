@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-19 — v85 일반 데이터의 정확한 별도 승계 준비
+
+사용자가 원인 미확정 일반 데이터 변경의 불확실성을 받아들이고 정확한 현황 보존 방식의 준비를 승인했다. 전일41개 table/count/hash와 현재가 같고, 전체 보호 추가 차이0/auth10 차이0·웹15/DB232/43jobs/worker49/새8/OFF·원3승인이 유지됐다. 원 d397/d69를 보존하는 별도 네 번째 create-only 승인과41개 지문 결속을 준비하며, 이후 drift·부분 게시·OS 거부는 중단한다. 원인을 정상이라고 보증하거나 필드를 제외하지 않는다. [고정 지문·도구·확인·실제 발급 경계](../engineering/youtube-v85-normal-data-successor-20261019.md)를 따른다. 네 번째 실제 승인/발급/등록/worker 전환은 아직 실행하지 않았다.
+
 ## 2026-10-18 — v85 웹 reader 수정의 별도 비자격 실행 결속
 
 원 d397/승인3개/d69 발급 경로/고정웹15를 보존하고, 웹CLI reader1줄과 정확한 웹 결속 plumbing만 별도 source pin으로 검증한다. 익명 pipe와 실제 부모/source에 묶인 이번 invocation만 내부 웹 확인을 대신하며 자격 경계는 유지한다. [고정 범위·실행기·검증·다음 gen50 단계](../engineering/v85-web-reader-repair-20261018.md)를 따른다. 아직 이 경로로 웹 전환하지 않았다.

@@ -119,9 +119,9 @@ describe('one create-only exact auth successor with both prior authorities prese
       for(const [name,bytes]of [['plan.json',originalBytes],['continuation-plan.json',priorBytes],[A.filename,nextBytes]] as const)
         writeFileSync(join(dir,name),bytes,{mode:0o600,flag:'wx'});
       const anchors=new Map([['approved-plan-sha256',originalHash],['approved-continuation-sha256',A.priorSha256],[A.account,nextHash]]);
-      const readApproval=vi.fn((account='approved-plan-sha256')=>{const value=anchors.get(account);if(!value)throw Error('fixture missing anchor');return value;});
+      const readApproval=vi.fn((account='approved-plan-sha256',optional=false)=>{const value=anchors.get(account);if(!value&&optional&&account==='approved-normal-data-successor-20261019-sha256')return null;if(!value)throw Error('fixture missing anchor');return value;});
       const load=()=>readV85ExecutionApproval((path:string)=>readFileSync(path),readApproval,dir,now);
-      expect(load()?.planSha256).toBe(nextHash);expect(readApproval.mock.calls.map(c=>c[0]??'approved-plan-sha256')).toEqual([...anchors.keys()]);
+      expect(load()?.planSha256).toBe(nextHash);expect(readApproval.mock.calls.map(c=>c[0]??'approved-plan-sha256')).toEqual([...anchors.keys(),'approved-normal-data-successor-20261019-sha256']);
       for(const account of [...anchors.keys()]){
         const value=anchors.get(account)!;anchors.delete(account);expect(load).toThrow();
         anchors.set(account,'f'.repeat(64));expect(load).toThrow();anchors.set(account,value);
