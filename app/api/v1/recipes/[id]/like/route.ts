@@ -1,4 +1,5 @@
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import {
   isQaFixtureModeEnabled,
@@ -15,60 +16,23 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  code?: string;
-  message: string;
-}
-
-interface RecipeCountRow {
-  id: string;
-  like_count: number;
-}
-
-interface RecipeLikeRow {
-  id: string;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface RecipesSelectQuery {
-  eq(column: string, value: string): RecipesSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeCountRow>;
-}
-
-interface RecipeLikesSelectQuery {
-  eq(column: string, value: string): RecipeLikesSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeLikeRow>;
-}
-
-interface RecipeLikesInsertQuery {
-  select(columns: string): RecipeLikesInsertQuery;
-  maybeSingle(): MaybeSingleResult<RecipeLikeRow>;
-}
-
-interface RecipeLikesDeleteQuery {
-  eq(column: string, value: string): RecipeLikesDeleteQuery;
-  select(columns: string): RecipeLikesDeleteQuery;
-  maybeSingle(): MaybeSingleResult<RecipeLikeRow>;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
-}
-
-interface RecipeLikesTable {
-  select(columns: string): RecipeLikesSelectQuery;
-  insert(values: { user_id: string; recipe_id: string }): RecipeLikesInsertQuery;
-  delete(): RecipeLikesDeleteQuery;
-}
-
-interface RecipeLikeDbClient {
-  from(table: "recipes"): RecipesTable;
-  from(table: "recipe_likes"): RecipeLikesTable;
-}
+// Consumed projections only; this type does not grant database permissions.
+export type RecipeLikeDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipes: {
+        Row: { id: string; like_count: number };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_likes: {
+        Row: { id: string; user_id: string; recipe_id: string; created_at: string };
+        Insert: { user_id: string; recipe_id: string };
+        Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -140,7 +104,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as RecipeLikeDbClient;
+  const dbClient: RecipeLikeDbClient = routeClient;
   const recipeResult = await readRecipeCount(dbClient, id);
 
   if (recipeResult.error || !recipeResult.data) {
