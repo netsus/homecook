@@ -1,4 +1,4 @@
-import { executionState, executionWeightSummary } from "@/lib/server/cooking-execution-quantities";
+import { executionState, executionWeightSummary, projectExecutionQuantityRows } from "@/lib/server/cooking-execution-quantities";
 import { wantsCookedWeightEvidence } from "@/lib/cooking/cooked-weight-response-contract";
 import { fail, ok } from "@/lib/api/response";
 import { cookedWeightEvidenceEnabled, readSnapshotWeightPrediction, summarizeWeightPrediction } from "@/lib/server/cooked-batch-weight-evidence";
@@ -72,7 +72,9 @@ export async function GET(_request: Request, context: RouteContext) {
     execution = executionState(stored.data);
     if (!execution || !rawMode || typeof rawMode !== "object" || !("recipe" in rawMode)
       || !rawMode.recipe || typeof rawMode.recipe !== "object") return fail("INTERNAL_ERROR", "요리의 재료 기록을 확인하지 못했어요.", 500);
-    rawMode = { ...rawMode, recipe: { ...rawMode.recipe, ingredients: execution.rows } };
+    const rows = projectExecutionQuantityRows(execution.rows, "ingredients" in rawMode.recipe ? rawMode.recipe.ingredients : null);
+    if (!rows) return fail("INTERNAL_ERROR", "요리의 재료 기록을 확인하지 못했어요.", 500);
+    rawMode = { ...rawMode, recipe: { ...rawMode.recipe, ingredients: rows } };
   }
   const data = projectSnapshotV2CookModeData(rawMode);
   const metadata: Pick<SnapshotV2CookModeData, "weight_evidence_enabled" | "weight_prediction"> = {};

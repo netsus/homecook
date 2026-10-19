@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
-import {applyExecutionQuantityChanges,calculateExecutionQuantities,executionWeightSummary,parseExecutionQuantityChanges} from "@/lib/server/cooking-execution-quantities";
+import {projectExecutionQuantityRows,applyExecutionQuantityChanges,calculateExecutionQuantities,executionWeightSummary,parseExecutionQuantityChanges} from "@/lib/server/cooking-execution-quantities";
 const hydration=vi.hoisted(()=>({hydrate:vi.fn()}));
 vi.mock("@/scripts/lib/recipe-nutrition-predecessor.mjs",()=>({loadRecipeNutritionPredecessors:async()=>new Map(),hydrateRecipeNutritionIngredients:(rows:unknown[])=>hydration.hydrate(rows)}));
 const pin="c2000000-0000-4000-8000-000000000001",ingredient="c5000000-0000-4000-8000-000000000001";
@@ -31,4 +31,15 @@ describe("owner cooking execution quantity calculation",()=>{
   expect(result.nutritionSnapshot.base_servings).toBe(4);expect(result.nutritionSnapshot.fixed_values.energy_kcal).toBe(190);expect(result.nutritionSnapshot.scalable_values.energy_kcal).toBe(0);
   expect(executionWeightSummary({revision:1,snapshot_id:pin,base_servings:2,cooking_servings:4,original_rows:rows,rows,steps:[],nutrition_snapshot:result.nutritionSnapshot,prediction:{...result.prediction}})).toMatchObject({source:"conditional_estimate",predicted_g:142.5,model_version:"ingredient-mass-75-v1"});
  });
+});
+
+
+it("copies only matching authorized labels without persisting them or accepting substituted identities",()=>{
+ const stored={ingredient_id:ingredient,row_key:pin,amount:190,unit:"g",ingredient_type:"QUANT",scalable:false};
+ const labelled={...stored,amount:100,scalable:true,standard_name:"trusted label"};
+ expect(projectExecutionQuantityRows([stored],[labelled])).toEqual([{...stored,standard_name:"trusted label"}]);
+ expect(stored).not.toHaveProperty("standard_name");
+ for(const bad of [[{...labelled,row_key:ingredient}],[{...labelled,ingredient_id:pin}],[{...labelled,food_product_id:pin}],[],[{...labelled,standard_name:null}]]){
+  expect(projectExecutionQuantityRows([stored],bad)).toBeNull();
+ }
 });
