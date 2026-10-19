@@ -73,3 +73,33 @@
 고정 소스618b09f02에서 첫 백업을 시도했다. exact bootout 직후 launchd가 일시 loaded/not-running으로 관찰돼 snapshot 단계 전에 중단됐다. `maintenance-1-before-stop` 다음 기록은 `maintenance-2-restored`이며 플랫폼 백업 operation·API 중지·archive 생성은0이다. 동일 plist bootstrap 복구 뒤 workerPID98098→10709, 실제 인증/readiness 성공·큐/processing/permit0을 확인했다. policy/credential/43jobs/plist/activation/web/R2의 전후 지문은 모두 같다. gen50·고정만료·A/B·역사 기록 변경은 없다.
 
 이를 정상 백업 성공으로 세지 않는다. 다음 시도는 별도 새 출력/receipt 경로를 쓰며, bootout은 한 번만 보내고 own plist/명령 보호를 통과한 전환 상태만 최대20회 관찰해 실제113/unloaded를 기다린다. 관찰 예외는 즉시 거절한다.250ms 대기간격 합계는5초이나 각 launchctl print의 실행 시간은 별도이므로 wall-clock5초 상한이라고 주장하지 않는다. 작은 회귀를 추가해 선택84 PASS·lint0을 확인했고 독립 재리뷰 P1/P2는0건이다.
+
+
+### 새 플랫폼 백업·별도 매체·격리 복원 완료 (09:40–09:41 UTC cut)
+
+두 번째 시도는 pnpm 실행 경로가 없어 snapshot/API 중지 전에 실패했다. 원 plist 복구 PID10709→17751과 보호 지문 동일을 확인한 뒤, 운영 서비스 환경 대신 해당 operator process PATH만 보완했다. 세 번째 시도는 고정ec3762e10에서 새 create-only 경로로 성공했다. 전체 operation은09:40:01.967–09:41:19.150 UTC이며 이77초를 정확한 API 중단 시간으로 해석하지 않는다. worker17751→22753, 기존 gen50/policy ON/고정만료/43jobs·plist·activation·웹·R2 지문을 보존하고 실제 인증·readiness·queue0을 재확인했다. DB232·웹15는 유지했다.
+
+새 archive SHA256은 `10f8d72f108c3506cf77a1bfa890660bf2c70190b8cfc7f3f17205f870912974`다. 기존 도구의 v5 인증·Storage 포함·미분류 파일0 검증을 통과했다. 별도 매체 복사 첫 요청은 자동 승인 검토가 전체 DB·Storage·인증 payload와 정확한 목적지 승인 부족으로 실행 전에 거절했다. 사용자가 정확한 새 목적지로 암호화 사본 복사·검증을 명시 승인한 뒤 한 번 실행해 source/destination SHA 동일을 확인했다. 네트워크 전송은0이다.
+
+승인된 사본으로 기존 isolated restore 도구의 실제 clean DB·Storage 복원과 키 복구를 완료했고, 기존 record-readiness 도구도 PASS했다. 새 비공개 operation은 `cooking-experience-backup-20261019-5OioFg`이며 archive·실제 restore manifest·key recovery·readiness를 함께 보존했다. 이 성공을 DB233–235 적용이나 웹 배포 성공으로 확대하지 않는다. 다음 DB 창은 fresh fence/drain/동일 worker stop·복구가 별도로 필요하다.
+
+
+### 정확 DB235 연결과 최종 격리 검증
+
+별도 cooking feature에 원233/234/235 raw SQL·payload·232 prefix/235 원장만 허용했다. 기존 보호 엔진의 session·exported snapshot 전체 dump/roles/full decode·단일 DDL/원장 transaction·commit guard·읽기 전용 reconcile을 그대로 사용한다. CLI는 cooking-database/cooking-database-retry/cooking-reconcile 세 phase만 추가하고 기존 deploy lock·R2 lease 안에서 fresh fence/drain·동일 worker 중지/복구를 필수로 거친다. 정책 ON/세대50/고정만료와 원A/B·과거232 receipt는 변경하지 않는다. 기존 v85 도구18개는 이미 커밋된 endpoint bytes만 운반하며 새 v85 기능 수정은 허용하지 않는다.
+
+현재232의 pg_dump 복원은 전체 카탈로그 raw hash가 운영과 달랐다. 전역 query/과거 PIN을 바꾸지 않고 요리 전용 비교기를 추가했다. 진단된23개 relation·2개 schema의 NULL/default ACL 표기, ACL 배열 순서,3개 table의 삭제열 번호 공백, 정확5개 CHECK deparse만 정리한다. empty ACL·열 권한·grantor/option·owner·RLS·visible column의 순서/형식 등은 보존한다. 운영 raw3종 before는 정확 고정하고, 변경을 허용한 함수10개와 새 table1개만 제외한 **운영 raw remainder**를 transaction 전후 같은 값으로 요구한다. 전체 canonical before/after도 동시에 고정한다. 복원 fixture의 raw after를 운영 기대값으로 사용하지 않으며 실제 transaction raw after를 commit intent/receipt에 보존하고 ACK reconcile 때 대조한다.
+
+운영 읽기와 복원 fixture의 canonical3종은 실제 동일했다. helper SHA는 `e22430b18e6719638162169dcbc389f0c190f32ef5d17358a36095159110c74e`, native raw remainder는 `7bfcf789e77f7af13569b2042e7a41e194b1374095fa222f818f5ce6a9d473b5`이며 helper와 고정 query4종 SHA도 새 review에 결속한다. 이 비교기는 실제 권한/역할 변경을 승인하는 우회가 아니다.
+
+독립 검토에서 동기 DB dump 동안 main의 fence 감시가 정지하는 구간을 발견했다. 기존 backup 함수는 command 완료를 await하고, cooking adapter만 같은4개 dump/roles/list/decode 명령을 비동기 child로 수행한다. 기본 다른 feature는 기존 실행을 유지한다. actual child700ms 동안 연결 상실을 감지해 접수를 닫는 회귀 PASS이며, 최종 native5case에서도 backup 중 timer66–70회 실행을 확인했다.
+
+최종 native run `de8070e0ba6065e363a107546a096fba`는 정상 commit,233/234/235 뒤 실제 오류 rollback, COMMIT 뒤 backend 종료/ACK 불명 reconcile을 모두 통과했다. DDL 재전송0·원 scope alias OID/행/controls 보존,20개 ACL/열/함수/RLS/constraint 부정 검사, 소유 컨테이너 정리도 확인했다. 실행 중 source10개 SHA는 불변이었다. 보고서 SHA `b00f5731d4c2b301b61af15bdccaddbf810ed75497351908572ca5995ef033f3`. 선택 기존174 PASS·typecheck0·독립 최종 P1/P2=0이다. 합성 fixture 결과이며 이 문단 시점 운영233–235·새 웹 반영은0이다.
+
+운영 도구 ref와 웹 target ref는 분리한다. 먼저 PIN이 빈 검증 후보 source를 고정하고, 그 정확 source pair와 최신 실제 백업/evidence를 새 create-only review로 결속한 별도 도구 commit에서만 PIN을 게시한다. 배포 웹은 검토한 후보 SHA이고 이후235 관리 CLI는 bound 도구 checkout에서 실행한다. 원 v85 source validator·A/B를 재타깃하지 않는다. 현재 실제 state의 rotationBridgeRequired=false도 읽기 전용으로 확인해 완료된 v85 확인 절차를 다시 실행할 필요가 없다.
+
+
+기존 웹15의 실제 RPC 선택 소스를 대조한 완료 경로3개(기존 추정450g, 유효한 미확인 예측, 직접 실측200g)를 추가해 **현재 구조 SQL26 PASS**를 확인했다(run `ecef7c3ec80f5d718219bafaf1bb3886`). 새 검사 작성 중의 null 예측/공유 fixture ID 충돌, projection에 없는 measured_g 기대는 합성 검사 오류로 고쳤으며 운영 오류로 보고하지 않는다. 실제 evidence 열과 원형 예측 계약을 사용한 최종 결과다. [공개 가능한 로컬 증거](data/cooking-database235-local-evidence-20261019.json)와 [실제 백업 증거](data/cooking-backup-current-evidence-20261019.json)를 구분한다.
+
+
+PIN 게시 후에도 운영 파일을 읽지 않고 회귀를 반복할 수 있도록 test/harness의 소유 복사본 주입만 보완했다. null/미래 bound 선언이 같은 synthetic module bytes를 만들며 최종 native 실행이 사용한 복사본 SHA `565f157bf122064564ed557cdc956f074b865981d95617e4e76f9c6b6af76562`와 실제 동일함을 확인했다. production PIN을 runtime 인수로 바꾸는 경로는 없다. 마지막 test-only 보완 후 Node23 PASS·lint0/diffcheck0이며 runtime 소스는 최종 native 실행본과 같다.

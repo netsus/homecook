@@ -2,6 +2,7 @@
 // Restores an existing, hash-pinned schema-only native fixture. No live DB input.
 import assert from "node:assert/strict";
 import {canonicalCookingSchemaDump} from "./lib/cooking-schema-restore-comparison.mjs";
+import {canonicalCookingCatalogSql,unchangedCookingCatalogSql} from "./lib/cooking-catalog-comparison.mjs";
 import { spawnSync } from "node:child_process";
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync, mkdtempSync, chmodSync, rmSync } from "node:fs";
@@ -9,7 +10,10 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import ts from "typescript";
 import { buildRecipeProductSourceFunctionInventorySql, assertRecipeProductSourceFunctionInventoryResult } from "./lib/full-local-security-inventory.mjs";
+import { DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS } from "./lib/youtube-extraction-worker-artifact.mjs";
 import { readPinnedLocalDockerTarget } from "./lib/local-supabase-isolated-runtime.mjs";
+import { COOKING_FUNCTIONS_SQL, COOKING_EXECUTION_TABLE_SQL, COOKING_SCOPE_LINK_SQL } from "./lib/cooking-experience-maintenance.mjs";
+import { PROTECTED_CATALOG_SQL, PROTECTED_IMMUTABLE_CATALOG_SQL, COOKED_WEIGHT_STABLE_IMMUTABLE_SQL, RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL } from "./lib/prelaunch-database.mjs";
 
 const image = "public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a";
 const hash = value => createHash("sha256").update(value).digest("hex");
@@ -19,15 +23,15 @@ const run = (file, args, input) => spawnSync(file, args, { env, input, encoding:
 const required = (args, input) => { const r = run("docker", args, input); assert.equal(r.status, 0, r.stderr); return r.stdout.trim(); };
 let container, httpContainer, secretDirectory;
 const report = { schema: "homecook.cooking-current-schema-http.v1", runId: tag, status: "RUNNING", network: "none", productionConnections: 0, applicationDataRestored: false, migrations: [], tests: [] };
-const sqlMode=process.argv[2]==="--sql-regression";
-const reportPath=sqlMode?"/tmp/homecook-cooking-current-sql-report.json":"/tmp/homecook-cooking-current-http-report.json";
+const sqlMode=process.argv[2]==="--sql-regression",maintenanceMode=process.argv[2]==="--maintenance-regression";
+const reportPath=maintenanceMode?"/tmp/homecook-cooking-maintenance-native-report.json":sqlMode?"/tmp/homecook-cooking-current-sql-report.json":"/tmp/homecook-cooking-current-http-report.json";
 writeFileSync(reportPath, JSON.stringify(report, null, 2));
 const catalogSql = `select jsonb_agg(jsonb_build_object('signature',p.oid::regprocedure::text,'name',p.proname,'schema',n.nspname,'oid',p.oid,'owner',pg_get_userbyid(p.proowner),
  'catalog_attributes',to_jsonb(p)-'provolatile','body',md5(btrim(p.prosrc,chr(10))),'definition',encode(sha256(convert_to(pg_get_functiondef(p.oid),'UTF8')),'hex'),'security',p.prosecdef,'volatility',p.provolatile,'configuration',p.proconfig,
  'acl',coalesce((select string_agg((case when a.grantee=0 then 'public' else r.rolname end)||':'||a.privilege_type||':'||a.is_grantable::text,',' order by a.grantee,a.privilege_type) from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a left join pg_roles r on r.oid=a.grantee where a.grantee<>p.proowner),'')) order by n.nspname,p.proname,p.oid)
  from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','private') and p.prokind='f' and not exists(select 1 from pg_depend d where d.classid='pg_proc'::regclass and d.objid=p.oid and d.deptype='e');`;
 try {
-  assert(process.argv.length===2||(process.argv.length===3&&sqlMode),"Only --sql-regression accepted; no target/connection arguments");
+  assert(process.argv.length===2||(process.argv.length===3&&(sqlMode||maintenanceMode)),"Only --sql-regression/--maintenance-regression accepted; no target/connection arguments");
   const fixtureDirectory="/private/tmp/hc-cooking-current232-2vr7HH";
   const archive=readFileSync(`${fixtureDirectory}/schema232.dump`);
   const roleBytes=readFileSync(`${fixtureDirectory}/roles-attributes.json`);
@@ -47,10 +51,15 @@ try {
   const own = () => assert.equal(required(["inspect", "--format", '{{.Image}}|{{.HostConfig.NetworkMode}}|{{len .Mounts}}|{{len .HostConfig.PortBindings}}|{{index .Config.Labels "homecook.cooked-weight-test"}}', container]), `${expectedImage}|none|0|0|${tag}`);
   own();
   const exec = (args, input) => { own(); return required(["exec", "-i", container, ...args], input); };
-  exec(["mkdir", "-m", "700", "-p", "/tmp/pgsocket"]);
+  exec(["mkdir", "-m", "700", "-p", "/tmp/pgsocket", "/var/run/postgresql"]);
   exec(["initdb", "-D", "/tmp/cooking-pg", "-U", "supabase_admin", "--auth-local=trust", "--auth-host=trust", "--locale-provider=icu", "--icu-locale=en-US", "--locale=en_US.UTF-8"]);
-  exec(["pg_ctl", "-D", "/tmp/cooking-pg", "-o", "-h 127.0.0.1 -k /tmp/pgsocket -c timezone=UTC -c shared_preload_libraries=pg_stat_statements,supabase_vault", "-l", "/tmp/cooking-pg.log", "-w", "start"]);
-  const sql = (input, user = "postgres", database = "postgres") => exec(["psql", "-h", "/tmp/pgsocket", "-U", user, "-d", database, "-XqAt", "-v", "ON_ERROR_STOP=1"], input);
+  exec(["pg_ctl", "-D", "/tmp/cooking-pg", "-o", "-h 127.0.0.1 -k /tmp/pgsocket,/var/run/postgresql -c timezone=UTC -c shared_preload_libraries=pg_stat_statements,supabase_vault", "-l", "/tmp/cooking-pg.log", "-w", "start"]);
+  const contextBytes=readFileSync("/private/tmp/homecook-cooking-pg-context-live-20261019.json");
+  assert.equal(hash(contextBytes),"569b5da16f96c5f00a564cbe52925d6c1f73878b90ea026999c5d480c249a846");
+  const context=JSON.parse(contextBytes);assert.equal(context.timeZone,"UTC");
+  const contextPrefix=`do $observation_context$ begin perform set_config('search_path',${literal(context.searchPath)},false);perform set_config('TimeZone',${literal(context.timeZone)},false);end;$observation_context$;\n`;
+  report.observationContext={sha256:hash(contextBytes),searchPath:context.searchPath,timeZone:context.timeZone,mode:"explicit per-query context; original role/schema unchanged"};
+  const sql = (input, user = "postgres", database = "postgres") => exec(["psql", "-h", "/tmp/pgsocket", "-U", user, "-d", database, "-XqAt", "-v", "ON_ERROR_STOP=1"], contextPrefix+input);
   const toc = exec(["pg_restore", "--list"], archive);
   assert.doesNotMatch(toc, /\b(?:TABLE DATA|SEQUENCE SET|BLOB DATA)\b/u);
   for(const role of roleModel.roles.filter(role=>!role.name.startsWith("pg_"))) {
@@ -76,6 +85,7 @@ try {
   report.restoredSchemaSqlMatches={sourceSqlSha256:hash(sourceSchema),restoredSqlSha256:hash(restoredSchema),rawExactMatch:sourceSchema===restoredSchema,canonicalSha256:hash(canonicalCookingSchemaDump(sourceSchema)),commentsExcluded:true,normalizations:"dump headers/restrict tokens; five reviewed varchar-array checks; policy role set order; consecutive GRANT order within ACL blocks; REVOKE/context order preserved",tableData:false};
   const counts = JSON.parse(sql(`create temp table counts(n bigint);do $$ declare t record;n bigint;begin for t in select ns.nspname,c.relname from pg_class c join pg_namespace ns on ns.oid=c.relnamespace where c.relkind in('r','p') and ns.nspname not like 'pg_%' and ns.nspname<>'information_schema' and not exists(select 1 from pg_depend d where d.classid='pg_class'::regclass and d.objid=c.oid and d.deptype='e') loop execute format('select count(*) from %I.%I',t.nspname,t.relname) into n;insert into counts values(n);end loop;end$$;select jsonb_build_object('tables',count(*),'rows',sum(n)) from counts;`, "supabase_admin"));
   assert(counts.tables>=153); assert.equal(counts.rows, 0); report.beforeSeed = counts;
+  report.databaseContext=JSON.parse(sql("select jsonb_build_object('provider',datlocprovider,'collate',datcollate,'ctype',datctype,'icuLocale',to_jsonb(pg_database)->>'datlocale','searchPath',current_setting('search_path'),'timeZone',current_setting('TimeZone')) from pg_database where datname=current_database();"));
   const restoredRoleModel=JSON.parse(sql(`select jsonb_build_object('roles',(select jsonb_agg(jsonb_build_object('name',rolname,'superuser',rolsuper,'inherit',rolinherit,'createrole',rolcreaterole,'createdb',rolcreatedb,'login',rolcanlogin,'replication',rolreplication,'bypassrls',rolbypassrls,'connection_limit',rolconnlimit,'valid_until',rolvaliduntil) order by rolname) from pg_roles),'memberships',(select jsonb_agg(jsonb_build_object('role',r.rolname,'member',m.rolname,'grantor',g.rolname,'admin',am.admin_option,'inherit',am.inherit_option,'set',am.set_option) order by r.rolname,m.rolname,g.rolname) from pg_auth_members am join pg_roles r on r.oid=am.roleid join pg_roles m on m.oid=am.member join pg_roles g on g.oid=am.grantor));`));
   assert.deepEqual(restoredRoleModel,roleModel);report.roleAttributesAndMembershipsMatch=true;
   assert.equal(sql("select to_regprocedure('public.verify_full_local_postgrest_request_authority()') is not null;"),"t");
@@ -83,6 +93,51 @@ try {
   assert.deepEqual(restoredSettings,settings.role_settings);report.nonsecretSettingsMatch=true;
   const flags = { includeCookedWeightEvidenceFunctions: true, includeQuantityInputV4Functions: true, includeCookedWeightAttestationFunctions: true, includeRecipeSaveRecoveryFunctions: true, includeRecipeRequestRoleFunctions: true };
   report.pre232SourceInventory = assertRecipeProductSourceFunctionInventoryResult(JSON.parse(sql(buildRecipeProductSourceFunctionInventorySql(flags))), flags);
+  // Schema-only fixture, synthetic rows inside a rolled-back transaction. These
+  // are the unchanged real readiness SQL and expected-schema contract, not a
+  // simulated fingerprint or an operating worker/JWT authentication test.
+  const syntheticOptions=JSON.stringify(DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS).replaceAll("'","''");
+  const workerReadiness = () => JSON.parse(sql(`begin;
+    insert into private.youtube_extraction_current_policy values('primary',3,'codex_cli',repeat('a',64),'${syntheticOptions}','1',null,null,true,'2026-01-01T00:00:00Z');
+    insert into private.youtube_extraction_worker_credentials values('primary',50,repeat('b',64),'2099-01-01T00:00:00Z',repeat('a',40),'youtube-extraction-worker-schema-v2',
+      private.youtube_extraction_policy_snapshot_digest('codex_cli',repeat('a',64),'${syntheticOptions}',3),'2026-01-01T00:00:00Z');
+    set local role postgres;set local request.jwt.claims='{"role":"youtube_extraction_worker"}';
+    select public.read_youtube_extraction_enqueue_readiness();rollback;`,"supabase_admin"));
+  const cookingImage = () => ({unchangedCatalogSha256:sql(unchangedCookingCatalogSql(PROTECTED_CATALOG_SQL)),catalogSha256:sql(PROTECTED_CATALOG_SQL),immutableSha256:sql(PROTECTED_IMMUTABLE_CATALOG_SQL),
+    stableImmutableSha256:sql(COOKED_WEIGHT_STABLE_IMMUTABLE_SQL),normalProjectionSha256:hash(RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL),
+    canonicalCatalogSha256:sql(canonicalCookingCatalogSql(PROTECTED_CATALOG_SQL)),canonicalImmutableSha256:sql(canonicalCookingCatalogSql(PROTECTED_IMMUTABLE_CATALOG_SQL)),
+    canonicalStableImmutableSha256:sql(canonicalCookingCatalogSql(COOKED_WEIGHT_STABLE_IMMUTABLE_SQL)),
+    cookingFunctions:JSON.parse(sql(COOKING_FUNCTIONS_SQL)),scopeLink:JSON.parse(sql(COOKING_SCOPE_LINK_SQL)),
+    executionTable:JSON.parse(sql(`select coalesce((${COOKING_EXECUTION_TABLE_SQL.replace(/;$/u,"")}), 'null'::jsonb);`)),workerReadiness:workerReadiness()});
+  const cookingBefore=cookingImage();
+  const catalogPrefix="SELECT encode(sha256(convert_to((",catalogSuffix=")::text,'UTF8')),'hex');";
+  assert(PROTECTED_CATALOG_SQL.startsWith(catalogPrefix)&&PROTECTED_CATALOG_SQL.endsWith(catalogSuffix),"Fixed catalog digest envelope differs");
+  const catalogExpression=PROTECTED_CATALOG_SQL.slice(catalogPrefix.length,-catalogSuffix.length);
+  const catalogBytes=JSON.stringify(JSON.parse(sql(`SELECT ${catalogExpression};`)))+"\n";
+  const catalogPath="/private/tmp/homecook-cooking-fixture-catalog232-20261019.json";
+  const {existsSync:catalogExists}=await import("node:fs");
+  if(catalogExists(catalogPath))assert.equal(hash(readFileSync(catalogPath)),hash(catalogBytes),"Existing private catalog export differs; preserve it for review");
+  else writeFileSync(catalogPath,catalogBytes,{mode:0o600,flag:"wx"});
+  report.fixtureCatalogExport={path:catalogPath,sha256:hash(catalogBytes),privateMetadataOnly:true,applicationRows:0};
+  const exportCookingImages=()=>{
+    const after=cookingImage();
+    assert.equal(after.unchangedCatalogSha256,cookingBefore.unchangedCatalogSha256,"Raw non-cooking catalog remainder changed");
+    const expected=JSON.parse(readFileSync("scripts/manifests/youtube-extraction-expected-schema.json","utf8"));
+    assert.equal(cookingBefore.workerReadiness.catalog_fingerprint,expected.catalog_fingerprint);
+    assert.equal(after.workerReadiness.catalog_fingerprint,expected.catalog_fingerprint);
+    assert.equal(cookingBefore.workerReadiness.ready,true);assert.deepEqual(after.workerReadiness,cookingBefore.workerReadiness);
+    const evidence={schema:"homecook.cooking-current232-to235-postimages.v1",status:"isolated-candidate-not-operating-approval",archiveSha256:hash(archive),
+      roleSha256:hash(roleBytes),settingsSha256:hash(settingBytes),before:cookingBefore,after,
+      expectedSchemaSha256:hash(readFileSync("scripts/manifests/youtube-extraction-expected-schema.json")),
+      workerReadinessScope:"unchanged SQL with synthetic rolled-back gen50/policy rows; no operating worker/JWT/service health",productionConnections:0};
+    const bytes=JSON.stringify(evidence,null,2)+"\n";writeFileSync("/tmp/homecook-cooking-current232-to235-postimages.json",bytes,{mode:0o600});
+    report.cookingPostimages={path:"/tmp/homecook-cooking-current232-to235-postimages.json",sha256:hash(bytes),workerCatalogUnchanged:true,syntheticReadiness:true};
+  };
+  if(maintenanceMode) {
+    const {runCookingMaintenanceNativeRegression}=await import("./lib/cooking-maintenance-engine-regression.mjs");
+    report.maintenance=await runCookingMaintenanceNativeRegression({container,tag,env,sql,own,settings,cookingBefore});
+    report.tests.push(...report.maintenance.tests);
+  } else {
   for (const filename of ["20261017210000_cooked_weight_mass_fallback.sql", "20261017220000_cooking_execution_quantities.sql"]) {
     const bytes = readFileSync(path.join("supabase/migrations", filename));
     const expected = filename.includes("210000") ? "9709397e9031ca28a1ae6dbb934502ef9092ca7bc0d6ba96d568121672ac7f2e" : "34b2947952f4eedb55234ddf330ca0029c080d7c8d887542e8880a56106cbaa6";
@@ -94,11 +149,12 @@ try {
   report.sqlSuiteSha256=hash(readFileSync("tests/cooking-experience-schema232-postgres.integration.test.ts"));
   if(sqlMode) {
     sql(readFileSync(fixPath,"utf8"));
+    exportCookingImages();
     env.HOMECOOK_COOKING_SCHEMA232_PG="1";env.HOMECOOK_WEIGHT_EVIDENCE_TEST_CONTAINER=container;env.HOMECOOK_WEIGHT_EVIDENCE_TEST_TAG=tag;
     const suite=run(process.execPath,[path.resolve("node_modules/vitest/vitest.mjs"),"run","tests/cooking-experience-schema232-postgres.integration.test.ts"]);
     writeFileSync("/tmp/homecook-cooking-current-sql-vitest.log",suite.stdout+suite.stderr);
-    assert.equal(suite.status,0,"Current-schema SQL regression failed; see local log");assert.match(suite.stdout,/25 passed/u);
-    report.tests.push("existing25 SQL regression PASS on current schema232+original233234+reader forward");
+    assert.equal(suite.status,0,"Current-schema SQL regression failed; see local log");assert.match(suite.stdout,/26 passed/u);
+    report.tests.push("existing26 SQL regression PASS on current schema232+original233234+reader forward");
   } else {
   // Reuse only the synthetic beforeAll SQL from the existing schema232 suite.
   // Its application data is generated test data, never a production snapshot.
@@ -157,6 +213,7 @@ try {
   else {
     assert.equal(report.before.status,405); assert.equal(report.before.body.code,"25006");
     sql(readFileSync(fixPath,"utf8")); report.fix = { path:fixPath,sha256:hash(readFileSync(fixPath)) };
+    exportCookingImages();
     assert.equal(tableGuards(),tableBefore);
     const after = JSON.parse(sql(catalogSql)); const a = after.map(row=> {
       const old = before.find(previous=>previous.signature===row.signature);
@@ -213,6 +270,7 @@ try {
     const readOnly=run("docker",["exec","-i",container,"psql","-h","/tmp/pgsocket","-U","postgres","-d","postgres","-XqAt","-v","ON_ERROR_STOP=1"],`begin read only;set local role service_role;set local request.jwt.claim.role='service_role';set local request.jwt.claims='{"role":"service_role"}';select public.read_cooking_execution_quantities('${constants.owner}','${constants.epoch}','${constants.hash}',1,'${constants.issued}','${session}');rollback;`);
     assert.notEqual(readOnly.status,0);assert.match(readOnly.stderr,/cannot execute SELECT FOR SHARE in a read-only transaction/u);report.tests.push("explicit read-only transaction still forbids authority row locking");
     sql(readFileSync(fixPath,"utf8"));assert.deepEqual(JSON.parse(sql(catalogSql)),after);assert.equal(tableGuards(),tableBefore);report.tests.push("forward ALTER reapply is idempotent and private table ACL/RLS unchanged");
+  }
   }
   }
   report.status="PASS";

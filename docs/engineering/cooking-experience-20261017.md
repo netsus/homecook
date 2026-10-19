@@ -330,3 +330,10 @@ exact 검증 대상에 기존 `pg_dump --schema-only` 경로와 read-only PGOPTI
 운영 담당자가 확인한 동일 gen50 plist의 일시 bootout/bootstrap 경로와 최신 무작업 관찰을 반영해 [최소 백업·DB·웹 순서](cooking-backup-deploy-sequence-20261019.md)를 작성했다. 기존 exported snapshot 백업은 API/worker 중단 없는 DB-only 경로이며 전체 플랫폼의 Storage/off-Mac/암호화/clean restore/readiness를 대체하지 않는다. 현재 full backup의 API finally와 worker/enqueue fence 실패 복구 연결, 요리233/234/235의 exact review, 정상 새 웹 handoff가 미완료이므로 실행 준비 완료라고 하지 않는다. policy/updated_at·자격·세대·A/B/역사 증거는 유지한다.
 
 선택 회귀4파일107 PASS이며 별도 첫 실행의 request-role 유지보수 suite는 기존 파생 fixture import 누락으로 collection 실패했다. 이번 단계는 문서와 로컬 mock/fixture 검증뿐이며 서비스 중지·백업/복원·원격 쓰기·DB/웹 반영은0이다. 실제 실행은 부모 직렬화와 문서에 적은 좁은 연결/실패 경로 검증 뒤에 진행한다.
+
+
+### 2026-10-19 운영 반영 준비 후속
+
+최신 플랫폼 백업·승인된 별도 매체 사본·실제 격리 복원·키 복구·readiness를 완료했다. 현재232 구조에서 SQL26, native 보호 엔진5시나리오와20카탈로그 부정 검사, 기존174회귀·typecheck 및 독립 리뷰를 통과했다. 원233/234/235를 단일 transaction으로 반영하고 gen50/새키/정책ON/만료/원A·B를 보존하는 별도 요리 연결을 준비했다. 세부 순서·지문·실패 보호는 [운영 순서 기록](cooking-backup-deploy-sequence-20261019.md)에 있다. 이 기록 시점 실제 DB235·새 웹 배포·운영 Chrome 검증은 아직 미완료다.
+
+최근 두 오일 후보의 cache ID는 실재 catalog가 아닌 가상 UUID였음을 현재 행으로 확인했다. 기존 editable 계약에 catalog identity 선택이 없어 운영 UPDATE는 하지 않았고, 원문/현재량/과거 pin 보존 조건의 다음 별도 묶음으로 분리했다. [현재 연결 제약](recent-nutrition-source-review-20261017.md)을 따른다.

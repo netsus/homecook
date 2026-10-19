@@ -31,3 +31,12 @@ PR1785의 정확 v4 계량값 부분 계산을 기존 캐시6개에 적용하면
 ## 후속 반영 계획
 
 [기계 판독 계획](data/recent-nutrition-link-plan-20261017.json)에이전캐시의정확old ingredient행과target profile기준량·버전,미확인분량수,제품/원료보류,최소backup→CAS→readback조건을기록했다. 실행플래그는모두false이고backup/운영쓰기0이다. 공개UUID GET은재시도하지않으며잠금해제후부모가필요한사용자확인을조율한다.
+
+
+## 2026-10-19 현재 행 재확인 — 두 연결 후보의 구조 차단
+
+최신 플랫폼 백업/별도 매체/격리 복원 검증 뒤 두 레시피만 읽기 전용으로 다시 확인했다. 둘 다 editable revision2이며 과거 캐시의 old ingredient ID는 실재 catalog 행이 아니라 미연결 snapshot 재료의 합성 UUID였다. 이를 영양 profile에 연결하는 UPDATE/INSERT는 적절한 해결이 아니다. 실제 승인 식용유 profile은 현재도 active/approved·100g/HOMECOOK_USER_STANDARD/2026-09-15이며 새 수치는 필요하지 않는다.
+
+현재 만둣국은 사용자가 수정한 식용유10g과 source pointer null을 갖는다. 원source의 ‘오일2큰술’로 되돌리면 현재 양을 덮어쓰므로 금지한다. 바비큐는 오일/양·단위 미확인/source pointer 유지 상태다. `project_youtube_saved_recipe_ingredient_links`는 응답 시 계산하는 STABLE 함수이며 물리적인 link table/별도 link writer는 없다. 기존 editable CAS writer도 명시 ingredient_id 필드를 지원하지 않아 두 ID만 바꾸는 기존 권한 RPC는 없다.
+
+비공개 beforeimage와 link preview, 과거 snapshot/meal/session의 count/hash를 보존했고 운영 쓰기는0이다. 원문·현재 양·과거 pin을 유지하는 명시 catalog 선택 저장 계약이 다음 별도 작은 묶음의 후보이며 DB235/web 배포에 섞지 않는다. 이전 계획의 `ready_to_execute=false`를 유지한다. 정확 제품·식품 정체가 불명인 나머지 영양 수치는 계속 미확인/부분으로 표시한다.
