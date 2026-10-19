@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
@@ -22,14 +23,6 @@ interface RouteContext {
   params: Promise<{
     book_id: string;
   }>;
-}
-
-interface QueryError {
-  message: string;
-}
-
-interface QueryOrderOption {
-  ascending: boolean;
 }
 
 interface RecipeBookRow {
@@ -67,75 +60,52 @@ interface RecipeStepRow {
   duration_seconds: number | null;
 }
 
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface RecipeBooksSelectQuery {
-  eq(column: string, value: string): RecipeBooksSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeBookRow>;
-}
-
-interface RecipeBookItemsSelectQuery {
-  eq(column: string, value: string): RecipeBookItemsSelectQuery;
-  limit(value: number): RecipeBookItemsSelectQuery;
-  order(column: string, options: QueryOrderOption): RecipeBookItemsSelectQuery;
-  then: ArrayResult<RecipeSourceRow>["then"];
-}
-
-interface RecipeLikesSelectQuery {
-  eq(column: string, value: string): RecipeLikesSelectQuery;
-  limit(value: number): RecipeLikesSelectQuery;
-  order(column: string, options: QueryOrderOption): RecipeLikesSelectQuery;
-  then: ArrayResult<RecipeSourceRow>["then"];
-}
-
-interface RecipesSelectQuery {
-  eq(column: string, value: string): RecipesSelectQuery;
-  in(column: string, values: string[]): RecipesSelectQuery;
-  limit(value: number): RecipesSelectQuery;
-  order(column: string, options: QueryOrderOption): RecipesSelectQuery;
-  then: ArrayResult<RecipeRow>["then"];
-}
-
-interface RecipeStepsSelectQuery {
-  in(column: string, values: string[]): RecipeStepsSelectQuery;
-  then: ArrayResult<RecipeStepRow>["then"];
-}
-
-interface RecipeBooksTable {
-  select(columns: string): RecipeBooksSelectQuery;
-}
-
-interface RecipeBookItemsTable {
-  select(columns: string): RecipeBookItemsSelectQuery;
-}
-
-interface RecipeLikesTable {
-  select(columns: string): RecipeLikesSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
-}
-
-interface RecipeStepsTable {
-  select(columns: string): RecipeStepsSelectQuery;
-}
-
-interface RecipeBookRecipesDbClient {
-  from(table: "recipe_books"): RecipeBooksTable;
-  from(table: "recipe_book_items"): RecipeBookItemsTable;
-  from(table: "recipe_likes"): RecipeLikesTable;
-  from(table: "recipes"): RecipesTable;
-  from(table: "recipe_steps"): RecipeStepsTable;
-}
+// GET projections only. The route client still owns authentication and RLS enforcement.
+export type RecipeBookRecipesDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_books: {
+        Row: { id: string; user_id: string; book_type: RecipeBookType };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_book_items: {
+        Row: { id: string; book_id: string; recipe_id: string; added_at: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_book_items_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: false;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+      recipe_likes: {
+        Row: { id: string; user_id: string; recipe_id: string; created_at: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_likes_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: false;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+      recipes: {
+        Row: { id: string; created_by: string | null; title: string; thumbnail_url: string | null;
+          tags: string[]; view_count: number; base_servings: number; created_at: string;
+          source_type: "system" | "youtube" | "manual" };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_sources: {
+        Row: { recipe_id: string; extraction_meta_json: unknown };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_sources_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: true;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+      recipe_steps: {
+        Row: { recipe_id: string; duration_seconds: number | null };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_steps_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: false;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -472,13 +442,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    RecipeBookRecipesDbClient & UserBootstrapDbClient;
-  const recipeReaderClient: RecipeBookRecipesDbClient = dbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const recipeReaderClient: RecipeBookRecipesDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -487,7 +456,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const bookResult = await readRecipeBook(dbClient, bookId);
+  const bookResult = await readRecipeBook(recipeReaderClient, bookId);
 
   if (bookResult.error || !bookResult.data) {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
