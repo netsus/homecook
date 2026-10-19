@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -15,17 +16,13 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  message: string;
-}
-
-interface ShoppingListRow {
+type ShoppingListRow = {
   id: string;
   user_id: string;
   title: string;
   date_range_start: string;
   is_completed: boolean;
-}
+};
 
 interface ShoppingListShareItemRow {
   id: string;
@@ -36,43 +33,31 @@ interface ShoppingListShareItemRow {
   sort_order: number;
 }
 
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface ShoppingListsSelectQuery {
-  eq(column: string, value: string): ShoppingListsSelectQuery;
-  maybeSingle(): MaybeSingleResult<ShoppingListRow>;
-}
-
-interface ShoppingListItemsSelectQuery {
-  eq(column: string, value: string | boolean): ShoppingListItemsSelectQuery;
-  order(column: string, options: QueryOrderOption): ShoppingListItemsSelectQuery;
-  then: ArrayResult<ShoppingListShareItemRow>["then"];
-}
-
-interface ShoppingListsTable {
-  select(columns: string): ShoppingListsSelectQuery;
-}
-
-interface ShoppingListItemsTable {
-  select(columns: string): ShoppingListItemsSelectQuery;
-}
-
-interface ShoppingShareTextDbClient {
-  from(table: "shopping_lists"): ShoppingListsTable;
-  from(table: "shopping_list_items"): ShoppingListItemsTable;
-}
+// Scope to the read projection and actual ingredient FK. SDK preserves
+// maybeSingle/list phases; no new runtime client or permission boundary.
+export type ShoppingShareTextDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      shopping_lists: {
+        Row: ShoppingListRow;
+        Insert: never; Update: never; Relationships: [];
+      };
+      shopping_list_items: {
+        Row: { id: string; shopping_list_id: string; ingredient_id: string;
+          display_text: string; is_checked: boolean; is_pantry_excluded: boolean; sort_order: number };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "shopping_list_items_ingredient_id_fkey";
+          columns: ["ingredient_id"]; isOneToOne: false;
+          referencedRelation: "ingredients"; referencedColumns: ["id"]; }];
+      };
+      ingredients: {
+        Row: { id: string; category: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -130,12 +115,12 @@ export async function GET(_request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingShareTextDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: ShoppingShareTextDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
