@@ -12,11 +12,11 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "9baadd453a56b4924894b329b0196f796f7c3e4e",
+    "baseCommit": "7d15dfe790f8cf600cb84c756ef9afe9984a212b",
     "startingCommit": "d5f9a6dae2fcac111ee4b6ad50822177f73d2494",
     "total": 105,
     "newFindings": 0,
-    "verificationState": "Local three-commit safe boundary batch only: original assertion52 assessed,9 locally resolved/43 remain. Original16358resolved/105remaining; array37/conditional25 unchanged, existing retain3 candidates and reference/explicit holds preserved. Profile/preference62 PASS and RPC143 PASS, source/code independent reviews APPROVE. Whole type/lint/verify105/new0 PASS; TS6053 from parallel temporary fixture probe resolved by sequential type rerun. Separate static gate3 existing failures reproduced on unchanged9542; normalized inventory violation lists, boundary70 and public scope same. No guard/baseline/test weakening. Actual operating9542/buildprelaunch-9542c435537f-ZlS15L/DB238 remains114; new batch not merged/deployed/auth QA. Existing permission3, held444, original49 list unknown and legacy actual completion untested. No SQL/env/credentials/policy/PIN/worker changes.",
+    "verificationState": "PR1833 merged/operating once at7d15dfe/buildprelaunch-7d15dfe790f8-MTla10/DB238. Anti105(43/37/25)/new0; original16358resolved/105remaining. Exact merge205 PASS, whole type/lint/verify/diff and independent APPROVE. Web1466 PASS/133 name-filter SKIP, build98s/static94/existingwarnings3; manifest200/unauth3 wrapped401. Fixed read-only data observer9 equal, original approval/PIN/ledger/readerFloor/plan unchanged. Existing static3FAIL preserved. Auth QA/legacy completion untested; permission3/444/separate49 unknown preserved. Protected36 origin/dirty read investigation ongoing, no silent release. SQL/settings/worker changes0; no docs-only redeploy.",
     "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
   },
   "residualRolloutObservation": {
@@ -943,7 +943,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "9b3e5f0a2f60ab796ff4b9899966582cd059c7c2",
         "reason": "users SQL/SDK consumed projection; delete handwritten query protocol, keep unknown JSON and existing JSON consumption behavior.",
         "verification": "Before52, JSON7 before/after59, native SDK3 final62 PASS; whole type/lint/verify105new0 and independent APPROVE.",
@@ -980,7 +980,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
         "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
         "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
@@ -1011,7 +1011,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
         "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
         "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
@@ -1060,7 +1060,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
         "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
         "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
@@ -1107,7 +1107,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "9b3e5f0a2f60ab796ff4b9899966582cd059c7c2",
         "reason": "users SQL/SDK consumed projection; delete handwritten query protocol, keep unknown JSON and existing JSON consumption behavior.",
         "verification": "Before52, JSON7 before/after59, native SDK3 final62 PASS; whole type/lint/verify105new0 and independent APPROVE.",
@@ -1143,7 +1143,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
         "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
         "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
@@ -1162,7 +1162,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
         "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
         "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
@@ -1181,7 +1181,7 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
         "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
         "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
@@ -2273,7 +2273,7 @@
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
       },
       "adoptedResolution": {
-        "status": "local commit; not merged or operating",
+        "status": "PR1833 merged and operating7d15dfe/buildprelaunch-7d15dfe790f8-MTla10; authenticated QA pending",
         "candidateCommit": "9baadd453a56b4924894b329b0196f796f7c3e4e",
         "reason": "Same RPC-only factory instance directly satisfies existing reader; runtime JS byte-identical. Old coordination hold reassessed for type-only reader under explicit continuation and QA release.",
         "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",

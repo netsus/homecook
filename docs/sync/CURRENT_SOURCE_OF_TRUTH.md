@@ -1,8 +1,8 @@
 # Current Source of Truth
 
-## 2026-10-20 — Anti Slop105 실제 SDK·capability 경계 로컬 묶음
+## 2026-10-20 — Anti Slop105 실제 SDK·capability 경계 운영 묶음
 
-출발 master `d5f9a6dae`에서 프로필/일반 설정·lifecycle capability·snapshot RPC를 검증/독립 리뷰한3개 로컬 커밋(source `9baadd453a56b4924894b329b0196f796f7c3e4e`)으로 정리했다. 단언9건만 해결해105(단언43·배열37·조건부25)/신규0, 원163 ID58해결/105잔여다. 통합11suite205 PASS·전체 비증분 타입/lint/verify/diff·독립 코드 검토를 통과했고 정적 기존3FAIL은 미수정9542에서도 같음을 구분한다. 잔여 단언43은 보호 범위36·계약4·명시 보류3이며 기술적 불가능으로 확대하지 않는다. 아직 머지0/운영0, 실제 앱은9542/Anti114·DB238이다. 관련 수정들을 한 번에 반영하고 기존 고정 observer의 데이터 보존 전후 대조 및 최신9542의 미검증 인증 흐름을 다음 QA에 묶는다. [전수 ID 분류·검증/실패·유지·운영 계획](../engineering/anti-slop-safe-boundary-batch-20261020.md)을 따른다. 별도49 미발견/권한3/444/legacy 미실행은 유지한다.
+**안전 경계 운영105:** PR1833 merged/operating once at7d15dfe/buildprelaunch-7d15dfe790f8-MTla10/DB238. Anti105(43/37/25)/new0; original16358resolved/105remaining. Exact merge205 PASS, whole type/lint/verify/diff and independent APPROVE. Web1466 PASS/133 name-filter SKIP, build98s/static94/existingwarnings3; manifest200/unauth3 wrapped401. Fixed read-only data observer9 equal, original approval/PIN/ledger/readerFloor/plan unchanged. Existing static3FAIL preserved. Auth QA/legacy completion untested; permission3/444/separate49 unknown preserved. Protected36 origin/dirty read investigation ongoing, no silent release. SQL/settings/worker changes0; no docs-only redeploy. [상세 기록](../engineering/anti-slop-safe-boundary-batch-20261020.md).
 
 ## 2026-10-20 — Anti Slop114 진도·활동 경계 운영 반영
 

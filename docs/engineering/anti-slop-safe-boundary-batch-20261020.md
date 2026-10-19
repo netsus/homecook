@@ -1,6 +1,6 @@
 # Anti Slop105 — 실제 SDK·내부 capability 경계 묶음
 
-출발 source는 `d5f9a6dae2fcac111ee4b6ad50822177f73d2494`, 제품 후보는 `9baadd453a56b4924894b329b0196f796f7c3e4e`다. 아직 **로컬3커밋/머지0/운영0**이며 실제 운영은9542/build `prelaunch-9542c435537f-ZlS15L`·DB238/Anti114다. 소규모 수정마다 배포하지 않고 아래 관련 변경을 한 앱 묶음으로 검증한다.
+출발 source는 `d5f9a6dae2fcac111ee4b6ad50822177f73d2494`, 제품3커밋의 최종 source는 `9baadd453a56b4924894b329b0196f796f7c3e4e`다. [PR1833](https://github.com/netsus/homecook/pull/1833)을 독립 검토 후 일반 머지한 `7d15dfe790f8cf600cb84c756ef9afe9984a212b`를 **한 번** 앱-only 배포했다. 머지1/운영1, 실제 build `prelaunch-7d15dfe790f8-MTla10`·DB238/Anti105다. 문서 후속은 앱을 재배포하지 않는다.
 
 ## 세 논리 단위와 실제 제거
 
@@ -33,12 +33,22 @@
 
 잔여4의 실제 이유는 다음과 같다. 삭제 RPC는 jsonb를 검증 없이 UserDeletePolicyResult로 가정하므로 단순 직접 대입도 같은 문제를 숨긴다. legacy auth callback2는 환경에 따라 full SDK/RPC-only를 반환하는 factory와 소비 입력 사이의 종속 capability가 타입에 없으므로 좁히는 설계가 필요하다(Cloud credential/remote 접근으로 검증하지 않는다). Turnstile1은 전역 provider의 flexible render 타입과 Round2의 compact/response-field 계약이 달라 실제 provider 계약·기존 R2 보호 범위의 검증이 먼저다. 지표용 단일 단언·타입 확장·새 adapter로 닫지 않았다.
 
-보호 범위36은 기술적 불가능/취약점/변경 가치 없음의 판정이 아니다. 원래 저장/UI/플래너·YouTube/P5 비충돌 범위의 명시적 해제와 관련 실제 데이터/상태 QA가 필요한 별도 결정이다. 명시 보류3(save444 관련2·PR1745 관련1)·기존 권한3·과거 넓은10실패·별도49 원본 미발견은 그대로다. 변경 실익이 없는 배열/own-key는 기존 유지 근거를 보존하며 숫자0을 목표로 하지 않는다.
+보호 범위36은 기술적 불가능/취약점/변경 가치 없음이나 사용자 영구 제외 판정이 아니다. 원래 지시는 병행 저장/UI/플래너 및 P5 worktree 비접촉이며, 부모의 후속 인계는 P5 freeze가 당시 파일 소유권·미커밋 충돌 방지였음을 명확히 했다. 현재 세션 종료 사실만으로 남은 dirty 변경의 수정 권한을 추론하지 않는다. 우선 원문 지시·현재 겹침·순수 타입 정리와 실제 계약 변경을 읽기 조사하며 임의 해제하지 않는다. 명시 보류3(save444 관련2·PR1745 관련1)·기존 권한3·과거 넓은10실패·별도49 원본 미발견은 그대로다. 변경 실익이 없는 배열/own-key는 기존 유지 근거를 보존하며 숫자0을 목표로 하지 않는다.
+
+## 보호36의 원문과 현재 겹침 — 읽기 조사
+
+승계 user 원문은 별도 세션의 canonical 저장/UI/플래너 및 P5 worktree를 건드리지 말라는 당시 병행 작업 지시다. 장부의 `held-scope`는 이를 승계한 파생 분류이지 별도의 영구 제품 정책이 아니다. 부모 후속 인계도 P5 대기가 파일 소유권·freeze·미커밋 충돌 방지였고 요리QA/v85 세션이 종료됐음을 명확히 했다. 종료만으로 기존 dirty를 수정할 권한은 생기지 않는다.
+
+현재 고정52 감사의 보호36은11파일(플래너/끼니/UI9·YouTube2)이다. 등록 worktree의 추적 `git diff HEAD --name-only` 읽기 대조에서 플래너9파일 겹침0, `lib/server/youtube-saved-recipes.ts`는 기존 catalog-link worktree와 겹친다. `lib/server/youtube-import.ts`는 기존 youtube-ingredient-resolution/youtube-vision-redesign/homecook-codex-vision-loop/homecook-youtube-i031-impl의 dirty와 겹친다. P5와 메인 dirty는 이11파일과 겹침0이다. 이 관측은 세션이 활성이라는 증거나 미추적/외부 저장 변경 부재 증명이 아니다. 이미 없어진 임시 worktree3곳은 조회 불가였으며 prune하지 않았다.
+
+현재 변경0을 유지한다. 플래너는 별도 깨끗한 브랜치에서 타입-only 개선과 테스트를 검토할 여지가 있지만 원문 보호 해제를 추론하지 않는다. YouTube2파일은 dirty 소유 변경을 통합/대체할지의 정확한 소유자 인계가 먼저다. state/legacy JSON/영양·수량·source 연결 의미가 달라지는 실제 설계안만 별도 계약 판단으로 올리며,36 전체를 포괄 승인받아야만 읽기 조사할 수 있다는 의미는 아니다. 명시 보류444/권한/DB·인증·worker 경계는 이 조율 문제와 별개다.
 
 ## 반영·실제 데이터·QA 경계
 
 제품 source9ba의 공식 plan은 exit0·제품5파일·SQL0·환경 키0·기존 DB 읽기 전용으로 통과했다. 이 계획은 실제 배포 성공이나 데이터 전후 일치가 아니다.
 
-단위별 독립 검토 뒤 최종 문서·원본 대응을 검토하고 draft PR로 시작한다. 관련 최종 코드만 일반 머지한 뒤 공식 앱-only DB238 경로를 한 번 사용한다. 배포 전후 기존 승인 target·backup readiness·원 ledger/readerFloor/plan·자격/정책을 검증하고, 기존 고정 observer의9개 data/catalog/control 지문을 읽기 전용 전후 관측으로 대조한다. 이는 이번 창의 보존 확인이지 원 PIN/과거 관측을 새 baseline으로 교체하거나 조회수3개 차이를 숨기는 행위가 아니다. 새 전체DB 백업·전체 복원 반복은 요구하지 않는다. 일치하지 않으면 원인을 확인하며 DB 쓰기·되돌리기·projection 제외·PIN 수정으로 통과시키지 않는다.
+제품·최종 metadata 독립 APPROVE 뒤 draft PR1833을 일반 머지했다. 정확한 merge7d에서도 통합205·전체 비증분 타입·변경 lint·verify105/new0·diff를 재확인했고 최종 source tree는 검토 head와 동일했다. 공식 앱-only DB238 배포 exit0, 선택웹1466 PASS/133 명시적 이름필터 SKIP·빌드98초/정적94/기존경고3·loaded=true다. DB238 ready·원 ledger/readerFloor48c4/planSHA·closedR2·recoveryPending=false를 유지했다. 새 manifest200·비로그인 users/me/progress/gamification3곳 wrapped401을 확인했다. 초기 잘못된3000포트 조회는 연결 거절됐고 공식3100에서 확인했으며 재배포하지 않았다.
 
-현재 위 전후 운영 관측·배포는 미실행이다. 최신9542 인증 진도·활동 흐름도 미검증으로 남겨 새 프로필/일반 설정·기존 snapshot 읽기 QA와 함께 인계한다. 기존 Chrome을 지원하는 부모가 실제 QA를 수행하며 이 작업은 세션/토큰 추출·새 로그인·신규 식사 생성·실제 삭제/격리 처리·운영 데이터 쓰기·공개 recipe detail GET을 하지 않는다. 이전 e5face 장보기 복원/read-only/수량·관측 콘솔오류0 QA와 새 앱 QA를 혼동하지 않는다. 실제 legacy 완료는 본인 기존 표본이 없어 계속 미실행이다.
+배포 전후 기존 승인 target·backup readiness를 확인한 고정 읽기 전용 observer의9개 data/catalog/control 지문은 **모두 일치**했다(19:56:33Z→20:07:13Z). [원본 전후 증거](evidence/anti-slop-safe-boundary-data-preservation-20261020.json)를 따른다. 이는 이번 배포 창의 보존 확인이지 원 PIN/과거 관측을 새 baseline으로 교체하거나 과거 조회수3개 차이를 숨기는 행위가 아니다. SQL/환경/키/인증설정/정책/PIN/worker 변경0이며 새 전체DB 백업·전체 복원 성공을 주장하지 않는다. 52단언 분류 JSON은 source9ba의 머지 전 고정 감사 기록으로 보존하며 현행 운영 관측과 구분한다.
+
+인증 진도·활동·새 프로필/일반 설정·기존 snapshot 읽기 QA는 현재7d/buildMTla10에 고정해 부모에게 인계하며 아직 미실행이다. 기존 Chrome을 지원하는 부모가 실제 QA를 수행하며 이 작업은 세션/토큰 추출·새 로그인·신규 식사 생성·실제 삭제/격리 처리·운영 데이터 쓰기·공개 recipe detail GET을 하지 않는다. 이전 e5face 장보기 복원/read-only/수량·관측 콘솔오류0 QA와 새 앱 QA를 혼동하지 않는다. 실제 legacy 완료는 본인 기존 표본이 없어 계속 미실행이다.
