@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop105 실제 SDK·capability 경계 로컬 묶음
+
+출발 master `d5f9a6dae`에서 프로필/일반 설정·lifecycle capability·snapshot RPC를 검증/독립 리뷰한3개 로컬 커밋(source `9baadd453a56b4924894b329b0196f796f7c3e4e`)으로 정리했다. 단언9건만 해결해105(단언43·배열37·조건부25)/신규0, 원163 ID58해결/105잔여다. 통합11suite205 PASS·전체 비증분 타입/lint/verify/diff·독립 코드 검토를 통과했고 정적 기존3FAIL은 미수정9542에서도 같음을 구분한다. 잔여 단언43은 보호 범위36·계약4·명시 보류3이며 기술적 불가능으로 확대하지 않는다. 아직 머지0/운영0, 실제 앱은9542/Anti114·DB238이다. 관련 수정들을 한 번에 반영하고 기존 고정 observer의 데이터 보존 전후 대조 및 최신9542의 미검증 인증 흐름을 다음 QA에 묶는다. [전수 ID 분류·검증/실패·유지·운영 계획](../engineering/anti-slop-safe-boundary-batch-20261020.md)을 따른다. 별도49 미발견/권한3/444/legacy 미실행은 유지한다.
+
 ## 2026-10-20 — Anti Slop114 진도·활동 경계 운영 반영
 
 PR1831 head `84ff8aac56bb23e62729dd8e8062f772ef77bccd`/merge `9542c435537f58f70734183e59084634a6ae2fdf`에서 진도 GET/활동 helper의 동일 SDK 직접 대입2건과 타입 대입만 감싸던 불가능 catch를 정리했다. 수정 전·후5suite40 PASS·전체 비증분 타입·변경 lint·verify114/baseline207/신규0·diff 통과, 원163 ID49해결/114잔여다. 머지1/운영1이며 공식 앱-only plan/deploy exit0·실제9542c435/build `prelaunch-9542c435537f-ZlS15L`·loaded=true·DB238 ready다. 선택웹1466 PASS/133 이름필터 SKIP·빌드 PASS(100초/정적94/기존경고3)·새 manifest200·progress/gamification GET2곳 wrapped401을 확인했다. 원readerFloor/databasePlanSha·closedR2·복구대기없음을 유지하며 SQL/환경/키/인증설정/worker/정책/PIN 변경0이다. 부모가 정확e5face의 인증 장보기 복원 QA PASS·데이터 변경0과 점유 해제를 인계했다. 이번 후보의 인증 QA·legacy 실제 완료는 미실행이다. 최종 코드·metadata 독립 APPROVE 뒤 draft 해제·일반 merge했고 문서 후속으로 앱을 재배포하지 않는다. [범위·유지 후보3·검증·보류](../engineering/anti-slop-growth-boundary-20261020.md)를 따른다. 기존 권한3/444/별도49 미발견은 유지한다.

@@ -2,6 +2,8 @@
 
 이 문서는 중복 작업을 막기 위한 구현·검증 이력이다. 제품/API/DB 계약이나 배포 승인이 아니다. `AGENTS.md`가 작업 범위와 검사 강도를 결정한다.
 
+- **안전 경계 로컬 묶음105:** source `9baadd453a56b4924894b329b0196f796f7c3e4e`의3개 검증·독립 리뷰 커밋으로 단언9 해결, 원16358해결/105잔여다. 통합205 PASS·타입/lint/verify105new0·diff 통과, 기존 정적3FAIL은 미수정9542 재현과 위반 inventory 동치로 구분했다. 아직 머지0/운영0이고 실제 앱은9542/114·DB238이다. [유형별 유지·미해결43 이유·실제 데이터와 QA 경계](anti-slop-safe-boundary-batch-20261020.md)가 최신이며 아래114는 이전 checkpoint다. 개별 수정마다 배포하지 않고 관련3커밋을 한 번 반영한다.
+
 - **진도·활동 경계 운영 반영114:** 동일 SDK 직접 타입 대입2건과 타입 단언만 감싸던 catch를 정리했다. 전후5suite40 PASS·전체 비증분 타입/lint/verify/diff·제품·metadata 독립 APPROVE 뒤 PR1831을 일반 merge9542c435537f58f70734183e59084634a6ae2fdf로 반영했다. 원163 ID49해결/114잔여, 머지1/운영1, 실제9542c435/build `prelaunch-9542c435537f-ZlS15L`·loaded=true·DB238 ready다. 공식 앱-only plan/deploy exit0·선택웹1466 PASS/133 이름필터 SKIP·빌드 PASS(100초/정적94/기존경고3)·manifest200·변경GET2곳 wrapped401·원readerFloor/plan·복구대기없음을 확인했다. 새 인증QA/legacy 실제완료는 미실행이고 SQL/설정/PIN 변경은 없다. 고정4필드 오류 문자열 체인3건은 코드 변경 없이 명시적 유지 후보 근거만 추가했다(범위보류97에 포함). [검증·운영 QA 인계·기존 보류](anti-slop-growth-boundary-20261020.md)를 따른다.
 
 ## 현재 기준과 기록 방법

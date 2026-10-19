@@ -12,10 +12,12 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "9542c435537f58f70734183e59084634a6ae2fdf",
-    "total": 114,
+    "baseCommit": "9baadd453a56b4924894b329b0196f796f7c3e4e",
+    "startingCommit": "d5f9a6dae2fcac111ee4b6ad50822177f73d2494",
+    "total": 105,
     "newFindings": 0,
-    "verificationState": "PR1831 head84ff8aac5 independently product/metadata APPROVED, normal merge9542c435537f58f70734183e59084634a6ae2fdf tree-identical. Merged1/operating1 with original ID2 resolutions. Before/after/exact merge5suite40 PASS, whole nonincremental type/lint/verify114/new0/diff PASS. Original163 frozen identity unchanged:49resolved114remaining. Actual official app-only deployment exit0 operating9542c435/buildprelaunch-9542c435537f-ZlS15L/DB238 ready. Selected web1466 PASS/133 explicit filtered SKIP/build PASS(100s/static94/existing warnings3); manifest200/progress+gamification protectedGET401, original readerFloor/plan/closedR2 and no pending recovery preserved. Parent exacte5face authenticated shopping QA passed and released occupancy; new version authenticated QA and legacy completion untested. SQL/env/auth-setting/worker/policy/PIN unchanged, no fresh fullDB backup/full data fingerprint claim. Separate49 original unknown, permission3/held444/historical10 failures retained."
+    "verificationState": "Local three-commit safe boundary batch only: original assertion52 assessed,9 locally resolved/43 remain. Original16358resolved/105remaining; array37/conditional25 unchanged, existing retain3 candidates and reference/explicit holds preserved. Profile/preference62 PASS and RPC143 PASS, source/code independent reviews APPROVE. Whole type/lint/verify105/new0 PASS; TS6053 from parallel temporary fixture probe resolved by sequential type rerun. Separate static gate3 existing failures reproduced on unchanged9542; normalized inventory violation lists, boundary70 and public scope same. No guard/baseline/test weakening. Actual operating9542/buildprelaunch-9542c435537f-ZlS15L/DB238 remains114; new batch not merged/deployed/auth QA. Existing permission3, held444, original49 list unknown and legacy actual completion untested. No SQL/env/credentials/policy/PIN/worker changes.",
+    "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
   },
   "residualRolloutObservation": {
     "historical": true,
@@ -938,8 +940,15 @@
       "line": 115,
       "column": 20,
       "snippet": "routeClient as unknown as UserSettingsDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "9b3e5f0a2f60ab796ff4b9899966582cd059c7c2",
+        "reason": "users SQL/SDK consumed projection; delete handwritten query protocol, keep unknown JSON and existing JSON consumption behavior.",
+        "verification": "Before52, JSON7 before/after59, native SDK3 final62 PASS; whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/detail.jsx::anti-slop(no-array-filter-map)::65c9340771b057d71dcf2de445ec7ab72c7418a1325bf5e65a7b760e8843cc1c#1",
@@ -968,8 +977,15 @@
       "line": 177,
       "column": 7,
       "snippet": "input.dbClient as unknown as OperationalEventsDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
+        "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
+        "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-conditional-empty-object-spread)::cbda6f702526273c0fdf1e83ba4fcb4c6318f3b1191581efea82320f55c032cb#1",
@@ -992,8 +1008,15 @@
       "line": 285,
       "column": 7,
       "snippet": "input.dbClient as unknown as OperationalEventsDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
+        "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
+        "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/wave1.jsx::anti-slop(no-array-filter-map)::f6486c9d16ab0cf9103c46050e71061a74b604037d0afbfa791b6e962722ff31#1",
@@ -1034,8 +1057,15 @@
       "line": 94,
       "column": 17,
       "snippet": "serviceRoleClient as unknown as OperationalEventsDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
+        "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
+        "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/shopping/preview/route.ts::anti-slop(no-chained-type-assertions)::7aa68f75dff384408a6f4fdbae344061cd6d0536133eabe6e1eef7a27d482271#1",
@@ -1074,8 +1104,15 @@
       "line": 158,
       "column": 20,
       "snippet": "routeClient as unknown as UsersMeDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "9b3e5f0a2f60ab796ff4b9899966582cd059c7c2",
+        "reason": "users SQL/SDK consumed projection; delete handwritten query protocol, keep unknown JSON and existing JSON consumption behavior.",
+        "verification": "Before52, JSON7 before/after59, native SDK3 final62 PASS; whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::36a5841e1ce290633f53713c29c9bcdefd8a66a06708a819b5047550f433bdc7#1",
@@ -1087,7 +1124,12 @@
       "column": 20,
       "snippet": "serviceRoleClient as unknown as UsersMeDeleteDbClient",
       "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "reassessment": {
+        "decision": "pending-contract-design",
+        "reason": "Legacy deletion RPC returns jsonb; generic SDK any plus handwritten UserDeletePolicyResult is not validated. Direct annotation merely hides the same assumption. Needs precise result contract or consumed parser/malformed compatibility decision, not metric-only deletion.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3#1",
@@ -1098,8 +1140,15 @@
       "line": 380,
       "column": 19,
       "snippet": "serviceRoleClient as unknown as OperationalEventsDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
+        "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
+        "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::621f428feacff4329e310deb68114442142d34792d6058dd29ebeddd349398a1#1",
@@ -1110,8 +1159,15 @@
       "line": 403,
       "column": 34,
       "snippet": "serviceRoleClient as unknown as OperationalEventsDbClient | null",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
+        "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
+        "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::621f428feacff4329e310deb68114442142d34792d6058dd29ebeddd349398a1#2",
@@ -1122,8 +1178,15 @@
       "line": 418,
       "column": 32,
       "snippet": "serviceRoleClient as unknown as OperationalEventsDbClient | null",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
+        "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical.",
+        "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "lib/server/user-growth-activity.ts::anti-slop(no-chained-type-assertions)::4d0a30d6891165e87b8ad349dc6c268b125b55a22ae06cd50835576b733680ab#1",
@@ -2123,7 +2186,12 @@
       "column": 22,
       "snippet": "client as unknown as UserBootstrapDbClient",
       "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "reassessment": {
+        "decision": "pending-contract-design",
+        "reason": "Factory returns full SDK in nonlocal compatibility mode but RPC-only in full-local mode. Callee rechecks env without discriminating input union; removing casts needs a capability-preserving factory/consumer design. No remote Cloud setup, new auth guard or setting change for this cleanup.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::ad71ce36f80c8301ba0b1fe7799c42e9306a140f9bcaad4490801d39661cff14#1",
@@ -2135,7 +2203,12 @@
       "column": 26,
       "snippet": "client as unknown as { from(table: \"users\"): { select(columns: string): { eq(column: string, value: string): { is(column: string, value: null): { maybeSingle(): PromiseLike<{ data: { id: string } | null; error: { message: string } | null; }>; }; }; }; }; }",
       "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "reassessment": {
+        "decision": "pending-contract-design",
+        "reason": "Factory returns full SDK in nonlocal compatibility mode but RPC-only in full-local mode. Callee rechecks env without discriminating input union; removing casts needs a capability-preserving factory/consumer design. No remote Cloud setup, new auth guard or setting change for this cleanup.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/cooking/sessions/[session_id]/complete/route.ts::anti-slop(no-chained-type-assertions)::dfdc16fbe4f15c336cd94233663b7dba171ea3dff258c662baafca9c5fc1f8bc#1",
@@ -2191,13 +2264,20 @@
       "line": 53,
       "column": 5,
       "snippet": "serviceClient as unknown as FuturePropagationRpcClient",
-      "state": "held-coordination",
+      "state": "resolved",
       "holdReason": "Direct assignment compiles, but this is the cook-mode endpoint covered by parallel weight compatibility work. Read-only comparison found no current target diff in checked weight worktrees, not proof of no future overlap. Parent coordination unavailable (thread not found); preserve until owner confirms.",
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
         "evidence": "single-assertion in-memory direct replacement, whole-program diagnostics0; coordination not confirmed",
         "limit": "Non-success compiler probes isolated each changed file semantic diagnostics; clean whole-program baseline was0. This is diagnosis, not a current production fix, exploit verdict or universal impossibility proof."
+      },
+      "adoptedResolution": {
+        "status": "local commit; not merged or operating",
+        "candidateCommit": "9baadd453a56b4924894b329b0196f796f7c3e4e",
+        "reason": "Same RPC-only factory instance directly satisfies existing reader; runtime JS byte-identical. Old coordination hold reassessed for type-only reader under explicit continuation and QA release.",
+        "verification": "Before/after lifecycle failure92 PASS, final RPC6suite143 PASS, runtime JS byte-identical, whole type/lint/verify105new0 and independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
       }
     },
     {
@@ -2281,7 +2361,12 @@
       "column": 31,
       "snippet": "window.turnstile as unknown as Provider | undefined",
       "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "reassessment": {
+        "decision": "pending-contract-verification",
+        "reason": "Existing Window provider render type accepts flexible size while Round2 replaces render options with compact/response-field false. Simply deleting double cast conceals protocol mismatch; provider contract and protected R2 scope need separate verification, no new adapter for metrics.",
+        "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+      }
     },
     {
       "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#1",

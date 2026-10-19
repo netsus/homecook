@@ -1,0 +1,379 @@
+{
+  "schema": 1,
+  "startingCommit": "d5f9a6dae2fcac111ee4b6ad50822177f73d2494",
+  "sourceCommit": "9baadd453a56b4924894b329b0196f796f7c3e4e",
+  "reviewedOriginalAssertions": 52,
+  "resolvedLocal": 9,
+  "remaining": 43,
+  "counts": {
+    "planner-owner-scope": 19,
+    "profile-preferences": 2,
+    "lifecycle-capability": 6,
+    "delete-json-contract": 1,
+    "explicit-hold": 3,
+    "legacy-dependent-factory": 2,
+    "snapshot-rpc": 1,
+    "provider-boundary": 1,
+    "youtube-owner-scope": 17
+  },
+  "groups": {
+    "profile-preferences": {
+      "decision": "resolved-local",
+      "commit": "9b3e5f0a2f60ab796ff4b9899966582cd059c7c2",
+      "reason": "users SQL/SDK consumed projection; delete handwritten query protocol, keep unknown JSON and existing JSON consumption behavior."
+    },
+    "lifecycle-capability": {
+      "decision": "resolved-local",
+      "commit": "d93c970547bd66812ddd2cd6cdef19339d4dd44a",
+      "reason": "Actual scoped factory already supplies rpc and operational_events-only from. Require capability only for two consumers; replay remains RPC-only. Runtime JS byte-identical."
+    },
+    "snapshot-rpc": {
+      "decision": "resolved-local",
+      "commit": "9baadd453a56b4924894b329b0196f796f7c3e4e",
+      "reason": "Same RPC-only factory instance directly satisfies existing reader; runtime JS byte-identical. Old coordination hold reassessed for type-only reader under explicit continuation and QA release."
+    },
+    "explicit-hold": {
+      "decision": "held-explicit",
+      "reason": "Existing save444 two IDs and PR1745 shopping service-client one ID remain explicitly held; no silent scope release."
+    },
+    "planner-owner-scope": {
+      "decision": "pending-scope-decision",
+      "reason": "Original protected planner/meals/UI scope remains. Not a proof of technical impossibility, vulnerability or no value; owner scope release and related data/state QA needed before modification."
+    },
+    "youtube-owner-scope": {
+      "decision": "pending-scope-decision",
+      "reason": "Original protected extractor/YouTube save/P5 boundary remains. No worker/release contract or parallel owner scope changed; not a technical impossibility claim."
+    },
+    "delete-json-contract": {
+      "decision": "pending-contract-design",
+      "reason": "Legacy deletion RPC returns jsonb; generic SDK any plus handwritten UserDeletePolicyResult is not validated. Direct annotation merely hides the same assumption. Needs precise result contract or consumed parser/malformed compatibility decision, not metric-only deletion."
+    },
+    "legacy-dependent-factory": {
+      "decision": "pending-contract-design",
+      "reason": "Factory returns full SDK in nonlocal compatibility mode but RPC-only in full-local mode. Callee rechecks env without discriminating input union; removing casts needs a capability-preserving factory/consumer design. No remote Cloud setup, new auth guard or setting change for this cleanup."
+    },
+    "provider-boundary": {
+      "decision": "pending-contract-verification",
+      "reason": "Existing Window provider render type accepts flexible size while Round2 replaces render options with compact/response-field false. Simply deleting double cast conceals protocol mismatch; provider contract and protected R2 scope need separate verification, no new adapter for metrics."
+    }
+  },
+  "limits": [
+    "Original163 frozen IDs are the identity source; no inferred original49 list.",
+    "Local resolved does not mean merged/operating. Starting operating9542/Anti114; new auth QA and legacy completion untested.",
+    "Array37/conditional25 are unchanged; existing retain/reference/scope states preserved."
+  ],
+  "entries": [
+    {
+      "id": "app/api/v1/product-planner-entries/route.ts::anti-slop(no-chained-type-assertions)::86a850df59c1324f7c3cc1fabd80bcad0dff8f2ebfab214518e17382a3dbbf8f#1",
+      "file": "app/api/v1/product-planner-entries/route.ts",
+      "checkpointLine": 96,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#1",
+      "file": "app/api/v1/product-planner-entries/[entry_id]/route.ts",
+      "checkpointLine": 84,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#2",
+      "file": "app/api/v1/product-planner-entries/[entry_id]/route.ts",
+      "checkpointLine": 144,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/planner/route.ts::anti-slop(no-chained-type-assertions)::dbc701ee1443a382ea4c8238f09525dd993c05dbd7eb886a8705b3e245a52d01#1",
+      "file": "app/api/v1/planner/route.ts",
+      "checkpointLine": 234,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts::anti-slop(no-chained-type-assertions)::e37acc447d4e8ad8c719ae510162a9d9770b7ea42147717d46fef54d7f7524b9#1",
+      "file": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts",
+      "checkpointLine": 21,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "checkpointLine": 235,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "checkpointLine": 269,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#2",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "checkpointLine": 317,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#2",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "checkpointLine": 351,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
+      "file": "app/api/v1/meals/route.ts",
+      "checkpointLine": 422,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::16e843117c2fadc3c91622137f1ce7bd4675d535edd60aecee60516b63f48332#1",
+      "file": "app/api/v1/meals/route.ts",
+      "checkpointLine": 649,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::d9f5207c6497f3b58132a472f7662c1ebadcb343b00a471159ce0c1e993fe9a0#1",
+      "file": "app/api/v1/meals/route.ts",
+      "checkpointLine": 671,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "file": "app/api/v1/meals/route.ts",
+      "checkpointLine": 736,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/planner/nutrition/route.ts::anti-slop(no-chained-type-assertions)::92e084546d67fd71e7919c79a5c7a7071c42750e4aeb39b29f6ac932fc35979f#1",
+      "file": "app/api/v1/planner/nutrition/route.ts",
+      "checkpointLine": 80,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/users/me/settings/route.ts::anti-slop(no-chained-type-assertions)::9a86eb7b114f8f0ca9f1ed90cebed5116e6694fbf97ecbd98d51401535c57c98#1",
+      "file": "app/api/v1/users/me/settings/route.ts",
+      "checkpointLine": 115,
+      "category": "profile-preferences"
+    },
+    {
+      "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-chained-type-assertions)::6ffeb26c3ea5844adc99e5d696e54ab8c817d988b959ca6628737fc04a45c64c#1",
+      "file": "app/api/v1/users/me/_account-generation-active.ts",
+      "checkpointLine": 177,
+      "category": "lifecycle-capability"
+    },
+    {
+      "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-chained-type-assertions)::6ffeb26c3ea5844adc99e5d696e54ab8c817d988b959ca6628737fc04a45c64c#2",
+      "file": "app/api/v1/users/me/_account-generation-active.ts",
+      "checkpointLine": 285,
+      "category": "lifecycle-capability"
+    },
+    {
+      "id": "app/api/v1/planner/columns/shared.ts::anti-slop(no-chained-type-assertions)::91ed2302347fd6bac4d9d018e4d817e65709029fb2fd3c9547c5bd9c3ad3c5ec#1",
+      "file": "app/api/v1/planner/columns/shared.ts",
+      "checkpointLine": 285,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts::anti-slop(no-chained-type-assertions)::fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3#1",
+      "file": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      "checkpointLine": 94,
+      "category": "lifecycle-capability"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::2cd700b4d3558c3e1f11e949e748e7ee8bcb4b7afa56642ec8b656fb525bb838#1",
+      "file": "app/api/v1/users/me/route.ts",
+      "checkpointLine": 158,
+      "category": "profile-preferences"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::36a5841e1ce290633f53713c29c9bcdefd8a66a06708a819b5047550f433bdc7#1",
+      "file": "app/api/v1/users/me/route.ts",
+      "checkpointLine": 360,
+      "category": "delete-json-contract"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3#1",
+      "file": "app/api/v1/users/me/route.ts",
+      "checkpointLine": 380,
+      "category": "lifecycle-capability"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::621f428feacff4329e310deb68114442142d34792d6058dd29ebeddd349398a1#1",
+      "file": "app/api/v1/users/me/route.ts",
+      "checkpointLine": 403,
+      "category": "lifecycle-capability"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::621f428feacff4329e310deb68114442142d34792d6058dd29ebeddd349398a1#2",
+      "file": "app/api/v1/users/me/route.ts",
+      "checkpointLine": 418,
+      "category": "lifecycle-capability"
+    },
+    {
+      "id": "app/api/v1/shopping/lists/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "checkpointLine": 1082,
+      "category": "explicit-hold"
+    },
+    {
+      "id": "app/api/v1/recipes/[id]/save/route.ts::anti-slop(no-chained-type-assertions)::1d4ed556adf3eac796f34013d7c35a6a76c4b33cb52b3bf5cae4cbae49b88b50#1",
+      "file": "app/api/v1/recipes/[id]/save/route.ts",
+      "checkpointLine": 354,
+      "category": "explicit-hold"
+    },
+    {
+      "id": "app/api/v1/recipes/[id]/save/route.ts::anti-slop(no-chained-type-assertions)::ad2bfadee955fec6270d46984716065dc2bd503db54ad6dc214ae0e06fb0a760#1",
+      "file": "app/api/v1/recipes/[id]/save/route.ts",
+      "checkpointLine": 368,
+      "category": "explicit-hold"
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::64752f1969cb456f9fd8d564dc2359492240ce45f46c4962895b480ad08ccac5#1",
+      "file": "lib/supabase/server.ts",
+      "checkpointLine": 646,
+      "category": "legacy-dependent-factory"
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::ad71ce36f80c8301ba0b1fe7799c42e9306a140f9bcaad4490801d39661cff14#1",
+      "file": "lib/supabase/server.ts",
+      "checkpointLine": 647,
+      "category": "legacy-dependent-factory"
+    },
+    {
+      "id": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "checkpointLine": 53,
+      "category": "snapshot-rpc"
+    },
+    {
+      "id": "components/marketing/round2/round2-turnstile.tsx::anti-slop(no-chained-type-assertions)::9e2a0750b99b350e4bb98d094219cdfbbf3c9b2f5a2453cb1b46fc8c98d1fff2#1",
+      "file": "components/marketing/round2/round2-turnstile.tsx",
+      "checkpointLine": 11,
+      "category": "provider-boundary"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#1",
+      "file": "components/planner/meal-log-screen.tsx",
+      "checkpointLine": 121,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#2",
+      "file": "components/planner/meal-log-screen.tsx",
+      "checkpointLine": 133,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#3",
+      "file": "components/planner/meal-log-screen.tsx",
+      "checkpointLine": 142,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#4",
+      "file": "components/planner/meal-log-screen.tsx",
+      "checkpointLine": 147,
+      "category": "planner-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-saved-recipes.ts::anti-slop(no-chained-type-assertions)::5a36c46def2ed4f85e2e1af41ef3959b67ad71c17d2f10abf55fbf47550fbe03#1",
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "checkpointLine": 256,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::cc6c925ac6aa2f56d5248ee67918751cdf452bd3d0da012119770ab573722b16#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 567,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 9398,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 9450,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::e1db37d04ff6244ebac409ede6b65b088461e0e775e21f102e62e066ccce7889#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 9455,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#2",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 9673,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#3",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 9850,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::420b7c93e579798d38a80482548997ac918e8ca4c752a1a0ae25ccaa463ec3f1#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 10631,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#2",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 10701,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::e1db37d04ff6244ebac409ede6b65b088461e0e775e21f102e62e066ccce7889#2",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 10706,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::30b6f3c5e18c13720d24cfa5c04c8a9e5f2aada95d61d06ac25a22748ddb792d#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 10761,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::7504d79179b148302738b40b37ac0fb91764a14cc58d0df3d7dcf5e2e1a00c04#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 10809,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#3",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 10868,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::b5d30639b6c87c3d09cd95ec3c502b152e05dc9984bd6c06e37cffcac7705644#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 10902,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::72794cb52a80a24933131f9e382bf574d3b55cf5c15371e800367bb6fc5cb4b4#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 11000,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::92da625072f8e7b97a9f5e9b9df5f3628375c2855fd87776c2d4d727c2f74b0c#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 11067,
+      "category": "youtube-owner-scope"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::7b4229720f23313ef9315ed7760408c2fdc40bbb9021f9fe961fb06e49c8b5c8#1",
+      "file": "lib/server/youtube-import.ts",
+      "checkpointLine": 11103,
+      "category": "youtube-owner-scope"
+    }
+  ]
+}

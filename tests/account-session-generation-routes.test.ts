@@ -14,7 +14,12 @@ const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((_error: unknown, fallbackMessage: string) => {
   return fallbackMessage;
 });
-const recordOperationalEvent = vi.fn(async () => true);
+const recordOperationalEvent = vi.fn<typeof import("@/lib/server/admin-events").recordOperationalEvent>(async () => true);
+const operationalInsert = vi.fn<(values: Record<string, unknown>) => Promise<{ error: null }>>(async () => ({ error: null }));
+const operationalFrom = vi.fn((table: string) => {
+  if (table !== "operational_events") throw new Error(`unexpected lifecycle table: ${table}`);
+  return { insert: operationalInsert };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createAccountLifecycleInternalRpcClient: createServiceRoleClient,
@@ -38,6 +43,12 @@ vi.mock("@/lib/server/admin-events", () => ({
 interface QueryResult<T> {
   data: T | null;
   error: { message: string } | null;
+}
+
+function createLifecycleTestClient(
+  rpc: (name: string, args: Record<string, unknown>) => PromiseLike<QueryResult<unknown>>,
+) {
+  return { rpc, from: operationalFrom };
 }
 
 function createCapabilityRpc(
@@ -128,6 +139,8 @@ describe("account session generation F0 routes", () => {
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     recordOperationalEvent.mockClear();
+    operationalFrom.mockClear();
+    operationalInsert.mockReset().mockResolvedValue({ error: null });
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     createSessionAuthorityClient.mockReturnValue({
@@ -545,7 +558,7 @@ describe("account session generation F0 routes", () => {
     const { executeAccountGenerationDelete } = await importAccountGenerationActiveAdapter();
 
     const response = await executeAccountGenerationDelete({
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
       request: new Request("http://localhost:3000/api/v1/users/me", {
         method: "DELETE",
@@ -575,6 +588,28 @@ describe("account session generation F0 routes", () => {
     });
   });
 
+  it.each(["delete", "activate"] as const)("records an unexpected %s failure through the same lifecycle client", async (action) => {
+    const actual = await vi.importActual<typeof import("@/lib/server/admin-events")>("@/lib/server/admin-events");
+    recordOperationalEvent.mockImplementationOnce(actual.recordOperationalEvent);
+    const rpc = vi.fn(async () => ({ data: null, error: { code: "XX000", message: "fixture unexpected" } }));
+    const dbClient = createLifecycleTestClient(rpc);
+    const adapter = await importAccountGenerationActiveAdapter();
+    const input = { dbClient, idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+      request: new Request("http://localhost/api/v1/users/me"),
+      sessionAuthority: { ownerUuid: "550e8400-e29b-41d4-a716-446655440001",
+        authIdentityCreatedAt: "2026-07-23T00:00:00Z", sessionKeyHash: "a".repeat(64), hmacKeyVersion: 1 } };
+    const response = action === "delete" ? await adapter.executeAccountGenerationDelete(input)
+      : await adapter.executeAccountQuarantineResolution({ ...input, action, nickname: "집밥러" });
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ success: false, data: null, error: { code: "INTERNAL_ERROR" } });
+    expect(recordOperationalEvent).toHaveBeenCalledWith(dbClient, expect.objectContaining({ http_status: 500 }));
+    expect(operationalFrom).toHaveBeenCalledExactlyOnceWith("operational_events");
+    expect(operationalInsert).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      event_type: action === "delete" ? "account_generation_delete_failure" : "account_quarantine_resolution_failure",
+      actor_user_id: input.sessionAuthority.ownerUuid, target_user_id: input.sessionAuthority.ownerUuid, http_status: 500,
+    }));
+  });
+
   it("maps a protected delete replay conflict to the exact public error", async () => {
     const rpc = vi.fn(async () => ({
       data: null,
@@ -586,7 +621,7 @@ describe("account session generation F0 routes", () => {
     const { executeAccountGenerationDelete } = await importAccountGenerationActiveAdapter();
 
     const response = await executeAccountGenerationDelete({
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
       request: new Request("http://localhost:3000/api/v1/users/me", {
         method: "DELETE",
@@ -627,7 +662,7 @@ describe("account session generation F0 routes", () => {
       await importAccountGenerationActiveAdapter();
 
     const response = await executeAccountGenerationDelete({
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
       request: new Request("http://localhost:3000/api/v1/users/me", {
         method: "DELETE",
@@ -657,7 +692,7 @@ describe("account session generation F0 routes", () => {
     const { executeAccountGenerationDelete } = await importAccountGenerationActiveAdapter();
 
     const response = await executeAccountGenerationDelete({
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
       request: new Request("http://localhost:3000/api/v1/users/me", {
         method: "DELETE",
@@ -1337,7 +1372,7 @@ describe("account session generation F0 routes", () => {
 
     const response = await executeAccountQuarantineResolution({
       action: "activate",
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440010",
       nickname: "집밥러",
       request: new Request(
@@ -1379,7 +1414,7 @@ describe("account session generation F0 routes", () => {
     const { executeAccountQuarantineResolution } = await importAccountGenerationActiveAdapter();
     const response = await executeAccountQuarantineResolution({
       action: "activate",
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440010",
       nickname: "무먹러",
       request: new Request("http://localhost/api/v1/users/me/cutover-quarantine-resolution"),
@@ -1407,7 +1442,7 @@ describe("account session generation F0 routes", () => {
 
     const response = await executeAccountQuarantineResolution({
       action: "delete",
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440010",
       nickname: null,
       request: new Request(
@@ -1443,7 +1478,7 @@ describe("account session generation F0 routes", () => {
 
     const response = await executeAccountQuarantineResolution({
       action: "delete",
-      dbClient: { rpc },
+      dbClient: createLifecycleTestClient(rpc),
       idempotencyKey: "550e8400-e29b-41d4-a716-446655440010",
       nickname: null,
       request: new Request(

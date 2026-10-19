@@ -1,5 +1,5 @@
 import { fail } from "@/lib/api/response";
-import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
+import { recordOperationalEvent } from "@/lib/server/admin-events";
 import {
   createAccountLifecycleInternalRpcClient,
   createRouteHandlerClient,
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   if (!verifiedSession.ok) {
     return failClosedQuarantineResolution({
       action: parsedRequest.action,
-      dbClient: serviceRoleClient as unknown as OperationalEventsDbClient,
+      dbClient: serviceRoleClient,
       request,
       userId: user.id,
     });
