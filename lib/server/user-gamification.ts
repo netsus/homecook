@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserGamificationProjectionWriter } from "@/lib/server/user-gamification-projection";
 import {
   getUserProgressGrade,
@@ -201,135 +202,68 @@ interface UserProgressNotificationInsert {
   created_at: string;
 }
 
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
+type BadgeAwardReadRow = { [Key in keyof UserBadgeAwardRow]: UserBadgeAwardRow[Key] } & {
+  id: string; user_id: string; source_event_id: string | null; idempotency_key: string;
+};
+type AchievementAwardReadRow = { [Key in keyof UserAchievementAwardRow]: UserAchievementAwardRow[Key] } & {
+  id: string; user_id: string; source_event_id: string | null;
+  source_activity_id: string | null; idempotency_key: string;
+};
+type QuestProgressReadRow = Omit<UserQuestProgressRow, "source_event_id"> & {
+  id: string; user_id: string; source_event_id: string | null;
+};
+type NotificationReadRow = Omit<UserProgressNotificationRow,
+  "priority" | "delivery_channel" | "toast_eligible" | "group_key"> & {
+  user_id: string; notification_key: string; source_event_id: string | null;
+  priority: number; delivery_channel: UserGamificationNotificationDeliveryChannel;
+  toast_eligible: boolean; group_key: string | null;
+};
+type ActivityReadRow = Omit<UserGrowthActivityEventRow, "id" | "category" | "occurred_at"> & {
+  id: string; user_id: string; category: string; occurred_at: string;
+};
 
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface InsertSelectQuery<T> {
-  maybeSingle(): MaybeSingleResult<T>;
-}
-
-interface InsertQuery<T> {
-  select(columns: string): InsertSelectQuery<T>;
-}
-
-interface UpsertSelectQuery<T> {
-  maybeSingle(): MaybeSingleResult<T>;
-}
-
-interface UpsertQuery<T> {
-  select(columns: string): UpsertSelectQuery<T>;
-}
-
-interface BadgeAwardsSelectQuery {
-  eq(column: string, value: string): BadgeAwardsSelectQuery;
-  then: ArrayResult<UserBadgeAwardRow>["then"];
-}
-
-interface AchievementAwardsSelectQuery {
-  eq(column: string, value: string): AchievementAwardsSelectQuery;
-  then: ArrayResult<UserAchievementAwardRow>["then"];
-}
-
-interface QuestProgressSelectQuery {
-  eq(column: string, value: string): QuestProgressSelectQuery;
-  then: ArrayResult<UserQuestProgressRow>["then"];
-}
-
-interface GrowthActivitySelectQuery {
-  eq(column: string, value: string): GrowthActivitySelectQuery;
-  in(column: string, values: string[]): GrowthActivitySelectQuery;
-  then: ArrayResult<UserGrowthActivityEventRow>["then"];
-}
-
-interface CountFilterQuery {
-  eq(column: string, value: string | boolean): CountFilterQuery;
-  in(column: string, values: string[]): CountFilterQuery;
-  then: PromiseLike<{
-    data: null;
-    error: QueryError | null;
-    count: number | null;
-  }>["then"];
-}
-
-interface NotificationSelectQuery {
-  eq(column: string, value: string): NotificationSelectQuery;
-  is(column: string, value: null): NotificationSelectQuery;
-  in(column: string, values: string[]): NotificationSelectQuery;
-  lt(column: string, value: string): NotificationSelectQuery;
-  or(expression: string): NotificationSelectQuery;
-  order(column: string, options: { ascending: boolean }): NotificationSelectQuery;
-  limit(count: number): NotificationSelectQuery;
-  then: ArrayResult<UserProgressNotificationRow>["then"];
-}
-
-interface NotificationUpdateFilterQuery {
-  eq(column: string, value: string): NotificationUpdateFilterQuery;
-  in(column: string, values: string[]): NotificationUpdateFilterQuery;
-  select(columns: string): ArrayResult<NotificationSeenUpdateRow>;
-}
-
-interface BadgeAwardUpdateFilterQuery {
-  eq(column: string, value: string): BadgeAwardUpdateFilterQuery;
-  in(column: string, values: string[]): BadgeAwardUpdateFilterQuery;
-  select(columns: string): ArrayResult<{ badge_key: string }>;
-}
-
-interface AchievementAwardUpdateFilterQuery {
-  eq(column: string, value: string): AchievementAwardUpdateFilterQuery;
-  in(column: string, values: string[]): AchievementAwardUpdateFilterQuery;
-  select(columns: string): ArrayResult<{ achievement_key: string }>;
-}
-
-interface BadgeAwardsTable {
-  insert(values: UserBadgeAwardInsert): InsertQuery<UserBadgeAwardRow>;
-  select(columns: string): BadgeAwardsSelectQuery;
-  update(values: { seen_at: string }): BadgeAwardUpdateFilterQuery;
-}
-
-interface AchievementAwardsTable {
-  insert(values: UserAchievementAwardInsert): InsertQuery<UserAchievementAwardRow>;
-  select(columns: string): AchievementAwardsSelectQuery;
-  update(values: { seen_at: string }): AchievementAwardUpdateFilterQuery;
-}
-
-interface QuestProgressTable {
-  select(columns: string): QuestProgressSelectQuery;
-  upsert(
-    values: UserQuestProgressUpsert,
-    options: { onConflict: "user_id,quest_key" },
-  ): UpsertQuery<UserQuestProgressRow>;
-}
-
-interface GrowthActivityTable {
-  select(columns: string): GrowthActivitySelectQuery;
-}
-
-interface CountTable {
-  select(columns: string, options: { count: "exact"; head: true }): CountFilterQuery;
-}
-
-interface NotificationsTable {
-  insert(values: UserProgressNotificationInsert): InsertQuery<{ id: string }>;
-  select(columns: string): NotificationSelectQuery;
-  update(values: { seen_at: string }): NotificationUpdateFilterQuery;
-}
-
-export interface UserGamificationDbClient {
-  from(table: "user_badge_awards"): BadgeAwardsTable;
-  from(table: "user_achievement_awards"): AchievementAwardsTable;
-  from(table: "user_quest_progress"): QuestProgressTable;
-  from(table: "user_progress_notifications"): NotificationsTable;
-  from(table: "user_growth_activity_events"): GrowthActivityTable;
-  from(table: "shopping_lists"): CountTable;
-  from(table: "recipes"): CountTable;
-}
+// Consumed columns/payloads only, not a generated DB schema or runtime grant.
+// Native builders preserve select/filter phases; no joins are consumed here.
+// Insert/Update never does not hide SDK delete(), nor make the client read-only.
+export type UserGamificationDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      user_badge_awards: {
+        Row: BadgeAwardReadRow;
+        Insert: { [Key in keyof UserBadgeAwardInsert]: UserBadgeAwardInsert[Key] };
+        Update: { seen_at: string }; Relationships: [];
+      };
+      user_achievement_awards: {
+        Row: AchievementAwardReadRow;
+        Insert: { [Key in keyof UserAchievementAwardInsert]: UserAchievementAwardInsert[Key] };
+        Update: { seen_at: string }; Relationships: [];
+      };
+      user_quest_progress: {
+        Row: QuestProgressReadRow;
+        Insert: { [Key in keyof UserQuestProgressUpsert]: UserQuestProgressUpsert[Key] };
+        Update: { [Key in keyof UserQuestProgressUpsert]: UserQuestProgressUpsert[Key] };
+        Relationships: [];
+      };
+      user_progress_notifications: {
+        Row: NotificationReadRow;
+        Insert: { [Key in keyof UserProgressNotificationInsert]: UserProgressNotificationInsert[Key] };
+        Update: { seen_at: string }; Relationships: [];
+      };
+      user_growth_activity_events: {
+        Row: ActivityReadRow; Insert: never; Update: never; Relationships: [];
+      };
+      shopping_lists: {
+        Row: { id: string; user_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; created_by: string | null; source_type: "system" | "youtube" | "manual" };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 export const USER_NOTIFICATION_PRIORITIES: Record<UserGamificationNotificationType, number> = {
   level_up: 1,

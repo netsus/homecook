@@ -1,5 +1,7 @@
 # Anti Slop 후속 — 로컬 Progress 경계·P5 인계 조사
 
+이 문서는 `e823fbc34`·`9887d303c` 선행 후보를 만들 당시의 기록이다. 아래 운영 상태·인계 질문·검사 수치는 그 시점의 이력이며 현재 배포나 작업 잠금으로 해석하지 않는다. 후속 native Gamification 계약은 [별도 로컬 기록](anti-slop-gamification-native-local-20261020.md)에서 추적한다. 후속 worktree에는 이 두 커밋만 재사용했고, 과거 실패 실험 worktree는 수정하지 않았다.
+
 상태: **로컬 검증·독립 리뷰 완료, 미머지·미배포**. 기준은 `origin/master d90af7a976392eb052a1d6557d3ab8c2bebb7221`이다. 운영 `eb7df156d24b361a0e91b17345522cd1b15f05b1`의 인증 QA는 부모의 지원 Chrome 세션이 담당하며, 이 작업에서는 운영/DB/자격/PIN/worker/정책을 읽거나 변경하지 않았다. push/PR/머지/배포도 실행하지 않았다.
 
 ## TS2589의 최소 원인과 국소 수정
