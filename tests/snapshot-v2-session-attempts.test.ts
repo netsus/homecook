@@ -266,6 +266,27 @@ describe("snapshot-v2 session attempts public contract", () => {
     });
   });
 
+  it("merges execution quantities with the authorized label absent from actual storage rows", async () => {
+    const stored = { ingredient_id: ingredientId, row_key: pantryItemId, food_product_id: null,
+      food_product_nutrition_version_id: null, amount: 100, unit: "g", ingredient_type: "QUANT", scalable: true, display_text: null };
+    const mode = { session_id: sessionId, contract_version: "snapshot_v2", mode: "standalone", status: "in_progress",
+      recipe: { id: recipeId, title: "실행 검증", base_servings: 2, cooking_servings: 4,
+        ingredients: [{ ...stored, standard_name: "우유" }], steps: [] }, pantry_candidates: [] };
+    const { rpc } = setupAuthorizedRpc({ data: mode, error: null });
+    const state = { revision: 0, snapshot_id: recipeId, base_servings: 2, cooking_servings: 4,
+      original_rows: [stored], rows: [stored], steps: [], nutrition_snapshot: null, prediction: null };
+    const { GET } = await importCookModeRoute();
+    for (const edited of [false, true]) {
+      rpc.mockResolvedValueOnce({ data: mode, error: null }).mockResolvedValueOnce({ data: edited ? {
+        ...state, revision: 1, rows: [{ ...stored, amount: 190, scalable: false }],
+      } : state, error: null });
+      const response = await GET(new Request(`http://localhost/api/v1/cooking/session-attempts/${sessionId}/cook-mode`,
+        { headers: { "X-Homecook-Execution-Quantities": "execution-v1" } }), context());
+      expect(response.status).toBe(200);
+      expect((await response.json()).data.recipe.ingredients[0]).toMatchObject({ standard_name: "우유", amount: edited ? 190 : 200 });
+    }
+  });
+
   it("preserves pinned product labels through the actual session-attempt cook-mode projector", async () => {
     setupAuthorizedRpc({ data: {
       session_id: sessionId, contract_version: "snapshot_v2", mode: "standalone", status: "in_progress",
@@ -384,7 +405,7 @@ describe("snapshot-v2 session attempts public contract", () => {
         mode: "planner",
         status: "in_progress",
         recipe,
-        pantry_candidates: [pantryCandidate],
+        pantry_candidates: [{ ...pantryCandidate, source_kind: "food_product" }],
       },
       error: null,
     });
@@ -392,7 +413,7 @@ describe("snapshot-v2 session attempts public contract", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it("reuses CookingModeRecipe, scales product labels, and strips raw internal snapshot food fields", async () => {
+  it("reuses CookingModeRecipe and retains pinned product provenance while stripping unprojected metadata", async () => {
     const { rpc } = setupAuthorizedRpc({
       data: {
         session_id: sessionId,
@@ -469,6 +490,11 @@ describe("snapshot-v2 session attempts public contract", () => {
             {
               ingredient_id: ingredientId,
               standard_name: "내부 브랜드 · 내부 상품명",
+              source_kind: "food_product",
+              food_product_id: productId,
+              food_product_nutrition_version_id: productVersionId,
+              food_product_name: "내부 상품명",
+              food_product_brand: "내부 브랜드",
               amount: 200,
               unit: "g",
               display_text: "내부 브랜드 · 내부 상품명 200g",
@@ -486,16 +512,12 @@ describe("snapshot-v2 session attempts public contract", () => {
                 code: "boil",
                 label: "끓이기",
                 color_key: "boil",
-                category_code: undefined,
-                category_label: undefined,
               },
               cooking_methods: [
                 {
                   code: "boil",
                   label: "끓이기",
                   color_key: "boil",
-                  category_code: undefined,
-                  category_label: undefined,
                 },
               ],
               ingredients_used: [ingredientId],

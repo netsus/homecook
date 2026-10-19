@@ -94,6 +94,21 @@ export async function calculateExecutionQuantities(input: {
   return { nutrition, nutritionSnapshot, prediction: evidence };
 }
 
+/** Snapshot storage omits display names. Reuse only the authorized reader's
+ * matching row label; quantities and immutable source identity stay frozen. */
+export function projectExecutionQuantityRows(rows: readonly Record<string, unknown>[], labelled: unknown): Record<string, unknown>[] | null {
+  if (!Array.isArray(labelled) || rows.length !== labelled.length) return null;
+  const identity = ["row_key", "ingredient_id", "food_product_id", "food_product_nutrition_version_id"];
+  const result: Record<string, unknown>[] = [];
+  for (const [index, row] of rows.entries()) {
+    const source: unknown = labelled[index];
+    if (!record(source) || typeof source.standard_name !== "string"
+      || identity.some(key => (row[key] ?? null) !== (source[key] ?? null))) return null;
+    result.push({ ...row, standard_name: source.standard_name });
+  }
+  return result;
+}
+
 export interface CookingExecutionState {
   revision: number; snapshot_id: string; base_servings: number; cooking_servings: number;
   original_rows: unknown[]; rows: Record<string, unknown>[]; steps: unknown[];
