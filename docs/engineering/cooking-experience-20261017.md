@@ -284,3 +284,29 @@ core의 수정 전masterd55f20562와 현재14464a83c를 독립 checkout에서 �
 표지 origin 공백만 추가 최소 수정해 PR1793(`4446d01fc`)으로 병합했다. same-origin GET은 매 요청 현재 책 소유권/registry/path/state와 파일한도를 확인하며 reader 상대경로도 유지한다. 관련57 PASS·독립57 PASS·type/lint/build0. 실제auth/Storage/Chrome·운영반영0이다. Anti Slop는 기준master와같은 기존5개로exit1/신규표지0/baseline변경0이다.
 
 초기133개 최신분할은 최소수정3·runtime재머지불필요75·실험8·정책/owner보류23·추가조사24이며 미착수0이다. ACK동일3개만 새server확장보류로 옮겼고 기존실험8/정책20은 활성화0이다. 필요한변경전체/운영완료는false다. core는수정전d55f20562·중간14464a83c·최종4446d01fc 모두67 PASS/2동일기대FAIL이며 마지막실패본문도정확동일하다. 현재잠금에서독립실행가능한조사범위는끝났고 표의source/worker/catalog/운영조건을따라재개한다.
+
+## 2026-10-19 — 실행분 reader의 합성 PostgREST 회귀 (로컬 후보)
+
+부모 지정 master `f9b7499a71d106ee29cd89910b8c86b6e21eae28`에서 원233/234를 그대로 적용하고 실제 PostgREST POST RPC를 호출했다. `read_cooking_execution_quantities`가 STABLE이라 요청 트랜잭션이 read-only가 되고, 변경하지 않은 세션 권위 함수의 `SELECT FOR SHARE`가 `405/25006`으로 실패한다. 직접 SQL의 read-write 호출만 확인했던 기존25개 회귀와 다른 경계다.
+
+최소 후속 migration `20261019090000_cooking_execution_reader_transaction.sql`은 정확한7인자 함수에 `ALTER FUNCTION … VOLATILE`만 적용한다. 원233/234·권위 함수·잠금·scope alias·권한을 재작성하지 않는다. 기존 schema232에서 원233→234→이번 후속 순서로 적용하는 후보이며, 과거 승인/postimage를 이번 변경으로 덮어쓰지 않는다.
+
+검증 명령은 `node scripts/run-cooking-execution-reader-http.mjs`다. 기존 hash 고정 schema-only228 archive+원229–232에서153테이블/0행과 기존109함수 inventory 차이0을 확인한 뒤 원233/234를 적용한다. 운영 역할 dump는 없어 합성 NOLOGIN 역할·테스트 계정·무작위 일시 JWT를 사용했다. PostgreSQL17과 PostgREST14.12는 로컬 digest 고정 이미지, network-none 공유 namespace/호스트 포트0/mount0이고 외부 요청·운영 데이터·운영 연결0이다.
+
+수정 전405/25006 재현 후 수정 뒤16개 검사 PASS: 소유자 revision0/1 HTTP200, 실행분190g/원본300g 분리, 재조회 무변경, 타인·stale·철회·탈퇴 중·잘못된 키버전 거절, anon/authenticated 실행 거절, SQL scope의 정확POST 허용과 잘못된scope/GET 거절, 명시read-only의 잠금 거절 유지, 후속ALTER 재적용 멱등성이다. 수정 전후 모든 public/private 함수의 `pg_proc` 속성 전체를 비교해 대상의 volatility만s→v이고 raw본문/OID/owner/ACL/config/security와 다른함수는 같다. private 실행분 테이블ACL/RLS도 전후 동일하다. revision1 영양/무게 payload는 reader 투영용 합성 marker이며 영양 계산이나 저장 RPC의 추가 검증으로 세지 않는다. 생성한 컨테이너 둘과 일시 JWT 파일의 정리도 확인한다.
+
+변경 스크립트의 Node syntax/ESLint와 독립 읽기 리뷰를 수행했다. Anti Slop 전체 명령은 기존 제품5개 baseline 초과 때문에 실패하며 이번 SQL/검증 스크립트가 그 자동 검사 대상 제품 경로를 바꾸지는 않는다. baseline은 유지한다. 제품 타입/UI 변경이 없어 전체typecheck/build/Chrome는 이번 경계 검사에서 재실행하지 않았다.
+
+운영 동등성·현재 운영 역할/ACL·실제 인증/웹→RPC 전체 흐름은 미완료다. 앞선 합성 HTTP에는 pre-request를 연결하지 않았으며 scope dispatcher는 별도 SQL 경계로만 확인했다. 당시 조회한 옛 함수명의 부재를 현재 pre-request 부재로 해석하지 않는다. `run-cooking-experience-schema232-postgres.mjs`와 기존 postimage는 원233/234 역사 검증으로 보존했고, 후속 파일까지 자동 수용하도록 보호 목록을 완화하지 않았다. 실제 배포 사전 검증에서는 후속을 명시한 실행 순서와 현재 운영232 전체 동등성을 별도로 확인해야 한다. 이 합성 회귀 실행의 운영 접근/쓰기·배포와 원격 push/PR/머지는0이다. 이후 허용된 운영 구조 관찰은 다음 절에 구분한다.
+
+## 2026-10-19 — 현재 운영 구조 사전 관찰과 추출 차단
+
+부모가 후속으로 허용한 기존 읽기 경로에서 DB232 승인 review의 정확 SHA·config bytes를 확인하고 `createRecordingDockerAdapter.inspect/query`로 현재 full-local 대상을 관찰했다. PostgreSQL17.6/원장232·역할36개·비밀번호 없는 역할 속성/멤버십·허용한 role setting만 읽었고 transaction_read_only=on 및 전후 보호 catalog 지문 동일을 확인했다. 개인 행 조회·데이터 내보내기·운영 쓰기·자격 발급/만료 변경·gen50 실행·R2/lead/C05 변경0이다.
+
+현재 authenticator의 pre-request는 `public.verify_full_local_postgrest_request_authority`다. 앞선 테스트가 확인했던 `public.verify_hybrid_request_authority_pre_request`는 현재 이름이 아니므로, 그 이름의 부재를 실제 pre-request 부재로 해석하지 않는다. 합성 postgres는 SUPERUSER였으나 현재 postgres는 NOSUPERUSER다. 앞선16PASS는 여전히 기술적 HTTP 잠금 경계만 증명하며 현재 역할·ACL 동등성으로 승격하지 않는다.
+
+기존 readiness의 메타데이터상 백업은2026-10-14T21:22:11Z, 복원 확인은21:29:35Z이며 관찰 시 약107시간 전이다. archive/off-Mac 사본의 존재만 확인했고 HMAC/복원 검증을 새로 수행하지 않았다.24시간 신선도와 현재 데이터 복구 가능성이 증명되지 않아 운영 mutation 준비는false다. 새 백업·서비스 정지·전체 복원은 이번 범위에서 실행하지 않았다.
+
+exact 검증 대상에 기존 `pg_dump --schema-only` 경로와 read-only PGOPTIONS를 사용해 새0700 fixture 입력을 만들려던 명령은 자동 승인 검토가 실행 전에 거절했다. 이유는 “현재 작업은 운영DB에 연결하지 않는 범위이며 read-only 추출도 제한 위반”이었다. 해당 명령은 실행0/재시도0/불확실 결과0이고 다른 추출 경로로 우회하지 않았다. 따라서 현재 구조 전체 복제·역할/ACL/pre-request 동등성·실제233→234→235 PostgREST 검증은 차단 상태다. [정확한 관찰·차이·백업 한계·차단](data/cooking-deployment-preflight-20261019.json).
+
+로컬 최소 수정/회귀/보고서는 현재 master 기반 커밋으로 보존한다. 실제 DB 반영 전에 새233/234/235의 exact source·적용 전 원장/구조·승인 후 postimage·현재 백업/복구 증거와 부모 직렬화가 필요하다. 기존 빠른 DB 분류기/보호 allowlist를 이번 SQL을 수용하도록 완화하지 않는다. 원격 push/PR/머지·운영 DB 쓰기·웹/worker 배포·전체 웹 운영QA 통과 주장은 없다.

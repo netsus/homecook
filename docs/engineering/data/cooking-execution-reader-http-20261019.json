@@ -1,0 +1,121 @@
+{
+  "schema": "homecook.execution-reader-http.v1",
+  "runId": "f99f401e222c1905a95432b314c6b8ee",
+  "status": "PASS",
+  "network": "none",
+  "productionConnections": 0,
+  "applicationDataRestored": false,
+  "migrations": [
+    {
+      "filename": "20261014225000_recipe_nutrition_quantity_v4_warning_contract.sql",
+      "sha256": "a03d44504bc0c318bbcc399c9ef563d2cdcd7adc79ebdb0314846b981fd89bdd"
+    },
+    {
+      "filename": "20261014225200_recipe_snapshot_reason_identity.sql",
+      "sha256": "b6050c12e60594267908b89ff02cff0c0344a52ccb79dc9a88d21e3c57e8fe66"
+    },
+    {
+      "filename": "20261014225300_recipe_future_patch_http_replay.sql",
+      "sha256": "aed773e0d27e6b6dd4af8e65fb933d73c89927faef1d1d36804eec8476fed9c7"
+    },
+    {
+      "filename": "20261015100000_recipe_future_request_role.sql",
+      "sha256": "2322ccf737382e9738aa2c3d5cb50531c769c1a7902e2f621c8d378f9ce1505e"
+    },
+    {
+      "filename": "20261017210000_cooked_weight_mass_fallback.sql",
+      "sha256": "9709397e9031ca28a1ae6dbb934502ef9092ca7bc0d6ba96d568121672ac7f2e"
+    },
+    {
+      "filename": "20261017220000_cooking_execution_quantities.sql",
+      "sha256": "34b2947952f4eedb55234ddf330ca0029c080d7c8d887542e8880a56106cbaa6"
+    }
+  ],
+  "tests": [
+    "owner baseline reader HTTP200",
+    "authenticated cannot execute reader",
+    "anon cannot execute reader",
+    "foreign owner denied",
+    "stale session denied",
+    "repeat owner read identical",
+    "reads do not mutate session or create execution rows",
+    "private direct-read ACL unchanged",
+    "revision1 projects saved execution rows and frozen payloads without changing original rows",
+    "revision1 repeated reads preserve execution and session rows",
+    "revoked binding denied",
+    "deleting account denied",
+    "wrong binding key version denied",
+    "unchanged scope dispatcher accepts exact POST path and rejects wrong scope or GET (SQL boundary)",
+    "explicit read-only transaction still forbids authority row locking",
+    "forward ALTER reapply is idempotent and private table ACL/RLS unchanged"
+  ],
+  "archiveSha256": "b92a1bc300f66f533c95fc3d05f09aa31e7d88a076cb62d56c4516c592e31ca0",
+  "ownedContainerId": "8224d93d18c54acd090326c743f414d4e4f6c6d8cd8fb9b18bf2557c7a2de154",
+  "roleModel": {
+    "synthetic": true,
+    "operatingRoleEquivalence": false,
+    "operatingAclVerification": "INCOMPLETE"
+  },
+  "beforeSeed": {
+    "rows": 0,
+    "tables": 153
+  },
+  "pre232SourceInventory": {
+    "acl": 0,
+    "body": 0,
+    "owner": 0,
+    "missing": 0,
+    "security": 0,
+    "volatility": 0,
+    "search_path": 0,
+    "required_functions": 109
+  },
+  "fixture": {
+    "path": "tests/cooking-experience-schema232-postgres.integration.test.ts",
+    "sha256": "220c027ae0534486fe407a41848b2c3049139f81606e8e6c53f437b71a977a13",
+    "seededSqlCalls": 3,
+    "realApplicationRows": 0
+  },
+  "httpIsolation": {
+    "image": "postgrest/postgrest@sha256:54000f24847d01a2c2302e0041cf0618b875c57fb48507d743cfa9aaa50bf43c",
+    "postgresNetwork": "none",
+    "postgrestNetwork": "owned-PG-network-namespace",
+    "mounts": 0,
+    "publishedPorts": 0,
+    "externalRequests": 0,
+    "syntheticJwtOnly": true,
+    "preRequest": "not configured for synthetic RPC transaction boundary test",
+    "scope": "snapshot-v2-session",
+    "operatingEquivalence": false
+  },
+  "before": {
+    "status": 405,
+    "body": {
+      "code": "25006",
+      "details": null,
+      "hint": null,
+      "message": "cannot execute SELECT FOR SHARE in a read-only transaction"
+    }
+  },
+  "fix": {
+    "path": "supabase/migrations/20261019090000_cooking_execution_reader_transaction.sql",
+    "sha256": "a24a54518783f89018645a7f9b827f97510f64e38a1ff68c2c2cd045cc213d32"
+  },
+  "functionDelta": {
+    "changed": 1,
+    "onlyAttribute": "volatility",
+    "before": "s",
+    "after": "v",
+    "bodyOwnerAclOidConfigSecurityAndOtherFunctionsUnchanged": true
+  },
+  "cleanupCompleted": true,
+  "sourceBase": "f9b7499a71d106ee29cd89910b8c86b6e21eae28",
+  "command": "node scripts/run-cooking-execution-reader-http.mjs",
+  "runnerSha256": "aa670caf5bcc7da260c0dfd6548bba51461bc9a3176a138f0c5421ecc443e19b",
+  "scope": "Synthetic-role real PostgREST RPC transaction boundary; NOT operating-role/ACL/pre-request/web equivalence",
+  "independentReview": {
+    "kind": "source-read-only",
+    "newConfirmedP1P2": 0,
+    "rerunByReviewer": false
+  }
+}
