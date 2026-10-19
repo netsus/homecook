@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "pullRequest": 1833,
+  "deployedRef": "7d15dfe790f8cf600cb84c756ef9afe9984a212b",
+  "buildId": "prelaunch-7d15dfe790f8-MTla10",
+  "databaseLedgerCount": 238,
+  "method": "Existing fixed protected read-only observer; approved target and backup readiness verified. This deployment window comparison only, not replacement of original approval baseline/PIN or proof of whole database restore.",
+  "before": {
+    "stage": "before",
+    "observedAt": "2026-10-19T19:56:33.851Z",
+    "sourceCommit": "7d15dfe790f8cf600cb84c756ef9afe9984a212b",
+    "existingApprovedTargetAndBackupReadinessVerified": true,
+    "targetSha256": "9c6432ca15830a77e2eca66c394ef32bcfd5085884c21e0f7adb60e47880a8c1",
+    "readOnlyObserver": true,
+    "originalApprovalUnchanged": true,
+    "hashes": {
+      "normalDataSha256": "83090b83cc687f33bd809b27bed3755b68df5cb4787a1db9a12bb6e3e2af61ec",
+      "preservedRowsSha256": "4b16e06187faf848ac5dd6d5e860053c6c80f8b0eedf3501d8986774d181c53b",
+      "attestationRowsSha256": "2ea926e45c1bfab8cc7ccb24d9d762f31782ee46697147caec9bf2226c8fabbb",
+      "controlsSha256": "eabc93020ee028c21f1aadce744aedbf54f91e2173ed2f856ccf89d858f0d5e8",
+      "executionRowsSha256": "b1fca4ec4462d8f366d871e48a6d5270ecccb07864da471f17dfeaba3ed85240",
+      "ledgerPreservedRowsSha256": "67e2870a336fb8142dd5596dbb92c14ccc91d3ef319653ce842b85a4a023064d",
+      "catalogSha256": "cfe445830b62e59317e48452f99f284bbe5aba9c40419ef76a4558fd39afbab5",
+      "immutableSha256": "9cab32b11a74b219de1831cd1903b61bf1311d0c5c4569a23ff3fb2f42868d70",
+      "stableImmutableSha256": "61b7c4b449ea47420f0d0a9d0d8315e643a900c5250f7cb019916f638ebfbe8f"
+    }
+  },
+  "after": {
+    "stage": "after",
+    "observedAt": "2026-10-19T20:07:13.672Z",
+    "sourceCommit": "7d15dfe790f8cf600cb84c756ef9afe9984a212b",
+    "existingApprovedTargetAndBackupReadinessVerified": true,
+    "targetSha256": "9c6432ca15830a77e2eca66c394ef32bcfd5085884c21e0f7adb60e47880a8c1",
+    "readOnlyObserver": true,
+    "originalApprovalUnchanged": true,
+    "hashes": {
+      "normalDataSha256": "83090b83cc687f33bd809b27bed3755b68df5cb4787a1db9a12bb6e3e2af61ec",
+      "preservedRowsSha256": "4b16e06187faf848ac5dd6d5e860053c6c80f8b0eedf3501d8986774d181c53b",
+      "attestationRowsSha256": "2ea926e45c1bfab8cc7ccb24d9d762f31782ee46697147caec9bf2226c8fabbb",
+      "controlsSha256": "eabc93020ee028c21f1aadce744aedbf54f91e2173ed2f856ccf89d858f0d5e8",
+      "executionRowsSha256": "b1fca4ec4462d8f366d871e48a6d5270ecccb07864da471f17dfeaba3ed85240",
+      "ledgerPreservedRowsSha256": "67e2870a336fb8142dd5596dbb92c14ccc91d3ef319653ce842b85a4a023064d",
+      "catalogSha256": "cfe445830b62e59317e48452f99f284bbe5aba9c40419ef76a4558fd39afbab5",
+      "immutableSha256": "9cab32b11a74b219de1831cd1903b61bf1311d0c5c4569a23ff3fb2f42868d70",
+      "stableImmutableSha256": "61b7c4b449ea47420f0d0a9d0d8315e643a900c5250f7cb019916f638ebfbe8f"
+    }
+  },
+  "allNineEqual": true,
+  "sqlWrites": 0,
+  "approvalOrPolicyChanges": 0
+}
