@@ -372,6 +372,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 독립 리뷰는 위 집합과 기존 bootstrap14를 포함한 고유57 PASS/4 이름필터 제외·전체 nonincremental typecheck/lint/diff를 확인해 APPROVE했다. root와 겹친 성공 수는 합산하지 않는다. emit은 동일 객체 bootstrap 별칭 추가/참조 교체 외 동일하며 바이트 완전 동일이라고 주장하지 않는다.
 - 실제 SDK 요청은 owner403/시스템북403/guest401/missing404/items500/book500·정확 선택문·inner FK·제한 update payload·items→book 삭제 순서를 고정한다. SQL/실DB·권한·기존 저장/플래너·새 도구/운영·원격 반영0, master 계약28과 로컬 채택 후15를 구분한다.
 
+## 별도 정확성 보정: 장보기 nullable 재료 ID3곳
+
+- 메타데이터1건은 `e020b67bf`로 보존했다. pantry의 최신 제품 지원 migration을 추가 대조하면서, 이미 보존한 share-text/bulk/item SDK 행3곳에 과거 손코딩 계약의 ingredient_id:string이 남아 있는 정밀도 누락을 확인했다. 앞선 root/독립 리뷰 모두 이 nullable 변경을 놓쳤음을 기록한다. 진단 감소를 위해 거짓 nonnull을 유지하지 않는다.
+- 실제20260731110000의 shopping_list_items ingredient_id DROP NOT NULL에 맞춰 세 행을 string|null로, share ingredient FK 추론은 object|null로 맞췄다. bulk/item에 제품null 반환 회귀 각각1건과 selected-row 타입 근거를 추가했다. 기존 ShoppingListItemSummary는 이미 nullable이며 제품3파일 JS emit은 HEAD와 동일하다. 런타임/권한/쓰기/응답 변경0이다.
+- 최종6 suite62 PASS·전체 typecheck·lint(max-warnings0)·Anti132/baseline207/신규0 유지·diff PASS다. 기존3건 해결 수나 Anti 감소로 중복 계상하지 않는다. master28/로컬 채택 후15도 그대로다.
+- 독립 리뷰는 SQL의 이전 누락을 명시하고6 suite62 PASS·전체 nonincremental typecheck/diff·제품3파일 byte-identical JS emit을 확인해 APPROVE했다. 기존 성공 수와 합산하지 않는다.
+
 ## 보류·기술적 경계
 
 - [#1745](https://github.com/netsus/homecook/pull/1745): OPEN DRAFT, head `5fc7dd78678a6d321bc689f7f3f74c6b02940e1e`. 완료 표에 넣지 않는다.

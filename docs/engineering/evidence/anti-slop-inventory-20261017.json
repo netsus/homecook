@@ -25,6 +25,12 @@
     "contractCandidatesAfterAdoption": 15,
     "status": "local commits through 7f47991e8(pantry-bundles1) plus verified book-metadata1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
   },
+  "nullableShoppingContractFollowup": {
+    "files": ["shopping/lists/[list_id]/share-text", "shopping/lists/[list_id]/items/bulk", "shopping/lists/[list_id]/items/[item_id]"],
+    "reason": "Initial native contracts copied the historical handwritten ingredient_id:string; actual20260731110000 SQL drops NOT NULL. Corrected to string|null, nullable FK result, and product-null bulk/item regression. Prior reviews missed this precision gap; do not hide it or count the original three findings as completed again.",
+    "verification": "6 suites62 PASS, whole typecheck, lint max-warnings0, Anti132/new0 unchanged, diff PASS; independent62 PASS/nonincremental typecheck/diff APPROVE and three-file byte-identical JS emit confirmed. No DB/SQL/permissions/operational changes.",
+    "status": "local followup candidate, no additional finding reduction or contract count reduction"
+  },
   "findings": [
     {
       "id": "app/api/v1/product-planner-entries/route.ts::anti-slop(no-chained-type-assertions)::86a850df59c1324f7c3cc1fabd80bcad0dff8f2ebfab214518e17382a3dbbf8f#1",

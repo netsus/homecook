@@ -9,11 +9,11 @@ const owner = "550e8400-e29b-41d4-a716-446655440001";
 const list = "550e8400-e29b-41d4-a716-446655440002";
 const item = "550e8400-e29b-41d4-a716-446655440003";
 const columns = "id,shopping_list_id,ingredient_id,display_text,amounts_json,is_checked,is_pantry_excluded,added_to_pantry,sort_order";
-type Mode = "check" | "exclude" | "noop" | "foreign" | "completed" | "item-missing" | "list-missing" | "guest" | "conflict" | "update-error";
+type Mode = "check" | "product" | "exclude" | "noop" | "foreign" | "completed" | "item-missing" | "list-missing" | "guest" | "conflict" | "update-error";
 
 function fixture(mode: Mode = "check") {
   const requests: Array<{ url: URL; method: string; body: unknown }> = [];
-  const row = { id: item, shopping_list_id: list, ingredient_id: "ingredient-1", display_text: "양파",
+  const row = { id: item, shopping_list_id: list, ingredient_id: mode === "product" ? null : "ingredient-1", display_text: "양파",
     amounts_json: [{ amount: 2, unit: "개" }], is_checked: false, is_pantry_excluded: false, added_to_pantry: false, sort_order: 0 };
   const sdk = createClient("http://shopping-item-contract.invalid", "public-test-key", {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -49,29 +49,29 @@ describe("shopping single item native selected-single contract", () => {
   beforeEach(() => vi.resetAllMocks());
   it("infers exact selected-single rows before and after update", () => {
     const { client } = fixture();
-    const read = client.from("shopping_list_items").select("id, amounts_json, is_checked").maybeSingle();
+    const read = client.from("shopping_list_items").select("id, ingredient_id, amounts_json, is_checked").maybeSingle();
     const update = client.from("shopping_list_items").update({ is_checked: false, is_pantry_excluded: true })
-      .select("id, amounts_json, is_checked").maybeSingle();
-    expectTypeOf<Awaited<typeof read>["data"]>().toEqualTypeOf<{ id: string; amounts_json: unknown; is_checked: boolean } | null>();
+      .select("id, ingredient_id, amounts_json, is_checked").maybeSingle();
+    expectTypeOf<Awaited<typeof read>["data"]>().toEqualTypeOf<{ id: string; ingredient_id: string | null; amounts_json: unknown; is_checked: boolean } | null>();
     expectTypeOf<Awaited<typeof update>["data"]>().toEqualTypeOf<Awaited<typeof read>["data"]>();
     expect(read.then).toBeTypeOf("function");
     expect(update.then).toBeTypeOf("function");
   });
-  it.each<Mode>(["check", "exclude", "noop", "foreign", "completed", "item-missing", "list-missing", "guest", "conflict", "update-error"])("preserves %s guards, normalization and no-op/write boundary", async mode => {
+  it.each<Mode>(["check", "product", "exclude", "noop", "foreign", "completed", "item-missing", "list-missing", "guest", "conflict", "update-error"])("preserves %s guards, normalization and no-op/write boundary", async mode => {
     const { requests } = fixture(mode);
     const response = await PATCH(new Request("http://localhost/item", { method: "PATCH", headers: { "content-type": "application/json" },
       body: JSON.stringify(mode === "exclude" ? { is_checked: true, is_pantry_excluded: true } : { is_checked: mode !== "noop" }) }),
     { params: Promise.resolve({ list_id: list, item_id: item }) });
-    const success = mode === "check" || mode === "exclude" || mode === "noop";
+    const success = mode === "check" || mode === "product" || mode === "exclude" || mode === "noop";
     expect(response.status).toBe(success ? 200 : mode === "foreign" ? 403 : mode === "completed" || mode === "conflict" ? 409
       : mode === "guest" ? 401 : mode === "item-missing" || mode === "list-missing" ? 404 : 500);
     const result = await response.json();
     if (success) expect(result).toMatchObject({ success: true, error: null, data: {
-      id: item, is_checked: mode === "check", is_pantry_excluded: mode === "exclude", amounts_json: [{ amount: 2, unit: "개" }],
+      id: item, ingredient_id: mode === "product" ? null : "ingredient-1", is_checked: mode === "check" || mode === "product", is_pantry_excluded: mode === "exclude", amounts_json: [{ amount: 2, unit: "개" }],
     } });
     else expect(result).toMatchObject({ success: false, data: null, error: { fields: [] } });
     const writes = requests.filter(request => request.method === "PATCH");
-    const shouldWrite = mode === "check" || mode === "exclude" || mode === "conflict" || mode === "update-error";
+    const shouldWrite = mode === "check" || mode === "product" || mode === "exclude" || mode === "conflict" || mode === "update-error";
     expect(writes).toHaveLength(shouldWrite ? 1 : 0);
     if (shouldWrite) expect(writes[0].body).toEqual({ is_checked: mode !== "exclude", is_pantry_excluded: mode === "exclude" });
     for (const request of requests.filter(request => request.url.pathname.endsWith("/shopping_list_items"))) {

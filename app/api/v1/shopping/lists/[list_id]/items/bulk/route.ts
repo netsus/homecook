@@ -22,7 +22,7 @@ interface RouteContext {
 type ShoppingListItemRow = {
   id: string;
   shopping_list_id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   display_text: string;
   amounts_json: unknown;
   is_checked: boolean;

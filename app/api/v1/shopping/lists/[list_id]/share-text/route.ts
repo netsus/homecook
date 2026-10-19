@@ -43,7 +43,7 @@ export type ShoppingShareTextDbClient = Pick<SupabaseClient<{
         Insert: never; Update: never; Relationships: [];
       };
       shopping_list_items: {
-        Row: { id: string; shopping_list_id: string; ingredient_id: string;
+        Row: { id: string; shopping_list_id: string; ingredient_id: string | null;
           display_text: string; is_checked: boolean; is_pantry_excluded: boolean; sort_order: number };
         Insert: never; Update: never;
         Relationships: [{ foreignKeyName: "shopping_list_items_ingredient_id_fkey";

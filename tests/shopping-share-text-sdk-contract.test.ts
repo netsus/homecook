@@ -43,7 +43,7 @@ function fixture(mode: "success" | "completed" | "null-join" | "empty" | "foreig
 
 describe("shopping share text native projection contract", () => {
   beforeEach(() => vi.resetAllMocks());
-  it("infers exact list/single phases and required ingredient FK object", () => {
+  it("infers exact list/single phases and nullable ingredient FK object", () => {
     const { client } = fixture();
     const lists = client.from("shopping_lists").select("id, user_id, title, date_range_start, is_completed").eq("id", list).maybeSingle();
     const items = client.from("shopping_list_items").select("id, display_text, is_checked, is_pantry_excluded, sort_order, ingredients(category)");
@@ -52,7 +52,7 @@ describe("shopping share text native projection contract", () => {
     } | null>();
     expectTypeOf<NonNullable<Awaited<typeof items>["data"]>[number]>().toEqualTypeOf<{
       id: string; display_text: string; is_checked: boolean; is_pantry_excluded: boolean;
-      sort_order: number; ingredients: { category: string };
+      sort_order: number; ingredients: { category: string } | null;
     }>();
     expect(items.then).toBeTypeOf("function");
     expect(lists.then).toBeTypeOf("function");

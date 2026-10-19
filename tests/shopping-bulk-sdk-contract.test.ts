@@ -11,7 +11,7 @@ const first = "550e8400-e29b-41d4-a716-446655440003";
 const second = "550e8400-e29b-41d4-a716-446655440004";
 const columns = "id,shopping_list_id,ingredient_id,display_text,amounts_json,is_checked,is_pantry_excluded,added_to_pantry,sort_order";
 
-function fixture(mode: "check" | "uncheck" | "empty" | "foreign" | "completed" | "missing" | "guest" | "error" = "check") {
+function fixture(mode: "check" | "uncheck" | "product" | "empty" | "foreign" | "completed" | "missing" | "guest" | "error" = "check") {
   const requests: Array<{ url: URL; method: string; body: unknown; prefer: string | null }> = [];
   const sdk = createClient("http://shopping-bulk-contract.invalid", "public-test-key", {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -26,7 +26,7 @@ function fixture(mode: "check" | "uncheck" | "empty" | "foreign" | "completed" |
       else if (table === "shopping_lists" && method === "GET") data = mode === "missing" ? null
         : { id: list, user_id: mode === "foreign" ? "other-owner" : owner, is_completed: mode === "completed" };
       else if (table === "shopping_list_items" && method === "PATCH") data = mode === "error" ? { code: "42501", message: "fixture denied" }
-        : mode === "empty" ? [] : [second, first].map(id => ({ id, shopping_list_id: list, ingredient_id: "ingredient-1",
+        : mode === "empty" ? [] : [second, first].map(id => ({ id, shopping_list_id: list, ingredient_id: mode === "product" ? null : "ingredient-1",
           display_text: "양파", amounts_json: id === first ? [{ amount: 2, unit: "개" }, { amount: "bad", unit: "개" }] : null,
           is_checked: mode !== "uncheck", is_pantry_excluded: false, added_to_pantry: false, sort_order: 1 }));
       else throw new Error(`unexpected fixture operation: ${method} ${table}`);
@@ -46,15 +46,15 @@ describe("shopping bulk native update/select contract", () => {
   it("infers actual update/select rows and untrusted amounts JSON", () => {
     const { client } = fixture();
     const update = client.from("shopping_list_items").update({ is_checked: true })
-      .eq("shopping_list_id", list).select("id, amounts_json, is_checked");
-    expectTypeOf<Awaited<typeof update>["data"]>().toEqualTypeOf<Array<{ id: string; amounts_json: unknown; is_checked: boolean }> | null>();
+      .eq("shopping_list_id", list).select("id, ingredient_id, amounts_json, is_checked");
+    expectTypeOf<Awaited<typeof update>["data"]>().toEqualTypeOf<Array<{ id: string; ingredient_id: string | null; amounts_json: unknown; is_checked: boolean }> | null>();
     expect(update.then).toBeTypeOf("function");
   });
-  it.each(["check", "uncheck", "empty", "foreign", "completed", "missing", "guest", "error"] as const)("preserves %s boundaries, one scoped update and normalized sorted response", async mode => {
+  it.each(["check", "uncheck", "product", "empty", "foreign", "completed", "missing", "guest", "error"] as const)("preserves %s boundaries, one scoped update and normalized sorted response", async mode => {
     const { requests } = fixture(mode);
     const response = await PATCH(new Request("http://localhost/bulk", { method: "PATCH", headers: { "content-type": "application/json" },
       body: JSON.stringify({ item_ids: [first, second], is_checked: mode !== "uncheck" }) }), { params: Promise.resolve({ list_id: list }) });
-    const allowed = mode === "check" || mode === "uncheck" || mode === "empty";
+    const allowed = mode === "check" || mode === "uncheck" || mode === "product" || mode === "empty";
     expect(response.status).toBe(allowed ? 200 : mode === "foreign" ? 403 : mode === "completed" ? 409 : mode === "missing" ? 404 : mode === "guest" ? 401 : 500);
     const result = await response.json();
     if (allowed) {
@@ -63,6 +63,7 @@ describe("shopping bulk native update/select contract", () => {
       if (mode !== "empty") {
         expect(result.data.items[0]).toMatchObject({ is_checked: mode !== "uncheck", amounts_json: [{ amount: 2, unit: "개" }] });
         expect(result.data.items[1].amounts_json).toEqual([]);
+        expect(result.data.items[0].ingredient_id).toBe(mode === "product" ? null : "ingredient-1");
       }
     } else expect(result).toMatchObject({ success: false, data: null, error: { fields: [] } });
     const writes = requests.filter(request => request.method === "PATCH");
