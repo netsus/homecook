@@ -2724,6 +2724,12 @@ export function loadCookingExperienceMaintenance(repositoryRoot) {
     recipeSavePredecessor:cookingPredecessor.recipeSavePredecessor,nutritionPredecessor:cookingPredecessor.nutritionPredecessor,
     predecessor:cookingPredecessor.predecessor};
 }
+// Cooking's DB/read successor preserves the existing C04/personal controls.
+// It is not authority to retarget any historical writer ON/OFF or retry proof.
+export function assertCookingWriterStatePreserved(databaseMaintenance) {
+  if (databaseMaintenance?.review.feature===COOKING_EXPERIENCE_FEATURE) throw new DeploymentError("Cooking235는 기존 C04/개인 실측 writer 상태를 보존합니다. writer 전환에는 별도 권위가 필요합니다.");
+}
+
 export function cookingExperiencePhaseStatus(attempt,readerCompatible=false,legacyReaderCurrent=false) {
   const {review,record}=attempt;assertCookingExperienceReview(review);
   const committed=record.status==="committed",unapplied=record.status==="not_applied";

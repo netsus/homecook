@@ -228,3 +228,10 @@ test('owned PIN seam yields identical bytes before/after a future production bin
  assert.throws(()=>createOwnedCookingReviewModule('export const unrelated = 1;'),/Exactly one/u);
  assert.throws(()=>createOwnedCookingReviewModule(nullSource+'\n'+nullSource),/Exactly one/u);
 });
+
+
+test('cooking235 explicitly preserves writer states rather than retargeting historical toggle authority',()=>{
+ assert.throws(()=>web.assertCookingWriterStatePreserved({review:{feature:cooking.COOKING_EXPERIENCE_FEATURE}}),/writer.*별도 권위/u);
+ assert.doesNotThrow(()=>web.assertCookingWriterStatePreserved(null));
+ assert.doesNotThrow(()=>web.assertCookingWriterStatePreserved({review:{feature:'cooked-weight-user-attestation'}}));
+});

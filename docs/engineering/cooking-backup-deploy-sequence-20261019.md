@@ -103,3 +103,10 @@
 
 
 PIN 게시 후에도 운영 파일을 읽지 않고 회귀를 반복할 수 있도록 test/harness의 소유 복사본 주입만 보완했다. null/미래 bound 선언이 같은 synthetic module bytes를 만들며 최종 native 실행이 사용한 복사본 SHA `565f157bf122064564ed557cdc956f074b865981d95617e4e76f9c6b6af76562`와 실제 동일함을 확인했다. production PIN을 runtime 인수로 바꾸는 경로는 없다. 마지막 test-only 보완 후 Node23 PASS·lint0/diffcheck0이며 runtime 소스는 최종 native 실행본과 같다.
+
+
+### 실제 사전 점검의 긴 읽기와 도구 보완
+
+첫 공식 plan은 운영 변경 전에 전체41개 table의 normalData 해시 조회가 기존5초 제한을 넘어 실패했다. 같은 고정 projection의 읽기 전용 실측은17,867ms로 성공했다. SQL·조회 열·기대 지문을 줄이지 않고 cooking 관찰만 기존 비동기 session에 READ ONLY transaction·서버90초/host95초 고정 제한을 사용한다. 기본 다른 feature의5초 계약은 유지한다. 실제 network-none PG 검사에서5.344초 조회 중 timer53회, 쓰기 거절/row0,90.121초 서버 timeout 중 timer885회, session 종료와 소유 컨테이너 정리를 확인했다.
+
+이 도구 변경은 새 비공개 review에 결속한 웹 target1802b2276/SQL233–235/계산 query를 변경하지 않는다. 최종 도구 commit과 독립 검토를 별도로 기록한다. DB235에서는 기존 C04·개인 실측 writer ON/OFF·retry/reconcile 토글을 이 cooking 권위로 지원하지 않는다. 진입 시 운영 I/O 전에 명시 거절하며, 기존 상태를 보존한다. 새 writer 토글 권위는 별도 검토 대상이다. cooking 전용 DB reconcile과 gateway containment·동일 plist 복구는 유지한다. 독립 재검토 잔여 P1/P2=0.

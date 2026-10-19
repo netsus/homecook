@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { COOKING_EXPERIENCE_FEATURE, COOKING_EXPERIENCE_MIGRATIONS } from "./lib/cooking-experience-maintenance.mjs";
 import {createCookingMaintenanceLocal} from "./lib/cooking-maintenance-local.mjs";
-import {readCookingExperienceAttempt,cookingExperiencePhaseStatus,loadRecipeRequestRoleMaintenance} from "./lib/prelaunch-web-deploy.mjs";
+import {readCookingExperienceAttempt,cookingExperiencePhaseStatus,loadRecipeRequestRoleMaintenance,assertCookingWriterStatePreserved} from "./lib/prelaunch-web-deploy.mjs";
 import { V85_WEB_RECOVERY,assertRecoveryBinding,assertRecoveryPreserved,assertRecoveryWebProcess,assertRecoveredEnqueue,runV85WebRecovery,recoveryCheck } from './lib/prelaunch-v85-web-recovery.mjs';
 import { createV85WebRecoveryObserver } from './lib/prelaunch-v85-web-recovery-observation.mjs';
 import { loadRecoveredReadiness } from './lib/prelaunch-v85-recovered-readiness.mjs';
@@ -773,7 +773,7 @@ async function verifyProtectedBaseline(review, plan, options) {
   loadProtectedDatabaseReceipt(review);
   if (options.reviewedProtectedRollout && (options.dbConfig !== review.database.configPath
     || hash(readClosedR2PrivateBytes(options.dbConfig, repository, 65536)) !== review.database.configSha256)) throw new DeploymentError("보호 reader의 승인된 config bytes가 다릅니다.");
-  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
+  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: currentReview.feature===COOKING_EXPERIENCE_FEATURE });
   const observed = await createProtectedPrelaunchAdapter(base, currentReview.feature, currentReview, databaseMaintenance).observe(undefined, "protected-baseline-readback");
   const fingerprintPolicy = JSON.parse((await base.query(`SELECT jsonb_build_object('currentFingerprintKeyVersion',fingerprint_key_version,
     'previousFingerprintKeyVersion',CASE WHEN previous_fingerprint_valid_until>=clock_timestamp() THEN previous_fingerprint_key_version ELSE NULL END,
@@ -902,9 +902,10 @@ async function runProtectedDatabasePhase(options, action, review) {
   say(JSON.stringify({ status: receipt.status, phase: options.protectedPhase, readerReady: maintenance ? receipt.status === "committed" ? receipt.readerReady : null : false, writerEnabled: maintenance ? receipt.status === "committed" ? receipt.writerEnabled : null : false, automaticRetryAllowed: false }, null, 2));
 }
 async function runProtectedWriterPhase(options, action, review) {
+  const databaseMaintenance = loadCurrentDatabaseMaintenance(repository);
+  assertCookingWriterStatePreserved(databaseMaintenance);
   const quantityOff = review.feature === QUANTITY_V4_FEATURE && options.protectedPhase.startsWith("writer-off");
   const successor = loadCookedWeightAttestationSuccessor(repository);
-  const databaseMaintenance = loadCurrentDatabaseMaintenance(repository);
   const quantityCloseOnAttestation = quantityOff && Boolean(successor);
   const workerContinuation = successor ? loadCookedWeightAttestationWorkerContinuation(successor, repository) : null;
   const v74Successor = workerContinuation && V74_ACTIVATION_SHA256 ? loadV74WorkerSuccessor(successor, databaseMaintenance, workerContinuation) : null;
@@ -1017,7 +1018,7 @@ async function completeProtectedReaderRecovery(options, review) {
     bytes: readFileSync(plistPath) }, live);
   if (hash(live.bytes) !== state.targetPlistHash) throw new DeploymentError("보호 reader 복구 plist가 다릅니다.");
   await verifyProtectedBaseline(review, state.databaseVerification, options);
-  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
+  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: review.feature===COOKING_EXPERIENCE_FEATURE });
   const observed = await createProtectedPrelaunchAdapter(base, review.feature, review).observe(undefined, "protected-reader-recovery");
   const personalSuccessor = review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? loadCookedWeightAttestationSuccessor(repository) : null;
   const personalWorker = personalSuccessor ? loadCookedWeightAttestationWorkerContinuation(personalSuccessor, repository) : null;
@@ -1495,7 +1496,7 @@ process.exit(result.status ?? 1);`;
         closedLease = await acquireClosedR2ControlLease(closedReview, repository);
         closedLease.verify();
         if (protectedReader) {
-          const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root });
+          const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: rollout.feature===COOKING_EXPERIENCE_FEATURE });
           if (hash(JSON.stringify(await base.inspect())) !== rollout.database.targetSha256) {
             throw new DeploymentError("reader 잠금 대상이 승인된 운영 DB와 다릅니다.");
           }
