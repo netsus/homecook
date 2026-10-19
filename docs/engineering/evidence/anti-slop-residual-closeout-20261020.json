@@ -821,5 +821,15 @@
     "Actual operating62c20d4bd/buildktOrhp/DB238/Anti87 at source audit; this source84 is not yet merged/deployed.",
     "New authenticated QA and actual deletion/legacy completion not executed. Unauthenticated health is not authenticated success.",
     "Protected provider/R2/YouTube dirty and factory/auth sources unchanged. Arrays/conditionals audit is static value judgment, not benchmark."
-  ]
+  ],
+  "rollout": {
+    "pullRequest": 1839,
+    "operatingRef": "16cf3155c7b59bd5f74a64e0a42fc0d9b14f6e1c",
+    "buildId": "prelaunch-16cf3155c7b5-qy0qD5",
+    "dataEvidence": "docs/engineering/evidence/anti-slop-nutrition-data-preservation-20261020.json",
+    "sourceAndOperatingTotal": 84,
+    "allNineEqual": true,
+    "newAuthenticatedQAExecuted": false,
+    "sqlWrites": 0
+  }
 }

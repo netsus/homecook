@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop84 운영·잔여84 종료 기록 완료
+
+PR1839 merge16cf3155를공식DB238앱-only로한번배포했다. 실제buildprelaunch-16cf3155c7b5-qy0qD5·ready·Anti84/new0, source345PASS/전체type/lint/독립승인·배포웹1477PASS133이름필터SKIP·compile98/static94/기존경고3다. 고정READ ONLY9지문전후동일·원plan/readerFloor/PIN/R2보호유지·SQL/설정변경0. 실제확인은manifest200·비로그인users/me/planner/nutritionGET3wrapped401이며새인증QA미실행이다. 원16379해결84잔여, 배열/조건부62개별가치감사와전체84개이유/재개조건을끝냈다. 보호된후보/설계/명시보류는해제하지않았다. [운영증거·잔여종료장부·검증한계](../engineering/anti-slop-nutrition-residual-closeout-20261020.md)가최신이며아래source84/운영87은과거다.
+
 ## 2026-10-20 — Anti Slop84 소스 검증·잔여84 종료 분류
 
 영양JSON1의실SDK/unknown소비경계·중복계산삭제와검색q중복조건2만수정했다. snapshot/legacy42기존행동잠금·최종15suite345PASS/전체type/lint/verify84new0·독립승인이다. 원16379해결/84잔여, 배열/조건부62는고정ID별가치감사후q2만채택했고전체잔여84에이유/재검토조건을남겼다. source549fec481은아직미배포이며실제62c20d4bd/buildktOrhp·DB238·Anti87과구분한다. provider/R2·YouTubedirty·권한3/static3/444/1745·새인증QA미실행은보존한다. [검증·기존실패·ID별종료조건](../engineering/anti-slop-nutrition-residual-closeout-20261020.md)을따른다.
