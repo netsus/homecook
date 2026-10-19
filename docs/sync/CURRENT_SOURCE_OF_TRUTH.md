@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-19 — 요리 분수 JSON echo 저장 후속 (격리 검증, 미배포)
+
+웹196·DB235 실제 Chrome에서 다른 재료만 수정할 때 untouched1/7kg frozen proof 숫자의 JS 왕복 정밀도 차이로422를 확인했다. DB 원본+명시 수정값만 저장하고 행 echo의 숫자 표현만 비교하는 최소238 후보를 작성했다. 기존26+신규25 실제 PostgreSQL 회귀·권한/원본/metadata/rollback 검사와 타입을 통과했다. 원235 승인·receipt와 과거 pin은 유지하며 운영 적용·최종 Chrome 재확인은 별도 후속이다. [원인·계약·검증과 한계](../engineering/cooking-frozen-quantity-json-echo-20261019.md)를 따른다.
+
 ## 2026-10-19 — 등록50 이후 worker 생명주기 검사 오류 복구 완료
 
 gen50 등록 뒤 이전workerPID49750을 요구한 검사 오류를 단계별 보호로 수정하고, 실제 사용자 Terminal 확인 뒤 동일50 resume를 완료했다. 원4승인·캡슐·8455/d69·DB232·고정만료를 보존했으며 재발급·재등록 없이07:45:54 UTC 활성화됐다. 공식reconcile은activated/재발급·재등록불가·역사작업보존이며 실제인증200/빈claim거부·health/readiness ready·43jobs지문/기존V2 33개일치·R2 OFF·로컬/공개로그인200을 확인했다. [원인·보호·소스결속·회귀·운영검증](../engineering/v85-registered50-resume-repair-20261019.md)을 따른다. 원격push/PR/merge는 별도 승인 차단으로 미실행이다.
