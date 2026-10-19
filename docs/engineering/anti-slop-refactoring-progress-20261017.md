@@ -4,7 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면127/계약10이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면126/계약9이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 사용자 지시: DB238을 그대로 유지하는 최소 앱 successor 검증기/CLI·관련 검증/리뷰/코드 통합과 타입 수정의 앱 전용 배포를 승인했다. 이전 장부의 승인 대기 문장은 당시 상태다. 기존 PIN/승인·가드는 보존하며 SQL/환경/키/권한/worker/정책 변경은 포함하지 않는다. 별도 세션의 승인된 영양5행 작업 종료 인계 전에는 실제 배포나 새 데이터 기준 고정을 하지 않는다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -413,6 +414,14 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 수정 전route14+bootstrap11=25 PASS. 최종 SDK6+route14+mypage7+bootstrap11=4 suite38 PASS·전체 typecheck·lint(max-warnings0)·Anti127/baseline207/신규0·diff PASS다. SDK는 HEAD/count=exact/Content-Range 수신/종류별 개수·owner·innerFK·빈목록/guest401/read/count500을 고정한다.
 - 앞서 별도 실패로 보존한 mypage GET의 누락된 image factory mock export를 이번 GET 범위에서 보완하고, 오래된 id-only 기대를 실제 inner-count 선택문으로 강화했다. 기존표지 검증 route도 그대로 통과했으며 테스트를 완화하지 않았다. 그 과거1실패는 이제 해소됐지만 pantry DELETE2실패는 별도 그대로다.
 - 독립 리뷰도4 suite38 PASS·전체 nonincremental typecheck/lint/diff와 실제 SQL/HEAD/표지 reader 보존, POST·auth helper byte-identical JS emit을 확인해 APPROVE했다. POST 보상 계약 장애는 미해결로 분리한다. master28/로컬 채택 후10, 실제 DB·권한/운영/원격·도구/배포0을 유지한다.
+
+## Bootstrap 후속: 기존 요리 세션 생성1건 로컬 완료
+
+- 북 목록 GET1은 `4a42068e6`으로 보존했다. 생성의 native6표/실제 insert/select/maybeSingle·nullable ingredient/product/snapshot FK·상태enum을 맞췄다. snapshot JSON은 concrete array로 가장하지 않고 unknown을 유지하며 기존 inline product guard를 그대로 둔다. same client bootstrap 분리 외 조회·삽입 순서/상태/응답/권한 흐름은 불변이다.
+- 수정 전28 PASS, 최종 SDK15+기존생성17+bootstrap11=3 suite43 PASS·전체 typecheck·lint(max-warnings0)·Anti126/baseline207/신규0·diff PASS다. 독립 리뷰도 동일43/타입/lint/Anti126/new0/diff 및 실제 SQL/unknown guard/기존 direct-DML 경계 불변을 확인해 APPROVE했다. SDK transport fixture를 실제DB/RLS 권한 검증으로 확대하지 않는다.
+- master28/로컬 채택 후9다. 남은9는 보호된 저장/UI/플래너와 접점이 있는 북 레시피3+manual생성1, 공통 progress/growth 경계4(bookPOST/pantry/shoppingPOST/complete), cook-mode snapshot 전체 JSON parser1로 구분한다. 두 경로(bookPOST/pantry)의 독립 memory 전체 compiler에서 progress 직접대입 TS2589, growth/award CountFilterQuery(data:null 대 SDK GenericStringError[]) TS2322를 각각 확인했다. 이는 운영 취약점 재현이나 모든 개선 불가능 판정이 아니다.
+- 최소 후속 판단은 공통 count 소비(error/count)와 정확select/단계/필터 계약, 원장 성공/중복/부가 projection 실패 흡수·optionalRPC 부재 fail-closed를 먼저 분리하는 것이다. 기존 projection RPC는 activity/notification/count의 drop-in 대체가 아니다. cook-mode는 JSON unknown에서 출력할 keyed row parser와 malformed/legacy 처리 정책을 먼저 정해야 한다. 보호된 저장/UI4건은 병행 범위 조율 없이 건드리지 않는다. 새 단언/큰 adapter/검사 완화로 수만 줄이지 않는다.
+- 실제 DB/SQL/환경/권한/운영·원격 변경0으로 이 로컬 묶음을 보존했다. 이후 새로 승인된 최소 앱 successor 작업은 별도 의도/검증으로 진행하며 영양5행 인계 전 배포/데이터 기준 고정은 하지 않는다.
 
 ## 보류·기술적 경계
 

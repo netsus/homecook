@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseCookingSessionBody } from "@/lib/server/cooking";
 import {
   ensurePublicUserRow,
@@ -13,92 +14,43 @@ import type {
   CookingSessionMealData,
 } from "@/types/cooking";
 
-interface QueryError {
-  message: string;
-}
-
-interface RecipeRow {
-  id: string;
-}
-
-interface MealRow {
-  id: string;
-  user_id: string;
-  recipe_id: string;
-  status: string;
-  recipe_content_snapshots?: { ingredients_json: unknown } | Array<{ ingredients_json: unknown }> | null;
-}
-
-interface SessionInsertRow {
-  id: string;
-  status: "in_progress";
-}
-
-interface SessionMealInsertRow {
-  meal_id: string;
-  is_cooked: boolean;
-}
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface RecipesSelectQuery {
-  eq(column: string, value: string): RecipesSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeRow>;
-}
-
-interface MealsSelectQuery {
-  in(column: string, values: string[]): MealsSelectQuery;
-  then: ArrayResult<MealRow>["then"];
-}
-
-interface SessionsInsertQuery {
-  select(columns: string): SessionsInsertQuery;
-  maybeSingle(): MaybeSingleResult<SessionInsertRow>;
-}
-
-interface SessionMealsInsertQuery {
-  select(columns: string): ArrayResult<SessionMealInsertRow>;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
-}
-
-interface MealsTable {
-  select(columns: string): MealsSelectQuery;
-}
-
-interface CookingSessionsTable {
-  insert(value: { user_id: string; status: "in_progress" }): SessionsInsertQuery;
-}
-
-interface CookingSessionMealsTable {
-  insert(values: Array<{
-    session_id: string;
-    meal_id: string;
-    recipe_id: string;
-    cooking_servings: number;
-    is_cooked: false;
-  }>): SessionMealsInsertQuery;
-}
-
-interface CookingSessionDbClient {
-  from(table: "recipe_ingredients"): { select(columns: string): {
-    eq(column: string, value: string): ArrayResult<{ ingredient_id: string | null; food_product_id: string | null; food_product_nutrition_version_id: string | null }>;
-  } };
-  from(table: "recipes"): RecipesTable;
-  from(table: "meals"): MealsTable;
-  from(table: "cooking_sessions"): CookingSessionsTable;
-  from(table: "cooking_session_meals"): CookingSessionMealsTable;
-}
+// Consumed fields and actual insert/select phases. Snapshot JSON remains unknown
+// until the existing inline product guard; no new writer or authority boundary.
+export type CookingSessionDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_ingredients: {
+        Row: { recipe_id: string; ingredient_id: string | null; food_product_id: string | null; food_product_nutrition_version_id: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string }; Insert: never; Update: never; Relationships: [];
+      };
+      meals: {
+        Row: { id: string; user_id: string; recipe_id: string; status: "registered" | "shopping_done" | "cook_done";
+          recipe_content_snapshot_id: string | null };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "meals_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"]; }];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; ingredients_json: unknown };
+        Insert: never; Update: never; Relationships: [];
+      };
+      cooking_sessions: {
+        Row: { id: string; user_id: string; status: "in_progress" | "completed" | "cancelled" };
+        Insert: { user_id: string; status: "in_progress" }; Update: never; Relationships: [];
+      };
+      cooking_session_meals: {
+        Row: { session_id: string; meal_id: string; recipe_id: string; cooking_servings: number; is_cooked: boolean };
+        Insert: { session_id: string; meal_id: string; recipe_id: string; cooking_servings: number; is_cooked: false };
+        Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
@@ -136,12 +88,12 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    CookingSessionDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: CookingSessionDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
