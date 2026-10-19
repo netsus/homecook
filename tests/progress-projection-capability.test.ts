@@ -17,6 +17,7 @@ function query<Row>(read: () => Row[], error: () => ErrorRow | null = () => null
   const q = {
     select: vi.fn((columns: string) => { void columns; return q; }),
     eq: vi.fn((column: string, value: string | boolean) => { void column; void value; return q; }),
+    match: vi.fn((filters: { user_id: string }) => { void filters; return q; }),
     in: vi.fn((column: string, values: string[]) => { void column; void values; return q; }),
     is: vi.fn((column: string, value: null) => { void column; void value; return q; }),
     lt: vi.fn((column: string, value: string) => { void column; void value; return q; }),

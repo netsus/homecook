@@ -19,6 +19,7 @@ function createMaybeSingleQuery<T>(data: T | null, error: { message: string; cod
 function createArrayQuery<T>(data: T[]) {
   const query = {
     eq: vi.fn(() => query),
+    match: vi.fn(() => query),
     then(onFulfilled?: (value: { data: T[]; error: null }) => unknown) {
       return Promise.resolve({ data, error: null }).then(onFulfilled);
     },
