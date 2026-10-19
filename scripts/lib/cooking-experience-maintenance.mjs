@@ -6,7 +6,7 @@ import { isAbsolute } from "node:path";
 // reviewed step; neither an environment variable nor CLI option supplies it.
 export const COOKING_CATALOG_MODE = "cooking-canonical-with-native-raw-remainder-v1";
 export const COOKING_EXPERIENCE_FEATURE = "cooking-execution-experience";
-export const COOKING_EXPERIENCE_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const COOKING_EXPERIENCE_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/cooking-experience-deploy-20261019-eRvoMs/approved-cooking-experience-review.json", sha256: "13a4fbeca9d5dfb392bef017f8bb28f85479aecdd2ba60f941e1f3b57855cdaf" });
 const SEALED_WORKER_CATALOG = "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05";
 export const COOKING_EXPERIENCE_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: "20261017210000_cooked_weight_mass_fallback.sql", sha256: "9709397e9031ca28a1ae6dbb934502ef9092ca7bc0d6ba96d568121672ac7f2e", prefix: "-- Extend model compatibility only; owner/state/idempotency/measurement gates stay intact.\n-- Requires schema+web release; existing evidence/observations are never rewritten.\n" }),
