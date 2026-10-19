@@ -484,6 +484,40 @@ describe("17c settings/account backend", () => {
     expect(routeRpc).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { payload: { deleted: true }, status: 200 },
+    { payload: { deleted: false }, status: 500 },
+    { payload: null, status: 500 },
+    { payload: [], status: 500 },
+    { payload: "true", status: 500 },
+    { payload: 1, status: 500 },
+    { payload: false, status: 500 },
+    { payload: {}, status: 500 },
+    { payload: { deleted: 1 }, status: 200 },
+    { payload: { deleted: "legacy-truthy" }, status: 200 },
+    { payload: { deleted: 0 }, status: 500 },
+    { payload: { deleted: "" }, status: 500 },
+    { payload: { deleted: [] }, status: 200 },
+    { payload: { deleted: {} }, status: 200 },
+  ])("preserves legacy cleanup JSON flag consumption %#", async ({ payload, status }) => {
+    setupAuthedClient({ from: vi.fn(() => { throw new Error("unexpected table read"); }) });
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "get_account_generation_capability" ? { state: "legacy", revision: 1 } : payload,
+      error: null,
+    }));
+    createServiceRoleClient.mockReturnValue({ rpc });
+    const { DELETE } = await importUsersMeRoute();
+    const response = await DELETE(new Request("http://localhost/api/v1/users/me", { method: "DELETE" }));
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject(status === 200
+      ? { success: true, data: { deleted: true }, error: null }
+      : { success: false, data: null, error: { code: "INTERNAL_ERROR", fields: [] } });
+    expect(rpc).toHaveBeenCalledWith("delete_user_private_data_with_generation_receipt", {
+      p_user_id: "user-1", p_auth_identity_created_at: "2026-07-23T00:00:00.000Z",
+    });
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
   it("DELETE /users/me surfaces cleanup failures before reporting account deletion success", async () => {
     setupAuthedClient({
       from: vi.fn((table: string) => {

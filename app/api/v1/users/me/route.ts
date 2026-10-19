@@ -29,10 +29,6 @@ import {
   readRequiredIdempotencyKey,
 } from "./_account-generation";
 
-interface QueryError {
-  message: string;
-}
-
 type UserProfileRow = {
   id: string;
   nickname: string;
@@ -58,24 +54,16 @@ export type UsersMeDbClient = Pick<SupabaseClient<{
   };
 }>, "from">;
 
-interface UserDeletePolicyResult {
-  deleted: boolean;
-  user_deleted?: boolean;
-  preserved_recipe_count?: number;
-}
-
-interface UsersMeDeleteDbClient {
-  rpc(
-    functionName: "delete_user_private_data_with_generation_receipt",
-    values: {
-      p_user_id: string;
-      p_auth_identity_created_at: string;
-    },
-  ): PromiseLike<{
-    data: UserDeletePolicyResult | null;
-    error: QueryError | null;
-  }>;
-}
+export type UsersMeDeleteDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: Record<never, never>; Views: Record<never, never>;
+    Functions: {
+      delete_user_private_data_with_generation_receipt: {
+        Args: { p_user_id: string; p_auth_identity_created_at: string }; Returns: unknown;
+      };
+    };
+  };
+}>, "rpc">;
 
 function readScreenWakeLock(settings: unknown) {
   if (!settings || typeof settings !== "object" || !("screen_wake_lock" in settings)) return false;
@@ -341,7 +329,7 @@ export async function DELETE(request: Request) {
     return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
   }
 
-  const dbClient = serviceRoleClient as unknown as UsersMeDeleteDbClient;
+  const dbClient: UsersMeDeleteDbClient = serviceRoleClient;
   const capability = await readAccountGenerationCapability(serviceRoleClient);
 
   if (!capability.ok) {
@@ -383,7 +371,9 @@ export async function DELETE(request: Request) {
     },
   );
 
-  if (deleteResult.error || !deleteResult.data?.deleted) {
+  // Preserve legacy truthiness, not a new strict-boolean response policy.
+  if (deleteResult.error || !deleteResult.data || typeof deleteResult.data !== "object"
+    || !("deleted" in deleteResult.data) || !deleteResult.data.deleted) {
     await recordOperationalEvent(serviceRoleClient, {
       event_type: "account_delete_failure",
       severity: "error",
