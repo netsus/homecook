@@ -12,6 +12,7 @@ const SITE_KEY = process.env.NEXT_PUBLIC_MARKETING_TURNSTILE_SITE_KEY?.trim()
 type TurnstileResult = { ok: true; token: string } | { ok: false; message: string };
 type TurnstileWidgetId = string | number;
 
+// Provider render options: https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/
 interface TurnstileApi {
   render: (
     container: HTMLElement,
@@ -21,7 +22,8 @@ interface TurnstileApi {
       callback: (token: string) => void;
       "error-callback": () => void;
       "expired-callback": () => void;
-      size: "flexible";
+      size: "normal" | "flexible" | "compact";
+      "response-field"?: boolean;
       sitekey: string;
     },
   ) => TurnstileWidgetId;

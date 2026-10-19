@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
@@ -25,14 +26,12 @@ import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import {
   buildMealAddPathSourceKey,
   MEAL_ADD_PATHS,
   recordUserGrowthActivityEvent,
   type MealAddPath,
-  type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
 import { readVerifiedAccountGenerationSession } from
   "@/lib/server/account-generation/session-authority";
@@ -40,7 +39,7 @@ import {
   buildSessionAuthorityRpcArgs,
   callFuturePropagationRpc,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
-import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
+import { awardUserProgressEvent } from "@/lib/server/user-progress";
 import {
   createFutureMealWriteInternalClient,
   createRouteHandlerClient,
@@ -49,32 +48,11 @@ import {
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 
-interface QueryError {
-  code?: string;
-  message: string;
-}
-
-interface RecipeLookupRow {
-  id: string;
-}
-
 interface RecipeSummaryRow {
   id: string;
   created_by: string | null;
   title: string;
   thumbnail_url: string | null;
-}
-
-interface PlannerColumnRow {
-  id: string;
-  user_id: string;
-  name: string;
-}
-
-interface LeftoverDishLookupRow extends CookedBatchMealEligibilityRow {
-  id: string;
-  user_id: string;
-  recipe_id: string;
 }
 
 interface MealListRow {
@@ -97,102 +75,38 @@ interface MealListRow {
     | null;
 }
 
-interface MealInsertRow {
-  id: string;
-  recipe_id: string;
-  plan_date: string;
-  column_id: string;
-  planned_servings: number;
-  status: "registered";
-  is_leftover: boolean;
-  leftover_dish_id: string | null;
-  recipe_nutrition_snapshot_id: string | null;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-interface RecipesLookupQuery {
-  eq(column: string, value: string): RecipesLookupQuery;
-  maybeSingle(): MaybeSingleResult<RecipeLookupRow>;
-}
-
-interface RecipesSummaryQuery {
-  in(column: string, values: string[]): RecipesSummaryQuery;
-  then: ArrayQueryResult<RecipeSummaryRow>["then"];
-}
-
-interface PlannerColumnsSelectQuery {
-  eq(column: string, value: string): PlannerColumnsSelectQuery;
-  maybeSingle(): MaybeSingleResult<PlannerColumnRow>;
-}
-
-interface LeftoverDishesSelectQuery {
-  eq(column: string, value: string): LeftoverDishesSelectQuery;
-  maybeSingle(): MaybeSingleResult<LeftoverDishLookupRow>;
-}
-
-interface MealsSelectQuery {
-  eq(column: string, value: string): MealsSelectQuery;
-  order(column: string, options: QueryOrderOption): MealsSelectQuery;
-  then: ArrayQueryResult<MealListRow>["then"];
-}
-
-interface MealsInsertQuery {
-  select(columns: string): MealsInsertQuery;
-  maybeSingle(): MaybeSingleResult<MealInsertRow>;
-}
-
-interface RecipesTable {
-  select(columns: "id"): RecipesLookupQuery;
-  select(columns: "id, title, thumbnail_url, created_by"): RecipesSummaryQuery;
-}
-
-interface PlannerColumnsTable {
-  select(columns: string): PlannerColumnsSelectQuery;
-}
-
-interface LeftoverDishesTable {
-  select(columns: string): LeftoverDishesSelectQuery;
-}
-
-interface MealsTable {
-  select(columns: string): MealsSelectQuery;
-  insert(values: {
-    user_id: string;
-    recipe_id: string;
-    plan_date: string;
-    column_id: string;
-    planned_servings: number;
-    status: "registered";
-    is_leftover: boolean;
-    leftover_dish_id: string | null;
-    shopping_list_id: null;
-    cooked_at: null;
-  }): MealsInsertQuery;
-}
-
-interface MealsDbClient {
-  from(table: "recipes"): RecipesTable;
-  from(table: "meal_plan_columns"): PlannerColumnsTable;
-  from(table: "leftover_dishes"): LeftoverDishesTable;
-  from(table: "meals"): MealsTable;
-  rpc(
-    name: "list_product_planner_entries",
-    args: Record<string, unknown>,
-  ): PromiseLike<{ data: unknown; error: QueryError | null }>;
-}
+// Only currently consumed reads; all mutations remain existing scoped RPC calls.
+export type MealsDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipes: {
+        Row: { id: string; created_by: string | null; title: string; thumbnail_url: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      meal_plan_columns: {
+        Row: { id: string; user_id: string; name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      leftover_dishes: {
+        Row: CookedBatchMealEligibilityRow & { id: string; user_id: string; recipe_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      meals: {
+        Row: Omit<MealListRow, "recipe_content_snapshots"> & { user_id: string; plan_date: string; column_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "meals_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"]; }];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; title: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: { list_product_planner_entries: { Args: Record<string, unknown>; Returns: unknown } };
+  };
+}>, "from" | "rpc">;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -418,12 +332,11 @@ async function getMeals(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    MealsDbClient & UserBootstrapDbClient;
+  const dbClient: MealsDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -645,12 +558,11 @@ async function postMeals(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    MealsDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
+  const dbClient: MealsDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -667,7 +579,7 @@ async function postMeals(request: Request) {
   // A successful keyed replay must remain available if its source is later removed.
   // The new RPC validates ownership and source eligibility on the first creation.
   if (idempotencyKey === null) {
-    const recipeResult = await (routeClient as unknown as MealsDbClient)
+    const recipeResult = await dbClient
       .from("recipes")
       .select("id")
       .eq("id", parsed.recipeId)
@@ -758,7 +670,7 @@ async function postMeals(request: Request) {
   const occurredAt = new Date().toISOString();
 
   try {
-    await awardUserProgressEvent(dbClient, {
+    await awardUserProgressEvent(routeClient, {
       userId: user.id,
       eventType: "planner_registered",
       sourceTable: "meals",
@@ -772,7 +684,7 @@ async function postMeals(request: Request) {
   const sourcePath = normalizeMealAddPath(body.source_path);
   if (sourcePath) {
     try {
-      await recordUserGrowthActivityEvent(dbClient, {
+      await recordUserGrowthActivityEvent(routeClient, {
         userId: user.id,
         activityType: "meal_add_path_used",
         category: "planner",
@@ -799,14 +711,14 @@ export async function POST(request: Request) {
   return guardedPostMeals(request);
 }
 
-interface CookedBatchMealEligibilityRow {
+type CookedBatchMealEligibilityRow = {
   recipe_content_snapshot_id: string | null;
   status: "leftover" | "eaten";
   remaining_weight_g: number | null;
   weight_status: "known" | "missing" | "unrecoverable" | null;
   batch_status: "available" | "depleted" | null;
   depleted_reason: string | null;
-}
+};
 
 function isMealEligibleLeftover(row: CookedBatchMealEligibilityRow) {
   return row.recipe_content_snapshot_id === null
