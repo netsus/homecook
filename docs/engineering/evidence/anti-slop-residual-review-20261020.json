@@ -1,0 +1,1118 @@
+{
+  "schema": 1,
+  "baseSourceCommit": "3ebbf28716b5fc01a2fedfce60af8cece4ac57dd",
+  "historicalReconciliation": {
+    "original275Commit": "0d4ba86357b7fe9ed13895e0fc8104f8d8857782",
+    "original275BaselineGroups": 255,
+    "original275Count": 275,
+    "reconstructed191Commit": "7e466b170ba39795220ef64e67eac3fab4429420",
+    "reconstructed191Groups": 173,
+    "reconstructed191Count": 191,
+    "originalCheckerExit": 0,
+    "changedCheckerFiles": 0,
+    "oxlintAndPluginsVersion": "1.78.0",
+    "current117NotIn191": 0,
+    "original163NotIn191": 0,
+    "absent191To163": 28,
+    "recordedResolved163To117": 46,
+    "absent191To117": 74,
+    "separate49OriginalFound": false,
+    "fingerprintCsv": "docs/engineering/evidence/anti-slop-191-fingerprint-map-20261020.csv",
+    "limit": "Fingerprint absence is not proof of behavioral improvement or individual PR attribution. The historical191 output is reconstructed, not a recovered original output artifact; separate49 overlap/completion remains unknown."
+  },
+  "baselineTotal": 207,
+  "baseTotal": 117,
+  "localCandidateTotal": 116,
+  "newFindings": 0,
+  "baseRuleCounts": {
+    "chainedAssertions": 55,
+    "twoPassArrays": 37,
+    "conditionalOwnKeys": 25,
+    "accumulatorCopies": 0
+  },
+  "bucketCounts": {
+    "planner-coordination": 23,
+    "authentication-session-sensitive": 24,
+    "youtube-extraction-coordination": 52,
+    "held-reference": 8,
+    "held-explicit": 3,
+    "held-technical": 1,
+    "retained-no-improvement-evidence": 5,
+    "held-coordination": 1
+  },
+  "identityReference": "docs/engineering/evidence/anti-slop-inventory-20261017.json",
+  "limits": [
+    "Static flags are not confirmed runtime defects or vulnerabilities.",
+    "Existing scope holds are preserved, not silently lifted.",
+    "Local like candidate is not merged or deployed; source117 and local116 differ.",
+    "191/49 source reconciliation is recorded separately; no numeric-only overlap inference."
+  ],
+  "findings": [
+    {
+      "id": "app/api/v1/product-planner-entries/route.ts::anti-slop(no-chained-type-assertions)::86a850df59c1324f7c3cc1fabd80bcad0dff8f2ebfab214518e17382a3dbbf8f#1",
+      "baseLiveLine": 96,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#1",
+      "baseLiveLine": 84,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#2",
+      "baseLiveLine": 144,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/hybrid-auth/bootstrap.ts::anti-slop(no-array-filter-map)::e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596#1",
+      "baseLiveLine": 51,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "app/api/v1/planner/route.ts::anti-slop(no-chained-type-assertions)::dbc701ee1443a382ea4c8238f09525dd993c05dbd7eb886a8705b3e245a52d01#1",
+      "baseLiveLine": 234,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/marketing-round2.ts::anti-slop(no-conditional-empty-object-spread)::1074c5efc6313c249855ad1fb10f9499113dfb09031ce9d74d89b53190b88e00#1",
+      "baseLiveLine": 142,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/prompt.mjs::anti-slop(no-array-filter-map)::d14c717e8fbb23ae9ecb7e2241d9a67e60f9fdbde752042fd91abc4be8a53bce#1",
+      "baseLiveLine": 55,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-array-filter-map)::a4ada9dfe223ee89ccb5dbbd41885289bebaa9ce7b5c0dc1553920124fcaca4c#1",
+      "baseLiveLine": 651,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-array-filter-map)::3716996129a78c2f61b68a4f6757f27336ebd274606e50ca8ef21c7c92318e9d#1",
+      "baseLiveLine": 670,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-array-filter-map)::eb99d134dac64ce35355c9e79b152ba6923d08703fecbf854e0b1d3f4c7bfc47#1",
+      "baseLiveLine": 707,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-conditional-empty-object-spread)::cf7ee0be9adfe7c69a40eb53e321529d1ec25058a42bc5b41bcd2ecaa3144aa3#1",
+      "baseLiveLine": 966,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-conditional-empty-object-spread)::0b2b268568de654429b31896206dc18385602bebe3bb6e694967b106659bc41a#1",
+      "baseLiveLine": 967,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/candidate-packets.mjs::anti-slop(no-array-filter-map)::552bad8a0b0ff1ee44b1930b798a8db3d6da299764cdf219da76be17e7fe7267#1",
+      "baseLiveLine": 127,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::1ddba8e9c246d8581a7a448ecd442afe3cc0bea022eb48769feab60838d1cf5a#1",
+      "baseLiveLine": 191,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::cd92f1a95e2259833e69117865a8684bf1350d75408b028f36d3b34fdfd2ef39#1",
+      "baseLiveLine": 191,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::423cf43922f0227b945b501c7c0f9d04d68a0bdcc074690806c1c98c11a940ea#1",
+      "baseLiveLine": 355,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::7712a2824c586fbd95d0fe0018d8c53f87647e59a634f4ca82329181a0d6f9c0#1",
+      "baseLiveLine": 422,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::9c92fb3e00ecb4db3f5383f45ab1271e875dc8383e93b6ae364076e69fe7799e#1",
+      "baseLiveLine": 423,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::adbfb9831e781c61cc83ad6d53f6b6f863d10c6d55f5803fee5c30b512436182#1",
+      "baseLiveLine": 516,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/hybrid-auth/session-observability.ts::anti-slop(no-array-filter-map)::a117605a78dc4dac9265e35ca1e9564c7d6d55c76d1299c6ba9b88cf49780528#1",
+      "baseLiveLine": 38,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::42b213e63f521a5b1d7d24990338bb1918dfbc337317ea9d8e084975e83ed253#1",
+      "baseLiveLine": 200,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::0686d5adf87baff37fb31b849989d853bd6c447803fc09d32afa9f8edd776802#1",
+      "baseLiveLine": 201,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::8084d999b093f6aaa05e37f9efef2744b3b710fe3106152ee2b4147b8364a1e0#1",
+      "baseLiveLine": 260,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts::anti-slop(no-chained-type-assertions)::e37acc447d4e8ad8c719ae510162a9d9770b7ea42147717d46fef54d7f7524b9#1",
+      "baseLiveLine": 21,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260512-desktop/project/modals.jsx::anti-slop(no-array-filter-map)::be59a9625462d08be0bd5c266c0cb4ead88957d74463faa92dbdbe03aa996457#1",
+      "baseLiveLine": 296,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
+      "baseLiveLine": 235,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "baseLiveLine": 269,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#2",
+      "baseLiveLine": 317,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#2",
+      "baseLiveLine": 351,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
+      "baseLiveLine": 422,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::16e843117c2fadc3c91622137f1ce7bd4675d535edd60aecee60516b63f48332#1",
+      "baseLiveLine": 649,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::d9f5207c6497f3b58132a472f7662c1ebadcb343b00a471159ce0c1e993fe9a0#1",
+      "baseLiveLine": 671,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "baseLiveLine": 736,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx::anti-slop(no-array-filter-map)::bca8d01a1ce4b0397a467d308799c2e6692413529772ad9dbc3fe31050ec823f#1",
+      "baseLiveLine": 743,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx::anti-slop(no-array-filter-map)::c565029adc76b4bce3f607d0977d4c4136539b8aba1cf166591d24c9befed9c6#1",
+      "baseLiveLine": 1481,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "app/api/v1/planner/nutrition/route.ts::anti-slop(no-chained-type-assertions)::92e084546d67fd71e7919c79a5c7a7071c42750e4aeb39b29f6ac932fc35979f#1",
+      "baseLiveLine": 80,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/settings/route.ts::anti-slop(no-chained-type-assertions)::9a86eb7b114f8f0ca9f1ed90cebed5116e6694fbf97ecbd98d51401535c57c98#1",
+      "baseLiveLine": 115,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/detail.jsx::anti-slop(no-array-filter-map)::65c9340771b057d71dcf2de445ec7ab72c7418a1325bf5e65a7b760e8843cc1c#1",
+      "baseLiveLine": 53,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-chained-type-assertions)::6ffeb26c3ea5844adc99e5d696e54ab8c817d988b959ca6628737fc04a45c64c#1",
+      "baseLiveLine": 177,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-conditional-empty-object-spread)::cbda6f702526273c0fdf1e83ba4fcb4c6318f3b1191581efea82320f55c032cb#1",
+      "baseLiveLine": 268,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-chained-type-assertions)::6ffeb26c3ea5844adc99e5d696e54ab8c817d988b959ca6628737fc04a45c64c#2",
+      "baseLiveLine": 285,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/wave1.jsx::anti-slop(no-array-filter-map)::f6486c9d16ab0cf9103c46050e71061a74b604037d0afbfa791b6e962722ff31#1",
+      "baseLiveLine": 1928,
+      "priorState": "held-reference",
+      "bucket": "held-reference",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-reference"
+    },
+    {
+      "id": "app/api/v1/planner/columns/shared.ts::anti-slop(no-chained-type-assertions)::91ed2302347fd6bac4d9d018e4d817e65709029fb2fd3c9547c5bd9c3ad3c5ec#1",
+      "baseLiveLine": 285,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts::anti-slop(no-chained-type-assertions)::fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3#1",
+      "baseLiveLine": 94,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::2cd700b4d3558c3e1f11e949e748e7ee8bcb4b7afa56642ec8b656fb525bb838#1",
+      "baseLiveLine": 158,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::36a5841e1ce290633f53713c29c9bcdefd8a66a06708a819b5047550f433bdc7#1",
+      "baseLiveLine": 360,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3#1",
+      "baseLiveLine": 380,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::621f428feacff4329e310deb68114442142d34792d6058dd29ebeddd349398a1#1",
+      "baseLiveLine": 403,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/users/me/route.ts::anti-slop(no-chained-type-assertions)::621f428feacff4329e310deb68114442142d34792d6058dd29ebeddd349398a1#2",
+      "baseLiveLine": 418,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/shopping/lists/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "baseLiveLine": 972,
+      "priorState": "held-explicit",
+      "bucket": "held-explicit",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "preserve-explicit-or-active-QA"
+    },
+    {
+      "id": "app/api/v1/users/me/gamification/_helpers.ts::anti-slop(no-chained-type-assertions)::63592dedca1c006cc7b61b3f204225c2848c2c9fd3e18bbee5a52ebbba5558c0#1",
+      "baseLiveLine": 45,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/recipes/[id]/save/route.ts::anti-slop(no-chained-type-assertions)::1d4ed556adf3eac796f34013d7c35a6a76c4b33cb52b3bf5cae4cbae49b88b50#1",
+      "baseLiveLine": 353,
+      "priorState": "held-explicit",
+      "bucket": "held-explicit",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "preserve-explicit-or-active-QA"
+    },
+    {
+      "id": "app/api/v1/recipes/[id]/save/route.ts::anti-slop(no-chained-type-assertions)::ad2bfadee955fec6270d46984716065dc2bd503db54ad6dc214ae0e06fb0a760#1",
+      "baseLiveLine": 367,
+      "priorState": "held-explicit",
+      "bucket": "held-explicit",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "preserve-explicit-or-active-QA"
+    },
+    {
+      "id": "app/api/v1/recipes/[id]/like/route.ts::anti-slop(no-chained-type-assertions)::3ad1ddccb50e5086af927f31cadc2fd2e474318f0036351292fb4c0aea4546bf#1",
+      "baseLiveLine": 143,
+      "priorState": "held-technical",
+      "bucket": "held-technical",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "candidate-local-independent-APPROVE-not-merged-or-deployed",
+      "reviewOrderWithinAuthorizedScope": "P1-local-type-only-candidate"
+    },
+    {
+      "id": "components/planner/meal-add-picker-flow.tsx::anti-slop(no-conditional-empty-object-spread)::4e7df61d6cc11240fa16ccd6307faae492d9436afb293af522747dca831c9199#1",
+      "baseLiveLine": 130,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "app/api/v1/users/me/progress/route.ts::anti-slop(no-chained-type-assertions)::6b70f37f7ca1b8c175aafd2e09f28a3363c2b790149ad4e980ab7e35ffd0d080#1",
+      "baseLiveLine": 31,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::afb7b5791d3240030d1311ff3c097ce1594d74cc78213f1cfa8171b6a3fb16b6#1",
+      "baseLiveLine": 355,
+      "priorState": "retained-no-improvement-evidence",
+      "bucket": "retained-no-improvement-evidence",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-unless-new-evidence"
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::f662a8a2b81fbd32d5d5a51847b61960e4229c510ba386727756885db3ac6eab#1",
+      "baseLiveLine": 357,
+      "priorState": "retained-no-improvement-evidence",
+      "bucket": "retained-no-improvement-evidence",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-unless-new-evidence"
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::e795e548fa21a1828d5f7bd6d2a62a57386040b76ded57d87ee3dab5fa5be5ad#1",
+      "baseLiveLine": 1363,
+      "priorState": "retained-no-improvement-evidence",
+      "bucket": "retained-no-improvement-evidence",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-unless-new-evidence"
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-array-filter-map)::c2acee8946d823a14f92b11b6296f4ebfb91966112db0b788e083dd255c8737f#1",
+      "baseLiveLine": 1418,
+      "priorState": "retained-no-improvement-evidence",
+      "bucket": "retained-no-improvement-evidence",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-unless-new-evidence"
+    },
+    {
+      "id": "components/planner/food-product-picker.tsx::anti-slop(no-conditional-empty-object-spread)::44bc57cfc7aaf47feaa462cb8d24fcefdd3ee7408624dc23692804844624e7f6#1",
+      "baseLiveLine": 689,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "components/planner/recipe-search-picker.tsx::anti-slop(no-conditional-empty-object-spread)::224f2dc08b20d2925b3039766282725fbc43b3bde6e3ccbdc7956085a1b408d9#1",
+      "baseLiveLine": 322,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "components/planner/recipe-search-picker.tsx::anti-slop(no-conditional-empty-object-spread)::3a7f38694f3f46f992fd88740808b62afc4100640245e94426f5d3203e5ecb59#1",
+      "baseLiveLine": 354,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "components/auth/account-quarantine-screen.tsx::anti-slop(no-conditional-empty-object-spread)::379a9b7ebcb91eca8f97be88719640db973f1da89fe6004994faa868a8ee6e29#1",
+      "baseLiveLine": 149,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-conditional-empty-object-spread)::eb7dee8d361a75fb15140abc686d4fc6a8b6e7cc120ad5155fff2043233af23f#1",
+      "baseLiveLine": 133,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-conditional-empty-object-spread)::8582f1aa19f63c520f7f83dc1c927ced28bea42dd9ea18b693b76a2861a61325#1",
+      "baseLiveLine": 276,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-array-filter-map)::e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596#1",
+      "baseLiveLine": 620,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::64752f1969cb456f9fd8d564dc2359492240ce45f46c4962895b480ad08ccac5#1",
+      "baseLiveLine": 646,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::ad71ce36f80c8301ba0b1fe7799c42e9306a140f9bcaad4490801d39661cff14#1",
+      "baseLiveLine": 647,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "baseLiveLine": 54,
+      "priorState": "held-coordination",
+      "bucket": "held-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "preserve-explicit-or-active-QA"
+    },
+    {
+      "id": "lib/server/youtube-multi-recipe-extractor.ts::anti-slop(no-array-filter-map)::b0fcfeeb0e737e9d27fe7f122574e52d74a119bdd23dbc84dfae2bb12a5286f6#1",
+      "baseLiveLine": 97,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-multi-recipe-extractor.ts::anti-slop(no-array-filter-map)::a31ab85a7f7dc7ba576baa2bd6193af0f375e6923a864f79bdbb3ad3c7b2fca3#1",
+      "baseLiveLine": 100,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-multi-recipe-extractor.ts::anti-slop(no-array-filter-map)::bfa5125924e5ab1bb3c165ab0cca17f286bd473f1d0f3b3aaa2db9316c920ca3#1",
+      "baseLiveLine": 161,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "components/marketing/round2/round2-turnstile.tsx::anti-slop(no-chained-type-assertions)::9e2a0750b99b350e4bb98d094219cdfbbf3c9b2f5a2453cb1b46fc8c98d1fff2#1",
+      "baseLiveLine": 11,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#1",
+      "baseLiveLine": 121,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#2",
+      "baseLiveLine": 133,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#3",
+      "baseLiveLine": 142,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#4",
+      "baseLiveLine": 147,
+      "priorState": "held-scope",
+      "bucket": "planner-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-corpus-scoring.ts::anti-slop(no-array-filter-map)::aba92d5c9d64659fad6231a02147b765ee5cb55f112d291ac3e4906b18d8f55a#1",
+      "baseLiveLine": 375,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-corpus-scoring.ts::anti-slop(no-array-filter-map)::11186be8691d2d130d7c85b3ab664fc84e7cf7bcd881bf2f0c8dc1899cdc06ba#1",
+      "baseLiveLine": 423,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/recipe-content-snapshot-future-propagation.ts::anti-slop(no-conditional-empty-object-spread)::a741156783c7ed3aa3ae80dacb54a95a853de9fea81f22eb00b104da674c632d#1",
+      "baseLiveLine": 641,
+      "priorState": "retained-no-improvement-evidence",
+      "bucket": "retained-no-improvement-evidence",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "retain-unless-new-evidence"
+    },
+    {
+      "id": "lib/server/youtube-dictionary-resolution-scoring.ts::anti-slop(no-array-filter-map)::e238adcbe3546aace55104ce34de370a5a86be87d3951b01e911a21296c9b28d#1",
+      "baseLiveLine": 151,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-caption-normalizer.ts::anti-slop(no-array-filter-map)::9bbea3fe827400ed5317238a3bbf4929621406478705ae0dd4a42cd4859d5405#1",
+      "baseLiveLine": 39,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::7b6764024fe75ca0469396eed32a2d6f995076a9e627421e4eedf340eb47a007#1",
+      "baseLiveLine": 490,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::929c73950f7e7e3b6e7c78551d36517b3d1fbf465aa92fdeb0f6ba41a9157258#1",
+      "baseLiveLine": 491,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::38885a3ae3a8772920c89766ceb9dc300b731525b2bad64c38a092fadf0306ee#1",
+      "baseLiveLine": 492,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::34e806cb2794a179da81f3209081a642c240cd89d3f39add25ad31bc6262f7f4#1",
+      "baseLiveLine": 493,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::1bbd1d03a572a4dfabd22ca9fafe3f95181a28e87c44f05d001bd1f821c46fc6#1",
+      "baseLiveLine": 494,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-saved-recipes.ts::anti-slop(no-chained-type-assertions)::5a36c46def2ed4f85e2e1af41ef3959b67ad71c17d2f10abf55fbf47550fbe03#1",
+      "baseLiveLine": 262,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/marketing-round2-preflight.ts::anti-slop(no-array-filter-map)::6f1729cfe5e56c4ea7cb606e3d29e6e8192ccfeda950e2b6ca5b4360bffd13dd#1",
+      "baseLiveLine": 236,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::cc6c925ac6aa2f56d5248ee67918751cdf452bd3d0da012119770ab573722b16#1",
+      "baseLiveLine": 567,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::cf956bcd75d239ceff25ab4054133c4ca84949988b56b595aef7057202dc6177#1",
+      "baseLiveLine": 2282,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::c90a745fcd5816ccdf7697882c0ad7a37ab1b18db5ed4ad2e385dd6241659644#1",
+      "baseLiveLine": 5668,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::b83c829a846df3e11720bbd6a52ad1d71f9069a923fc88e92933721050686f16#1",
+      "baseLiveLine": 5888,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::2704e2b4eac333f3f2eecb2d12dec6e6b492d820bdca2c33f4d54dc66bee8b9f#1",
+      "baseLiveLine": 5891,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::d5f630122221169358e05bcacb6d241f341c2354b826f15259684684ed0c07e3#1",
+      "baseLiveLine": 7244,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::ebd87cbfab328fb4aa47906c821f71e43f1c949c93940bdc28d9e202a2ad492d#1",
+      "baseLiveLine": 8561,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::7d1046f7803cf6ada9004d52e4dd8f1e2f68a1207d95e7a14f9d4d77c2caca5e#1",
+      "baseLiveLine": 8764,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#1",
+      "baseLiveLine": 9398,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#1",
+      "baseLiveLine": 9450,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::e1db37d04ff6244ebac409ede6b65b088461e0e775e21f102e62e066ccce7889#1",
+      "baseLiveLine": 9455,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#2",
+      "baseLiveLine": 9673,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-conditional-empty-object-spread)::832897b23a8e4d8031cad5350820f96d2aabb7fd175f3ab9a4438c1ac5ab69e8#1",
+      "baseLiveLine": 9812,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#3",
+      "baseLiveLine": 9850,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::f100c2dc1ae544ca8ee0af0ad91bf9be9a23e7ce5182449f2b66c4dfd083110c#1",
+      "baseLiveLine": 10319,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::25ac0d525c3da59d26b59b15f223d632ce205eecd5a2c8f0af58a2765a6423db#1",
+      "baseLiveLine": 10334,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "two-pass-array-chain",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::420b7c93e579798d38a80482548997ac918e8ca4c752a1a0ae25ccaa463ec3f1#1",
+      "baseLiveLine": 10631,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#2",
+      "baseLiveLine": 10701,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::e1db37d04ff6244ebac409ede6b65b088461e0e775e21f102e62e066ccce7889#2",
+      "baseLiveLine": 10706,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::30b6f3c5e18c13720d24cfa5c04c8a9e5f2aada95d61d06ac25a22748ddb792d#1",
+      "baseLiveLine": 10761,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::7504d79179b148302738b40b37ac0fb91764a14cc58d0df3d7dcf5e2e1a00c04#1",
+      "baseLiveLine": 10809,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "projection-or-JSON-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P2-boundary-evidence-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#3",
+      "baseLiveLine": 10868,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::b5d30639b6c87c3d09cd95ec3c502b152e05dc9984bd6c06e37cffcac7705644#1",
+      "baseLiveLine": 10902,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::72794cb52a80a24933131f9e382bf574d3b55cf5c15371e800367bb6fc5cb4b4#1",
+      "baseLiveLine": 11000,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::92da625072f8e7b97a9f5e9b9df5f3628375c2855fd87776c2d4d727c2f74b0c#1",
+      "baseLiveLine": 11067,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::7b4229720f23313ef9315ed7760408c2fdc40bbb9021f9fe961fb06e49c8b5c8#1",
+      "baseLiveLine": 11103,
+      "priorState": "held-scope",
+      "bucket": "youtube-extraction-coordination",
+      "staticShape": "database-or-provider-protocol-assertion",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P3-SQL-SDK-contract-after-scope-coordination"
+    },
+    {
+      "id": "lib/server/account-generation/session-authority.ts::anti-slop(no-conditional-empty-object-spread)::85a9086b2ebf866ef15a1c5987f5df4140b9a6401ca3c689124701537c1b749e#1",
+      "baseLiveLine": 289,
+      "priorState": "held-scope",
+      "bucket": "authentication-session-sensitive",
+      "staticShape": "conditional-own-key-emission",
+      "localDisposition": "unchanged",
+      "reviewOrderWithinAuthorizedScope": "P4-only-with-demonstrated-simplicity-benefit"
+    }
+  ],
+  "staticShapeCounts": {
+    "database-or-provider-protocol-assertion": 41,
+    "projection-or-JSON-assertion": 14,
+    "two-pass-array-chain": 37,
+    "conditional-own-key-emission": 25
+  },
+  "riskAssessment": {
+    "boundaryContracts": "41 protocol and14 projection assertions warrant runtime/SQL/nullable evidence review, but the diagnostic alone proves neither an exploit nor malformed-input acceptance.",
+    "collectionChains": "37 two-pass chains have no demonstrated latency/cardinality defect merely from this rule; preserve sparse-array/index/order semantics.",
+    "conditionalKeys": "25 spreads may intentionally distinguish absent keys from own undefined/null; do not rewrite into unconditional values for count reduction.",
+    "holds": "99 historical scope/coordinated items, explicit3, active cook-mode coordination1 and reference8 remain preserved. Broad follow-up does not imply release of security/parallel ownership holds.",
+    "firstSafeBatch": "Previously technical-held like route only: native two-table SDK contract removes55 handwritten type lines/adds19; no runtime code changes. Local116 is not operating117."
+  }
+}
