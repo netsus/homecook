@@ -6,18 +6,35 @@
   "baselinePath": "tools/oxlint/anti-slop-baseline.json",
   "identityContract": "file::rule::snippetSha256#occurrence. Fingerprint equals the existing checker whitespace-normalized source span SHA256; occurrence and line refer only to this immutable checkpoint.",
   "limits": [
-    "Original request275 mapping and separate49 source list remain unverified; do not add them to this inventory.",
+    "Original275 baseline fingerprint list and historical191 checker output were reconstructed from exact Git commits; absence alone is not semantic completion. Separate49 source remains unverified; do not add it to this inventory.",
     "held-scope is a user scope hold, not a compiler failure or a verified vulnerability.",
     "unreviewed is not claimed blocked or resolved; inspect before deciding.",
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "50bcbe701e5cf47f099b95eca7b7b1be7cccf548",
-    "total": 117,
+    "baseCommit": "e5face22af6f42daaf239ef57ed50e4f77e83e3e",
+    "total": 116,
     "newFindings": 0,
-    "verificationState": "Source50bcbe701 includes shared prerequisite PR1819, six contract resolutions PR1820-1824/1826, and runtime-identical unused writer cleanup PR1825. Anti117/new0, original29 contracts29 resolved/0 remaining; original163 IDs46 resolved/117 remaining. Final45suite396 PASS, whole nonincremental typecheck/lint/diff and independent code reviews PASS; final JSON compatibility91 PASS plus exact baseline30 PASS. Six contract batches merged6/operating6 after official exact app-only plan/deploy exit0; web1466 PASS/133 explicit name-filter SKIP/build PASS/static94/existing4 warnings. Actual operating50bcbe701/buildprelaunch-50bcbe701e5c-JYsG4J loadedtrue/DB238 ready/original48c4 readerFloor/no recovery pending; new manifest200 and anonymous protectedGET3 wrapped401 confirmed. Historical eb7 authenticated QA is not new-candidate QA; actual legacy completion remains untested. No SQL/env/auth/worker/policy/PIN changes or claim of fresh fullDB backup/full data fingerprint revalidation; permission3, held444fe1f6f and unrelated historical failures remain explicit."
+    "verificationState": "Sourcee5face22a includes PR1828 native like protocol (runtime emit equal,17 PASS) and PR1829 mypage URL selection restoration (197 PASS,375/1440 fixture browser2 PASS); final15suite214 PASS/whole nonincremental type/lint/verify Anti116 baseline207 new0/diff and independent reviews APPROVE. Original163 IDs47 resolved/116 remaining, original29 contracts remain29 resolved/0 remaining. Two new product batches merged2/operating2; official app-only deployment exit0, actual refe5face22a/buildprelaunch-e5face22af6f-tQHGcl/DB238 ready. Selected web1466 PASS/133 explicit filtered SKIP/build PASS(existing warnings3); manifest200/protected GET3 wrapped401; recoveryPending false, original readerFloor/plan unchanged. Parent authenticated50bc QA passed books/readonly shopping/pantry105/approved-quantity5/history; not new e5face auth QA. Legacy completion untested(no owned sample). Original275 and reconstructed191 fingerprint subset/counts verified; separate49 original not found/no inferred overlap. Frozen117 snapshot remains historical. No SQL/env/auth-setting/worker/policy/PIN changes or claim of fresh fullDB backup/full fingerprint revalidation; permission3, held444 and historical failures preserved."
+  },
+  "residualRolloutObservation": {
+    "sourceCommit": "e5face22af6f42daaf239ef57ed50e4f77e83e3e",
+    "pullRequests": [1828, 1829],
+    "mergedBatches": 2,
+    "operatingBatches": 2,
+    "deployedRef": "e5face22af6f42daaf239ef57ed50e4f77e83e3e",
+    "buildId": "prelaunch-e5face22af6f-tQHGcl",
+    "databaseLedgerCount": 238,
+    "deploymentLog": "deploy-1792436671132.log",
+    "total": 116,
+    "newFindings": 0,
+    "original163Resolved": 47,
+    "historical191AbsentNow": 75,
+    "reference": "docs/engineering/anti-slop-residual-rollout-20261020.md",
+    "limit": "Historical117 JSON/191 CSV are frozen pre-like snapshots, not current116 outputs. Fingerprint absence is not semantic completion; separate49 source unknown. Current sensitive/explicit/reference holds not silently lifted."
   },
   "contractRolloutObservation": {
+    "historical": true,
     "sourceCommit": "50bcbe701e5cf47f099b95eca7b7b1be7cccf548",
     "sharedPrerequisite": { "pullRequest": 1819, "mergeCommit": "bd9aa784252e0cae2092434357497f246a87f533" },
     "contractPullRequests": [1820, 1821, 1822, 1823, 1824, 1826],
@@ -1465,8 +1482,16 @@
       "line": 143,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeLikeDbClient",
-      "state": "held-technical",
-      "holdReason": "직접 client 대입 실험에서 TS2589로 원복. 복잡한 adapter·새 단언으로 우회하지 않음."
+      "state": "resolved",
+      "holdReason": "직접 client 대입 실험에서 TS2589로 원복. 복잡한 adapter·새 단언으로 우회하지 않음.",
+      "adoptedResolution": {
+        "previousState": "held-technical",
+        "reason": "Replace55 handwritten recursive protocol lines with19 native SDK two-table Row/Insert contract lines and same-client direct assignment. Preserve owner+recipe lookup, DELETE id+user_id, insert23505 snapshot refresh and count clamp; runtime emit byte-identical.",
+        "verification": "Existing5 PASS, before-product SDK11+existing5=16 PASS, final exact type17 PASS/root and independent whole nonincremental type/lint/verify116 new0/diff APPROVE. Final merged pair15suite214 PASS.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1828",
+        "mergeCommit": "ae7e4ab102cdec7b6035c4d8cb366a1276095b58",
+        "status": "merged PR1828; app-deployed e5face22af/buildprelaunch-e5face22af6f-tQHGcl; DB238 ready, no recovery pending. New authenticated QA not performed."
+      }
     },
     {
       "id": "components/planner/meal-add-picker-flow.tsx::anti-slop(no-conditional-empty-object-spread)::4e7df61d6cc11240fa16ccd6307faae492d9436afb293af522747dca831c9199#1",

@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop116·좋아요와 장보기 상세 복원 소스
+
+최종 제품 source `e5face22af6f42daaf239ef57ed50e4f77e83e3e`는 PR1828 좋아요 native2와 PR1829 마이페이지 장보기 선택 복원을 포함한다. Anti116/baseline207/신규0(연쇄54·배열37·조건부25), 원163 ID47해결/116잔여다. 원29계약29완료와 별개인 좋아요1건을 추가 채택했고 전체275/별도49 완료가 아니다. root 최종15suite214 PASS·전체 비증분 타입/lint/verify/diff·독립 리뷰,375/1440px 로컬 browser2 PASS·overflow/console/page-error/request/write0를 확인했다. 상세 소실은2026-05-24부터 URL을 쓰고 mount에서 읽지 않던 누락으로 최근 리팩토링 귀속이 아니며 기존 API/권한/read-only·모바일 standalone 경로를 유지했다. 현재 두 배치는 머지2/운영2이며 공식 앱-only plan/deploy exit0·실제e5face/build `prelaunch-e5face22af6f-tQHGcl`·loaded=true·DB238 ready다. 선택웹1466 PASS/133 이름필터 SKIP·빌드 PASS(기존 경고3)·manifest200·보호GET3곳 wrapped401, 원readerFloor/databasePlanSha·복구 대기 없음 상태를 확인했다. 부모의50bc 인증 QA 완료를 인계받았으나 새후보 인증QA가 아니다. 과거191은 정확코드에서 재현했고 원275⊇191⊇163⊇현재116을 대조했다. 별도49 원본은 미발견, 고정117 JSON/CSV는 이전 시점으로 보존한다. [새 통합·잔여·운영 경계](../engineering/anti-slop-residual-rollout-20261020.md), [117 당시 재분류](../engineering/anti-slop-residual-review-20261020.md)가 기준이며 아래117은 이전 checkpoint다.
+
 ## 2026-10-20 — Anti Slop117·후속6계약 앱 반영 완료
 
 실제 운영 ref `50bcbe701e5cf47f099b95eca7b7b1be7cccf548`/build `prelaunch-50bcbe701e5c-JYsG4J`·loaded=true·DB238 ready다. 공식 앱-only plan/deploy exit0, 후속6계약 **머지6/운영6**이며 공유 PR1819/미사용 정리 PR1825도 함께 반영했다. 선택웹1466 PASS/133 명시적 이름필터 SKIP·빌드 PASS(98초 컴파일/정적94/기존경고4)·새 manifest200·보호GET3곳의 wrapped401을 확인했다. 원readerFloor48c4/databasePlanSha·closed-R2와 복구 대기 없음 상태를 유지하며 SQL/환경/키/권한/worker/정책/PIN 변경0이다. 새 전체DB 백업/데이터지문 전체 재검증을 주장하지 않는다. Anti117/신규0·원29계약29완료/0잔여는 전체275/별도49 완료가 아니며 기존 권한3/보류444/역사실패·새 인증 QA/actual legacy 완료 미확인을 유지한다. [최신 운영·검증·한계](../engineering/anti-slop-contract-rollout-20261020.md), [장부](../engineering/anti-slop-refactoring-progress-20261017.md)가 기준이며 아래 운영0/d7d는 배포 전 이력이다. 후속 docs PR은 앱 재배포를 요구하지 않는다.
