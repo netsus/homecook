@@ -1,4 +1,5 @@
 import { after, NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
@@ -12,7 +13,6 @@ import {
   normalizeIngredientIds,
   toPantryItems,
   type IngredientRow,
-  type PantryIngredientRow,
   type PantryItemJoinedRow,
 } from "@/lib/server/pantry";
 import {
@@ -37,47 +37,10 @@ interface QueryError {
   message: string;
 }
 
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
 type ArrayResult<T> = PromiseLike<{
   data: T[] | null;
   error: QueryError | null;
 }>;
-
-interface PantryItemsSelectQuery {
-  eq(column: string, value: string): PantryItemsSelectQuery;
-  in(column: string, values: string[]): PantryItemsSelectQuery;
-  order(column: string, options: QueryOrderOption): PantryItemsSelectQuery;
-  range(from: number, to: number): PantryItemsSelectQuery;
-  then: ArrayResult<PantryItemJoinedRow>["then"];
-}
-
-interface PantryIngredientsSelectQuery {
-  in(column: string, values: string[]): PantryIngredientsSelectQuery;
-  like(column: string, value: string): PantryIngredientsSelectQuery;
-  order(column: string, options: QueryOrderOption): PantryIngredientsSelectQuery;
-  range(from: number, to: number): PantryIngredientsSelectQuery;
-  then: ArrayResult<IngredientRow>["then"];
-}
-
-interface PantrySynonymSelectQuery {
-  like(column: string, value: string): PantrySynonymSelectQuery;
-  order(column: string, options: QueryOrderOption): PantrySynonymSelectQuery;
-  range(from: number, to: number): PantrySynonymSelectQuery;
-  then: ArrayResult<{ ingredient_id: string; synonym: string }>["then"];
-}
-
-interface PantryExistingSelectQuery {
-  eq(column: string, value: string): PantryExistingSelectQuery;
-  in(column: string, values: string[]): PantryExistingSelectQuery;
-  then: ArrayResult<PantryIngredientRow>["then"];
-}
-
-interface PantryInsertQuery {
-  select(columns: string): ArrayResult<PantryItemJoinedRow>;
-}
 
 interface PantryProductJoinedRow {
   id: string;
@@ -100,75 +63,55 @@ interface PantryProductJoinedRow {
     | null;
 }
 
-interface PantryProductSelectQuery {
-  eq(column: string, value: string): PantryProductSelectQuery;
-  in(column: string, values: string[]): PantryProductSelectQuery;
-  order(column: string, options: QueryOrderOption): PantryProductSelectQuery;
-  then: ArrayResult<PantryProductJoinedRow>["then"];
-}
-
-interface PantryProductInsertQuery {
-  select(columns: string): ArrayResult<PantryProductJoinedRow>;
-}
-
-interface PantryDeleteQuery {
-  eq(column: string, value: string): PantryDeleteQuery;
-  in(column: string, values: string[]): PantryDeleteQuery;
-  or(filters: string): PantryDeleteQuery;
-  select(columns: string): ArrayResult<PantryIngredientRow>;
-}
-
-interface PantryItemsTable {
-  select(columns: string): PantryItemsSelectQuery | PantryExistingSelectQuery;
-  insert(
-    values: Array<
-      | { user_id: string; ingredient_id: string }
-      | {
-          user_id: string;
-          food_product_id: string;
-          food_product_nutrition_version_id: string;
-        }
-    >,
-  ): PantryInsertQuery | PantryProductInsertQuery;
-  delete(): PantryDeleteQuery;
-}
-
-interface IngredientsTable {
-  select(columns: string): PantryIngredientsSelectQuery;
-}
-
-interface FoodProductRow {
-  id: string;
-  name: string;
-  brand: string | null;
-  owner_user_id: string | null;
-  visibility: string;
-  deleted_at: string | null;
-}
-
-interface FoodProductVersionRow {
-  id: string;
-  product_id: string;
-}
-
-interface ProductLookupQuery<T> {
-  in(column: string, values: string[]): ProductLookupQuery<T>;
-  then: ArrayResult<T>["then"];
-}
-
-interface ProductLookupTable<T> {
-  select(columns: string): ProductLookupQuery<T>;
-}
-
-interface PantryDbClient {
-  from(table: "pantry_items"): PantryItemsTable;
-  from(table: "ingredients"): IngredientsTable;
-  from(table: "ingredient_synonyms"): { select(columns: string): PantrySynonymSelectQuery };
-  from(table: "food_products"): ProductLookupTable<FoodProductRow>;
-  from(
-    table: "food_product_nutrition_versions",
-  ): ProductLookupTable<FoodProductVersionRow>;
-}
+// Actual consumed native read/DML phases, including the nullable XOR identities
+// and pinned composite product-version FK. Request RLS remains authoritative.
+export type PantryDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      pantry_items: {
+        Row: { id: string; user_id: string; ingredient_id: string | null;
+          food_product_id: string | null; food_product_nutrition_version_id: string | null; created_at: string };
+        Insert: { user_id: string; ingredient_id: string } | { user_id: string;
+          food_product_id: string; food_product_nutrition_version_id: string };
+        Update: never;
+        Relationships: [
+          { foreignKeyName: "pantry_items_ingredient_id_fkey"; columns: ["ingredient_id"];
+            isOneToOne: false; referencedRelation: "ingredients"; referencedColumns: ["id"]; },
+          { foreignKeyName: "pantry_items_product_version_fkey";
+            columns: ["food_product_id", "food_product_nutrition_version_id"]; isOneToOne: false;
+            referencedRelation: "food_product_nutrition_versions"; referencedColumns: ["product_id", "id"]; },
+        ];
+      };
+      ingredients: {
+        Row: { id: string; standard_name: string; category: string; category_code: string | null; search_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      ingredient_synonyms: {
+        Row: { id: string; ingredient_id: string; synonym: string; search_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      food_products: {
+        Row: { id: string; name: string; brand: string | null; owner_user_id: string | null;
+          visibility: "public" | "private"; deleted_at: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      food_product_nutrition_versions: {
+        Row: { id: string; product_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "food_product_nutrition_versions_product_id_fkey";
+          columns: ["product_id"]; isOneToOne: false; referencedRelation: "food_products"; referencedColumns: ["id"]; }];
+      };
+    };
+    Views: {
+      ingredient_catalog_aliases: {
+        Row: { ingredient_id: string; representative_ingredient_id: string; representative_standard_name: string;
+          representative_category: string; representative_category_code: string | null };
+        Relationships: [];
+      };
+    };
+    Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const PANTRY_SELECT =
   "id, ingredient_id, created_at, ingredients!inner(standard_name, category, category_code)";
@@ -186,7 +129,8 @@ interface NormalizedProductInput {
 }
 
 interface PantryAuthSuccess {
-  dbClient: PantryDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+  dbClient: PantryDbClient;
+  growthClient: UserGrowthActivityDbClient;
   user: { id: string };
 }
 
@@ -212,7 +156,7 @@ function schedulePantryItemAddedActivityRecords({
   scheduleAfterResponse(async () => {
     try {
       await Promise.allSettled(items.map((item) =>
-        recordUserGrowthActivityEvent(auth.dbClient, {
+        recordUserGrowthActivityEvent(auth.growthClient, {
           userId: auth.user.id,
           activityType: "pantry_item_added",
           category: "pantry",
@@ -242,12 +186,13 @@ async function getAuthenticatedDb(
     };
   }
 
-  const dbClient = routeClient as unknown as
-    PantryDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+  const dbClient: PantryDbClient = routeClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const growthClient: UserGrowthActivityDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return {
       response: fail(
@@ -260,6 +205,7 @@ async function getAuthenticatedDb(
 
   return {
     dbClient,
+    growthClient,
     user,
   };
 }
@@ -345,6 +291,18 @@ function toPantryProductItems(rows: PantryProductJoinedRow[]): PantryProductItem
   });
 }
 
+// The ingredient inner join and product composite FK/XOR guarantee these
+// branch-specific identities for valid rows; do not narrow the whole table.
+function hasIngredientIdentity<T extends { ingredient_id: string | null }>(row: T): row is T & { ingredient_id: string } {
+  return typeof row.ingredient_id === "string";
+}
+
+function hasProductIdentity<T extends { food_product_id: string | null; food_product_nutrition_version_id: string | null }>(
+  row: T,
+): row is T & { food_product_id: string; food_product_nutrition_version_id: string } {
+  return typeof row.food_product_id === "string" && typeof row.food_product_nutrition_version_id === "string";
+}
+
 function productItemField(index: number) {
   return `product_items[${index}].food_product_nutrition_version_id`;
 }
@@ -359,10 +317,6 @@ function getPantrySelect(includeTaxonomyColumn: boolean) {
   return includeTaxonomyColumn ? PANTRY_SELECT : PANTRY_SELECT_LEGACY;
 }
 
-function getIngredientSelect(includeTaxonomyColumn: boolean) {
-  return includeTaxonomyColumn ? INGREDIENT_SELECT : INGREDIENT_SELECT_LEGACY;
-}
-
 function buildPantryItemsQuery({
   auth,
   includeTaxonomyColumn,
@@ -374,7 +328,7 @@ function buildPantryItemsQuery({
 }) {
   let query = auth.dbClient
     .from("pantry_items")
-    .select(getPantrySelect(includeTaxonomyColumn)) as PantryItemsSelectQuery;
+    .select(getPantrySelect(includeTaxonomyColumn));
 
   query = query.eq("user_id", auth.user.id);
 
@@ -396,7 +350,7 @@ async function findPantryIngredientIds(dbClient: PantryDbClient, q: string, alia
   let synonymsFinished = false;
   for (let offset = 0; ; offset += pageSize) {
     const [ingredients, synonyms]: [
-      Awaited<ArrayResult<IngredientRow>>,
+      Awaited<ArrayResult<Pick<IngredientRow, "id" | "standard_name">>>,
       Awaited<ArrayResult<{ ingredient_id: string; synonym: string }>>,
     ] = await Promise.all([
       ingredientsFinished ? Promise.resolve({ data: [], error: null }) : dbClient
@@ -488,7 +442,7 @@ export async function GET(request: NextRequest) {
       includeTaxonomyColumn = false;
       result = await readPage();
     }
-    if (result.error || !result.data) {
+    if (result.error || !result.data || !result.data.every(hasIngredientIdentity)) {
       return fail("INTERNAL_ERROR", "팬트리 목록을 불러오지 못했어요.", 500);
     }
     pantryRows.push(...result.data);
@@ -500,13 +454,13 @@ export async function GET(request: NextRequest) {
   if (!category) {
     let productQuery = auth.dbClient
       .from("pantry_items")
-      .select(PANTRY_PRODUCT_SELECT) as PantryProductSelectQuery;
+      .select(PANTRY_PRODUCT_SELECT);
     productQuery = productQuery.eq("user_id", auth.user.id);
     const productResult = await productQuery
       .order("created_at", { ascending: false })
       .order("id", { ascending: true });
 
-    if (productResult.error || !productResult.data) {
+    if (productResult.error || !productResult.data || !productResult.data.every(hasProductIdentity)) {
       return fail("INTERNAL_ERROR", "팬트리 목록을 불러오지 못했어요.", 500);
     }
     productItems = toPantryProductItems(productResult.data);
@@ -551,16 +505,16 @@ export async function POST(request: Request) {
   }
 
   let includeTaxonomyColumn = true;
-  let ingredientsResult = await auth.dbClient
+  let ingredientsResult: { data: IngredientRow[] | null; error: QueryError | null } = await auth.dbClient
     .from("ingredients")
-    .select(getIngredientSelect(includeTaxonomyColumn))
+    .select(INGREDIENT_SELECT)
     .in("id", ingredientIds);
 
   if (isSchemaCacheMiss(ingredientsResult.error)) {
     includeTaxonomyColumn = false;
     ingredientsResult = await auth.dbClient
       .from("ingredients")
-      .select(getIngredientSelect(includeTaxonomyColumn))
+      .select(INGREDIENT_SELECT_LEGACY)
       .in("id", ingredientIds);
   }
 
@@ -572,7 +526,7 @@ export async function POST(request: Request) {
 
   const existingQuery = auth.dbClient
     .from("pantry_items")
-    .select("ingredient_id") as PantryExistingSelectQuery;
+    .select("ingredient_id");
   const existingResult = validIngredientIds.length > 0
     ? await existingQuery
         .eq("user_id", auth.user.id)
@@ -648,7 +602,7 @@ export async function POST(request: Request) {
 
   const productExistingQuery = auth.dbClient
     .from("pantry_items")
-    .select(PANTRY_PRODUCT_SELECT) as PantryProductSelectQuery;
+    .select(PANTRY_PRODUCT_SELECT);
   const productExistingResult = productIds.length > 0
     ? await productExistingQuery
         .eq("user_id", auth.user.id)
@@ -671,22 +625,25 @@ export async function POST(request: Request) {
       ),
   );
 
-  const insertResult = ingredientIdsToInsert.length > 0
+  const insertResult: { data: Array<Omit<PantryItemJoinedRow, "ingredient_id"> & { ingredient_id: string | null }> | null;
+    error: QueryError | null } = ingredientIdsToInsert.length > 0
     ? await (
         auth.dbClient
           .from("pantry_items")
           .insert(ingredientIdsToInsert.map((ingredientId) => ({
             user_id: auth.user.id,
             ingredient_id: ingredientId,
-          }))) as PantryInsertQuery
+          })))
       ).select(getPantrySelect(includeTaxonomyColumn))
     : { data: [], error: null };
 
-  if (insertResult.error || !insertResult.data) {
+  if (insertResult.error || !insertResult.data || !insertResult.data.every(hasIngredientIdentity)) {
     return fail("INTERNAL_ERROR", "팬트리에 재료를 추가하지 못했어요.", 500);
   }
 
-  const productInsertResult = productItemsToInsert.length > 0
+  const productInsertResult: { data: Array<Omit<PantryProductJoinedRow, "food_product_id" | "food_product_nutrition_version_id"> & {
+    food_product_id: string | null; food_product_nutrition_version_id: string | null }> | null;
+    error: QueryError | null } = productItemsToInsert.length > 0
     ? await (
         auth.dbClient.from("pantry_items").insert(
           productItemsToInsert.map((item) => ({
@@ -695,11 +652,11 @@ export async function POST(request: Request) {
             food_product_nutrition_version_id:
               item.food_product_nutrition_version_id,
           })),
-        ) as PantryProductInsertQuery
+        )
       ).select(PANTRY_PRODUCT_SELECT)
     : { data: [], error: null };
 
-  if (productInsertResult.error || !productInsertResult.data) {
+  if (productInsertResult.error || !productInsertResult.data || !productInsertResult.data.every(hasProductIdentity)) {
     return fail("INTERNAL_ERROR", "팬트리에 재료를 추가하지 못했어요.", 500);
   }
 
