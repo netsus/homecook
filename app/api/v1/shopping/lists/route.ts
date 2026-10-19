@@ -141,13 +141,6 @@ interface PantryRow {
   food_product_nutrition_version_id: string | null;
 }
 
-interface ShoppingListInsertRow {
-  id: string;
-  title: string;
-  is_completed: boolean;
-  created_at: string;
-}
-
 type ShoppingListHistoryRow = {
   id: string;
   title: string;
@@ -180,144 +173,54 @@ type ArrayQueryResult<T> = PromiseLike<{
   error: QueryError | null;
 }>;
 
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
 interface MealsSelectQuery {
-  in(column: string, values: string[]): MealsSelectQuery;
-  then: ArrayQueryResult<MealsRow>["then"];
-}
-
-interface MealsUpdateQuery {
-  in(column: string, values: string[]): MealsUpdateQuery;
-  eq(column: string, value: string): MealsUpdateQuery;
-  then: ArrayQueryResult<MealsRow>["then"];
-}
-
-interface MealsInsertQuery {
-  then: ArrayQueryResult<unknown>["then"];
-}
-
-interface ShoppingListsInsertQuery {
-  select(columns: string): ShoppingListsInsertQuery;
-  maybeSingle(): MaybeSingleResult<ShoppingListInsertRow>;
+  in(column: "id", values: string[]): ArrayQueryResult<MealsRow>;
 }
 
 interface RecipeIngredientsSelectQuery {
-  in(column: string, values: string[]): RecipeIngredientsSelectQuery;
-  then: ArrayQueryResult<RecipeIngredientSourceRow>["then"];
+  in(column: "recipe_id", values: string[]): ArrayQueryResult<RecipeIngredientSourceRow>;
 }
 
 interface RecipesSelectQuery {
-  in(column: string, values: string[]): RecipesSelectQuery;
-  then: ArrayQueryResult<RecipeRow>["then"];
+  in(column: "id", values: string[]): ArrayQueryResult<RecipeRow>;
 }
 
 interface IngredientsSelectQuery {
-  in(column: string, values: string[]): IngredientsSelectQuery;
-  then: ArrayQueryResult<IngredientRow>["then"];
+  in(column: "id", values: string[]): ArrayQueryResult<IngredientRow>;
 }
 
 interface PantrySelectQuery {
-  eq(column: string, value: string): PantrySelectQuery;
-  or(filters: string): PantrySelectQuery;
-  then: ArrayQueryResult<PantryRow>["then"];
-}
-
-interface ShoppingListRecipesInsertQuery {
-  then: ArrayQueryResult<unknown>["then"];
-}
-
-interface ShoppingListItemsInsertQuery {
-  select(columns: string): ShoppingListItemsInsertQuery;
-  then: ArrayQueryResult<ShoppingCreateItemRow>["then"];
+  eq(column: "user_id", value: string): {
+    or(filters: string): ArrayQueryResult<PantryRow>;
+  };
 }
 
 interface MealsTable {
-  select(columns: string): MealsSelectQuery;
-  insert(values: Array<{
-    user_id: string;
-    recipe_id: string;
-    plan_date: string;
-    column_id: string;
-    planned_servings: number;
-    status: "registered";
-    is_leftover: boolean;
-    leftover_dish_id: string | null;
-    shopping_list_id: null;
-    cooked_at: null;
-  }>): MealsInsertQuery;
-  update(
-    values:
-      | { shopping_list_id: string }
-      | { planned_servings: number }
-      | { status: "shopping_done" },
-  ): MealsUpdateQuery;
-}
-
-interface ShoppingListsTable {
-  insert(value: {
-    user_id: string;
-    title: string;
-    date_range_start: string;
-    date_range_end: string;
-    is_completed: false;
-  }): ShoppingListsInsertQuery;
-}
-
-interface ShoppingListRecipesTable {
-  insert(values: Array<{
-    shopping_list_id: string;
-    recipe_id: string;
-    shopping_servings: number;
-    planned_servings_total: number;
-  }>): ShoppingListRecipesInsertQuery;
+  select(columns: "id, user_id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(base_servings, ingredients_json), plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, shopping_list_id"): MealsSelectQuery;
 }
 
 interface RecipeIngredientsTable {
-  select(columns: string): RecipeIngredientsSelectQuery;
+  select(columns: "recipe_id, ingredient_id, food_product_id, food_product_nutrition_version_id, amount, unit, ingredient_type, display_text"): RecipeIngredientsSelectQuery;
 }
 
 interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
+  select(columns: "id, base_servings"): RecipesSelectQuery;
 }
 
 interface IngredientsTable {
-  select(columns: string): IngredientsSelectQuery;
+  select(columns: "id, standard_name"): IngredientsSelectQuery;
 }
 
 interface PantryItemsTable {
-  select(columns: string): PantrySelectQuery;
-}
-
-interface ShoppingListItemsTable {
-  insert(
-    values: Array<{
-      shopping_list_id: string;
-      ingredient_id: string | null;
-      food_product_id: string | null;
-      food_product_nutrition_version_id: string | null;
-      display_text: string;
-      amounts_json: Array<{ amount: number; unit: string }>;
-      is_pantry_excluded: boolean;
-      is_checked: false;
-      added_to_pantry: false;
-      sort_order: number;
-    }>,
-  ): ShoppingListItemsInsertQuery;
+  select(columns: "ingredient_id, food_product_id, food_product_nutrition_version_id"): PantrySelectQuery;
 }
 
 interface ShoppingCreateDbClient extends Partial<RecipeProductNutritionClient> {
   from(table: "meals"): MealsTable;
-  from(table: "shopping_lists"): ShoppingListsTable;
-  from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
   from(table: "recipes"): RecipesTable;
   from(table: "recipe_ingredients"): RecipeIngredientsTable;
   from(table: "ingredients"): IngredientsTable;
   from(table: "pantry_items"): PantryItemsTable;
-  from(table: "shopping_list_items"): ShoppingListItemsTable;
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
