@@ -28,7 +28,7 @@ export async function GET() {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as UserProgressDbClient & UserBootstrapDbClient;
+  const dbClient: UserProgressDbClient & UserBootstrapDbClient = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
