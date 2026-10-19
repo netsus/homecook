@@ -168,7 +168,6 @@ const LEFTOVERS_DESCRIPTION =
 const EATEN_DESCRIPTION =
   "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
 const MYPAGE_SAVED_RECIPES_HREF = "/mypage?tab=saved";
-const MYPAGE_SHOPPING_HREF = "/mypage?tab=shopping";
 const WEB_MYPAGE_LOADING_TAB_LABELS = [
   "저장한 레시피",
   "레시피북",
@@ -329,8 +328,7 @@ export function MypageScreen({
   const [shoppingHasNext, setShoppingHasNext] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [shoppingLoaded, setShoppingLoaded] = useState(false);
-  const [selectedShoppingItem, setSelectedShoppingItem] =
-    useState<ShoppingListHistoryItem | null>(null);
+  const [selectedShoppingListId, setSelectedShoppingListId] = useState<string | null>(null);
   const [shoppingSelectedDateKey, setShoppingSelectedDateKey] = useState("");
 
   // Leftovers
@@ -439,6 +437,7 @@ export function MypageScreen({
     if (tab) {
       setActiveTab(tab);
       setMobileSurface(getMobileSurfaceForTab(tab));
+      setSelectedShoppingListId(tab === "shopping" ? params.get("shoppingListId") || null : null);
       return;
     }
 
@@ -470,23 +469,33 @@ export function MypageScreen({
     };
   }, []);
 
+  const clearShoppingSelectionUrl = useCallback((tab: MypageTab) => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("shoppingListId")) return;
+    url.searchParams.delete("shoppingListId");
+    url.searchParams.set("tab", tab);
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
+
   const switchDesktopTab = useCallback((tab: MypageTab) => {
     if (tab !== "recipebooks") {
       setSelectedRecipeBook(null);
     }
 
-    if (tab === "shopping" && activeTab === "shopping" && selectedShoppingItem) {
-      setSelectedShoppingItem(null);
+    if (tab === "shopping" && activeTab === "shopping" && selectedShoppingListId) {
+      setSelectedShoppingListId(null);
+      clearShoppingSelectionUrl(tab);
       window.scrollTo(0, 0);
       return;
     }
 
     setActiveTab(tab);
     if (tab !== "shopping") {
-      setSelectedShoppingItem(null);
+      setSelectedShoppingListId(null);
+      clearShoppingSelectionUrl(tab);
     }
     window.scrollTo(0, 0);
-  }, [activeTab, selectedShoppingItem]);
+  }, [activeTab, clearShoppingSelectionUrl, selectedShoppingListId]);
 
   const handleMobileSurfaceBack = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
@@ -500,7 +509,7 @@ export function MypageScreen({
     mobileReturnToRef.current = null;
     setActiveTab("saved");
     setSelectedRecipeBook(null);
-    setSelectedShoppingItem(null);
+    setSelectedShoppingListId(null);
     setMobileSurface("home");
     router.replace("/mypage");
   }, [router]);
@@ -738,32 +747,23 @@ export function MypageScreen({
   }, []);
 
   const openShoppingDetail = useCallback((item: ShoppingListHistoryItem) => {
-    if (typeof window !== "undefined") {
-      window.history.replaceState(
-        { mypageTab: "shopping" },
-        "",
-        MYPAGE_SHOPPING_HREF,
-      );
-      const params = new URLSearchParams({ tab: "shopping", shoppingListId: item.id });
-      window.history.pushState(
-        { mypageTab: "shopping", shoppingListId: item.id },
-        "",
-        `/mypage?${params.toString()}`,
-      );
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("tab") !== "shopping" || url.searchParams.get("shoppingListId") !== item.id) {
+      url.searchParams.set("tab", "shopping");
+      url.searchParams.delete("shoppingListId");
+      if (url.href !== window.location.href) {
+        window.history.replaceState(window.history.state, "", url);
+      }
+      url.searchParams.set("shoppingListId", item.id);
+      window.history.pushState(window.history.state, "", url);
     }
-    setSelectedShoppingItem(item);
+    setSelectedShoppingListId(item.id);
   }, []);
 
   const closeShoppingDetail = useCallback(() => {
-    setSelectedShoppingItem(null);
-    if (typeof window !== "undefined") {
-      window.history.replaceState(
-        { mypageTab: "shopping" },
-        "",
-        MYPAGE_SHOPPING_HREF,
-      );
-    }
-  }, []);
+    setSelectedShoppingListId(null);
+    clearShoppingSelectionUrl("shopping");
+  }, [clearShoppingSelectionUrl]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -774,9 +774,7 @@ export function MypageScreen({
         setMobileSurface(getMobileSurfaceForTab(tab));
       }
 
-      if (tab === "shopping" && !params.get("shoppingListId")) {
-        setSelectedShoppingItem(null);
-      }
+      setSelectedShoppingListId(tab === "shopping" ? params.get("shoppingListId") || null : null);
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -1262,7 +1260,6 @@ export function MypageScreen({
     plannerServings,
     selectedPlanColumnId,
     selectedPlanDate,
-    showToast,
   ]);
 
   const handleEatLeftover = useCallback(
@@ -1379,12 +1376,13 @@ export function MypageScreen({
       authState !== "authenticated" ||
       viewState !== "ready" ||
       activeTab !== "shopping" ||
+      selectedShoppingListId !== null ||
       shoppingLoaded
     ) {
       return;
     }
     void loadShoppingHistory();
-  }, [authState, activeTab, shoppingLoaded, loadShoppingHistory, viewState]);
+  }, [authState, activeTab, selectedShoppingListId, shoppingLoaded, loadShoppingHistory, viewState]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;
@@ -1790,6 +1788,18 @@ export function MypageScreen({
   }
 
   if (shouldUseMobileViewport) {
+    if (mobileSurface === "shopping" && selectedShoppingListId) {
+      return (
+        <ShoppingDetailScreen
+          initialAuthenticated
+          listId={selectedShoppingListId}
+          navActiveId="mypage"
+          onCompleted={() => void loadShoppingHistory()}
+          onRequestClose={closeShoppingDetail}
+          presentation="embedded"
+        />
+      );
+    }
     return (
       <>
         <MypageMobileScreen
@@ -2176,7 +2186,7 @@ export function MypageScreen({
               onSelectedDateKeyChange={setShoppingSelectedDateKey}
               scrollSentinelRef={scrollSentinelRef}
               selectedDateKey={shoppingSelectedDateKey}
-              selectedItem={selectedShoppingItem}
+              selectedListId={selectedShoppingListId}
             />
           ) : null}
           {activeTab === "leftovers" ? (
@@ -4065,7 +4075,7 @@ interface ShoppingHistoryTabContentProps {
   loaded: boolean;
   hasNext: boolean;
   isLoadingMore: boolean;
-  selectedItem: ShoppingListHistoryItem | null;
+  selectedListId: string | null;
   selectedDateKey: string;
   scrollSentinelRef: React.RefObject<HTMLDivElement | null>;
   onCloseDetail: () => void;
@@ -4079,7 +4089,7 @@ function ShoppingHistoryTabContent({
   loaded,
   hasNext,
   isLoadingMore,
-  selectedItem,
+  selectedListId,
   selectedDateKey,
   scrollSentinelRef,
   onCloseDetail,
@@ -4087,10 +4097,10 @@ function ShoppingHistoryTabContent({
   onOpenDetail,
   onSelectedDateKeyChange,
 }: ShoppingHistoryTabContentProps) {
-  if (selectedItem) {
+  if (selectedListId) {
     return (
       <ShoppingHistoryInlineDetail
-        item={selectedItem}
+        listId={selectedListId}
         onBack={onCloseDetail}
         onCompleted={onHistoryRefresh}
       />
@@ -4552,11 +4562,11 @@ function ShoppingHistoryStatusTag({ item }: { item: ShoppingListHistoryItem }) {
 }
 
 function ShoppingHistoryInlineDetail({
-  item,
+  listId,
   onBack,
   onCompleted,
 }: {
-  item: ShoppingListHistoryItem;
+  listId: string;
   onBack: () => void;
   onCompleted: () => void;
 }) {
@@ -4564,7 +4574,7 @@ function ShoppingHistoryInlineDetail({
     <div className="web-mypage-subsurface web-mypage-inline-detail">
       <ShoppingDetailScreen
         initialAuthenticated
-        listId={item.id}
+        listId={listId}
         navActiveId="mypage"
         onCompleted={onCompleted}
         onRequestClose={onBack}
