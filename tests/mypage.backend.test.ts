@@ -15,6 +15,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createRecipeImageInternalClient: () => null,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -216,10 +217,10 @@ describe("17a mypage backend", () => {
       { id: "91000000-0000-4000-8000-000000000003", name: "좋아요한 레시피", book_type: "liked", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 2 },
       { id: "91000000-0000-4000-8000-000000000004", name: "주말 파티", book_type: "custom", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 3 },
     ]);
-    expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+    expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id, recipes!inner(id)", { count: "exact", head: true });
     expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000002");
     expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000004");
-    expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id", { count: "exact", head: true });
+    expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id, recipes!inner(id)", { count: "exact", head: true });
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 

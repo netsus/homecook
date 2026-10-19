@@ -1,4 +1,5 @@
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { readQaFixtureFaultsHeader } from "@/lib/mock/qa-fixture-overrides";
 import {
@@ -73,25 +74,37 @@ type MaybeSingleQueryResult<T> = PromiseLike<{
   error: QueryError | null;
 }>;
 
-type CountQueryResult = PromiseLike<{
-  data: null;
-  error: QueryError | null;
-  count: number | null;
-}>;
-
-interface RecipeBooksSelectQuery {
-  eq(column: string, value: string): RecipeBooksSelectQuery;
-  in(column: string, values: string[]): RecipeBooksSelectQuery;
-  order(column: string, options: QueryOrderOption): RecipeBooksSelectQuery;
-  limit(value: number): RecipeBooksSelectQuery;
-  then: ArrayQueryResult<RecipeBookRow>["then"];
-}
-
-interface CountSelectQuery {
-  eq(column: string, value: string): CountSelectQuery;
-  in(column: string, values: string[]): CountSelectQuery;
-  then: CountQueryResult["then"];
-}
+// List and head-count projections only. POST's creation/reward contract stays separate.
+export type RecipeBookListReadDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_books: {
+        Row: { id: string; user_id: string; name: string; book_type: RecipeBookType; sort_order: number;
+          cover_color_key: RecipeBookCoverColorKey | null; cover_image_url: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_book_items: {
+        Row: { id: string; book_id: string; recipe_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_book_items_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: false;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+      recipe_likes: {
+        Row: { user_id: string; recipe_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_likes_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: false;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+      recipes: {
+        Row: { id: string; created_by: string | null; source_type: "system" | "youtube" | "manual" };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 interface RecipeBookSortOrderSelectQuery {
   eq(column: string, value: string): RecipeBookSortOrderSelectQuery;
@@ -106,7 +119,7 @@ interface RecipeBooksInsertQuery {
 }
 
 interface RecipeBooksTable {
-  select(columns: string): RecipeBooksSelectQuery | RecipeBookSortOrderSelectQuery;
+  select(columns: "sort_order"): RecipeBookSortOrderSelectQuery;
   insert(values: {
     user_id: string;
     name: string;
@@ -117,23 +130,8 @@ interface RecipeBooksTable {
   }): RecipeBooksInsertQuery;
 }
 
-interface RecipeBookItemsTable {
-  select(columns: string, options: { count: "exact"; head: true }): CountSelectQuery;
-}
-
-interface RecipeLikesTable {
-  select(columns: string, options: { count: "exact"; head: true }): CountSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: string, options: { count: "exact"; head: true }): CountSelectQuery;
-}
-
 interface RecipeBookDbClient {
   from(table: "recipe_books"): RecipeBooksTable;
-  from(table: "recipe_book_items"): RecipeBookItemsTable;
-  from(table: "recipe_likes"): RecipeLikesTable;
-  from(table: "recipes"): RecipesTable;
 }
 
 function normalizeBookName(name: unknown) {
@@ -301,7 +299,7 @@ function getRecipeBookCount({
 }
 
 async function readRecipeBookItemCounts(
-  dbClient: RecipeBookDbClient,
+  dbClient: RecipeBookListReadDbClient,
   bookIds: string[],
 ) {
   if (bookIds.length === 0) {
@@ -393,12 +391,12 @@ export async function GET(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    RecipeBookDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: RecipeBookListReadDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -409,7 +407,7 @@ export async function GET(request: Request) {
 
   const booksQuery = dbClient
     .from("recipe_books")
-    .select("id, name, book_type, sort_order, cover_color_key, cover_image_url") as RecipeBooksSelectQuery;
+    .select("id, name, book_type, sort_order, cover_color_key, cover_image_url");
   const booksResult = await booksQuery
     .eq("user_id", user.id)
     .order("sort_order", { ascending: true })

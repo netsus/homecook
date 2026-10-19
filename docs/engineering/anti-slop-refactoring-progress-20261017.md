@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면128/계약11이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면127/계약10이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -406,6 +406,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 상세1건은 `7f7e3ee15`로 보존했다. 같은파일의 POST 생성·권한/growth/quantity와 분리해 history GET만 native2표/선택행으로 맞췄다. GET전용 수동 fluent interface와 POST타입의 미사용 history select멤버를 제거했다. 같은 request client bootstrap순서, owner/cursor/정렬/limit+1/구매 항목 개수/제목/오류/응답 유지다.
 - 기준선55 PASS, 최종 SDK7+기존55=4 suite62 PASS·전체 typecheck·lint(max-warnings0)·Anti128/baseline207/신규0·diff PASS다. 신규fixture 첫2실패는 기존기간제목을 저장title로 잘못 기대했기 때문이며 실제 기존10/19~20 규칙으로 기대값만 정정했다. 제품 제목 함수는 변경하지 않았다.
 - 독립 리뷰도4 suite62 PASS·전체 nonincremental typecheck/diff PASS 및 SQL/owner/cursor/count와 POST함수 byte-identical JS emit을 확인해 APPROVE했다. POST 생성·권한·보상 흐름 변경0이며 실제DB/RLS는 미실행이다. master28/로컬 채택 후11, 원격·도구·운영 배포 승인 대기를 유지한다.
+
+## Bootstrap 후속: 레시피북 목록 GET1건 로컬 완료
+
+- history GET1은 `d164acc09`로 보존했다. 북 목록 GET만 실제4표/실제items·likes→recipes FK/head count/nullable cover/enum native 계약으로 분리했다. GET의 연쇄 단언·선택 query cast와 미사용 수동 count interface를 제거했고, POST타입의 미사용 GET count overload도 삭제했다. POST 생성/보상과 표지 reader는 유지했다.
+- 수정 전route14+bootstrap11=25 PASS. 최종 SDK6+route14+mypage7+bootstrap11=4 suite38 PASS·전체 typecheck·lint(max-warnings0)·Anti127/baseline207/신규0·diff PASS다. SDK는 HEAD/count=exact/Content-Range 수신/종류별 개수·owner·innerFK·빈목록/guest401/read/count500을 고정한다.
+- 앞서 별도 실패로 보존한 mypage GET의 누락된 image factory mock export를 이번 GET 범위에서 보완하고, 오래된 id-only 기대를 실제 inner-count 선택문으로 강화했다. 기존표지 검증 route도 그대로 통과했으며 테스트를 완화하지 않았다. 그 과거1실패는 이제 해소됐지만 pantry DELETE2실패는 별도 그대로다.
+- 독립 리뷰도4 suite38 PASS·전체 nonincremental typecheck/lint/diff와 실제 SQL/HEAD/표지 reader 보존, POST·auth helper byte-identical JS emit을 확인해 APPROVE했다. POST 보상 계약 장애는 미해결로 분리한다. master28/로컬 채택 후10, 실제 DB·권한/운영/원격·도구/배포0을 유지한다.
 
 ## 보류·기술적 경계
 
