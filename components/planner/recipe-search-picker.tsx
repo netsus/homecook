@@ -319,7 +319,7 @@ export function RecipeSearchPicker({
     setLoadedQuery(trimmedQuery);
 
     const response = await fetchRecipes({
-      ...(trimmedQuery ? { q: trimmedQuery } : {}),
+      q: trimmedQuery,
       limit: 10,
     });
     if (requestId !== requestIdRef.current) return;
@@ -351,7 +351,7 @@ export function RecipeSearchPicker({
     moreRequestRef.current = requestId;
     setLoadingMore(true);
     setMoreError(null);
-    const response = await fetchRecipes({ ...(loadedQuery ? { q: loadedQuery } : {}), cursor, limit: 10 });
+    const response = await fetchRecipes({ q: loadedQuery, cursor, limit: 10 });
     if (requestId !== requestIdRef.current) return;
     moreRequestRef.current = null;
     setLoadingMore(false);
