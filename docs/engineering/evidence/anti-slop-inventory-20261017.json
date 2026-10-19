@@ -20,10 +20,10 @@
   "candidateObservation": {
     "baseCommit": "64112be4bec14e29f88449214140250685210f15",
     "branch": "codex/cook-mode-row-contract-20261019",
-    "total": 144,
+    "total": 143,
     "newFindings": 0,
-    "contractCandidatesAfterAdoption": 27,
-    "status": "local verified, unmerged, undeployed; original contract state stays pending until adoption"
+    "contractCandidatesAfterAdoption": 26,
+    "status": "cook-mode preserved in local commit a30be1a6a plus separate verified memory input candidate; both unmerged/undeployed, original master contract28 state stays pending until adoption"
   },
   "findings": [
     {
@@ -363,6 +363,12 @@
       "snippet": "memory as unknown as RecipeNutritionServiceClient",
       "state": "needs-contract-refactor",
       "holdReason": "The in-memory BundleQuery is not a native PostgREST builder (url/headers/urlLengthLimit/cloneRequestState and other SDK state missing), in addition to loose bundle Row types. Do not fill fake SDK methods or invent revision/quantity_input; separate pure computation/bundle preparation is a medium refactor candidate.",
+      "pendingLocalResolution": {
+        "branch": "codex/cook-mode-row-contract-20261019",
+        "reason": "Separate native row loading from shared input preparation. Unknown bundle rows are validated; the shared core consumes a real predecessor loader and RPC capability, not a fake native client. Remove the memory SDK assertion, unused recipe table and maybeSingle; preserve local sorting/paging, owner/version/quantity guards and exact two refresh RPCs.",
+        "verification": "Before4 suites66 PASS; final5 suites79 PASS including native owner SDK and8 added refresh cases. Related callers4 suites37 PASS/1 suite12 conditional SKIP. Whole typecheck/lint/verify:anti-slop143/new0/diff PASS. Independent3 suites61/nonincremental typecheck/diff APPROVE. Initial ID-ordered guard fixture1FAIL corrected without product guard changes; falsy pin predicate issue corrected with real optional-field checks and2 regression cases. Invalid owner/revision/product metadata now explicitly rejects before writes; valid SQL rows unchanged, missing revision/quantity not invented.",
+        "status": "local verified, unmerged and undeployed; not deducted from master contract28; cook-mode plus memory adoption leaves bootstrap26"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",

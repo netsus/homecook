@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 다음 독립요리 로컬 후보는144/채택 후계약27이며 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 독립요리와 영양memory의 별도 로컬 후보를 함께 채택하면143/계약26이며 둘 다 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -291,6 +291,15 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 부모의 별도 로컬 진행 지시에 따라 `codex/cook-mode-row-contract-20261019`에서 독립 요리모드1건만 수정했다. 손코딩 fluent query interface를 실제 native6표/ingredient FK/step method FK/junction `step_id`·`method_id` 관계로 맞췄다. public/auth의 선택문을 각각 추론하고 기존 CookingIngredientRow/CookingStepRow 소비 view로 구조대입해 같은 client의 연쇄 단언1건을 제거했다. 새 단언/any/검사억제/wrapper0, SQL/권한/운영 변경0이다.
 - 제품 수정 전 기존 standalone/canonical9+신규SDK7 PASS, 최종 native8(타입/선택열/인분/제품전용null join/legacy fallback/오류/잘못된인분)+기존9=2 suite17 PASS다. 전체 typecheck·변경 lint(max-warnings0)·Anti144/baseline207/신규0·diff PASS다. 독립 리뷰도17/전체nonincremental typecheck/diff PASS 및 SQL/FK/legacy/canonical/실패차단을 확인해 APPROVE했다. 비차단 NOT NULL 정밀도 권고는 cooking_method_id:string으로 수용하고 compiler를 재확인했다.
 - 현재 로컬 검증본은 미머지·미배포다. master 계약28에서 아직 차감하지 않고 채택 후27(memory1+bootstrap26)로 구분한다. 원장의 pendingLocalResolution/candidateObservation에 남겼다. DB238 앱-only 도구 단계는 부모의 최소 변경 범위 승인 전 보류하며, 원격/운영 차단을 로컬 계약 실패로 표현하지 않는다. 실제 DB/RLS·브라우저·운영 검증이나 build를 이번 로컬 검증으로 대체하지 않는다.
+
+## 영양 memory 로컬 계약 분리와 승인 대기 보존
+
+- 부모가 새 DB238 앱 successor/CLI 변경·운영 범위를 사용자에게 확인 중이므로 승인 응답 전 새 검증기와 배포는 시작하지 않는다. 검증된 독립 요리모드 후보는 로컬 커밋 `a30be1a6a`로 보존했고 push/머지/배포하지 않았다. 다음 영양 변경은 그 뒤 별도 작은 커밋으로 분리한다.
+- memory의 `RecipeNutritionServiceClient` 연쇄 단언1건을 제거했다. native 서비스는 기존 실제 SDK 조회·읽기 오류 처리를 유지하고, 공통 `prepareRecipeNutritionSnapshotFromInput`에 입력 행·실제 predecessor loader·RPC capability를 전달한다. refresh는 검증된 job bundle의 recipe와 기존 정렬된 재료를 직접 전달하며 기존 evidence filter/order/paging과 product/quantity RPC reader를 사용한다. 메모리가 SDK 내부 상태를 흉내 내도록 만들지 않았고 미사용 recipes table/maybeSingle도 삭제했다.
+- 새 unknown 입력 경계는 실제 소비 행의 owner/revision/재료ID/제품pin 타입을 확인한다. 이는 잘못된 RPC 메타데이터를 쓰기 전 INVALID_RECIPE_NUTRITION_INPUT으로 명시 거절하는 경계 보강이다. 정상 SQL 행·기존 owner/session/version/quantity 판정·guard 독립 재계산/비교·마지막 두 RPC와 stale 오류·job acknowledgement 금지·DB 계약/권한/실데이터는 바꾸지 않는다. bundle에 없는 revision/quantity_input을 만들지 않는다.
+- 수정 전4 suite66 PASS, 최종5 suite79 PASS(native owner SDK 포함, 새refresh8건)다. 연관 AI runtime/worker·발행·quantity-v4 선택은4 suite37 PASS/조건부1 suite12 SKIP이며 제외를 성공에 합산하지 않는다. 고유116 PASS/12 SKIP다. 전체 typecheck·변경 lint(max-warnings0)·Anti143/baseline207/신규0·diff PASS다. 독립 리뷰도3 suite61 PASS/전체nonincremental typecheck/diff PASS를 확인해 APPROVE했고 가짜 SDK cast wrapper가 아닌 실제 두 producer의 입력 경계 분리임을 검토했다.
+- 최초 새fixture1건은 guard를 sort_order 순서로 가정해 실패했고 실제 ID 정렬 계약으로 fixture만 정정했다. 새unknown guard의 falsy product pin 타입 좁힘 문제는 root와 독립 리뷰에서 확인해 optional 필드별 실제 타입 검사와 false/object 회귀2건으로 수정했다. 검사·guard·baseline을 완화하지 않았다.
+- 요리모드+memory 두 로컬 후보는 미머지·미배포이므로 master 계약28에서 완료로 차감하지 않는다. 함께 채택하면 공통 초기화26만 남는다. 원본39·원본미확인49·전체진단145/로컬143은 서로 다른 분모다. 승계 검증기/운영 배포는 승인 대기 중이며 이 로컬 검증을 실제 DB/RLS·운영 결과로 표현하지 않는다.
 
 ## 보류·기술적 경계
 

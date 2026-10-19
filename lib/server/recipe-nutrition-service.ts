@@ -97,24 +97,35 @@ function isNonEmptyText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isValidRecipe(
-  row: RecipeNutritionRecipeRow | null,
-  recipeId: string,
-): row is RecipeNutritionRecipeRow {
-  return row !== null &&
-    row.id === recipeId &&
-    Number.isFinite(row.base_servings) &&
-    row.base_servings > 0 &&
-    isNonEmptyText(row.updated_at);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function isValidIngredient(row: RecipeNutritionIngredientRow) {
-  if (!isNonEmptyText(row.id)) return false;
+function isValidRecipe(
+  row: unknown,
+  recipeId: string,
+): row is RecipeNutritionRecipeRow {
+  return isRecord(row) &&
+    row.id === recipeId &&
+    typeof row.base_servings === "number" &&
+    Number.isFinite(row.base_servings) &&
+    row.base_servings > 0 &&
+    isNonEmptyText(row.updated_at) &&
+    (row.created_by === undefined || row.created_by === null || typeof row.created_by === "string") &&
+    (row.revision === undefined || typeof row.revision === "number");
+}
+
+function isValidIngredient(row: unknown): row is RecipeNutritionIngredientRow {
+  if (!isRecord(row) || !isNonEmptyText(row.id)
+    || !(row.ingredient_id === null || typeof row.ingredient_id === "string")
+    || !(row.food_product_id === undefined || row.food_product_id === null || typeof row.food_product_id === "string")
+    || !(row.food_product_nutrition_version_id === undefined || row.food_product_nutrition_version_id === null
+      || typeof row.food_product_nutrition_version_id === "string")) return false;
   const product = row.food_product_id ?? null;
   const version = row.food_product_nutrition_version_id ?? null;
   if ((product === null) !== (version === null)) return false;
   if (product ? !isNonEmptyText(product) || !isNonEmptyText(version) : !isNonEmptyText(row.ingredient_id)) return false;
-  if (!Number.isInteger(row.sort_order) || typeof row.scalable !== "boolean") return false;
+  if (typeof row.sort_order !== "number" || !Number.isInteger(row.sort_order) || typeof row.scalable !== "boolean") return false;
   if (row.ingredient_type === "TO_TASTE") {
     return row.amount === null && row.unit === null && row.scalable === false;
   }
@@ -151,9 +162,29 @@ export async function prepareRecipeNutritionSnapshot(
   if (recipeResult.error || ingredientsResult.error) {
     throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
   }
-  if (!isValidRecipe(recipeResult.data, recipeId) ||
-    !ingredientsResult.data ||
-    ingredientsResult.data.some((ingredient) => !isValidIngredient(ingredient))) {
+  return prepareRecipeNutritionSnapshotFromInput({
+    recipeId, recipe: recipeResult.data, ingredients: ingredientsResult.data,
+    loadPredecessors: ids => loadRecipeNutritionPredecessors(predecessorClient, ids),
+    predecessorClient, sessionAuthority,
+  });
+}
+
+/** Prepare from either SDK-selected rows or an authenticated job bundle.
+ * Input rows are validated here; the evidence loader and RPC reader are real
+ * consumed capabilities, not a memory object pretending to be an SDK client.
+ */
+export async function prepareRecipeNutritionSnapshotFromInput({
+  recipeId, recipe, ingredients, loadPredecessors, predecessorClient, sessionAuthority,
+}: {
+  recipeId: string;
+  recipe: unknown;
+  ingredients: unknown;
+  loadPredecessors: (ingredientIds: string[]) => ReturnType<typeof loadRecipeNutritionPredecessors>;
+  predecessorClient: RecipeProductNutritionClient;
+  sessionAuthority?: AccountGenerationBootstrapSessionAuthority;
+}) {
+  if (!isNonEmptyText(recipeId) || !isValidRecipe(recipe, recipeId)
+    || !Array.isArray(ingredients) || !ingredients.every(isValidIngredient)) {
     throw new RecipeNutritionServiceError("INVALID_RECIPE_NUTRITION_INPUT");
   }
 
@@ -162,9 +193,8 @@ export async function prepareRecipeNutritionSnapshot(
   // existing scoped reader instead of mistaking RLS-filtered rows for missing data.
   let predecessors;
   try {
-    predecessors = await loadRecipeNutritionPredecessors(
-      predecessorClient,
-      ingredientsResult.data.flatMap((ingredient) => ingredient.food_product_id || !ingredient.ingredient_id ? [] : [ingredient.ingredient_id]),
+    predecessors = await loadPredecessors(
+      ingredients.flatMap((ingredient) => ingredient.food_product_id || !ingredient.ingredient_id ? [] : [ingredient.ingredient_id]),
     );
   } catch {
     throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
@@ -174,9 +204,9 @@ export async function prepareRecipeNutritionSnapshot(
   try {
     productHydration = await hydrateRecipeProductNutrition(
       predecessorClient,
-      ingredientsResult.data,
-      hydrateRecipeNutritionIngredients(ingredientsResult.data, predecessors),
-      recipeResult.data.created_by,
+      ingredients,
+      hydrateRecipeNutritionIngredients(ingredients, predecessors),
+      recipe.created_by,
     );
   } catch {
     throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
@@ -184,10 +214,10 @@ export async function prepareRecipeNutritionSnapshot(
   let quantityV4: boolean;
   let quantityRecipeRevision: number | undefined;
   if (sessionAuthority) {
-    if (recipeResult.data.created_by !== sessionAuthority.ownerUuid) {
+    if (recipe.created_by !== sessionAuthority.ownerUuid) {
       throw new RecipeNutritionServiceError("RESOURCE_NOT_FOUND");
     }
-    const revision = recipeResult.data.revision;
+    const revision = recipe.revision;
     if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision <= 0) {
       throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
     }
@@ -204,29 +234,29 @@ export async function prepareRecipeNutritionSnapshot(
     quantityV4 = false;
     if ("quantity_policy_version" in mode) {
       if (!("quantity_recipe_revision" in mode) || mode.quantity_policy_version !== "quantity-v4"
-        || mode.quantity_recipe_revision !== recipeResult.data.revision) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
-      quantityRecipeRevision = recipeResult.data.revision;
+        || mode.quantity_recipe_revision !== recipe.revision) throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
+      quantityRecipeRevision = recipe.revision;
       quantityV4 = true;
     }
   }
-  if (!quantityV4 && ingredientsResult.data.some(row => row.quantity_input !== null && row.quantity_input !== undefined)) {
+  if (!quantityV4 && ingredients.some(row => row.quantity_input !== null && row.quantity_input !== undefined)) {
     throw new RecipeNutritionServiceError("UNIT_CONTEXT_STALE");
   }
   let quantityHydration;
   try {
-    quantityHydration = quantityV4 ? await hydrateRecipeQuantityNutrition(predecessorClient, ingredientsResult.data,
-      productHydration.ingredients, recipeResult.data.created_by ?? undefined) : null;
+    quantityHydration = quantityV4 ? await hydrateRecipeQuantityNutrition(predecessorClient, ingredients,
+      productHydration.ingredients, recipe.created_by ?? undefined) : null;
   } catch { throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED"); }
   const calculation = calculateRecipeNutrition({
     recipe_id: recipeId,
-    recipe_version: recipeResult.data.updated_at,
-    base_servings: recipeResult.data.base_servings,
+    recipe_version: recipe.updated_at,
+    base_servings: recipe.base_servings,
     ingredients: quantityHydration?.ingredients ?? productHydration.ingredients,
     calculation_version: quantityV4 ? RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION : undefined,
   });
 
   const guard = addRecipeProductNutritionGuard(
-    buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors), ingredientsResult.data, productHydration.predecessors);
+    buildRecipeNutritionInputGuard(ingredients, predecessors), ingredients, productHydration.predecessors);
   if (quantityHydration) {
     Object.assign(guard, { quantity_policy_version: "quantity-v4", quantity_recipe_revision: quantityRecipeRevision });
   }
@@ -236,7 +266,7 @@ export async function prepareRecipeNutritionSnapshot(
   }
   return {
     calculation,
-    expectedRecipeVersion: recipeResult.data.updated_at,
+    expectedRecipeVersion: recipe.updated_at,
     inputGuard: guard,
   };
 }
