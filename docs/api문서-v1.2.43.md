@@ -3902,6 +3902,8 @@ GET /shopping/preview
 
 ### 8-2. 장보기 목록 생성 (Step D) `v1.2 변경`
 
+> 2026-10-20 내부 조회 경계 보완: 요청 client의 실제 SDK 6표/FK 읽기 계약과 snapshot JSON의 소비 시점 타입 확인을 사용한다. 기존 snapshot 우선/legacy fallback, 수량·원문, null/누락 fallback, 미사용 label, `scalable !== false` 동작과 원자 쓰기 RPC는 유지한다. JSON 전체 필드의 새 일괄 유효성 검사를 추가한 것은 아니다. 기존에 후속 UUID 조회/RPC 오류가 나는 truthy 비문자열 ingredient/product ID는 해당 후속 요청 전에 `{ success:false, data:null, error:{ code:"INTERNAL_ERROR", message:"장보기 재료를 확인하지 못했어요.", fields:[] } }`와 HTTP 500으로 닫는다. 이 malformed-ID 차이는 SDK/fake 오류 회귀이며 실제 운영 DB의 오류 응답을 조회한 증거가 아니다. [정확한 호환·실행 차이·검증 범위](engineering/anti-slop-shopping-json-consumption-20261020.md)를 따른다.
+
 ```
 POST /shopping/lists
 ```
