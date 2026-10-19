@@ -34,6 +34,7 @@ function createMaybeSingleQuery<T>(result: QueryResult<T>) {
 function createArraySelectQuery<T>(result: QueryResult<T[]>) {
   const query = {
     eq: vi.fn(() => query),
+    match: vi.fn(() => query),
     then(
       onFulfilled?: (value: QueryResult<T[]>) => unknown,
       onRejected?: (reason: unknown) => unknown,
@@ -48,6 +49,7 @@ function createArraySelectQuery<T>(result: QueryResult<T[]>) {
 function createSelectMaybeSingleQuery<T>(result: QueryResult<T>) {
   const query = {
     eq: vi.fn(() => query),
+    match: vi.fn(() => query),
     maybeSingle: vi.fn(async () => result),
   };
 

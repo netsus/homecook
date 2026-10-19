@@ -25,7 +25,7 @@ function createReadOnlyClient(missingSummary = false) {
     select() {
       const result = { data: rows[table] ?? [], error: null, count: 0 };
       const query = {
-        eq: () => query, in: () => query, is: () => query,
+        eq: () => query, match: () => query, in: () => query, is: () => query,
         order: () => query, limit: () => query,
         maybeSingle: async () => ({ data: missingSummary ? null : summary, error: null }),
         then: Promise.resolve(result).then.bind(Promise.resolve(result)),

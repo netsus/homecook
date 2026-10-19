@@ -44,6 +44,7 @@ function createUpsertQuery<T>(result: QueryResult<T>) {
 function createArrayQuery<T>(result: QueryResult<T[]>) {
   const query = {
     eq: vi.fn(() => query),
+    match: vi.fn(() => query),
     is: vi.fn(() => query),
     then(
       onFulfilled?: (value: QueryResult<T[]>) => unknown,

@@ -57,7 +57,7 @@ type ArrayResult<T> = PromiseLike<{
 }>;
 
 interface ProgressEventInsertQuery {
-  select(columns: string): ProgressEventInsertSelectQuery;
+  select(columns: "id, xp_delta, source_meta_json"): ProgressEventInsertSelectQuery;
 }
 
 interface ProgressEventInsertSelectQuery {
@@ -69,17 +69,17 @@ interface ProgressEventInsertSelectQuery {
 }
 
 interface ProgressEventsSelectQuery {
-  eq(column: string, value: string): ProgressEventsSelectQuery;
-  then: ArrayResult<UserProgressEventRow>["then"];
+  match(filters: { user_id: string }): ArrayResult<UserProgressEventRow>;
 }
 
 interface ProgressSummarySelectQuery {
-  eq(column: string, value: string): ProgressSummarySelectQuery;
-  maybeSingle(): MaybeSingleResult<UserProgressSummaryRow>;
+  match(filters: { user_id: string }): {
+    maybeSingle(): MaybeSingleResult<UserProgressSummaryRow>;
+  };
 }
 
 interface ProgressSummaryUpsertQuery {
-  select(columns: string): ProgressSummaryUpsertSelectQuery;
+  select(columns: "user_id, total_xp, current_level, level_curve_version, event_counts, last_event_at, last_updated_at"): ProgressSummaryUpsertSelectQuery;
 }
 
 interface ProgressSummaryUpsertSelectQuery {
@@ -88,11 +88,11 @@ interface ProgressSummaryUpsertSelectQuery {
 
 interface ProgressEventsTable {
   insert(values: UserProgressEventInsert): ProgressEventInsertQuery;
-  select(columns: string): ProgressEventsSelectQuery;
+  select(columns: "event_type, source_id, source_key, xp_delta, occurred_at, source_meta_json"): ProgressEventsSelectQuery;
 }
 
 interface ProgressSummaryTable {
-  select(columns: string): ProgressSummarySelectQuery;
+  select(columns: "user_id, total_xp, current_level, level_curve_version, event_counts, last_event_at, last_updated_at"): ProgressSummarySelectQuery;
   upsert(values: UserProgressSummaryRow, options: { onConflict: "user_id" }): ProgressSummaryUpsertQuery;
 }
 
@@ -365,7 +365,7 @@ export async function awardUserProgressEvent(
     const existingEventsResult = await dbClient
       .from("user_progress_events")
       .select("event_type, source_id, source_key, xp_delta, occurred_at, source_meta_json")
-      .eq("user_id", input.userId);
+      .match({ user_id: input.userId });
 
     if (existingEventsResult.error || !existingEventsResult.data) {
       return {
@@ -469,7 +469,7 @@ export async function readUserProgress(
     const summaryResult = await dbClient
       .from("user_progress_summary")
       .select("user_id, total_xp, current_level, level_curve_version, event_counts, last_event_at, last_updated_at")
-      .eq("user_id", userId)
+      .match({ user_id: userId })
       .maybeSingle();
 
     if (summaryResult.error) {
@@ -506,7 +506,7 @@ async function recalculateUserProgressSummary(
   const eventsResult = await dbClient
     .from("user_progress_events")
     .select("event_type, source_id, source_key, xp_delta, occurred_at, source_meta_json")
-    .eq("user_id", userId);
+    .match({ user_id: userId });
 
   if (eventsResult.error || !eventsResult.data) {
     return {

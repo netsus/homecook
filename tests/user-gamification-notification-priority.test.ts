@@ -43,6 +43,9 @@ function createMaybeSingleQuery<T>(result: QueryResult<T>) {
     eq: vi.fn(() => ({
       maybeSingle: vi.fn(async () => result),
     })),
+    match: vi.fn(() => ({
+      maybeSingle: vi.fn(async () => result),
+    })),
   };
 }
 
