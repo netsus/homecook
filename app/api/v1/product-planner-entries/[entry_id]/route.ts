@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { parseProductPlannerEntryPatchBody } from "@/lib/server/prepared-food-planner-entry";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
@@ -13,27 +14,21 @@ interface RpcError {
   message: string;
 }
 
-interface EntryState {
-  id: string;
-  user_id: string;
-}
-
-interface StateQuery {
-  eq(column: string, value: string): StateQuery;
-  maybeSingle(): PromiseLike<{ data: EntryState | null; error: RpcError | null }>;
-}
-
-interface EntryTable {
-  select(columns: string): StateQuery;
-}
-
-interface ProductPlannerEntryMutationDbClient {
-  from(table: "product_planner_entries"): EntryTable;
-  rpc(
-    name: "update_product_planner_entry_quantity" | "delete_product_planner_entry",
-    args: Record<string, unknown>,
-  ): PromiseLike<{ data: unknown; error: RpcError | null }>;
-}
+export type ProductPlannerEntryMutationDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      product_planner_entries: {
+        Row: { id: string; user_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: {
+      update_product_planner_entry_quantity: { Args: Record<string, unknown>; Returns: unknown };
+      delete_product_planner_entry: { Args: Record<string, unknown>; Returns: unknown };
+    };
+  };
+}>, "from" | "rpc">;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -81,7 +76,7 @@ async function requireEntry(context: RouteContext) {
     };
   }
 
-  const db = routeClient as unknown as ProductPlannerEntryMutationDbClient;
+  const db: ProductPlannerEntryMutationDbClient = routeClient;
   const stateResult = await db
     .from("product_planner_entries")
     .select("id, user_id")
@@ -141,7 +136,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = routeClient as unknown as ProductPlannerEntryMutationDbClient;
+  const db: ProductPlannerEntryMutationDbClient = routeClient;
   const stateResult = await db
     .from("product_planner_entries")
     .select("id, user_id")

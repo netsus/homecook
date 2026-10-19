@@ -12,12 +12,12 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "7d15dfe790f8cf600cb84c756ef9afe9984a212b",
-    "startingCommit": "d5f9a6dae2fcac111ee4b6ad50822177f73d2494",
-    "total": 105,
+    "baseCommit": "b867b1e3e",
+    "startingCommit": "99e44c009e63bd7a43f57f2e45ab886d41db6fa2",
+    "total": 93,
     "newFindings": 0,
-    "verificationState": "PR1833 merged/operating once at7d15dfe/buildprelaunch-7d15dfe790f8-MTla10/DB238. Anti105(43/37/25)/new0; original16358resolved/105remaining. Exact merge205 PASS, whole type/lint/verify/diff and independent APPROVE. Web1466 PASS/133 name-filter SKIP, build98s/static94/existingwarnings3; manifest200/unauth3 wrapped401. Fixed read-only data observer9 equal, original approval/PIN/ledger/readerFloor/plan unchanged. Existing static3FAIL preserved. Auth QA/legacy completion untested; permission3/444/separate49 unknown preserved. Protected36 origin/dirty read investigation ongoing, no silent release. SQL/settings/worker changes0; no docs-only redeploy.",
-    "reference": "docs/engineering/anti-slop-safe-boundary-batch-20261020.md"
+    "verificationState": "Local planner/meals/UI12 source resolutions in5 logical commits; original16370resolved/93remaining, released planner7unreviewed, protectedYouTube17 preserved. Combined18suite209PASS/0skip, whole nonincrementaltype/lint/verify93new0/diff and independent source reviews APPROVE. Existing mealsGET1FAIL reproduced unchanged7d, static3/permission3/444/original49unknown preserved. No runtime guard/baseline/test weakening. Actual operating7d15/buildprelaunch-7d15dfe790f8-MTla10/DB238 remains105; parent7d15 authenticated readQA passed with no profile/settings/new data writes, per-requestHTTP uncollected and legacy completion untested. New batch unmerged/undeployed/authQA unexecuted. SQL/settings/credentials/PIN/policy/worker changes0.",
+    "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
   },
   "residualRolloutObservation": {
     "historical": true,
@@ -124,8 +124,17 @@
       "line": 96,
       "column": 14,
       "snippet": "routeClient as unknown as ProductPlannerEntryCreateDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "3d72e1d9b",
+        "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#1",
@@ -136,8 +145,17 @@
       "line": 84,
       "column": 14,
       "snippet": "routeClient as unknown as ProductPlannerEntryMutationDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "3d72e1d9b",
+        "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#2",
@@ -148,8 +166,17 @@
       "line": 144,
       "column": 14,
       "snippet": "routeClient as unknown as ProductPlannerEntryMutationDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "3d72e1d9b",
+        "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "lib/server/hybrid-auth/bootstrap.ts::anti-slop(no-array-filter-map)::e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596#1",
@@ -205,8 +232,17 @@
       "line": 234,
       "column": 20,
       "snippet": "routeClient as unknown as PlannerDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "1b4248998",
+        "reason": "Native selected5table/nullable snapshot FK and unknown JSON RPC contract; same owner/date/order/pin/image/dedupe and bootstrap instance.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/leftovers/[leftover_id]/eat/route.ts::anti-slop(no-chained-type-assertions)::d97c9904d63c0f8d8dc8c6f7fdc82ecbdf011582d94a53d7f5ac6aba62cebc67#1",
@@ -743,8 +779,10 @@
       "line": 21,
       "column": 15,
       "snippet": "result.data as unknown as MealRecipeSnapshotRow",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "unreviewed",
+      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
     },
     {
       "id": "ui/designs/prototypes/claude-design-260512-desktop/project/modals.jsx::anti-slop(no-array-filter-map)::be59a9625462d08be0bd5c266c0cb4ead88957d74463faa92dbdbe03aa996457#1",
@@ -773,8 +811,10 @@
       "line": 235,
       "column": 20,
       "snippet": "routeClient as unknown as MealsDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "unreviewed",
+      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
     },
     {
       "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
@@ -785,8 +825,17 @@
       "line": 269,
       "column": 5,
       "snippet": "serviceClient as unknown as FuturePropagationRpcClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "e97a4f797",
+        "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#2",
@@ -797,8 +846,10 @@
       "line": 317,
       "column": 20,
       "snippet": "routeClient as unknown as MealsDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "unreviewed",
+      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
     },
     {
       "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#2",
@@ -809,8 +860,17 @@
       "line": 351,
       "column": 5,
       "snippet": "serviceClient as unknown as FuturePropagationRpcClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "e97a4f797",
+        "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "lib/server/user-progress.ts::anti-slop(no-chained-type-assertions)::a2c5fd4bd48d3ce5683f88b76fd735a69e7b35408f4dfb83886844dddfa6b4bf#1",
@@ -844,8 +904,10 @@
       "line": 422,
       "column": 20,
       "snippet": "routeClient as unknown as MealsDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "unreviewed",
+      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
     },
     {
       "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::16e843117c2fadc3c91622137f1ce7bd4675d535edd60aecee60516b63f48332#1",
@@ -856,8 +918,10 @@
       "line": 649,
       "column": 20,
       "snippet": "routeClient as unknown as MealsDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "unreviewed",
+      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
     },
     {
       "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::d9f5207c6497f3b58132a472f7662c1ebadcb343b00a471159ce0c1e993fe9a0#1",
@@ -868,8 +932,10 @@
       "line": 671,
       "column": 33,
       "snippet": "routeClient as unknown as MealsDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "unreviewed",
+      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
     },
     {
       "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
@@ -880,8 +946,17 @@
       "line": 736,
       "column": 5,
       "snippet": "serviceClient as unknown as FuturePropagationRpcClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "e97a4f797",
+        "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx::anti-slop(no-array-filter-map)::bca8d01a1ce4b0397a467d308799c2e6692413529772ad9dbc3fe31050ec823f#1",
@@ -928,8 +1003,10 @@
       "line": 80,
       "column": 22,
       "snippet": "routeClient as unknown as PlannerNutritionDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "unreviewed",
+      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
     },
     {
       "id": "app/api/v1/users/me/settings/route.ts::anti-slop(no-chained-type-assertions)::9a86eb7b114f8f0ca9f1ed90cebed5116e6694fbf97ecbd98d51401535c57c98#1",
@@ -1045,8 +1122,17 @@
       "line": 285,
       "column": 20,
       "snippet": "routeClient as unknown as PlannerColumnsDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "0aad87dac",
+        "reason": "Native consumed single table and owned-delete RPC replace handwritten builders; unused meals protocol deleted, ordering/min-max/owner/delete semantics unchanged.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts::anti-slop(no-chained-type-assertions)::fa5c10c788d5d7e83b6cd93996cb0632be561cf191c08dae008ecf818870ecb3#1",
@@ -2377,8 +2463,17 @@
       "line": 121,
       "column": 38,
       "snippet": "value as unknown as MealLogReturnContext",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#2",
@@ -2389,8 +2484,17 @@
       "line": 133,
       "column": 12,
       "snippet": "value as unknown as MealLogReturnContext",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#3",
@@ -2401,8 +2505,17 @@
       "line": 142,
       "column": 12,
       "snippet": "value as unknown as MealLogReturnContext",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#4",
@@ -2413,8 +2526,17 @@
       "line": 147,
       "column": 12,
       "snippet": "value as unknown as MealLogReturnContext",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "Planner scope released; behavior-preserving source resolution verified, merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
+      "adoptedResolution": {
+        "status": "local verified and independently approved; not yet merged/deployed",
+        "candidateCommit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup.",
+        "verification": "Final18suite209 PASS/0skip; whole type/lint/verify93new0/diff and relevant independent APPROVE.",
+        "reference": "docs/engineering/anti-slop-planner-contracts-20261020.md"
+      }
     },
     {
       "id": "lib/server/youtube-corpus-scoring.ts::anti-slop(no-array-filter-map)::aba92d5c9d64659fad6231a02147b765ee5cb55f112d291ac3e4906b18d8f55a#1",

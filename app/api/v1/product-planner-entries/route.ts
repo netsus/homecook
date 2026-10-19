@@ -1,9 +1,9 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { parseProductPlannerEntryCreateBody } from "@/lib/server/prepared-food-planner-entry";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
@@ -14,37 +14,25 @@ interface RpcError {
   message: string;
 }
 
-interface ProductState {
-  id: string;
-  owner_user_id: string | null;
-  visibility: "public" | "private";
-  moderation_status?: "visible" | "hidden_by_report" | "hidden_by_operator";
-  deleted_at: string | null;
-  current_nutrition_version_id: string | null;
-}
-
-interface ColumnState {
-  id: string;
-  user_id: string;
-}
-
-interface StateQuery<T> {
-  eq(column: string, value: string): StateQuery<T>;
-  maybeSingle(): PromiseLike<{ data: T | null; error: RpcError | null }>;
-}
-
-interface StateTable<T> {
-  select(columns: string): StateQuery<T>;
-}
-
-interface ProductPlannerEntryCreateDbClient {
-  from(table: "food_products"): StateTable<ProductState>;
-  from(table: "meal_plan_columns"): StateTable<ColumnState>;
-  rpc(
-    name: "create_product_planner_entry",
-    args: Record<string, unknown>,
-  ): PromiseLike<{ data: unknown; error: RpcError | null }>;
-}
+// Selected SQL columns only; RPC JSON remains unknown at the existing response boundary.
+export type ProductPlannerEntryCreateDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      food_products: {
+        Row: { id: string; owner_user_id: string | null; visibility: "public" | "private";
+          moderation_status: "visible" | "hidden_by_report" | "hidden_by_operator";
+          deleted_at: string | null; current_nutrition_version_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      meal_plan_columns: {
+        Row: { id: string; user_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: { create_product_planner_entry: { Args: Record<string, unknown>; Returns: unknown } };
+  };
+}>, "from" | "rpc">;
 
 function databaseFailure(error: RpcError | null) {
   const detail = `${error?.code ?? ""} ${error?.message ?? ""}`;
@@ -93,11 +81,10 @@ export async function POST(request: Request) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = routeClient as unknown as
-    ProductPlannerEntryCreateDbClient & UserBootstrapDbClient;
+  const db: ProductPlannerEntryCreateDbClient = routeClient;
   try {
-    await ensurePublicUserRow(db, user);
-    await ensureUserBootstrapState(db, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch {
     return fail("INTERNAL_ERROR", "완제품을 플래너에 추가하지 못했어요.", 500);
   }

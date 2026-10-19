@@ -1,104 +1,40 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail } from "@/lib/api/response";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { PlannerColumnData } from "@/types/planner";
 
-interface QueryError {
-  message: string;
-}
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-export interface PlannerColumnRow {
+export type PlannerColumnRow = {
   id: string;
   user_id: string;
   name: string;
   sort_order: number;
   created_at: string;
-}
+};
 
-interface MealLookupRow {
-  id: string;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface PlannerColumnsSelectQuery {
-  eq(column: string, value: string): PlannerColumnsSelectQuery;
-  order(column: string, options: QueryOrderOption): PlannerColumnsSelectQuery;
-  maybeSingle(): MaybeSingleResult<PlannerColumnRow>;
-  then: ArrayResult<PlannerColumnRow>["then"];
-}
-
-interface PlannerColumnsInsertQuery {
-  select(columns: string): PlannerColumnsInsertQuery;
-  maybeSingle(): MaybeSingleResult<PlannerColumnRow>;
-}
-
-interface PlannerColumnsUpdateQuery {
-  eq(column: string, value: string): PlannerColumnsUpdateQuery;
-  select(columns: string): PlannerColumnsUpdateQuery;
-  maybeSingle(): MaybeSingleResult<PlannerColumnRow>;
-  then: ArrayResult<unknown>["then"];
-}
-
-interface PlannerColumnsDeleteQuery {
-  eq(column: string, value: string): PlannerColumnsDeleteQuery;
-  then: ArrayResult<unknown>["then"];
-}
-
-interface MealsSelectQuery {
-  eq(column: string, value: string): MealsSelectQuery;
-  limit(count: number): MealsSelectQuery;
-  then: ArrayResult<MealLookupRow>["then"];
-}
-
-interface PlannerColumnsTable {
-  select(columns: string): PlannerColumnsSelectQuery;
-  insert(values: {
-    id: string;
-    user_id: string;
-    name: string;
-    sort_order: number;
-    created_at: string;
-  }): PlannerColumnsInsertQuery;
-  update(values: Partial<Pick<PlannerColumnRow, "name" | "sort_order">>): PlannerColumnsUpdateQuery;
-  delete(): PlannerColumnsDeleteQuery;
-}
-
-interface MealsTable {
-  select(columns: string): MealsSelectQuery;
-}
-
-export interface PlannerColumnsDbClient {
-  from(table: "meal_plan_columns"): PlannerColumnsTable;
-  from(table: "meals"): MealsTable;
-  rpc(
-    name: "delete_owned_planner_column",
-    args: {
-      p_user_id: string;
-      p_column_id: string;
-    },
-  ): PromiseLike<{
-    data: unknown;
-    error: QueryError | null;
-  }>;
-}
+// Only the table consumed here; owned deletion remains the existing atomic RPC.
+export type PlannerColumnsDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      meal_plan_columns: {
+        Row: PlannerColumnRow;
+        Insert: PlannerColumnRow;
+        Update: Partial<Pick<PlannerColumnRow, "name" | "sort_order">>;
+        Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: {
+      delete_owned_planner_column: {
+        Args: { p_user_id: string; p_column_id: string }; Returns: unknown;
+      };
+    };
+  };
+}>, "from" | "rpc">;
 
 const PLANNER_COLUMN_NAME_MAX_LENGTH = 30;
 export const PLANNER_COLUMN_MAX_COUNT = 5;
@@ -282,12 +218,11 @@ export async function createAuthedPlannerColumnsClient(fallbackMessage: string) 
     };
   }
 
-  const dbClient = routeClient as unknown as
-    PlannerColumnsDbClient & UserBootstrapDbClient;
+  const dbClient: PlannerColumnsDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return {
       response: fail(

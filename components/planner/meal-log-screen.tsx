@@ -113,40 +113,40 @@ function isPositiveNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
-function parseReturnContext(value: unknown): MealLogReturnContext | null {
-  if (!isRecord(value) || value.version !== 1 || !isDateKey(value.date)) return null;
+function isReturnContext(value: unknown): value is MealLogReturnContext {
+  if (!isRecord(value) || value.version !== 1 || !isDateKey(value.date)) return false;
   if (value.action === "add") {
     if (!hasExactKeys(value, ["version", "action", "date", "columnId", "invoker", "draft"])
-      || value.invoker !== "section-add" || !isUuid(value.columnId)) return null;
-    if (value.draft === null) return value as unknown as MealLogReturnContext;
-    if (!isRecord(value.draft)) return null;
+      || value.invoker !== "section-add" || !isUuid(value.columnId)) return false;
+    if (value.draft === null) return true;
+    if (!isRecord(value.draft)) return false;
     const draftKeys = ["type", "id", "name", "brand", "amount", "unit", ...("quantityInput" in value.draft ? ["quantityInput"] : [])];
     const draftKeysWithMax = [...draftKeys, "maxAmount"];
-    if (!hasExactKeys(value.draft, draftKeys) && !hasExactKeys(value.draft, draftKeysWithMax)) return null;
+    if (!hasExactKeys(value.draft, draftKeys) && !hasExactKeys(value.draft, draftKeysWithMax)) return false;
     if (typeof value.draft.type !== "string" || !SOURCE_TYPES.has(value.draft.type)
       || !isUuid(value.draft.id) || !isSafeText(value.draft.name, 160)
       || (value.draft.brand !== null && !isSafeText(value.draft.brand, 160))
       || (value.draft.amount !== null && !isPositiveNumber(value.draft.amount)) || !isSafeText(value.draft.unit, 40)
-      || (value.draft.maxAmount !== undefined && !isPositiveNumber(value.draft.maxAmount))) return null;
+      || (value.draft.maxAmount !== undefined && !isPositiveNumber(value.draft.maxAmount))) return false;
     if ("quantityInput" in value.draft && (!isPositiveNumber(value.draft.amount)
-      || !isQuantityInputDraft(value.draft.quantityInput, { amount: value.draft.amount as number, unit: value.draft.unit as string }))) return null;
-    return value as unknown as MealLogReturnContext;
+      || !isQuantityInputDraft(value.draft.quantityInput, { amount: value.draft.amount as number, unit: value.draft.unit as string }))) return false;
+    return true;
   }
   if (value.action === "edit") {
     if (!hasExactKeys(value, ["version", "action", "date", "entryId", "invoker", "draft"])
       || value.invoker !== "entry-edit" || !isUuid(value.entryId) || !isRecord(value.draft)
       || !hasExactKeys(value.draft, ["amount", "columnId", "unit", ...("quantityInput" in value.draft ? ["quantityInput"] : [])])
       || !isPositiveNumber(value.draft.amount) || !isUuid(value.draft.columnId)
-      || !isSafeText(value.draft.unit, 40)) return null;
-    if ("quantityInput" in value.draft && !isQuantityInputDraft(value.draft.quantityInput, { amount: value.draft.amount as number, unit: value.draft.unit as string })) return null;
-    return value as unknown as MealLogReturnContext;
+      || !isSafeText(value.draft.unit, 40)) return false;
+    if ("quantityInput" in value.draft && !isQuantityInputDraft(value.draft.quantityInput, { amount: value.draft.amount as number, unit: value.draft.unit as string })) return false;
+    return true;
   }
   if (value.action === "delete") {
     if (!hasExactKeys(value, ["version", "action", "date", "entryId", "invoker"])
-      || value.invoker !== "entry-delete" || !isUuid(value.entryId)) return null;
-    return value as unknown as MealLogReturnContext;
+      || value.invoker !== "entry-delete" || !isUuid(value.entryId)) return false;
+    return true;
   }
-  return null;
+  return false;
 }
 
 function saveReturnContext(context: MealLogReturnContext) {
@@ -172,9 +172,10 @@ function readReturnContext() {
   try {
     const raw = window.sessionStorage.getItem(MEAL_LOG_RETURN_CONTEXT_KEY);
     if (!raw) return null;
-    const context = parseReturnContext(JSON.parse(raw));
-    if (!context) window.sessionStorage.removeItem(MEAL_LOG_RETURN_CONTEXT_KEY);
-    return context;
+    const context: unknown = JSON.parse(raw);
+    if (isReturnContext(context)) return context;
+    window.sessionStorage.removeItem(MEAL_LOG_RETURN_CONTEXT_KEY);
+    return null;
   } catch {
     try { window.sessionStorage.removeItem(MEAL_LOG_RETURN_CONTEXT_KEY); } catch { /* optional return aid */ }
     return null;

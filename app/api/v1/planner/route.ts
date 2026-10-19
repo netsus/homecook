@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
@@ -13,25 +14,10 @@ import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { resolveAuthorizedRecipeImageUrls } from "@/lib/server/recipe-image-read";
 import { createRecipeImageInternalClient, createRouteHandlerClient } from "@/lib/supabase/server";
 import type { MealStatus, PlannerData, PlannerMealData } from "@/types/planner";
-
-interface QueryError {
-  message: string;
-}
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-interface PlannerColumnRow {
-  id: string;
-  name: string;
-  sort_order: number;
-}
 
 interface PlannerMealRow {
   id: string;
@@ -62,61 +48,38 @@ interface ShoppingListRow {
   title: string;
 }
 
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface PlannerColumnsSelectQuery {
-  eq(column: string, value: string): PlannerColumnsSelectQuery;
-  order(column: string, options: QueryOrderOption): PlannerColumnsSelectQuery;
-  then: ArrayQueryResult<PlannerColumnRow>["then"];
-}
-
-interface PlannerMealsSelectQuery {
-  eq(column: string, value: string): PlannerMealsSelectQuery;
-  gte(column: string, value: string): PlannerMealsSelectQuery;
-  lte(column: string, value: string): PlannerMealsSelectQuery;
-  order(column: string, options: QueryOrderOption): PlannerMealsSelectQuery;
-  then: ArrayQueryResult<PlannerMealRow>["then"];
-}
-
-interface RecipesSelectQuery {
-  in(column: string, values: string[]): RecipesSelectQuery;
-  then: ArrayQueryResult<RecipeRow>["then"];
-}
-
-interface ShoppingListsSelectQuery {
-  in(column: string, values: string[]): ShoppingListsSelectQuery;
-  then: ArrayQueryResult<ShoppingListRow>["then"];
-}
-
-interface PlannerColumnsTable {
-  select(columns: string): PlannerColumnsSelectQuery;
-}
-
-interface PlannerMealsTable {
-  select(columns: string): PlannerMealsSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
-}
-
-interface ShoppingListsTable {
-  select(columns: string): ShoppingListsSelectQuery;
-}
-
-interface PlannerDbClient {
-  from(table: "meal_plan_columns"): PlannerColumnsTable;
-  from(table: "meals"): PlannerMealsTable;
-  from(table: "recipes"): RecipesTable;
-  from(table: "shopping_lists"): ShoppingListsTable;
-  rpc(
-    name: "list_product_planner_entries",
-    args: Record<string, unknown>,
-  ): PromiseLike<{ data: unknown; error: QueryError | null }>;
-}
+// Native selected-column inference; the nullable snapshot FK is many meals to one snapshot.
+export type PlannerDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      meal_plan_columns: {
+        Row: { id: string; user_id: string; name: string; sort_order: number };
+        Insert: never; Update: never; Relationships: [];
+      };
+      meals: {
+        Row: Omit<PlannerMealRow, "recipe_content_snapshots"> & { user_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "meals_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"]; }];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; title: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; created_by: string | null; title: string; thumbnail_url: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      shopping_lists: {
+        Row: { id: string; title: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: { list_product_planner_entries: { Args: Record<string, unknown>; Returns: unknown } };
+  };
+}>, "from" | "rpc">;
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -231,12 +194,11 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    PlannerDbClient & UserBootstrapDbClient;
+  const dbClient: PlannerDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",

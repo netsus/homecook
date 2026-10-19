@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop93 플래너 동작 보존 로컬 묶음
+
+기존 충돌 방지 보호를 사용자 인계로 해제한 플래너/끼니/UI19건 중12건을5논리커밋(source `b867b1e3e`)으로 정리했다. native SDK 선택 계약·미사용 query 타입 삭제·scoped RPC 직접 전달·기존 완전한 복원 validator의 정확한 타입 표현이며 새 제품 정책/guard/권한 변경0이다. 통합18suite209 PASS·전체 타입/lint/verify93/신규0·독립 검토 통과, 원16370해결/93잔여다. 아직 머지0/운영0이고 실제7d15/Anti105·DB238이다. 부모의 정확7d15 인증 읽기QA PASS는 새 source QA와 구분한다. 기존 meals GET1실패는 미수정7d15에서도 재현했으며 권한3/static3/444/별도49미발견·legacy 실제완료 미실행을 보존했다. YouTube17 dirty는 비접촉, 해제된 후속7은 검토 대기이며 유지8 ID의 의미/실익 근거를 [새 기록](../engineering/anti-slop-planner-contracts-20261020.md)에 고정했다. 작은 수정마다 배포하지 않고 최종 검증 후 앱 묶음으로 반영한다.
+
 ## 2026-10-20 — Anti Slop105 실제 SDK·capability 경계 운영 묶음
 
 **안전 경계 운영105:** PR1833 merged/operating once at7d15dfe/buildprelaunch-7d15dfe790f8-MTla10/DB238. Anti105(43/37/25)/new0; original16358resolved/105remaining. Exact merge205 PASS, whole type/lint/verify/diff and independent APPROVE. Web1466 PASS/133 name-filter SKIP, build98s/static94/existingwarnings3; manifest200/unauth3 wrapped401. Fixed read-only data observer9 equal, original approval/PIN/ledger/readerFloor/plan unchanged. Existing static3FAIL preserved. Auth QA/legacy completion untested; permission3/444/separate49 unknown preserved. Protected36 origin/dirty read investigation ongoing, no silent release. SQL/settings/worker changes0; no docs-only redeploy. [상세 기록](../engineering/anti-slop-safe-boundary-batch-20261020.md).

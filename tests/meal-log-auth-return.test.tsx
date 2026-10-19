@@ -23,6 +23,22 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
   beforeEach(() => window.sessionStorage.clear());
   afterEach(cleanup);
 
+  it.each([
+    null,
+    { version: 2, action: "add", date: "2026-08-10", columnId: RESTORED_BATCH_ID, invoker: "section-add", draft: null },
+    { version: 1, action: "add", date: "2026-08-10", columnId: RESTORED_BATCH_ID, invoker: "section-add", draft: null, extra: true },
+    { version: 1, action: "add", date: "2026-08-10", columnId: RESTORED_BATCH_ID, invoker: "section-add", draft: { type: "unknown", id: RESTORED_BATCH_ID, name: "음식", brand: null, amount: 1, unit: "g" } },
+    { version: 1, action: "edit", date: "2026-08-10", entryId: RESTORED_BATCH_ID, invoker: "entry-edit", draft: { amount: -1, columnId: RESTORED_BATCH_ID, unit: "g" } },
+    { version: 1, action: "edit", date: "2026-08-10", entryId: RESTORED_BATCH_ID, invoker: "entry-edit", draft: { amount: 1, columnId: RESTORED_BATCH_ID, unit: "g", quantityInput: { schema_version: "invalid" } } },
+    { version: 1, action: "delete", date: "2026-08-10", entryId: RESTORED_BATCH_ID, invoker: "entry-edit" },
+  ])("discards malformed stored return context %# without reopening an action", async context => {
+    window.sessionStorage.setItem(RETURN_CONTEXT_KEY, JSON.stringify(context));
+    renderMealLogShell();
+    await screen.findByRole("region", { name: "8월 10일 월요일 식사 기록" });
+    await waitFor(() => expect(window.sessionStorage.getItem(RETURN_CONTEXT_KEY)).toBeNull());
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("hides private day data and shows the existing login return gate when a read returns 401", async () => {
     renderMealLogShell({ unauthorized: "read" });
 
