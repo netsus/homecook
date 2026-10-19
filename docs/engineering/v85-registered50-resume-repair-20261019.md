@@ -1,5 +1,15 @@
 # v85 등록50 이후 단계별 검사와 동일50 복구
 
+## 실제 복구 완료와 후속 검증
+
+2026-10-19T07:45:54.134Z 실제 사용자 Terminal의 확인 입력 뒤 기존 등록50 resume가 성공했다. executor A `0d64dc2bdccd5bc6b7d813e240346cfd6aa22b6b`와 binding B `3b3485a2c5b025a24a954f25d201288009dfdc17`는 별도 독립검토와 실제 공식 reconcile로 결속을 확인했다. A/B와 원8455/d69 checkout은 보존한다. 이후 실행 기록은 통합 브랜치 문서에만 추가한다.
+
+activation SHA256은 `3837afcebb57f880c29fe7b937c917fa876a4be317a3dbf1e5702cc35617a14d`이며 독립 seal을 포함한 공식 읽기 전용 reconcile은 `activated/mayIssue=false/mayRegister=false/historicalJobsPreserved=true/postActivationJobs=0`이다. worker PID98098, release1be5, DB232, 원4승인과 고정 만료2026-10-22T14:27:30Z를 유지한다.
+
+07:50:07 UTC 별도 읽기 전용 후속검증에서 실제 token 인증200, 빈claim은 정확한 session 거부500/ACCOUNT_SESSION_STALE, worker health ok/ready 및 동일PID, 실제웹15 loader/시작환경 enqueue readiness ready(V2·이전키없음), 역사 V2 지문33/33일치,43jobs/queued0/processing0을 확인했다. 전체43지문 `ee4735ef8af42dd2e97931ad89ed0de9dd05ba90c228d1ceab72565c89ae9f63`은 이전과 같다. R2 collector는503/ROUND2_DISABLED, 로컬·공개로그인은200이다. 새 발급·재등록·모델호출·신규추출은0이다. 사용자 로그인 HTTP로 실제 새 추출을 신청하는 전체 UI 흐름은 이번 검증 범위가 아니다.
+
+비밀 없는 후속 근거는 `/private/tmp/homecook-v85-registered-resume-terminal-20261019/postverify-result.json`이다. 원격push/PR/merge는 별도 자동승인 검토에서 게시 대상·범위 승인 불명확으로 거부돼 미실행이며 재시도하지 않는다. 아래 준비 단계의 미실행 설명은 고정 executor A 작성 시점의 역사 기록이다.
+
 사용자가 실제 Terminal의 두 확인을 마친 뒤 gen50 서명과49→50 등록은 완료됐다. 06:57:57 UTC 실패 기록과 공식 읽기 전용 reconcile은 `registered/mayIssue=false/mayRegister=false`다. 현재 policy OFF·worker 미실행이며 웹15의 로그인은200이다. DB232·43개 작업 전체 지문·고정 만료2026-10-22T14:27:30Z는 유지됐다. manager 파일은 정리됐다. 활성화 완료로 보고하지 않는다.
 
 ## 원인

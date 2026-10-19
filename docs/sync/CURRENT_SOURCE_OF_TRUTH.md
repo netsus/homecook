@@ -1,8 +1,8 @@
 # Current Source of Truth
 
-## 2026-10-19 — 등록50 이후 worker 생명주기 검사 오류 복구 준비
+## 2026-10-19 — 등록50 이후 worker 생명주기 검사 오류 복구 완료
 
-실제 사용자 Terminal 실행에서gen50 발급·49→50등록이 완료됐으나 웹 검사에 이전workerPID49750을 요구해 활성화 전 중단됐다. 공식reconcile은registered/재발급·재등록불가이며 policyOFF·worker미실행·웹로그인200·DB232/43jobs/고정만료를 확인했다. 원4승인·캡슐·8455/d69를 보존하고 웹 전용 census와 단계별worker검사, 이미등록된동일50만 설치→검증→ON하는 별도source-bound resume를 준비한다. [원인·보호·소스결속·회귀·실제확인경계](../engineering/v85-registered50-resume-repair-20261019.md)를 따른다. 실제복구·health/readiness완료는 아직 아니다.
+gen50 등록 뒤 이전workerPID49750을 요구한 검사 오류를 단계별 보호로 수정하고, 실제 사용자 Terminal 확인 뒤 동일50 resume를 완료했다. 원4승인·캡슐·8455/d69·DB232·고정만료를 보존했으며 재발급·재등록 없이07:45:54 UTC 활성화됐다. 공식reconcile은activated/재발급·재등록불가·역사작업보존이며 실제인증200/빈claim거부·health/readiness ready·43jobs지문/기존V2 33개일치·R2 OFF·로컬/공개로그인200을 확인했다. [원인·보호·소스결속·회귀·운영검증](../engineering/v85-registered50-resume-repair-20261019.md)을 따른다. 원격push/PR/merge는 별도 승인 차단으로 미실행이다.
 
 ## 2026-10-19 — v85 일반 데이터의 정확한 별도 승계 준비
 
