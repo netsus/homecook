@@ -20,10 +20,10 @@
   "candidateObservation": {
     "baseCommit": "64112be4bec14e29f88449214140250685210f15",
     "branch": "codex/cook-mode-row-contract-20261019",
-    "total": 129,
+    "total": 128,
     "newFindings": 0,
-    "contractCandidatesAfterAdoption": 12,
-    "status": "local commits through 934dd6b10(legacy-cancel1) plus verified shopping-detail1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
+    "contractCandidatesAfterAdoption": 11,
+    "status": "local commits through 7f7e3ee15(shopping-detail1) plus verified shopping-history-GET1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
   },
   "nullableShoppingContractFollowup": {
     "files": ["shopping/lists/[list_id]/share-text", "shopping/lists/[list_id]/items/bulk", "shopping/lists/[list_id]/items/[item_id]"],
@@ -1034,6 +1034,12 @@
       "snippet": "routeClient as unknown as ShoppingCreateDbClient & UserBootstrapDbClient",
       "state": "needs-contract-refactor",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "pendingLocalResolution": {
+        "branch": "codex/cook-mode-row-contract-20261019",
+        "reason": "History GET native two-table read projection separated from POST creation contract; same request client bootstrap direct assignment, remove GET-only handwritten phases/dead POST select members. Owner/cursor/order/limit+1/count/title/errors unchanged.",
+        "verification": "Baseline55 PASS; SDK7+existing55=62 PASS, whole typecheck/lint/Anti128/new0/diff PASS; independent62 PASS/nonincremental typecheck/diff APPROVE, POST function byte-identical emit. New test initially expected stored title rather than unchanged existing date-range title; corrected fixture expectation only. No new cast/wrapper/suppression/SQL/auth/operational changes.",
+        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption11"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",

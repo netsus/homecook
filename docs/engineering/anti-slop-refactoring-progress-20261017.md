@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면129/계약12이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면128/계약11이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -400,6 +400,12 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 수정 전25 PASS, 최종 SDK10+기존25+bootstrap11=4 suite46 PASS·전체 typecheck·lint(max-warnings0)·Anti129/baseline207/신규0·diff PASS다. SDK 회귀는 각 선택문/FK/JSON/productnull·완료목록 읽기·생성시각·pin우선·empty·owner403/guest401/404/500·정확 owner/pins quantity 읽기RPC를 확인했다.
 - 독립 리뷰는 다른 집합(SDK10+backend18+bootstrap11+quantity helper9)48 PASS·전체 typecheck/lint/diff와 실제 SQL/RPC·권한 보존을 확인해 APPROVE했다. root46과 합산하지 않는다. 비차단 URL coverage 메모는 recipes/ingredients exact URL assertion 추가로 수용하고 root46/lint를 재확인했다. 실제 DB/RLS는 미실행이다.
 - master 계약28과 로컬 채택 후12를 구분한다. DB/SQL/권한·쓰기·운영/원격/새 도구·배포 변경0이며 승인 대기는 유지한다.
+
+## Bootstrap 후속: 장보기 이력 GET1건 로컬 완료
+
+- 상세1건은 `7f7e3ee15`로 보존했다. 같은파일의 POST 생성·권한/growth/quantity와 분리해 history GET만 native2표/선택행으로 맞췄다. GET전용 수동 fluent interface와 POST타입의 미사용 history select멤버를 제거했다. 같은 request client bootstrap순서, owner/cursor/정렬/limit+1/구매 항목 개수/제목/오류/응답 유지다.
+- 기준선55 PASS, 최종 SDK7+기존55=4 suite62 PASS·전체 typecheck·lint(max-warnings0)·Anti128/baseline207/신규0·diff PASS다. 신규fixture 첫2실패는 기존기간제목을 저장title로 잘못 기대했기 때문이며 실제 기존10/19~20 규칙으로 기대값만 정정했다. 제품 제목 함수는 변경하지 않았다.
+- 독립 리뷰도4 suite62 PASS·전체 nonincremental typecheck/diff PASS 및 SQL/owner/cursor/count와 POST함수 byte-identical JS emit을 확인해 APPROVE했다. POST 생성·권한·보상 흐름 변경0이며 실제DB/RLS는 미실행이다. master28/로컬 채택 후11, 원격·도구·운영 배포 승인 대기를 유지한다.
 
 ## 보류·기술적 경계
 
