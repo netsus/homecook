@@ -3,12 +3,15 @@ import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFile
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import * as savedNutrition from "../scripts/lib/saved-recipe-nutrition-maintenance.mjs";
+import * as cookingExperience from "../scripts/lib/cooking-experience-maintenance.mjs";
+const handoffGlobals = `const SAVED_RECIPE_NUTRITION_FEATURE=${JSON.stringify(savedNutrition.SAVED_RECIPE_NUTRITION_FEATURE)},SAVED_RECIPE_NUTRITION_MIGRATIONS=${JSON.stringify(savedNutrition.SAVED_RECIPE_NUTRITION_MIGRATIONS)},COOKING_EXPERIENCE_FEATURE=${JSON.stringify(cookingExperience.COOKING_EXPERIENCE_FEATURE)},COOKING_EXPERIENCE_MIGRATIONS=${JSON.stringify(cookingExperience.COOKING_EXPERIENCE_MIGRATIONS)};`;
 const hash = (v: string | Buffer) => createHash("sha256").update(v).digest("hex");
 const sha = (c: string) => c.repeat(64), ref = (c: string) => c.repeat(40);
 const temp = mkdtempSync(join(realpathSync("/tmp"), "recipe-save-owned-"));
 afterAll(() => rmSync(temp, {recursive:true,force:true}));
 let source = readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8")
-  .replace(/from "(\.\/[^"\n]+)"/gu,(_text,relative:string)=>`from "${pathToFileURL(join(process.cwd(),"scripts/lib",relative)).href}"`)
+  .replace(/from (["'])(\.\/[^"'\n]+)\1/gu,(_text,_quote:string,relative:string)=>`from "${pathToFileURL(join(process.cwd(),"scripts/lib",relative)).href}"`)
   .replace(/^export const ([A-Z0-9_]+_PIN) = [\s\S]*?;(?=\r?\n)/gmu,
   (_text,name:string)=>`export const ${name} = Object.freeze({path:null,sha256:null});`);
 source=source.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',()=>`function prelaunchStateRoot() { return ${JSON.stringify(join(temp,"state"))}; }`);
@@ -210,7 +213,7 @@ it("accepts the actual reviewed A+B operator payloads, not merely synthetic SQL"
 it("never falls back to229 if the new durable loader reports an unresolved231 guard",()=>{
  const text=readFileSync("scripts/lib/prelaunch-web-deploy.mjs","utf8"),start=text.indexOf("export function loadCurrentDatabaseMaintenance("),end=text.indexOf("\nexport function recipeSaveRecoveryPhaseStatus",start);
  if(start<0||end<=start)throw Error("Current maintenance loader boundary moved");let oldCalls=0;
- const load=new Function("loadRecipeRequestRoleMaintenance","loadRecipeSaveRecoveryMaintenance","loadNutritionValidatorMaintenance",text.slice(start,end).replace("export function","function")+";return loadCurrentDatabaseMaintenance;")(
+ const load=new Function("loadRecipeRequestRoleMaintenance","loadRecipeSaveRecoveryMaintenance","loadNutritionValidatorMaintenance","const loadSavedRecipeNutritionMaintenance=()=>null,loadCookingExperienceMaintenance=()=>null;"+text.slice(start,end).replace("export function","function")+";return loadCurrentDatabaseMaintenance;")(
    ()=>null,()=>{throw Error("owned231 outcome unresolved");},()=>{oldCalls++;return {ledgerCount:229};});
  expect(()=>load(temp)).toThrow("231 outcome unresolved");expect(oldCalls).toBe(0);
 });
@@ -232,7 +235,7 @@ it("the actual source helper sends partial runtime-only variants to the exact231
  if(start<0||end<=start)throw Error("Actual source helper moved");
  const route="app/api/v1/recipes/[id]/route.ts",serializer="lib/server/recipe-content-snapshot-future-propagation.ts";
  let current:typeof maintenance|null=maintenance,fullAlreadyLive=false;
- const invoke=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync","RECIPE_REQUEST_ROLE_MIGRATION","RECIPE_REQUEST_ROLE_FEATURE","V74_WEB_PREDECESSOR",cli.slice(start,end)+";return nutritionSourceHandoff;")(
+ const invoke=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync","RECIPE_REQUEST_ROLE_MIGRATION","RECIPE_REQUEST_ROLE_FEATURE","V74_WEB_PREDECESSOR",handoffGlobals+cli.slice(start,end)+";return nutritionSourceHandoff;")(
    web.recipeSaveRecoveryRuntimeContract,web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,web.RECIPE_SAVE_RECOVERY_FEATURE,web.RECIPE_SAVE_RECOVERY_MIGRATIONS,web.NUTRITION_VALIDATOR_MIGRATION,()=>current,temp,web.DeploymentError,hash,()=>"owned blob",
    (_program:string,args:string[])=>args.at(-1)!.endsWith(serializer)?Buffer.from('"recipe-nutrition-v5" // whitespace-only variant'):Buffer.from('"read_recipe_future_patch_result" // comment'),()=>({status:fullAlreadyLive?0:1}),web.RECIPE_REQUEST_ROLE_MIGRATION,web.RECIPE_REQUEST_ROLE_FEATURE,"0ae67d66c5ab330cf3f7ef7aff3a7ba40e99b1d7");
  const live={ref:review.from,buildId:review.predecessorBuildId,plistSha256:review.predecessorPlistSha256,bytes:Buffer.from("owned plist")};
@@ -260,7 +263,7 @@ function databaseCliFixture(phase:string,denyWorker=false) {
   hash,readFileSync:()=>Buffer.from("owned reader"),readClosedR2PrivateBytes:()=>Buffer.from(JSON.stringify(guard)),join,mkdirSync:vi.fn(),randomUUID:()=>guard.operationId,
   protectedRolloutPins:()=>({rollout:{sha256:sha("8")}}),createProtectedPrelaunchDatabase:createDatabase,protectedMigrationsAt:()=>[],
   acquireClosedR2ControlLease:async()=>({verify:vi.fn(),release:vi.fn(async()=>{})}),loadClosedR2Review:()=>({}),verifyProtectedBoundary:vi.fn(),cancellation:{check:vi.fn()},DeploymentError:web.DeploymentError};
- const run=new Function(...Object.keys(deps),source.slice(start,end)+";return runProtectedDatabasePhase;")(...Object.values(deps));
+ const run=new Function(...Object.keys(deps),handoffGlobals+source.slice(start,end)+";return runProtectedDatabasePhase;")(...Object.values(deps));
  return {admission,observe,verifyReader,writerAdmission,createDatabase,run:(action="apply")=>run({ref:review.to,protectedPhase:phase},action,review)};
 }
 

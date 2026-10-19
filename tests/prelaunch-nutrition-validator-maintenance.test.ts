@@ -3,6 +3,9 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
+import * as savedNutrition from "../scripts/lib/saved-recipe-nutrition-maintenance.mjs";
+import * as cookingExperience from "../scripts/lib/cooking-experience-maintenance.mjs";
+const handoffGlobals = `const SAVED_RECIPE_NUTRITION_FEATURE=${JSON.stringify(savedNutrition.SAVED_RECIPE_NUTRITION_FEATURE)},SAVED_RECIPE_NUTRITION_MIGRATIONS=${JSON.stringify(savedNutrition.SAVED_RECIPE_NUTRITION_MIGRATIONS)},COOKING_EXPERIENCE_FEATURE=${JSON.stringify(cookingExperience.COOKING_EXPERIENCE_FEATURE)},COOKING_EXPERIENCE_MIGRATIONS=${JSON.stringify(cookingExperience.COOKING_EXPERIENCE_MIGRATIONS)};`;
 const hash = (v: string | Buffer) => createHash("sha256").update(v).digest("hex");
 const sha = (c: string) => c.repeat(64), ref = (c: string) => c.repeat(40);
 const temp = mkdtempSync(join(realpathSync("/tmp"), "nutrition-maintenance-owned-"));
@@ -20,11 +23,13 @@ for (const [name, value] of Object.entries({ NUTRITION_VALIDATOR_MIGRATION_SHA25
 }
 source = source.replace('function prelaunchStateRoot() { return join(homedir(), ".homecook/prelaunch-web"); }',
   () => `function prelaunchStateRoot() { return ${JSON.stringify(join(temp, "state"))}; }`);
+source = source.replace(/from (["'])(\.\/[^"'\n]+)\1/gu,
+  (_text, _quote: string, relative: string) => `from "${pathToFileURL(join(process.cwd(), "scripts/lib", relative)).href}"`);
 const webPath = join(temp, "web.mjs"); writeFileSync(webPath, source, { mode: 0o600 });
 const web: typeof import("../scripts/lib/prelaunch-web-deploy.mjs") = await import(pathToFileURL(webPath).href);
 const dbPath = join(temp, "database.mjs");
-writeFileSync(dbPath, readFileSync("scripts/lib/prelaunch-database.mjs", "utf8").replace(/from "(\.\/[^"\n]+)"/gu,
-  (_text, relative: string) => `from "${pathToFileURL(relative === "./prelaunch-web-deploy.mjs" ? webPath : join(process.cwd(), "scripts/lib", relative)).href}"`), { mode: 0o600 });
+writeFileSync(dbPath, readFileSync("scripts/lib/prelaunch-database.mjs", "utf8").replace(/from (["'])(\.\/[^"'\n]+)\1/gu,
+  (_text, _quote: string, relative: string) => `from "${pathToFileURL(relative === "./prelaunch-web-deploy.mjs" ? webPath : join(process.cwd(), "scripts/lib", relative)).href}"`), { mode: 0o600 });
 const db: typeof import("../scripts/lib/prelaunch-database.mjs") = await import(pathToFileURL(dbPath).href);
 const target = { fixture: true, containerId: "owned-no-prod" };
 
@@ -240,7 +245,7 @@ it("uses the real CLI unresolved fence, while allowing only its read-only reconc
   const review=fixture(), attempt={review,record:{status:"unknown"}};
   const run=new Function("readRecipeSaveRecoveryAttempt","RECIPE_SAVE_RECOVERY_FEATURE","readNutritionValidatorAttempt","currentProtectedPhase","NUTRITION_VALIDATOR_FEATURE","repository","current","DeploymentError",
     "existsSync","recoveryPath","statePath","join","dirname","closedR2ArtifactName","loadProtectedRolloutReview","loadCurrentDatabaseMaintenance","readRecipeRequestRoleAttempt","RECIPE_REQUEST_ROLE_FEATURE",
-    `${cli.slice(start,end)};return requireClosedR2Mode;`)(()=>null,web.RECIPE_SAVE_RECOVERY_FEATURE,()=>attempt,()=>web.nutritionValidatorPhaseStatus(attempt,true),web.NUTRITION_VALIDATOR_FEATURE,
+    `${handoffGlobals}const readCookingExperienceAttempt=()=>null;${cli.slice(start,end)};return requireClosedR2Mode;`)(()=>null,web.RECIPE_SAVE_RECOVERY_FEATURE,()=>attempt,()=>web.nutritionValidatorPhaseStatus(attempt,true),web.NUTRITION_VALIDATOR_FEATURE,
       process.cwd(),()=>({ref:review.from,cwd:temp}),web.DeploymentError,()=>false,"/owned/recovery","/owned/state",join,()=>temp,"marker",()=>review,
       ()=>{throw new Error("unresolved cannot load committed");},()=>null,web.RECIPE_REQUEST_ROLE_FEATURE);
   expect(()=>run({})).toThrow("unresolved");
@@ -255,18 +260,19 @@ it("verifies B's229 source before real CLI compensation to the original A plist"
   const end=cli.indexOf('\n      }\n      await switchWeb',start);
   if(start<0 || end<=start) throw new Error("Exact compensation boundary changed");
   const calls:string[]=[];
-  const build=(databaseFails=false)=>new Function("rollout","protectedReader","loadCurrentDatabaseMaintenance","repository","state","live",
+  const build=(databaseFails=false,sourceAncestor=true)=>new Function("rollout","protectedReader","loadCurrentDatabaseMaintenance","repository","state","live",
     "assertNutritionValidatorReaderCompensation","hash","readFileSync","join","verifyAppliedDatabase","options","verifyProtectedBaseline",
-    "readClosedR2PrivateBytes","protectedReaderReceiptPath","git","spawnSync","assertProtectedReaderRollback",`return(async()=>{${cli.slice(start,end)}})();`)(
+    "readClosedR2PrivateBytes","protectedReaderReceiptPath","git","spawnSync","assertProtectedReaderRollback","approvedSourceAncestor","DeploymentError",`return(async()=>{${cli.slice(start,end)}})();`)(
       {feature:web.COOKED_WEIGHT_ATTESTATION_FEATURE},false,()=>maintenance,process.cwd(),
       {ref:maintenance.review.to,checkout:"/owned/B229",closedR2:{from:maintenance.review.from}},
       {ref:maintenance.review.from,buildId:maintenance.review.predecessorBuildId,bytes,cwd:"/owned/A228"},
       web.assertNutritionValidatorReaderCompensation,hash,()=>validator,join,
       async (_options:object,checkout:string)=>{calls.push(checkout);if(databaseFails) throw new Error("DB229 guard rejected");return{source:maintenance.review.database.after};},
       {},async()=>{calls.push("guard229");},()=>JSON.stringify({readerFloor:maintenance.review.predecessorAttestation.readerFloor}),"/owned/readerReceipt",
-      ()=>{},()=>({status:0}),()=>{});
+      ()=>{},()=>({status:0}),()=>{},()=>sourceAncestor,web.DeploymentError);
   await build();expect(calls).toEqual(["/owned/B229","guard229"]);
   calls.splice(0);await expect(build(true)).rejects.toThrow("DB229 guard rejected");expect(calls).toEqual(["/owned/B229"]);
+  calls.splice(0);await expect(build(false,false)).rejects.toThrow("승인된 source handoff");expect(calls).toEqual(["/owned/B229","guard229"]);
 });
 
 it("reads the real reconciled not-applied terminal's target SHA without inventing a missing target", () => {
@@ -333,7 +339,7 @@ async function handoffDeployEntryFixture() {
   if(helperStart<0||helperEnd<=helperStart||entryStart<0||entryEnd<=entryStart)throw new Error("Exact deploy prebuild/source helper boundary changed");
   const sourceHandoff=(candidateLive=live,candidateSelection=selection,current:typeof maintenance|null=maintenance)=>{
     const run=new Function("recipeSaveRecoveryRuntimeContract","RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES","RECIPE_SAVE_RECOVERY_FEATURE","RECIPE_SAVE_RECOVERY_MIGRATIONS","NUTRITION_VALIDATOR_MIGRATION","loadCurrentDatabaseMaintenance","repository","DeploymentError","hash","git","execFileSync","spawnSync","RECIPE_REQUEST_ROLE_MIGRATION","RECIPE_REQUEST_ROLE_FEATURE",
-      `${cli.slice(helperStart,helperEnd)};return nutritionSourceHandoff;`)(web.recipeSaveRecoveryRuntimeContract,web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,web.RECIPE_SAVE_RECOVERY_FEATURE,web.RECIPE_SAVE_RECOVERY_MIGRATIONS,web.NUTRITION_VALIDATOR_MIGRATION,()=>current,process.cwd(),web.DeploymentError,hash,
+      `${handoffGlobals}${cli.slice(helperStart,helperEnd)};return nutritionSourceHandoff;`)(web.recipeSaveRecoveryRuntimeContract,web.RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,web.RECIPE_SAVE_RECOVERY_FEATURE,web.RECIPE_SAVE_RECOVERY_MIGRATIONS,web.NUTRITION_VALIDATOR_MIGRATION,()=>current,process.cwd(),web.DeploymentError,hash,
         (args:string[])=>args[0]==="ls-tree"&&args[1]===candidateSelection.target?"owned blob":"",
         (_program:string,args:string[])=>content[args.at(-1)!.slice(41)]??Buffer.from("foreign unreviewed file"),()=>({status:0}),web.RECIPE_REQUEST_ROLE_MIGRATION,web.RECIPE_REQUEST_ROLE_FEATURE);
     return run(candidateLive,candidateSelection);
