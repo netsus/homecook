@@ -1,0 +1,87 @@
+{
+  "schema": "homecook.cooking-experience.operating-checks.v1",
+  "observedAt": "2026-10-19T13:30:10.629874+00:00",
+  "web": {
+    "ref": "48c4ce03abaed534775095988a95a57525d5dd72",
+    "buildId": "prelaunch-48c4ce03abae-gsyzsl",
+    "loaded": true
+  },
+  "database": {
+    "ledger": 238,
+    "status": "committed",
+    "planSha256": "a8795f5e5177cc77aa106ffb7b83a892260e0cfeddff3d5aabd6d1afac1a7692",
+    "receiptSha256": "86157669cc8c463e345a767b26ba838137153cb54c1e08cab62a283deba528af",
+    "prior235ReceiptPreserved": true,
+    "readerPending": false,
+    "recoveryPending": false,
+    "rowsControlsMetadataOidsPreserved": true,
+    "fullBackupDecoded": true,
+    "reviewedMetadataException": "public.build_recipe_nutrition_input_guard(uuid): SQL→PLpgSQL language only"
+  },
+  "worker": {
+    "generation": 50,
+    "pid": 54910,
+    "policyEnabled": true,
+    "expiresAt": "2026-10-22T14:27:30Z",
+    "healthy": true,
+    "authenticatedStatus": 200,
+    "emptyClaimDenied": true,
+    "readiness": true,
+    "queues": 0,
+    "keyChanges": 0,
+    "policyChanges": 0
+  },
+  "closedCollection": {
+    "round2": false,
+    "lead": false,
+    "c05": false
+  },
+  "verification": {
+    "sql236": 15,
+    "sql237": 20,
+    "quantitySql": 51,
+    "apiUi": 72,
+    "cleanupRegression": 59,
+    "operatorNodePassed": 36,
+    "operatorNodeSkipped": 1,
+    "nativeCases": 7,
+    "nativeNegatives": 20,
+    "webSelectedPassed": 1466,
+    "webFilteredSkipped": 133,
+    "webSelectedFailed": 0,
+    "typecheck": true,
+    "build": true,
+    "antiSlopNewFindings": 0,
+    "independentP1P2": 0,
+    "chromeWidths": [
+      375,
+      1440
+    ],
+    "viewportReset": true
+  },
+  "evidenceSha256": {
+    "oilBefore": "c659f586047ab6bcd460262e5757664dbb5f3fe4d4678c9287625f2b6f784177",
+    "oilHistoryBefore": "0b88d08a7bad9207a29498c5b32558c15b377789081e55981e78a521b0d476fa",
+    "oilAfter": "9b17036d9184188b2bab2fdf502f90d24713fbc4f1b3818c3e7b3efde41e7b5e",
+    "finalQaBatches": "031b5c489c417f55809a440ca227a3172e58dea5b7cc8bc2743a8246aab43158",
+    "untouchedProof": "e537d7adfca4db1139d2a1290e971b8f295ddb642eb989d24e0a6cff47b44ece",
+    "dbCommand": "803ccb8d6a8aa8d81bbc2fff6a80ead9c2c76f6b4e718e129470850f8f689235",
+    "webCommand": "09ef5fa3d20c8eda313e11d35452271aeeb8044c693076b78cd69e8ed8da77b8"
+  },
+  "dataRepair": {
+    "savedRows": 2,
+    "revisions": "2→3",
+    "onlyCatalogSelectionChanged": true,
+    "quantitiesSourceAndPriorHistoryPreserved": true,
+    "newNutritionPins": 2,
+    "broadBackfill": false,
+    "newProfileValues": 0,
+    "completeFoodAccuracyClaims": 0
+  },
+  "remaining": [
+    "Unidentified product/preparation states listed in operating document",
+    "Source-only changes with same immutable content identity may remain pending",
+    "Live resize across mobile/desktop retains existing separate selection-state limitation"
+  ],
+  "healthInformationExternalTransmissions": 0
+}

@@ -1,5 +1,7 @@
 # 요리 실행분 수정의 분수 JSON 정밀도
 
+최종 운영 웹48c4·DB238에서 미수정1/7kg/우유만500g 저장·새로고침·완료가 통과했다. 원 snapshot과 저장 proof의 normalized 숫자 텍스트 `142.85714285714285714000`까지 동일하다. [실제 운영·증거](cooking-experience-operating-checks-20261019.md)를 우선하며 아래 격리 후보 기록은 당시 상태로 보존한다.
+
 ## 실제 발견과 범위
 
 운영 웹 `196c498f4e1ecc326d6bd7b6c22e4f0b2cb56ed6`·DB235에서 QA 레시피의 우유만 수정하고 밀가루 `1/7kg`를 그대로 두면 PATCH가422로 거절됐다. 밀가루의 원본 `quantity_input.normalized.amount`가 PostgreSQL numeric→JavaScript Number→JSON을 지나며 반올림됐다. 바깥 amount와 원본 identity는 같았고, 중첩 frozen proof 숫자만 달랐다. 모든 재료를 강제로 수정하거나 frozen proof를 삭제하는 우회는 사용하지 않는다.

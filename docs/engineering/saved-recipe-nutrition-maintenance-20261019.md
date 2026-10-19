@@ -1,5 +1,9 @@
 # 현재 영양 발행·분수 저장의 별도 운영 권위
 
+## 실제 반영
+
+PR1807/1808을 머지하고 공식 경로로 웹48c4·DB238을 반영했다. 새 review SHA `f1dd80889e76799ba8997314747c4e2475c4dd9052501b7bfb4c27ff2dacd381`,receipt SHA `86157669cc8c463e345a767b26ba838137153cb54c1e08cab62a283deba528af`다. 실제 행·OID·권한 보존과 검토한 guard 언어 SQL→PLpgSQL 한정 예외/백업 및 동일gen50 복구·최종 Chrome/두 오일 최소 CAS를 확인했다. [현재 상태와 정확한 검증 한계](cooking-experience-operating-checks-20261019.md)를 우선한다. 아래 격리 검증은 운영 실행과 별도로 보존한다.
+
 ## 범위
 
 기존 운영 웹196·DB235를 출발점으로 현재 저장 레시피의 명시 catalog 선택, 현재 내용의 영양 발행, 분수 JSON 왕복 저장을 묶는다. 별도 `saved-recipe-nutrition-experience` feature의 PIN/guard/receipt를 사용한다. 원235 승인·receipt·reader floor와 v85 A/B·gen50·고정 만료·키·정책은 수정하지 않는다.
@@ -34,4 +38,4 @@ COMMIT 응답 미확인은 기존 guard를 보존하고 명시 reconcile로 분�
 
 최종 소스 고정 전 task 관련 기존 Anti Slop 위반5곳은 조건부 속성 대입과 이미 검증된 typed DB client 재사용으로 정리했다. baseline·권한·SQL은 바꾸지 않았으며 선택59회귀와 관련 lint·Anti Slop 신규0을 확인했다.
 
-후속 운영 적용·두 오일 행의 실제 CAS·최종 Chrome 재검증은 아직 실행하지 않았다. [현재 운영과9개 QA 상태](cooking-experience-operating-checks-20261019.md)를 함께 본다.
+운영 적용·두 오일 행의 실제 소유자 CAS·최종 Chrome 분수 저장/75% fallback/목차/표 검증을 완료했다. 제품 미확정 자료와 실제 음식 정확도는 검증 범위 밖으로 남긴다. [현재 운영과9개 QA 상태](cooking-experience-operating-checks-20261019.md)를 함께 본다.
