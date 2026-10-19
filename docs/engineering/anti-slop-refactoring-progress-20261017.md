@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면132/계약15이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면131/계약14이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -378,6 +378,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 실제20260731110000의 shopping_list_items ingredient_id DROP NOT NULL에 맞춰 세 행을 string|null로, share ingredient FK 추론은 object|null로 맞췄다. bulk/item에 제품null 반환 회귀 각각1건과 selected-row 타입 근거를 추가했다. 기존 ShoppingListItemSummary는 이미 nullable이며 제품3파일 JS emit은 HEAD와 동일하다. 런타임/권한/쓰기/응답 변경0이다.
 - 최종6 suite62 PASS·전체 typecheck·lint(max-warnings0)·Anti132/baseline207/신규0 유지·diff PASS다. 기존3건 해결 수나 Anti 감소로 중복 계상하지 않는다. master28/로컬 채택 후15도 그대로다.
 - 독립 리뷰는 SQL의 이전 누락을 명시하고6 suite62 PASS·전체 nonincremental typecheck/diff·제품3파일 byte-identical JS emit을 확인해 APPROVE했다. 기존 성공 수와 합산하지 않는다.
+
+## Bootstrap 후속: 장보기 preview1건 로컬 완료
+
+- nullable3곳 보정은 `7468cbb30`으로 보존했다(진단/완료 수 추가차감0). 다음 preview는 실제4표/nullable meal snapshot FK/상태enum과 native SDK 행으로 손코딩 fluent interface·연쇄 단언1건을 제거했다. 같은 request client bootstrap/reader 분리 대입 외 런타임 요청·분기·집계·정렬과 기존 array/null 소비 호환은 유지했다.
+- 수정 전52 PASS, 최종 SDK9+기존41+bootstrap11=3 suite61 PASS·전체 typecheck·lint(max-warnings0)·Anti131/baseline207/신규0·diff PASS다. 정확 선택문/owner·registered·shopping_list_id is.null·created/id 정렬, 고정title/legacyfallback·빈목록·guest401·깨진pin/조회500·column조회 실패fallback을 SDK 요청으로 확인했다.
+- 독립 리뷰도 최종3 suite61 PASS·전체 typecheck/lint/diff PASS와 실제 SQL·후속 nullable 대조/실제 SDK 선택 행·런타임 보존을 확인해 APPROVE했다. 중복 수는 합산하지 않는다.
+- master 계약28과 로컬 채택 후14를 구분한다. SQL/실DB/권한/운영·원격 반영·새 도구/배포 변경0, 운영 승인은 대기한다.
 
 ## 보류·기술적 경계
 
