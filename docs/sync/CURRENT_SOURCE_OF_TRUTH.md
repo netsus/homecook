@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — 플래너93 운영 반영·식사 후속86 소스
+
+PR1835 merge `5ea486e534729eb576477bf81526847caa2dfee6`를 명시 승인 뒤 한 번 배포했다. 실제 build `prelaunch-5ea486e53472-wPutWL`·Anti93·DB238 ready, 웹1473 PASS/133 이름필터 SKIP·compile99초/정적94/기존경고3·manifest200·보호GET2 wrapped401·고정 지문9 전후일치다. 원 승인/PIN/plan/readerFloor를 보존했고 SQL/설정/worker 변경0이다. [운영 근거](../engineering/anti-slop-planner-contracts-20261020.md)를 따른다. 별도 후속 source `207b3a4bc154a1c43421b37af9caeda5cc713b42`는 식사query5/provider1/삭제JSON1을3논리커밋으로 정리해 통합14suite163 PASS·전체 타입/lint/verify86new0·제품 독립 승인을 통과했으나 아직 머지0/운영0이다. 원16377해결/86잔여, 후속11중7해결/4설계후속이며 과거29완료는 별도다. [후속 고정 ID·기존실패/JSON호환·미해결](../engineering/anti-slop-meal-followup-20261020.md)을 따른다. YouTube17dirty/444/권한3/static3/49미발견·새5ea 인증QA와 legacy완료 미실행은 유지한다.
+
 ## 2026-10-20 — Anti Slop93 플래너 동작 보존 로컬 묶음
 
 기존 충돌 방지 보호를 사용자 인계로 해제한 플래너/끼니/UI19건 중12건을5논리커밋(source `b867b1e3e`)으로 정리했다. native SDK 선택 계약·미사용 query 타입 삭제·scoped RPC 직접 전달·기존 완전한 복원 validator의 정확한 타입 표현이며 새 제품 정책/guard/권한 변경0이다. 통합18suite209 PASS·전체 타입/lint/verify93/신규0·독립 검토 통과, 원16370해결/93잔여다. 아직 머지0/운영0이고 실제7d15/Anti105·DB238이다. 부모의 정확7d15 인증 읽기QA PASS는 새 source QA와 구분한다. 기존 meals GET1실패는 미수정7d15에서도 재현했으며 권한3/static3/444/별도49미발견·legacy 실제완료 미실행을 보존했다. YouTube17 dirty는 비접촉, 해제된 후속7은 검토 대기이며 유지8 ID의 의미/실익 근거를 [새 기록](../engineering/anti-slop-planner-contracts-20261020.md)에 고정했다. 작은 수정마다 배포하지 않고 최종 검증 후 앱 묶음으로 반영한다.

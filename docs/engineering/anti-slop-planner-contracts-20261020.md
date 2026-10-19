@@ -1,6 +1,6 @@
 # Anti Slop93 — 플래너 동작 보존 묶음
 
-기준 master `99e44c009e63bd7a43f57f2e45ab886d41db6fa2`, 제품 source `b867b1e3e`다. 현재 로컬5논리커밋/머지0/운영0, 실제 운영은7d15/build `prelaunch-7d15dfe790f8-MTla10`·DB238/Anti105다. 사용자 인계가 플래너·끼니·UI19건의 당시 충돌 방지 보호를 깨끗한 독립 worktree에서 해제했다. YouTube2파일/17건·그 기존 dirty는 그대로 보존했다. 새 제품 정책·권한·DB·인증 설정 변경 승인이 아니다.
+기준 master `99e44c009e63bd7a43f57f2e45ab886d41db6fa2`, 제품 source `b867b1e3e`다.5논리커밋은 [PR1835](https://github.com/netsus/homecook/pull/1835) merge `5ea486e534729eb576477bf81526847caa2dfee6`로 반영한 뒤 공식 DB238 앱 전용 경로를 한 번 실행했다. 머지1/운영1, 실제 build `prelaunch-5ea486e53472-wPutWL`·Anti93다. 사용자 인계가 플래너·끼니·UI19건의 당시 충돌 방지 보호를 깨끗한 독립 worktree에서 해제했다. YouTube2파일/17건·그 기존 dirty는 그대로 보존했다. 새 제품 정책·권한·DB·인증 설정 변경 승인이 아니다.
 
 ## 작은 배치와 실익
 
@@ -38,4 +38,6 @@
 
 부모가 정확7d15의 인증 **읽기 QA**를 완료했다: 프로필/일반 설정 현재값·진도/활동/업적·기존 레시피/남은요리/식사기록 정상 표시, 과거 전체무게200g 실측 근거 보존. 관측 console/화면 API 오류0, 요청별HTTP는 수집하지 않았다. 설정/프로필 변경·신규 생성0, legacy 실제완료 미실행이다. 환경설정 새로고침은 기본 탭으로 돌아오지만 재진입 시 현재값 정상인 탐색 특성으로만 남긴다. 이 QA를 현재 로컬 source의 인증 QA로 바꾸어 부르지 않는다.
 
-최종 코드/원본 대응 독립 검토 뒤 draft PR을 일반 머지하는 범위이며, 소규모 커밋마다 배포하지 않는다. 부모의 QA 점유해제로 검증된 다음 앱 묶음 순차 배포가 가능하나, 실제 새 ref/build·DB238·원 승인과 데이터 보존 확인이 끝나기 전 운영 완료로 집계하지 않는다. 실제 삭제/격리/신규 식사 QA·세션/토큰 추출·새 로그인·공개 상세GET/조회수 변경·DB 쓰기는 하지 않는다.
+제품·exact metadata 독립 APPROVE 뒤 draft PR1835를 일반 머지했고 최종 merge tree는 검토 head와 동일했다. 사용자에게 미배포를 명확히 보고한 뒤 이번5ea 후보의 명시적 배포 지시를 받아 실제7d15/실행 중 deploy0을 먼저 확인했다. 공식 plan은 web7·SQL0·환경키0·DB readOnly, 단일 deploy exit0·선택웹1473 PASS/133 명시적 이름필터 SKIP·compile99초/정적94/기존경고3다. 실제 ref5ea/buildwPutWL·loaded=true·DB238 ready·원 planSHA/readerFloor48c4·closedR2·recoveryPending=false, 새 manifest200·비로그인 users/me 및 planner GET wrapped401을 확인했다.
+
+배포 창21:41:48Z→21:49:08Z의 동일 고정 읽기 전용 observer9개 지문은 모두 일치했다. [전후 증거](evidence/anti-slop-planner-data-preservation-20261020.json)는 원 승인/PIN/과거 baseline을 교체하지 않는 창 단위 비교다. 이전 QA 등을 사이에 둔 과거 관측의 normal/preserved 지문과 같다는 주장이나 새 전체DB 백업/복원 증명이 아니다. SQL/환경/자격/인증 설정/정책/PIN/worker 변경0이다. 실제 삭제/격리/신규 식사 QA·세션/토큰 추출·새 로그인·공개 상세GET/조회수 변경·DB 쓰기는 하지 않았다. 최신5ea 인증 QA와 legacy 실제완료는 미실행이고 부모의 과거7d15 읽기QA로 대체하지 않는다.19건 JSON은 sourceb867의 고정 머지 전 감사 snapshot이며 현재 운영 상태와 별개다.
