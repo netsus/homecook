@@ -104,4 +104,62 @@ describe("job-scoped AI recipe refresh", () => {
     await expect(refreshIngredientAiRecipeNutrition(client, options)).rejects.toMatchObject({ code: "RECIPE_NUTRITION_INPUT_STALE" });
     expect(client.rpc).toHaveBeenCalledTimes(2);
   });
+
+  it("preserves sorted ingredient input and exact guard without mutating or inventing bundle fields", async () => {
+    const input = bundle();
+    input.recipe_ingredients.push({ ...input.recipe_ingredients[0], id: "ri-2", amount: 25, sort_order: -1 });
+    // Guard rows are canonical ID order, independently of the read sort_order.
+    input.input_guard.recipe_ingredients.push({ ...input.input_guard.recipe_ingredients[0], id: "ri-2", amount: 25, sort_order: -1 });
+    const before = structuredClone(input);
+    const client = rpcClient(input);
+    await refreshIngredientAiRecipeNutrition(client, options);
+    expect(client.rpc.mock.calls[1][1].p_input_guard).toEqual(input.input_guard);
+    expect(client.rpc.mock.calls[1][1]).toMatchObject({ p_snapshot: { scalable_values: { energy_kcal: 75 } } });
+    expect(input).toEqual(before);
+    expect(input.recipe).not.toHaveProperty("revision");
+    expect(input.recipe_ingredients[0]).not.toHaveProperty("quantity_input");
+    expect(client.rpc.mock.calls.map(([name]) => name)).toEqual(["get_ingredient_ai_recipe_refresh_input", "write_ingredient_ai_recipe_refresh"]);
+  });
+
+  it("filters ineligible evidence using the existing local predecessor reader", async () => {
+    const input = bundle();
+    input.ingredient_nutrition_profiles.unshift({ ...input.ingredient_nutrition_profiles[0], id: "ignored-inactive", is_active: false });
+    const client = rpcClient(input);
+    await refreshIngredientAiRecipeNutrition(client, options);
+    expect(client.rpc.mock.calls[1][1].p_input_guard).toEqual(input.input_guard);
+  });
+
+  it("keeps duplicate product predecessor rejection before the write RPC", async () => {
+    const input = bundle();
+    Object.assign(input.recipe_ingredients[0], { ingredient_id: null, food_product_id: "product-1", food_product_nutrition_version_id: "version-1" });
+    input.product_predecessors = [{ id: "ri-1", product_predecessor: null }, { id: "ri-1", product_predecessor: null }];
+    const client = rpcClient(input);
+    await expect(refreshIngredientAiRecipeNutrition(client, options)).rejects.toMatchObject({ code: "RECIPE_NUTRITION_INPUT_READ_FAILED" });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not invent a recipe revision from a supplied quantity guard", async () => {
+    const input = bundle();
+    Object.assign(input.input_guard, { quantity_policy_version: "quantity-v4", quantity_recipe_revision: 7 });
+    const client = rpcClient(input);
+    await expect(refreshIngredientAiRecipeNutrition(client, options)).rejects.toMatchObject({ code: "UNIT_CONTEXT_STALE" });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { name: "owner metadata", recipe: { ...bundle().recipe, created_by: 7 } },
+    { name: "revision metadata", recipe: { ...bundle().recipe, revision: "7" } },
+  ])("rejects invalid $name instead of asserting that RPC rows are native SDK rows", async ({ recipe }) => {
+    const client = rpcClient({ ...bundle(), recipe });
+    await expect(refreshIngredientAiRecipeNutrition(client, options)).rejects.toMatchObject({ code: "INVALID_RECIPE_NUTRITION_INPUT" });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, { id: "not-a-pin-string" }])("rejects malformed optional product pins (%j)", async pin => {
+    const input = bundle();
+    const client = rpcClient({ ...input, recipe_ingredients: [{ ...input.recipe_ingredients[0],
+      food_product_id: pin, food_product_nutrition_version_id: pin }] });
+    await expect(refreshIngredientAiRecipeNutrition(client, options)).rejects.toMatchObject({ code: "INVALID_RECIPE_NUTRITION_INPUT" });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+  });
 });

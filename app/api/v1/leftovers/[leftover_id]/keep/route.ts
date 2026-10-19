@@ -48,7 +48,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (!authorized.ok) return authorized.response;
   const { routeClient, user } = authorized;
 
-  const dbClient = routeClient as unknown as UserBootstrapDbClient;
+  const dbClient: UserBootstrapDbClient = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);

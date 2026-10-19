@@ -1,5 +1,6 @@
-import { prepareRecipeNutritionSnapshot, type RecipeNutritionServiceClient } from "@/lib/server/recipe-nutrition-service";
+import { prepareRecipeNutritionSnapshotFromInput } from "@/lib/server/recipe-nutrition-service";
 import { createRecipeNutritionSnapshotPayload } from "@/lib/server/recipe-nutrition-snapshot";
+import { loadRecipeNutritionPredecessors } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
 
 export interface IngredientAiRecipeRefreshClient {
   rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }>;
@@ -79,7 +80,6 @@ class BundleQuery implements PromiseLike<ListResult> {
     return this;
   }
   range(from: number, to: number) { this.rows = this.rows.slice(from, to + 1); return this; }
-  async maybeSingle() { return { data: this.rows.length === 1 ? this.rows[0] : null, error: null }; }
   then<TResult1 = ListResult, TResult2 = never>(
     onfulfilled?: ((value: ListResult) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
@@ -90,7 +90,7 @@ class BundleQuery implements PromiseLike<ListResult> {
 
 function bundleClient(bundle: RefreshBundle) {
   const tables: Record<string, Row[]> = {
-    recipes: [bundle.recipe], recipe_ingredients: bundle.recipe_ingredients,
+    recipe_ingredients: bundle.recipe_ingredients,
     ingredient_nutrition_profiles: bundle.ingredient_nutrition_profiles,
     ingredient_conversion_assignments: bundle.ingredient_conversion_assignments,
     piece_unit_weights: bundle.piece_unit_weights,
@@ -142,11 +142,13 @@ export async function refreshIngredientAiRecipeNutrition(
   if (read.error) failRpc(read.error, "AI_NUTRITION_REFRESH_READ_FAILED");
   validateBundle(read.data, options.jobId, options.recipeId);
   const memory = bundleClient(read.data);
-  // The adapter intentionally has only in-memory read behavior, not a snapshot
-  // writer or any general service-role REST access.
-  const prepared = await prepareRecipeNutritionSnapshot(
-    memory as unknown as RecipeNutritionServiceClient, options.recipeId,
-  );
+  const ingredients = await memory.from("recipe_ingredients")
+    .eq("recipe_id", options.recipeId).order("sort_order", { ascending: true });
+  const prepared = await prepareRecipeNutritionSnapshotFromInput({
+    recipeId: options.recipeId, recipe: read.data.recipe, ingredients: ingredients.data,
+    loadPredecessors: ids => loadRecipeNutritionPredecessors(memory, ids),
+    predecessorClient: memory,
+  });
   if (canonical(prepared.inputGuard) !== canonical(read.data.input_guard)) {
     throw new IngredientAiRecipeRefreshError("AI_NUTRITION_REFRESH_GUARD_MISMATCH");
   }

@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -19,60 +20,23 @@ interface QueryError {
   message: string;
 }
 
-interface ShoppingListRow {
-  id: string;
-  user_id: string;
-  is_completed: boolean;
-}
-
-interface ShoppingListItemRow {
-  id: string;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-type UpdateResult = PromiseLike<{
-  data: null;
-  error: QueryError | null;
-}>;
-
-interface ShoppingListsSelectQuery {
-  eq(column: string, value: string): ShoppingListsSelectQuery;
-  maybeSingle(): MaybeSingleResult<ShoppingListRow>;
-}
-
-interface ShoppingListItemsSelectQuery {
-  eq(column: string, value: string): ShoppingListItemsSelectQuery;
-  in(column: string, values: string[]): ShoppingListItemsSelectQuery;
-  then: ArrayResult<ShoppingListItemRow>["then"];
-}
-
-interface ShoppingListItemsUpdateQuery {
-  eq(column: string, value: string): ShoppingListItemsUpdateQuery;
-  then: UpdateResult["then"];
-}
-
-interface ShoppingListsTable {
-  select(columns: string): ShoppingListsSelectQuery;
-}
-
-interface ShoppingListItemsTable {
-  select(columns: string): ShoppingListItemsSelectQuery;
-  update(values: { sort_order: number }): ShoppingListItemsUpdateQuery;
-}
-
-interface ShoppingReorderDbClient {
-  from(table: "shopping_lists"): ShoppingListsTable;
-  from(table: "shopping_list_items"): ShoppingListItemsTable;
-}
+// Exact consumed rows and sort-only update payload, with native SDK phases.
+// This does not replace the database's owner/completed-list write guards.
+export type ShoppingReorderDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      shopping_lists: {
+        Row: { id: string; user_id: string; is_completed: boolean };
+        Insert: never; Update: never; Relationships: [];
+      };
+      shopping_list_items: {
+        Row: { id: string; shopping_list_id: string; sort_order: number };
+        Insert: never; Update: { sort_order: number }; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -197,12 +161,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingReorderDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: ShoppingReorderDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { SAVED_RECIPE_NUTRITION_FEATURE,SAVED_RECIPE_NUTRITION_MIGRATIONS } from "./lib/saved-recipe-nutrition-maintenance.mjs";
+import { readDbAppSuccessorReview, assertDbAppSuccessor } from "./lib/prelaunch-db-app-successor.mjs";
 import {readSavedRecipeNutritionAttempt,savedRecipeNutritionPhaseStatus,loadCookingExperienceMaintenance} from "./lib/prelaunch-web-deploy.mjs";
 import { COOKING_EXPERIENCE_FEATURE, COOKING_EXPERIENCE_MIGRATIONS } from "./lib/cooking-experience-maintenance.mjs";
 import {createCookingMaintenanceLocal} from "./lib/cooking-maintenance-local.mjs";
@@ -209,7 +210,7 @@ function fingerprintSourceHandoff(from,to,files) {
   return {plan:recovery.plan,from,to,digests};
 }
 function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = false, testScript,
-  youtubeTrialReview = null, youtubeResolutionReview = null, integratedMaster = false, protectedCandidate = null) {
+  youtubeTrialReview = null, youtubeResolutionReview = null, integratedMaster = false, protectedCandidate = null, deploymentOptions = null) {
   assertClean(live.cwd);
   const target = git(["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
   const files = prelaunchChangedFiles((args) => command("git", ["-C", repository, ...args], { trimOutput: false }), live.ref, target);
@@ -245,14 +246,15 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
         { maxBuffer: 65536, stdio: ["ignore", "pipe", "pipe"] })) : null) : null;
   const recipeSaveHandoff = !protectedCandidate && (SAVED_RECIPE_NUTRITION_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`)) || COOKING_EXPERIENCE_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`)) || files.includes(`supabase/migrations/${RECIPE_REQUEST_ROLE_MIGRATION.filename}`) || RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`))
     || files.some(file=>Object.hasOwn(RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,file)))
-    ? nutritionSourceHandoff(live,{target,files}) : null;
-  if (recipeSaveHandoff) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
+    ? nutritionSourceHandoff(live,{target,files},deploymentOptions,true) : null;
+  const appSuccessorSupport = recipeSaveHandoff?.appSuccessorSupport;
+  if (recipeSaveHandoff && !appSuccessorSupport) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
-      reviewedIntegratedFiles: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(protectedCandidate?.review.feature) ? new Set(Object.keys(protectedCandidate.review.files)) : [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(recipeSaveHandoff?.maintenance.review.feature) ? new Set(Object.keys(recipeSaveHandoff.maintenance.review.files)) : integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport ?? v85Support,
+      reviewedIntegratedFiles: appSuccessorSupport ?? ([COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(protectedCandidate?.review.feature) ? new Set(Object.keys(protectedCandidate.review.files)) : [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(recipeSaveHandoff?.maintenance?.review.feature) ? new Set(Object.keys(recipeSaveHandoff.maintenance.review.files)) : integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport ?? v85Support),
       // validateProtectedCandidate above already checked the complete exact byte pairs.
       reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
-      reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff), eslintConfigDigests });
+      reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff && !appSuccessorSupport), eslintConfigDigests });
   const verificationScripts = prelaunchVerificationScripts(scope, manifest(target), verifyScript, skipAutomatedTests, testScript);
   return { from: live.ref, target, files, scope, verificationScripts, integratedReview };
 }
@@ -292,7 +294,7 @@ function quantityPublicReadDigests(live, selection, closedContext) {
       { maxBuffer: 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })) : null);
 }
 
-function nutritionSourceHandoff(live, selection) {
+function nutritionSourceHandoff(live, selection, options = null, forScope = false) {
   const savedNutritionSql=SAVED_RECIPE_NUTRITION_MIGRATIONS.some(row=>selection.files.includes(`supabase/migrations/${row.filename}`));
   if(savedNutritionSql){
     const maintenance=loadCurrentDatabaseMaintenance(repository);
@@ -317,6 +319,22 @@ function nutritionSourceHandoff(live, selection) {
     && recipeSaveRecoveryRuntimeContract(file,execFileSync("git",["-C",repository,"show",`${selection.target}:${file}`],{maxBuffer:32*1024*1024,stdio:["ignore","pipe","pipe"]})));
   if (!selection.files.includes(`supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}`) && !recipeSql && !recipeRuntime && !roleSql) return undefined;
   const maintenance = loadCurrentDatabaseMaintenance(repository);
+  if (maintenance?.review.feature === SAVED_RECIPE_NUTRITION_FEATURE && recipeRuntime && !recipeSql && !roleSql
+    && !selection.files.some(file => file.startsWith("supabase/"))) {
+    const review = readDbAppSuccessorReview(path => readClosedR2PrivateBytes(path, repository));
+    const digests = Object.fromEntries(selection.files.map(file => [file, [live.ref, selection.target].map(sha => {
+      const entry = git(["ls-tree", sha, "--", file]);
+      if (!entry) return null;
+      if (!entry.startsWith("100644 blob ")) throw new DeploymentError("DB_APP_SUCCESSOR_FILE_MODE");
+      return hash(execFileSync("git", ["-C", repository, "show", `${sha}:${file}`], { maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }));
+    })]));
+    const { supportFiles } = assertDbAppSuccessor({ review, maintenance, from: live.ref, to: selection.target,
+      live: { ref: live.ref, buildId: live.buildId, plistSha256: hash(live.bytes) }, files: selection.files, digests, options,
+      readerFloorAncestor: spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", maintenance.review.to, live.ref], { stdio: "ignore" }).status === 0,
+      liveAncestor: spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", live.ref, selection.target], { stdio: "ignore" }).status === 0 });
+    // Scope gets only the exact historical operator blob, never DB handoff authority.
+    return forScope ? { appSuccessorSupport: supportFiles } : undefined;
+  }
   if (!maintenance || roleSql && maintenance.review.feature !== RECIPE_REQUEST_ROLE_FEATURE || (recipeSql || recipeRuntime) && ![RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(maintenance.review.feature)) throw new DeploymentError("Exact nutrition/recipe-save source is not already committed under its separate authority");
   if (recipeRuntime && !recipeSql && !roleSql && !selection.files.some(file=>file.startsWith("supabase/")) && [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(maintenance.review.feature)
     && spawnSync("git",["-C",repository,"merge-base","--is-ancestor",maintenance.review.to,live.ref],{stdio:"ignore"}).status===0) return undefined;
@@ -349,7 +367,7 @@ async function stageRound2Readiness(plist, release, live, selection, databaseDep
       assertRound2InheritanceBoundaries({ previous: live.plist, next: plist, files: selection.files, databaseDeployment,
         reviewedFingerprintSource: fingerprintSourceHandoff(live.ref,selection.target,selection.files),
         reviewedV85Source: v85SourceHandoff(live.ref,selection.target,selection.files),
-        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
+        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection, options),
         reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       if (!options.envFile && !isDeepStrictEqual(plist, retargetPlist(live.plist, plist.WorkingDirectory))) throw new DeploymentError("닫힘 승계는 기존 환경과 실행 설정을 유지해야 합니다.");
     }
@@ -1329,14 +1347,14 @@ async function deploy(options) {
   if (options.reviewedFeedbackReadiness) await loadFeedbackReview();
   if (existsSync(recoveryPath)) throw new DeploymentError("이전 배포 복구가 남아 있습니다. status와 rollback을 먼저 실행하세요.");
   const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness,
-    protectedReader ? { review: rollout, context: closedContext } : null);
+    protectedReader ? { review: rollout, context: closedContext } : null, options);
   const patch = readEnvironmentPatch(options.envFile, repository);
   if (options.reviewedClosedR2Maintenance) {
     validateClosedR2Candidate(closedReview, live, selection, patch, options, closedContext);
     verifyClosedR2Control(closedReview, repository);
   }
   if (closedReview && selection.scope.database.length && !protectedReader) {
-    const handoff = options.alreadyAppliedDb === true ? nutritionSourceHandoff(live, selection) : null;
+    const handoff = options.alreadyAppliedDb === true ? nutritionSourceHandoff(live, selection, options) : null;
     if (!handoff) throw new DeploymentError("닫힘 유지/승계에 SQL source 변경은 허용하지 않습니다.");
     assertNutritionValidatorSourceHandoff(handoff);
   }
@@ -1885,7 +1903,7 @@ async function main() {
     if (youtubeTrialReview) await verifyYoutubeTrialSourceBackfill({ review: youtubeTrialReview, repositoryRoot: repository });
     const youtubeResolutionReview = options.reviewedYoutubeResolutionReadiness ? await loadYoutubeResolutionReview() : null;
     const selection = plan(options.ref, live, options.refOption, options.verifyScript, options.skipAutomatedTests, options.testScript, youtubeTrialReview, youtubeResolutionReview, options.reviewedIntegratedMasterReadiness,
-      protectedReview ? { review: protectedReview, context: closedContext } : null);
+      protectedReview ? { review: protectedReview, context: closedContext } : null, options);
     const environmentKeys = Object.keys(readEnvironmentPatch(options.envFile, repository)).sort();
     if (protectedReview) {
       loadProtectedDatabaseReceipt(protectedReview);
@@ -1897,7 +1915,7 @@ async function main() {
       assertRound2InheritanceBoundaries({ previous: live.plist, next: live.plist, files: selection.files, databaseDeployment: selection.scope.database.length > 0,
         reviewedFingerprintSource: fingerprintSourceHandoff(live.ref,selection.target,selection.files),
         reviewedV85Source: v85SourceHandoff(live.ref,selection.target,selection.files),
-        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection),
+        quantityPublicReadDigests: quantityPublicReadDigests(live, selection, closedContext), nutritionMaintenanceHandoff: nutritionSourceHandoff(live, selection, options),
         reviewedV74Source: live.ref===V74_WEB_PREDECESSOR&&selection.target===V74_RELEASE&&verifiedV74Source()?verifiedV74Inputs:null });
       verifyClosedR2Control(closedContext.review, repository);
     }

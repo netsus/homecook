@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
@@ -13,86 +14,62 @@ import {
   normalizeLeftoverStatus,
   projectLeftoverCompatibilityStatus,
   toLeftoverListItem,
-  type LeftoverDishRow,
-  type LeftoverOriginMealRow,
   type LeftoverRecipeRow,
   type LeftoverSourceMealRow,
 } from "@/lib/server/leftovers";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { LeftoverListData } from "@/types/leftover";
 
-interface QueryError {
-  code?: string;
-  message: string;
-}
-
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-interface LeftoverSelectQuery {
-  eq(column: string, value: string): LeftoverSelectQuery;
-  gt(column: string, value: string): LeftoverSelectQuery;
-  or(filters: string): LeftoverSelectQuery;
-  order(column: string, options: QueryOrderOption): LeftoverSelectQuery;
-  then: ArrayQueryResult<LeftoverDishRow>["then"];
-}
-
-interface RecipeSelectQuery {
-  in(column: string, values: string[]): RecipeSelectQuery;
-  then: ArrayQueryResult<LeftoverRecipeRow>["then"];
-}
-
-interface SourceMealSelectQuery {
-  eq(column: string, value: string): SourceMealSelectQuery;
-  in(column: string, values: string[]): SourceMealSelectQuery;
-  order(column: string, options: QueryOrderOption): SourceMealSelectQuery;
-  then: ArrayQueryResult<LeftoverSourceMealRow>["then"];
-}
-
-interface OriginMealSelectQuery {
-  in(column: string, values: string[]): OriginMealSelectQuery;
-  order(column: string, options: QueryOrderOption): OriginMealSelectQuery;
-  then: ArrayQueryResult<LeftoverOriginMealRow>["then"];
-}
-
-interface LeftoverDishesTable {
-  select(columns: string): LeftoverSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipeSelectQuery;
-}
-
-interface RecipeContentSnapshotsSelectQuery {
-  in(column: string, values: string[]): RecipeContentSnapshotsSelectQuery;
-  then: ArrayQueryResult<{ id: string; recipe_id: string; title: string }>["then"];
-}
-
-interface RecipeContentSnapshotsTable {
-  select(columns: string): RecipeContentSnapshotsSelectQuery;
-}
-
-interface MealsTable {
-  select(columns: string): SourceMealSelectQuery;
-}
-
-interface CookingSessionMealsTable {
-  select(columns: string): OriginMealSelectQuery;
-}
-
-interface LeftoversDbClient {
-  from(table: "leftover_dishes"): LeftoverDishesTable;
-  from(table: "recipes"): RecipesTable;
-  from(table: "recipe_content_snapshots"): RecipeContentSnapshotsTable;
-  from(table: "meals"): MealsTable;
-  from(table: "cooking_session_meals"): CookingSessionMealsTable;
-}
+// Consumed columns and real many-to-one FK joins only. SDK select inference
+// supplies projection/cardinality; this is not a database schema or grant change.
+export type LeftoversDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      leftover_dishes: {
+        Row: {
+          id: string; user_id: string; recipe_id: string;
+          recipe_content_snapshot_id: string | null;
+          status: "leftover" | "eaten"; cooked_at: string;
+          eaten_at: string | null; auto_hide_at: string | null;
+          stale_reviewed_at: string | null; cooking_servings: number;
+          weight_status: "known" | "missing" | "unrecoverable" | null;
+          batch_status: "available" | "depleted" | null;
+          depleted_reason: "consumed" | "discarded" | "mixed"
+            | "consumed_unweighed" | "discarded_unweighed" | "mixed_unweighed" | null;
+        };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; title: string; thumbnail_url: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; recipe_id: string; title: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      meals: {
+        Row: { id: string; user_id: string; leftover_dish_id: string | null;
+          planned_servings: number; column_id: string; cooked_at: string | null };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "meals_column_id_fkey";
+          columns: ["column_id"]; isOneToOne: false;
+          referencedRelation: "meal_plan_columns"; referencedColumns: ["id"]; }];
+      };
+      meal_plan_columns: {
+        Row: { id: string; name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      cooking_session_meals: {
+        Row: { id: string; session_id: string; meal_id: string; cooked_at: string | null };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "cooking_session_meals_meal_id_fkey";
+          columns: ["meal_id"]; isOneToOne: false;
+          referencedRelation: "meals"; referencedColumns: ["id"]; }];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 export async function GET(request: NextRequest) {
   const status = normalizeLeftoverStatus(request.nextUrl.searchParams.get("status"));
@@ -121,12 +98,12 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    LeftoversDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: LeftoversDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",

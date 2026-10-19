@@ -15,7 +15,7 @@ export async function authorizeMealLogRequest() {
   const user = auth.data.user;
   if (!user) return { ok: false as const, response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401) };
   try {
-    const bootstrapClient = routeClient as unknown as UserBootstrapDbClient;
+    const bootstrapClient: UserBootstrapDbClient = routeClient;
     await ensurePublicUserRow(bootstrapClient, user);
     await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (error) {

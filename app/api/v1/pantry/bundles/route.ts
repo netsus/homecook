@@ -1,9 +1,7 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildPantryBundles,
-  type PantryBundleItemJoinedRow,
-  type PantryBundleRow,
-  type PantryIngredientRow,
 } from "@/lib/server/pantry";
 import {
   ensurePublicUserRow,
@@ -13,55 +11,36 @@ import {
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 
-interface QueryError {
-  message: string;
-}
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface BundlesSelectQuery {
-  order(column: string, options: QueryOrderOption): BundlesSelectQuery;
-  then: ArrayResult<PantryBundleRow>["then"];
-}
-
-interface BundleItemsSelectQuery {
-  in(column: string, values: string[]): BundleItemsSelectQuery;
-  then: ArrayResult<PantryBundleItemJoinedRow>["then"];
-}
-
-interface PantryItemsSelectQuery {
-  eq(column: string, value: string): PantryItemsSelectQuery;
-  in(column: string, values: string[]): PantryItemsSelectQuery;
-  then: ArrayResult<PantryIngredientRow>["then"];
-}
-
-interface IngredientBundlesTable {
-  select(columns: string): BundlesSelectQuery;
-}
-
-interface IngredientBundleItemsTable {
-  select(columns: string): BundleItemsSelectQuery;
-}
-
-interface PantryItemsTable {
-  select(columns: string): PantryItemsSelectQuery;
-}
-
-interface PantryBundlesDbClient {
-  from(table: "ingredient_bundles"): IngredientBundlesTable;
-  from(table: "ingredient_bundle_items"): IngredientBundleItemsTable;
-  from(table: "pantry_items"): PantryItemsTable;
-}
+// Consumed fields and the real bundle-item ingredient FK; no runtime wrapper.
+export type PantryBundlesDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      ingredient_bundles: {
+        Row: { id: string; name: string; display_order: number };
+        Insert: never; Update: never; Relationships: [];
+      };
+      ingredient_bundle_items: {
+        Row: { bundle_id: string; ingredient_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "ingredient_bundle_items_ingredient_id_fkey";
+          columns: ["ingredient_id"]; isOneToOne: false;
+          referencedRelation: "ingredients"; referencedColumns: ["id"]; }];
+      };
+      ingredients: {
+        Row: { id: string; standard_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      pantry_items: {
+        Row: { user_id: string; ingredient_id: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 interface PantryBundlesAuthSuccess {
-  dbClient: PantryBundlesDbClient & UserBootstrapDbClient;
+  dbClient: PantryBundlesDbClient;
   user: { id: string };
 }
 
@@ -80,12 +59,12 @@ async function getAuthenticatedDb(): Promise<PantryBundlesAuthSuccess | PantryBu
     };
   }
 
-  const dbClient = routeClient as unknown as
-    PantryBundlesDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: PantryBundlesDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return {
       response: fail(
@@ -136,7 +115,7 @@ export async function GET() {
   const ingredientIds = [
     ...new Set(bundleItemsResult.data.map((item) => item.ingredient_id)),
   ];
-  let pantryItems: PantryIngredientRow[] = [];
+  let pantryItems: Array<{ ingredient_id: string | null }> = [];
 
   if (ingredientIds.length > 0) {
     const pantryItemsResult = await auth.dbClient

@@ -21,6 +21,7 @@ import {
   isMissingStepCookingMethodsRelation,
 } from "@/lib/server/recipe-step-method-select";
 import type { CookingStandaloneCookModeData } from "@/types/cooking";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface RouteContext {
   params: Promise<{
@@ -28,64 +29,65 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  message: string;
-}
+// Only the consumed columns and real FK joins, not a replacement database
+// schema or runtime read-only grant. Keep the SDK's native query phases.
+export type StandaloneCookModeDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipes: {
+        Row: { id: string; title: string; base_servings: number };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_ingredients: {
+        Row: {
+          id: string; recipe_id: string; ingredient_id: string | null;
+          source_kind: "ingredient" | "food_product" | null;
+          amount: number | null; unit: string | null; display_text: string | null;
+          component_label: string | null; ingredient_type: "QUANT" | "TO_TASTE";
+          scalable: boolean; sort_order: number; quantity_input: unknown;
+          food_product_id: string | null; food_product_nutrition_version_id: string | null;
+        };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_ingredients_ingredient_id_fkey";
+          columns: ["ingredient_id"]; isOneToOne: false;
+          referencedRelation: "ingredients"; referencedColumns: ["id"]; }];
+      };
+      ingredients: {
+        Row: { id: string; standard_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_steps: {
+        Row: { id: string; recipe_id: string; step_number: number; instruction: string;
+          component_label: string | null; ingredients_used: unknown; heat_level: string | null;
+          duration_seconds: number | null; duration_text: string | null; cooking_method_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_steps_cooking_method_id_fkey";
+          columns: ["cooking_method_id"]; isOneToOne: false;
+          referencedRelation: "cooking_methods"; referencedColumns: ["id"]; }];
+      };
+      cooking_methods: {
+        Row: { id: string; code: string; label: string; color_key: string; category_code: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_step_cooking_methods: {
+        Row: { step_id: string; method_id: string; position: number };
+        Insert: never; Update: never;
+        Relationships: [
+          { foreignKeyName: "recipe_step_cooking_methods_step_id_fkey";
+            columns: ["step_id"]; isOneToOne: false;
+            referencedRelation: "recipe_steps"; referencedColumns: ["id"]; },
+          { foreignKeyName: "recipe_step_cooking_methods_method_id_fkey";
+            columns: ["method_id"]; isOneToOne: false;
+            referencedRelation: "cooking_methods"; referencedColumns: ["id"]; },
+        ];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
-interface RecipeRow {
-  id: string;
-  title: string;
-  base_servings: number;
-}
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-interface RecipeSelectQuery {
-  eq(column: string, value: string): RecipeSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeRow>;
-}
-
-interface IngredientsSelectQuery {
-  eq(column: string, value: string): IngredientsSelectQuery;
-  order(column: string, options: QueryOrderOption): IngredientsSelectQuery;
-  then: ArrayResult<CookingIngredientRow>["then"];
-}
-
-interface StepsSelectQuery {
-  eq(column: string, value: string): StepsSelectQuery;
-  order(column: string, options: QueryOrderOption): StepsSelectQuery;
-  then: ArrayResult<CookingStepRow>["then"];
-}
-
-interface RecipesTable {
-  select(columns: string): RecipeSelectQuery;
-}
-
-interface RecipeIngredientsTable {
-  select(columns: string): IngredientsSelectQuery;
-}
-
-interface RecipeStepsTable {
-  select(columns: string): StepsSelectQuery;
-}
-
-interface StandaloneCookModeDbClient {
-  from(table: "recipes"): RecipesTable;
-  from(table: "recipe_ingredients"): RecipeIngredientsTable;
-  from(table: "recipe_steps"): RecipeStepsTable;
-}
+const INGREDIENT_COLUMNS_PUBLIC = "id, source_kind, ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)";
+const INGREDIENT_COLUMNS_AUTH = "id, source_kind, ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name), food_product_id, food_product_nutrition_version_id, quantity_input";
 
 function parseServings(value: string | null) {
   if (!value) {
@@ -143,7 +145,7 @@ export async function GET(request: Request, context: RouteContext) {
     const routeClient = await createRouteHandlerClient({
       anonymousPublicReadScope: "recipe-cook-mode",
     });
-    const dbClient = routeClient as unknown as StandaloneCookModeDbClient;
+    const dbClient: StandaloneCookModeDbClient = routeClient;
 
     const recipeResult = await dbClient
       .from("recipes")
@@ -156,11 +158,11 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const user = (await routeClient.auth.getUser()).data.user;
-    const ingredientColumns = "id, source_kind, ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)"
-      + (user ? ", food_product_id, food_product_nutrition_version_id, quantity_input" : "");
-    const ingredientsResult = await dbClient
-      .from("recipe_ingredients")
-      .select(ingredientColumns)
+    const ingredientTable = dbClient.from("recipe_ingredients");
+    const ingredientQuery = user
+      ? ingredientTable.select(INGREDIENT_COLUMNS_AUTH)
+      : ingredientTable.select(INGREDIENT_COLUMNS_PUBLIC);
+    const ingredientsResult = await ingredientQuery
       .eq("recipe_id", recipeId)
       .order("sort_order", { ascending: true });
 
@@ -168,11 +170,11 @@ export async function GET(request: Request, context: RouteContext) {
       return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
     }
 
-    let productIngredients = user
+    let productIngredients: CookingIngredientRow[] = user
       ? await readRecipeProductLabels(routeClient, ingredientsResult.data)
       : await readPublicRecipeProductLabels(routeClient, recipeId, ingredientsResult.data);
 
-    let stepsResult = await dbClient
+    let stepsResult: { data: CookingStepRow[] | null; error: unknown } = await dbClient
       .from("recipe_steps")
       .select(COOK_MODE_STEP_SELECT_WITH_METHODS)
       .eq("recipe_id", recipeId)

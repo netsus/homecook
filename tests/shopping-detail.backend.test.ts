@@ -165,7 +165,6 @@ describe("10a shopping detail backend", () => {
           is_completed: false,
           completed_at: null,
           created_at: "2026-04-25T09:00:00.000Z",
-          updated_at: "2026-04-25T09:10:00.000Z",
         },
         error: null,
       },
@@ -311,7 +310,7 @@ describe("10a shopping detail backend", () => {
         is_completed: false,
         completed_at: null,
         created_at: "2026-04-25T09:00:00.000Z",
-        updated_at: "2026-04-25T09:10:00.000Z",
+        updated_at: "2026-04-25T09:00:00.000Z",
         recipes: [
           {
             recipe_id: "recipe-1",

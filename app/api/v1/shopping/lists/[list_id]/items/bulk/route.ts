@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -18,63 +19,34 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  code?: string;
-  message: string;
-}
-
-interface ShoppingListRow {
-  id: string;
-  user_id: string;
-  is_completed: boolean;
-}
-
-interface ShoppingListItemRow {
+type ShoppingListItemRow = {
   id: string;
   shopping_list_id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
   display_text: string;
   amounts_json: unknown;
   is_checked: boolean;
   is_pantry_excluded: boolean;
   added_to_pantry: boolean;
   sort_order: number;
-}
+};
 
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface ShoppingListsSelectQuery {
-  eq(column: string, value: string): ShoppingListsSelectQuery;
-  maybeSingle(): MaybeSingleResult<ShoppingListRow>;
-}
-
-interface ShoppingListItemsUpdateQuery {
-  eq(column: string, value: string | boolean): ShoppingListItemsUpdateQuery;
-  in(column: string, values: string[]): ShoppingListItemsUpdateQuery;
-  select(columns: string): ShoppingListItemsUpdateQuery;
-  then: ArrayResult<ShoppingListItemRow>["then"];
-}
-
-interface ShoppingListsTable {
-  select(columns: string): ShoppingListsSelectQuery;
-}
-
-interface ShoppingListItemsTable {
-  update(values: { is_checked: boolean }): ShoppingListItemsUpdateQuery;
-}
-
-interface ShoppingBulkItemUpdateDbClient {
-  from(table: "shopping_lists"): ShoppingListsTable;
-  from(table: "shopping_list_items"): ShoppingListItemsTable;
-}
+// Consumed rows and check-only payload; native SDK keeps update/select phases.
+export type ShoppingBulkItemUpdateDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      shopping_lists: {
+        Row: { id: string; user_id: string; is_completed: boolean };
+        Insert: never; Update: never; Relationships: [];
+      };
+      shopping_list_items: {
+        Row: ShoppingListItemRow;
+        Insert: never; Update: { is_checked: boolean }; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -206,12 +178,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingBulkItemUpdateDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: ShoppingBulkItemUpdateDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",

@@ -4,7 +4,8 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 재조사 master: `f02e0bb8976a928ee7104bd2e55e3dad71f9142c`(2026-10-19), 실제 진단 **146**, baseline **207**, 신규 **0**. 계약 후보29는 모두 남아 있고 아래 상세1건의 로컬 검증본은145/계약 채택 후28이며 아직 미머지·미배포다. 과거 확정2cd4aab93의147과 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면126/계약9이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 사용자 지시: DB238을 그대로 유지하는 최소 앱 successor 검증기/CLI·관련 검증/리뷰/코드 통합과 타입 수정의 앱 전용 배포를 승인했다. 이전 장부의 승인 대기 문장은 당시 상태다. 기존 PIN/승인·가드는 보존하며 SQL/환경/키/권한/worker/정책 변경은 포함하지 않는다. 별도 세션의 승인된 영양5행 작업 종료 인계 전에는 실제 배포나 새 데이터 기준 고정을 하지 않는다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -16,7 +17,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 최신 master 대조 분류는 범위 보류99, 명시 보류3, 기존TS2589 기술 보류1, 계약 보강 필요29, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결17이다(총163/잔여146). 선행 PR1807의 save 추가 단언1건 제거를 반영한 것이며, 이번 계약 수정 성과에 합산하지 않는다. 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
+- 최신 master 대조 분류는 범위 보류99, 명시 보류3, 기존TS2589 기술 보류1, 계약 보강 필요28, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결18이다(총163/잔여145). 선행 PR1807의 save 추가 단언1건 제거는 이번 계약 수정 성과에 합산하지 않는다. 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
@@ -283,6 +284,144 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 회귀 우선: 제품 수정 전 기존 상세23 PASS/67필터 SKIP와 새 실제SDK5 PASS를 확인했다. 최종 새8건에는 네 선택 행의 compiler 검사 및 제품 전용/null join auth/public2건을 추가했다. 최종 상세 선택2 suite31 PASS/67필터 SKIP, 별도 기본 설정3 suite28 PASS(새8+수량13+canonical 영양7), 중복8건을 제외한 고유51 PASS다. product 설정은 canonical suite를 포함하지 않아 첫 선택 실행에서는 수량13만 실행됐고, 이후 기본 설정에서 영양7을 실제 실행했다.
 - 전체 typecheck·변경TS lint(max-warnings0)·verify:anti-slop(145/baseline207/신규0)·diff PASS다. 독립 최종 리뷰는 새8 PASS, nonincremental 전체typecheck/diff PASS와 SQL/SDK 요청 지연 실행을 직접 확인해 APPROVE했다. 최초 union4를 한 select에 전달한 초안은 TS2590으로 실패했고 개별 native select 추론으로 수정했다. type-only fixture 변수 lint경고4도 실제 builder then 확인으로 정정했다. 단언·any·검사 억제나 baseline 갱신으로 통과시키지 않았다.
 - 상태: 별도 `codex/detail-row-contract-20261019` 작업트리의 로컬 검증본이며 미머지·미배포다. master 계약29에서 완료로 차감하지 않고 채택 후28(독립요리1+memory1+bootstrap26)로 기록한다. 원장 pendingLocalResolution과 candidateObservation은 이 로컬 상태를 명시한다. 기존 checkout·원장 미커밋 계획·고정 복구 checkout·bootstrap 미완료 실험은 보존했다. 전체 build/화면/실DB/RLS 및 기존 넓은 실패 묶음을 이번에 재실행한 것으로 주장하지 않는다.
+
+## PR1811 머지 후 배포 차단과 독립 요리모드 로컬 검증
+
+- PR1811은 검증한 head572063abd 그대로 ready→merge했고 실제 merge는 `64112be4bec14e29f88449214140250685210f15`다. 운영은 d09ab4b/DB238 ready·복구대기없음으로 재확인했다. 정확64112be4·`--already-applied-db`·기존 full-local 설정·`test:feedback-batch:web`를 지정한 공식 plan은 exit1, `Exact nutrition/recipe-save source is not already committed under its separate authority`로 거부됐다. deploy/새 상세 운영 검증은 미실행이며 기존 PIN/승인/가드·DB/worker/환경을 바꾸지 않았다.
+- 공개 소스·테스트와 독립 읽기 전용 분석상 현재238의 새 앱-only successor 경로는 없다. 상세의 기존 PATCH writer 문자열이 legacy runtime source 검사에 걸리지만, 실제 PATCH/DELETE 및 GET 외 함수의 ES2022 emit은 양쪽 동일하다. 정확한 원인·최소 별도 successor 검증기·음성 회귀·추가 승인 범위는 [DB238 앱 후속 배포 검토](anti-slop-db238-app-successor-review-20261019.md)를 따른다. 제안은 미구현이며 과거승인쌍·다른 mode 전용이나 가드완화로 배포하지 않는다.
+- 부모의 별도 로컬 진행 지시에 따라 `codex/cook-mode-row-contract-20261019`에서 독립 요리모드1건만 수정했다. 손코딩 fluent query interface를 실제 native6표/ingredient FK/step method FK/junction `step_id`·`method_id` 관계로 맞췄다. public/auth의 선택문을 각각 추론하고 기존 CookingIngredientRow/CookingStepRow 소비 view로 구조대입해 같은 client의 연쇄 단언1건을 제거했다. 새 단언/any/검사억제/wrapper0, SQL/권한/운영 변경0이다.
+- 제품 수정 전 기존 standalone/canonical9+신규SDK7 PASS, 최종 native8(타입/선택열/인분/제품전용null join/legacy fallback/오류/잘못된인분)+기존9=2 suite17 PASS다. 전체 typecheck·변경 lint(max-warnings0)·Anti144/baseline207/신규0·diff PASS다. 독립 리뷰도17/전체nonincremental typecheck/diff PASS 및 SQL/FK/legacy/canonical/실패차단을 확인해 APPROVE했다. 비차단 NOT NULL 정밀도 권고는 cooking_method_id:string으로 수용하고 compiler를 재확인했다.
+- 현재 로컬 검증본은 미머지·미배포다. master 계약28에서 아직 차감하지 않고 채택 후27(memory1+bootstrap26)로 구분한다. 원장의 pendingLocalResolution/candidateObservation에 남겼다. DB238 앱-only 도구 단계는 부모의 최소 변경 범위 승인 전 보류하며, 원격/운영 차단을 로컬 계약 실패로 표현하지 않는다. 실제 DB/RLS·브라우저·운영 검증이나 build를 이번 로컬 검증으로 대체하지 않는다.
+
+## 영양 memory 로컬 계약 분리와 승인 대기 보존
+
+- 부모가 새 DB238 앱 successor/CLI 변경·운영 범위를 사용자에게 확인 중이므로 승인 응답 전 새 검증기와 배포는 시작하지 않는다. 검증된 독립 요리모드 후보는 로컬 커밋 `a30be1a6a`로 보존했고 push/머지/배포하지 않았다. 다음 영양 변경은 그 뒤 별도 작은 커밋으로 분리한다.
+- memory의 `RecipeNutritionServiceClient` 연쇄 단언1건을 제거했다. native 서비스는 기존 실제 SDK 조회·읽기 오류 처리를 유지하고, 공통 `prepareRecipeNutritionSnapshotFromInput`에 입력 행·실제 predecessor loader·RPC capability를 전달한다. refresh는 검증된 job bundle의 recipe와 기존 정렬된 재료를 직접 전달하며 기존 evidence filter/order/paging과 product/quantity RPC reader를 사용한다. 메모리가 SDK 내부 상태를 흉내 내도록 만들지 않았고 미사용 recipes table/maybeSingle도 삭제했다.
+- 새 unknown 입력 경계는 실제 소비 행의 owner/revision/재료ID/제품pin 타입을 확인한다. 이는 잘못된 RPC 메타데이터를 쓰기 전 INVALID_RECIPE_NUTRITION_INPUT으로 명시 거절하는 경계 보강이다. 정상 SQL 행·기존 owner/session/version/quantity 판정·guard 독립 재계산/비교·마지막 두 RPC와 stale 오류·job acknowledgement 금지·DB 계약/권한/실데이터는 바꾸지 않는다. bundle에 없는 revision/quantity_input을 만들지 않는다.
+- 수정 전4 suite66 PASS, 최종5 suite79 PASS(native owner SDK 포함, 새refresh8건)다. 연관 AI runtime/worker·발행·quantity-v4 선택은4 suite37 PASS/조건부1 suite12 SKIP이며 제외를 성공에 합산하지 않는다. 고유116 PASS/12 SKIP다. 전체 typecheck·변경 lint(max-warnings0)·Anti143/baseline207/신규0·diff PASS다. 독립 리뷰도3 suite61 PASS/전체nonincremental typecheck/diff PASS를 확인해 APPROVE했고 가짜 SDK cast wrapper가 아닌 실제 두 producer의 입력 경계 분리임을 검토했다.
+- 최초 새fixture1건은 guard를 sort_order 순서로 가정해 실패했고 실제 ID 정렬 계약으로 fixture만 정정했다. 새unknown guard의 falsy product pin 타입 좁힘 문제는 root와 독립 리뷰에서 확인해 optional 필드별 실제 타입 검사와 false/object 회귀2건으로 수정했다. 검사·guard·baseline을 완화하지 않았다.
+- 요리모드+memory 두 로컬 후보는 미머지·미배포이므로 master 계약28에서 완료로 차감하지 않는다. 함께 채택하면 공통 초기화26만 남는다. 원본39·원본미확인49·전체진단145/로컬143은 서로 다른 분모다. 승계 검증기/운영 배포는 승인 대기 중이며 이 로컬 검증을 실제 DB/RLS·운영 결과로 표현하지 않는다.
+
+## Bootstrap26 분할: 첫 초기화 전용3건 로컬 완료
+
+- DB238 successor 도구·CLI와 배포는 계속 승인 대기다. bootstrap26을 한 번에 치환하지 않고 실제 소비 계약별로 다음처럼 분리한다. 이 순서는 로컬 후보 작업 순서이며 승인 범위를 확장하지 않는다.
+
+| 작은 묶음 | 기존 계약 후보 수 |
+| --- | --- |
+| 초기화 전용: leftovers keep/uneat, meal-log 공통 helper | 3 |
+| leftovers 목록/eat | 2 |
+| recipe-books | 6 |
+| shopping preview/root/leaf | 9 |
+| pantry root/bundles | 2 |
+| manual recipe 생성 | 1 |
+| cooking sessions root/cook-mode/cancel | 3 |
+
+- 첫3건의 기존 `UserBootstrapDbClient` 하나를 실제 선택문·insert/update→select→maybeSingle 단계에 맞췄다. users/settings는 JSONB 소비 경계인 unknown, 북 종류는 실제4종 enum, 표지·이메일은 실제 nullable, social_id는 NOT NULL string이다. 초기화의 네 동등 필터는 공식 SDK `.match`로 표현하며 기존 `.eq`와 동일한 `column=eq.value` 요청을 검증했다. 별도 native/legacy union·adapter·새 단언·검사억제 없이 세 호출부의 연쇄 단언을 제거했다. owner/auth/RPC 순서, seed/default/version, 정렬, 23505 허용과 기존 payload를 유지한다.
+- 수정 전3 suite64 PASS. 최종 SDK projection/JSON nullable·기존 bootstrap/leftover/UI auth-return4 suite75 PASS와 실제 SDK를 거치는 meal-log 경계4 PASS로 고유5 suite79 PASS다. meal-log는 guest401/stale409/bootstrap500/성공 시 auth→users→users→verified→internal 순서를 고정했다. 전체 typecheck·변경 lint·Anti140/baseline207/신규0·diff PASS다. 독립 리뷰는 이 중69 PASS와 전체 nonincremental typecheck/diff를 확인해 APPROVE했다. 독립69는79의 부분집합이지 추가 성공 수가 아니다.
+- 실패한 native/legacy union 초안은 overload TS2349가 발생해 전부 폐기했다. 선택 결과의 list/single 단계를 잘못 선언한 TS2322도 실제 select→maybeSingle 단계로 수정했다. 기존 실패를 감추거나 suppress하지 않았다. 원래 보존된 bootstrap 실험 작업트리의 미추적 fixture는 수정하지 않고 현재 작업트리에 별도 복사·확장했다.
+- factory의 기존 SDK generic any까지 해결했다는 뜻은 아니다. 이번 증거는 실제 선택 필드/nullable/cardinality와 소비 계약·요청 wire이며 실제 DB/RLS·운영 검증은 아니다. auth/factory/플래너/meal 제품 코드와 SQL·배포 도구·환경·운영 데이터는 변경하지 않았다.
+- 앞선 로컬 커밋 `a30be1a6a`·`ad298ab0b`와 이번3건을 채택하면 bootstrap23이 남는다. master 계약28 상태는 아직 차감하지 않고 원장에 pendingLocalResolution5건으로 보존한다. push/PR/머지/배포는 실행하지 않았다.
+
+## Bootstrap 후속: leftovers 목록·eat2건 로컬 완료
+
+- 첫3건은 `0c9320a80`으로 보존했다. 다음 목록/eat의 연쇄 단언2건을 제거했다. 목록의 손코딩 fluent interface를 소비6표의 native SDK 행과 실제 `meals.column_id`/`cooking_session_meals.meal_id` many-to-one FK로 맞췄다. 같은 request client를 bootstrap과 reader에 직접 구조대입하며 eat의 단발 타입 별칭을 삭제했다. 큰 공통 추상화·새 단언·wrapper·억제0이다.
+- 기존44 PASS 후 최종3 suite52 PASS(SDK8+backend33+bootstrap11), 전체 typecheck·변경 lint(max-warnings0)·Anti138/baseline207/신규0·diff PASS다. 독립 리뷰는 SDK/backend41+parser30=71 PASS와 전체 nonincremental typecheck/diff를 확인해 APPROVE했다. 서로 겹친 성공 수는 합산하지 않는다.
+- SDK 신규 회귀는 정확 선택문·owner/in 필터·정렬·eaten 만료 조건·snapshot 우선·source 우선/origin fallback·null 관계·guest401/누락snapshot500/조회오류500을 고정했다. 최초 타입 fixture의 nullable FK 기대값은 SDK의 실제 NOT NULL FK 객체 추론과 달라 실패해 실제 추론으로 정정했다. nullable runtime/array-shaped 호환 방어는 기존대로이며 타입·검사를 약화하지 않았다.
+- 응답·auth/bootstrap·eat 권위/RPC/보상 순서와 SQL/권한/운영 환경 불변. 로컬 채택 후 잔여21과 master 잔여28을 구분한다. 도구 승계/배포는 승인 대기, push/PR/머지/DB 쓰기는0이다.
+
+## Bootstrap 후속: 장보기 공유 텍스트1건 로컬 완료
+
+- leftovers2는 `a8537bbfa`로 보존했다. 다음은 병행 저장/플래너 범위를 피해 read-only 공유 텍스트1건만 분리했다. 수동 query interface를 소비3표/실제 필수 ingredient FK의 native SDK projection으로 맞추고 같은 request client를 bootstrap/reader에 직접 대입했다. 소비 view의 nullable 관계 방어는 보존했다. 공통 추상화·새 단언·억제0이다.
+- 수정 전 backend/auth2 suite13 PASS, 최종 SDK9+기존13+bootstrap11=4 suite33 PASS, 전체 typecheck·변경 lint(max-warnings0)·Anti137/baseline207/신규0·diff PASS다. 필수 FK 객체 추론과 실제 선택문/boolean필터/이중정렬/owner403·guest401·missing404·items500·완료 목록 공유·null join fallback·빈 목록의 텍스트를 고정했다.
+- 독립 리뷰도 최종4 suite33 PASS·전체 nonincremental typecheck/diff PASS와 실제 SQL/동일 client/권한·필터 보존을 확인해 APPROVE했다. 독립 검사 수는 중복 합산하지 않는다.
+- 최초 SDK Row를 기존 interface로 재사용하면 SDK Record 제약 때문에 schema가 never로 추론돼 TS2339/TS2344가 발생했다. 동일 필드의 object type alias로 맞춰 실제 compiler/SDK 계약을 통과시켰다. 타입 assertion·index signature·검사 완화로 우회하지 않았다.
+- master 계약28은 그대로이며 로컬 채택 후20으로 구분한다. 원격 push/PR/머지·새 배포 도구·운영 배포·DB 쓰기·권한 변경0, 승인 대기는 유지한다.
+
+## Bootstrap 후속: 장보기 순서 변경1건 로컬 완료
+
+- 공유 텍스트1건은 `c6b6654b9`로 보존했다. 순서 변경은 SDK 두 표의 실제 선택 행·sort_order 한 필드 update·반환 없는 update 단계로 계약을 맞췄다. 같은 request client의 bootstrap/reader 직접 대입으로 연쇄 단언1건과 손코딩 fluent interface를 제거했다. 런타임 함수·요청 순서·파서·오류/응답 로직은 그대로다.
+- 수정 전2 suite16 PASS, 최종 SDK9+기존16+bootstrap11=4 suite36 PASS, 전체 typecheck·변경 lint(max-warnings0)·Anti136/baseline207/신규0·diff PASS다. 새 실제 SDK 요청 fixture는 guest401/owner403/완료409/누락404/조회500/update409·500, 실제 소속 item만 정확히 한 번 PATCH, update의 list/id 필터와 sort_order만 전달을 고정했다. 실제 DB 쓰기는0이다.
+- 독립 리뷰도 최종4 suite36 PASS·전체 nonincremental typecheck/diff PASS 및 실제 SQL/반환 없는 update/owner·완료·소속 필터 보존을 확인해 APPROVE했다. root와 중복된 성공 수는 합산하지 않는다.
+- master 계약28과 로컬 채택 후19를 구분한다. 새 단언·wrapper·검사 억제·DB/권한/운영 변경0, 원격 반영과 승계 도구·배포는 대기한다.
+
+## Bootstrap 후속: 장보기 일괄 체크1건 로컬 완료
+
+- reorder1은 `bb551e102`로 보존했다. bulk의 실제 두 표·check-only update→select 반환 행을 native SDK에 맞추고 같은 request client를 bootstrap/reader에 직접 대입했다. 기존 `amounts_json` unknown 정규화와 반환 sort_order/id 정렬·구매 제외 false 필터·owner/완료 보호·단일 update를 유지했다. 새 단언·억제·wrapper·공통 계층0이다.
+- 수정 전25 PASS, 최종 SDK9+기존25+bootstrap11=4 suite45 PASS, 전체 typecheck·변경 lint(max-warnings0)·Anti135/baseline207/신규0·diff PASS다. SDK 회귀는 true/false/빈반환·소유403/완료409/누락404/guest401/update500 및 정확 payload/선택문/list/item/pantry-excluded 필터·정규화/동률정렬을 고정한다.
+- 독립 리뷰도4 suite45 PASS·전체 nonincremental typecheck/diff PASS와 실제 SQL·단일 쓰기/필터 보존을 확인해 APPROVE했다. 중복 성공 수는 합산하지 않는다.
+- master 계약28과 로컬 채택 후18을 구분한다. 실제 DB 쓰기·SQL/권한/도구·운영 변경과 원격 반영0, 승계 도구·배포는 승인 대기를 유지한다.
+
+## Bootstrap 후속: 장보기 단건 체크1건 로컬 완료
+
+- bulk1은 `70d8930ce`로 보존했다. 단건 항목의 실제 두 표/선택 행·flag-only update·select→maybeSingle 단계를 SDK에 맞춰 손코딩 fluent query interface와 연쇄 단언1건을 제거했다. 같은 request client bootstrap 직접 대입이며 no-op·제외면 체크false·owner/완료·이중 list/id 필터·JSON 정규화와 응답은 그대로다.
+- 관련 기존25+SDK11+bootstrap11=4 suite47 PASS, 전체 typecheck·변경 lint(max-warnings0)·Anti134/baseline207/신규0·diff PASS다. 신규 fixture는 정상체크/제외/no-op·목록/항목404·guest401/owner403/완료409/update409·500과 정확 조회/쓰기 필터·payload를 고정했다.
+- 독립 리뷰도4 suite47 PASS·전체 nonincremental typecheck/diff PASS와 실제 SQL/selected-single/보호 흐름 불변을 확인해 APPROVE했다. 중복 수는 합산하지 않는다.
+- master 계약28은 유지하고 로컬 채택 후17로 구분한다. DB/SQL/권한/새 추상화·단언·억제/운영 변경0, 원격 반영과 승인 대기 중 도구·배포 실행0이다.
+
+## Bootstrap 후속: 팬트리 묶음 조회1건 로컬 완료
+
+- 단건 체크1건은 `9a6c850ca`로 보존했다. bundles의 실제4표/inner ingredient FK/현재 nullable pantry ingredient_id를 SDK에 맞췄다. 같은 request client를 bootstrap/reader에 직접 대입하고 손코딩 query interface를 제거했다. 상품 지원 migration20260731110000 이후 nullable 계약은 묶음 계산의 pantryItems 입력과 membership set 타입만 좁게 보정했다. 공유 PantryIngredientRow 전체나 런타임 계산/요청은 변경하지 않았다.
+- 수정 전 pantry 전체+bootstrap은25 PASS/2 FAIL이었다. 기존 DELETE 성공 기대200→실제422와 오류 reason required_non_empty→invalid_or_empty_ids 불일치2건이며, 이 작업의 수정 전부터 있었다. 범위 밖 DELETE 계약을 변경하거나 테스트를 완화하지 않았다. 직접 bundles 기준선은1 PASS/15 이름필터 제외다.
+- 최종 SDK10+bootstrap11=21 PASS와 기존 bundles1 PASS/15 필터 SKIP로 고유22 PASS다. 전체 typecheck·변경 lint(max-warnings0)·Anti133/baseline207/신규0·diff PASS다. inner FK 객체·정확 선택문/owner/in/이중정렬·빈목록 단락·guest401/각 단계500·nullable product identity의 membership 무영향을 고정했다. pantry 전체 통과를 주장하지 않는다.
+- 독립 리뷰도 고유22 PASS/15 이름필터 제외·전체 nonincremental typecheck/diff PASS 및 SQL nullable/inner FK·helper 런타임 보존을 확인해 APPROVE했다. 기존 전체2실패는 해결로 간주하지 않는다.
+- master 계약28과 로컬 채택 후16을 구분한다. 새 단언·wrapper·억제·SQL/권한/실DB 쓰기·운영·원격 반영0, 도구/배포 승인 대기는 유지한다.
+
+## Bootstrap 후속: 레시피북 메타데이터 수정·삭제1건 로컬 완료
+
+- pantry bundles1은 `7f47991e8`로 보존했다. 저장/플래너와 분리된 북 metadata만 실제3표/FK/native selected-single update/no-return delete로 맞췄다. 반환 행은 실제4종 enum/nullable cover이며 응답의 기존 custom 상수는 유지한다. 같은 request client를 bootstrap/native에 각각 직접 대입해 from 오버로드 충돌을 피하고 손코딩 query interface·연쇄 단언을 제거했다.
+- 수정 전 넓은 mypage/route/bootstrap31 PASS/1 FAIL이었다. 별도 목록 GET의 기존 mock에 createRecipeImageInternalClient export가 없는 실패이며 이번 metadata 수정 전 발생했다. 이를 숨기거나 전체green으로 표현하지 않는다. 최종 SDK15+route14+bootstrap11=40 PASS, 기존 PATCH/DELETE3 PASS/4 이름필터 제외로 고유43 PASS다. 전체 typecheck·lint(max-warnings0)·Anti132/baseline207/신규0·diff PASS다.
+- 독립 리뷰는 위 집합과 기존 bootstrap14를 포함한 고유57 PASS/4 이름필터 제외·전체 nonincremental typecheck/lint/diff를 확인해 APPROVE했다. root와 겹친 성공 수는 합산하지 않는다. emit은 동일 객체 bootstrap 별칭 추가/참조 교체 외 동일하며 바이트 완전 동일이라고 주장하지 않는다.
+- 실제 SDK 요청은 owner403/시스템북403/guest401/missing404/items500/book500·정확 선택문·inner FK·제한 update payload·items→book 삭제 순서를 고정한다. SQL/실DB·권한·기존 저장/플래너·새 도구/운영·원격 반영0, master 계약28과 로컬 채택 후15를 구분한다.
+
+## 별도 정확성 보정: 장보기 nullable 재료 ID3곳
+
+- 메타데이터1건은 `e020b67bf`로 보존했다. pantry의 최신 제품 지원 migration을 추가 대조하면서, 이미 보존한 share-text/bulk/item SDK 행3곳에 과거 손코딩 계약의 ingredient_id:string이 남아 있는 정밀도 누락을 확인했다. 앞선 root/독립 리뷰 모두 이 nullable 변경을 놓쳤음을 기록한다. 진단 감소를 위해 거짓 nonnull을 유지하지 않는다.
+- 실제20260731110000의 shopping_list_items ingredient_id DROP NOT NULL에 맞춰 세 행을 string|null로, share ingredient FK 추론은 object|null로 맞췄다. bulk/item에 제품null 반환 회귀 각각1건과 selected-row 타입 근거를 추가했다. 기존 ShoppingListItemSummary는 이미 nullable이며 제품3파일 JS emit은 HEAD와 동일하다. 런타임/권한/쓰기/응답 변경0이다.
+- 최종6 suite62 PASS·전체 typecheck·lint(max-warnings0)·Anti132/baseline207/신규0 유지·diff PASS다. 기존3건 해결 수나 Anti 감소로 중복 계상하지 않는다. master28/로컬 채택 후15도 그대로다.
+- 독립 리뷰는 SQL의 이전 누락을 명시하고6 suite62 PASS·전체 nonincremental typecheck/diff·제품3파일 byte-identical JS emit을 확인해 APPROVE했다. 기존 성공 수와 합산하지 않는다.
+
+## Bootstrap 후속: 장보기 preview1건 로컬 완료
+
+- nullable3곳 보정은 `7468cbb30`으로 보존했다(진단/완료 수 추가차감0). 다음 preview는 실제4표/nullable meal snapshot FK/상태enum과 native SDK 행으로 손코딩 fluent interface·연쇄 단언1건을 제거했다. 같은 request client bootstrap/reader 분리 대입 외 런타임 요청·분기·집계·정렬과 기존 array/null 소비 호환은 유지했다.
+- 수정 전52 PASS, 최종 SDK9+기존41+bootstrap11=3 suite61 PASS·전체 typecheck·lint(max-warnings0)·Anti131/baseline207/신규0·diff PASS다. 정확 선택문/owner·registered·shopping_list_id is.null·created/id 정렬, 고정title/legacyfallback·빈목록·guest401·깨진pin/조회500·column조회 실패fallback을 SDK 요청으로 확인했다.
+- 독립 리뷰도 최종3 suite61 PASS·전체 typecheck/lint/diff PASS와 실제 SQL·후속 nullable 대조/실제 SDK 선택 행·런타임 보존을 확인해 APPROVE했다. 중복 수는 합산하지 않는다.
+- master 계약28과 로컬 채택 후14를 구분한다. SQL/실DB/권한/운영·원격 반영·새 도구/배포 변경0, 운영 승인은 대기한다.
+
+## Bootstrap 후속: 기존 요리 세션 취소1건 로컬 완료
+
+- preview1은 `c899fe6de`로 보존했다. 기존 취소의 native session1표/select/update/maybeSingle와 실제 상태3종enum을 맞췄다. cancelled 응답 상수가 DB 반환 row를 한 종류로 좁히지 않도록 했다. update 입력은 기존 cancelled 한 값, 같은 client bootstrap 분리 대입이며 기존 직접DML의 database-before-trigger 권한 경계를 승계/확대/완화하지 않았다.
+- 기존 cancel 기준선2 PASS/15 이름필터 제외, 최종 SDK10+bootstrap11=21 PASS와 기존2 PASS/15 제외로 고유23 PASS다. 전체 typecheck·lint(max-warnings0)·Anti130/baseline207/신규0·diff PASS다. owner403/완료409/guest401/없음404/조회·update500·이미취소 멱등성·정확id/owner update필터를 고정했다.
+- 독립 리뷰도 고유23 PASS/15 필터 제외·전체 nonincremental typecheck/diff PASS와 SQL/권한·상태흐름 불변을 확인해 APPROVE했다. 해당 권한 경계 전체의 안전성을 새로 검증한 것으로 확대하지 않는다.
+- 상태 전이·auth/세션/DB/SQL/실데이터·운영/원격/새 도구·배포 변경0이다. master 계약28과 로컬 채택 후13을 구분한다. 기존 권한 결속을 해결했다는 주장이 아니다.
+
+## Bootstrap 후속: 장보기 상세 읽기1건 로컬 완료
+
+- cancel1은 `934dd6b10`으로 보존했다. 상세는 실제7표/두 nullable snapshot FK/제품 식별자 nullable/JSON unknown/native selected행으로 손코딩 query interface와 연쇄 단언1건을 제거했다. same request client bootstrap분리와 quantity read RPC 원 client 전달을 명시했다. meal 조회 throw catch/깨진pin 실패·소유권·정렬·제품 수량 실패 시 soft fallback은 유지했다.
+- shopping_lists의 실제 테이블/SELECT에는 updated_at이 없으므로 가상 optional열과 불가능한 분기를 제거하고 이미 사용되던 created_at을 응답에 명시했다. 옛 mock이 선택하지 않은 updated_at을 임의 반환해 최종검사 첫 시도1건이 기대값 불일치로 실패했다. 해당 fixture의 가상열을 제거하고 실제값 기대/SDK exact select로 보강했다. 실제 API/DB 응답 계약을 바꾸지 않았고 테스트를 느슨하게 만들지 않았다.
+- 수정 전25 PASS, 최종 SDK10+기존25+bootstrap11=4 suite46 PASS·전체 typecheck·lint(max-warnings0)·Anti129/baseline207/신규0·diff PASS다. SDK 회귀는 각 선택문/FK/JSON/productnull·완료목록 읽기·생성시각·pin우선·empty·owner403/guest401/404/500·정확 owner/pins quantity 읽기RPC를 확인했다.
+- 독립 리뷰는 다른 집합(SDK10+backend18+bootstrap11+quantity helper9)48 PASS·전체 typecheck/lint/diff와 실제 SQL/RPC·권한 보존을 확인해 APPROVE했다. root46과 합산하지 않는다. 비차단 URL coverage 메모는 recipes/ingredients exact URL assertion 추가로 수용하고 root46/lint를 재확인했다. 실제 DB/RLS는 미실행이다.
+- master 계약28과 로컬 채택 후12를 구분한다. DB/SQL/권한·쓰기·운영/원격/새 도구·배포 변경0이며 승인 대기는 유지한다.
+
+## Bootstrap 후속: 장보기 이력 GET1건 로컬 완료
+
+- 상세1건은 `7f7e3ee15`로 보존했다. 같은파일의 POST 생성·권한/growth/quantity와 분리해 history GET만 native2표/선택행으로 맞췄다. GET전용 수동 fluent interface와 POST타입의 미사용 history select멤버를 제거했다. 같은 request client bootstrap순서, owner/cursor/정렬/limit+1/구매 항목 개수/제목/오류/응답 유지다.
+- 기준선55 PASS, 최종 SDK7+기존55=4 suite62 PASS·전체 typecheck·lint(max-warnings0)·Anti128/baseline207/신규0·diff PASS다. 신규fixture 첫2실패는 기존기간제목을 저장title로 잘못 기대했기 때문이며 실제 기존10/19~20 규칙으로 기대값만 정정했다. 제품 제목 함수는 변경하지 않았다.
+- 독립 리뷰도4 suite62 PASS·전체 nonincremental typecheck/diff PASS 및 SQL/owner/cursor/count와 POST함수 byte-identical JS emit을 확인해 APPROVE했다. POST 생성·권한·보상 흐름 변경0이며 실제DB/RLS는 미실행이다. master28/로컬 채택 후11, 원격·도구·운영 배포 승인 대기를 유지한다.
+
+## Bootstrap 후속: 레시피북 목록 GET1건 로컬 완료
+
+- history GET1은 `d164acc09`로 보존했다. 북 목록 GET만 실제4표/실제items·likes→recipes FK/head count/nullable cover/enum native 계약으로 분리했다. GET의 연쇄 단언·선택 query cast와 미사용 수동 count interface를 제거했고, POST타입의 미사용 GET count overload도 삭제했다. POST 생성/보상과 표지 reader는 유지했다.
+- 수정 전route14+bootstrap11=25 PASS. 최종 SDK6+route14+mypage7+bootstrap11=4 suite38 PASS·전체 typecheck·lint(max-warnings0)·Anti127/baseline207/신규0·diff PASS다. SDK는 HEAD/count=exact/Content-Range 수신/종류별 개수·owner·innerFK·빈목록/guest401/read/count500을 고정한다.
+- 앞서 별도 실패로 보존한 mypage GET의 누락된 image factory mock export를 이번 GET 범위에서 보완하고, 오래된 id-only 기대를 실제 inner-count 선택문으로 강화했다. 기존표지 검증 route도 그대로 통과했으며 테스트를 완화하지 않았다. 그 과거1실패는 이제 해소됐지만 pantry DELETE2실패는 별도 그대로다.
+- 독립 리뷰도4 suite38 PASS·전체 nonincremental typecheck/lint/diff와 실제 SQL/HEAD/표지 reader 보존, POST·auth helper byte-identical JS emit을 확인해 APPROVE했다. POST 보상 계약 장애는 미해결로 분리한다. master28/로컬 채택 후10, 실제 DB·권한/운영/원격·도구/배포0을 유지한다.
+
+## Bootstrap 후속: 기존 요리 세션 생성1건 로컬 완료
+
+- 북 목록 GET1은 `4a42068e6`으로 보존했다. 생성의 native6표/실제 insert/select/maybeSingle·nullable ingredient/product/snapshot FK·상태enum을 맞췄다. snapshot JSON은 concrete array로 가장하지 않고 unknown을 유지하며 기존 inline product guard를 그대로 둔다. same client bootstrap 분리 외 조회·삽입 순서/상태/응답/권한 흐름은 불변이다.
+- 수정 전28 PASS, 최종 SDK15+기존생성17+bootstrap11=3 suite43 PASS·전체 typecheck·lint(max-warnings0)·Anti126/baseline207/신규0·diff PASS다. 독립 리뷰도 동일43/타입/lint/Anti126/new0/diff 및 실제 SQL/unknown guard/기존 direct-DML 경계 불변을 확인해 APPROVE했다. SDK transport fixture를 실제DB/RLS 권한 검증으로 확대하지 않는다.
+- master28/로컬 채택 후9다. 남은9는 보호된 저장/UI/플래너와 접점이 있는 북 레시피3+manual생성1, 공통 progress/growth 경계4(bookPOST/pantry/shoppingPOST/complete), cook-mode snapshot 전체 JSON parser1로 구분한다. 두 경로(bookPOST/pantry)의 독립 memory 전체 compiler에서 progress 직접대입 TS2589, growth/award CountFilterQuery(data:null 대 SDK GenericStringError[]) TS2322를 각각 확인했다. 이는 운영 취약점 재현이나 모든 개선 불가능 판정이 아니다.
+- 최소 후속 판단은 공통 count 소비(error/count)와 정확select/단계/필터 계약, 원장 성공/중복/부가 projection 실패 흡수·optionalRPC 부재 fail-closed를 먼저 분리하는 것이다. 기존 projection RPC는 activity/notification/count의 drop-in 대체가 아니다. cook-mode는 JSON unknown에서 출력할 keyed row parser와 malformed/legacy 처리 정책을 먼저 정해야 한다. 보호된 저장/UI4건은 병행 범위 조율 없이 건드리지 않는다. 새 단언/큰 adapter/검사 완화로 수만 줄이지 않는다.
+- 실제 DB/SQL/환경/권한/운영·원격 변경0으로 이 로컬 묶음을 보존했다. 이후 새로 승인된 최소 앱 successor 작업은 별도 의도/검증으로 진행하며 영양5행 인계 전 배포/데이터 기준 고정은 하지 않는다.
 
 ## 보류·기술적 경계
 

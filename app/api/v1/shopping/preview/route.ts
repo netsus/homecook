@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
@@ -9,14 +10,6 @@ import {
 import { isMealEligibleForShopping } from "@/lib/server/shopping";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ShoppingPreviewData } from "@/types/shopping";
-
-interface QueryError {
-  message: string;
-}
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
 
 interface MealRow {
   id: string;
@@ -44,51 +37,35 @@ interface RecipeRow {
   thumbnail_url: string | null;
 }
 
-interface MealPlanColumnRow {
-  id: string;
-  name: string;
-}
-
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface MealsSelectQuery {
-  eq(column: string, value: string): MealsSelectQuery;
-  is(column: string, value: null): MealsSelectQuery;
-  order(column: string, options: QueryOrderOption): MealsSelectQuery;
-  then: ArrayQueryResult<MealRow>["then"];
-}
-
-interface RecipesSelectQuery {
-  in(column: string, values: string[]): RecipesSelectQuery;
-  then: ArrayQueryResult<RecipeRow>["then"];
-}
-
-interface MealPlanColumnsSelectQuery {
-  eq(column: string, value: string): MealPlanColumnsSelectQuery;
-  in(column: string, values: string[]): MealPlanColumnsSelectQuery;
-  then: ArrayQueryResult<MealPlanColumnRow>["then"];
-}
-
-interface MealsTable {
-  select(columns: string): MealsSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
-}
-
-interface MealPlanColumnsTable {
-  select(columns: string): MealPlanColumnsSelectQuery;
-}
-
-interface ShoppingPreviewDbClient {
-  from(table: "meals"): MealsTable;
-  from(table: "recipes"): RecipesTable;
-  from(table: "meal_plan_columns"): MealPlanColumnsTable;
-}
+// Actual selected rows and nullable meal snapshot FK, not a runtime adapter.
+export type ShoppingPreviewDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      meals: {
+        Row: { id: string; user_id: string; column_id: string; recipe_id: string;
+          recipe_content_snapshot_id: string | null; plan_date: string; planned_servings: number;
+          status: "registered" | "shopping_done" | "cook_done"; shopping_list_id: string | null; created_at: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "meals_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"]; }];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; title: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; title: string; thumbnail_url: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      meal_plan_columns: {
+        Row: { id: string; user_id: string; name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 function getPinnedMealTitle(meal: MealRow) {
   const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
@@ -111,12 +88,12 @@ export async function GET() {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingPreviewDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: ShoppingPreviewDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",

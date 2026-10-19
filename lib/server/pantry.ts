@@ -97,7 +97,7 @@ export function toPantryItems(rows: PantryItemJoinedRow[] | null | undefined) {
 
 function toBundleIngredient(
   row: PantryBundleItemJoinedRow,
-  pantryIngredientIds: Set<string>,
+  pantryIngredientIds: ReadonlySet<string | null>,
 ): PantryBundleIngredient {
   const ingredient = firstJoin(row.ingredients);
 
@@ -115,7 +115,7 @@ export function buildPantryBundles({
 }: {
   bundles: PantryBundleRow[];
   bundleItems: PantryBundleItemJoinedRow[];
-  pantryItems: PantryIngredientRow[];
+  pantryItems: Array<{ ingredient_id: string | null }>;
 }) {
   const pantryIngredientIds = new Set(pantryItems.map((item) => item.ingredient_id));
   const itemsByBundleId = new Map<string, PantryBundleIngredient[]>();

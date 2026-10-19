@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   aggregateShoppingIngredients,
   buildShoppingListTitle,
@@ -147,7 +148,7 @@ interface ShoppingListInsertRow {
   created_at: string;
 }
 
-interface ShoppingListHistoryRow {
+type ShoppingListHistoryRow = {
   id: string;
   title: string;
   date_range_start: string;
@@ -155,12 +156,24 @@ interface ShoppingListHistoryRow {
   is_completed: boolean;
   completed_at: string | null;
   created_at: string;
-}
+};
 
-interface ShoppingListItemCountRow {
-  shopping_list_id: string;
-  is_pantry_excluded: boolean;
-}
+// History read capability only; POST's snapshot/growth/writer boundary stays separate.
+export type ShoppingHistoryDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      shopping_lists: {
+        Row: ShoppingListHistoryRow & { user_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      shopping_list_items: {
+        Row: { shopping_list_id: string; is_pantry_excluded: boolean };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 type ArrayQueryResult<T> = PromiseLike<{
   data: T[] | null;
@@ -190,19 +203,6 @@ interface MealsInsertQuery {
 interface ShoppingListsInsertQuery {
   select(columns: string): ShoppingListsInsertQuery;
   maybeSingle(): MaybeSingleResult<ShoppingListInsertRow>;
-}
-
-interface ShoppingListsSelectQuery {
-  eq(column: string, value: string): ShoppingListsSelectQuery;
-  limit(value: number): ShoppingListsSelectQuery;
-  or(filters: string): ShoppingListsSelectQuery;
-  order(column: string, options: { ascending: boolean }): ShoppingListsSelectQuery;
-  then: ArrayQueryResult<ShoppingListHistoryRow>["then"];
-}
-
-interface ShoppingListItemsSelectForHistoryQuery {
-  in(column: string, values: string[]): ShoppingListItemsSelectForHistoryQuery;
-  then: ArrayQueryResult<ShoppingListItemCountRow>["then"];
 }
 
 interface RecipeIngredientsSelectQuery {
@@ -258,7 +258,6 @@ interface MealsTable {
 }
 
 interface ShoppingListsTable {
-  select(columns: string): ShoppingListsSelectQuery;
   insert(value: {
     user_id: string;
     title: string;
@@ -294,7 +293,6 @@ interface PantryItemsTable {
 }
 
 interface ShoppingListItemsTable {
-  select(columns: string): ShoppingListItemsSelectForHistoryQuery;
   insert(
     values: Array<{
       shopping_list_id: string;
@@ -1279,12 +1277,12 @@ export async function GET(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingCreateDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: ShoppingHistoryDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
