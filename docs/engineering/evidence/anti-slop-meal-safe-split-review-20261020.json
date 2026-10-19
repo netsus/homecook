@@ -111,8 +111,12 @@
   ],
   "limits": [
     "User explicitly approved splitting meal/delete6 only. Provider1 and all Draft1836 commits/denial evidence preserved; no guard/readiness/flag weakening.",
-    "Source audit before merge/deploy, actual operating5ea/buildwPutWL remains93.",
+    "Original source audit preceded merge. Now PR1837 merged and deployed62c20d4bd/buildktOrhp/DB238/Anti87; chronological states remain distinct.",
     "Previous Draft1836 local86 includes held provider; current87 is intentional scope separation, not a new finding or an operating count.",
     "Original52/19/117/191 snapshots and163 identity fields/baseline unchanged. permission3/444/static3/original49unknown/legacy completion untested remain."
-  ]
+  ],
+  "mergedRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+  "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+  "buildId": "prelaunch-62c20d4bd305-ktOrhp",
+  "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json"
 }

@@ -16,12 +16,12 @@
     "startingCommit": "5ea486e534729eb576477bf81526847caa2dfee6",
     "total": 87,
     "newFindings": 0,
-    "verificationState": "User-approved safe split meal/delete6 in2 commits, provider1 preserved in Draft1836 and excluded from source. Original16376resolved/87remaining; reviewed11=6localresolved/4design/1providerheld. Before121PASS1staleFixtureFAIL, after9suite141PASS0skip with original malformed500 retained. Whole type/lint/verify87new0/diff PASS, safe7files identical to independently approved originals; split independent review APPROVE (8suite105, whole type/lint/diff). Actual operating5ea/buildwPutWL/DB238 remains93, fixed9datahashes equal/web1473PASS133SKIP/99sstatic94warnings3/manifest200/unauth2wrapped401 from previous single deploy. No second split deploy yet. Existing permission3/444/static3/original49unknown/YouTube17dirty/new5eaAuthQA/legacy actual completion untested preserved.",
+    "verificationState": "PR1837 merged62c20d4bd tree identical to reviewed e3e251493. Official DB238 app-only single deploy exit0/buildktOrhp/loadedtrue/DB238ready/originalplanSHA+readerFloor/recoveryPendingfalse. Exactmerge verify87new0; source9suite141PASS/fulltype/lint/diff/source+metadata APPROVE. Web1473PASS133name-filterSKIP/compile99s/static94/warnings3/manifest200/unauth2wrapped401. Same fixed9read-only hashes equal22:11:53Z to22:18:44Z; original approval/PIN/baseline preserved. Original16376resolved87remaining; provider1 held Draft1836, protected sources unchanged. Followup4 assessed; nutrition1 implementable engineering followup, not product-decision blocker. Permission3/444/static3/original49unknown/YouTube17dirty/newAuthQA/legacy actual completion untested preserved.",
     "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
-    "operatingRef": "5ea486e534729eb576477bf81526847caa2dfee6",
-    "operatingTotal": 93,
-    "buildId": "prelaunch-5ea486e53472-wPutWL",
-    "dataEvidence": "docs/engineering/evidence/anti-slop-planner-data-preservation-20261020.json",
+    "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+    "operatingTotal": 87,
+    "buildId": "prelaunch-62c20d4bd305-ktOrhp",
+    "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json",
     "providerHold": {
       "pullRequest": 1836,
       "commit": "217582273",
@@ -829,11 +829,13 @@
       "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
       "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
       "adoptedResolution": {
-        "status": "local safe split verified, not yet merged/deployed",
+        "status": "PR1837 merged62c20d4bd and operatingbuildprelaunch-62c20d4bd305-ktOrhp/DB238; new authenticated QA unexecuted",
         "candidateCommit": "b7c27efa2",
         "reason": "Native selected read contracts; unused mutation protocol removed, same SDK/bootstrap/growth/RPC/owner/state/idempotency. Stale fixture corrected with old malformed500 retained.",
         "verification": "9suite141 PASS/0skip, whole type/lint/verify87new0/diff;7 safe files byte-identical to approved Draft originals.",
-        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md"
+        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+        "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+        "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json"
       }
     },
     {
@@ -871,11 +873,13 @@
       "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
       "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
       "adoptedResolution": {
-        "status": "local safe split verified, not yet merged/deployed",
+        "status": "PR1837 merged62c20d4bd and operatingbuildprelaunch-62c20d4bd305-ktOrhp/DB238; new authenticated QA unexecuted",
         "candidateCommit": "b7c27efa2",
         "reason": "Native selected read contracts; unused mutation protocol removed, same SDK/bootstrap/growth/RPC/owner/state/idempotency. Stale fixture corrected with old malformed500 retained.",
         "verification": "9suite141 PASS/0skip, whole type/lint/verify87new0/diff;7 safe files byte-identical to approved Draft originals.",
-        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md"
+        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+        "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+        "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json"
       }
     },
     {
@@ -936,11 +940,13 @@
       "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
       "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
       "adoptedResolution": {
-        "status": "local safe split verified, not yet merged/deployed",
+        "status": "PR1837 merged62c20d4bd and operatingbuildprelaunch-62c20d4bd305-ktOrhp/DB238; new authenticated QA unexecuted",
         "candidateCommit": "b7c27efa2",
         "reason": "Native selected read contracts; unused mutation protocol removed, same SDK/bootstrap/growth/RPC/owner/state/idempotency. Stale fixture corrected with old malformed500 retained.",
         "verification": "9suite141 PASS/0skip, whole type/lint/verify87new0/diff;7 safe files byte-identical to approved Draft originals.",
-        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md"
+        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+        "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+        "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json"
       }
     },
     {
@@ -957,11 +963,13 @@
       "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
       "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
       "adoptedResolution": {
-        "status": "local safe split verified, not yet merged/deployed",
+        "status": "PR1837 merged62c20d4bd and operatingbuildprelaunch-62c20d4bd305-ktOrhp/DB238; new authenticated QA unexecuted",
         "candidateCommit": "b7c27efa2",
         "reason": "Native selected read contracts; unused mutation protocol removed, same SDK/bootstrap/growth/RPC/owner/state/idempotency. Stale fixture corrected with old malformed500 retained.",
         "verification": "9suite141 PASS/0skip, whole type/lint/verify87new0/diff;7 safe files byte-identical to approved Draft originals.",
-        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md"
+        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+        "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+        "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json"
       }
     },
     {
@@ -978,11 +986,13 @@
       "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
       "scopeReleaseReference": "docs/engineering/anti-slop-planner-contracts-20261020.md",
       "adoptedResolution": {
-        "status": "local safe split verified, not yet merged/deployed",
+        "status": "PR1837 merged62c20d4bd and operatingbuildprelaunch-62c20d4bd305-ktOrhp/DB238; new authenticated QA unexecuted",
         "candidateCommit": "b7c27efa2",
         "reason": "Native selected read contracts; unused mutation protocol removed, same SDK/bootstrap/growth/RPC/owner/state/idempotency. Stale fixture corrected with old malformed500 retained.",
         "verification": "9suite141 PASS/0skip, whole type/lint/verify87new0/diff;7 safe files byte-identical to approved Draft originals.",
-        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md"
+        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+        "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+        "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json"
       }
     },
     {
@@ -1267,11 +1277,13 @@
       },
       "previousScopeHold": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local safe split verified, not yet merged/deployed",
+        "status": "PR1837 merged62c20d4bd and operatingbuildprelaunch-62c20d4bd305-ktOrhp/DB238; new authenticated QA unexecuted",
         "candidateCommit": "a69acef9f077b6ae442f1cac4cacb3fb2812e545",
         "reason": "Native RPC JSON unknown, same deleted truthiness;14 JSON cases preserve200/500, no strict boolean/permission policy. Unused assumed fields removed.",
         "verification": "9suite141 PASS/0skip, whole type/lint/verify87new0/diff;7 safe files byte-identical to approved Draft originals.",
-        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md"
+        "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+        "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
+        "dataEvidence": "docs/engineering/evidence/anti-slop-meal-safe-split-data-preservation-20261020.json"
       }
     },
     {

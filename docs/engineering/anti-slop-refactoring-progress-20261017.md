@@ -2,6 +2,8 @@
 
 이 문서는 중복 작업을 막기 위한 구현·검증 이력이다. 제품/API/DB 계약이나 배포 승인이 아니다. `AGENTS.md`가 작업 범위와 검사 강도를 결정한다.
 
+- **안전6건 운영87 완료:** PR1837 merge62c20d4bd/buildprelaunch-62c20d4bd305-ktOrhp·DB238ready·Anti87new0. 소스141PASS·전체type/lint/독립승인·배포웹1473PASS133이름필터SKIP·compile99/static94/기존경고3·manifest200/보호GET2wrapped401. 이번 고정READ ONLY9지문 전후동일·원승인/PIN/plan/readerFloor/R2가드 보존, 실제삭제/SQL/환경변경0. provider1은 Draft1836에 원거절과 함께 보존, 영양JSON1은 다음 구현가능 공학배치·snapshot1과legacy2는 행동증명 후속이다. [새운영증거·보류·검사한계](anti-slop-meal-safe-split-20261020.md)를 따른다. 아래 후보87/운영93은 과거다.
+
 - **안전분리 후보87/운영93:** provider1은 Draft1836에 보호거절과 함께 보존, 끼니5/삭제JSON1만 분리했다.9suite141 PASS·전체타입/lint/verify87신규0·독립 APPROVE, 원16376해결/87잔여다. 새분리 머지/배포 대기이며 실제5ea/buildwPutWL/DB238·1473 PASS/133 이름필터SKIP·9지문 동일은 별도다. [범위·실패·후속4](anti-slop-meal-safe-split-20261020.md)를 따른다.
 
 - **플래너 로컬 묶음93:** source `b867b1e3e`, 보호 해제19중12 해결/후속7 검토 대기·YouTube17 dirty보존.5논리커밋의 native SDK/실제 unused protocol 삭제/동일 scoped RPC/기존 validator 타입 표현으로 통합209 PASS·전체타입/lint/verify93new0·독립 검토 통과. 원16370해결/93잔여, 배열37/조건부25 유지, 유지8개 고정ID 근거를 [새 기록](anti-slop-planner-contracts-20261020.md)에 남겼다. 아직 머지0/운영0이고 실제7d15/Anti105·DB238이다. 부모7d15 인증 읽기QA PASS·무게200g근거/설정현재값보존/새생성0은 새 source QA가 아니다. 기존 mealsGET1실패·정적3·권한3/444/49미발견·legacy미실행을 숨기지 않는다.
