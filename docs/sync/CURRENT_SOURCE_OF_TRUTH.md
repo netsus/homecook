@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop87 안전6건 운영 완료
+
+PR1837을 정확 merge62c20d4bd로 병합하고 공식 DB238 앱-only 경로로 한 번 배포했다. 실제buildprelaunch-62c20d4bd305-ktOrhp·loadedtrue·DB238ready·Anti87/new0이며 source141 PASS·전체type/lint/독립승인, 배포웹1473 PASS/133 이름필터SKIP·빌드99초/static94/기존경고3다. 원planSHA/readerFloor·R2보호·승인/PIN은 그대로이고 고정READ ONLY9지문은 이번 배포전후 모두 같다. 실제삭제/SQL/설정변경0·새인증QA미실행이다. provider1은 Draft1836/원HEAD에 보존했고, 영양JSON1은 구현 가능한 다음 공학배치다. [운영증거·후속4·기존실패](../engineering/anti-slop-meal-safe-split-20261020.md)를 따른다. 아래 후보/운영93은 당시 기록이다.
+
 ## 2026-10-20 — Anti Slop87 안전분리 후보·운영93
 
 provider1은 Draft1836에 원R2 보호거절과 함께 보존하고 사용자 승인된 끼니5/삭제JSON1만 분리했다.9suite141 PASS·전체타입/lint/verify87신규0·독립 APPROVE, 원16376해결/87잔여다. 새분리 머지/배포는 대기이며 실제5ea/buildwPutWL·DB238·Anti93은 단일배포1473 PASS/133 이름필터SKIP·9읽기지문 동일로 확인했다. [분리 증거·기존 실패·후속4](../engineering/anti-slop-meal-safe-split-20261020.md)를 따른다. 아래93로컬은 당시 이력이다.
