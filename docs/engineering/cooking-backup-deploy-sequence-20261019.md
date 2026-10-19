@@ -110,3 +110,12 @@ PIN 게시 후에도 운영 파일을 읽지 않고 회귀를 반복할 수 있�
 첫 공식 plan은 운영 변경 전에 전체41개 table의 normalData 해시 조회가 기존5초 제한을 넘어 실패했다. 같은 고정 projection의 읽기 전용 실측은17,867ms로 성공했다. SQL·조회 열·기대 지문을 줄이지 않고 cooking 관찰만 기존 비동기 session에 READ ONLY transaction·서버90초/host95초 고정 제한을 사용한다. 기본 다른 feature의5초 계약은 유지한다. 실제 network-none PG 검사에서5.344초 조회 중 timer53회, 쓰기 거절/row0,90.121초 서버 timeout 중 timer885회, session 종료와 소유 컨테이너 정리를 확인했다.
 
 이 도구 변경은 새 비공개 review에 결속한 웹 target1802b2276/SQL233–235/계산 query를 변경하지 않는다. 최종 도구 commit과 독립 검토를 별도로 기록한다. DB235에서는 기존 C04·개인 실측 writer ON/OFF·retry/reconcile 토글을 이 cooking 권위로 지원하지 않는다. 진입 시 운영 I/O 전에 명시 거절하며, 기존 상태를 보존한다. 새 writer 토글 권위는 별도 검토 대상이다. cooking 전용 DB reconcile과 gateway containment·동일 plist 복구는 유지한다. 독립 재검토 잔여 P1/P2=0.
+
+
+### 실제 DB235 적용과 웹 handoff 판정 보완
+
+운영 operation082d20d8-a9c9-45bc-a876-76e8c1842376은committed다. 정상 단일 transaction에서 원행/controls/scope alias OID 보존과 정확 catalog 검증을 통과했다. worker22753→73976으로 동일 plist 복구했고 실제 인증/readiness 성공·queue/processing/permit0·policy/credential/jobs/web/R2/activation/plist/config 지문 동일을 확인했다. 원receipt SHA `8ebf54657f7d47c97c0cfdb575ff81bcf0ae5dbea1e3dcb555efdd2360bc78b6`.
+
+이후 정상 웹 plan이 currentProtectedPhase의 구v74 fallback에서 거절됐다. 새 후보가 아직 구웹의 ancestor가 아니어서 옛232 handoff를 현재235 authority로 검사한 도구 오류다. 웹 교체는0이다. cooking 판정만 실제 git ancestor와 정확 구reader ref/build/plist의 별도 비교를 사용하며, 구v74 검사나 receipt를235에 재타깃하지 않는다. foreign/미확정235의 기존 fail-closed 검증은 그대로다.
+
+후속plan은 실제 닫힌R2 lineage 확인에서도 같은 구v74 fallback을 요구했다. 이 경우 검사를 생략하지 않고, 검증된committed235의 원cookingPredecessor232 pointer/원장을 기존v74 validator에 전달한다. 과거v74 proof bytes·232 권한·assertion은 그대로이며, 현재235는 별도 exactreceipt 검증을 먼저 통과해야 한다. unknown235는 원232로 fallback하지 않는다.

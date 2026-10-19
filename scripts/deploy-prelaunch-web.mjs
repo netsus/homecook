@@ -182,7 +182,8 @@ function approvedSourceAncestor(ancestor,descendant) {
   const bytes=readClosedR2PrivateBytes(join(V74_OPERATION_DIRECTORY,"web-handoff.json"),repository,524288);
   if(hash(bytes)!==V74_WEB_HANDOFF_SHA256)throw new DeploymentError("v74 pinned web handoff bytes differ");
   const maintenance=loadCurrentDatabaseMaintenance(repository);
-  assertV74WebHandoff({proof:JSON.parse(bytes),maintenance:maintenance.pointer,ledger:maintenance.review.database.after});verifiedV74Source();
+  const historicalMaintenance=maintenance.cookingPredecessor ?? maintenance;
+  assertV74WebHandoff({proof:JSON.parse(bytes),maintenance:historicalMaintenance.pointer,ledger:historicalMaintenance.review.database.after});verifiedV74Source();
   return spawnSync("git",["-C",repository,"merge-base","--is-ancestor",ancestor,V74_WEB_PREDECESSOR],{stdio:"ignore"}).status===0
     &&spawnSync("git",["-C",repository,"merge-base","--is-ancestor",V74_RELEASE,descendant],{stdio:"ignore"}).status===0;
 }
@@ -460,7 +461,7 @@ function currentProtectedPhase(live = current()) {
   const cooking=readCookingExperienceAttempt(repository);
   if (cooking) {
     if (cooking.record.status === "committed") loadCurrentDatabaseMaintenance(repository);
-    return cookingExperiencePhaseStatus(cooking,approvedSourceAncestor(cooking.review.to,live.ref),
+    return cookingExperiencePhaseStatus(cooking,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",cooking.review.to,live.ref],{stdio:"ignore"}).status===0,
       live.ref===cooking.review.from&&live.buildId===cooking.review.legacyReader.buildId&&hash(live.bytes)===cooking.review.legacyReader.plistSha256);
   }
   const role = readRecipeRequestRoleAttempt(repository);
