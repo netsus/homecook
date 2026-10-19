@@ -12,10 +12,24 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "eb7df156d24b361a0e91b17345522cd1b15f05b1",
-    "total": 125,
+    "baseCommit": "d7d865ac2fa86ad5ebc445ad8266ad78080a87dc",
+    "total": 123,
     "newFindings": 0,
-    "verificationState": "PR1814 headf73b11c6f merged and app-deployed aseb7df156d, buildprelaunch-eb7df156d24b-EeWHdq. Anti125/new0 and contract8 remain. Snapshot candidate45 PASS, whole nonincremental typecheck, changed lint and independent review APPROVE. Official app-only plan and deploy exit0; web1466 PASS/133 name-filter SKIP, build PASS with4 existing warnings. Actual ref/build/DB238 ready/recoveryPendingfalse, buildmanifest200 and anonymous cookmode401 verified. No authenticated mutation QA. Earlier PR1812/appf204073a2 evidence remains historical, including five-row preservation and public GET counter diagnosis. No SQL/env/auth/worker/policy/PIN changes. Historical broad failures and held444fe1f6f remain explicit."
+    "verificationState": "PR1816 list and PR1817 detail GET native SDK read contracts merged and app-deployed d7d865ac2/buildprelaunch-d7d865ac2fa8-1VWr9s; Anti123/new0, original29 contracts23 resolved/6 remaining. Target combined6suite45 PASS, web1466 PASS/133 name-filter SKIP, whole nonincremental typecheck/lint/diff PASS, independent reviews APPROVE. Official plan/deploy exit0; build PASS4 existing warnings; actual ref/build loadedtrue/DB238ready/recoveryfalse/readerFloor48c4 preserved, manifest200 and both anonymous GET401 wrappers verified. Parent authenticated QA on preceding eb7 passed save/book-refresh/fraction and shopping-complete/read-only/pantry0; no owned in-progress legacy sample, so actual legacy complete remains untested. Denied new QA meal creation is not retried. No SQL/env/auth/worker/policy/PIN changes. Historical broad failures, permission3 and held444fe1f6f remain explicit."
+  },
+  "bookReadFollowupObservation": {
+    "baseCommit": "d90af7a976392eb052a1d6557d3ab8c2bebb7221",
+    "mergeCommit": "d7d865ac2fa86ad5ebc445ad8266ad78080a87dc",
+    "pullRequests": [1816, 1817],
+    "deployedRef": "d7d865ac2fa86ad5ebc445ad8266ad78080a87dc",
+    "buildId": "prelaunch-d7d865ac2fa8-1VWr9s",
+    "mergedBatches": 2,
+    "operatingBatches": 2,
+    "total": 123,
+    "newFindings": 0,
+    "contractCandidatesAfterAdoption": 6,
+    "remaining": "Shared progress/growth route4, book detail DELETE1, manual POST1. Progress match prerequisite commits e823fbc34/9887d303c remain local only; native Gamification7 is an isolated memory probe, not adopted.",
+    "runtimeLimit": "Same request client and wire behavior; two route execution ASTs equal after alias normalization, normalizer emitted JS byte-identical. No new casts/any/suppressions. First list merge request used a mistranscribed match-head SHA and was rejected; rereading exact local/remote HEAD then normal merge succeeded, no bypass."
   },
   "snapshotFollowupObservation": {
     "baseCommit": "cfcb2bd61c31984c2f1f9efae003c51e1d105f42",
@@ -601,7 +615,14 @@
       "line": 531,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
+      "adoptedResolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1817",
+        "candidateCommit": "fdeceaae01f0745651682b551139ced5f1132179",
+        "mergeCommit": "d7d865ac2fa86ad5ebc445ad8266ad78080a87dc",
+        "reason": "GET uses ten native SDK read tables with SQL-checked nullable FKs, one-to-one source and JSON unknown; bootstrap and reader directly share the existing request client. Existing DELETE mutation assertion remains a separate unresolved finding.",
+        "verification": "Target5suite38 PASS, independent7suite60 PASS, combined45 PASS/web1466 PASS, whole nonincremental typecheck/lint/diff and independent final review APPROVE. Same execution AST after alias normalization; normalizer emitted JS byte-identical. No SQL/auth/operational mutation in implementation."
+      },
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -637,7 +658,14 @@
       "line": 475,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookRecipesDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
+      "adoptedResolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1816",
+        "candidateCommit": "1dc9fac2c4d6b443e707039b04e66fe9989fa107",
+        "mergeCommit": "a80f1ede73eade75df01e1e4856642d71207785f",
+        "reason": "Six native SDK tables and real relationship metadata replace handwritten fluent contracts; exact selected results and the same request client preserve ownership, canonical links and query behavior.",
+        "verification": "Target/independent17 PASS, whole nonincremental typecheck/lint/diff and independent review APPROVE. Anti125 to124, no baseline/rule/scope changes. Same helper emit and GET execution AST after same-object alias normalization."
+      },
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
       "review": {
         "source": "independent read-only compiler/source investigation",
