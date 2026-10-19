@@ -41,10 +41,6 @@ import type {
   ShoppingListSummary,
 } from "@/types/shopping";
 
-interface QueryError {
-  message: string;
-}
-
 interface ShoppingCreateRpcData {
   id?: string | null;
   title?: string;
@@ -75,15 +71,14 @@ interface ShoppingCreateItemRow {
 }
 
 interface PinnedIngredientSnapshot {
-  ingredient_id: string | null;
-  food_product_id?: string | null;
-  food_product_nutrition_version_id?: string | null;
-  amount: number | null;
-  unit: string | null;
-  ingredient_type: "QUANT" | "TO_TASTE";
-  display_text: string | null;
-  scalable?: boolean;
-  sort_order?: number;
+  ingredient_id?: unknown;
+  food_product_id?: unknown;
+  food_product_nutrition_version_id?: unknown;
+  amount?: unknown;
+  unit?: unknown;
+  ingredient_type?: unknown;
+  display_text?: unknown;
+  scalable?: unknown;
 }
 
 interface MealsRow {
@@ -94,11 +89,11 @@ interface MealsRow {
   recipe_content_snapshots:
     | {
       base_servings: number | null;
-      ingredients_json: PinnedIngredientSnapshot[] | null;
+      ingredients_json: unknown;
     }
     | Array<{
       base_servings: number | null;
-      ingredients_json: PinnedIngredientSnapshot[] | null;
+      ingredients_json: unknown;
     }>
     | null;
   plan_date: string;
@@ -117,12 +112,6 @@ interface RecipeIngredientRow {
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
   display_text: string | null;
-}
-
-interface RecipeIngredientSourceRow extends Omit<RecipeIngredientRow, "ingredient_id"> {
-  ingredient_id: string | null;
-  food_product_id?: string | null;
-  food_product_nutrition_version_id?: string | null;
 }
 
 interface RecipeRow {
@@ -168,59 +157,37 @@ export type ShoppingHistoryDbClient = Pick<SupabaseClient<{
   };
 }>, "from">;
 
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface MealsSelectQuery {
-  in(column: "id", values: string[]): ArrayQueryResult<MealsRow>;
-}
-
-interface RecipeIngredientsSelectQuery {
-  in(column: "recipe_id", values: string[]): ArrayQueryResult<RecipeIngredientSourceRow>;
-}
-
-interface RecipesSelectQuery {
-  in(column: "id", values: string[]): ArrayQueryResult<RecipeRow>;
-}
-
-interface IngredientsSelectQuery {
-  in(column: "id", values: string[]): ArrayQueryResult<IngredientRow>;
-}
-
-interface PantrySelectQuery {
-  eq(column: "user_id", value: string): {
-    or(filters: string): ArrayQueryResult<PantryRow>;
+// These are the six consumed read projections, not runtime grants or a complete schema.
+// Snapshot JSON is unknown; fields are narrowed only in the branch that consumes them.
+export type ShoppingCreateDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      meals: {
+        Row: Omit<MealsRow, "recipe_content_snapshots" | "status"> & { status: "registered" | "shopping_done" | "cook_done" };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "meals_recipe_content_snapshot_id_fkey"; columns: ["recipe_content_snapshot_id"];
+          isOneToOne: false; referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"] }];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; base_servings: number; ingredients_json: unknown };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: { Row: { [K in keyof RecipeRow]: RecipeRow[K] }; Insert: never; Update: never; Relationships: [] };
+      recipe_ingredients: {
+        Row: { recipe_id: string; ingredient_id: string | null; food_product_id: string | null;
+          food_product_nutrition_version_id: string | null; amount: number | null; unit: string | null;
+          ingredient_type: "QUANT" | "TO_TASTE"; display_text: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      ingredients: { Row: { [K in keyof IngredientRow]: IngredientRow[K] }; Insert: never; Update: never; Relationships: [] };
+      pantry_items: { Row: { [K in keyof PantryRow]: PantryRow[K] } & { user_id: string }; Insert: never; Update: never; Relationships: [] };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
   };
-}
+}>, "from"> & Partial<RecipeProductNutritionClient>;
 
-interface MealsTable {
-  select(columns: "id, user_id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(base_servings, ingredients_json), plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, shopping_list_id"): MealsSelectQuery;
-}
-
-interface RecipeIngredientsTable {
-  select(columns: "recipe_id, ingredient_id, food_product_id, food_product_nutrition_version_id, amount, unit, ingredient_type, display_text"): RecipeIngredientsSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: "id, base_servings"): RecipesSelectQuery;
-}
-
-interface IngredientsTable {
-  select(columns: "id, standard_name"): IngredientsSelectQuery;
-}
-
-interface PantryItemsTable {
-  select(columns: "ingredient_id, food_product_id, food_product_nutrition_version_id"): PantrySelectQuery;
-}
-
-interface ShoppingCreateDbClient extends Partial<RecipeProductNutritionClient> {
-  from(table: "meals"): MealsTable;
-  from(table: "recipes"): RecipesTable;
-  from(table: "recipe_ingredients"): RecipeIngredientsTable;
-  from(table: "ingredients"): IngredientsTable;
-  from(table: "pantry_items"): PantryItemsTable;
+function isSnapshotIngredientObject(value: unknown): value is PinnedIngredientSnapshot {
+  return value !== null && typeof value === "object";
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -476,8 +443,7 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parseFields);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingCreateDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+  const dbClient: ShoppingCreateDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -662,7 +628,11 @@ export async function POST(request: Request) {
   const legacyRecipeIds = [...new Set(legacyMeals.map((meal) => meal.recipe_id))];
   const recipeBaseServingsMap = new Map<string, number>();
   const ingredientAggregationRows: Array<
-    RecipeIngredientRow & {
+    Omit<RecipeIngredientRow, "amount" | "unit" | "ingredient_type" | "display_text"> & {
+      amount: unknown;
+      unit: unknown;
+      ingredient_type: unknown;
+      display_text: unknown;
       shopping_key: string;
       shopping_servings: number;
       planned_servings: number;
@@ -672,8 +642,8 @@ export async function POST(request: Request) {
     food_product_id: string;
     food_product_nutrition_version_id: string;
     display_text: string;
-    amount: number | null;
-    unit: string | null;
+    amount: unknown;
+    unit: unknown;
     shopping_servings: number;
     planned_servings: number;
     scalable: boolean;
@@ -730,25 +700,36 @@ export async function POST(request: Request) {
     }
   }
 
-  contentPinnedMeals.forEach((meal) => {
+  for (const meal of contentPinnedMeals) {
     const contentSnapshot = getMealContentSnapshot(meal);
     if (!contentSnapshot || typeof contentSnapshot.base_servings !== "number") {
-      return;
+      continue;
     }
 
     const shoppingServings =
       shoppingServingsByMealId.get(meal.id) ?? meal.planned_servings;
 
-    for (const ingredient of contentSnapshot.ingredients_json ?? []) {
+    const ingredients = contentSnapshot.ingredients_json;
+    if (ingredients === null || ingredients === undefined || typeof ingredients === "string") continue;
+    if (!Array.isArray(ingredients)) throw new TypeError("snapshot ingredients are not iterable");
+    for (const rawIngredient of ingredients) {
+      if (rawIngredient === null || rawIngredient === undefined) throw new TypeError("Cannot read properties of null");
+      if (!isSnapshotIngredientObject(rawIngredient)) continue;
+      const ingredient = rawIngredient;
       if (
         ingredient.food_product_id &&
         ingredient.food_product_nutrition_version_id
       ) {
+        const label = ingredient.display_text;
+        if (label !== null && label !== undefined && typeof label !== "string") throw new TypeError("display_text.trim is not a function");
+        if (typeof ingredient.food_product_id !== "string" || typeof ingredient.food_product_nutrition_version_id !== "string") {
+          return fail("INTERNAL_ERROR", "장보기 재료를 확인하지 못했어요.", 500);
+        }
         productAggregationRows.push({
           food_product_id: ingredient.food_product_id,
           food_product_nutrition_version_id:
             ingredient.food_product_nutrition_version_id,
-          display_text: ingredient.display_text?.trim() || "상품",
+          display_text: label?.trim() || "상품",
           amount: ingredient.amount,
           unit: ingredient.unit,
           shopping_servings: shoppingServings,
@@ -765,6 +746,9 @@ export async function POST(request: Request) {
       if (!ingredient.ingredient_id) {
         continue;
       }
+      if (typeof ingredient.ingredient_id !== "string") {
+        return fail("INTERNAL_ERROR", "장보기 재료를 확인하지 못했어요.", 500);
+      }
 
       ingredientAggregationRows.push({
         recipe_id: meal.recipe_id,
@@ -779,7 +763,7 @@ export async function POST(request: Request) {
         planned_servings: contentSnapshot.base_servings,
       });
     }
-  });
+  }
 
   const ingredientIds = [...new Set(ingredientAggregationRows.map((row) => row.ingredient_id))];
   const neededIngredientIds = new Set(ingredientIds);
@@ -855,9 +839,14 @@ export async function POST(request: Request) {
   for (const row of ingredientAggregationRows) {
     if (ingredientNameMap.has(row.ingredient_id)) continue;
     const previous = unavailableIngredients.get(row.ingredient_id);
+    let displayName = previous?.name;
+    if (displayName === undefined) {
+      const label = row.display_text;
+      if (label !== null && label !== undefined && typeof label !== "string") throw new TypeError("display_text.trim is not a function");
+      displayName = label?.trim().replace(/\s+(?:\d.*|적당량|약간|조금|취향껏)$/, "").trim() || "재료";
+    }
     unavailableIngredients.set(row.ingredient_id, {
-      name: previous?.name ?? (row.display_text?.trim()
-        .replace(/\s+(?:\d.*|적당량|약간|조금|취향껏)$/, "").trim() || "재료"),
+      name: displayName,
       hasQuant: previous?.hasQuant === true || row.ingredient_type === "QUANT",
     });
   }
@@ -909,7 +898,7 @@ export async function POST(request: Request) {
       food_product_id: string;
       food_product_nutrition_version_id: string;
       display_text: string;
-      amounts_json: Array<{ amount: number; unit: string }>;
+      amounts_json: Array<{ amount: number; unit: unknown }>;
       is_pantry_excluded: boolean;
       sort_order: number;
     }
@@ -920,7 +909,7 @@ export async function POST(request: Request) {
     const pair = `${product.food_product_id}:${product.food_product_nutrition_version_id}`;
     const existing = productPayloadByPair.get(pair);
     if (purchaseAmountsByPair.get(pair) !== null) {
-      if (product.amount === null || !product.unit) purchaseAmountsByPair.set(pair, null);
+      if (typeof product.amount !== "number" || typeof product.unit !== "string" || !product.unit) purchaseAmountsByPair.set(pair, null);
       else {
         const amounts = purchaseAmountsByPair.get(pair) ?? [];
         amounts.push({ amount: product.amount, unit: product.unit, scale: product.purchase_scale });

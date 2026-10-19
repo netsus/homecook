@@ -30,10 +30,10 @@ export interface ParseShoppingRecipeConfigsResult {
 export interface IngredientAggregationInput {
   ingredient_id: string;
   standard_name: string;
-  ingredient_type: "QUANT" | "TO_TASTE";
-  amount: number | null;
-  unit: string | null;
-  display_text: string | null;
+  ingredient_type: unknown;
+  amount: unknown;
+  unit: unknown;
+  display_text: unknown;
   planned_servings: number;
   shopping_servings: number;
 }
@@ -90,10 +90,12 @@ function toPositiveNumber(value: unknown) {
   return value;
 }
 
-function extractToTasteText(standardName: string, displayText: string | null) {
+function extractToTasteText(standardName: string, displayText: unknown) {
   if (!displayText) {
     return "적당량";
   }
+
+  if (typeof displayText !== "string") throw new TypeError("displayText.trim is not a function");
 
   const normalized = displayText.trim();
 
@@ -229,7 +231,7 @@ export function aggregateShoppingIngredients(
 
     if (
       input.ingredient_type !== "QUANT"
-      || input.amount === null
+      || typeof input.amount !== "number"
       || input.unit === null
       || !Number.isFinite(input.amount)
       || input.amount <= 0
@@ -245,6 +247,7 @@ export function aggregateShoppingIngredients(
       return;
     }
 
+    if (typeof input.unit !== "string") throw new TypeError("unit.trim is not a function");
     const normalizedUnit = normalizeUnitForConversion(input.unit);
     const convertible = CONVERTIBLE_UNITS.get(normalizedUnit);
 
