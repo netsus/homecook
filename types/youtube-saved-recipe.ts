@@ -23,12 +23,15 @@ export interface YoutubeSavedRecipeIngredientInput {
   unit: string | null;
   display_text: string | null;
   component_label: string | null;
+  /** Owner-selected catalog identity only; null explicitly unlinks. Omission preserves an existing choice. */
+  catalog_ingredient_id?: string | null;
   quantity_input?: YoutubeSavedQuantityDraft | QuantityInputSnapshot | null;
   /** Server-stored context of the quantity, separate from current choices. */
   quantity_context_fingerprint?: string;
 }
 
 export interface YoutubeSavedRecipeIngredientLink {
+  catalog_name?: string;
   ingredient_id: string | null;
   resolution_status: YoutubeIngredientResolutionStatus;
   candidates: YoutubeIngredientCandidate[];
@@ -61,6 +64,8 @@ export interface YoutubeSavedRecipeResult {
   draft_id: string;
   /** Present after the additive canonical-recipe bridge migration. */
   recipe_id?: string;
+  canonical_content_hash?: string;
+  nutrition_publication?: { status: "ready" | "pending" | "stale" };
   revision: number;
   created_at: string;
   updated_at: string;

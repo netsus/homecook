@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-19 — 요리 경험 운영235 확인과 영양·분수 저장 후속
+
+실제 운영 웹은 `196c498f4e1ecc326d6bd7b6c22e4f0b2cb56ed6`·DB235이며 worker gen50·같은 키/고정 만료·Round2 OFF를 보존했다. Chrome 완료 저장3건의 추정/직접 입력/미확인과 원본·기존 계획 보존,1440 남색 배경,375 완료창,상세/끼니 영양표와18개 북의 탐색을 확인했다. 정확 DB 선택·현재 영양 발행236/237과 JSON echo238은 별도 검증·배포 권위 준비 중이며 운영 미적용이다. 제목/단계 수정 뒤 pending 영양 발행의 새 끼니 pin 후속도 같은10함수 범위에서 검증한다. [9개 QA 표·실제 배포 SHA·증거·남은 원천 자료](../engineering/cooking-experience-operating-checks-20261019.md)를 현재 상태로 따른다. 아래 과거 미배포/잠금 문구는 해당 시점의 기록이다.
+
 ## 2026-10-19 — 요리 분수 JSON echo 저장 후속 (격리 검증, 미배포)
 
 웹196·DB235 실제 Chrome에서 다른 재료만 수정할 때 untouched1/7kg frozen proof 숫자의 JS 왕복 정밀도 차이로422를 확인했다. DB 원본+명시 수정값만 저장하고 행 echo의 숫자 표현만 비교하는 최소238 후보를 작성했다. 기존26+신규25 실제 PostgreSQL 회귀·권한/원본/metadata/rollback 검사와 타입을 통과했다. 원235 승인·receipt와 과거 pin은 유지하며 운영 적용·최종 Chrome 재확인은 별도 후속이다. [원인·계약·검증과 한계](../engineering/cooking-frozen-quantity-json-echo-20261019.md)를 따른다.

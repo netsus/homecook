@@ -1,3 +1,4 @@
+import { publishSavedYoutubeRecipeNutrition } from "@/lib/server/youtube-saved-recipe-nutrition";
 import { fail, ok } from "@/lib/api/response";
 import { isQuantityInputDraft, isQuantityInputSnapshot } from "@/lib/quantity-input";
 import { quantityInputContractRequested, quantityInputWriteEnabled } from "@/lib/server/quantity-input";
@@ -73,6 +74,7 @@ function parseIngredient(
     "display_text",
     "component_label",
   ];
+  if (isRecord(value) && "catalog_ingredient_id" in value) keys.push("catalog_ingredient_id");
   if (isRecord(value) && "quantity_input" in value) keys.push("quantity_input");
   if (isRecord(value) && "quantity_context_fingerprint" in value) keys.push("quantity_context_fingerprint");
   if (!isRecord(value) || !hasExactKeys(value, keys)) {
@@ -82,6 +84,9 @@ function parseIngredient(
   if (!isUuid(value.row_id)) fields.push({ field: `${field}.row_id`, reason: "invalid_uuid" });
   if (value.source_draft_ingredient_id !== null && !isUuid(value.source_draft_ingredient_id)) {
     fields.push({ field: `${field}.source_draft_ingredient_id`, reason: "invalid_uuid" });
+  }
+  if ("catalog_ingredient_id" in value && value.catalog_ingredient_id !== null && !isUuid(value.catalog_ingredient_id)) {
+    fields.push({ field: `${field}.catalog_ingredient_id`, reason: "invalid_uuid" });
   }
   const name = typeof value.standard_name === "string" ? value.standard_name.trim() : "";
   if (!name || name.length > 100) fields.push({ field: `${field}.standard_name`, reason: "invalid_text" });
@@ -133,6 +138,7 @@ function parseIngredient(
   };
   // The strict runtime checks above distinguish a raw draft, a stored snapshot
   // echo and explicit null. SQL revalidates every server-held source relation.
+  if ("catalog_ingredient_id" in value) parsed.catalog_ingredient_id = value.catalog_ingredient_id as string | null;
   if ("quantity_input" in value) parsed.quantity_input = value.quantity_input as YoutubeSavedRecipeIngredientInput["quantity_input"];
   if (typeof value.quantity_context_fingerprint === "string") parsed.quantity_context_fingerprint = value.quantity_context_fingerprint;
   return parsed;
@@ -248,7 +254,7 @@ async function requireAuthority() {
   }
   const internalClient = createRecipeFuturePropagationInternalClient();
   if (!internalClient) return { ok: false as const, response: fail("INTERNAL_ERROR", "저장 결과를 처리하지 못했어요.", 500) };
-  return { ok: true as const, authority: verified.sessionAuthority, client: internalClient as RpcClient };
+  return { ok: true as const, authority: verified.sessionAuthority, client: internalClient as RpcClient, nutritionClient: internalClient, routeClient };
 }
 
 function parseEnvelope(value: unknown): RpcEnvelope | null {
@@ -384,7 +390,7 @@ export async function handleUpdateYoutubeSavedRecipe(request: Request, draftId: 
   const access = await requireAuthority();
   if (!access.ok) return access.response;
   if (newQuantityWrite(parsed.content) && !quantityInputWriteEnabled(request)) return rpcFailure({ code: "UNIT_POLICY_INACTIVE" });
-  return callRpc(access.client, "write_youtube_saved_recipe_result", {
+  const response = await callRpc(access.client, "write_youtube_saved_recipe_result", {
     ...buildSessionAuthorityRpcArgs(access.authority),
     p_action: "update",
     p_result_id: draftId,
@@ -393,4 +399,23 @@ export async function handleUpdateYoutubeSavedRecipe(request: Request, draftId: 
     p_editable_content: parsed.content,
     p_idempotency_key: idempotency.key,
   }, request);
+  if (!response.ok) return response;
+  const result: unknown = await response.json();
+  if (!isRecord(result) || !isRecord(result.data) || !isRecord(result.data.content)
+    || !Array.isArray(result.data.content.ingredients)
+    || !result.data.content.ingredients.some(row => isRecord(row) && "catalog_ingredient_id" in row)) return ok(isRecord(result) ? result.data : null);
+  const publication = await publishSavedYoutubeRecipeNutrition({ receipt: result.data,
+    authority: access.authority, internalClient: access.nutritionClient,
+    ownerClient: {
+      readRecipe: async recipeId => {
+        const read = await access.routeClient.from("recipes").select("id, revision, updated_at, base_servings, created_by, source_type, visibility, deleted_at")
+          .eq("id", recipeId).maybeSingle();
+        return { data: read.data, error: read.error };
+      },
+      writeSnapshot: async args => {
+        const write = await access.routeClient.rpc("write_owned_youtube_recipe_nutrition_snapshot", { ...args, p_user_id: access.authority.ownerUuid });
+        return { data: write.data, error: write.error };
+      },
+    } });
+  return ok({ ...result.data, nutrition_publication: publication });
 }

@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUser, readVerified, rpc } = vi.hoisted(() => ({
+const { getUser, readVerified, rpc, publication } = vi.hoisted(() => ({
   getUser: vi.fn(),
   readVerified: vi.fn(),
   rpc: vi.fn(),
+  publication: vi.fn(),
 }));
+
+vi.mock("@/lib/server/youtube-saved-recipe-nutrition", () => ({ publishSavedYoutubeRecipeNutrition: publication }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: vi.fn(async () => ({ auth: { getUser } })),
@@ -66,12 +69,41 @@ function request(body: unknown, method = "POST") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  publication.mockResolvedValue({ status: "pending" });
   getUser.mockResolvedValue({ data: { user: { id: authority.ownerUuid } } });
   readVerified.mockResolvedValue({ ok: true, sessionAuthority: authority });
 });
 afterEach(() => vi.unstubAllEnvs());
 
 describe("youtube saved recipe route boundary", () => {
+  it.each(["ready", "pending", "stale"])("preserves the durable successful save and adds honest publication status=%s", async status => {
+    const saved = { draft_id: "70000000-0000-4000-8000-000000000001", recipe_id: "80000000-0000-4000-8000-000000000001",
+      revision: 3, canonical_content_hash: "c".repeat(64), updated_at: "2026-10-19T00:00:00+00:00",
+      content: { ...content, ingredients: [{ ...content.ingredients[0], catalog_ingredient_id: null }] } };
+    const before = structuredClone(saved);
+    rpc.mockResolvedValue({ data: { success: true, data: saved, error: null }, error: null });
+    publication.mockResolvedValue({ status });
+    const response = await handleUpdateYoutubeSavedRecipe(request({ expected_revision: 2, content: saved.content }, "PATCH"), saved.draft_id);
+    expect(response.status).toBe(200);expect((await response.json()).data).toEqual({ ...before, nutrition_publication: { status } });
+    expect(publication).toHaveBeenCalledOnce();expect(publication.mock.calls[0][0]).toMatchObject({ receipt: before, authority });
+    expect(saved).toEqual(before);expect(rpc).toHaveBeenCalledOnce();
+  });
+
+  it.each(["80000000-0000-4000-8000-000000000001", null])("passes an explicit catalog choice without changing an unknown quantity: %s", async catalog_ingredient_id => {
+    const edited = { ...content, ingredients: [{ ...content.ingredients[0], catalog_ingredient_id }] };
+    rpc.mockResolvedValue({ data: { success: true, data: {}, error: null }, error: null });
+    const response = await handleUpdateYoutubeSavedRecipe(request({ expected_revision: 2, content: edited }, "PATCH"), "70000000-0000-4000-8000-000000000001");
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("write_youtube_saved_recipe_result", expect.objectContaining({
+      p_expected_revision: 2, p_editable_content: edited,
+    }));
+  });
+  it.each(["not-a-uuid", 3, {}, "80000000-0000-4000-8000-000000000001/path"])("rejects malformed catalog selection %j before RPC", async catalog_ingredient_id => {
+    const edited = { ...content, ingredients: [{ ...content.ingredients[0], catalog_ingredient_id }] };
+    const response = await handleUpdateYoutubeSavedRecipe(request({ expected_revision: 2, content: edited }, "PATCH"), "70000000-0000-4000-8000-000000000001");
+    expect(response.status).toBe(422); expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("requires a requested protocol and the web write flag for raw fractional updates", async () => {
     const edited = { ...content, ingredients: [{ ...content.ingredients[0], quantity_mode: "quantity", amount: 1 / 3, unit: "g",
       quantity_input: { schema_version: "quantity-v4", raw_value: "1/3", raw_unit: "g", expected_context_fingerprint: "b".repeat(64) } }] };

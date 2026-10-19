@@ -88,7 +88,8 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
 
   const submitCompletion = (body: SnapshotV2CompleteBody) => {
     if (completeInFlightRef.current || data.status !== "in_progress") return;
-    body = { ...body, ...(data.execution_revision !== undefined ? { execution_revision: data.execution_revision } : {}) };
+    body = { ...body };
+    if (data.execution_revision !== undefined) body.execution_revision = data.execution_revision;
     const payload = JSON.stringify(body);
     const attempt = completeAttemptRef.current?.payload === payload
       ? completeAttemptRef.current

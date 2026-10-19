@@ -1,3 +1,5 @@
+import { SAVED_RECIPE_NUTRITION_FEATURE, SAVED_RECIPE_NUTRITION_REVIEW_PIN, assertSavedRecipeNutritionReview,
+ assertSavedRecipeNutritionDatabaseReceipt, savedRecipeNutritionBinding, assertSavedRecipeNutritionSourceHandoff } from "./saved-recipe-nutrition-maintenance.mjs";
 import { COOKING_EXPERIENCE_FEATURE, COOKING_EXPERIENCE_REVIEW_PIN, assertCookingExperienceReview, assertCookingExperienceDatabaseReceipt, cookingExperienceBinding, assertCookingExperienceSourceHandoff } from "./cooking-experience-maintenance.mjs";
 import { assertV85Source } from "./youtube-v85-cutover.mjs";
 import { assertPinnedRound2ClosedMarkerRotationBridge } from './round2-closed-marker-rotation-bridge.mjs';
@@ -125,6 +127,7 @@ export function quantityV4StageForPhase(phase) {
 }
 
 export function protectedRolloutPins(review) {
+  if (review?.feature === SAVED_RECIPE_NUTRITION_FEATURE) return {rollout:SAVED_RECIPE_NUTRITION_REVIEW_PIN,writer:{path:null,sha256:null}};
   if (review?.feature === COOKING_EXPERIENCE_FEATURE) return { rollout: COOKING_EXPERIENCE_REVIEW_PIN, writer: { path: null, sha256: null } };
   if (review?.feature === RECIPE_REQUEST_ROLE_FEATURE) return { rollout: RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN, writer: { path: null, sha256: null } };
   if (review?.feature === RECIPE_SAVE_RECOVERY_FEATURE) return { rollout: RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN, writer: { path: null, sha256: null } };
@@ -140,14 +143,14 @@ export function protectedRolloutPins(review) {
 }
 
 export function protectedRolloutPaths(root, review) {
-  const prefix = review?.feature === COOKING_EXPERIENCE_FEATURE ? "protected-cooking-experience" : review?.feature === RECIPE_REQUEST_ROLE_FEATURE ? "protected-recipe-request-role" : review?.feature === RECIPE_SAVE_RECOVERY_FEATURE ? "protected-recipe-save-recovery" : review?.feature === NUTRITION_VALIDATOR_FEATURE ? "protected-nutrition-validator" : review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? "protected-cooked-weight-attestation" : review?.feature === QUANTITY_V4_FEATURE ? `protected-quantity-v4-${review.quantityStage}` : review?.feature === COOKED_WEIGHT_FEATURE ? "protected-cooked-weight" : "protected";
+  const prefix = review?.feature === SAVED_RECIPE_NUTRITION_FEATURE?"protected-saved-recipe-nutrition":review?.feature === COOKING_EXPERIENCE_FEATURE ? "protected-cooking-experience" : review?.feature === RECIPE_REQUEST_ROLE_FEATURE ? "protected-recipe-request-role" : review?.feature === RECIPE_SAVE_RECOVERY_FEATURE ? "protected-recipe-save-recovery" : review?.feature === NUTRITION_VALIDATOR_FEATURE ? "protected-nutrition-validator" : review?.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? "protected-cooked-weight-attestation" : review?.feature === QUANTITY_V4_FEATURE ? `protected-quantity-v4-${review.quantityStage}` : review?.feature === COOKED_WEIGHT_FEATURE ? "protected-cooked-weight" : "protected";
   protectedRolloutPins(review);
   return { databaseGuardPath: join(root, `${prefix}-database-guard.json`), readerReceiptPath: join(root, `${prefix}-reader-ready.json`),
     operationRoot: join(root, `${prefix}-operations`), writerPrefix: `${prefix}-writer` };
 }
 
 export function protectedImmutableSha256(review, phase = "after") {
-  return [COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE].includes(review?.feature) && phase === "after" ? review.database.afterImmutableSha256 : review.database.immutableSha256;
+  return [COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE, SAVED_RECIPE_NUTRITION_FEATURE].includes(review?.feature) && phase === "after" ? review.database.afterImmutableSha256 : review.database.immutableSha256;
 }
 
 export function protectedReaderFenceSql(review) {
@@ -246,6 +249,13 @@ function readProtectedRolloutPin(repositoryRoot, pin) {
 }
 
 export function loadProtectedRolloutReview(repositoryRoot, selector = {}) {
+  if (selector.feature===SAVED_RECIPE_NUTRITION_FEATURE||selector.phase?.startsWith("saved-nutrition-")||selector.reviewSha256&&selector.reviewSha256===SAVED_RECIPE_NUTRITION_REVIEW_PIN.sha256){
+    const review=readProtectedRolloutPin(repositoryRoot,SAVED_RECIPE_NUTRITION_REVIEW_PIN);
+    closedR2Require(!selector.ref||selector.ref===review.to,"Saved nutrition exact source differs");
+    for(const key of ["isolatedEvidence","legacyReaderEvidence","postimages"])closedR2Require(closedR2Hash(readClosedR2PrivateBytes(review[key].path,repositoryRoot,524288))===review[key].sha256,"Saved nutrition evidence bytes differ");
+    return review;
+  }
+
   if (selector.feature === COOKING_EXPERIENCE_FEATURE || selector.phase?.startsWith("cooking-") || selector.reviewSha256 && selector.reviewSha256 === COOKING_EXPERIENCE_REVIEW_PIN.sha256) {
     const review = readProtectedRolloutPin(repositoryRoot, COOKING_EXPERIENCE_REVIEW_PIN);
     closedR2Require(!selector.ref || selector.ref === review.to, "Cooking exact source differs");
@@ -337,6 +347,7 @@ export function assertProtectedWriterReview(approval, rollout, rolloutReviewSha2
 }
 
 export function assertProtectedRolloutReview(review) {
+  if (review?.feature===SAVED_RECIPE_NUTRITION_FEATURE)return assertSavedRecipeNutritionReview(review);
   if (review?.feature === COOKING_EXPERIENCE_FEATURE) return assertCookingExperienceReview(review);
   if (review?.feature === RECIPE_REQUEST_ROLE_FEATURE) return assertRecipeRequestRoleReview(review);
   if (review?.feature === RECIPE_SAVE_RECOVERY_FEATURE) return assertRecipeSaveRecoveryReview(review);
@@ -512,6 +523,7 @@ export function assertNutritionValidatorDatabaseReceipt(review, record) {
 
 export function nutritionValidatorMaintenanceBinding(maintenance) {
   if (!maintenance) return null;
+  if(maintenance.review?.feature===SAVED_RECIPE_NUTRITION_FEATURE)return savedRecipeNutritionBinding(maintenance);
   if (maintenance.review?.feature === COOKING_EXPERIENCE_FEATURE) return cookingExperienceBinding(maintenance);
   if (maintenance.review?.feature === RECIPE_REQUEST_ROLE_FEATURE) return recipeRequestRoleBinding(maintenance);
   if (maintenance.review?.feature === RECIPE_SAVE_RECOVERY_FEATURE) return recipeSaveRecoveryBinding(maintenance);
@@ -611,6 +623,7 @@ export function verifyNutritionValidatorPredecessor(review, repositoryRoot) {
 }
 
 export function assertNutritionValidatorSourceHandoff({ maintenance, from, to, live, files, digests, reviewedSourceAncestor = /** @type {boolean | undefined} */ (undefined) }) {
+  if(maintenance?.review.feature===SAVED_RECIPE_NUTRITION_FEATURE)return assertSavedRecipeNutritionSourceHandoff({maintenance,from,to,live,files,digests,reviewedSourceAncestor});
   if (maintenance?.review.feature === COOKING_EXPERIENCE_FEATURE) return assertCookingExperienceSourceHandoff({ maintenance, from, to, live, files, digests, reviewedSourceAncestor });
   if (maintenance?.review.feature === RECIPE_REQUEST_ROLE_FEATURE) return assertRecipeRequestRoleSourceHandoff({ maintenance, from, to, live, files, digests, reviewedSourceAncestor });
   if (maintenance?.review.feature === RECIPE_SAVE_RECOVERY_FEATURE) return assertRecipeSaveRecoverySourceHandoff({ maintenance, from, to, live, files, digests });
@@ -635,6 +648,12 @@ export function assertNutritionValidatorReaderCompensation(maintenance, before, 
 }
 
 export function assertNutritionValidatorMarker(maintenance, marker, sourceReaderMarker = false) {
+  if(maintenance?.review.feature===SAVED_RECIPE_NUTRITION_FEATURE){
+    const binding=savedRecipeNutritionBinding(maintenance);
+    closedR2Require(marker&&isDeepStrictEqual(marker.databaseMaintenance,sourceReaderMarker?maintenance.review.predecessorMaintenance:binding)
+      &&marker.databasePlanSha256===maintenance.review.legacyMarkerDatabasePlanSha256,"Saved nutrition preserves historical marker and separate238 receipt");
+    return marker;
+  }
   if (maintenance?.review.feature === COOKING_EXPERIENCE_FEATURE) {
     const binding = cookingExperienceBinding(maintenance);
     closedR2Require(marker && isDeepStrictEqual(marker.databaseMaintenance, sourceReaderMarker ? maintenance.review.predecessorMaintenance : binding)
@@ -1371,7 +1390,7 @@ export function assertQuantityV4WorkerAuthority(review, control, journal, record
 export function verifyProtectedRolloutEvidence(review, repositoryRoot) {
   assertProtectedRolloutReview(review);
   const result = {};
-  if (review.feature === COOKING_EXPERIENCE_FEATURE) {
+  if ([COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature)) {
     for (const key of ["isolatedEvidence","legacyReaderEvidence","postimages","platformInventory","backupReadiness"]) {
       const bytes=readClosedR2PrivateBytes(review[key].path,repositoryRoot,524288);
       closedR2Require(closedR2Hash(bytes)===review[key].sha256,"Cooking exact evidence bytes differ");
@@ -1522,8 +1541,8 @@ export function assertCookedWeightFirstReader(review, productOffReceipt, reviewS
 
 export function assertProtectedRolloutSource({ review, live, releaseSha, files, digests, closedArtifactSha256 }) {
   assertProtectedRolloutReview(review);
-  closedR2Require(live.ref === review.from && releaseSha === review.to && live.buildId === (review.feature===COOKING_EXPERIENCE_FEATURE?review.legacyReader.buildId:review.predecessorBuildId)
-    && closedR2Hash(live.bytes) === (review.feature===COOKING_EXPERIENCE_FEATURE?review.legacyReader.plistSha256:review.predecessorPlistSha256) && closedArtifactSha256 === review.closedArtifactSha256,
+  closedR2Require(live.ref === review.from && releaseSha === review.to && live.buildId === ([COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature)?review.legacyReader.buildId:review.predecessorBuildId)
+    && closedR2Hash(live.bytes) === ([COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature)?review.legacyReader.plistSha256:review.predecessorPlistSha256) && closedArtifactSha256 === review.closedArtifactSha256,
     "보호 전환의 현재 source/build/plist/marker가 다릅니다.");
   closedR2Require(isDeepStrictEqual([...files].sort(), Object.keys(review.files).sort()) && isDeepStrictEqual(digests, review.files),
     "보호 전환의 전체 source diff bytes가 다릅니다.");
@@ -1539,7 +1558,7 @@ export function assertProtectedRolloutEnvironment({ review, before, after, curre
       expected.EnvironmentVariables = { ...expected.EnvironmentVariables, [COOKED_WEIGHT_ENVIRONMENT]: "1" };
     } else closedR2Require([review.readerEnvironment[COOKED_WEIGHT_ENVIRONMENT][0], "1"].includes(actualGate), "C01 boundary cannot adopt an unreviewed gate");
   }
-  if ([COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE].includes(review.feature)) closedR2Require(before.EnvironmentVariables[COOKED_WEIGHT_ENVIRONMENT] === "1"
+  if ([COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE, SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature)) closedR2Require(before.EnvironmentVariables[COOKED_WEIGHT_ENVIRONMENT] === "1"
     && before.EnvironmentVariables[QUANTITY_V4_ENVIRONMENT] === "true", "Personal attestation preserves C01/C04 reader gates without new environment");
   if (review.feature === QUANTITY_V4_FEATURE) {
     const actualGate = before.EnvironmentVariables[QUANTITY_V4_ENVIRONMENT] ?? null;
@@ -2072,7 +2091,7 @@ export function parsePrelaunchOptions(args) {
   }
   if (options.reviewedProtectedRollout) {
     if (options.refOption !== "--reviewed-ref" || !CLOSED_R2_REF.test(options.ref) || !options.dbConfig
-      || options.testScript !== "test:feedback-batch:web" || !["database", "database-retry", "worker-database", "worker-database-retry", "worker-reconcile", "reader", "reconcile", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry", "nutrition-database", "nutrition-database-retry", "nutrition-reconcile", "cooking-database", "cooking-database-retry", "cooking-reconcile", "attestation-database", "attestation-database-retry", "attestation-reconcile", "attestation-reader", "attestation-writer-on", "attestation-writer-off", "attestation-writer-on-reconcile", "attestation-writer-off-reconcile", "attestation-writer-on-retry", "attestation-writer-off-retry"].includes(options.protectedPhase)
+      || options.testScript !== "test:feedback-batch:web" || !["database", "database-retry", "worker-database", "worker-database-retry", "worker-reconcile", "reader", "reconcile", "writer-on", "writer-off", "writer-on-reconcile", "writer-off-reconcile", "writer-on-retry", "writer-off-retry", "nutrition-database", "nutrition-database-retry", "nutrition-reconcile", "cooking-database", "cooking-database-retry", "cooking-reconcile", "saved-nutrition-database", "saved-nutrition-database-retry", "saved-nutrition-reconcile", "attestation-database", "attestation-database-retry", "attestation-reconcile", "attestation-reader", "attestation-writer-on", "attestation-writer-off", "attestation-writer-on-reconcile", "attestation-writer-off-reconcile", "attestation-writer-on-retry", "attestation-writer-off-retry"].includes(options.protectedPhase)
       || options.envFile || options.dbBaseline || options.dbCompatible || options.alreadyAppliedDb || options.skipAutomatedTests || options.verifyScript
       || Object.entries(options).some(([key, value]) => key.startsWith("reviewed") && key !== "reviewedProtectedRollout" && value)) {
       throw new DeploymentError("보호 전환에는 정확한 reviewed-ref/DB/기존 test/phase만 허용합니다. 환경·기존 reviewed·자동 DB 옵션은 사용할 수 없습니다.");
@@ -2233,7 +2252,7 @@ export function assertRound2InheritanceBoundaries({ previous, next, files, datab
     && !(reviewedNutrition && (file === `supabase/migrations/${NUTRITION_VALIDATOR_MIGRATION}` || nutritionMaintenanceHandoff.maintenance.review.feature === RECIPE_SAVE_RECOVERY_FEATURE
       && RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row => file === `supabase/migrations/${row.filename}`)
       || nutritionMaintenanceHandoff.maintenance.review.feature === RECIPE_REQUEST_ROLE_FEATURE && file === `supabase/migrations/${RECIPE_REQUEST_ROLE_MIGRATION.filename}`
-      || nutritionMaintenanceHandoff.maintenance.review.feature === COOKING_EXPERIENCE_FEATURE && Object.hasOwn(nutritionMaintenanceHandoff.maintenance.review.files,file))))) {
+      || [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(nutritionMaintenanceHandoff.maintenance.review.feature) && Object.hasOwn(nutritionMaintenanceHandoff.maintenance.review.files,file))))) {
     throw new DeploymentError("R2 보호 코드·SQL·동의·라우팅 변경은 기존 readiness를 승계할 수 없습니다.");
   }
   const protectedEnvironment = /^(?:(?:NEXT_PUBLIC_)?(?:MUMEOK_|MARKETING_|SUPABASE_|TURNSTILE_)|(?:DATA|LOCAL)_SUPABASE_|HOMECOOK_(?:AUTH|DATA|FULL_LOCAL|SESSION)|NEXT_PUBLIC_SITE_URL$|NODE_ENV$)/u;
@@ -2478,7 +2497,7 @@ export function loadRecipeSaveRecoveryMaintenance(repositoryRoot) {
 }
 export function loadCurrentDatabaseMaintenance(repositoryRoot) {
   // A present unresolved231 guard throws; it must never fall back to a successful229 history.
-  return loadCookingExperienceMaintenance(repositoryRoot) ?? loadRecipeRequestRoleMaintenance(repositoryRoot) ?? loadRecipeSaveRecoveryMaintenance(repositoryRoot) ?? loadNutritionValidatorMaintenance(repositoryRoot);
+  return loadSavedRecipeNutritionMaintenance(repositoryRoot) ?? loadCookingExperienceMaintenance(repositoryRoot) ?? loadRecipeRequestRoleMaintenance(repositoryRoot) ?? loadRecipeSaveRecoveryMaintenance(repositoryRoot) ?? loadNutritionValidatorMaintenance(repositoryRoot);
 }
 export function recipeSaveRecoveryPhaseStatus(attempt,readerCompatible=false) {
   const {review,record}=attempt;assertRecipeSaveRecoveryReview(review);
@@ -2673,6 +2692,7 @@ export function assertRecipeRequestRoleMarker(maintenance,marker,sourceReaderMar
 // These are the three fixed committed maintenance anchors, not arbitrary historical state.
 export function matchesDatabaseMaintenanceBinding(value,current) {
   if (isDeepStrictEqual(value,current)) return true;
+  if(current?.schema==="homecook.saved-recipe-nutrition-maintenance.v1"&&current.predecessorMaintenance?.schema==="homecook.cooking-experience-maintenance.v1")return matchesDatabaseMaintenanceBinding(value,current.predecessorMaintenance);
   if (current?.schema === "homecook.cooking-experience-maintenance.v1" && current.predecessorMaintenance?.schema === "homecook.recipe-request-role-maintenance.v1") return matchesDatabaseMaintenanceBinding(value,current.predecessorMaintenance);
   if (current?.schema === "homecook.recipe-request-role-maintenance.v1" && current.predecessorMaintenance?.schema === "homecook.recipe-save-recovery-maintenance.v1") {
     if (isDeepStrictEqual(value,current.predecessorMaintenance)) return true;
@@ -2727,7 +2747,7 @@ export function loadCookingExperienceMaintenance(repositoryRoot) {
 // Cooking's DB/read successor preserves the existing C04/personal controls.
 // It is not authority to retarget any historical writer ON/OFF or retry proof.
 export function assertCookingWriterStatePreserved(databaseMaintenance) {
-  if (databaseMaintenance?.review.feature===COOKING_EXPERIENCE_FEATURE) throw new DeploymentError("Cooking235는 기존 C04/개인 실측 writer 상태를 보존합니다. writer 전환에는 별도 권위가 필요합니다.");
+  if ([COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(databaseMaintenance?.review.feature)) throw new DeploymentError("Cooking235는 기존 C04/개인 실측 writer 상태를 보존합니다. writer 전환에는 별도 권위가 필요합니다.");
 }
 
 export function cookingExperiencePhaseStatus(attempt,readerCompatible=false,legacyReaderCurrent=false) {
@@ -2738,4 +2758,43 @@ export function cookingExperiencePhaseStatus(attempt,readerCompatible=false,lega
     databasePlanSha256:committed?record.databasePlanSha256:unapplied?closedR2Hash(JSON.stringify({source:review.database.before,applied:review.database.before})):null,
     readerFloor:committed?review.to:null,readerPending:committed&&!readerCompatible,
     normalDeploymentAllowed:(committed||unapplied)&&(readerCompatible||legacyReaderCurrent&&review.legacyReaderCompatible),backwardCompatible:false};
+}
+
+// Successor authority is checked before235. Unknown/foreign238 intent cannot
+// fall through to a valid historical cooking receipt.
+export function readSavedRecipeNutritionAttempt(repositoryRoot){
+ const paths=protectedRolloutPaths(prelaunchStateRoot(),{feature:SAVED_RECIPE_NUTRITION_FEATURE});
+ if(!existsSync(paths.databaseGuardPath))return null;
+ const review=loadProtectedRolloutReview(repositoryRoot,{feature:SAVED_RECIPE_NUTRITION_FEATURE});
+ const bytes=readClosedR2PrivateBytes(paths.databaseGuardPath,repositoryRoot,524288),record=JSON.parse(bytes);
+ closedR2Require(record.schema==="homecook.prelaunch-protected-db-attempt.v1"&&record.feature===SAVED_RECIPE_NUTRITION_FEATURE
+  &&record.reviewSha256===SAVED_RECIPE_NUTRITION_REVIEW_PIN.sha256&&record.from===review.from&&record.to===review.to
+  &&record.journalFile==="attempt.json"&&record.readerFloor===review.to&&isDeepStrictEqual(record.predecessorMaintenance,review.predecessorMaintenance)
+  &&/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(record.operationId??"")
+  &&record.operationDirectory===join(paths.operationRoot,record.operationId)
+  &&["applying_precommit","commit_dispatch_guard","unknown","rolled_back_before_commit","committed","not_applied"].includes(record.status),"Saved nutrition unresolved/foreign guard cannot fall back to235");
+ closedR2Require(["committed","not_applied"].includes(record.status)?record.targetSha256===review.database.targetSha256:closedR2Hash(JSON.stringify(record.target))===review.database.targetSha256,"Saved nutrition attempt target differs");
+ return {review,record,bytes,paths};
+}
+export function loadSavedRecipeNutritionMaintenance(repositoryRoot){
+ const attempt=readSavedRecipeNutritionAttempt(repositoryRoot);if(!attempt)return null;
+ const {review,record,bytes,paths}=attempt;
+ closedR2Require(["committed","not_applied"].includes(record.status),"Saved nutrition238 outcome unresolved; retain guard");
+ const pointer={path:join(record.operationDirectory,"receipt.json"),sha256:closedR2Hash(bytes)};
+ closedR2Require(readClosedR2PrivateBytes(pointer.path,repositoryRoot,524288).equals(bytes),"Saved nutrition terminal/guard bytes differ");
+ if(record.status==="not_applied")return null;
+ assertSavedRecipeNutritionDatabaseReceipt(review,record);
+ const previous=loadCookingExperienceMaintenance(repositoryRoot);
+ closedR2Require(previous&&isDeepStrictEqual(cookingExperienceBinding(previous),review.predecessorMaintenance)
+  &&isDeepStrictEqual(previous.review.database.after,review.database.before)&&previous.review.database.targetSha256===review.database.targetSha256,"Saved nutrition committed235 predecessor differs");
+ return {...previous,review,record,pointer,guardPointer:{path:paths.databaseGuardPath,sha256:pointer.sha256},savedNutritionPredecessor:previous};
+}
+export function savedRecipeNutritionPhaseStatus(attempt,readerCompatible=false,legacyReaderCurrent=false){
+ const {review,record}=attempt;assertSavedRecipeNutritionReview(review);
+ const committed=record.status==="committed",unapplied=record.status==="not_applied";
+ if(committed)assertSavedRecipeNutritionDatabaseReceipt(review,record);
+ return {feature:SAVED_RECIPE_NUTRITION_FEATURE,phase:record.status,appliedLedgerCount:committed?238:unapplied?235:null,
+  databasePlanSha256:committed?record.databasePlanSha256:unapplied?closedR2Hash(JSON.stringify({source:review.database.before,applied:review.database.before})):null,
+  databaseReady:committed,readerPending:committed&&!readerCompatible,normalDeploymentAllowed:(committed||unapplied)&&(readerCompatible||legacyReaderCurrent&&review.legacyReaderCompatible),backwardCompatible:false,
+  recoveryPending:!committed&&!unapplied,rollbackAvailable:false,readerFloor:committed?review.to:null};
 }

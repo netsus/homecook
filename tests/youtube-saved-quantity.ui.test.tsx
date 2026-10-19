@@ -8,10 +8,16 @@ import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { fetchYoutubeSavedRecipe, updateYoutubeSavedRecipe } from "@/lib/api/youtube-saved-recipes";
 import type { YoutubeSavedRecipeResult } from "@/types/youtube-saved-recipe";
 import type { QuantityInputSnapshot } from "@/types/quantity-input";
+import { useActionConfirmationStore } from "@/stores/ui-store";
 import type { ApiResponse } from "@/types/api";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation, usePathname: () => "/recipes/youtube/saved/fixture", useSearchParams: () => new URLSearchParams() }));
+vi.mock("@/components/recipe/recipe-ingredient-add-modal", () => ({ RecipeIngredientAddModal: ({ onAdd, onClose }: {
+  onAdd: (rows: { ingredient_id: string; standard_name: string; amount: number; unit: string; ingredient_type: "QUANT"; display_text: string; scalable: boolean; sort_order: number }[]) => void;
+  onClose: () => void;
+}) => <button onClick={() => { onAdd([{ ingredient_id: "88888888-8888-4888-8888-888888888888", standard_name: "연결 식품",
+  amount: 999, unit: "개", ingredient_type: "QUANT", display_text: "덮어쓰면 안 됨", scalable: true, sort_order: 99 }]); onClose(); }}>합성 식품 선택</button> }));
 vi.mock("@/lib/api/cooking-methods", () => ({ fetchCookingMethods: vi.fn() }));
 vi.mock("@/lib/api/youtube-saved-recipes", () => ({ fetchYoutubeSavedRecipe: vi.fn(), updateYoutubeSavedRecipe: vi.fn(), ensureYoutubeSavedRecipe: vi.fn() }));
 const draftId = "11111111-1111-4111-8111-111111111111";
@@ -47,6 +53,37 @@ beforeEach(() => { vi.clearAllMocks();vi.mocked(fetchCookingMethods).mockResolve
 afterEach(cleanup);
 
 describe("saved YouTube raw quantity UI", () => {
+  it("shows saved-but-nutrition-pending without presenting it as a failed save", async () => {
+    const saved = fixture();saved.content.ingredients[0].catalog_ingredient_id = null;
+    saved.nutrition_publication = { status: "pending" };
+    vi.mocked(updateYoutubeSavedRecipe).mockResolvedValue(ok({ ...saved, revision: 2 }));
+    const user = userEvent.setup();await open();await title(user);await save(user);
+    await waitFor(() => expect(useActionConfirmationStore.getState().message).toBe("변경사항은 저장됐어요. 영양 계산은 준비되지 않아 다시 확인이 필요해요."));
+    expect(navigation.replace).toHaveBeenCalledWith(`/recipes/youtube/saved/${draftId}`);
+  });
+
+  it.each([true, false])("saves a metadata-only catalog choice, preserving source and entered quantity (known=%s)", async known => {
+    const original = fixture();
+    original.content.ingredients[0] = { ...original.content.ingredients[0], source_draft_ingredient_id: otherId,
+      standard_name: "소금", amount: known ? 10 : null, unit: known ? "g" : null,
+      quantity_mode: known ? "quantity" : "unknown", display_text: "원문 보존", quantity_input: undefined };
+    vi.mocked(fetchYoutubeSavedRecipe).mockResolvedValue(ok(original));
+    const user = userEvent.setup(); await open(); await user.click(screen.getByRole("button", { name: "재료 수정" }));
+    await user.click(screen.getByRole("button", { name: "재료 검색으로 교체" }));
+    await user.click(screen.getByRole("button", { name: "합성 식품 선택" })); await save(user);
+    expect(vi.mocked(updateYoutubeSavedRecipe).mock.calls[0][2].ingredients[0]).toEqual({
+      row_id: rowId, source_draft_ingredient_id: otherId, standard_name: "소금", quantity_mode: known ? "quantity" : "unknown",
+      amount: known ? 10 : null, unit: known ? "g" : null, display_text: "원문 보존", component_label: null,
+      catalog_ingredient_id: "88888888-8888-4888-8888-888888888888",
+    });
+  });
+  it("preserves an already selected catalog ID on a title-only save", async () => {
+    const original = fixture(); original.content.ingredients[0].catalog_ingredient_id = "88888888-8888-4888-8888-888888888888";
+    vi.mocked(fetchYoutubeSavedRecipe).mockResolvedValue(ok(original));
+    const user = userEvent.setup(); await open(); await title(user); await save(user);
+    expect(vi.mocked(updateYoutubeSavedRecipe).mock.calls[0][2].ingredients[0].catalog_ingredient_id).toBe("88888888-8888-4888-8888-888888888888");
+  });
+
   it("opts into reading and reopens 1/3 without decimal replacement", async () => {
     const user = userEvent.setup();await open();expect(fetchYoutubeSavedRecipe).toHaveBeenCalledWith(draftId, true);
     expect(screen.getByText("1/3g")).toBeTruthy();expect((await edit(user)).value).toBe("1/3");

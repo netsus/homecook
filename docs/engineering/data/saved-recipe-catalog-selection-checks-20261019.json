@@ -1,0 +1,278 @@
+{
+  "schema": "homecook.saved-catalog-selection-checks.v2",
+  "base": "4819d70fce255c1f0ac21215bb1f546f9c694afa",
+  "status": "isolated-candidate-not-complete-8",
+  "productionChanges": 0,
+  "actualRecipeWrites": 0,
+  "remoteChanges": 0,
+  "commits": 0,
+  "preservedStage1": {
+    "historical": true,
+    "patch": "/tmp/homecook-saved-catalog-stage1-20261019.patch",
+    "patchSha256": "b03cb26cbc2b141512e6865a8da5fe8b81cd40029ef3bcde9233777c78fec264",
+    "report": "/tmp/homecook-saved-catalog-stage1-sql-report-20261019.json",
+    "reportSha256": "95850506de9daa9eab9637bcd5a54b1dd2ddc12c7ee95577b051501f45941b2e",
+    "sql": {
+      "reportSha256": "95850506de9daa9eab9637bcd5a54b1dd2ddc12c7ee95577b051501f45941b2e",
+      "runId": "344508041122f745379799d8d4fd7fb5",
+      "status": "PASS",
+      "count": 15,
+      "cleanup": true,
+      "beforeSeed": {
+        "rows": 0,
+        "tables": 153
+      },
+      "functionDelta": {
+        "changed": 5,
+        "otherFunctionsUnchanged": true,
+        "oidOwnerAclAndConfigurationUnchanged": true,
+        "workerReadinessUnchanged": true
+      },
+      "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+      "suite": "25d64285d07e8862b086a086c4b1cb7925909b9cb247b67fb6e8d02455c18065",
+      "httpTested": false,
+      "operatingAuthorityApproval": false
+    },
+    "checks": {
+      "vitest": {
+        "files": 5,
+        "pass": 68
+      },
+      "typecheck": {
+        "exit": 0
+      },
+      "eslint": {
+        "exit": 0,
+        "warnings": 0
+      },
+      "antiSlop": {
+        "verifyExit": 1,
+        "directExit": 1,
+        "existingFindings": 5,
+        "existingFindingFilesByteEqualBase": true,
+        "newChangedFileFindings": 0,
+        "baselineUpdated": false
+      },
+      "build": "not-run",
+      "chrome": "not-run"
+    },
+    "files": {
+      "supabase/migrations/20261019120000_youtube_saved_catalog_selection.sql": "8085c98c35afe5277b9eaa3dc4a9ffffcefd9e533b3396dc80c2fc54daab81b0",
+      "scripts/run-saved-recipe-catalog-postgres.mjs": "ca5f99a61d070d4139fc2d77072383ae7b43245c659c24c6a09ff13ab26faf49",
+      "tests/youtube-saved-catalog-postgres.integration.test.ts": "25d64285d07e8862b086a086c4b1cb7925909b9cb247b67fb6e8d02455c18065"
+    }
+  },
+  "currentSql": {
+    "catalog": {
+      "path": "/tmp/homecook-saved-catalog-postgres-report.json",
+      "sha256": "15dc47ed790af45851629737a005cb0278884096cf346b733898201f3857eee2",
+      "runId": "a2e67400515f22ce928a4f3bf540b1dc",
+      "status": "PASS",
+      "count": 15,
+      "cleanup": true,
+      "beforeSeed": {
+        "rows": 0,
+        "tables": 153
+      },
+      "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+      "suite": {
+        "path": "tests/youtube-saved-catalog-postgres.integration.test.ts",
+        "sha256": "25d64285d07e8862b086a086c4b1cb7925909b9cb247b67fb6e8d02455c18065"
+      },
+      "functionDelta": {
+        "changed": 5,
+        "otherFunctionsUnchanged": true,
+        "oidOwnerAclAndConfigurationUnchanged": true,
+        "workerReadinessUnchanged": true
+      },
+      "httpTested": false,
+      "operatingAuthorityApproval": false,
+      "runnerSha256": "80d68136ab48806b95f4bf1fa1e92f05966326b1ab5a024bd06eeda13f88f604"
+    },
+    "publication": {
+      "path": "/tmp/homecook-saved-publication-postgres-report.json",
+      "sha256": "e746c667f08df158651190cf93171163d59804d6e64c047283361ca1a8dd5270",
+      "runId": "3fa9aa45b36d4a55bda977ccd21cd380",
+      "status": "PASS",
+      "count": 20,
+      "cleanup": true,
+      "beforeSeed": {
+        "rows": 0,
+        "tables": 153
+      },
+      "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+      "suite": {
+        "path": "tests/youtube-saved-publication-postgres.integration.test.ts",
+        "sha256": "e3b7793564096ad1e4fa33ca2107e77fd9bd72c9dafad32b84a2d6be2e3d8dcb"
+      },
+      "functionDelta": {
+        "changed": 5,
+        "otherFunctionsUnchanged": true,
+        "oidOwnerAclAndConfigurationUnchanged": true,
+        "workerReadinessUnchanged": true
+      },
+      "httpTested": false,
+      "operatingAuthorityApproval": false,
+      "runnerSha256": "80d68136ab48806b95f4bf1fa1e92f05966326b1ab5a024bd06eeda13f88f604",
+      "publicationFunctionDelta": {
+        "changed": 3,
+        "onlyPublicFunctions": true,
+        "guardLanguage": "sql-to-plpgsql",
+        "oidOwnerAclConfigSecurityVolatilityUnchanged": true,
+        "privateFunctionsUnchanged": true,
+        "workerReadinessUnchanged": true
+      }
+    }
+  },
+  "checks": {
+    "vitest": {
+      "files": 5,
+      "pass": 72
+    },
+    "typecheck": {
+      "exit": 0
+    },
+    "eslint": {
+      "exit": 0,
+      "warnings": 0
+    },
+    "antiSlop": {
+      "verifyExit": 1,
+      "directExit": 1,
+      "existingFindings": 5,
+      "unchangedFindingSyntax": true,
+      "publicNutritionHelperOnlyAddsExport": true,
+      "otherFourFindingFilesByteEqualBase": true,
+      "newChangedFileFindings": 0,
+      "baselineUpdated": false
+    },
+    "build": "not-run",
+    "chrome": "not-run",
+    "postgrestHttp": "not-run"
+  },
+  "functionScope": {
+    "migration236": 5,
+    "migration237": 3,
+    "newFunctions": 0,
+    "aclScopeOrWorkerChanges": 0,
+    "guardLanguage": "SQL-to-PLpgSQL",
+    "metadataExceptGuardLanguageUnchanged": true,
+    "privateFunctionsUnchanged": true,
+    "workerReadinessUnchangedInSyntheticFixture": true
+  },
+  "files": {
+    "app/api/v1/recipes/[id]/route.ts": "61d3dc02d64b380230dd9f51c79f83abe2d2cc1586917728fe14d1bdc3dcd662",
+    "components/recipe/youtube-import-screen.tsx": "eb711fc58f9a5fde0df4af2fd5dc31e94d91412fff500da7731224cba1e4623a",
+    "lib/server/youtube-public-recipe-nutrition.ts": "1fc264912d60db4c54a5f03699ddd87943e8bd0010f6a91260129cd78379edd2",
+    "lib/server/youtube-saved-public-recipe.ts": "d605bf8ac6ce4224920f50be16c76f96eebb68491d1ba38016ed81bd4c46a4b5",
+    "lib/server/youtube-saved-recipe-nutrition.ts": "d61f858480a295ca9a8909cf2d50261a645a95ae285954ee1537bdf87ef453ce",
+    "lib/server/youtube-saved-recipes.ts": "67cf510b121ed746a62a9a6292a6553878bde6900662bfc8908fedbf59ed0e67",
+    "scripts/run-saved-recipe-catalog-postgres.mjs": "80d68136ab48806b95f4bf1fa1e92f05966326b1ab5a024bd06eeda13f88f604",
+    "supabase/migrations/20261019120000_youtube_saved_catalog_selection.sql": "b7df06e51c2cb9ea95eb03154cf4b80e0268c949c4d104be4f72d464d2e88ac6",
+    "supabase/migrations/20261019130000_youtube_saved_nutrition_publication.sql": "fc9f65b1d592ae60062fbc7a3eaa40da8b8fa6a3d17d6b9f676e053e6ad7e60e",
+    "tests/youtube-public-nutrition-route.test.ts": "f0f88e7bf2f791a629833da11121c990b61beeeef99683cf8efd570bbf7b0aee",
+    "tests/youtube-saved-catalog-postgres.integration.test.ts": "25d64285d07e8862b086a086c4b1cb7925909b9cb247b67fb6e8d02455c18065",
+    "tests/youtube-saved-publication-postgres.integration.test.ts": "e3b7793564096ad1e4fa33ca2107e77fd9bd72c9dafad32b84a2d6be2e3d8dcb",
+    "tests/youtube-saved-quantity.ui.test.tsx": "bdb6675149b0ce312f1b42da47dfc5bb2692379cf127971322b6d566fa5293d0",
+    "tests/youtube-saved-recipes-route.test.ts": "b3b584870ffa9848073d7399b7f4aeec9cbae78eae0cbf6ab07813105ed20bcf",
+    "types/youtube-saved-recipe.ts": "8e5aa85a4278ad9e340a834e9cf3adb272fd8175550bcd2f9c3e894760b14b2f"
+  },
+  "remaining": [
+    "Independent review and new operating authority for236/237; existing235 approval not reused",
+    "Actual affected recipes and browser/mobile/desktop validation; actual recipe/data edits0",
+    "Evidence-only same-content recalculation may return pending on immutable identity collision; no overwrite/newhash policy",
+    "No new meal/GET retry ensure; unavailable or no matching standalone pin fail-closed",
+    "Frozen quantity numeric echo238 is separate root-owned work"
+  ],
+  "priorSqlBeforeTitleStepsFix": {
+    "catalog": {
+      "path": "/tmp/homecook-saved-catalog-pre-retire-fix-report-20261019.json",
+      "sha256": "5534041db01b3254914171fb9ea89eb33f6def1f8bef83d66fd0ebb8431160d7",
+      "runId": "ebdbc1f622b10bb6f0af77dd1f848c32",
+      "status": "PASS",
+      "count": 15,
+      "cleanup": true,
+      "beforeSeed": {
+        "rows": 0,
+        "tables": 153
+      },
+      "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+      "suite": {
+        "path": "tests/youtube-saved-catalog-postgres.integration.test.ts",
+        "sha256": "25d64285d07e8862b086a086c4b1cb7925909b9cb247b67fb6e8d02455c18065"
+      },
+      "functionDelta": {
+        "changed": 5,
+        "otherFunctionsUnchanged": true,
+        "oidOwnerAclAndConfigurationUnchanged": true,
+        "workerReadinessUnchanged": true
+      },
+      "httpTested": false,
+      "operatingAuthorityApproval": false
+    },
+    "publication": {
+      "path": "/tmp/homecook-saved-publication-pre-retire-fix-report-20261019.json",
+      "sha256": "8dbacf3e202bd1ca39880bdddd251ef450cbe3660a1bd95df46d24114e1f359f",
+      "runId": "388418183c616b74fc378e775b656784",
+      "status": "PASS",
+      "count": 18,
+      "cleanup": true,
+      "beforeSeed": {
+        "rows": 0,
+        "tables": 153
+      },
+      "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+      "suite": {
+        "path": "tests/youtube-saved-publication-postgres.integration.test.ts",
+        "sha256": "3c3885f00ba6068fae97ccfcdf966909332fbbce8583cde18ba9774d2501cfc6"
+      },
+      "functionDelta": {
+        "changed": 5,
+        "otherFunctionsUnchanged": true,
+        "oidOwnerAclAndConfigurationUnchanged": true,
+        "workerReadinessUnchanged": true
+      },
+      "httpTested": false,
+      "operatingAuthorityApproval": false,
+      "publicationFunctionDelta": {
+        "changed": 3,
+        "onlyPublicFunctions": true,
+        "guardLanguage": "sql-to-plpgsql",
+        "oidOwnerAclConfigSecurityVolatilityUnchanged": true,
+        "privateFunctionsUnchanged": true,
+        "workerReadinessUnchanged": true
+      },
+      "runnerSha256": "5d13b8b5b13d4780d7d7287ff4708d69d1f58e7acabb0ffb1fa64780c0a4b5f7"
+    }
+  },
+  "postReviewTitleStepsRetirement": {
+    "originalPatch": "/tmp/homecook-saved-catalog-publication-candidate-20261019.patch",
+    "originalPatchSha256": "b347c1d0b63d6338e15f62c33364a9fea2b8ff0997c35ecce64078d1a395c9e0",
+    "red": {
+      "pass": 18,
+      "fail": 2,
+      "cleanup": true,
+      "report": "/tmp/homecook-saved-title-steps-retire-red-report-20261019.json",
+      "reportSha256": "0e82aba9ab3e3c20d7d13b7cbf352bff9e681788a6cb2bfadfdf3826e507247c",
+      "log": "/tmp/homecook-saved-title-steps-retire-red-20261019.log",
+      "logSha256": "e7ab43d07cc5e185730b38078f227487694a6e7f15f820aa15dcd374592c09a0"
+    },
+    "firstGreenAttempt": {
+      "outcome": "suite-timeout-143",
+      "cleanup": true,
+      "report": "/tmp/homecook-saved-title-steps-retire-timeout-report-20261019.json",
+      "reportSha256": "0d250c319ff448bbc0293a62a0dc978099587e75c2216e7814921c6e8daf445e"
+    },
+    "final": {
+      "sql236Pass": 15,
+      "sql237Pass": 20,
+      "cleanup": true,
+      "typecheckExit": 0,
+      "relatedEslintExit": 0
+    },
+    "change": "Retire current nutrition on canonical title/steps changes before future-meal content selection; no past payload/pin changes",
+    "functionCountUnchanged": true,
+    "vitestCallOnlyTimeoutSeconds": 120,
+    "otherCommandTimeoutSeconds": 60
+  }
+}

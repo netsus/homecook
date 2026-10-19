@@ -5882,3 +5882,15 @@ PATCH `/cooking/session-attempts/{id}/ingredients`는 Idempotency-Key와 `{expec
 ### 2026-10-17 최근 공개 YouTube 영양 부분 복구 후속
 
 공개 canonical 레시피에 기존 영양 snapshot이 없을 때, quantity-v4 행 하나 때문에 전체 계산을 중단하지 않는다. 직접 g/kg/ml/L의 원문·현재량·정규화량이 일치하고 direct/실패사유없음/frozen-batch없음을 검증한 행과 기존 직접량만 계산한다. 불량·추정·미확인 수량은 해당 행의 결측으로 유지한다. v4가 섞인 레시피는 v4 단위 규칙만 사용하며 옛 숟가락/개 환산으로 재해석하지 않는다. 부분값은 확인된 일부이며 전체 열량으로 주장하지 않는다. 기존 snapshot 우선·제품/비공개/권한·GET쓰기0 경계는 유지한다. 최근 source/연결 보완 및 운영 데이터 적용은 [작업 기록](engineering/cooking-experience-20261017.md)의 별도 미완료 범위다.
+
+## 2026-10-19 — 저장 YouTube 재료의 명시 식품 연결 (로컬 후보·미배포)
+
+`PATCH /recipes/youtube/saved-drafts/{draft_id}`의 재료에 optional `catalog_ingredient_id: UUID|null`을 추가한다. UUID는 현재 선택 가능한 실제 catalog 행만 받는다. null은 명시 연결 해제이며 원천 자동매칭을 다시 사용하지 않는다. 생략은 같은 행/이름의 기존 명시 선택을 보존하며, 기존8필드 행에 불필요한 null을 추가하지 않는다. 선택은 `standard_name`, 현재 amount/unit/quantity_mode/display_text/component_label, 원 source pointer를 바꾸지 않는다. 이름을 바꾸면 기존 선택을 해제한다.
+
+기존 owner/session, expected_revision CAS, Idempotency-Key와 durable replay를 유지한다. 식품에 의존한 frozen 수량은 다른 식품 선택에 재사용하지 않고 `QUANTITY_INPUT_REQUIRED`를 반환한다. 미확인량은 catalog가 연결돼도 null과 partial/unavailable을 유지한다. 수량을 먼저 수정한 경우 그 변경을 저장한 후 식품을 연결한다.
+
+owner DTO의 `ingredient_links`는 명시 선택에 `catalog_name`을 덧붙인다. 내부 공개 detail projection은 선택 또는 해제 key의 존재를 `catalog_selection_present` boolean으로만 전달하며 owner/source 원문을 공개하지 않는다. 이 boolean이 true인 공개 canonical 상세는 오래된 영양snapshot 대신 현재 재료를 읽기 계산하고, 계산 실패는 일시 불가이며 옛값을 대신 표시하지 않는다. 기존 선택 없는 snapshot 우선 정책은 유지한다.
+
+owner DTO에 read-only `canonical_content_hash`를 추가한다. 명시 선택/해제 저장 성공 후 원 receipt의 revision/updated_at/hash가 현재와 같을 때만 기존 authenticated owner writer로 현재 영양을 발행한다. 저장 성공 data는 보존하고 `nutrition_publication: {status: "ready"|"pending"|"stale"}`를 부가한다. 이 상태는 durable receipt를 바꾸지 않는 현재 시도 결과다. 경쟁 편집/근거 drift/발행 장애는 저장 성공과 별개로 알리며 최신 revision을 대신 발행하거나 오래된 영양을 재노출하지 않는다.
+
+237 후보는 새 영양과 content pin을 같은 TX로 확보한다. canonical 독립 요리 시작은 현재 content hash/current nutrition에 맞는 pin을 고른다. 발행이 실패해 일치 pin이 없으면 오래된 pin을 사용하지 않고 기존 RESOURCE_NOT_FOUND 경계로 거절한다. 새 meal의 영양이 아직 없으면 unavailable이다. 미확인량은 발행 성공 후에도 unavailable/partial이다. [격리 검증과 남은 운영·화면 범위](engineering/saved-recipe-catalog-selection-20261019.md)를 따른다.

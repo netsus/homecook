@@ -6,6 +6,8 @@ import type {
 import { isQuantityInputSnapshot } from "@/lib/quantity-input";
 
 export interface YoutubeSavedPublicRecipeProjection {
+  /** Current owner-selected identity exists; legacy nutrition snapshots may predate it. */
+  catalogSelectionPresent?: boolean;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
 }
@@ -147,6 +149,7 @@ export function parseYoutubeSavedPublicRecipeProjection(
 ): YoutubeSavedPublicRecipeProjection | null {
   if (
     !isRecord(value)
+    || ("catalog_selection_present" in value && typeof value.catalog_selection_present !== "boolean")
     || !Array.isArray(value.ingredients)
     || !Array.isArray(value.steps)
   ) {
@@ -162,8 +165,10 @@ export function parseYoutubeSavedPublicRecipeProjection(
     return null;
   }
 
-  return {
+  const projection: YoutubeSavedPublicRecipeProjection = {
     ingredients: ingredients as RecipeIngredient[],
     steps: steps as RecipeStep[],
   };
+  if (typeof value.catalog_selection_present === "boolean") projection.catalogSelectionPresent = value.catalog_selection_present;
+  return projection;
 }
