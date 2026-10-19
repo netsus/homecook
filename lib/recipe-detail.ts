@@ -42,7 +42,7 @@ interface RecipeStepsRow {
   step_number: number;
   instruction: string;
   component_label?: string | null;
-  ingredients_used: RecipeStep["ingredients_used"] | null;
+  ingredients_used: unknown;
   heat_level: string | null;
   duration_seconds: number | null;
   duration_text: string | null;
