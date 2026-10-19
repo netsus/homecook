@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면131/계약14이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면130/계약13이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -385,6 +385,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 수정 전52 PASS, 최종 SDK9+기존41+bootstrap11=3 suite61 PASS·전체 typecheck·lint(max-warnings0)·Anti131/baseline207/신규0·diff PASS다. 정확 선택문/owner·registered·shopping_list_id is.null·created/id 정렬, 고정title/legacyfallback·빈목록·guest401·깨진pin/조회500·column조회 실패fallback을 SDK 요청으로 확인했다.
 - 독립 리뷰도 최종3 suite61 PASS·전체 typecheck/lint/diff PASS와 실제 SQL·후속 nullable 대조/실제 SDK 선택 행·런타임 보존을 확인해 APPROVE했다. 중복 수는 합산하지 않는다.
 - master 계약28과 로컬 채택 후14를 구분한다. SQL/실DB/권한/운영·원격 반영·새 도구/배포 변경0, 운영 승인은 대기한다.
+
+## Bootstrap 후속: 기존 요리 세션 취소1건 로컬 완료
+
+- preview1은 `c899fe6de`로 보존했다. 기존 취소의 native session1표/select/update/maybeSingle와 실제 상태3종enum을 맞췄다. cancelled 응답 상수가 DB 반환 row를 한 종류로 좁히지 않도록 했다. update 입력은 기존 cancelled 한 값, 같은 client bootstrap 분리 대입이며 기존 직접DML의 database-before-trigger 권한 경계를 승계/확대/완화하지 않았다.
+- 기존 cancel 기준선2 PASS/15 이름필터 제외, 최종 SDK10+bootstrap11=21 PASS와 기존2 PASS/15 제외로 고유23 PASS다. 전체 typecheck·lint(max-warnings0)·Anti130/baseline207/신규0·diff PASS다. owner403/완료409/guest401/없음404/조회·update500·이미취소 멱등성·정확id/owner update필터를 고정했다.
+- 독립 리뷰도 고유23 PASS/15 필터 제외·전체 nonincremental typecheck/diff PASS와 SQL/권한·상태흐름 불변을 확인해 APPROVE했다. 해당 권한 경계 전체의 안전성을 새로 검증한 것으로 확대하지 않는다.
+- 상태 전이·auth/세션/DB/SQL/실데이터·운영/원격/새 도구·배포 변경0이다. master 계약28과 로컬 채택 후13을 구분한다. 기존 권한 결속을 해결했다는 주장이 아니다.
 
 ## 보류·기술적 경계
 

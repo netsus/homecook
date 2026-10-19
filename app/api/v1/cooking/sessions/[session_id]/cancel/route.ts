@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { isUuid } from "@/lib/server/cooking";
 import {
   ensurePublicUserRow,
@@ -15,45 +16,19 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  message: string;
-}
-
-interface SessionRow {
-  id: string;
-  user_id: string;
-  status: CookingSessionStatus;
-}
-
-interface SessionUpdateRow {
-  id: string;
-  status: "cancelled";
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface SessionsSelectQuery {
-  eq(column: string, value: string): SessionsSelectQuery;
-  maybeSingle(): MaybeSingleResult<SessionRow>;
-}
-
-interface SessionsUpdateQuery {
-  eq(column: string, value: string): SessionsUpdateQuery;
-  select(columns: string): SessionsUpdateQuery;
-  maybeSingle(): MaybeSingleResult<SessionUpdateRow>;
-}
-
-interface CookingSessionsTable {
-  select(columns: string): SessionsSelectQuery;
-  update(value: { status: "cancelled" }): SessionsUpdateQuery;
-}
-
-interface CookingCancelDbClient {
-  from(table: "cooking_sessions"): CookingSessionsTable;
-}
+// Real session enum and selected-single update result; the response's existing
+// cancelled literal does not narrow the database row's three-state enum.
+export type CookingCancelDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      cooking_sessions: {
+        Row: { id: string; user_id: string; status: CookingSessionStatus };
+        Insert: never; Update: { status: "cancelled" }; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
@@ -74,12 +49,12 @@ export async function POST(_request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    CookingCancelDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: CookingCancelDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",

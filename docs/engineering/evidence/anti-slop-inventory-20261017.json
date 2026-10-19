@@ -20,10 +20,10 @@
   "candidateObservation": {
     "baseCommit": "64112be4bec14e29f88449214140250685210f15",
     "branch": "codex/cook-mode-row-contract-20261019",
-    "total": 131,
+    "total": 130,
     "newFindings": 0,
-    "contractCandidatesAfterAdoption": 14,
-    "status": "local commits through 7468cbb30(nullable correction, no extra reduction) plus verified preview1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
+    "contractCandidatesAfterAdoption": 13,
+    "status": "local commits through c899fe6de(preview1) plus verified legacy-cancel1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
   },
   "nullableShoppingContractFollowup": {
     "files": ["shopping/lists/[list_id]/share-text", "shopping/lists/[list_id]/items/bulk", "shopping/lists/[list_id]/items/[item_id]"],
@@ -1895,6 +1895,12 @@
       "snippet": "routeClient as unknown as CookingCancelDbClient & UserBootstrapDbClient",
       "state": "needs-contract-refactor",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "pendingLocalResolution": {
+        "branch": "codex/cook-mode-row-contract-20261019",
+        "reason": "Native session table exact select/update/maybeSingle with actual three-state enum, cancel-only update payload and same client bootstrap separation. No runtime query/state/authority change, preserve existing database-before-trigger boundary without promoting or relaxing it.",
+        "verification": "SDK10+bootstrap11=21 PASS plus existing cancel2 PASS/15 filtered: unique23 PASS; whole typecheck, lint max-warnings0, Anti130/new0 and diff PASS; independent23 PASS/15 filtered/nonincremental typecheck/diff APPROVE. Owner403/completed409/guest401/missing404/read-update500/idempotence and exact owner/id update filters locked. No new casts/wrappers/suppressions/SQL/auth/operational changes.",
+        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption13"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
