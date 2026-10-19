@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop87 안전분리 후보·운영93
+
+provider1은 Draft1836에 원R2 보호거절과 함께 보존하고 사용자 승인된 끼니5/삭제JSON1만 분리했다.9suite141 PASS·전체타입/lint/verify87신규0·독립 APPROVE, 원16376해결/87잔여다. 새분리 머지/배포는 대기이며 실제5ea/buildwPutWL·DB238·Anti93은 단일배포1473 PASS/133 이름필터SKIP·9읽기지문 동일로 확인했다. [분리 증거·기존 실패·후속4](../engineering/anti-slop-meal-safe-split-20261020.md)를 따른다. 아래93로컬은 당시 이력이다.
+
 ## 2026-10-20 — Anti Slop93 플래너 동작 보존 로컬 묶음
 
 기존 충돌 방지 보호를 사용자 인계로 해제한 플래너/끼니/UI19건 중12건을5논리커밋(source `b867b1e3e`)으로 정리했다. native SDK 선택 계약·미사용 query 타입 삭제·scoped RPC 직접 전달·기존 완전한 복원 validator의 정확한 타입 표현이며 새 제품 정책/guard/권한 변경0이다. 통합18suite209 PASS·전체 타입/lint/verify93/신규0·독립 검토 통과, 원16370해결/93잔여다. 아직 머지0/운영0이고 실제7d15/Anti105·DB238이다. 부모의 정확7d15 인증 읽기QA PASS는 새 source QA와 구분한다. 기존 meals GET1실패는 미수정7d15에서도 재현했으며 권한3/static3/444/별도49미발견·legacy 실제완료 미실행을 보존했다. YouTube17 dirty는 비접촉, 해제된 후속7은 검토 대기이며 유지8 ID의 의미/실익 근거를 [새 기록](../engineering/anti-slop-planner-contracts-20261020.md)에 고정했다. 작은 수정마다 배포하지 않고 최종 검증 후 앱 묶음으로 반영한다.
