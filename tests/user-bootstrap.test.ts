@@ -60,8 +60,8 @@ function createMemoryBootstrapClient({
       if (table === "users") {
         const selectQuery = {
           filters: {} as Record<string, string>,
-          eq(column: string, value: string) {
-            this.filters[column] = value;
+          match(filters: Record<string, string>) {
+            Object.assign(this.filters, filters);
             return this;
           },
           async maybeSingle() {
@@ -93,8 +93,8 @@ function createMemoryBootstrapClient({
         const updateQuery = {
           filters: {} as Record<string, string>,
           patch: {} as Partial<MemoryUserRow>,
-          eq(column: string, value: string) {
-            this.filters[column] = value;
+          match(filters: Record<string, string>) {
+            Object.assign(this.filters, filters);
             return this;
           },
           select() {
@@ -142,8 +142,8 @@ function createMemoryBootstrapClient({
         const selectQuery = {
           filters: {} as Record<string, string>,
           orders: [] as Array<{ column: keyof MemoryRecipeBookRow; ascending: boolean }>,
-          eq(column: string, value: string) {
-            this.filters[column] = value;
+          match(filters: Record<string, string>) {
+            Object.assign(this.filters, filters);
             return this;
           },
           order(column: keyof MemoryRecipeBookRow, options: { ascending: boolean }) {
@@ -207,8 +207,8 @@ function createMemoryBootstrapClient({
       const selectQuery = {
         filters: {} as Record<string, string>,
         orders: [] as Array<{ column: keyof MemoryPlannerColumnRow; ascending: boolean }>,
-        eq(column: string, value: string) {
-          this.filters[column] = value;
+        match(filters: Record<string, string>) {
+          Object.assign(this.filters, filters);
           return this;
         },
         order(column: keyof MemoryPlannerColumnRow, options: { ascending: boolean }) {

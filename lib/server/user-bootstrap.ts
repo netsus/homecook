@@ -22,39 +22,45 @@ interface QueryOrderOption {
   ascending: boolean;
 }
 
+const USER_COLUMNS = "id, nickname, email, profile_image_url, settings_json";
+const RECIPE_BOOK_COLUMNS = "id, name, book_type, sort_order, cover_color_key, cover_image_url";
+const PLANNER_COLUMN_COLUMNS = "id, name, sort_order";
+
+interface SelectedSingleRowQuery<T> {
+  maybeSingle(): MaybeSingleQueryResult<T>;
+}
+
 interface UserRow {
   id: string;
   nickname: string;
   email: string | null;
   profile_image_url: string | null;
-  settings_json: Record<string, unknown> | null;
+  settings_json: unknown;
 }
 
 interface UsersSelectQuery {
-  eq(column: string, value: string): UsersSelectQuery;
-  maybeSingle(): MaybeSingleQueryResult<UserRow>;
+  match(filters: { id: string }): SelectedSingleRowQuery<UserRow>;
 }
 
 interface UsersInsertQuery {
-  select(columns: string): UsersInsertQuery;
-  maybeSingle(): MaybeSingleQueryResult<UserRow>;
+  select(columns: typeof USER_COLUMNS): SelectedSingleRowQuery<UserRow>;
 }
 
 interface UsersUpdateQuery {
-  eq(column: string, value: string): UsersUpdateQuery;
-  select(columns: string): UsersUpdateQuery;
-  maybeSingle(): MaybeSingleQueryResult<UserRow>;
+  match(filters: { id: string }): {
+    select(columns: typeof USER_COLUMNS): SelectedSingleRowQuery<UserRow>;
+  };
 }
 
 interface UsersTable {
-  select(columns: string): UsersSelectQuery;
+  select(columns: typeof USER_COLUMNS): UsersSelectQuery;
   insert(values: {
     id: string;
     nickname: string;
     email: string | null;
     profile_image_url: string | null;
     social_provider: "kakao" | "naver" | "google";
-    social_id: string | null;
+    social_id: string;
     settings_json: Record<string, unknown>;
     created_at: string;
     updated_at: string;
@@ -72,25 +78,24 @@ interface UsersTable {
 interface RecipeBookRow {
   id: string;
   name: string;
-  book_type: string;
+  book_type: "my_added" | "saved" | "liked" | "custom";
   sort_order: number;
-  cover_color_key?: string | null;
-  cover_image_url?: string | null;
+  cover_color_key: string | null;
+  cover_image_url: string | null;
 }
 
 interface RecipeBooksSelectQuery {
-  eq(column: string, value: string): RecipeBooksSelectQuery;
+  match(filters: { user_id: string }): RecipeBooksSelectQuery;
   order(column: string, options: QueryOrderOption): RecipeBooksSelectQuery;
   then: ArrayQueryResult<RecipeBookRow>["then"];
 }
 
 interface RecipeBooksInsertQuery {
-  select(columns: string): RecipeBooksInsertQuery;
-  maybeSingle(): MaybeSingleQueryResult<RecipeBookRow>;
+  select(columns: typeof RECIPE_BOOK_COLUMNS): SelectedSingleRowQuery<RecipeBookRow>;
 }
 
 interface RecipeBooksTable {
-  select(columns: string): RecipeBooksSelectQuery;
+  select(columns: typeof RECIPE_BOOK_COLUMNS): RecipeBooksSelectQuery;
   insert(values: {
     id: string;
     user_id: string;
@@ -111,18 +116,17 @@ interface PlannerColumnRow {
 }
 
 interface PlannerColumnsSelectQuery {
-  eq(column: string, value: string): PlannerColumnsSelectQuery;
+  match(filters: { user_id: string }): PlannerColumnsSelectQuery;
   order(column: string, options: QueryOrderOption): PlannerColumnsSelectQuery;
   then: ArrayQueryResult<PlannerColumnRow>["then"];
 }
 
 interface PlannerColumnsInsertQuery {
-  select(columns: string): PlannerColumnsInsertQuery;
-  maybeSingle(): MaybeSingleQueryResult<PlannerColumnRow>;
+  select(columns: typeof PLANNER_COLUMN_COLUMNS): SelectedSingleRowQuery<PlannerColumnRow>;
 }
 
 interface PlannerColumnsTable {
-  select(columns: string): PlannerColumnsSelectQuery;
+  select(columns: typeof PLANNER_COLUMN_COLUMNS): PlannerColumnsSelectQuery;
   insert(values: {
     id: string;
     user_id: string;
@@ -246,8 +250,8 @@ function isDuplicateKeyConflict(error: QueryError | null) {
 async function readUserRow(dbClient: UserBootstrapDbClient, userId: string) {
   const result = await dbClient
     .from("users")
-    .select("id, nickname, email, profile_image_url, settings_json")
-    .eq("id", userId)
+    .select(USER_COLUMNS)
+    .match({ id: userId })
     .maybeSingle();
 
   if (result.error) {
@@ -260,8 +264,8 @@ async function readUserRow(dbClient: UserBootstrapDbClient, userId: string) {
 async function listRecipeBooks(dbClient: UserBootstrapDbClient, userId: string) {
   const result = await dbClient
     .from("recipe_books")
-    .select("id, name, book_type, sort_order, cover_color_key, cover_image_url")
-    .eq("user_id", userId)
+    .select(RECIPE_BOOK_COLUMNS)
+    .match({ user_id: userId })
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
 
@@ -275,8 +279,8 @@ async function listRecipeBooks(dbClient: UserBootstrapDbClient, userId: string) 
 async function listPlannerColumns(dbClient: UserBootstrapDbClient, userId: string) {
   const result = await dbClient
     .from("meal_plan_columns")
-    .select("id, name, sort_order")
-    .eq("user_id", userId)
+    .select(PLANNER_COLUMN_COLUMNS)
+    .match({ user_id: userId })
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
 
@@ -338,7 +342,7 @@ export async function ensurePublicUserRow(
       updated_at: now,
       deleted_at: null,
     })
-    .select("id, nickname, email, profile_image_url, settings_json")
+    .select(USER_COLUMNS)
     .maybeSingle();
 
   if (insertResult.error || !insertResult.data) {
@@ -387,7 +391,7 @@ export async function ensureUserBootstrapState(
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .select("id, name, book_type, sort_order, cover_color_key, cover_image_url")
+      .select(RECIPE_BOOK_COLUMNS)
       .maybeSingle();
 
     if (!isDuplicateKeyConflict(createResult.error) && (createResult.error || !createResult.data)) {
@@ -421,7 +425,7 @@ export async function ensureUserBootstrapState(
             : getNextSortOrder(currentColumns),
         created_at: new Date().toISOString(),
       })
-      .select("id, name, sort_order")
+      .select(PLANNER_COLUMN_COLUMNS)
       .maybeSingle();
 
     if (!isDuplicateKeyConflict(createResult.error) && (createResult.error || !createResult.data)) {
@@ -442,8 +446,8 @@ export async function ensureUserBootstrapState(
       },
       updated_at: new Date().toISOString(),
     })
-    .eq("id", userId)
-    .select("id, nickname, email, profile_image_url, settings_json")
+    .match({ id: userId })
+    .select(USER_COLUMNS)
     .maybeSingle();
 
   if (updateResult.error || !updateResult.data) {
