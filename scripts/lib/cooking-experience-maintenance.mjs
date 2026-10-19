@@ -248,12 +248,29 @@ export function cookingExperienceBinding(maintenance) {
     readerFloor: maintenance.review.to, predecessorMaintenance: maintenance.review.predecessorMaintenance };
 }
 
+export const COOKING_WEB_TEST_SUCCESSOR = Object.freeze({
+  from: "1802b2276b6e938e317e7e2cabd6d234547354da",
+  to: "d9e6c6b2cf22c327a8cec4be87cd27000ab08b01",
+  path: "tests/recipe-book-detail-screen.test.tsx",
+  before: "c1d88fd4845cb7d0f2981e0f56258ea23506327cad445f2fe306fdcd2b261c2d",
+  after: "6bca16ea1f4fbc84c28148fcee8564d971cb3dc9b4662f41d8b31beb9115e962",
+});
+
 export function assertCookingExperienceSourceHandoff({ maintenance, from, to, live, files, digests, reviewedSourceAncestor }) {
   cookingExperienceBinding(maintenance);
   const review = maintenance.review;
-  check(from === review.from && to === review.to && live?.ref === from && live.buildId === review.legacyReader.buildId
+  // One direct test-only child corrects two removed desktop-navigation expectations.
+  // All product/build bytes, the original DB235 authority and other pairs stay exact.
+  const successor = COOKING_WEB_TEST_SUCCESSOR;
+  const testOnly = review.to === successor.from && to === successor.to;
+  const expected = structuredClone(review.files);
+  if (testOnly) {
+    check(!Object.hasOwn(expected, successor.path), "test-only successor path must be unchanged in original review");
+    expected[successor.path] = [successor.before, successor.after];
+  }
+  check(from === review.from && (to === review.to || testOnly) && live?.ref === from && live.buildId === review.legacyReader.buildId
     && live.plistSha256 === review.legacyReader.plistSha256 && reviewedSourceAncestor === true
-    && isDeepStrictEqual([...files].sort(), Object.keys(review.files).sort()) && isDeepStrictEqual(digests, review.files),
+    && isDeepStrictEqual([...files].sort(), Object.keys(expected).sort()) && isDeepStrictEqual(digests, expected),
   "only the exact235 successor source pair and old reader may hand off");
   return true;
 }

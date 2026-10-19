@@ -235,3 +235,19 @@ test('cooking235 explicitly preserves writer states rather than retargeting hist
  assert.doesNotThrow(()=>web.assertCookingWriterStatePreserved(null));
  assert.doesNotThrow(()=>web.assertCookingWriterStatePreserved({review:{feature:'cooked-weight-user-attestation'}}));
 });
+
+
+test('one sealed test-only child keeps every original product pair and DB receipt',async()=>{
+ const f=engineFixture(),record=await f.engine.apply(),successor=cooking.COOKING_WEB_TEST_SUCCESSOR;
+ f.review.to=successor.from;record.to=successor.from;record.readerFloor=successor.from;
+ const pointer={path:join(root,'receipt.json'),sha256:sha('a')};
+ const maintenance={review:f.review,record,pointer,guardPointer:{...pointer}};
+ const handoff={maintenance,from:f.review.from,to:successor.to,live:{...f.review.legacyReader},files:Object.keys(f.review.files),digests:structuredClone(f.review.files),reviewedSourceAncestor:true};
+ handoff.files.push(successor.path);handoff.digests[successor.path]=[successor.before,successor.after];
+ assert.doesNotThrow(()=>web.assertNutritionValidatorSourceHandoff(handoff));
+ assert.equal(maintenance.record.readerFloor,successor.from);
+ for(const mutate of [h=>h.to=ref('f'),h=>h.digests[successor.path][0]=sha('b'),h=>h.digests[successor.path][1]=sha('b'),h=>h.digests[Object.keys(h.digests)[0]][1]=sha('b'),h=>h.files.push('app/foreign.ts'),h=>h.reviewedSourceAncestor=false]){
+  const bad=structuredClone(handoff);mutate(bad);assert.throws(()=>web.assertNutritionValidatorSourceHandoff(bad));
+ }
+ assert.equal(f.review.files[successor.path],undefined);
+});

@@ -119,3 +119,10 @@ PIN 게시 후에도 운영 파일을 읽지 않고 회귀를 반복할 수 있�
 이후 정상 웹 plan이 currentProtectedPhase의 구v74 fallback에서 거절됐다. 새 후보가 아직 구웹의 ancestor가 아니어서 옛232 handoff를 현재235 authority로 검사한 도구 오류다. 웹 교체는0이다. cooking 판정만 실제 git ancestor와 정확 구reader ref/build/plist의 별도 비교를 사용하며, 구v74 검사나 receipt를235에 재타깃하지 않는다. foreign/미확정235의 기존 fail-closed 검증은 그대로다.
 
 후속plan은 실제 닫힌R2 lineage 확인에서도 같은 구v74 fallback을 요구했다. 이 경우 검사를 생략하지 않고, 검증된committed235의 원cookingPredecessor232 pointer/원장을 기존v74 validator에 전달한다. 과거v74 proof bytes·232 권한·assertion은 그대로이며, 현재235는 별도 exactreceipt 검증을 먼저 통과해야 한다. unknown235는 원232로 fallback하지 않는다.
+
+
+### 웹 선택 검사와 test-only 후속 후보
+
+첫 웹 배포는 교체 전 선택 검사에서2개 stale test로 중단됐으며 구웹을 유지했다. 제거된 데스크톱 하단 ‘페이지 선택’ 대신 실제 왼쪽 목차로 선택을 바꾸고 제거/좋아요해제 버튼을 확인하도록 기대를 교정했다. 첫 소유 검사 수정은 미설치 jest matcher를 사용해 실패했고 저장소 Chai의toBeNull로 고친 뒤42검사 모두 통과했다. 원제품 오류나 운영 데이터 실패로 세지 않는다.
+
+정확 후속d9e6c6b2cf22c327a8cec4be87cd27000ab08b01은 원1802b2276의 직계 자식이고 tracked변경은 tests/recipe-book-detail-screen.test.tsx 하나(6추가/4삭제)뿐이다. 제품·빌드 입력·SQL은 전부 동일하다. 이 후보에서 공식feedback-batch 전체1466 PASS/133 SKIP을 확인했다. source handoff는 이exact SHA와 원15·1802에서 같은 원test SHA와 후test SHA만 유한하게 고정하며 원200개 file set/pair를 그대로 유지하고 원15→1802에서 불변이던 정확test pair 하나만 추가해 총201개를 요구한다. 원review/PIN/DB235receipt/floor1802는 변경하지 않는다. 임의후손·다른test·추가file은 거절한다. --skip-automated-tests는 닫힌R2 정상경로에서 불허이므로 사용하지 않았다.
