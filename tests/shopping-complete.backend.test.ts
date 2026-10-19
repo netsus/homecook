@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createClient } from "@supabase/supabase-js";
 
 import { completeShoppingList, isShoppingApiError } from "@/lib/api/shopping";
 
@@ -92,6 +93,42 @@ describe("12a shopping complete backend", () => {
     recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
   });
 
+  it.each(["success", "duplicate", "denied"])("uses the actual SDK RPC wire for %s without REST mutations", async (mode) => {
+    const requests: Array<{ url: URL; method: string; body: unknown }> = [];
+    const sdk = createClient("http://shopping-complete-contract.invalid", "public-test-key", {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: async (input, init) => {
+        const url = new URL(input instanceof Request ? input.url : String(input));
+        const body: unknown = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+        requests.push({ url, method: init?.method ?? "GET", body });
+        return new Response(JSON.stringify(mode === "denied"
+          ? { code: "42501", message: "fixture denied" }
+          : { newly_completed: mode === "success", completed_at: "2026-10-20T03:00:00Z", meal_ids: ["550e8400-e29b-41d4-a716-446655440002"], meals_updated: 2, pantry_added: 0 }),
+        { status: mode === "denied" ? 403 : 200, headers: { "content-type": "application/json" } });
+      } },
+    });
+    const client = { from: sdk.from.bind(sdk), rpc: sdk.rpc.bind(sdk),
+      auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) } };
+    createRouteHandlerClient.mockResolvedValue(client);
+    const { POST } = await importCompleteRoute();
+    const response = await POST(createCompleteRequest(listId, { add_to_pantry_item_ids: [] }), createContext());
+    expect(response.status).toBe(mode === "denied" ? 500 : 200);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url.pathname).toBe("/rest/v1/rpc/complete_shopping_list");
+    expect(requests[0]).toMatchObject({ method: "POST", body: {
+      p_list_id: listId, p_user_id: "user-1", p_add_to_pantry_item_ids: [],
+    } });
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(client, { id: "user-1" });
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(client, "user-1");
+    if (mode === "success") {
+      expect(awardUserProgressEvent).toHaveBeenCalledWith(client, expect.objectContaining({ userId: "user-1" }));
+      expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(client, expect.objectContaining({ userId: "user-1" }));
+    } else {
+      expect(awardUserProgressEvent).not.toHaveBeenCalled();
+      expect(recordUserGrowthActivityEvent).not.toHaveBeenCalled();
+    }
+  });
+
   it("returns 401 when completion is requested without authentication", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -147,6 +184,11 @@ describe("12a shopping complete backend", () => {
       createContext(),
     );
 
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(client, { id: "user-1" });
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(client, "user-1");
+    expect(ensurePublicUserRow.mock.invocationCallOrder[0])
+      .toBeLessThan(ensureUserBootstrapState.mock.invocationCallOrder[0]);
+    expect(ensureUserBootstrapState.mock.invocationCallOrder[0]).toBeLessThan(rpc.mock.invocationCallOrder[0]);
     expect(rpc).toHaveBeenCalledWith("complete_shopping_list", {
       p_list_id: listId,
       p_user_id: "user-1",
@@ -164,7 +206,7 @@ describe("12a shopping complete backend", () => {
       },
       error: null,
     });
-    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(client, {
       userId: "user-1",
       eventType: "shopping_completed",
       sourceTable: "shopping_lists",
@@ -175,7 +217,7 @@ describe("12a shopping complete backend", () => {
       actionKind: "shopping_list",
       mealIds: ["meal-1", "meal-2"],
     });
-    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(client, {
       userId: "user-1",
       activityType: "shopping_bundle_prepared",
       category: "shopping",
@@ -189,6 +231,9 @@ describe("12a shopping complete backend", () => {
       },
       occurredAt: "2026-04-27T11:20:00.000Z",
     });
+    expect(rpc.mock.invocationCallOrder[0]).toBeLessThan(awardUserProgressEvent.mock.invocationCallOrder[0]);
+    expect(awardUserProgressEvent.mock.invocationCallOrder[0])
+      .toBeLessThan(recordUserGrowthActivityEvent.mock.invocationCallOrder[0]);
   });
 
   it("fails closed without direct table writes when the atomic RPC is unavailable", async () => {
