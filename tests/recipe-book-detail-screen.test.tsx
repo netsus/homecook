@@ -1121,8 +1121,9 @@ describe("RecipeBookDetailScreen", () => {
     );
     expect(firstRemoveButton.closest(".web-recipebook-recipe-hero")).toBeTruthy();
     const user = userEvent.setup();
-    const pageDots = screen.getByRole("group", { name: "페이지 선택" });
-    await user.click(within(pageDots).getByRole("button", { name: "02쪽" }));
+    expect(screen.queryByRole("group", { name: "페이지 선택" })).toBeNull();
+    const toc = screen.getByTestId("recipebook-detail-toc");
+    await user.click(within(toc).getByRole("button", { name: /김치볶음밥/ }));
     const secondRemoveButton = screen.getByRole("button", {
       name: "김치볶음밥 제거",
     });
@@ -1148,8 +1149,9 @@ describe("RecipeBookDetailScreen", () => {
       screen.getByRole("button", { name: "된장찌개 좋아요 해제" }).className,
     ).toContain("web-recipebook-recipe-remove-icon");
     const user = userEvent.setup();
-    const pageDots = screen.getByRole("group", { name: "페이지 선택" });
-    await user.click(within(pageDots).getByRole("button", { name: "02쪽" }));
+    expect(screen.queryByRole("group", { name: "페이지 선택" })).toBeNull();
+    const toc = screen.getByTestId("recipebook-detail-toc");
+    await user.click(within(toc).getByRole("button", { name: /김치볶음밥/ }));
     expect(
       screen.getByRole("button", { name: "김치볶음밥 좋아요 해제" }).className,
     ).toContain("web-recipebook-recipe-remove-icon");
