@@ -1,0 +1,236 @@
+{
+  "schema": 1,
+  "startingCommit": "99e44c009e63bd7a43f57f2e45ab886d41db6fa2",
+  "sourceCommit": "b867b1e3e",
+  "scope": "Parent explicitly released planner/meals/UI19 for behavior-preserving work in clean independent worktree. YouTube17 and dirty files remain protected. No product policy/DB/auth settings authorization inferred.",
+  "resolvedLocal": 12,
+  "releasedPendingReview": 7,
+  "currentTotal": 93,
+  "newFindings": 0,
+  "entries": [
+    {
+      "id": "app/api/v1/product-planner-entries/route.ts::anti-slop(no-chained-type-assertions)::86a850df59c1324f7c3cc1fabd80bcad0dff8f2ebfab214518e17382a3dbbf8f#1",
+      "file": "app/api/v1/product-planner-entries/route.ts",
+      "resolution": {
+        "commit": "3d72e1d9b",
+        "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged."
+      },
+      "decision": "resolved-local",
+      "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged."
+    },
+    {
+      "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#1",
+      "file": "app/api/v1/product-planner-entries/[entry_id]/route.ts",
+      "resolution": {
+        "commit": "3d72e1d9b",
+        "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged."
+      },
+      "decision": "resolved-local",
+      "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged."
+    },
+    {
+      "id": "app/api/v1/product-planner-entries/[entry_id]/route.ts::anti-slop(no-chained-type-assertions)::40327e7de607d07ae6424626898895b6bce7f59ff66d1edf5527c05f2e0b2c59#2",
+      "file": "app/api/v1/product-planner-entries/[entry_id]/route.ts",
+      "resolution": {
+        "commit": "3d72e1d9b",
+        "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged."
+      },
+      "decision": "resolved-local",
+      "reason": "Native SDK selected-table/RPC-unknown consumed contracts replace handwritten query protocols; owner/visibility/version/quantity/bootstrap behavior unchanged."
+    },
+    {
+      "id": "app/api/v1/planner/route.ts::anti-slop(no-chained-type-assertions)::dbc701ee1443a382ea4c8238f09525dd993c05dbd7eb886a8705b3e245a52d01#1",
+      "file": "app/api/v1/planner/route.ts",
+      "resolution": {
+        "commit": "1b4248998",
+        "reason": "Native selected5table/nullable snapshot FK and unknown JSON RPC contract; same owner/date/order/pin/image/dedupe and bootstrap instance."
+      },
+      "decision": "resolved-local",
+      "reason": "Native selected5table/nullable snapshot FK and unknown JSON RPC contract; same owner/date/order/pin/image/dedupe and bootstrap instance."
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts::anti-slop(no-chained-type-assertions)::e37acc447d4e8ad8c719ae510162a9d9770b7ea42147717d46fef54d7f7524b9#1",
+      "file": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts",
+      "resolution": null,
+      "decision": "released-pending-review",
+      "reason": "JSON ingredients/steps projection needs precise consumed contract and existing malformed behavior evidence; no new guard solely for count reduction."
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "resolution": null,
+      "decision": "released-pending-review",
+      "reason": "Review compound meal read/write query and legacy/version/state JSON compatibility; not a hold or impossibility finding."
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "resolution": {
+        "commit": "e97a4f797",
+        "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical."
+      },
+      "decision": "resolved-local",
+      "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical."
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#2",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "resolution": null,
+      "decision": "released-pending-review",
+      "reason": "Review compound meal read/write query and legacy/version/state JSON compatibility; not a hold or impossibility finding."
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#2",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "resolution": {
+        "commit": "e97a4f797",
+        "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical."
+      },
+      "decision": "resolved-local",
+      "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical."
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::ac75b8bd0e842578717788ce2bca1c4a3ec46e3a486e02d97198a964cfcb2b99#1",
+      "file": "app/api/v1/meals/route.ts",
+      "resolution": null,
+      "decision": "released-pending-review",
+      "reason": "Review compound meal read/write query and legacy/version/state JSON compatibility; not a hold or impossibility finding."
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::16e843117c2fadc3c91622137f1ce7bd4675d535edd60aecee60516b63f48332#1",
+      "file": "app/api/v1/meals/route.ts",
+      "resolution": null,
+      "decision": "released-pending-review",
+      "reason": "Review compound meal read/write query and legacy/version/state JSON compatibility; not a hold or impossibility finding."
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::d9f5207c6497f3b58132a472f7662c1ebadcb343b00a471159ce0c1e993fe9a0#1",
+      "file": "app/api/v1/meals/route.ts",
+      "resolution": null,
+      "decision": "released-pending-review",
+      "reason": "Review compound meal read/write query and legacy/version/state JSON compatibility; not a hold or impossibility finding."
+    },
+    {
+      "id": "app/api/v1/meals/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "file": "app/api/v1/meals/route.ts",
+      "resolution": {
+        "commit": "e97a4f797",
+        "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical."
+      },
+      "decision": "resolved-local",
+      "reason": "Existing scoped RPC factory instance directly satisfies consumer; runtime JavaScript byte-identical."
+    },
+    {
+      "id": "app/api/v1/planner/nutrition/route.ts::anti-slop(no-chained-type-assertions)::92e084546d67fd71e7919c79a5c7a7071c42750e4aeb39b29f6ac932fc35979f#1",
+      "file": "app/api/v1/planner/nutrition/route.ts",
+      "resolution": null,
+      "decision": "released-pending-review",
+      "reason": "Review native SQL rows versus existing concrete JSON snapshot consumer without adding a metric-only parser or silently changing malformed compatibility."
+    },
+    {
+      "id": "app/api/v1/planner/columns/shared.ts::anti-slop(no-chained-type-assertions)::91ed2302347fd6bac4d9d018e4d817e65709029fb2fd3c9547c5bd9c3ad3c5ec#1",
+      "file": "app/api/v1/planner/columns/shared.ts",
+      "resolution": {
+        "commit": "0aad87dac",
+        "reason": "Native consumed single table and owned-delete RPC replace handwritten builders; unused meals protocol deleted, ordering/min-max/owner/delete semantics unchanged."
+      },
+      "decision": "resolved-local",
+      "reason": "Native consumed single table and owned-delete RPC replace handwritten builders; unused meals protocol deleted, ordering/min-max/owner/delete semantics unchanged."
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#1",
+      "file": "components/planner/meal-log-screen.tsx",
+      "resolution": {
+        "commit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+      },
+      "decision": "resolved-local",
+      "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#2",
+      "file": "components/planner/meal-log-screen.tsx",
+      "resolution": {
+        "commit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+      },
+      "decision": "resolved-local",
+      "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#3",
+      "file": "components/planner/meal-log-screen.tsx",
+      "resolution": {
+        "commit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+      },
+      "decision": "resolved-local",
+      "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+    },
+    {
+      "id": "components/planner/meal-log-screen.tsx::anti-slop(no-chained-type-assertions)::4c2faa0143bac9ac56864a82d97e6360eca2a1a1cc71bcb8c43b0a05e149d021#4",
+      "file": "components/planner/meal-log-screen.tsx",
+      "resolution": {
+        "commit": "b867b1e3e",
+        "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+      },
+      "decision": "resolved-local",
+      "reason": "Existing complete validator expressed as type predicate, condition text unchanged; same original object/action/storage handling, no new validator or UI markup."
+    }
+  ],
+  "retained": [
+    {
+      "id": "lib/server/hybrid-auth/bootstrap.ts::anti-slop(no-array-filter-map)::e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596#1",
+      "file": "lib/server/hybrid-auth/bootstrap.ts",
+      "decision": "retain-no-code-change",
+      "reason": "Fixed four-field error classification, no demonstrated allocation problem. Different order/separator in observability; no new helper or metric-only loop. No product change and original scope hold remains."
+    },
+    {
+      "id": "lib/server/hybrid-auth/session-observability.ts::anti-slop(no-array-filter-map)::a117605a78dc4dac9265e35ca1e9564c7d6d55c76d1299c6ba9b88cf49780528#1",
+      "file": "lib/server/hybrid-auth/session-observability.ts",
+      "decision": "retain-no-code-change",
+      "reason": "Fixed four-field error classification, no demonstrated allocation problem. Different order/separator in observability; no new helper or metric-only loop. No product change and original scope hold remains."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::afb7b5791d3240030d1311ff3c097ce1594d74cc78213f1cfa8171b6a3fb16b6#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "decision": "retain-no-code-change",
+      "reason": "This key is independently emitted only for a string source value (trimmed, including empty strings). Absent/null/undefined/non-string values all omit it. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::f662a8a2b81fbd32d5d5a51847b61960e4229c510ba386727756885db3ac6eab#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "decision": "retain-no-code-change",
+      "reason": "This key is independently emitted only for a string source value (trimmed, including empty strings). Absent/null/undefined/non-string values all omit it. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::e795e548fa21a1828d5f7bd6d2a62a57386040b76ded57d87ee3dab5fa5be5ad#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "decision": "retain-no-code-change",
+      "reason": "The two product keys are jointly emitted only when food_product_id is truthy; the nutrition-version value may remain an own undefined/null value inside that branch. A temporary object/unconditional spread has no demonstrated simplicity/allocation benefit."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-array-filter-map)::c2acee8946d823a14f92b11b6296f4ebfb91966112db0b788e083dd255c8737f#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "decision": "retain-no-code-change",
+      "reason": "Production search deduplication has real duplicate-ID responsibility and regression coverage. No cardinality/latency problem established; loop-only rewrite or filter removal is not justified."
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-array-filter-map)::e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596#1",
+      "file": "lib/supabase/server.ts",
+      "decision": "retain-no-code-change",
+      "reason": "Fixed four-field error classification, no demonstrated allocation problem. Different order/separator in observability; no new helper or metric-only loop. No product change and original scope hold remains."
+    },
+    {
+      "id": "lib/server/recipe-content-snapshot-future-propagation.ts::anti-slop(no-conditional-empty-object-spread)::a741156783c7ed3aa3ae80dacb54a95a853de9fea81f22eb00b104da674c632d#1",
+      "file": "lib/server/recipe-content-snapshot-future-propagation.ts",
+      "decision": "retain-no-code-change",
+      "reason": "Object.hasOwn deliberately distinguishes an absent product_predecessor key from an own undefined/null value. Preserving this and key order via a temporary object/unconditional spread has no demonstrated simplicity/allocation benefit."
+    }
+  ],
+  "limits": [
+    "Local source audit only; merge/deployment/authenticated QA counted separately.",
+    "Historical52/117/191 artifacts and original163 fingerprint fields stay frozen.",
+    "Separate original49 unknown, permission3/held444/static3 and unchanged meals GET1failure remain; no baseline/rule/test weakening."
+  ]
+}
