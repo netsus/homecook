@@ -314,7 +314,13 @@ describe("personal recipe editor endpoint contract boundaries", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
-    createRecipeFuturePropagationInternalClient.mockReturnValue({});
+    const serviceClient = {
+      rpc: vi.fn(async () => ({ data: {
+        revision: 12,
+        fork_context: { base_recipe_revision: 12, draft: buildDerivedBody().draft, image_object_id: null },
+      }, error: null })),
+    };
+    createRecipeFuturePropagationInternalClient.mockReturnValue(serviceClient);
 
     const { POST } = await importRecipesRoute();
     const mixedResponse = await POST(new Request("http://localhost:3000/api/v1/recipes", {
@@ -362,7 +368,7 @@ describe("personal recipe editor endpoint contract boundaries", () => {
       error: null,
     });
     expect(callFuturePropagationRpc).toHaveBeenCalledWith(
-      {},
+      serviceClient,
       "write_personal_recipe_core",
       expect.objectContaining({
         p_operation: "fork",
