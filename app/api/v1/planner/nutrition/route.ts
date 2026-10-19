@@ -77,8 +77,7 @@ export async function GET(request: NextRequest) {
     const user = authResult.data.user;
     if (!user) return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
 
-    const dbClient = routeClient as unknown as
-      PlannerNutritionDbClient;
+    const dbClient: PlannerNutritionDbClient = routeClient;
     const data = await readPlannerNutritionSummary(dbClient, user.id, {
       startDate: range.startDate,
       endDate: range.endDate,

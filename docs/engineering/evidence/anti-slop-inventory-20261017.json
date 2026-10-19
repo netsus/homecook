@@ -12,12 +12,12 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "a69acef9f077b6ae442f1cac4cacb3fb2812e545",
-    "startingCommit": "5ea486e534729eb576477bf81526847caa2dfee6",
-    "total": 87,
+    "baseCommit": "549fec4811dacd14f9049ef44bef22f13468c60a",
+    "startingCommit": "c103790a64c780b6ecbca683f18eba397cc2ef77",
+    "total": 84,
     "newFindings": 0,
-    "verificationState": "PR1837 merged62c20d4bd tree identical to reviewed e3e251493. Official DB238 app-only single deploy exit0/buildktOrhp/loadedtrue/DB238ready/originalplanSHA+readerFloor/recoveryPendingfalse. Exactmerge verify87new0; source9suite141PASS/fulltype/lint/diff/source+metadata APPROVE. Web1473PASS133name-filterSKIP/compile99s/static94/warnings3/manifest200/unauth2wrapped401. Same fixed9read-only hashes equal22:11:53Z to22:18:44Z; original approval/PIN/baseline preserved. Original16376resolved87remaining; provider1 held Draft1836, protected sources unchanged. Followup4 assessed; nutrition1 implementable engineering followup, not product-decision blocker. Permission3/444/static3/original49unknown/YouTube17dirty/newAuthQA/legacy actual completion untested preserved.",
-    "reference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+    "verificationState": "Source84/new0 (24assertions37array23conditional), baseline207 unchanged. Native nutrition1+duplicatequery2 in2 sourcecommits, snapshot/legacy42behaviorlocks productunchanged. Final15suite345PASS0skip/fullnonincrementaltype/12filelint/verify/diff and source independent APPROVE. Exact1112JSON outcomes baselinec103 vsnew mismatch0; not exoticJSproof. Original16379resolved84remaining, all84 fixed IDs have bounded closeout reason+reopencondition; arrays/conditional62 audit adopted2 only. Current operating62c20d4bd/buildktOrhp/DB238 remains87; source84 not yet merged/deployed. NewauthQA/legacycompletion/deletion0, providerDraft1836/R2planhold/YouTubedirty/permission3/static3/444/1745/original49unknown preserved.",
+    "reference": "docs/engineering/anti-slop-nutrition-residual-closeout-20261020.md",
     "operatingRef": "62c20d4bd30570842689873db8a0554f3d12cfb5",
     "operatingTotal": 87,
     "buildId": "prelaunch-62c20d4bd305-ktOrhp",
@@ -29,7 +29,8 @@
       "protectedPathsUnchanged": true,
       "guardReadinessOrFlagChanges": false,
       "userApprovedSafeSeparation": true
-    }
+    },
+    "residualCloseoutReference": "docs/engineering/evidence/anti-slop-residual-closeout-20261020.json"
   },
   "residualRolloutObservation": {
     "historical": true,
@@ -791,10 +792,10 @@
       "line": 21,
       "column": 15,
       "snippet": "result.data as unknown as MealRecipeSnapshotRow",
-      "state": "unreviewed",
-      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "state": "needs-contract-refactor",
+      "holdReason": "38 existing behavior cases locked; consumed JSON contract design required, no blanket strict guard adopted.",
       "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
-      "scopeReleaseReference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
+      "scopeReleaseReference": "docs/engineering/anti-slop-nutrition-residual-closeout-20261020.md",
       "reviewedPendingContract": "Projector checks array containers before ingredient/step consumption. Native unknown JSON requires honest consumed contract; new strict element checks could alter malformed409/500 compatibility."
     },
     {
@@ -1061,11 +1062,18 @@
       "line": 80,
       "column": 22,
       "snippet": "routeClient as unknown as PlannerNutritionDbClient",
-      "state": "unreviewed",
-      "holdReason": "Planner scope explicitly released; pending bounded review, not a permanent hold or technical impossibility.",
+      "state": "resolved",
+      "holdReason": "User-approved behavior-preserving cleanup; merge/deployment tracked separately.",
       "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
       "scopeReleaseReference": "docs/engineering/anti-slop-meal-safe-split-20261020.md",
-      "reviewedPendingContract": "Existing shared mapper consumes concrete JSON; native unknown JSON requires coherent consumed-input/validator contract across callers without duplicate guards or unavailable/error compatibility drift."
+      "reviewedPendingContract": "Existing shared mapper consumes concrete JSON; native unknown JSON requires coherent consumed-input/validator contract across callers without duplicate guards or unavailable/error compatibility drift.",
+      "adoptedResolution": {
+        "status": "source verified, not yet merged/deployed",
+        "candidateCommit": "7809c1d37c3bfd7f9f9818574511bcdd857289ca",
+        "reason": "Remove handwritten recursive query protocols, cast-only RSC helper and17-line reconstruction; reuse validated JSON in unchanged scaling formula.",
+        "verification": "Final15suite345PASS0skip, whole nonincremental type/lint/verify84new0/diff; independent source APPROVE.",
+        "reference": "docs/engineering/anti-slop-nutrition-residual-closeout-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/users/me/settings/route.ts::anti-slop(no-chained-type-assertions)::9a86eb7b114f8f0ca9f1ed90cebed5116e6694fbf97ecbd98d51401535c57c98#1",
@@ -2208,8 +2216,16 @@
       "line": 322,
       "column": 7,
       "snippet": "...(trimmedQuery ? { q: trimmedQuery } : {})",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "User-approved behavior-preserving cleanup; merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "source verified, not yet merged/deployed",
+        "candidateCommit": "0031da9f601532a526086d42718fbca2b5121782",
+        "reason": "fetchRecipes는 lib/api/recipe.ts에서 query.q의 같은 truthiness 조건으로 URL parameter를 이미 생략한다. caller의 conditional spread는 wire 의미상 중복이고 q:string 직접 전달로 조건/빈객체를 없앨 수 있다.",
+        "verification": "Final15suite345PASS0skip, whole nonincremental type/lint/verify84new0/diff; independent source APPROVE.",
+        "reference": "docs/engineering/anti-slop-nutrition-residual-closeout-20261020.md"
+      }
     },
     {
       "id": "components/planner/recipe-search-picker.tsx::anti-slop(no-conditional-empty-object-spread)::3a7f38694f3f46f992fd88740808b62afc4100640245e94426f5d3203e5ecb59#1",
@@ -2220,8 +2236,16 @@
       "line": 354,
       "column": 43,
       "snippet": "...(loadedQuery ? { q: loadedQuery } : {})",
-      "state": "held-scope",
-      "holdReason": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "User-approved behavior-preserving cleanup; merge/deployment tracked separately.",
+      "previousScopeHold": "플래너 및 연결된 병행 범위 보존. 별도 충돌/범위 해제 전 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "source verified, not yet merged/deployed",
+        "candidateCommit": "0031da9f601532a526086d42718fbca2b5121782",
+        "reason": "다음페이지도 fetchRecipes가 loadedQuery truthiness를 다시 검사한다. `{q:loadedQuery,cursor,limit:10}`이면 페이지 query 잠금은 유지하며 caller의 동일 조건이 사라진다.",
+        "verification": "Final15suite345PASS0skip, whole nonincremental type/lint/verify84new0/diff; independent source APPROVE.",
+        "reference": "docs/engineering/anti-slop-nutrition-residual-closeout-20261020.md"
+      }
     },
     {
       "id": "components/auth/account-quarantine-screen.tsx::anti-slop(no-conditional-empty-object-spread)::379a9b7ebcb91eca8f97be88719640db973f1da89fe6004994faa868a8ee6e29#1",

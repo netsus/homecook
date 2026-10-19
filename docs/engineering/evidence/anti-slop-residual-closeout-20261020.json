@@ -1,0 +1,825 @@
+{
+  "schema": "homecook.residual-closeout.v1",
+  "baseCommit": "c103790a64c780b6ecbca683f18eba397cc2ef77",
+  "sourceCommit": "549fec4811dacd14f9049ef44bef22f13468c60a",
+  "diagnostics": 84,
+  "newFindings": 0,
+  "originalInventoryCount": 163,
+  "resolvedOriginalIds": 79,
+  "remainingOriginalIds": 84,
+  "scope": "Closed for this bounded pass, not permanent technical impossibility or automatic-check zero goal. No assertion of whole275/separate49 completion.",
+  "verification": {
+    "selectedSuites": 15,
+    "passed": 345,
+    "skipped": 0,
+    "wholeNonincrementalType": "PASS after explicit failures fixed without cast/gate weakening",
+    "changedLint": "12files max0 PASS",
+    "anti": "84/new0 baseline207 unchanged",
+    "independentNutrition": "3suite73 PASS and 8file lint APPROVE",
+    "independentQuery": "6wire cases lint APPROVE",
+    "jsonComparison": {
+      "baseline": "c103790a6",
+      "outcomes": 1112,
+      "mismatches": 0,
+      "domain": "JSON-roundtripped values; same mapper result or error name/code and writer validator result/error; not sparse/getter/Proxy proof"
+    }
+  },
+  "resolved": [
+    {
+      "id": "app/api/v1/planner/nutrition/route.ts::anti-slop(no-chained-type-assertions)::92e084546d67fd71e7919c79a5c7a7071c42750e4aeb39b29f6ac932fc35979f#1",
+      "commit": "7809c1d37c3bfd7f9f9818574511bcdd857289ca",
+      "benefit": "Remove handwritten recursive query protocols, cast-only RSC helper and17-line reconstruction; reuse validated JSON in unchanged scaling formula."
+    },
+    {
+      "id": "components/planner/recipe-search-picker.tsx::anti-slop(no-conditional-empty-object-spread)::224f2dc08b20d2925b3039766282725fbc43b3bde6e3ccbdc7956085a1b408d9#1",
+      "commit": "0031da9f601532a526086d42718fbca2b5121782",
+      "benefit": "fetchRecipes는 lib/api/recipe.ts에서 query.q의 같은 truthiness 조건으로 URL parameter를 이미 생략한다. caller의 conditional spread는 wire 의미상 중복이고 q:string 직접 전달로 조건/빈객체를 없앨 수 있다."
+    },
+    {
+      "id": "components/planner/recipe-search-picker.tsx::anti-slop(no-conditional-empty-object-spread)::3a7f38694f3f46f992fd88740808b62afc4100640245e94426f5d3203e5ecb59#1",
+      "commit": "0031da9f601532a526086d42718fbca2b5121782",
+      "benefit": "다음페이지도 fetchRecipes가 loadedQuery truthiness를 다시 검사한다. `{q:loadedQuery,cursor,limit:10}`이면 페이지 query 잠금은 유지하며 caller의 동일 조건이 사라진다."
+    }
+  ],
+  "entries": [
+    {
+      "id": "lib/server/hybrid-auth/bootstrap.ts::anti-slop(no-array-filter-map)::e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596#1",
+      "file": "lib/server/hybrid-auth/bootstrap.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic",
+      "reason": "고정4 오류필드를 모두 읽은 뒤 문자열만 연결한다. 순서 code/message/details/hint와 공백 구분자가 maintenance 판정에 쓰이며 4원소의 할당 문제가 입증되지 않았다.",
+      "followupCondition": "오류 분류 계약 자체를 바꾸거나 실제 hot-path 측정으로 비용이 확인될 때만 별도 검토; getter 읽기·오류 우선순서 유지."
+    },
+    {
+      "id": "lib/server/marketing-round2.ts::anti-slop(no-conditional-empty-object-spread)::1074c5efc6313c249855ad1fb10f9499113dfb09031ce9d74d89b53190b88e00#1",
+      "file": "lib/server/marketing-round2.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "cookie가 있을 때만 participationId를 rate-limit 입력에 싣는다. 무조건 undefined 키를 넣으면 외부 dependency의 키 존재 계약을 넓히며 R2 보호 경로다.",
+      "followupCondition": "쿠키 없음/있음/invalid-cookie rate 소비 순서와 own-key 계약을 잠그는 실제 요구가 있을 때만 R2 승인 범위에서 검토."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/prompt.mjs::anti-slop(no-array-filter-map)::d14c717e8fbb23ae9ecb7e2241d9a67e60f9fdbde752042fd91abc4be8a53bce#1",
+      "file": "lib/server/recipe-extraction-lab/prompt.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "정규식 캡처 두 항목에서 장식을 제거하고 빈 문자열을 버리는 짧은 정제다. 2원소를 수동 분기/loop로 늘릴 실익이 없다.",
+      "followupCondition": "splitRecipeCandidate의 빈장식·와/과·결합제목 golden이 바뀌는 기능 요구나 측정된 병목이 있을 때."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-array-filter-map)::a4ada9dfe223ee89ccb5dbbd41885289bebaa9ce7b5c0dc1553920124fcaca4c#1",
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "ledger별 canonicalTitle/aliases를 keyOf로 정규화한 뒤 공백을 버리고 최대 match score를 찾는다. 빈 key는 includes 매칭을 오염시키므로 제거가 필요하다.",
+      "followupCondition": "ledger/alias 크기와 호출 횟수에서 병목을 보이면 key 캐싱을 입력 불변성·tie 순서 회귀와 함께 검토; 단순 loop 치환 금지."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-array-filter-map)::3716996129a78c2f61b68a4f6757f27336ebd274606e50ca8ef21c7c92318e9d#1",
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "canonical/aliases를 compact 후 some으로 제목 동등성 비교한다. blank 제거는 매칭 의미이며 타입별 null 입력 호환도 보존한다.",
+      "followupCondition": "반복 ledger-title 정규화의 실제 비용이 확인될 때만 캐싱/입력계약 검토; compact와 recipeTitlesLikelySame 호출순서 회귀 필요."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-array-filter-map)::eb99d134dac64ce35355c9e79b152ba6923d08703fecbf854e0b1d3f4c7bfc47#1",
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "서로 다른 근거원 제목·alias·source_note·line.text를 compact하고 Set으로 중복 제거해 텍스트를 만든다. 각 단계가 실제 정제·근거 병합 책임이다.",
+      "followupCondition": "동일 ledger text를 반복 구축하는 증거가 있을 때 재사용 여부 검토; 근거출처/첫 등장 순서/blank·null 회귀 선행."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-conditional-empty-object-spread)::cf7ee0be9adfe7c69a40eb53e321529d1ec25058a42bc5b41bcd2ecaa3144aa3#1",
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "evidence bundle이 없으면 요약 필드를 아예 생략하고 함수도 호출하지 않는다. 무조건 summarizeEvidencePackets(null) 호출은 zero/null 필드를 새로 출력한다.",
+      "followupCondition": "관측 metadata의 필드 부재 정책을 바꿀 제품/실험 요구와 extractor 범위 해제 후만 검토."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/extract.mjs::anti-slop(no-conditional-empty-object-spread)::0b2b268568de654429b31896206dc18385602bebe3bb6e694967b106659bc41a#1",
+      "file": "lib/server/recipe-extraction-lab/extract.mjs",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "public source bundle이 없을 때 요약을 생략한다. 기본인수 {}와 null은 같지 않고 summary의 section/candidate 필드 추가는 출력 계약 변경이다.",
+      "followupCondition": "public-source metadata 부재/빈 bundle의 구분을 golden으로 잠근 뒤 관련 extractor 소유자 조율."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/candidate-packets.mjs::anti-slop(no-array-filter-map)::552bad8a0b0ff1ee44b1930b798a8db3d6da299764cdf219da76be17e7fe7267#1",
+      "file": "lib/server/recipe-extraction-lab/candidate-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "후보의 titleHint/aliases/parentTimelineTitle을 정규화해 시간범위 외 텍스트 근거 매칭에 사용한다. 빈 alias를 남기면 모든 ref에 includes가 참이 될 수 있다.",
+      "followupCondition": "alias normalization 반복이 병목일 때 후보 생성 경계의 캐시 가능성을 검토; ref 시간경계·fallback text 순서 보존."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::1ddba8e9c246d8581a7a448ecd442afe3cc0bea022eb48769feab60838d1cf5a#1",
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "defer-algorithm-protected",
+      "reason": "동일 heading pipeline의 바깥 map/filter 진단이다. rawEntries.find를 유지하는 한 체인만 합쳐도 진짜 O(n²) 탐색은 남는다. 중복제목 객체를 만들고 버리는 일도 있다.",
+      "followupCondition": "extractor 소유범위 확인 뒤 현재 golden을 먼저 잠그고 아래 heading-boundary 제안 검토; 본 ID와 다음 ID를 한 논리변경으로만 집계."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::cd92f1a95e2259833e69117865a8684bf1350d75408b028f36d3b34fdfd2ef39#1",
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "defer-algorithm-protected",
+      "reason": "rawEntries가 lineIndex 순서인데 usable heading마다 처음부터 next greater line을 find하여 최악 O(n²)다. 단순 filter-map 제거가 아닌 인접 경계 재사용에 실제 알고리즘 가치가 있다.",
+      "followupCondition": "한 줄 복수 heading·unusable/영문 heading도 경계로 유지·중복제목 first-wins·Korean 우선·마지막 null을 잠근 뒤 line별 next-boundary 선계산 검토. 현재 extractor 수정 금지."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::423cf43922f0227b945b501c7c0f9d04d68a0bdcc074690806c1c98c11a940ea#1",
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "한 쌍의 제목을 cleanTitle하고 길이2..30 및 dish 검증을 모두 통과시킨다. 두 원소의 filter 길이 확인은 완전한 pair만 반환하는 의미다.",
+      "followupCondition": "제목 분할 계약 변경 외에는 유지; loop/flatMap로 두 원소를 재표현하지 않음."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::7712a2824c586fbd95d0fe0018d8c53f87647e59a634f4ca82329181a0d6f9c0#1",
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "compact한 제목·aliases를 Set으로 먼저 중복 제거한다. 다음 keyOf 정규화 이전의 중복 책임이며 순서도 입력 첫 등장 기준이다.",
+      "followupCondition": "compact/keyOf 중복처리의 실제 비용과 token-equivalence를 확인한 경우에만 정규화 단계 통합 검토."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::9c92fb3e00ecb4db3f5383f45ab1271e875dc8383e93b6ae364076e69fe7799e#1",
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "Set 이후 token을 keyOf하고 길이2 미만을 버려 과도한 부분문자열 매칭을 막는다. 이전 Set을 이 단계로 옮기면 normalization 후 중복 수가 달라질 수 있다.",
+      "followupCondition": "동일 제목 공백/기호/짧은 token·중복순서 golden 선행; 실측 없이 chain 두 개를 한 loop로 합치지 않음."
+    },
+    {
+      "id": "lib/server/recipe-extraction-lab/public-source-packets.mjs::anti-slop(no-array-filter-map)::adbfb9831e781c61cc83ad6d53f6b6f863d10c6d55f5803fee5c30b512436182#1",
+      "file": "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "두 제목만 cleanTitle 후 canonical과 빈값을 제거하고 Set으로 alias를 만든다. canonical 중복 출력 방지가 목적이고 크기도2다.",
+      "followupCondition": "alias 의미가 바뀌는 기능 요구가 있을 때만 수정; 2원소 할당 최적화는 근거 부족."
+    },
+    {
+      "id": "lib/server/hybrid-auth/session-observability.ts::anti-slop(no-array-filter-map)::a117605a78dc4dac9265e35ca1e9564c7d6d55c76d1299c6ba9b88cf49780528#1",
+      "file": "lib/server/hybrid-auth/session-observability.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "details/hint/message/code 순서·개행 연결 뒤 첫 SESSION_AUTHORITY_REASON_MARKER를 파싱한다. 다른 오류 helper와 순서/구분자가 달라 공통화가 안전하지 않다.",
+      "followupCondition": "정확한 marker 우선순서와 복합메시지 회귀가 요구되는 인증 별도작업 때; 현재 권한/보호 경계 유지."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::42b213e63f521a5b1d7d24990338bb1918dfbc337317ea9d8e084975e83ed253#1",
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-reference",
+      "reason": "prototype goPage가 args와 이전 모달의 복귀 컨텍스트를 조합한다. returnToModal이 falsy일 때 ...args의 키를 보존하므로 무조건 키 추가는 같은 의미가 아니다.",
+      "followupCondition": "디자인 원본 자체 갱신이 요청될 때만 복귀모달 우선순서·args own-key fixture 후 검토."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::0686d5adf87baff37fb31b849989d853bd6c447803fc09d32afa9f8edd776802#1",
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-reference",
+      "reason": "prototype returnToPage의 fallback은 returnToModal/args/prev.page의 결합이다. 조건키 생략이 이전 args를 보존하며 프로덕션 개선과 직접 연결되지 않는다.",
+      "followupCondition": "레퍼런스 route 모델을 수정할 명시적 필요와 뒤로가기 golden이 있을 때만."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx::anti-slop(no-conditional-empty-object-spread)::8084d999b093f6aaa05e37f9efef2744b3b710fe3106152ee2b4147b8364a1e0#1",
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/app.jsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-reference-dead-override",
+      "reason": "base=incoming||lookup이고 incoming이 있으면 ...base가 이미 incoming.items를 복사하므로 뒤의 conditional items 재삽입은 plain state 객체에서 중복이다. 다만 고정 디자인 참고자료여서 현재 수정 우선순위는 없다.",
+      "followupCondition": "참고 prototype 갱신 승인이 생길 때만 중복 spread 삭제; incoming/ID lookup/empty items/null 및 getter·Proxy가 지원영역인지 확인."
+    },
+    {
+      "id": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts::anti-slop(no-chained-type-assertions)::e37acc447d4e8ad8c719ae510162a9d9770b7ea42147717d46fef54d7f7524b9#1",
+      "file": "app/api/v1/meals/[meal_id]/recipe-snapshot/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-consumed-contract-design",
+      "reason": "38 snapshot behavior cases show containers rejected but null elements throw, primitive rows may yield NaN/undefined, string numeric inputs coerce, and labels depend on consumed branches. A blanket strict guard changes existing responses; count-only parser/guard not adopted.",
+      "followupCondition": "Design honest consumed unknown row/ingredient/step contract across the existing cooking projector; preserve all38 outcomes or explicitly approve malformed-data policy change; regression and independent review before implementation."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260512-desktop/project/modals.jsx::anti-slop(no-array-filter-map)::be59a9625462d08be0bd5c266c0cb4ead88957d74463faa92dbdbe03aa996457#1",
+      "file": "ui/designs/prototypes/claude-design-260512-desktop/project/modals.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-reference",
+      "reason": "선택 Set의 ID를 DM.ING 사전으로 조회하고 존재하지 않는 ID를 걸러낸다. mock 디자인 카탈로그의 stale ID 방어이며 소규모다.",
+      "followupCondition": "참고자료와 production 카탈로그 동기화 작업 때만; 선택순서·stale ID 의미 잠금."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx::anti-slop(no-array-filter-map)::bca8d01a1ce4b0397a467d308799c2e6692413529772ad9dbc3fe31050ec823f#1",
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-reference",
+      "reason": "태그 blank를 먼저 제거한 compacted index0에 대표 강조색을 준다. map 내부 null 반환으로 바꾸면 원 index에 따라 색과 key가 바뀐다.",
+      "followupCondition": "디자인 갱신 시 빈 theme/태그/중복태그의 index·key·스타일 비교 후만 검토."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx::anti-slop(no-array-filter-map)::c565029adc76b4bce3f607d0977d4c4136539b8aba1cf166591d24c9befed9c6#1",
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-reference",
+      "reason": "고정7 section별 buy 목록을 골라 빈 그룹을 버리는 디자인 표현이다. 반복스캔은 보이지만 작은 mock 목록에서 grouping Map 새 구조가 더 단순하다고 입증되지 않았다.",
+      "followupCondition": "실제 대량목록 production으로 이식할 때 section 순서와 그룹내 순서/미분류항목 정책을 잠그고 필요시 버킷화."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/detail.jsx::anti-slop(no-array-filter-map)::65c9340771b057d71dcf2de445ec7ab72c7418a1325bf5e65a7b760e8843cc1c#1",
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/detail.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-reference",
+      "reason": "상세 prototype도 filter 뒤 compact index0를 강조한다. 빈 theme가 있는 입력에서 filter 제거는 대표색/React key를 바꾸므로 지표용 재표현 금지.",
+      "followupCondition": "레퍼런스 상세 UI 변경 요구가 있을 때 태그 렌더 및 compact index 회귀 후 검토."
+    },
+    {
+      "id": "app/api/v1/users/me/_account-generation-active.ts::anti-slop(no-conditional-empty-object-spread)::cbda6f702526273c0fdf1e83ba4fcb4c6318f3b1191581efea82320f55c032cb#1",
+      "file": "app/api/v1/users/me/_account-generation-active.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "fullLocalSessionRecord가 존재할 때만 p_session_record를 RPC에 전송한다. 선택적 RPC parameter 부재와 null/undefined 전달은 authority 계약에서 같다고 가정할 수 없다.",
+      "followupCondition": "local/nonlocal capability·세션 원자성 테스트와 인증 범위 승인 하에서만 재검토."
+    },
+    {
+      "id": "ui/designs/prototypes/claude-design-260505-wave1/screens/wave1.jsx::anti-slop(no-array-filter-map)::f6486c9d16ab0cf9103c46050e71061a74b604037d0afbfa791b6e962722ff31#1",
+      "file": "ui/designs/prototypes/claude-design-260505-wave1/screens/wave1.jsx",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-reference",
+      "reason": "카테고리 선택 필터 후 JSX를 렌더하고 query로 빈 ingredient 그룹을 숨긴다. 외부 filter 제거는 렌더 대상·내부 필터 호출을 바꾸며 작은 디자인 자료다.",
+      "followupCondition": "디자인 검색 동작 변경 시 카테고리/질의/빈 그룹 golden부터; 신규 loop/JSX helper 불필요."
+    },
+    {
+      "id": "app/api/v1/shopping/lists/route.ts::anti-slop(no-chained-type-assertions)::fbb4fd32fd4a51ec15c9fca478fac4b344e50f95c07026b4c8139248f9822862#1",
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-explicit-hold",
+      "reason": "동일 scoped RPC 단언 제거 PR1745가 명시 보류 중. 재실행하지 않음.",
+      "followupCondition": "Explicit release of heldPR1745 and scoped RPC authority/error behavior evidence; do not replay held change."
+    },
+    {
+      "id": "app/api/v1/recipes/[id]/save/route.ts::anti-slop(no-chained-type-assertions)::1d4ed556adf3eac796f34013d7c35a6a76c4b33cb52b3bf5cae4cbae49b88b50#1",
+      "file": "app/api/v1/recipes/[id]/save/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-explicit-hold",
+      "reason": "명시 보류444fe1f6f 및 구형 save fallback 접근 결과 위험. 관련 파일 변경하지 않음.",
+      "followupCondition": "Explicit scope release plus legacy fallback access/permission3 compatibility proof; held444 must not be replayed."
+    },
+    {
+      "id": "app/api/v1/recipes/[id]/save/route.ts::anti-slop(no-chained-type-assertions)::ad2bfadee955fec6270d46984716065dc2bd503db54ad6dc214ae0e06fb0a760#1",
+      "file": "app/api/v1/recipes/[id]/save/route.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-explicit-hold",
+      "reason": "명시 보류444fe1f6f 및 구형 save fallback 접근 결과 위험. 관련 파일 변경하지 않음.",
+      "followupCondition": "Explicit scope release plus legacy fallback access/permission3 compatibility proof; held444 must not be replayed."
+    },
+    {
+      "id": "components/planner/meal-add-picker-flow.tsx::anti-slop(no-conditional-empty-object-spread)::4e7df61d6cc11240fa16ccd6307faae492d9436afb293af522747dca831c9199#1",
+      "file": "components/planner/meal-add-picker-flow.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic",
+      "reason": "leftoverDishId가 있을 때만 본문에 싣고 그 본문을 JSON.stringify해 멱등 키를 재사용한다. 단순 undefined 추가의 키/직렬화·목적 API 계약을 모두 검증해야 하며 현재 한 조건은 명료하다.",
+      "followupCondition": "식사 생성 payload 계약 변경 요구 시 null/empty/유효ID·fingerprint·재시도 동일키 회귀 후 검토."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::afb7b5791d3240030d1311ff3c097ce1594d74cc78213f1cfa8171b6a3fb16b6#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic",
+      "reason": "정규화된 product_id 키는 원 입력이 string일 때만 own-key로 남는다. null/undefined/nonstring 생략 및 빈문자 trim 결과 보존이 정상/legacy 분기를 구분한다.",
+      "followupCondition": "입력 키 존재 정책을 바꿀 실제 계약 요구가 생길 때 raw own-key matrix 회귀 후."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::f662a8a2b81fbd32d5d5a51847b61960e4229c510ba386727756885db3ac6eab#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic",
+      "reason": "nutrition version string만 trim해 별도 키로 출력한다. product_id와 독립이며 absent/null/nonstring을 undefined own-key로 바꾸면 의미가 달라진다.",
+      "followupCondition": "독립 pin 부재/빈문자/현재값의 처리 계약 변경 시만."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-conditional-empty-object-spread)::e795e548fa21a1828d5f7bd6d2a62a57386040b76ded57d87ee3dab5fa5be5ad#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic",
+      "reason": "truthy food_product_id가 있을 때 product ID와 nutrition version 두 키를 함께 싣는다. version own undefined/null을 유지하는 분기여서 단순 단일필드 조건으로 분해하면 의미가 달라진다.",
+      "followupCondition": "RPC product pin serialization 변경 요구가 생길 때 두 키 조합 matrix와 save/register 회귀로 잠금."
+    },
+    {
+      "id": "app/api/v1/recipes/route.ts::anti-slop(no-array-filter-map)::c2acee8946d823a14f92b11b6296f4ebfb91966112db0b788e083dd255c8737f#1",
+      "file": "app/api/v1/recipes/route.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "Set이 여러 조회행의 recipe_id를 first-wins로 중복 제거하고 Boolean filter가 빈 ID를 제외한다. 명시적인 검색 교집합 책임이며 크기/지연 근거가 없다.",
+      "followupCondition": "검색 행 수·프로파일에서 병목이 입증될 때만 null/empty·중복·순서·교집합 회귀를 잠그고 최적화."
+    },
+    {
+      "id": "components/planner/food-product-picker.tsx::anti-slop(no-conditional-empty-object-spread)::44bc57cfc7aaf47feaa462cb8d24fcefdd3ee7408624dc23692804844624e7f6#1",
+      "file": "components/planner/food-product-picker.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic",
+      "reason": "edit 때만 productId/action edit를 복귀 컨텍스트에 추가한다. 생성 흐름과 편집 흐름의 discriminant를 드러내는 한 조건으로 flat object는 더 안전하지 않다.",
+      "followupCondition": "복귀 draft 구조를 변경하는 작업에서 create/edit own-key·401 복귀·삭제 focus 회귀 후 검토."
+    },
+    {
+      "id": "components/auth/account-quarantine-screen.tsx::anti-slop(no-conditional-empty-object-spread)::379a9b7ebcb91eca8f97be88719640db973f1da89fe6004994faa868a8ee6e29#1",
+      "file": "components/auth/account-quarantine-screen.tsx",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "nickname가 truthy일 때만 격리해소 요청에 포함한다. 생략과 빈 nickname 전달은 activation payload/idempotency 정책에서 구분될 수 있다.",
+      "followupCondition": "quarantine activate/delete payload 계약 변경 필요가 있을 때만; 보호권한/멱등성/닉네임 없음 회귀 선행."
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-conditional-empty-object-spread)::eb7dee8d361a75fb15140abc686d4fc6a8b6e7cc120ad5155fff2043233af23f#1",
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "authFetch가 있을 때만 SDK global.fetch를 덮어쓰고 없을 때 기본 transport를 둔다. 전역 옵션의 부재를 무조건 undefined fetch로 바꾸는 이득이 없고 factory 보호 경로다.",
+      "followupCondition": "실제 auth transport 설계 작업과 local/compat SDK 기본옵션 wire 회귀가 있을 때만."
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-conditional-empty-object-spread)::8582f1aa19f63c520f7f83dc1c927ced28bea42dd9ea18b693b76a2861a61325#1",
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "observabilityClient가 존재할 때만 async failure callback을 설치한다. 빈 callback/undefined 키로 바꾸면 listener 존재·실패 전파·관측 capability 의미를 바꿀 수 있다.",
+      "followupCondition": "관측 capability 설계가 필요할 때 callback 부재/실패·RPC 순서·error 전달 회귀 및 보호범위 판단."
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-array-filter-map)::e96d15cdfa91a7bca9e819af9761ddc7d69304f21576b80c4ebbf4c6796d1596#1",
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "code/message/details/hint4개를 공백으로 연결해 legacy 실패 분류한다. observability는 다른 순서/개행이며 통합하면 우선순서가 바뀔 수 있다.",
+      "followupCondition": "실제 인증 오류 분류 요구나 비용 근거가 있을 때만; 기존 permission/static 실패 해결로 세지 않음."
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::64752f1969cb456f9fd8d564dc2359492240ce45f46c4962895b480ad08ccac5#1",
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-protected-capability-design",
+      "reason": "4 legacy capability tests preserve stable-local RPC-only, missing key null, environment reread mismatch TypeError/no RPC, and factory reread returning raw client. Capability and authority are not correlated; deleting a branch changes those outcomes. Protected factory source unchanged.",
+      "followupCondition": "Review a correlated capability/authority design with exact stable and reread behavior; any auth meaning change needs explicit approval, protected source requires official fresh readiness. No branch deletion/cast relocation for count."
+    },
+    {
+      "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::ad71ce36f80c8301ba0b1fe7799c42e9306a140f9bcaad4490801d39661cff14#1",
+      "file": "lib/supabase/server.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-protected-capability-design",
+      "reason": "4 legacy capability tests preserve stable-local RPC-only, missing key null, environment reread mismatch TypeError/no RPC, and factory reread returning raw client. Capability and authority are not correlated; deleting a branch changes those outcomes. Protected factory source unchanged.",
+      "followupCondition": "Review a correlated capability/authority design with exact stable and reread behavior; any auth meaning change needs explicit approval, protected source requires official fresh readiness. No branch deletion/cast relocation for count."
+    },
+    {
+      "id": "lib/server/youtube-multi-recipe-extractor.ts::anti-slop(no-array-filter-map)::b0fcfeeb0e737e9d27fe7f122574e52d74a119bdd23dbc84dfae2bb12a5286f6#1",
+      "file": "lib/server/youtube-multi-recipe-extractor.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "시작시각 number를 추출해 Math.min한다. 끝시각도 따로 순회하는 중복은 있지만 ref 크기/stack 위험이 입증되지 않은 상태의 local loop 치환은 지표성이다.",
+      "followupCondition": "증거 ref 수 상한/프로파일 또는 spread argument 한계 재현이 있을 때 두 범위계산을 함께 검토; sparse·NaN·Infinity·-0 보존 및 extractor 소유확인."
+    },
+    {
+      "id": "lib/server/youtube-multi-recipe-extractor.ts::anti-slop(no-array-filter-map)::a31ab85a7f7dc7ba576baa2bd6193af0f375e6923a864f79bdbb3ad3c7b2fca3#1",
+      "file": "lib/server/youtube-multi-recipe-extractor.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "끝시각은 end_ms??start_ms fallback을 적용한 뒤 number만 Math.max한다. 시작시각과 다른 fallback/empty-null 계약을 가진다.",
+      "followupCondition": "실제 ref 규모 근거로 range 계산 통합을 검토할 때 empty·start-only/end-only·NaN·fallback 계약을 별도 고정."
+    },
+    {
+      "id": "lib/server/youtube-multi-recipe-extractor.ts::anti-slop(no-array-filter-map)::bfa5125924e5ab1bb3c165ab0cca17f286bd473f1d0f3b3aaa2db9316c920ca3#1",
+      "file": "lib/server/youtube-multi-recipe-extractor.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "segment를 정규화한 text와 line/time/language 정보를 묶고 blank만 버린다. 새 loop는 객체 생성 일부를 줄이지만 입력성능·단순성 개선은 미입증이다.",
+      "followupCondition": "대형 자막 profile에서 blank 객체생성 비용이 실제 병목일 때 sourceLine 원index·정규화 호출순서·sparse 계약부터."
+    },
+    {
+      "id": "components/marketing/round2/round2-turnstile.tsx::anti-slop(no-chained-type-assertions)::9e2a0750b99b350e4bb98d094219cdfbbf3c9b2f5a2453cb1b46fc8c98d1fff2#1",
+      "file": "components/marketing/round2/round2-turnstile.tsx",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-r2-plan-rejection",
+      "reason": "Provider1 implementation is preserved in Draft1836 at3c7f720; official normal plan for58331 rejected changed protected marketing sources. Safe split intentionally excluded it.",
+      "followupCondition": "Fresh authorized R2 validation/readiness for protected source before normal plan; never change guard/PIN/flags/path to inherit old readiness."
+    },
+    {
+      "id": "lib/server/youtube-corpus-scoring.ts::anti-slop(no-array-filter-map)::aba92d5c9d64659fad6231a02147b765ee5cb55f112d291ac3e4906b18d8f55a#1",
+      "file": "lib/server/youtube-corpus-scoring.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "고정5 corpus category별 점수 평균을 계산하는 평가 코드다. 5n 재분류보다 새 bucket 구조가 더 단순/빠르다는 근거가 없다.",
+      "followupCondition": "corpus 크기·평가 지연이 문제될 때 category count와 average를 함께 계산하는 설계 검토; 빈 category 평균/부동소수 합산순서 보존."
+    },
+    {
+      "id": "lib/server/youtube-corpus-scoring.ts::anti-slop(no-array-filter-map)::11186be8691d2d130d7c85b3ab664fc84e7cf7bcd881bf2f0c8dc1899cdc06ba#1",
+      "file": "lib/server/youtube-corpus-scoring.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "wild sample에 실제 나타난 category만 출력한다. 고정5종에서 some+map은 없는 category의 평균 키 생략 계약을 명료하게 표현한다.",
+      "followupCondition": "대형 corpus 측정으로 반복 some 병목이 보이면 앞선 집계와 presence 재사용 검토; category 출력순서/빈키 생략 유지."
+    },
+    {
+      "id": "lib/server/recipe-content-snapshot-future-propagation.ts::anti-slop(no-conditional-empty-object-spread)::a741156783c7ed3aa3ae80dacb54a95a853de9fea81f22eb00b104da674c632d#1",
+      "file": "lib/server/recipe-content-snapshot-future-propagation.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic",
+      "reason": "Object.hasOwn이 product_predecessor의 absent와 own undefined/null을 의도적으로 구분한다. unconditional own-key로 바꾸면 guard evidence 계약이 달라진다.",
+      "followupCondition": "미래전파 guard 형식 변경의 실제 필요와 own-key/JSON 직렬화·predecessor evidence 회귀가 있을 때만."
+    },
+    {
+      "id": "lib/server/youtube-dictionary-resolution-scoring.ts::anti-slop(no-array-filter-map)::e238adcbe3546aace55104ce34de370a5a86be87d3951b01e911a21296c9b28d#1",
+      "file": "lib/server/youtube-dictionary-resolution-scoring.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value",
+      "reason": "평가용 perFixture의 category 평균과 바로 아래 count가 동일 분류를 반복하지만 고정5종이다. 새 accumulator의 복잡도/부동소수 순서 위험보다 이득 미입증이다.",
+      "followupCondition": "평가 corpus 확장으로 비용이 드러날 때 avg/count 함께 모으는 후보; 총 expected/resolved/needs-review와 empty 평균 회귀 필요."
+    },
+    {
+      "id": "lib/server/youtube-caption-normalizer.ts::anti-slop(no-array-filter-map)::9bbea3fe827400ed5317238a3bbf4929621406478705ae0dd4a42cd4859d5405#1",
+      "file": "lib/server/youtube-caption-normalizer.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "모든 자막 text의 공백을 정규화하고 blank를 제거한 뒤 개행으로 연결한다. filter가 없으면 빈 줄이 출력되며 loop는 콜백/희소배열 계약을 바꿀 수 있다.",
+      "followupCondition": "실제 긴 자막 메모리 병목이 측정될 때 chunk/stream 요구와 함께 검토; 출력 byte/golden·sparse·trailing newline 회귀 선행."
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::7b6764024fe75ca0469396eed32a2d6f995076a9e627421e4eedf340eb47a007#1",
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "quantityState가 undefined가 아닐 때만 authored quantity-state 키를 넣는다. 없는 state와 null/unknown 상태는 검증 흐름에서 다르며 새 객체조립 helper는 과도하다.",
+      "followupCondition": "I031 출력 schema 변경 및 dirty 소유자 인계가 있을 때 undefined/null/모든 상태의 own-key golden부터."
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::929c73950f7e7e3b6e7c78551d36517b3d1fbf465aa92fdeb0f6ba41a9157258#1",
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "amountBasis는 원 ingredient.amountBasis 존재 조건에 묶인다. 정규화 값만 검사하면 원 입력 부재/명시null의 호환이 달라진다.",
+      "followupCondition": "원 authored amount-basis 존재/명시null 정책을 바꿀 요구와 output matrix 선행."
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::38885a3ae3a8772920c89766ceb9dc300b731525b2bad64c38a092fadf0306ee#1",
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "originalName이 있을 때만 boundedEvidenceString을 호출한다. 무조건 호출하면 없는 필드가 오류가 되며 callback 평가 순서도 바뀐다.",
+      "followupCondition": "원문 이름의 optional 정책 변경 시 absent/null/빈문자/최대길이/오류경로 회귀 후."
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::34e806cb2794a179da81f3209081a642c240cd89d3f39add25ad31bc6262f7f4#1",
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "alternativeNames optional 배열은 부재와 []를 구분하며 상단 max4 검증을 거친다. unconditional undefined 키는 Object.keys 계약을 바꾼다.",
+      "followupCondition": "I031 serialization 변경 필요 시 absent/empty/중복/초과4/이상값 golden 후."
+    },
+    {
+      "id": "lib/server/youtube-i031-runtime.ts::anti-slop(no-conditional-empty-object-spread)::1bbd1d03a572a4dfabd22ca9fafe3f95181a28e87c44f05d001bd1f821c46fc6#1",
+      "file": "lib/server/youtube-i031-runtime.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "evidenceRefs가 파싱되지 않은 부재와 명시적인 빈 배열을 구분한다. quantity selection의 evidence 연결에도 쓰여 단순 삭제가 아니다.",
+      "followupCondition": "근거참조 schema 변경 시 own-key·empty·selectedEvidence 호환을 잠근 뒤 보호 소유자와 검토."
+    },
+    {
+      "id": "lib/server/youtube-saved-recipes.ts::anti-slop(no-chained-type-assertions)::5a36c46def2ed4f85e2e1af41ef3959b67ad71c17d2f10abf55fbf47550fbe03#1",
+      "file": "lib/server/youtube-saved-recipes.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/marketing-round2-preflight.ts::anti-slop(no-array-filter-map)::6f1729cfe5e56c4ea7cb606e3d29e6e8192ccfeda950e2b6ca5b4360bffd13dd#1",
+      "file": "lib/server/marketing-round2-preflight.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "ACTIONS 중 attempts<3인 것만 선별한 뒤 random nonce를 소비한다. filter/map 합치면 필터 검사와 RNG 호출의 phase/interleaving이 달라질 수 있고 R2 보안 preflight다.",
+      "followupCondition": "preflight 정책·nonce 발급 설계를 바꿀 명시 요구 시 RNG 호출 횟수/순서·시도3회·grant serialization 회귀 선행."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::cc6c925ac6aa2f56d5248ee67918751cdf452bd3d0da012119770ab573722b16#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::cf956bcd75d239ceff25ab4054133c4ca84949988b56b595aef7057202dc6177#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "XML text regex match를 decode하고 blank만 빼서 줄결합한다. decode/태그제거와 blank 생략이 실제 계약이며 네트워크 파싱보다 이 중간배열이 병목인 증거는 없다.",
+      "followupCondition": "대형 timedtext 실측에서 메모리가 문제일 때 streaming 설계와 함께 검토; entity/newline/빈태그/caption golden 및 YT dirty handoff 선행."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::c90a745fcd5816ccdf7697882c0ad7a37ab1b18db5ed4ad2e385dd6241659644#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "sourceKinds에서 공개텍스트 source만 허용 후 method로 변환하고 별도 first-index 중복제거한다. 작은 enum 입력에서 loop/Set 도입은 실익 미입증이다.",
+      "followupCondition": "신규 source로 카디널리티·중복 매핑 문제가 발생할 때 stable method순서/unknown source 회귀 후 소유인계."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::b83c829a846df3e11720bbd6a52ad1d71f9069a923fc88e92933721050686f16#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "refs의 start_ms number를 Math.min하여 explicitStart가 없을 때만 반환한다. explicitStart가 있어도 현재 선계산한다는 낭비는 있으나 refs 규모·비용 근거가 없다.",
+      "followupCondition": "profile로 range 선계산이 병목임을 확인하면 explicit 양끝 존재 시 조기계산 생략 또는 범위 통합 검토; getter/NaN/원순서·YT dirty 인계 필요."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::2704e2b4eac333f3f2eecb2d12dec6e6b492d820bdca2c33f4d54dc66bee8b9f#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "end_ms number만 Math.max하며 start_ms fallback이 없는 별도 계약이다. multi-recipe helper와 한 함수로 합치면 의미가 달라진다.",
+      "followupCondition": "실측 및 empty/end-only/explicitEnd·NaN 회귀로 차이를 고정한 경우에만 최적화; 공통helper 추출 금지."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::d5f630122221169358e05bcacb6d241f341c2354b826f15259684684ed0c07e3#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-no-proven-value-protected",
+      "reason": "시각적 수량 gap인 ingredient만 visual 추출기로 보내고 원 필드 및 ?? fallback을 선택한다. 필터 자체가 LLM 입력 최소화 책임이며 loop보다 의도가 선명하다.",
+      "followupCondition": "추출 비용/입력크기 실측 또는 gap 정책 요구 시 QUANT/TO_TASTE/missingunit/quantity_source 회귀와 dirty 소유인계."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::ebd87cbfab328fb4aa47906c821f71e43f1c949c93940bdc28d9e202a2ad492d#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "defer-dead-filter-protected",
+      "reason": "성공 경로에서 fallbackMethod가 없으면 생성하거나 error return하므로 최종 method null filter는 런타임상 죽은 방어일 가능성이 높다. callback이 mutable fallback을 캡처해 타입이 넓어지는 것이 원인인지 검증 필요하다.",
+      "followupCondition": "YT dirty 소유인계 후 성공시 nonnull fallback const로 타입 증명하고 generated/fallback/lookup error·원 step순서·sparse 회귀. 새 assertion/nonnull! 없이 filter 제거가 될 때만 채택."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::7d1046f7803cf6ada9004d52e4dd8f1e2f68a1207d95e7a14f9d4d77c2caca5e#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-index-semantics-protected",
+      "reason": "원 ingredient index를 오류 field 문자열에 담은 뒤 resolved인 것만 버린다. 먼저 filter하고 map하면 오류 인덱스가 재번호된다.",
+      "followupCondition": "실제 진단 형식 변경 외 유지; 변경 시 sparse/중간resolved/복수오류의 원index와 order를 고정."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::e1db37d04ff6244ebac409ede6b65b088461e0e775e21f102e62e066ccce7889#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#2",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-conditional-empty-object-spread)::832897b23a8e4d8031cad5350820f96d2aabb7fd175f3ab9a4438c1ac5ab69e8#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "single-recipe feature가 켜졌을 때만 세 metadata 필드를 함께 강제한다. off일 때 absence와 status/null/[] own-key는 cache/register 의미가 다르다.",
+      "followupCondition": "single/multi feature 정책 변경은 별도 승인·원 provider/worker 보호 범위에서; flag 값 캐시/분기 삭제로 감소 금지."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::c25c42e9d9c709268856fb6c725e060b0815d69599522c97fc95a01a1bef938f#3",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::f100c2dc1ae544ca8ee0af0ad91bf9be9a23e7ce5182449f2b66c4dfd083110c#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-index-semantics-protected",
+      "reason": "missingIdSet을 써 membership은 이미 O(1)이며 원 ingredients[index] 위치를 유지하려 map(null)/filter한다. filter-first는 field 경로를 바꾼다.",
+      "followupCondition": "필드 오류 형식 변경 요구나 실제대량입력 병목 근거가 있을 때 원index·중복ID·비연속오류·sparse 회귀 후만."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-array-filter-map)::25ac0d525c3da59d26b59b15f223d632ce205eecd5a2c8f0af58a2765a6423db#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-array-filter-map)",
+      "closedForThisPass": true,
+      "decision": "retain-index-semantics-protected",
+      "reason": "step 오류도 원 steps[index]를 노출한다. ingredient 쪽과 닮았어도 공통동적 field helper는 오히려 추상화이며 현재 Set으로membership 비용을 제한한다.",
+      "followupCondition": "오류 schema 실변경 시 step 원index·missing method·중복·순서 및 YT dirty 소유인계 후 검토."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::420b7c93e579798d38a80482548997ac918e8ca4c752a1a0ae25ccaa463ec3f1#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#2",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::e1db37d04ff6244ebac409ede6b65b088461e0e775e21f102e62e066ccce7889#2",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::30b6f3c5e18c13720d24cfa5c04c8a9e5f2aada95d61d06ac25a22748ddb792d#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::7504d79179b148302738b40b37ac0fb91764a14cc58d0df3d7dcf5e2e1a00c04#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::d3efe91d59abedbafb097a1d86b3fbc27e711c2b3b48395fb760c8f5406b647a#3",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::b5d30639b6c87c3d09cd95ec3c502b152e05dc9984bd6c06e37cffcac7705644#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::72794cb52a80a24933131f9e382bf574d3b55cf5c15371e800367bb6fc5cb4b4#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::92da625072f8e7b97a9f5e9b9df5f3628375c2855fd87776c2d4d727c2f74b0c#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/youtube-import.ts::anti-slop(no-chained-type-assertions)::7b4229720f23313ef9315ed7760408c2fdc40bbb9021f9fe961fb06e49c8b5c8#1",
+      "file": "lib/server/youtube-import.ts",
+      "rule": "anti-slop(no-chained-type-assertions)",
+      "closedForThisPass": true,
+      "decision": "closed-concurrent-youtube-scope",
+      "reason": "추출기·YouTube 병행 전환 범위: 사용자 보류. 코드 변경하지 않음. Existing dirty overlapping youtube-saved/import worktrees and separate canonical-save owner remain protected; this pass did not edit or resolve this ID.",
+      "followupCondition": "Explicit owner handoff of stable canonical/import code and dirty resolution, then exact boundary/permission regression review in a new small branch; no automatic scope release."
+    },
+    {
+      "id": "lib/server/account-generation/session-authority.ts::anti-slop(no-conditional-empty-object-spread)::85a9086b2ebf866ef15a1c5987f5df4140b9a6401ca3c689124701537c1b749e#1",
+      "file": "lib/server/account-generation/session-authority.ts",
+      "rule": "anti-slop(no-conditional-empty-object-spread)",
+      "closedForThisPass": true,
+      "decision": "retain-semantic-protected",
+      "reason": "includeFullLocalSessionRecord 옵션일 때만 실제 full-local record를 sessionAuthority에 노출한다. 무조건 포함/undefined 키는 capability·정보노출 계약 변경이다.",
+      "followupCondition": "session record 전달 설계의 필요가 생길 때 include false/true·remote/local와 data노출 회귀 및 auth 범위 검토."
+    }
+  ],
+  "decisionCounts": {
+    "retain-semantic": 7,
+    "retain-semantic-protected": 17,
+    "retain-no-proven-value": 13,
+    "defer-algorithm-protected": 2,
+    "retain-reference": 7,
+    "retain-reference-dead-override": 1,
+    "closed-consumed-contract-design": 1,
+    "closed-explicit-hold": 3,
+    "closed-protected-capability-design": 2,
+    "retain-no-proven-value-protected": 9,
+    "closed-r2-plan-rejection": 1,
+    "closed-concurrent-youtube-scope": 17,
+    "defer-dead-filter-protected": 1,
+    "retain-index-semantics-protected": 3
+  },
+  "limits": [
+    "Original163 identity8fields and old52/19/117/191 snapshots unchanged; checker/baseline207 unchanged.",
+    "Original49 list not found; permission3/static3/held444/held1745 remain, not resolved by this cleanup.",
+    "Actual operating62c20d4bd/buildktOrhp/DB238/Anti87 at source audit; this source84 is not yet merged/deployed.",
+    "New authenticated QA and actual deletion/legacy completion not executed. Unauthenticated health is not authenticated success.",
+    "Protected provider/R2/YouTube dirty and factory/auth sources unchanged. Arrays/conditionals audit is static value judgment, not benchmark."
+  ]
+}

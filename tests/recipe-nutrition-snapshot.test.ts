@@ -339,7 +339,9 @@ describe("recipe nutrition snapshot writer", () => {
     const duplicateSources = structuredClone(valid);
     duplicateSources.sources_json = [SOURCE, SOURCE];
     const extraValueField = structuredClone(valid);
-    (extraValueField.nutrient_status_json.energy_kcal as unknown as Record<string, unknown>).raw = true;
+    extraValueField.nutrient_status_json = {
+      ...calculation.values, energy_kcal: { ...calculation.values.energy_kcal, raw: true },
+    };
 
     for (const row of [
       extraVector,

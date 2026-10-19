@@ -496,6 +496,70 @@ describe("supabase server helpers", () => {
     expect(observabilityClient).toEqual({ rpc: expect.any(Function) });
   });
 
+  it("keeps stable full-local legacy callback capability RPC-only through bootstrap", async () => {
+    getServiceRoleKey.mockReturnValue("fixture-local-service");
+    const raw = { from: vi.fn(), rpc: vi.fn().mockResolvedValue({
+      data: { status: "ok", nickname: "고정 별명" }, error: null,
+    }) };
+    createClient.mockReturnValue(raw);
+    const server = await import("@/lib/supabase/server");
+    const client = server.createAuthCallbackOperationsClient();
+    if (!client) throw new Error("fixture capability missing");
+    expect(Object.keys(client)).toEqual(["rpc"]);
+    expect(await server.bootstrapLegacyAuthCallbackIdentity(client, {
+      id: "fixture-owner", email: " Cook@Example.COM ",
+      app_metadata: { provider: "google" }, user_metadata: { nickname: "고정 별명", sub: "fixture-sub" },
+    })).toEqual({ ok: true, nickname: "고정 별명" });
+    expect(raw.from).not.toHaveBeenCalled();
+    expect(raw.rpc).toHaveBeenCalledTimes(1);
+    expect(raw.rpc).toHaveBeenCalledWith("bootstrap_legacy_auth_callback_identity", {
+      p_email: "cook@example.com", p_nickname: "고정 별명", p_owner_uuid: "fixture-owner",
+      p_profile_image_url: null, p_social_id: "fixture-sub", p_social_provider: "google",
+    });
+  });
+
+  it("returns no legacy callback capability without a service key and never constructs the SDK", async () => {
+    const server = await import("@/lib/supabase/server");
+    expect(server.createAuthCallbackOperationsClient()).toBeNull();
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it("locks the current environment re-read mismatch: an RPC-only client cannot run the remote table branch", async () => {
+    getServiceRoleKey.mockReturnValue("fixture-local-service");
+    const raw = { from: vi.fn(), rpc: vi.fn() };
+    createClient.mockReturnValue(raw);
+    const server = await import("@/lib/supabase/server");
+    const client = server.createAuthCallbackOperationsClient();
+    if (!client) throw new Error("fixture capability missing");
+    expect(Object.keys(client)).toEqual(["rpc"]);
+    // A mock-only changing config proves that deleting the old branch is not
+    // justified merely by the capability captured at factory creation.
+    getSupabaseEnv.mockReturnValue({ url: "http://fixture.invalid", authority: "remote" });
+    await expect(server.bootstrapLegacyAuthCallbackIdentity(client, {
+      id: "fixture-owner", email: "fixture@example.invalid",
+      app_metadata: { provider: "google" }, user_metadata: { sub: "fixture-sub" },
+    })).rejects.toThrow(TypeError);
+    expect(raw.from).not.toHaveBeenCalled();
+    expect(raw.rpc).not.toHaveBeenCalled();
+  });
+
+  it("observes the factory second environment read separately from the SDK creation read", async () => {
+    getServiceRoleKey.mockReturnValue("fixture-local-service");
+    const raw = { from: vi.fn(), rpc: vi.fn() };
+    createClient.mockReturnValue(raw);
+    const server = await import("@/lib/supabase/server");
+    getSupabaseEnv.mockClear();
+    getSupabaseEnv.mockReturnValueOnce({ url: "http://fixture-local.invalid", authority: "local" })
+      .mockReturnValueOnce({ url: "http://fixture-remote.invalid", authority: "remote" });
+    // Baseline observation only, not approval to expose table access or use a
+    // remote authority in production. No real URL or session is contacted.
+    expect(server.createAuthCallbackOperationsClient()).toBe(raw);
+    expect(getSupabaseEnv).toHaveBeenCalledTimes(2);
+    expect(createClient.mock.calls[0][0]).toBe("http://fixture-local.invalid");
+    expect(raw.from).not.toHaveBeenCalled();
+    expect(raw.rpc).not.toHaveBeenCalled();
+  });
+
   it("never exposes the legacy callback table facade under local-only authority", async () => {
     getServiceRoleKey.mockReturnValue("local-service-secret");
     const client = {

@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop84 소스 검증·잔여84 종료 분류
+
+영양JSON1의실SDK/unknown소비경계·중복계산삭제와검색q중복조건2만수정했다. snapshot/legacy42기존행동잠금·최종15suite345PASS/전체type/lint/verify84new0·독립승인이다. 원16379해결/84잔여, 배열/조건부62는고정ID별가치감사후q2만채택했고전체잔여84에이유/재검토조건을남겼다. source549fec481은아직미배포이며실제62c20d4bd/buildktOrhp·DB238·Anti87과구분한다. provider/R2·YouTubedirty·권한3/static3/444/1745·새인증QA미실행은보존한다. [검증·기존실패·ID별종료조건](../engineering/anti-slop-nutrition-residual-closeout-20261020.md)을따른다.
+
 ## 2026-10-20 — Anti Slop87 안전6건 운영 완료
 
 PR1837을 정확 merge62c20d4bd로 병합하고 공식 DB238 앱-only 경로로 한 번 배포했다. 실제buildprelaunch-62c20d4bd305-ktOrhp·loadedtrue·DB238ready·Anti87/new0이며 source141 PASS·전체type/lint/독립승인, 배포웹1473 PASS/133 이름필터SKIP·빌드99초/static94/기존경고3다. 원planSHA/readerFloor·R2보호·승인/PIN은 그대로이고 고정READ ONLY9지문은 이번 배포전후 모두 같다. 실제삭제/SQL/설정변경0·새인증QA미실행이다. provider1은 Draft1836/원HEAD에 보존했고, 영양JSON1은 구현 가능한 다음 공학배치다. [운영증거·후속4·기존실패](../engineering/anti-slop-meal-safe-split-20261020.md)를 따른다. 아래 후보/운영93은 당시 기록이다.
