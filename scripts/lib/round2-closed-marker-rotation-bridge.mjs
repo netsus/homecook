@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual as same } from 'node:util';
 import { assertRound2EightKeyFence, preserveRound2RotationState, ROUND2_ROTATION_NAMES } from './round2-eight-key-rotation-fence.mjs';
-import { assertV85AuthSuccessorTool,v85RotationBridgeAuthority } from './youtube-v85-cutover.mjs';
+import { assertV85AuthSuccessorTool,assertV85DataSuccessorTool,v85RotationBridgeAuthority } from './youtube-v85-cutover.mjs';
 import { readerRepairInvocation, bindReaderRepairWebTool, consumeReaderRepairReview } from './v85-web-reader-repair.mjs';
 
 export const ROTATION_BRIDGE = Object.freeze({
@@ -33,7 +33,8 @@ export function assertRotationBridgeToolBinding({toolRef,requestedToolRef,target
   if (readerRepairInvocation()) return bindReaderRepairWebTool({toolRef,requestedToolRef,targetRef,capsuleSha256,clean,ownRepository,digests,untrackedPaths,authority});
   if(authority?.plan?.authSuccessor){
     check(requestedToolRef===toolRef&&targetRef===ROTATION_BRIDGE.target&&capsuleSha256===authority.planSha256);
-    assertV85AuthSuccessorTool({plan:authority.plan,toolRef,digests,clean,untrackedPaths,ownRepository});
+    const assertTool=authority.plan.dataSuccessor?assertV85DataSuccessorTool:assertV85AuthSuccessorTool;
+    assertTool({plan:authority.plan,toolRef,digests,clean,untrackedPaths,ownRepository});
     check(v85RotationBridgeAuthority(authority).planSha256===ROTATION_BRIDGE.capsule);
     return {toolRef,targetRef,capsuleSha256,historicalCapsuleSha256:ROTATION_BRIDGE.capsule,
       sourceDeltaSha256:hash(JSON.stringify(digests)),operatingChanged:false};

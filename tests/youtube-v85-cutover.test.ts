@@ -116,9 +116,9 @@ describe('independent immutable original plus exact continuation authority',()=>
       const p=continuationFixture(),originalBytes=Buffer.from(JSON.stringify(p.originalPlan));
       p.continuation.originalPlanSha256=v85Hash(originalBytes);
       const bytes=Buffer.from(JSON.stringify(p));writeFileSync(join(dir,'plan.json'),originalBytes);writeFileSync(join(dir,'continuation-plan.json'),bytes);
-      const approval=vi.fn(account=>account==='approved-continuation-sha256'?v85Hash(bytes):v85Hash(originalBytes));
+      const approval=vi.fn((account,optional=false)=>optional?null:account==='approved-continuation-sha256'?v85Hash(bytes):v85Hash(originalBytes));
       expect(readV85ExecutionApproval((file:string)=>readFileSync(file),approval,dir,now)?.planSha256).toBe(v85Hash(bytes));
-      expect(approval.mock.calls).toEqual([[],['approved-continuation-sha256']]);
+      expect(approval.mock.calls).toEqual([[],['approved-continuation-sha256'],['approved-normal-data-successor-20261019-sha256',true]]);
       expect(()=>readV85ExecutionApproval((file:string)=>readFileSync(file),()=>h,dir,now)).toThrow();
       expect(readFileSync(join(dir,'plan.json'))).toEqual(originalBytes);
     }finally{rmSync(dir,{recursive:true,force:true});}
@@ -202,10 +202,10 @@ describe('registration exact readback and successor',()=>{
   it.each(['future','long','expired'])('rejects unsafe manager %s before constructing rotation SQL',change=>{const f=fixture(),iat=now.getTime()/1000,managerClaims={role:'youtube_extraction_credential_manager',scope:'youtube-extraction-credential-manager',iss:'https://worker.mumeok.kr',aud:'youtube-extraction',jti_hash:h,iat,exp:iat+300};if(change==='future'){managerClaims.iat+=31;managerClaims.exp+=31;}if(change==='long')managerClaims.exp++;if(change==='expired')managerClaims.exp=iat;expect(()=>buildV85RegistrationSql({...f,managerClaims,now})).toThrow();});
   it('requires separate approval and activation byte anchors; pending registration cannot authorize unrelated deploy',()=>{
     const dir=mkdtempSync('/tmp/v85-authority-test-');try{const f=fixture(),bytes=JSON.stringify(f.plan),digest=v85Hash(bytes);writeFileSync(join(dir,'plan.json'),bytes);
-      const read=(p:string)=>readFileSync(p);expect(()=>readV85Authority(read,()=>other,dir,now)).toThrow();expect(readV85Authority(read,()=>digest,dir,now)?.proof).toBeNull();
+      const read=(p:string)=>readFileSync(p);expect(()=>readV85Authority(read,()=>other,dir,now)).toThrow();expect(readV85Authority(read,(_account?:string,optional=false)=>optional?null:digest,dir,now)?.proof).toBeNull();
       writeFileSync(join(dir,'registration-intent.json'),'{}');expect(()=>readV85Authority(read,()=>digest,dir,now)).toThrow();
       const proof=JSON.stringify(f.proof);writeFileSync(join(dir,'activation.json'),proof);expect(()=>readV85Authority(read,()=>digest,dir,now)).toThrow();
-      expect(readV85Authority(read,(account?:string)=>account==='activation-sha256'?v85Hash(proof):digest,dir,now)?.proof).toBeTruthy();
+      expect(readV85Authority(read,(account?:string,optional=false)=>optional?null:account==='activation-sha256'?v85Hash(proof):digest,dir,now)?.proof).toBeTruthy();
     }finally{rmSync(dir,{recursive:true,force:true});}
   });
 });
