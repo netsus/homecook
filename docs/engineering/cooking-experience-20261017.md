@@ -324,3 +324,9 @@ exact 검증 대상에 기존 `pg_dump --schema-only` 경로와 read-only PGOPTI
 **운영 백업 단계에서 새 보존 충돌을 발견해 실행을 보류했다.** 기존 `full-local-platform-backup.mjs`의 consistent cut은 gateway/auth/PostgREST/Storage(+Realtime) 컨테이너를 멈춘다. 고정v85와 현재가 같은 worker 소스는 claim RPC의 연결 오류/비정상 응답을 `runOnce → poll loop → runner` 밖으로 전파해 exit1이 될 수 있다. 백업 finally는 API 컨테이너만 재시작하며 별도 gen50 worker의 동일 PID/실행 상태를 복구하지 않는다. 실제 백업이나 worker 종료를 실행·관측한 것은 아니다. 일반 백업 승인만으로 gen50 재시작·재등록·자격 변경이 허용됐다고 해석하지 않고, 운영 담당자에게 기존 절차와 보존 조건을 함께 만족할 중단/복구 조율을 요청한다.
 
 백업 통과 뒤 push/PR/머지·DB·웹을 진행하라는 순서를 유지한다. 현재 최신 백업 생성·복원 검증·원격 쓰기·DB233/234/235 적용·웹 배포·운영 브라우저 QA는 미실행이다. gen50/자격/만료/고정A·B/활성화 기록·R2/lead/C05와 기존 사용자 데이터의 변경은0이다. [현재 fixture 검증과 백업 보류 근거](data/cooking-current-schema-preflight-20261019.json)를 따른다.
+
+## 2026-10-19 — 백업/복구 실행 전 계획만 구체화
+
+운영 담당자가 확인한 동일 gen50 plist의 일시 bootout/bootstrap 경로와 최신 무작업 관찰을 반영해 [최소 백업·DB·웹 순서](cooking-backup-deploy-sequence-20261019.md)를 작성했다. 기존 exported snapshot 백업은 API/worker 중단 없는 DB-only 경로이며 전체 플랫폼의 Storage/off-Mac/암호화/clean restore/readiness를 대체하지 않는다. 현재 full backup의 API finally와 worker/enqueue fence 실패 복구 연결, 요리233/234/235의 exact review, 정상 새 웹 handoff가 미완료이므로 실행 준비 완료라고 하지 않는다. policy/updated_at·자격·세대·A/B/역사 증거는 유지한다.
+
+선택 회귀4파일107 PASS이며 별도 첫 실행의 request-role 유지보수 suite는 기존 파생 fixture import 누락으로 collection 실패했다. 이번 단계는 문서와 로컬 mock/fixture 검증뿐이며 서비스 중지·백업/복원·원격 쓰기·DB/웹 반영은0이다. 실제 실행은 부모 직렬화와 문서에 적은 좁은 연결/실패 경로 검증 뒤에 진행한다.

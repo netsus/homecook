@@ -166,7 +166,7 @@ function dockerInventory(kind) {
   ));
 }
 
-function productionResourceController(args) {
+function productionResourceController(args, assertAdmissionFence = () => {}) {
   const path = exactConfigPath(args);
   if ((statSync(path).mode & 0o777) !== 0o600) {
     fail("Full-local production config must use exact mode 0600.");
@@ -201,11 +201,8 @@ function productionResourceController(args) {
   const provenance = {};
   let rows;
   const cut = createFailSafeConsistentCutController({
-    startWriter: (writer) => setContainerState(
-      "start",
-      [writer],
-      "Production consistent cut release failed.",
-    ),
+    assertRestartSafe: assertAdmissionFence,
+    startWriter: (writer) => setContainerState("start", [writer], "Production consistent cut release failed."),
     stopWriter: (writer) => setContainerState(
       "stop",
       [writer],
@@ -694,6 +691,22 @@ function assertPinnedSupabaseCli() {
   return observed;
 }
 
+// Programmatic composition keeps the same config/resource/key/archive checks as the CLI.
+// The cooking maintenance caller synchronously verifies its live enqueue fence before
+// every API restart; a lost fence leaves the affected writer stopped for reconciliation.
+export function backupProductionPlatform({ configPath, output, assertAdmissionFence }) {
+  const controller = productionResourceController(["--config", configPath], assertAdmissionFence);
+  try {
+    const result = createEncryptedPlatformBackup({
+      backupKey: loadBackupKey(), database: controller.database, output,
+      repositoryRoot: ROOT, storage: controller.storage,
+    });
+    return { ...result, cli_version: PINNED_SUPABASE_CLI_VERSION, status: "PASS" };
+  } finally {
+    controller.cleanup();
+  }
+}
+
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   rejectCredentialArguments(args);
@@ -703,20 +716,10 @@ async function main() {
       print({ keychain_account: KEYCHAIN_ACCOUNT, keychain_service: KEYCHAIN_SERVICE, status: "PASS" });
       break;
     case "backup": {
-      const output = requiredAbsolutePath(args, "--output");
-      const controller = productionResourceController(args);
-      try {
-        const result = createEncryptedPlatformBackup({
-          backupKey: loadBackupKey(),
-          database: controller.database,
-          output,
-          repositoryRoot: ROOT,
-          storage: controller.storage,
-        });
-        print({ ...result, cli_version: PINNED_SUPABASE_CLI_VERSION, status: "PASS" });
-      } finally {
-        controller.cleanup();
-      }
+      print(backupProductionPlatform({
+        configPath: exactConfigPath(args),
+        output: requiredAbsolutePath(args, "--output"),
+      }));
       break;
     }
     case "copy-off-mac":
@@ -768,7 +771,7 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch((error) => {
   process.stderr.write(`${JSON.stringify({
     error: error instanceof Error ? error.message : "Unknown failure.",
     status: "FAIL",
