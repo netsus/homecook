@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
@@ -316,4 +317,3 @@ export async function GET(request: NextRequest) {
 
   return ok(responseData);
 }
-import type { SupabaseClient } from "@supabase/supabase-js";

@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { parseProductPlannerEntryPatchBody } from "@/lib/server/prepared-food-planner-entry";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
@@ -183,4 +184,3 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
   return ok({ deleted: true, entry_id: required.entryId });
 }
-import type { SupabaseClient } from "@supabase/supabase-js";

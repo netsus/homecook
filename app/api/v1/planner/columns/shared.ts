@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail } from "@/lib/api/response";
 import {
   ensurePublicUserRow,
@@ -275,4 +276,3 @@ export async function findPlannerColumnById(
 
   return result.data;
 }
-import type { SupabaseClient } from "@supabase/supabase-js";
