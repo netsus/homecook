@@ -14,6 +14,8 @@
 
 Anti Slop은 **125/baseline207/신규0 유지**다. Gamification 전체 계약과 기존 route4건의 연쇄 단언을 제거한 변경은 아니므로 원29건21완료/8잔여 집계는 그대로다. 기존 `codex/anti-slop-growth-contract-20261020`의 실패 dirty3파일은 수정하지 않고 보존했다.
 
+후속으로 범위를 실제 progress/gamification23suite로 넓힌 첫 실행은123 PASS/5 FAIL이었다. 두 오래된 fixture가 `match`를 지원하지 않아 summary 조회에서 중단된 실패이며, 새 메서드 지원만 추가하고 기대값·read-only writer 거부·RPC실패/notification순서 검사는 유지했다. 재실행은 **23suite128 PASS**, 추가2 fixture의 lint/diff도 exit0이다. 초기46 PASS를 전체 인접 검사 성공으로 확대하지 않았고, 이5실패도 숨기지 않는다.
+
 재현 산출물(저장소 ignored `.omx`, 운영 연결 없음):
 
 - 기존 실패 WT `.omx/evidence/progress-ts2589-20261020/reproduce.mjs`: 매 case 새 Program으로15개 대조, 예상 TS2589 5개/진단0 10개를 고정한다. exit0은 **실패 재현이 예상과 일치함**이지 제품 타입 전체 통과가 아니다.
@@ -39,4 +41,4 @@ Anti Slop은 **125/baseline207/신규0 유지**다. Gamification 전체 계약�
 2. 위3 route와 공유 타입2개를 파일별 `FREEZE YES/NO`로 답해 달라. 특히 detail GET/DELETE는 파일 전체를 잠글 수 있는가? 남은 코드가 없으면 `REMAINING_EDITS=NONE`, 종료했으면 `HANDOFF_READY=YES`를 명시해 달라.
 3. 확정된 canonical/public bridge·private source/edit authority·공개 민감정보 비노출·my_added DELETE403·두 fallback을 그대로 두고, 최신 master 별도 WT에서 `list_GET`, `detail_GET_DELETE`, `manual_POST`의 route-local 타입/선택 단계+검사만 분리하는 것을 각각 `ALLOW/BLOCK`으로 답해 달라. 계약 변경이 pending이면 해당 항목·결정자·이유만 알려 달라.
 
-최신 인계에 따라 독립 수정 가능한 list GET→detail GET부터 진행하고 DELETE→manual POST는 공통 growth 경계를 함께 확인한다. 새 PENDING/dirty overlap이 실제 발견되면 해당 파일만 보류한다. 다른 작업의 old branch를 cherry-pick/rebase하지 않으며, 운영 배포는 인증 QA 종료 인계 뒤에만 직렬 진행한다. 기존 권한3건·보류444·실패 기준선은 미해결로 유지한다.
+최신 인계에 따라 독립 수정 가능한 list GET→detail GET부터 진행하고 DELETE→manual POST는 공통 growth 경계를 함께 확인한다. 새 PENDING/dirty overlap이 실제 발견되면 해당 파일만 보류한다. 다른 작업의 old branch를 cherry-pick/rebase하지 않는다. 부모가 이후 운영 인증 QA 종료도 인계했다: 기존Chrome에서 저장→북새로고침 PASS(분수 유지), 장보기완료→read-only PASS(새로고침 수정0/팬트리0), 보호5행/원문/revision 보존이다. 본인 진행 중 legacy 표본0이라 legacy 완료는 미실행이고 정상 snapshot-v2 시작은 취소/재조회만 확인했다. 새 QA 끼니 생성의 auto-review 거부는 재시도하거나 우회하지 않으며, legacy는 운영 추가 생성 없이 로컬 격리 fixture로만 검증한다. 검증된 다음 앱-only 묶음은 이 QA 종료 인계 후에만 직렬 배포할 수 있다. 이는 부모의 관측이며 root가 인증 QA를 직접 수행했다는 뜻이 아니다. 기존 권한3건·보류444·실패 기준선은 미해결로 유지한다.
