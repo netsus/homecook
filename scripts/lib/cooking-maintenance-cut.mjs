@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const check = (ok, message) => { if (!ok) throw new Error(message); };
 
@@ -89,4 +90,15 @@ export function startCookingFenceMonitor({ assertHeld, closeIngress }) {
   }, 500);
   timer.unref();
   return { get error() { return error; }, stop() { clearInterval(timer); } };
+}
+
+
+// bootout may return before launchd finishes unloading the owned service.
+// The observer still rejects a foreign plist or ambiguous status immediately.
+export async function waitForCookingWorkerUnloaded(observeStopped) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    if ((await observeStopped()).stopped === true) return;
+    await delay(250);
+  }
+  throw new Error('Owned worker did not finish unloading after 20 bounded observations');
 }

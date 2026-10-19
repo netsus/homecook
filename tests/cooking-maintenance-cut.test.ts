@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Worker } from 'node:worker_threads';
 import { createFailSafeConsistentCutController } from '../scripts/lib/full-local-platform-backup.mjs';
-import { assertCookingMaintenanceQueue, withCookingWorkerPaused, startCookingFenceMonitor } from '../scripts/lib/cooking-maintenance-cut.mjs';
+import { assertCookingMaintenanceQueue, withCookingWorkerPaused, startCookingFenceMonitor, waitForCookingWorkerUnloaded } from '../scripts/lib/cooking-maintenance-cut.mjs';
 
 function fixture(fail = '') {
   const events: string[] = [];
@@ -142,4 +142,17 @@ it('repeats containment until the operation can no longer restart the gateway', 
     await vi.advanceTimersByTimeAsync(500);
     expect(running).toBe(false);
   } finally { monitor.stop(); vi.useRealTimers(); }
+});
+
+
+it('waits for owned launchd unloading without dispatching bootout again', async () => {
+  let reads = 0;
+  await waitForCookingWorkerUnloaded(async () => ({ stopped: ++reads === 3 }));
+  expect(reads).toBe(3);
+});
+
+it('does not swallow foreign or ambiguous stop observations', async () => {
+  const observe = vi.fn(async () => { throw Error('foreign launcher'); });
+  await expect(waitForCookingWorkerUnloaded(observe)).rejects.toThrow('foreign launcher');
+  expect(observe).toHaveBeenCalledTimes(1);
 });

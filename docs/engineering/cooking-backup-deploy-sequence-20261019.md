@@ -67,3 +67,9 @@
 실패 복구: dump/Storage 실패도 원래 정확 API set을 복구한 뒤 동일 plist worker와 실제 인증/health를 확인한다. 차단 연결·API/worker 복구를 확인할 수 없으면 gateway를 닫고 해당 상태/소유 fence/backend/receipt를 대조한 뒤 재개하며, 불확실 호출을 중복 실행하지 않는다. DB commit과 운영 데이터 변경은 이 백업 단계에 없다. 실제 백업 성공 전 source/target/config·출력 경로와 실행 결과를 별도 비공개 receipt로 남긴다.
 
 새 검증: 선택3파일82 PASS, lint0. 소유 network-none·port0·mount0 PG17의 실제 advisory/함수5검사 PASS(이전 shared holder, COMMIT 뒤 exclusive 유지, 일반 읽기 허용, blocked enqueue 분류, 연결 종료 후 대기 요청 재개); 소유 컨테이너 정리 확인. 운영 읽기 사전 관찰은 같은PID98098·실제 인증/readiness 성공·큐/processing/permit0을 확인했다. 연결 단절 호출은 생성 전 실패해 파일/로그 불변을 대조했고, 그 뒤 로컬 변경·검사만 재실행했다. 이 기록 시점 운영 중지/백업/DB/웹 변경은0이다.
+
+### 첫 운영 시도와 복구 (09:33 UTC)
+
+고정 소스618b09f02에서 첫 백업을 시도했다. exact bootout 직후 launchd가 일시 loaded/not-running으로 관찰돼 snapshot 단계 전에 중단됐다. `maintenance-1-before-stop` 다음 기록은 `maintenance-2-restored`이며 플랫폼 백업 operation·API 중지·archive 생성은0이다. 동일 plist bootstrap 복구 뒤 workerPID98098→10709, 실제 인증/readiness 성공·큐/processing/permit0을 확인했다. policy/credential/43jobs/plist/activation/web/R2의 전후 지문은 모두 같다. gen50·고정만료·A/B·역사 기록 변경은 없다.
+
+이를 정상 백업 성공으로 세지 않는다. 다음 시도는 별도 새 출력/receipt 경로를 쓰며, bootout은 한 번만 보내고 own plist/명령 보호를 통과한 전환 상태만 최대20회 관찰해 실제113/unloaded를 기다린다. 관찰 예외는 즉시 거절한다.250ms 대기간격 합계는5초이나 각 launchctl print의 실행 시간은 별도이므로 wall-clock5초 상한이라고 주장하지 않는다. 작은 회귀를 추가해 선택84 PASS·lint0을 확인했고 독립 재리뷰 P1/P2는0건이다.

@@ -10,7 +10,7 @@ import { openDedicatedAdminSession } from '../youtube-resolution-controlled-db.m
 import { assertV74LoadedService } from './prelaunch-youtube-v74-cutover.mjs';
 import { parseLaunchctlPrintStatus } from './youtube-extraction-worker-ops.mjs';
 import { V85, v85Paths } from './youtube-v85-cutover.mjs';
-import { withCookingWorkerPaused, startCookingFenceMonitor } from './cooking-maintenance-cut.mjs';
+import { withCookingWorkerPaused, startCookingFenceMonitor, waitForCookingWorkerUnloaded } from './cooking-maintenance-cut.mjs';
 import { cookingFenceHeldSql, cookingEnqueueStateSql, runCookingPlatformBackup } from './cooking-platform-backup-thread.mjs';
 import { readWorkerEnvironment } from './youtube-extraction-worker-runtime.mjs';
 import { verifyYoutubeResolutionWorkerCaller } from './prelaunch-youtube-resolution-worker-install.mjs';
@@ -66,7 +66,7 @@ export async function createCookingMaintenanceLocal({ configPath, backupDirector
     return matches;
   });
   const gateway = writers.find(row => row[1] === 'api-gateway')[0];
-  function workerStatus() {
+  function workerStatus({ allowTransition = false } = {}) {
     check(hash(readFileSync(plistPath)) === originalPlistHash, 'Worker launcher changed');
     const result = spawnSync('/bin/launchctl', ['print', service], { encoding: 'utf8', timeout: 5000, maxBuffer: 4 * 1024 * 1024 });
     if (result.status !== 0) {
@@ -75,6 +75,7 @@ export async function createCookingMaintenanceLocal({ configPath, backupDirector
       return { stopped: true, running: false, pid: null };
     }
     const state = assertV74LoadedService({ stdout: result.stdout, plist: originalPlist, plistPath, serviceTarget: service, requireRunning: false });
+    if (allowTransition && state.loaded && state.state !== 'running') return { stopped: false, running: false, pid: state.pid ?? null };
     check(state.loaded && state.state === 'running' && state.pid > 0, 'Worker loaded but not running');
     return { stopped: false, running: true, pid: state.pid };
   }
@@ -155,7 +156,11 @@ export async function createCookingMaintenanceLocal({ configPath, backupDirector
   const worker = {
     observe: async () => observe(),
     observeStopped: async () => workerStatus(),
-    stop: async () => { check(workerStatus().running, 'Worker not running before bootout'); command('/bin/launchctl', ['bootout', service]); },
+    stop: async () => {
+      check(workerStatus().running, 'Worker not running before bootout');
+      command('/bin/launchctl', ['bootout', service]);
+      await waitForCookingWorkerUnloaded(() => workerStatus({ allowTransition: true }));
+    },
     startSamePlist: async () => { check(workerStatus().stopped, 'Worker is not unloaded'); command('/bin/launchctl', ['bootstrap', `gui/${process.getuid()}`, plistPath]); },
     async restoreApi() {
       for (const [id] of [...writers].reverse()) {
