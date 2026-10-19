@@ -5,9 +5,9 @@ import { COOKING_EXPERIENCE_REVIEW_PIN, COOKING_EXPERIENCE_MIGRATIONS } from "./
 import { SAVED_RECIPE_NUTRITION_FUNCTION_SIGNATURES } from "./saved-recipe-nutrition-catalog.mjs";
 
 export const SAVED_RECIPE_NUTRITION_FEATURE = "saved-recipe-nutrition-experience";
-export const SAVED_RECIPE_NUTRITION_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const SAVED_RECIPE_NUTRITION_REVIEW_PIN = Object.freeze({ path: "/Users/cwj/.homecook/operations/saved-nutrition-deploy-20261019-eNPbXN/approved-saved-nutrition-review.json", sha256: "f1dd80889e76799ba8997314747c4e2475c4dd9052501b7bfb4c27ff2dacd381" });
 export const SAVED_RECIPE_NUTRITION_CATALOG_MODE = "saved-recipe-nutrition-canonical-with-native-raw-remainder-v1";
-// Deliberately unbound until the final product/SQL bytes and evidence are reviewed.
+// SQL source bytes stay fixed independently of the create-only operating review.
 export const SAVED_RECIPE_NUTRITION_MIGRATIONS = Object.freeze([
   Object.freeze({ filename: "20261019120000_youtube_saved_catalog_selection.sql", sha256: "b7df06e51c2cb9ea95eb03154cf4b80e0268c949c4d104be4f72d464d2e88ac6", prefix: "" }),
   Object.freeze({ filename: "20261019130000_youtube_saved_nutrition_publication.sql", sha256: "fc9f65b1d592ae60062fbc7a3eaa40da8b8fa6a3d17d6b9f676e053e6ad7e60e", prefix: "" }),
