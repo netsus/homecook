@@ -1,7 +1,7 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import { productPurchaseSuggestion, productVersionKey, readProductQuantityContexts, shoppingProductPurchaseAmounts } from "@/lib/server/recipe-product-quantity";
-import type { RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -22,11 +22,7 @@ interface QueryError {
   message: string;
 }
 
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-interface ShoppingListRow {
+type ShoppingListRow = {
   id: string;
   user_id: string;
   title: string;
@@ -35,16 +31,7 @@ interface ShoppingListRow {
   is_completed: boolean;
   completed_at: string | null;
   created_at: string;
-  updated_at?: string;
-}
-
-interface ShoppingListRecipeRow {
-  recipe_content_snapshot_id?: string | null;
-  recipe_content_snapshots?: { base_servings?: unknown; ingredients_json?: unknown } | Array<{ base_servings?: unknown; ingredients_json?: unknown }> | null;
-  recipe_id: string;
-  shopping_servings: number;
-  planned_servings_total: number;
-}
+};
 
 interface RecipeRow {
   id: string;
@@ -65,12 +52,7 @@ interface MealRecipeContentRow {
     | null;
 }
 
-interface IngredientRow {
-  id: string;
-  category: string | null;
-}
-
-interface ShoppingListItemRow {
+type ShoppingListItemRow = {
   id: string;
   ingredient_id: string | null;
   food_product_id: string | null;
@@ -81,81 +63,56 @@ interface ShoppingListItemRow {
   is_pantry_excluded: boolean;
   added_to_pantry: boolean;
   sort_order: number;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
+};
 
 type ArrayResult<T> = PromiseLike<{
   data: T[] | null;
   error: QueryError | null;
 }>;
 
-interface ShoppingListsSelectQuery {
-  eq(column: string, value: string): ShoppingListsSelectQuery;
-  maybeSingle(): MaybeSingleResult<ShoppingListRow>;
-}
-
-interface ShoppingListRecipesSelectQuery {
-  eq(column: string, value: string): ShoppingListRecipesSelectQuery;
-  then: ArrayResult<ShoppingListRecipeRow>["then"];
-}
-
-interface RecipesSelectQuery {
-  in(column: string, values: string[]): RecipesSelectQuery;
-  then: ArrayResult<RecipeRow>["then"];
-}
-
-interface IngredientsSelectQuery {
-  in(column: string, values: string[]): IngredientsSelectQuery;
-  then: ArrayResult<IngredientRow>["then"];
-}
-
-interface ShoppingListItemsSelectQuery {
-  eq(column: string, value: string): ShoppingListItemsSelectQuery;
-  order(column: string, options: QueryOrderOption): ShoppingListItemsSelectQuery;
-  then: ArrayResult<ShoppingListItemRow>["then"];
-}
-
-interface ShoppingListsTable {
-  select(columns: string): ShoppingListsSelectQuery;
-}
-
-interface ShoppingListRecipesTable {
-  select(columns: string): ShoppingListRecipesSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
-}
-
-interface IngredientsTable {
-  select(columns: string): IngredientsSelectQuery;
-}
-
-interface ShoppingListItemsTable {
-  select(columns: string): ShoppingListItemsSelectQuery;
-}
-
-interface MealsSelectQuery {
-  eq(column: string, value: string): MealsSelectQuery;
-  then: ArrayResult<MealRecipeContentRow>["then"];
-}
-
-interface MealsTable {
-  select(columns: string): MealsSelectQuery;
-}
-
-interface ShoppingListDetailDbClient extends Partial<RecipeProductNutritionClient> {
-  from(table: "shopping_lists"): ShoppingListsTable;
-  from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
-  from(table: "meals"): MealsTable;
-  from(table: "recipes"): RecipesTable;
-  from(table: "ingredients"): IngredientsTable;
-  from(table: "shopping_list_items"): ShoppingListItemsTable;
-}
+// Selected read fields and nullable snapshot FKs only. Quantity RPC uses the
+// original request client separately, without mixing RPCs into table projections.
+export type ShoppingListDetailDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      shopping_lists: {
+        Row: ShoppingListRow; Insert: never; Update: never; Relationships: [];
+      };
+      shopping_list_recipes: {
+        Row: { shopping_list_id: string; recipe_id: string; recipe_content_snapshot_id: string | null;
+          shopping_servings: number; planned_servings_total: number };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "shopping_list_recipes_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"]; }];
+      };
+      meals: {
+        Row: { shopping_list_id: string | null; recipe_id: string; recipe_content_snapshot_id: string | null };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "meals_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"]; }];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; title: string; base_servings: number; ingredients_json: unknown };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; title: string; thumbnail_url: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      ingredients: {
+        Row: { id: string; category: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      shopping_list_items: {
+        Row: ShoppingListItemRow & { shopping_list_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 function getMealPinnedTitle(meal: MealRecipeContentRow) {
   const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
@@ -243,12 +200,12 @@ export async function GET(_request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingListDetailDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: ShoppingListDetailDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -356,7 +313,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const items = itemsResult.data.map((item) => buildItem(item, categoryByIngredientId));
-  const quantityContexts = await readProductQuantityContexts(dbClient, user.id, items).catch(() => new Map());
+  const quantityContexts = await readProductQuantityContexts(routeClient, user.id, items).catch(() => new Map());
   const purchaseAmounts = shoppingProductPurchaseAmounts(recipesResult.data, mealContentResult.data);
   for (const item of items) if (item.food_product_id && item.food_product_nutrition_version_id) {
     const pair = productVersionKey(item.food_product_id, item.food_product_nutrition_version_id);
@@ -370,7 +327,7 @@ export async function GET(_request: Request, context: RouteContext) {
     is_completed: listResult.data.is_completed,
     completed_at: listResult.data.completed_at,
     created_at: listResult.data.created_at,
-    updated_at: listResult.data.updated_at ?? listResult.data.created_at,
+    updated_at: listResult.data.created_at,
     recipes: recipesResult.data
       .map((recipe) => ({
         recipe_id: recipe.recipe_id,

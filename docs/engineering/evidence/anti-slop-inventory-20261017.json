@@ -20,10 +20,10 @@
   "candidateObservation": {
     "baseCommit": "64112be4bec14e29f88449214140250685210f15",
     "branch": "codex/cook-mode-row-contract-20261019",
-    "total": 130,
+    "total": 129,
     "newFindings": 0,
-    "contractCandidatesAfterAdoption": 13,
-    "status": "local commits through c899fe6de(preview1) plus verified legacy-cancel1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
+    "contractCandidatesAfterAdoption": 12,
+    "status": "local commits through 934dd6b10(legacy-cancel1) plus verified shopping-detail1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
   },
   "nullableShoppingContractFollowup": {
     "files": ["shopping/lists/[list_id]/share-text", "shopping/lists/[list_id]/items/bulk", "shopping/lists/[list_id]/items/[item_id]"],
@@ -1184,6 +1184,12 @@
       "snippet": "routeClient as unknown as ShoppingListDetailDbClient & UserBootstrapDbClient",
       "state": "needs-contract-refactor",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "pendingLocalResolution": {
+        "branch": "codex/cook-mode-row-contract-20261019",
+        "reason": "Native seven-table exact selected rows, nullable snapshot FKs/product identity, unknown JSON replace handwritten query phases. Bootstrap and quantity RPC retain the same original request client separately. Remove fictional updated_at from list projection; actual selected created_at already supplied the response fallback.",
+        "verification": "Baseline25 PASS; final SDK10+existing25+bootstrap11=46 PASS, whole typecheck/lint/Anti129/new0/diff PASS; independent SDK/backend/bootstrap39+quantity helper9=48 PASS/typecheck/lint/diff APPROVE (different test set). Reviewer URL-coverage note accepted with recipes/ingredients exact assertions and root46/lint reconfirmed. One old fixture returned unselected/nonexistent updated_at causing an initial expected-value failure; fixture/expectation corrected to actual selected created_at and pinned by SDK requests. Exact quantity read RPC/soft failure, owner/empty/broken pin/errors/filters/sort preserved. No new casts/wrappers/suppressions/SQL/auth/operational changes.",
+        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption12"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
