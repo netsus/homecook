@@ -2,6 +2,8 @@
 
 이 문서는 중복 작업을 막기 위한 구현·검증 이력이다. 제품/API/DB 계약이나 배포 승인이 아니다. `AGENTS.md`가 작업 범위와 검사 강도를 결정한다.
 
+- **진도·활동 경계 로컬 후보114:** 동일 SDK 직접 타입 대입2건과 타입 단언만 감싸던 catch를 정리했다. 전후5suite40 PASS·전체 비증분 타입/lint/verify/diff·독립 제품 검토 통과, 최종 문서 검토 전이다. 원163 ID49해결/114잔여, 운영은 e5face/116·DB238과 구분한다. 고정4필드 오류 문자열 체인3건은 코드 변경 없이 명시적 유지 후보 근거만 추가했다(범위보류97에 포함). [검증·운영 QA 인계·기존 보류](anti-slop-growth-boundary-20261020.md)를 따른다.
+
 ## 현재 기준과 기록 방법
 
 - **현재 소스116:** [PR1828](https://github.com/netsus/homecook/pull/1828) 제품 `d625ccfa1`/merge `ae7e4ab102cdec7b6035c4d8cb366a1276095b58`, [PR1829](https://github.com/netsus/homecook/pull/1829) head `d5b0bae966dcea5966db59de7649a0e43cbe2cc1`/merge `e5face22af6f42daaf239ef57ed50e4f77e83e3e`를 반영했다. 좋아요 SDK 정리117→116/신규0·JS byte동일, 마이페이지 복원은 진단 감소0이다. 최종15suite214 PASS·전체 비증분 타입/lint/verify/diff·독립 APPROVE·375/1440px browser2 PASS(overflow/console/page-error/request/예상외API/write0). 원163 ID47해결/116잔여이며 원29계약29완료와 별개인 추가1건이다. 두 배치는 머지2/운영2, 공식 앱-only plan/deploy exit0·실제e5face/build `prelaunch-e5face22af6f-tQHGcl`·DB238 ready다. 선택웹1466 PASS/133 이름필터 SKIP·빌드 PASS(기존 경고3)·manifest200·보호GET3곳 wrapped401, 원readerFloor/databasePlanSha·복구 대기 없음 상태를 확인했다. 부모50bc 인증 QA(북·read-only·팬트리105·수량5/과거기록 보존)는 새후보 QA가 아니다. [실제 merge·초기 실패·재분류·한계](anti-slop-residual-rollout-20261020.md)가 최신이고 아래117/d7d는 과거 기록이다.

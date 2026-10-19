@@ -12,12 +12,13 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "e5face22af6f42daaf239ef57ed50e4f77e83e3e",
-    "total": 116,
+    "baseCommit": "ee6b41f95a364e12264a0a6d5d7d25d4e4d4ba50",
+    "total": 114,
     "newFindings": 0,
-    "verificationState": "Sourcee5face22a includes PR1828 native like protocol (runtime emit equal,17 PASS) and PR1829 mypage URL selection restoration (197 PASS,375/1440 fixture browser2 PASS); final15suite214 PASS/whole nonincremental type/lint/verify Anti116 baseline207 new0/diff and independent reviews APPROVE. Original163 IDs47 resolved/116 remaining, original29 contracts remain29 resolved/0 remaining. Two new product batches merged2/operating2; official app-only deployment exit0, actual refe5face22a/buildprelaunch-e5face22af6f-tQHGcl/DB238 ready. Selected web1466 PASS/133 explicit filtered SKIP/build PASS(existing warnings3); manifest200/protected GET3 wrapped401; recoveryPending false, original readerFloor/plan unchanged. Parent authenticated50bc QA passed books/readonly shopping/pantry105/approved-quantity5/history; not new e5face auth QA. Legacy completion untested(no owned sample). Original275 and reconstructed191 fingerprint subset/counts verified; separate49 original not found/no inferred overlap. Frozen117 snapshot remains historical. No SQL/env/auth-setting/worker/policy/PIN changes or claim of fresh fullDB backup/full fingerprint revalidation; permission3, held444 and historical failures preserved."
+    "verificationState": "Local growth boundary candidate only: direct SDK assignment2 and impossible catch removal. Before/after5suite40 PASS, whole nonincremental type/lint/verify114/new0/diff PASS. Independent product review passed; final metadata review pending. Original163 frozen identity unchanged:49resolved114remaining. Actual operating e5face/buildprelaunch-e5face22af6f-tQHGcl/DB238 remains116. Parent exacte5face authenticated shopping QA passed and released occupancy. Candidate authenticated QA and legacy completion untested. SQL/env/auth-setting/worker/policy/PIN unchanged. Separate49 original unknown, permission3/held444/historical10 failures retained."
   },
   "residualRolloutObservation": {
+    "historical": true,
     "sourceCommit": "e5face22af6f42daaf239ef57ed50e4f77e83e3e",
     "pullRequests": [1828, 1829],
     "mergedBatches": 2,
@@ -158,7 +159,12 @@
       "column": 18,
       "snippet": "[\"code\", \"message\", \"details\", \"hint\"] .map((key) => candidate[key]) .filter((value): value is string => typeof value === \"string\")",
       "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "maintenanceAssessment": {
+        "decision": "explicit-retain-candidate",
+        "reason": "Fixed four-field error classification, no demonstrated allocation problem. Different order/separator in observability; no new helper or metric-only loop. No product change and original scope hold remains.",
+        "reference": "docs/engineering/anti-slop-growth-boundary-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/leftovers/route.ts::anti-slop(no-chained-type-assertions)::e000d2d91be100ae95ec113a9f932d1838c947734316b8eb437228f1bdd0e472#1",
@@ -476,7 +482,12 @@
       "column": 18,
       "snippet": "[\"details\", \"hint\", \"message\", \"code\"] .map((field) => candidate[field]) .filter((value): value is string => typeof value === \"string\")",
       "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "maintenanceAssessment": {
+        "decision": "explicit-retain-candidate",
+        "reason": "Fixed four-field error classification, no demonstrated allocation problem. Different order/separator in observability; no new helper or metric-only loop. No product change and original scope hold remains.",
+        "reference": "docs/engineering/anti-slop-growth-boundary-20261020.md"
+      }
     },
     {
       "id": "lib/server/ingredient-ai-nutrition-refresh.ts::anti-slop(no-chained-type-assertions)::ec7d41753dac343ab951b9a532e4f50507f257809b23f8cfca572965af34f32e#1",
@@ -1429,8 +1440,14 @@
       "line": 45,
       "column": 16,
       "snippet": "routeClient as unknown as UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local candidate; not merged or operating",
+        "reason": "Direct existing SDK contract assignment; gamification type-only assignment catch removed. Real initialization/auth/bootstrap errors unchanged. Only these query consumers scope-re-reviewed under continuation request.",
+        "verification": "Before/after5suite40 PASS; whole nonincremental type/lint/verify114 new0/diff PASS. Independent final review pending.",
+        "reference": "docs/engineering/anti-slop-growth-boundary-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/recipes/[id]/save/route.ts::anti-slop(no-chained-type-assertions)::1d4ed556adf3eac796f34013d7c35a6a76c4b33cb52b3bf5cae4cbae49b88b50#1",
@@ -1514,8 +1531,14 @@
       "line": 31,
       "column": 20,
       "snippet": "routeClient as unknown as UserProgressDbClient & UserBootstrapDbClient",
-      "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "state": "resolved",
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "adoptedResolution": {
+        "status": "local candidate; not merged or operating",
+        "reason": "Direct existing SDK contract assignment; gamification type-only assignment catch removed. Real initialization/auth/bootstrap errors unchanged. Only these query consumers scope-re-reviewed under continuation request.",
+        "verification": "Before/after5suite40 PASS; whole nonincremental type/lint/verify114 new0/diff PASS. Independent final review pending.",
+        "reference": "docs/engineering/anti-slop-growth-boundary-20261020.md"
+      }
     },
     {
       "id": "app/api/v1/recipes/[id]/cook-mode/route.ts::anti-slop(no-chained-type-assertions)::ce0f88be7a1fdeee0a51d9af9db8f0e19433dbe3fa2cfddb1150efdf006a0d3f#1",
@@ -2083,7 +2106,12 @@
       "column": 18,
       "snippet": "[\"code\", \"message\", \"details\", \"hint\"] .map((key) => candidate[key]) .filter((value): value is string => typeof value === \"string\")",
       "state": "held-scope",
-      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음."
+      "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
+      "maintenanceAssessment": {
+        "decision": "explicit-retain-candidate",
+        "reason": "Fixed four-field error classification, no demonstrated allocation problem. Different order/separator in observability; no new helper or metric-only loop. No product change and original scope hold remains.",
+        "reference": "docs/engineering/anti-slop-growth-boundary-20261020.md"
+      }
     },
     {
       "id": "lib/supabase/server.ts::anti-slop(no-chained-type-assertions)::64752f1969cb456f9fd8d564dc2359492240ce45f46c4962895b480ad08ccac5#1",

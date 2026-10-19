@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop114 진도·활동 경계 후보
+
+기준 master `ee6b41f95`에서 진도 GET/활동 helper의 동일 SDK 직접 대입2건과 타입 대입만 감싸던 불가능 catch를 정리했다. 수정 전·후5suite40 PASS·전체 비증분 타입·변경 lint·verify114/baseline207/신규0·diff 통과, 원163 ID49해결/114잔여다. 현재 로컬 후보이며 운영은 아래 e5face/Anti116·DB238이다. 부모가 정확e5face의 인증 장보기 복원 QA PASS·데이터 변경0과 점유 해제를 인계했다. 이번 후보의 인증 QA·legacy 실제 완료는 미실행이다. 독립 최종 검토·draft PR·일반 머지·공식 앱-only 배포 전에는 반영으로 세지 않는다. [범위·유지 후보3·검증·보류](../engineering/anti-slop-growth-boundary-20261020.md)를 따른다. 기존 권한3/444/별도49 미발견은 유지한다.
+
 ## 2026-10-20 — Anti Slop116·좋아요와 장보기 상세 복원 소스
 
 최종 제품 source `e5face22af6f42daaf239ef57ed50e4f77e83e3e`는 PR1828 좋아요 native2와 PR1829 마이페이지 장보기 선택 복원을 포함한다. Anti116/baseline207/신규0(연쇄54·배열37·조건부25), 원163 ID47해결/116잔여다. 원29계약29완료와 별개인 좋아요1건을 추가 채택했고 전체275/별도49 완료가 아니다. root 최종15suite214 PASS·전체 비증분 타입/lint/verify/diff·독립 리뷰,375/1440px 로컬 browser2 PASS·overflow/console/page-error/request/write0를 확인했다. 상세 소실은2026-05-24부터 URL을 쓰고 mount에서 읽지 않던 누락으로 최근 리팩토링 귀속이 아니며 기존 API/권한/read-only·모바일 standalone 경로를 유지했다. 현재 두 배치는 머지2/운영2이며 공식 앱-only plan/deploy exit0·실제e5face/build `prelaunch-e5face22af6f-tQHGcl`·loaded=true·DB238 ready다. 선택웹1466 PASS/133 이름필터 SKIP·빌드 PASS(기존 경고3)·manifest200·보호GET3곳 wrapped401, 원readerFloor/databasePlanSha·복구 대기 없음 상태를 확인했다. 부모의50bc 인증 QA 완료를 인계받았으나 새후보 인증QA가 아니다. 과거191은 정확코드에서 재현했고 원275⊇191⊇163⊇현재116을 대조했다. 별도49 원본은 미발견, 고정117 JSON/CSV는 이전 시점으로 보존한다. [새 통합·잔여·운영 경계](../engineering/anti-slop-residual-rollout-20261020.md), [117 당시 재분류](../engineering/anti-slop-residual-review-20261020.md)가 기준이며 아래117은 이전 checkpoint다.

@@ -40,17 +40,7 @@ export async function createAuthedGamificationClient(fallbackMessage: string) {
     };
   }
 
-  let dbClient: UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
-  try {
-    dbClient = routeClient as unknown as
-      UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
-  } catch {
-    return {
-      response: fail("INTERNAL_ERROR", fallbackMessage, 500),
-      dbClient: null,
-      user: null,
-    };
-  }
+  const dbClient: UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
