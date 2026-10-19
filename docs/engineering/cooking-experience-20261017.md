@@ -310,3 +310,17 @@ core의 수정 전masterd55f20562와 현재14464a83c를 독립 checkout에서 �
 exact 검증 대상에 기존 `pg_dump --schema-only` 경로와 read-only PGOPTIONS를 사용해 새0700 fixture 입력을 만들려던 명령은 자동 승인 검토가 실행 전에 거절했다. 이유는 “현재 작업은 운영DB에 연결하지 않는 범위이며 read-only 추출도 제한 위반”이었다. 해당 명령은 실행0/재시도0/불확실 결과0이고 다른 추출 경로로 우회하지 않았다. 따라서 현재 구조 전체 복제·역할/ACL/pre-request 동등성·실제233→234→235 PostgREST 검증은 차단 상태다. [정확한 관찰·차이·백업 한계·차단](data/cooking-deployment-preflight-20261019.json).
 
 로컬 최소 수정/회귀/보고서는 현재 master 기반 커밋으로 보존한다. 실제 DB 반영 전에 새233/234/235의 exact source·적용 전 원장/구조·승인 후 postimage·현재 백업/복구 증거와 부모 직렬화가 필요하다. 기존 빠른 DB 분류기/보호 allowlist를 이번 SQL을 수용하도록 완화하지 않는다. 원격 push/PR/머지·운영 DB 쓰기·웹/worker 배포·전체 웹 운영QA 통과 주장은 없다.
+
+## 2026-10-19 — 추가 승인 후 현재 구조 fixture 검증과 백업 보존 충돌
+
+사용자의 추가 묶음 승인 전달 뒤 거절됐던 같은 read-only schema-only 추출을 한 번 재시도해 성공했다. 새 archive SHA는 `8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b`이며 과거228 fixture와 다르다. 검증된 DB232 target에서 비밀번호/토큰/개인 행 없이 schema-only 자료와 역할 속성·멤버십·허용 설정을 확보했고, 추출 전후 구조 지문과 역할 속성은 같았다. 실제 PostgREST image digest `84478545…`와 비밀 없는 두 env 설정(public/storage schema, anon role)을 확인했으며 pre-request는 authenticator의 현재 role setting을 따른다. 원격 master는 `f9b7499a…`로 기존 후보 `f703f6438`의 부모와 같았다.
+
+새 `scripts/run-cooking-current-schema-http.mjs`는 실제 역할36개·멤버십23개·관련 role setting을 비밀번호 없이 복원하고 전체 속성/멤버십과 설정의 일치를 검사한다. 현재 postgres의 NOSUPERUSER도 유지한다.153테이블/0행과 기존109함수 inventory 차이0 뒤 원233→234→후속235를 적용한다. PostgREST는 현재와 같은 image/DB role/public·storage schema/pre-request 설정을 사용하되, 무작위 합성 JWT와 테스트 계정·합성 자료만 사용하고 network-none/port0/mount0을 유지한다.
+
+원본 dump와 격리 복원 후 재출력한 schema SQL은 raw bytes가 같지 않다. PostgreSQL이5개 지정 CHECK의 varchar배열→text배열 캐스트를 원소별 캐스트로 출력하고 RLS역할 및 ACL의독립GRANT 순서가 달라진다. 새 비교기는 정확한 dump 객체블록에서 그5개 고정배열·역할집합순서·연속GRANT순서만 정규화한다. REVOKE/문맥변경 순서와 함수 본문/문자열은 보존하며, 함수 안의 가짜 객체header가 블록을 자르거나 지원하지 않는 함수dump이면 거절한다. 현재 고정자료의469함수는 모두 지원하는 dollar본문이다. 원문2개 SHA와 canonical SHA·정규화 범위를 보고한다. 권한/정책/미등록제약/함수변경을 감지하는 Node8개 회귀가 있다. 이는 새 fixture 비교이며 과거 migration/fence/승인/postimage를 재작성하거나 대체하지 않는다.
+
+현재 pre-request를 실제 통과하는 HTTP17개는 수정 전405/25006 재현과 수정 후 revision0/1 조회, missing/wrong scope 및 권위/역할 거절, 본문·권한·RLS 보존을 확인한다. `--sql-regression`은 별도 disposable DB에서 기존25개 SQL 회귀를 원233/234/235와 함께 실행하며 SQL/시험파일SHA를 고정한다. 이 검사도 실제 운영 사용자·운영 JWT·웹 전체 흐름·실제 음식 정답·전체 운영QA를 증명하지 않는다.
+
+**운영 백업 단계에서 새 보존 충돌을 발견해 실행을 보류했다.** 기존 `full-local-platform-backup.mjs`의 consistent cut은 gateway/auth/PostgREST/Storage(+Realtime) 컨테이너를 멈춘다. 고정v85와 현재가 같은 worker 소스는 claim RPC의 연결 오류/비정상 응답을 `runOnce → poll loop → runner` 밖으로 전파해 exit1이 될 수 있다. 백업 finally는 API 컨테이너만 재시작하며 별도 gen50 worker의 동일 PID/실행 상태를 복구하지 않는다. 실제 백업이나 worker 종료를 실행·관측한 것은 아니다. 일반 백업 승인만으로 gen50 재시작·재등록·자격 변경이 허용됐다고 해석하지 않고, 운영 담당자에게 기존 절차와 보존 조건을 함께 만족할 중단/복구 조율을 요청한다.
+
+백업 통과 뒤 push/PR/머지·DB·웹을 진행하라는 순서를 유지한다. 현재 최신 백업 생성·복원 검증·원격 쓰기·DB233/234/235 적용·웹 배포·운영 브라우저 QA는 미실행이다. gen50/자격/만료/고정A·B/활성화 기록·R2/lead/C05와 기존 사용자 데이터의 변경은0이다. [현재 fixture 검증과 백업 보류 근거](data/cooking-current-schema-preflight-20261019.json)를 따른다.
