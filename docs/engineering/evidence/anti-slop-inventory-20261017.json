@@ -21,7 +21,21 @@
     "operatingRef": "5ea486e534729eb576477bf81526847caa2dfee6",
     "operatingTotal": 93,
     "buildId": "prelaunch-5ea486e53472-wPutWL",
-    "dataEvidence": "docs/engineering/evidence/anti-slop-planner-data-preservation-20261020.json"
+    "dataEvidence": "docs/engineering/evidence/anti-slop-planner-data-preservation-20261020.json",
+    "deploymentGate": {
+      "state": "blocked-protected-source",
+      "checkedCommit": "58331afdf089a2945b733f356311bbc01ab746cf",
+      "exitCode": 1,
+      "reason": "Existing R2 readiness cannot inherit components/marketing protected provider2file changes, including runtime-JS-identical types.",
+      "paths": [
+        "components/marketing/marketing-turnstile.tsx",
+        "components/marketing/round2/round2-turnstile.tsx"
+      ],
+      "guardOrReadinessChanged": false,
+      "alternateFlagOrPathAttempted": false,
+      "followupMerged": false,
+      "followupDeployed": false
+    }
   },
   "residualRolloutObservation": {
     "historical": true,

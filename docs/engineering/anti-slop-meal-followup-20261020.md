@@ -21,6 +21,7 @@ provider 근거는 [Cloudflare 공식 설정 계약](https://developers.cloudfla
 - provider: 기존4suite16 + widget6 PASS → 수정 후5suite22 PASS, 독립3suite20·lint/diff·두 파일 실행 JS 동일·공식 계약 review APPROVE다.
 - 삭제: 제품 변경 전에14 JSON 형태를 추가해 실제2suite82 PASS, 수정 후 native SDK1 포함 정확3suite83 PASS. 초안 명령의 존재하지 않는 세 번째 테스트 경로는 Vitest가 선택하지 않았으며3suite라고 집계하지 않는다. 독립 동일83·lint/diff와 JSON 소비/권한 보존 검토 APPROVE다.
 - 최종 중복 없는 **14suite163 PASS/0 SKIP**, 전체 비증분 타입 exit0·변경 lint max-warnings0·verify fixture/tool type/신규 거부 및 **Anti86/baseline207/신규0**·diff-check 통과다. 타입과 verifier 임시 probe는 순차 실행했다. 검사기·baseline·기대 권한 정책·새 의존성 변경0이다.
+- 정적 권한 검사는 현재와 미수정5ea에서 각각10 PASS/기존3 FAIL이다. internal-operation15·응답 경계70(옛 기대63)·공개 recipes scope 불일치를 그대로 재현했다. 검사/허용 목록을 바꾸지 않았으며 관련163 통과를 전체 권한 해결로 확대하지 않는다.
 
 ## 고정 ID와 남은 실제 경계
 
@@ -37,3 +38,5 @@ YouTube dirty2파일/17건·명시 보류444/PR1745의3·기존 권한3·static 
 ## 반영 경계
 
 후속 source는 제품·정확 원본 대응 metadata를 독립 검토한 뒤 draft PR로 시작하고 승인된 일반 머지 범위를 사용한다. 이 문서의 새 source를 운영93에 반영했다고 부르지 않는다. 최신5ea 인증 QA·후속 source 인증 QA와 실제 legacy 완료는 미실행이며 부모의 이전7d15 읽기QA를 대체 증거로 쓰지 않는다.5ea 창의 지문 일치는 원 승인/PIN/과거 baseline 교체나 새 전체DB 백업/복원 증명이 아니다. 작은 커밋마다 배포하지 않으며 다음 배포도 정확 후보·읽기 전용 계획·QA 점유를 구분한다.
+
+정확한 clean 후속 문서 head `58331afdf089a2945b733f356311bbc01ab746cf`에 기존 DB238/일반 앱 경로의 공식 plan을 실행했으나 **exit1: R2 보호 코드·SQL·동의·라우팅 변경은 기존 readiness를 승계할 수 없음**으로 거부됐다. 실제 원인은 이번 source의 `components/marketing/marketing-turnstile.tsx`·`components/marketing/round2/round2-turnstile.tsx`가 기존 `protectedSources`의 marketing 보호 경로에 해당하기 때문이다. SQL/동의/라우팅을 실제 변경했다는 뜻이나 테스트 실패 판정이 아니다. 실행 JS 동일한 타입 변경도 이 경로 가드를 자동 해제하지 않는다. 기존 가드·readiness·PIN/증거를 수정하거나 다른 reviewed flag/실행 경로로 우회하지 않았다. 후속7건은 별도 draft/로컬 커밋에 보존하고 실제 머지·두 번째 배포를 보류한다. 이미 완료한5ea/DB238/지문9 보존은 이 후속 거부와 별개다. 보호 provider를 포함할 다음 반영의 범위/승인 경계를 먼저 결정해야 한다.
