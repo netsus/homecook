@@ -66,6 +66,45 @@ import {
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
 import type { RecipeDetail, RecipePhoto, RecipePhotoRole, RecipeUserStatus } from "@/types/recipe";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Consumed columns and the existing ingredient FK, not a complete DB schema
+// or a runtime permission boundary. This client is used only for this read.
+export type RecipeDetailIngredientReadClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_ingredients: {
+        Row: {
+          id: string; recipe_id: string; ingredient_id: string | null;
+          source_kind: "ingredient" | "food_product" | null;
+          amount: number | string | null; unit: string | null;
+          ingredient_type: "QUANT" | "TO_TASTE"; display_text: string | null;
+          component_label: string | null; scalable: boolean; sort_order: number;
+          quantity_input: unknown; food_product_id: string | null;
+          food_product_nutrition_version_id: string | null;
+        };
+        Insert: never; Update: never;
+        Relationships: [{
+          foreignKeyName: "recipe_ingredients_ingredient_id_fkey";
+          columns: ["ingredient_id"]; isOneToOne: false;
+          referencedRelation: "ingredients"; referencedColumns: ["id"];
+        }];
+      };
+      ingredients: {
+        Row: { id: string; standard_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
+
+// Keep each projection a literal so the native select parser can infer both
+// the base join and exactly which optional columns are actually requested.
+const INGREDIENT_COLUMNS_PUBLIC = "id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)";
+const INGREDIENT_COLUMNS_PUBLIC_QUANTITY = "quantity_input, id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)";
+const INGREDIENT_COLUMNS_AUTH = "id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name), food_product_id, food_product_nutrition_version_id";
+const INGREDIENT_COLUMNS_AUTH_QUANTITY = "quantity_input, id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name), food_product_id, food_product_nutrition_version_id";
 
 interface RouteContext {
   params: Promise<{
@@ -306,8 +345,22 @@ export async function GET(request: Request, context: RouteContext) {
         })
       : Promise.resolve(legacyThumbnailUrl);
 
-    const ingredientColumns = (quantityInputContractRequested(request) ? "quantity_input, " : "") + "id, source_kind, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)"
-      + (authResult.data.user ? ", food_product_id, food_product_nutrition_version_id" : "");
+    const ingredientClient: RecipeDetailIngredientReadClient = routeClient;
+    const ingredientTable = ingredientClient.from("recipe_ingredients");
+    const quantityRequested = quantityInputContractRequested(request);
+    const ingredientQuery = authResult.data.user
+      ? quantityRequested
+        ? ingredientTable.select(INGREDIENT_COLUMNS_AUTH_QUANTITY)
+        : ingredientTable.select(INGREDIENT_COLUMNS_AUTH)
+      : quantityRequested
+        ? ingredientTable.select(INGREDIENT_COLUMNS_PUBLIC_QUANTITY)
+        : ingredientTable.select(INGREDIENT_COLUMNS_PUBLIC);
+    const ingredientRead: PromiseLike<{
+      data: Parameters<typeof normalizeRecipeIngredients>[0];
+      error: unknown;
+    }> = ingredientQuery
+      .eq("recipe_id", id)
+      .order("sort_order", { ascending: true });
     const [
       sourceResult,
       ingredientsResult,
@@ -320,11 +373,7 @@ export async function GET(request: Request, context: RouteContext) {
         .select("youtube_url, youtube_video_id, extraction_meta_json")
         .eq("recipe_id", id)
         .maybeSingle(),
-      dbClient
-        .from("recipe_ingredients")
-        .select(ingredientColumns)
-        .eq("recipe_id", id)
-        .order("sort_order", { ascending: true }),
+      ingredientRead,
       readCurrentRecipeNutritionSnapshot(serviceClient ?? routeClient, id),
       imageReadPromise,
       dbClient
@@ -438,11 +487,7 @@ export async function GET(request: Request, context: RouteContext) {
       userStatus = mapRecipeUserStatus(likedResult.data, savedResult.data);
     }
 
-    // The public/authenticated select union has the same base row contract;
-    // PostgREST's type-level select parser cannot infer conditional projections.
-    const ingredientRows = (ingredientsResult.data ?? []) as unknown as NonNullable<
-      Parameters<typeof normalizeRecipeIngredients>[0]
-    >;
+    const ingredientRows = ingredientsResult.data ?? [];
     let ingredients = normalizeRecipeIngredients(user
       ? await readRecipeProductLabels(dbClient, ingredientRows)
       : await readPublicRecipeProductLabels(routeClient, id, ingredientRows));

@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 마지막 확정 master: `2cd4aab93d5b9f527ce1a8b8de6d434136fc987b`, 실제 진단 **147**, baseline **207**, 신규 **0**.
+- 최신 재조사 master: `f02e0bb8976a928ee7104bd2e55e3dad71f9142c`(2026-10-19), 실제 진단 **146**, baseline **207**, 신규 **0**. 계약 후보29는 모두 남아 있고 아래 상세1건의 로컬 검증본은145/계약 채택 후28이며 아직 미머지·미배포다. 과거 확정2cd4aab93의147과 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -16,7 +16,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 현재 분류는 범위 보류99, 명시 보류4, 기존TS2589 기술 보류1, 계약 보강 필요29, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결16이다(총163). 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
+- 최신 master 대조 분류는 범위 보류99, 명시 보류3, 기존TS2589 기술 보류1, 계약 보강 필요29, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결17이다(총163/잔여146). 선행 PR1807의 save 추가 단언1건 제거를 반영한 것이며, 이번 계약 수정 성과에 합산하지 않는다. 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint
@@ -272,6 +272,17 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 실험 WT `.worktrees/bootstrap-select-projection-contract-20261017`에는 미추적 `tests/bootstrap-sdk-projection-contract.test.ts`만 남겼다. 제품 편집/커밋/PR은0이다. 새 실제SDK7+기존4 suite62 =5 suite69 runtime PASS지만 직접 SDK client 대입 typecheck는 TS2589 1/exit2다. 최초 fixture의 POST/PATCH object Accept 누락3실패는 제품 수정 없이 정정했다. 이 파일은 미완료 실험이며 master의190건·typecheck 성공에 포함하지 않는다.
 - standalone cook-mode의 별도 native3표+join3표/FK/public-auth 동일문자열/소비view안은 전체 compiler3진단(ParserError 전파)으로 미채택했다. legacy step fallback과 canonical productIngredients/cookingSteps 재대입까지 타입 영향이 가므로, 단순 한 줄 삭제가 아닌 병행 소유자 조율과 별도 회귀 범위가 필요하다. source/DB 변경0이며 이 특정안 실패를 전체 native 계약 불가로 확대하지 않는다.
 - 이 checkpoint는 원본163 ID/hash를 보존한다. 해결16·계약29·보호99·명시4·기술1·조율1·고정참조8·근거없음5의 합163, 현재진단147이다. 보호99와 기존 보류를 스스로 해제하지 않는다. 전체 build·화면·실DB·운영 배포를 실행하지 않았다.
+
+## 2026-10-19 재개: 원본29 재대조와 상세 재료 조회1건 로컬 검증
+
+- 시작 조건 충족: 부모가 v85와 요리 개선9건의 운영 반영·실제 Chrome 검증 완료를 전달했다. 최신 기준은 master `f02e0bb8976a928ee7104bd2e55e3dad71f9142c`다. 공식 status를 별도 읽어 운영 웹 `d09ab4bcdd519e2921165ff33779821096172373`/build `prelaunch-d09ab4bcdd51-h6rAwJ`, DB238 committed/ready, readerPending=false/recoveryPending=false/normalDeploymentAllowed=true를 확인했다. worker gen50·기존 키/정책/고정만료·R2 OFF 보존은 부모의 운영 인계이며 이번 작업에서 worker나 비밀값을 재조사하지 않았다.
+- 선행 운영 기록은 [요리 경험 최종 확인](cooking-experience-operating-checks-20261019.md)이다. 원235/238 승인·receipt와 reader floor48c4를 보존하며 동시 배포하지 않는다. 향후 앱 전용 반영도 정확한 새 SHA로 공식 plan과 `--already-applied-db` 경로를 먼저 확인한다. 이번 턴의 운영 쓰기·DB·배포는0이다.
+- 원본 ID/hash를 실제 진단에 대조한 결과 계약29=상세/독립요리2+영양memory1+bootstrap26이 모두 남아 있다. 상세의 canonical 영양 계산이 선행 개선에서 추가됐지만 대상 정규화 단언은 남았고, 독립 요리모드·memory·bootstrap 파일은 이 기준 사이에 변경되지 않았다. 과거39 중 이미 해결한10건을 다시 작업하지 않으며49원본 미확인도 별도다.
+- 전체147→146은 별도 선행 변경이다. PR1789가 save의 generic service-role fallback을 제거한 후 PR1807이 같은 userDbClient를 재사용해 원본 추가 단언1건을 없앴다. 이 작업이 save/권한을 수정하거나 보류444를 반영한 것이 아니며 남은 save 단언·권한 문제 전체 해결을 주장하지 않는다. 이전 장부의 fallback 존재·147·명시4 표기는 각 당시 checkpoint 기록으로 읽는다.
+- 첫 작은 작업: `recipes/[id]/route.ts`의 재료 조회만 실제 native SDK table/select/filter 단계, nullable ingredient FK 및 public/auth×quantity4 선택 행으로 맞췄다. 동일 routeClient를 구조적으로 대입하고 기존 normalizer의 소비 계약으로 결과를 받으므로 결과의 unknown→연쇄 단언1건을 제거한다. 선택 열/순서·recipe_id 필터·sort_order·Promise.all의 요청 병렬성·public/auth 제품 라벨 경로·canonical 영양/quantity·권한/오류 응답은 유지한다. DB schema/grant나 runtime validation을 새로 바꾸지 않았다.
+- 회귀 우선: 제품 수정 전 기존 상세23 PASS/67필터 SKIP와 새 실제SDK5 PASS를 확인했다. 최종 새8건에는 네 선택 행의 compiler 검사 및 제품 전용/null join auth/public2건을 추가했다. 최종 상세 선택2 suite31 PASS/67필터 SKIP, 별도 기본 설정3 suite28 PASS(새8+수량13+canonical 영양7), 중복8건을 제외한 고유51 PASS다. product 설정은 canonical suite를 포함하지 않아 첫 선택 실행에서는 수량13만 실행됐고, 이후 기본 설정에서 영양7을 실제 실행했다.
+- 전체 typecheck·변경TS lint(max-warnings0)·verify:anti-slop(145/baseline207/신규0)·diff PASS다. 독립 최종 리뷰는 새8 PASS, nonincremental 전체typecheck/diff PASS와 SQL/SDK 요청 지연 실행을 직접 확인해 APPROVE했다. 최초 union4를 한 select에 전달한 초안은 TS2590으로 실패했고 개별 native select 추론으로 수정했다. type-only fixture 변수 lint경고4도 실제 builder then 확인으로 정정했다. 단언·any·검사 억제나 baseline 갱신으로 통과시키지 않았다.
+- 상태: 별도 `codex/detail-row-contract-20261019` 작업트리의 로컬 검증본이며 미머지·미배포다. master 계약29에서 완료로 차감하지 않고 채택 후28(독립요리1+memory1+bootstrap26)로 기록한다. 원장 pendingLocalResolution과 candidateObservation은 이 로컬 상태를 명시한다. 기존 checkout·원장 미커밋 계획·고정 복구 checkout·bootstrap 미완료 실험은 보존했다. 전체 build/화면/실DB/RLS 및 기존 넓은 실패 묶음을 이번에 재실행한 것으로 주장하지 않는다.
 
 ## 보류·기술적 경계
 
