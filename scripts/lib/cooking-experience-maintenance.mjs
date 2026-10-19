@@ -265,8 +265,8 @@ export function assertCookingExperienceSourceHandoff({ maintenance, from, to, li
   const testOnly = review.to === successor.from && to === successor.to;
   const expected = structuredClone(review.files);
   if (testOnly) {
-    check(expected[successor.path]?.[1] === successor.before, "test-only successor original bytes differ");
-    expected[successor.path][1] = successor.after;
+    check(!Object.hasOwn(expected, successor.path), "test-only successor path must be unchanged in original review");
+    expected[successor.path] = [successor.before, successor.after];
   }
   check(from === review.from && (to === review.to || testOnly) && live?.ref === from && live.buildId === review.legacyReader.buildId
     && live.plistSha256 === review.legacyReader.plistSha256 && reviewedSourceAncestor === true
