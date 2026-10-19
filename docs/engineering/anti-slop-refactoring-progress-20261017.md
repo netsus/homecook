@@ -2,6 +2,8 @@
 
 이 문서는 중복 작업을 막기 위한 구현·검증 이력이다. 제품/API/DB 계약이나 배포 승인이 아니다. `AGENTS.md`가 작업 범위와 검사 강도를 결정한다.
 
+- **운영84·잔여84 종료:** PR1839 merge16cf3155/buildprelaunch-16cf3155c7b5-qy0qD5·DB238ready. source345PASS/전체type/lint/독립승인·배포웹1477PASS133이름필터SKIP·compile98/static94/경고3·고정READ ONLY9지문동일. manifest200/비로그인보호GET3wrapped401만실검사했고새인증QA0이다. 원16379해결84잔여·배열/조건부62감사·잔여84각이유/재개조건완료, 자동0목표나전체275/별도49완료가아니다. provider/R2/YTdirty/권한3/static3/444/1745보류·SQL/설정변경0을유지했다. [최신운영/종료조건](anti-slop-nutrition-residual-closeout-20261020.md)을따른다.
+
 - **영양JSON1·검색중복2 source84:** 최종15suite345PASS/전체type/lint/verify84new0·독립승인, 원16379해결84잔여다. snapshot/legacy42행동잠금·배열/조건부62개별감사·잔여84종료조건을기록했다. source549fec481은미배포이며운영62c20d4bd/buildktOrhp/DB238/Anti87을유지한다. [새기록·실패·보호보류](anti-slop-nutrition-residual-closeout-20261020.md)를따른다.
 
 - **안전6건 운영87 완료:** PR1837 merge62c20d4bd/buildprelaunch-62c20d4bd305-ktOrhp·DB238ready·Anti87new0. 소스141PASS·전체type/lint/독립승인·배포웹1473PASS133이름필터SKIP·compile99/static94/기존경고3·manifest200/보호GET2wrapped401. 이번 고정READ ONLY9지문 전후동일·원승인/PIN/plan/readerFloor/R2가드 보존, 실제삭제/SQL/환경변경0. provider1은 Draft1836에 원거절과 함께 보존, 영양JSON1은 다음 구현가능 공학배치·snapshot1과legacy2는 행동증명 후속이다. [새운영증거·보류·검사한계](anti-slop-meal-safe-split-20261020.md)를 따른다. 아래 후보87/운영93은 과거다.
