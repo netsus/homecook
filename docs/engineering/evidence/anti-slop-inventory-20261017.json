@@ -12,10 +12,10 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "64112be4bec14e29f88449214140250685210f15",
-    "total": 145,
+    "baseCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a",
+    "total": 126,
     "newFindings": 0,
-    "verificationState": "PR1811 head572063abd with verified Anti145/new0 merged as64112be4. Contract28 remain in master; the saved fallback/alias change was separate upstream work. Detail remains undeployed: official app-only plan64112be4 failed the legacy runtime-source/feature gate under current DB238. Historical190 PASS/10 FAIL are not fresh runs here. Local cook-mode candidate below is excluded from this master observation."
+    "verificationState": "PR1812 head484e89df9 merged ascd91be21a; appf204073a2 deployed asprelaunch-f204073a2dbd-A2tFiO on unchangedDB238. Contract9 remain. Web1466 PASS/133 filtered SKIP, source regression253 PASS, type/build/lint and independent reviews PASS. Fresh pre/post deployment nine data/catalog/control digests match after the separately approved five-row handoff. No SQL/env/auth/worker/policy changes. Historical broad failures and held444fe1f6f remain explicit."
   },
   "candidateObservation": {
     "baseCommit": "64112be4bec14e29f88449214140250685210f15",
@@ -23,13 +23,30 @@
     "total": 126,
     "newFindings": 0,
     "contractCandidatesAfterAdoption": 9,
-    "status": "local commits through 4a42068e6(book-list-GET1) plus verified legacy-create1 candidate; all unmerged/undeployed, master contract28 state stays pending until adoption"
+    "status": "adopted in PR1812 mergecd91be21a and app-deployed asf204073a2; 19 local finding resolutions now recorded asadoptedResolution, not counted twice",
+    "candidateCommit": "f204073a2dbd8468644d7f40e206f48ec6518e20"
   },
   "nullableShoppingContractFollowup": {
-    "files": ["shopping/lists/[list_id]/share-text", "shopping/lists/[list_id]/items/bulk", "shopping/lists/[list_id]/items/[item_id]"],
+    "files": [
+      "shopping/lists/[list_id]/share-text",
+      "shopping/lists/[list_id]/items/bulk",
+      "shopping/lists/[list_id]/items/[item_id]"
+    ],
     "reason": "Initial native contracts copied the historical handwritten ingredient_id:string; actual20260731110000 SQL drops NOT NULL. Corrected to string|null, nullable FK result, and product-null bulk/item regression. Prior reviews missed this precision gap; do not hide it or count the original three findings as completed again.",
     "verification": "6 suites62 PASS, whole typecheck, lint max-warnings0, Anti132/new0 unchanged, diff PASS; independent62 PASS/nonincremental typecheck/diff APPROVE and three-file byte-identical JS emit confirmed. No DB/SQL/permissions/operational changes.",
-    "status": "local followup candidate, no additional finding reduction or contract count reduction"
+    "status": "adopted in PR1812; no additional finding reduction or contract count reduction"
+  },
+  "postQaObservation": {
+    "normalDataBeforeQa": "82205065b22ff73da3807157a909f4de50f86f1a8b28817ab80eea23003bbb7e",
+    "normalDataAfterQa": "3f48996f7ae9b9b372181241c644a1b0b97bde88989b169704d8a19f98dd9e9a",
+    "cause": "Existing public detail GET increments view_count through its unchanged server-side internal POST. Browser nonGET0 is not DB-write0. Raw normalData and derived preservedRows differences are retained, not accepted as a new deployment baseline.",
+    "viewCounts": [
+      { "recipeId": "0fc9b367-517c-49cb-a923-c08bf0095e55", "before": 2, "after": 14 },
+      { "recipeId": "38c81e36-b98f-403e-aff5-e0914dc8be1f", "before": 1, "after": 11 },
+      { "recipeId": "84a371bf-a082-4fa3-9c41-439492fb7fbd", "before": 6, "after": 25 }
+    ],
+    "evidence": "READ ONLY hypothesis substituting only these three counts uniquely reconstructs the original full41-table normalData hash within each integer0..currentCount search domain; current row/chunk hash equivalence checked first. Current ten protected-table rows/absence plus original normal and freshly rechecked unchanged ledger/execution reconstruct the original preservedRows hash. Independent source comparison and forensic rerun PASS. This is diagnosis only: no DB UPDATE, projection exclusion, gate relaxation or approval/PIN rewrite.",
+    "reference": "docs/engineering/anti-slop-db238-app-successor-review-20261019.md"
   },
   "findings": [
     {
@@ -89,13 +106,17 @@
       "line": 124,
       "column": 20,
       "snippet": "routeClient as unknown as LeftoversDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Six consumed native SDK tables with actual NOT NULL FK directions and selected-row inference replace handwritten fluent interfaces; bootstrap and reader use direct structural assignment of the same request client. All wire projections, filters, order, snapshot priority and defensive null/array compatibility remain.",
         "verification": "Before44 PASS; final SDK/backend/bootstrap52 PASS, full typecheck, ESLint max-warnings0, Anti138/new0 and diff PASS. Independent native/backend/parser71 PASS plus nonincremental typecheck/diff APPROVE. Initial test expected nullable joins but SDK infers required-FK objects; expectations corrected to actual inference while runtime null defense remains. No casts, wrappers, suppressions, SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption21"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption21",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -125,13 +146,17 @@
       "line": 57,
       "column": 20,
       "snippet": "routeClient as unknown as LeftoverMutationAuthedDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Delete redundant bootstrap-only type alias and directly assign the existing request client to the already verified bootstrap contract. Eat authority/RPC/parser/gamification flow unchanged.",
         "verification": "Same leftovers list/eat batch:52 PASS, full typecheck/lint/Anti138/new0/diff PASS; independent71 PASS/nonincremental typecheck/diff APPROVE.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption21"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption21",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -161,13 +186,17 @@
       "line": 51,
       "column": 20,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Precise select literals and single-row query phases alone do not resolve direct assignment: isolated whole-program probe still has TS2589 at untyped SupabaseClient<any> eq/ResolveFilterValue comparison. Native shared-contract proposals also affect protected/cross-domain callers. No new assertion/adapter or protected factory edits; coordinate actual factory/validation contracts first.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Bootstrap-only slice(uneat/keep/meal-log): retain one consumed contract, exact three select literals and actual selected-single-row stages. Use SDK match with the identical id/user_id eq wire instead of recursive eq generic comparison; directly assign the same request client. JSON settings remain unknown until existing normalization, selected covers are nullable, book enum and social ID match SQL.",
         "verification": "Before3 suites64 PASS; final bootstrap SDK11+existing64+meal-log authorization4=79 PASS. Whole typecheck/lint/verify:anti-slop140/new0/diff PASS; independent69/nonincremental typecheck/diff APPROVE. Native/legacy union prototype TS2349 and an incorrect selected-list/single result TS2322 were rejected/corrected, not suppressed. Existing initializer writes/filter/sort/version23505/auth and RPC transition order preserved; protected factory/meal/planner source untouched.",
-        "status": "local verified, unmerged/undeployed; bootstrap26 becomes23 only after this3 and prior local2 candidates are adopted"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; bootstrap26 becomes23 only after this3 and prior local2 candidates are adopted",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -204,13 +233,17 @@
       "line": 51,
       "column": 20,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Precise select literals and single-row query phases alone do not resolve direct assignment: isolated whole-program probe still has TS2589 at untyped SupabaseClient<any> eq/ResolveFilterValue comparison. Native shared-contract proposals also affect protected/cross-domain callers. No new assertion/adapter or protected factory edits; coordinate actual factory/validation contracts first.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Same bootstrap-only3 slice: exact native-compatible projection/query phases and SDK match equality permit direct request-client assignment without another native/legacy contract or wrapper.",
         "verification": "79 selected tests/whole typecheck/lint/Anti140,new0/diff PASS; independent69/nonincremental typecheck/diff APPROVE. SDK fixture verifies exact wire/payload and final version order; RPC/authorization code unchanged.",
-        "status": "local verified, unmerged/undeployed; master contract28 not decremented"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 not decremented",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -391,13 +424,17 @@
       "line": 148,
       "column": 5,
       "snippet": "memory as unknown as RecipeNutritionServiceClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "The in-memory BundleQuery is not a native PostgREST builder (url/headers/urlLengthLimit/cloneRequestState and other SDK state missing), in addition to loose bundle Row types. Do not fill fake SDK methods or invent revision/quantity_input; separate pure computation/bundle preparation is a medium refactor candidate.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Separate native row loading from shared input preparation. Unknown bundle rows are validated; the shared core consumes a real predecessor loader and RPC capability, not a fake native client. Remove the memory SDK assertion, unused recipe table and maybeSingle; preserve local sorting/paging, owner/version/quantity guards and exact two refresh RPCs.",
         "verification": "Before4 suites66 PASS; final5 suites79 PASS including native owner SDK and8 added refresh cases. Related callers4 suites37 PASS/1 suite12 conditional SKIP. Whole typecheck/lint/verify:anti-slop143/new0/diff PASS. Independent3 suites61/nonincremental typecheck/diff APPROVE. Initial ID-ordered guard fixture1FAIL corrected without product guard changes; falsy pin predicate issue corrected with real optional-field checks and2 regression cases. Invalid owner/revision/product metadata now explicitly rejects before writes; valid SQL rows unchanged, missing revision/quantity not invented.",
-        "status": "local verified, unmerged and undeployed; not deducted from master contract28; cook-mode plus memory adoption leaves bootstrap26"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged and undeployed; not deducted from master contract28; cook-mode plus memory adoption leaves bootstrap26",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -440,13 +477,17 @@
       "line": 419,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "List-only native four-table exact projection/FK/head-count separates GET from POST creation/rewards. Same request client bootstrap/reader, real nullable covers and enum; remove unused count/fluent interfaces and GET cast. POST runtime/auth helper unchanged.",
         "verification": "Baseline route14+bootstrap11=25 PASS; final SDK6+route14+mypage7+bootstrap11=38 PASS, whole typecheck/lint/Anti127/new0/diff PASS; independent38 PASS/nonincremental typecheck/lint/diff APPROVE, POST/auth helper byte-identical emit. Prior mypage GET mock failure fixed in this GET scope by missing image-factory mock and stronger actual inner-count select expectations; no weakening.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption10"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption10",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -464,13 +505,17 @@
       "line": 216,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookDetailDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Native three-table metadata/item/recipe FK projections and limited update/delete phases, four book enum and nullable covers. Separate structural assignments of same request client to bootstrap and native consumer avoid overload collision. Preserve owner/custom gates and item-before-book delete order.",
         "verification": "SDK15+route14+bootstrap11=40 PASS plus existing PATCH/DELETE3 PASS/4 filtered: root unique43 PASS. Whole typecheck/lint/Anti132/new0/diff PASS; independent unique57 PASS including existing bootstrap14 plus nonincremental typecheck/lint/diff APPROVE. Before modification broad mypage/route/bootstrap31 PASS/1 FAIL due separate list GET missing createRecipeImageInternalClient mock export; preserved, not counted green. No new casts/wrappers/suppressions/SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption15"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption15",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -901,13 +946,17 @@
       "line": 118,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingPreviewDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Native four-table exact projection and nullable meal snapshot FK replace handwritten query phases; same request client directly assigned to bootstrap/reader. Preserve registered AND shopping_list_id IS NULL, owner filters, sort, pinned-title fail-closed and aggregation.",
         "verification": "Baseline52 PASS; final SDK9+existing41+bootstrap11=61 PASS, whole typecheck, lint max-warnings0, Anti131/new0 and diff PASS; independent61 PASS/typecheck/lint/diff APPROVE. Existing array/null compatibility consumer remains. No new casts/wrappers/suppressions/SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption14"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption14",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1038,13 +1087,17 @@
       "line": 1282,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingCreateDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "History GET native two-table read projection separated from POST creation contract; same request client bootstrap direct assignment, remove GET-only handwritten phases/dead POST select members. Owner/cursor/order/limit+1/count/title/errors unchanged.",
         "verification": "Baseline55 PASS; SDK7+existing55=62 PASS, whole typecheck/lint/Anti128/new0/diff PASS; independent62 PASS/nonincremental typecheck/diff APPROVE, POST function byte-identical emit. New test initially expected stored title rather than unchanged existing date-range title; corrected fixture expectation only. No new cast/wrapper/suppression/SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption11"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption11",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1062,13 +1115,17 @@
       "line": 83,
       "column": 20,
       "snippet": "routeClient as unknown as PantryBundlesDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Four native SDK tables and real inner ingredient FK replace handwritten query interfaces. Current pantry ingredient_id is nullable after product support; narrow bundle calculator input and set types match it without widening shared PantryIngredientRow or changing runtime. Same request client bootstrap/reader direct assignment.",
         "verification": "SDK10+bootstrap11=21 PASS plus existing bundles1 PASS/15 name-filtered SKIP: unique22 PASS. Whole typecheck/lint/Anti133/new0/diff PASS; independent22 PASS/15 filtered/nonincremental typecheck/diff APPROVE. Initial unmodified pantry whole baseline had25 PASS/2 FAIL: DELETE expected200 got422 and required_non_empty vs invalid_or_empty_ids; retained separately, not fixed or counted green. No actual DB writes/SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption16"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption16",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1086,13 +1143,17 @@
       "line": 222,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingItemUpdateDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Two native SDK tables with selected-single read/update phases and flag-only payload replace handwritten query interfaces. Same request client direct assignment; preserve no-op, exclude implies unchecked, owner/completed gates, list/id filters, errors and JSON normalization.",
         "verification": "SDK11+existing25+bootstrap11=47 PASS; whole typecheck, ESLint max-warnings0, Anti134/new0, diff PASS; independent47 PASS/nonincremental typecheck/diff APPROVE. No new assertion, wrapper, suppression, SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption17"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption17",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1128,13 +1189,17 @@
       "line": 213,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingBulkItemUpdateDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Native two-table rows and check-only Update/select phases, same request client directly assigned to bootstrap and reader; amounts JSON remains unknown until existing normalization. Preserve one update, owner/completed gates, list/item/pantry-excluded filters and sorted response.",
         "verification": "Baseline25 PASS; SDK9+existing25+bootstrap11=45 PASS, whole typecheck, ESLint max-warnings0, Anti135/new0 and diff PASS; independent45 PASS/nonincremental typecheck/diff APPROVE. No new assertion/wrapper/suppression/SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption18"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption18",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1152,13 +1217,17 @@
       "line": 137,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingShareTextDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Replace handwritten query phases with actual SDK three-table projection and mandatory ingredient FK; same request client directly assigned to bootstrap and reader. Keep consumer null fallback, completed read-only access, owner gate, purchase-only filter, stable ordering and text unchanged.",
         "verification": "Baseline13 PASS; final SDK9+backend/auth13+bootstrap11=33 PASS, full typecheck, ESLint max-warnings0, Anti137/new0 and diff PASS; independent33 PASS/nonincremental typecheck/diff APPROVE. Initial interface Row did not satisfy SDK Record constraint and produced never/TS2339/TS2344; corrected to identical object type alias without assertions or suppressions. No SQL/DB/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption20"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption20",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1194,13 +1263,17 @@
       "line": 250,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingListDetailDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Native seven-table exact selected rows, nullable snapshot FKs/product identity, unknown JSON replace handwritten query phases. Bootstrap and quantity RPC retain the same original request client separately. Remove fictional updated_at from list projection; actual selected created_at already supplied the response fallback.",
         "verification": "Baseline25 PASS; final SDK10+existing25+bootstrap11=46 PASS, whole typecheck/lint/Anti129/new0/diff PASS; independent SDK/backend/bootstrap39+quantity helper9=48 PASS/typecheck/lint/diff APPROVE (different test set). Reviewer URL-coverage note accepted with recipes/ingredients exact assertions and root46/lint reconfirmed. One old fixture returned unselected/nonexistent updated_at causing an initial expected-value failure; fixture/expectation corrected to actual selected created_at and pinned by SDK requests. Exact quantity read RPC/soft failure, owner/empty/broken pin/errors/filters/sort preserved. No new casts/wrappers/suppressions/SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption12"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption12",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1218,13 +1291,17 @@
       "line": 204,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingReorderDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Native SDK two-table exact projection and sort_order-only update payload replace handwritten fluent phases. Same request client assigned separately to bootstrap/reader; no-return update data is inferred null. Keep owner/completed gates, owned item selection and list/id update filters unchanged.",
         "verification": "Before16 PASS; final SDK9+backend/auth16+bootstrap11=36 PASS, full typecheck, ESLint max-warnings0, Anti136/new0 and diff PASS; independent36 PASS/nonincremental typecheck/diff APPROVE. Runtime requests lock guest401/owner403/completed409/missing404/item500/update409/500 and exactly one owned-item PATCH. No new assertions, suppressions, wrappers, SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption19"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption19",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1331,13 +1408,17 @@
       "line": 146,
       "column": 22,
       "snippet": "routeClient as unknown as StandaloneCookModeDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Generated product/ingredient/step projection has GenericStringError, missing step methods and array/object relation mismatch. Confirm exact query/schema contract before declaring row types.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Use native consumed-table/FK select contracts and the existing ingredient/step consumer views. Preserve public/auth projections, product-only/null joins, legacy method fallback and canonical projection reassignment. No new assertion/any/wrapper or runtime permission change.",
         "verification": "Before: existing9+newSDK7 PASS. After: new8 native projection/type/product/fallback/error tests plus existing9, total17 PASS; whole typecheck/lint/verify:anti-slop144/new0/diff PASS. Independent17/nonincremental typecheck/diff APPROVE. Accepted SQL NOT NULL precision comment for cooking_method_id; compiler rechecked after narrowing.",
-        "status": "local verified, unmerged and undeployed; not deducted from master contract28"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged and undeployed; not deducted from master contract28",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1798,13 +1879,17 @@
       "line": 139,
       "column": 20,
       "snippet": "routeClient as unknown as CookingSessionDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Native six-table exact select/insert phases, real nullable ingredient/product/snapshot FK and status enums, ingredients JSON unknown with existing inline guard. Same request client bootstrap assignment; preserve owner/state/product guard and existing direct-DML authority boundary without promoting or relaxing it.",
         "verification": "Baseline28 PASS; final SDK15+existing17+bootstrap11=43 PASS, whole typecheck/lint/Anti126/new0/diff PASS; independent43 PASS/typecheck/lint/Anti126/new0/diff APPROVE. No new cast/wrapper/suppression/SQL/auth/operational changes. SDK transport is not actual DB/RLS permission proof.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption9"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption9",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1917,13 +2002,17 @@
       "line": 77,
       "column": 20,
       "snippet": "routeClient as unknown as CookingCancelDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Native session table exact select/update/maybeSingle with actual three-state enum, cancel-only update payload and same client bootstrap separation. No runtime query/state/authority change, preserve existing database-before-trigger boundary without promoting or relaxing it.",
         "verification": "SDK10+bootstrap11=21 PASS plus existing cancel2 PASS/15 filtered: unique23 PASS; whole typecheck, lint max-warnings0, Anti130/new0 and diff PASS; independent23 PASS/15 filtered/nonincremental typecheck/diff APPROVE. Owner403/completed409/guest401/missing404/read-update500/idempotence and exact owner/id update filters locked. No new casts/wrappers/suppressions/SQL/auth/operational changes.",
-        "status": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption13"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 unchanged, local candidates after adoption13",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1995,13 +2084,17 @@
       "line": 18,
       "column": 29,
       "snippet": "routeClient as unknown as UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Precise select literals and single-row query phases alone do not resolve direct assignment: isolated whole-program probe still has TS2589 at untyped SupabaseClient<any> eq/ResolveFilterValue comparison. Native shared-contract proposals also affect protected/cross-domain callers. No new assertion/adapter or protected factory edits; coordinate actual factory/validation contracts first.",
-      "pendingLocalResolution": {
+      "adoptedResolution": {
         "branch": "codex/cook-mode-row-contract-20261019",
         "reason": "Same bootstrap-only3 slice: directly assign the original routeClient against actual native-compatible bootstrap query phases, preserving authorization and internal writer separation.",
         "verification": "79 selected tests/whole typecheck/lint/Anti140,new0/diff PASS; independent69/nonincremental typecheck/diff APPROVE. New actual-SDK meal-log cases cover auth→bootstrap twice→generation/owner verification→internal client, guest401/stale409/bootstrap500, and writer RPC0.",
-        "status": "local verified, unmerged/undeployed; master contract28 not decremented"
+        "status": "merged PR1812 / app-deployed f204073a2; fresh post-deploy baseline nine digests preserved",
+        "previousState": "needs-contract-refactor",
+        "localVerificationStatus": "local verified, unmerged/undeployed; master contract28 not decremented",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1812",
+        "mergeCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a"
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
