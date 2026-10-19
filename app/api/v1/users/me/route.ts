@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { readProfileAccountGeneration } from "@/lib/server/account-generation/profile-subject";
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
@@ -6,7 +7,6 @@ import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
 import {
@@ -33,46 +33,30 @@ interface QueryError {
   message: string;
 }
 
-interface UserProfileRow {
+type UserProfileRow = {
   id: string;
   nickname: string;
   email: string | null;
   profile_image_url: string | null;
   social_provider: "kakao" | "naver" | "google";
-  settings_json: Record<string, unknown> | null;
-}
+  settings_json: unknown;
+};
 
 interface UserProfileRequestBody {
   nickname?: unknown;
 }
 
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface UsersSelectQuery {
-  eq(column: string, value: string): UsersSelectQuery;
-  maybeSingle(): MaybeSingleResult<UserProfileRow>;
-}
-
-interface UsersUpdateProfileQuery {
-  eq(column: string, value: string): UsersUpdateProfileQuery;
-  select(columns: string): UsersUpdateProfileQuery;
-  maybeSingle(): MaybeSingleResult<UserProfileRow>;
-}
-
-interface UsersTable {
-  select(columns: string): UsersSelectQuery;
-  update(values: {
-    nickname: string;
-    updated_at: string;
-  }): UsersUpdateProfileQuery;
-}
-
-interface UsersMeDbClient {
-  from(table: "users"): UsersTable;
-}
+export type UsersMeDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: { users: {
+      Row: UserProfileRow;
+      Insert: never;
+      Update: { nickname: string; updated_at: string };
+      Relationships: [];
+    } };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 interface UserDeletePolicyResult {
   deleted: boolean;
@@ -93,7 +77,8 @@ interface UsersMeDeleteDbClient {
   }>;
 }
 
-function readScreenWakeLock(settings: Record<string, unknown> | null) {
+function readScreenWakeLock(settings: unknown) {
+  if (!settings || typeof settings !== "object" || !("screen_wake_lock" in settings)) return false;
   return typeof settings?.screen_wake_lock === "boolean" ? settings.screen_wake_lock : false;
 }
 
@@ -155,11 +140,10 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
     };
   }
 
-  const dbClient = routeClient as unknown as
-    UsersMeDbClient & UserBootstrapDbClient;
+  const dbClient: UsersMeDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
+    await ensurePublicUserRow(routeClient, user);
   } catch (bootstrapError) {
     return {
       response: fail(
@@ -173,7 +157,7 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
     };
   }
   try {
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return {
       response: fail(

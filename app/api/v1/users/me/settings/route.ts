@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { isQaFixtureModeEnabled } from "@/lib/mock/recipes";
@@ -5,56 +6,33 @@ import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { UserSettingsData } from "@/types/user";
-
-interface QueryError {
-  message: string;
-}
-
-interface SettingsRow {
-  settings_json: Record<string, unknown> | null;
-}
 
 interface UserSettingsRequestBody {
   screen_wake_lock?: unknown;
 }
 
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
+// Consumed users columns only; JSON remains untrusted until read below.
+export type UserSettingsDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: { users: {
+      Row: { id: string; settings_json: unknown; updated_at: string };
+      Insert: never;
+      Update: { settings_json: Record<string, unknown>; updated_at: string };
+      Relationships: [];
+    } };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
-interface UsersSettingsSelectQuery {
-  eq(column: string, value: string): UsersSettingsSelectQuery;
-  maybeSingle(): MaybeSingleResult<SettingsRow>;
-}
-
-interface UsersSettingsUpdateQuery {
-  eq(column: string, value: string): UsersSettingsUpdateQuery;
-  select(columns: string): UsersSettingsUpdateQuery;
-  maybeSingle(): MaybeSingleResult<SettingsRow>;
-}
-
-interface UsersSettingsTable {
-  select(columns: string): UsersSettingsSelectQuery;
-  update(values: {
-    settings_json: Record<string, unknown>;
-    updated_at: string;
-  }): UsersSettingsUpdateQuery;
-}
-
-interface UserSettingsDbClient {
-  from(table: "users"): UsersSettingsTable;
-}
-
-function normalizeSettings(settings: Record<string, unknown> | null) {
+function normalizeSettings(settings: unknown) {
   return settings && typeof settings === "object" ? settings : {};
 }
 
-function readScreenWakeLock(settings: Record<string, unknown> | null) {
+function readScreenWakeLock(settings: unknown) {
+  if (!settings || typeof settings !== "object" || !("screen_wake_lock" in settings)) return false;
   return typeof settings?.screen_wake_lock === "boolean" ? settings.screen_wake_lock : false;
 }
 
@@ -112,12 +90,11 @@ export async function PATCH(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    UserSettingsDbClient & UserBootstrapDbClient;
+  const dbClient: UserSettingsDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -136,7 +113,7 @@ export async function PATCH(request: Request) {
     return fail("INTERNAL_ERROR", "설정을 저장하지 못했어요.", 500);
   }
 
-  const nextSettings = {
+  const nextSettings: Record<string, unknown> = {
     ...normalizeSettings(currentResult.data.settings_json),
   };
   if (typeof body.screen_wake_lock === "boolean") {

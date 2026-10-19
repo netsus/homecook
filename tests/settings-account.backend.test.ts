@@ -234,6 +234,38 @@ describe("17c settings/account backend", () => {
     });
   });
 
+  it.each([
+    { json: null, stored: {}, enabled: false },
+    { json: "legacy-json", stored: {}, enabled: false },
+    { json: 42, stored: {}, enabled: false },
+    { json: true, stored: {}, enabled: false },
+    { json: ["legacy"], stored: { 0: "legacy" }, enabled: false },
+    { json: { keep: 1, screen_wake_lock: "true" }, stored: { keep: 1, screen_wake_lock: "true" }, enabled: false },
+    { json: { keep: 1, screen_wake_lock: true }, stored: { keep: 1, screen_wake_lock: true }, enabled: true },
+  ])("preserves profile and preference JSON consumption: %j", async ({ json, stored, enabled }) => {
+    const usersTable = createUsersTable([
+      { data: { id: "user-1", nickname: "집밥러", email: null, profile_image_url: null,
+        social_provider: "google", settings_json: json }, error: null },
+      { data: { settings_json: json }, error: null },
+      { data: { settings_json: json }, error: null },
+    ]);
+    setupAuthedClient({ from: vi.fn(() => usersTable) });
+    const profile = await importUsersMeRoute();
+    const response = await profile.GET(new Request("http://localhost/api/v1/users/me"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true,
+      data: { id: "user-1", settings: { screen_wake_lock: enabled } }, error: null });
+    const preferences = await importUserSettingsRoute();
+    const updated = await preferences.PATCH(new Request("http://localhost/api/v1/users/me/settings", {
+      method: "PATCH", headers: { "content-type": "application/json" }, body: "{}",
+    }));
+    expect(updated.status).toBe(200);
+    expect(await updated.json()).toEqual({ success: true,
+      data: { settings: { screen_wake_lock: enabled } }, error: null });
+    expect(usersTable.update).toHaveBeenCalledWith(expect.objectContaining({ settings_json: stored }));
+    for (const call of usersTable.__query.eq.mock.calls) expect(call).toEqual(["id", "user-1"]);
+  });
+
   it("PATCH /users/me/settings rejects non-boolean wake lock values", async () => {
     setupAuthedClient({ from: vi.fn() });
 
