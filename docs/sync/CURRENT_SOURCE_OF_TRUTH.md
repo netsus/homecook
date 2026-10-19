@@ -1,5 +1,17 @@
 # Current Source of Truth
 
+## 2026-10-20 — Anti Slop117·후속6계약 앱 반영 완료
+
+실제 운영 ref `50bcbe701e5cf47f099b95eca7b7b1be7cccf548`/build `prelaunch-50bcbe701e5c-JYsG4J`·loaded=true·DB238 ready다. 공식 앱-only plan/deploy exit0, 후속6계약 **머지6/운영6**이며 공유 PR1819/미사용 정리 PR1825도 함께 반영했다. 선택웹1466 PASS/133 명시적 이름필터 SKIP·빌드 PASS(98초 컴파일/정적94/기존경고4)·새 manifest200·보호GET3곳의 wrapped401을 확인했다. 원readerFloor48c4/databasePlanSha·closed-R2와 복구 대기 없음 상태를 유지하며 SQL/환경/키/권한/worker/정책/PIN 변경0이다. 새 전체DB 백업/데이터지문 전체 재검증을 주장하지 않는다. Anti117/신규0·원29계약29완료/0잔여는 전체275/별도49 완료가 아니며 기존 권한3/보류444/역사실패·새 인증 QA/actual legacy 완료 미확인을 유지한다. [최신 운영·검증·한계](../engineering/anti-slop-contract-rollout-20261020.md), [장부](../engineering/anti-slop-refactoring-progress-20261017.md)가 기준이며 아래 운영0/d7d는 배포 전 이력이다. 후속 docs PR은 앱 재배포를 요구하지 않는다.
+
+## 2026-10-20 — Anti Slop117·원29계약 소스 통합 완료
+
+최종 master `50bcbe701e5cf47f099b95eca7b7b1be7cccf548`은 PR1826 장보기 생성 native6/unknown JSON 소비 호환까지 포함한다. Anti117/baseline207/신규0, 원29계약29완료/0잔여, 원163 ID46해결/117잔여다. 정확5208 기존30사례 대조·최종91 PASS·통합45suite396 PASS·전체 비증분 타입/lint/diff·독립 검토를 통과했다. 미소비 label/문자열 amount fallback/scalable/raw unit42를 유지하고 중복행 short-circuit 초안1FAIL을 재현 후 복구했다. truthy 비문자열 ID의 후속 요청 전 표준500 차이만 API43에 추가했으며 실제 DB 오류를 관측했다는 뜻은 아니다. 후속6계약 머지6/운영0, 실제 운영은 아직 d7d/build `prelaunch-d7d865ac2fa8-1VWr9s`·DB238이다. SQL/환경/키/권한/worker/정책/PIN 변경은 없다. 전체275/별도49 완료·기존 권한3/보류444 해결·새 인증 QA로 확대하지 않는다. [최신 통합·실패·운영 경계](../engineering/anti-slop-contract-rollout-20261020.md), [진행 장부](../engineering/anti-slop-refactoring-progress-20261017.md)가 기준이며 아래118/잔여1은 과거 checkpoint다.
+
+## 2026-10-20 — Anti Slop118·공유 선행과 후속5계약 소스 통합
+
+master source `5208dcbdeb68bf6a229ca5a1c3156a868aa31148`은 공유 PR1819, 북 생성/삭제·수동 POST·장보기 완료·팬트리 PR1820–1824, 실제 미사용 writer97줄 정리 PR1825를 포함한다. Anti118/신규0, 원29계약28완료/1잔여이며 e7 통합353 PASS·선택웹1466 PASS/133 이름필터 SKIP·전체 비증분 타입/lint·독립 코드 검토를 통과했다. 후속5계약은 머지5/운영0, 운영은 아직 d7d/build `prelaunch-d7d865ac2fa8-1VWr9s`·DB238이다. 마지막 장보기 생성은 TS2589와 기존 JSON201 호환을 유지하는 소비 경계로 별도 진행하며, 강제 guard/단언/검사 완화로 닫지 않는다. 정상 nullable/product-only/legacy·권한·상태·멱등성과 수량/source/revision을 유지하고 malformed manual/pantry identity500 차이만 API43에 기록했다. 기존 dirty/P5·보류444·permission3·과거 실패와 기존 QA 한계를 보존한다. [통합·실패·운영 경계](../engineering/anti-slop-contract-rollout-20261020.md), [진행 장부](../engineering/anti-slop-refactoring-progress-20261017.md)가 최신이며 아래123/6잔여/선행 미채택은 과거 checkpoint다.
+
 ## 2026-10-20 — Anti Slop123·레시피북 조회 2건
 
 목록 PR1816/master `a80f1ede73eade75df01e1e4856642d71207785f`, 상세 GET PR1817/master `d7d865ac2fa86ad5ebc445ad8266ad78080a87dc`로 native SDK6표/10표 조회 계약을 반영했다. 표적17/38 PASS·통합45 PASS·선택웹1466 PASS/133 이름필터 SKIP·전체 비증분 타입/lint·독립 검토를 통과했고 Anti123/신규0, 원29계약23완료/6잔여다. 정확d7d를 공식 앱-only plan/deploy exit0으로 반영했으며 build `prelaunch-d7d865ac2fa8-1VWr9s`·loaded=true·DB238 ready·원readerFloor48c4·recoveryPending=false·manifest200·두 조회API 비로그인401을 확인했다. 이번 두 배치는 머지2/운영 반영2다. 소유권/canonical/DELETE mutation/normalizer 실행 동작을 유지하며 SQL·인증·키·worker·정책/PIN 변경은 없다. 기존 dirty/P5와 로컬 Progress 선행 후보를 보존했다. 부모의 이전eb7 인증 저장/장보기 QA는 통과했지만 새후보 인증흐름 및 actual legacy 완료는 미실행, 거부된 새 QA 끼니 생성을 재시도하지 않는다. 남은6건은 다음 작은 배치로 계속한다. 기존 권한3·보류444·실패 기준선을 유지한다. [조회 후속·검증 한계](../engineering/anti-slop-book-read-followup-20261020.md), [진행 장부](../engineering/anti-slop-refactoring-progress-20261017.md)가 최신이며 아래125/P5 대기는 이전 checkpoint다.

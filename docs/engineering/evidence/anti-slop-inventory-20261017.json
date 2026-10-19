@@ -12,12 +12,29 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "d7d865ac2fa86ad5ebc445ad8266ad78080a87dc",
-    "total": 123,
+    "baseCommit": "50bcbe701e5cf47f099b95eca7b7b1be7cccf548",
+    "total": 117,
     "newFindings": 0,
-    "verificationState": "PR1816 list and PR1817 detail GET native SDK read contracts merged and app-deployed d7d865ac2/buildprelaunch-d7d865ac2fa8-1VWr9s; Anti123/new0, original29 contracts23 resolved/6 remaining. Target combined6suite45 PASS, web1466 PASS/133 name-filter SKIP, whole nonincremental typecheck/lint/diff PASS, independent reviews APPROVE. Official plan/deploy exit0; build PASS4 existing warnings; actual ref/build loadedtrue/DB238ready/recoveryfalse/readerFloor48c4 preserved, manifest200 and both anonymous GET401 wrappers verified. Parent authenticated QA on preceding eb7 passed save/book-refresh/fraction and shopping-complete/read-only/pantry0; no owned in-progress legacy sample, so actual legacy complete remains untested. Denied new QA meal creation is not retried. No SQL/env/auth/worker/policy/PIN changes. Historical broad failures, permission3 and held444fe1f6f remain explicit."
+    "verificationState": "Source50bcbe701 includes shared prerequisite PR1819, six contract resolutions PR1820-1824/1826, and runtime-identical unused writer cleanup PR1825. Anti117/new0, original29 contracts29 resolved/0 remaining; original163 IDs46 resolved/117 remaining. Final45suite396 PASS, whole nonincremental typecheck/lint/diff and independent code reviews PASS; final JSON compatibility91 PASS plus exact baseline30 PASS. Six contract batches merged6/operating6 after official exact app-only plan/deploy exit0; web1466 PASS/133 explicit name-filter SKIP/build PASS/static94/existing4 warnings. Actual operating50bcbe701/buildprelaunch-50bcbe701e5c-JYsG4J loadedtrue/DB238 ready/original48c4 readerFloor/no recovery pending; new manifest200 and anonymous protectedGET3 wrapped401 confirmed. Historical eb7 authenticated QA is not new-candidate QA; actual legacy completion remains untested. No SQL/env/auth/worker/policy/PIN changes or claim of fresh fullDB backup/full data fingerprint revalidation; permission3, held444fe1f6f and unrelated historical failures remain explicit."
+  },
+  "contractRolloutObservation": {
+    "sourceCommit": "50bcbe701e5cf47f099b95eca7b7b1be7cccf548",
+    "sharedPrerequisite": { "pullRequest": 1819, "mergeCommit": "bd9aa784252e0cae2092434357497f246a87f533" },
+    "contractPullRequests": [1820, 1821, 1822, 1823, 1824, 1826],
+    "unusedWriterPullRequest": 1825,
+    "mergedContracts": 6,
+    "operatingContracts": 6,
+    "deployedRef": "50bcbe701e5cf47f099b95eca7b7b1be7cccf548",
+    "buildId": "prelaunch-50bcbe701e5c-JYsG4J",
+    "databaseLedgerCount": 238,
+    "deploymentLog": "deploy-1792434274291.log",
+    "resolvedOriginalContracts": 29,
+    "remainingOriginalContracts": 0,
+    "remaining": "No remaining needs-contract-refactor in original29. PR1826 solves shopping creation using native6/mapped Row/unknown JSON consumed-input compatibility, with malformed nonstring identity early500 documented separately. Historical TS2589/prototype25 diagnostics/blanket8-field guard and one short-circuit regression remain recorded, not universal impossibility claims. Held service-client assertions, permission3/444 and original275/separate49 unmapped scope are not solved. PR1825 removes97 net obsolete protocol lines without diagnostic reduction.",
+    "reference": "docs/engineering/anti-slop-contract-rollout-20261020.md"
   },
   "bookReadFollowupObservation": {
+    "historical": true,
     "baseCommit": "d90af7a976392eb052a1d6557d3ab8c2bebb7221",
     "mergeCommit": "d7d865ac2fa86ad5ebc445ad8266ad78080a87dc",
     "pullRequests": [1816, 1817],
@@ -32,6 +49,7 @@
     "runtimeLimit": "Same request client and wire behavior; two route execution ASTs equal after alias normalization, normalizer emitted JS byte-identical. No new casts/any/suppressions. First list merge request used a mistranscribed match-head SHA and was rejected; rereading exact local/remote HEAD then normal merge succeeded, no bypass."
   },
   "snapshotFollowupObservation": {
+    "historical": true,
     "baseCommit": "cfcb2bd61c31984c2f1f9efae003c51e1d105f42",
     "candidateCommit": "f73b11c6f1d900142b52eb003b683c7e2640ebda",
     "mergeCommit": "eb7df156d24b361a0e91b17345522cd1b15f05b1",
@@ -487,7 +505,13 @@
       "line": 370,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
+      "adoptedResolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1820",
+        "mergeCommit": "d958c338f9e430d64aaa037932d5caa11466f2ee",
+        "reason": "One native SDK table with full book enum/nullable covers and same-object bootstrap capability split replaces handwritten creation phases; owner sort, custom insert and reward order are unchanged.",
+        "verification": "SDK/existing20 PASS, source-action21 PASS, independent26 PASS/APPROVE; whole nonincremental typecheck/lint/diff PASS. Product emit identical after exact same-object bootstrap alias normalization."
+      },
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -640,7 +664,13 @@
       "line": 854,
       "column": 20,
       "snippet": "routeClient as unknown as RecipeBookRecipeRemoveAuthedDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
+      "adoptedResolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1821",
+        "mergeCommit": "c35ca89f256e950efb649e2b3a1da282a7b15515",
+        "reason": "Three native mutation tables and same request-client read/bootstrap/growth aliases preserve owner/RLS/my_added403, DELETE filters, count update and secondary ordering.",
+        "verification": "Target23/root27/independent20 PASS, whole nonincremental typecheck/lint/diff and independent APPROVE; actual SDK exact DELETE/PATCH wire filters and inferred rows verified."
+      },
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1099,8 +1129,17 @@
       "line": 578,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingCreateDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "adoptedResolution": {
+        "branch": "codex/anti-slop-shopping-json-consumption-20261020",
+        "reason": "Native six-table read schema with real nullable snapshot FK/mapped Row; same request client directly assigned. Snapshot JSON remains unknown and narrows at actual consumption, preserving amount text fallback, unused label, scalable and raw product unit behavior. Malformed truthy nonstring identity now closes early wrapped500 before lookup/RPC, documented API43.",
+        "verification": "Exact5208 baseline30 PASS; initial short-circuit regression1FAIL reproduced and fixed; final related4suite91 PASS/root and independent91 PASS, whole nonincremental typecheck/lint/diff and Anti117/new0 PASS. Final integrated45suite396 PASS. Runtime emit is not byte-identical; fake22P02 observations are not operating DB evidence.",
+        "previousState": "needs-contract-refactor",
+        "status": "merged PR1826 / app-deployed50bcbe701-buildprelaunch-50bcbe701e5c-JYsG4J DB238 ready; authenticated QA not performed",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1826",
+        "mergeCommit": "50bcbe701e5cf47f099b95eca7b7b1be7cccf548"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
@@ -1213,7 +1252,13 @@
       "line": 245,
       "column": 20,
       "snippet": "routeClient as unknown as PantryDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
+      "adoptedResolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1824",
+        "mergeCommit": "e7f59dc69c2a8dad388b485a5fc44ddf00c4de7c",
+        "reason": "Five native tables/alias view and real nullable XOR/composite FKs retain product-only rows, owner access, duplicates, legacy/optional-join fallback, after-response growth and scoped DELETE. Only malformed branch identities fail with documented500.",
+        "verification": "Final SDK15+existing/projection27=42 PASS, independent29 PASS/type/lint/diff/Anti and APPROVE. Historical18PASS/2FAIL were stale UUID/reason fixtures only, fixed without expectation weakening. Manual/pantry API addenda conflict resolved preserving both original records."
+      },
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1287,7 +1332,13 @@
       "line": 179,
       "column": 20,
       "snippet": "routeClient as unknown as ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
+      "adoptedResolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1823",
+        "mergeCommit": "5aa5e62262819dc136f8941b9d907bb48baf16a9",
+        "reason": "Actual SDK client directly satisfies the existing completion capabilities after shared prerequisite, with no product runtime change or fallback weakening.",
+        "verification": "Target38/root28/independent21 PASS, whole nonincremental typecheck/lint/diff and independent APPROVE; actual SDK atomic RPC success/duplicate/denial, owner/list/empty pantry selection, same-object order verified. Product emit byte-identical."
+      },
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
       "review": {
         "source": "independent read-only compiler/source investigation",
@@ -1712,7 +1763,13 @@
       "line": 1946,
       "column": 20,
       "snippet": "routeClient as unknown as ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
+      "adoptedResolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1822",
+        "mergeCommit": "fad86fef691baf52dfc07e63c59141979ec46589",
+        "reason": "Five native DML/lookup tables keep full source enum/nullable owner/JSON unknown and separate same-object bootstrap/growth. Optional RPC/no-RPC DML/derived permissions and write order stay unchanged; malformed DML identity alone closes500 before child writes, documented in API43.",
+        "verification": "Author/root57 PASS, whole nonincremental typecheck/lint/diff and root independent review APPROVE. Historical41PASS/1FAIL was missing quantity-context RPC fixture, repaired to42PASS without weakening. Actual SDK DML/RPC/no-DML-after-error/derived409 boundaries locked."
+      },
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
       "review": {
         "source": "independent read-only compiler/source investigation",
