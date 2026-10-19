@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -20,89 +21,39 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  message: string;
-}
-
-interface RecipeBookRow {
-  id: string;
-  user_id: string;
-  book_type: RecipeBookType;
-}
-
-interface RecipeBookUpdatedRow {
-  id: string;
-  name: string;
-  book_type: "custom";
-  sort_order: number;
-  cover_color_key?: RecipeBookCoverColorKey | null;
-  cover_image_url?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface RecipeBookItemRow {
-  book_id: string;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface RecipeBooksSelectQuery {
-  eq(column: string, value: string): RecipeBooksSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeBookRow>;
-}
-
-interface RecipeBookUpdateValues {
+type RecipeBookUpdateValues = {
   name?: string;
   cover_color_key?: RecipeBookCoverColorKey | null;
   cover_image_url?: string | null;
   updated_at: string;
-}
+};
 
-interface RecipeBooksUpdateQuery {
-  eq(column: string, value: string): RecipeBooksUpdateQuery;
-  select(columns: string): RecipeBooksUpdateQuery;
-  maybeSingle(): MaybeSingleResult<RecipeBookUpdatedRow>;
-}
-
-interface RecipeBooksDeleteQuery {
-  eq(column: string, value: string): RecipeBooksDeleteQuery;
-  then: ArrayResult<unknown>["then"];
-}
-
-interface RecipeBookItemsDeleteQuery {
-  eq(column: string, value: string): RecipeBookItemsDeleteQuery;
-  then: ArrayResult<unknown>["then"];
-}
-
-interface RecipeBookItemsSelectQuery {
-  eq(column: string, value: string): RecipeBookItemsSelectQuery;
-  then: ArrayResult<RecipeBookItemRow>["then"];
-}
-
-interface RecipeBooksTable {
-  select(columns: string): RecipeBooksSelectQuery;
-  update(values: RecipeBookUpdateValues): RecipeBooksUpdateQuery;
-  delete(): RecipeBooksDeleteQuery;
-}
-
-interface RecipeBookItemsTable {
-  select(columns: string): RecipeBookItemsSelectQuery;
-  delete(): RecipeBookItemsDeleteQuery;
-}
-
-interface RecipeBookDetailDbClient {
-  from(table: "recipe_books"): RecipeBooksTable;
-  from(table: "recipe_book_items"): RecipeBookItemsTable;
-}
+// Consumed metadata and actual item-to-recipe FK. Keep native SDK selected-single
+// update and no-return delete phases, separate from user bootstrap writes.
+export type RecipeBookDetailDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_books: {
+        Row: { id: string; user_id: string; name: string; book_type: RecipeBookType;
+          sort_order: number; cover_color_key: RecipeBookCoverColorKey | null;
+          cover_image_url: string | null; created_at: string; updated_at: string };
+        Insert: never; Update: RecipeBookUpdateValues; Relationships: [];
+      };
+      recipe_book_items: {
+        Row: { book_id: string; recipe_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_book_items_recipe_id_fkey";
+          columns: ["recipe_id"]; isOneToOne: false;
+          referencedRelation: "recipes"; referencedColumns: ["id"]; }];
+      };
+      recipes: {
+        Row: { id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -213,12 +164,12 @@ async function createAuthedDbClient() {
     };
   }
 
-  const dbClient = routeClient as unknown as
-    RecipeBookDetailDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: RecipeBookDetailDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return {
       response: fail(

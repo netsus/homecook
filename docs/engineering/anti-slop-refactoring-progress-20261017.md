@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면133/계약16이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 현재 별도 로컬 후보들을 함께 채택하면132/계약15이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -364,6 +364,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 최종 SDK10+bootstrap11=21 PASS와 기존 bundles1 PASS/15 필터 SKIP로 고유22 PASS다. 전체 typecheck·변경 lint(max-warnings0)·Anti133/baseline207/신규0·diff PASS다. inner FK 객체·정확 선택문/owner/in/이중정렬·빈목록 단락·guest401/각 단계500·nullable product identity의 membership 무영향을 고정했다. pantry 전체 통과를 주장하지 않는다.
 - 독립 리뷰도 고유22 PASS/15 이름필터 제외·전체 nonincremental typecheck/diff PASS 및 SQL nullable/inner FK·helper 런타임 보존을 확인해 APPROVE했다. 기존 전체2실패는 해결로 간주하지 않는다.
 - master 계약28과 로컬 채택 후16을 구분한다. 새 단언·wrapper·억제·SQL/권한/실DB 쓰기·운영·원격 반영0, 도구/배포 승인 대기는 유지한다.
+
+## Bootstrap 후속: 레시피북 메타데이터 수정·삭제1건 로컬 완료
+
+- pantry bundles1은 `7f47991e8`로 보존했다. 저장/플래너와 분리된 북 metadata만 실제3표/FK/native selected-single update/no-return delete로 맞췄다. 반환 행은 실제4종 enum/nullable cover이며 응답의 기존 custom 상수는 유지한다. 같은 request client를 bootstrap/native에 각각 직접 대입해 from 오버로드 충돌을 피하고 손코딩 query interface·연쇄 단언을 제거했다.
+- 수정 전 넓은 mypage/route/bootstrap31 PASS/1 FAIL이었다. 별도 목록 GET의 기존 mock에 createRecipeImageInternalClient export가 없는 실패이며 이번 metadata 수정 전 발생했다. 이를 숨기거나 전체green으로 표현하지 않는다. 최종 SDK15+route14+bootstrap11=40 PASS, 기존 PATCH/DELETE3 PASS/4 이름필터 제외로 고유43 PASS다. 전체 typecheck·lint(max-warnings0)·Anti132/baseline207/신규0·diff PASS다.
+- 독립 리뷰는 위 집합과 기존 bootstrap14를 포함한 고유57 PASS/4 이름필터 제외·전체 nonincremental typecheck/lint/diff를 확인해 APPROVE했다. root와 겹친 성공 수는 합산하지 않는다. emit은 동일 객체 bootstrap 별칭 추가/참조 교체 외 동일하며 바이트 완전 동일이라고 주장하지 않는다.
+- 실제 SDK 요청은 owner403/시스템북403/guest401/missing404/items500/book500·정확 선택문·inner FK·제한 update payload·items→book 삭제 순서를 고정한다. SQL/실DB·권한·기존 저장/플래너·새 도구/운영·원격 반영0, master 계약28과 로컬 채택 후15를 구분한다.
 
 ## 보류·기술적 경계
 
