@@ -4202,7 +4202,7 @@ GET /cooking/sessions/{session_id}/cook-mode
 
 🔒 로그인 필수
 
-2026-10-20 후속 구현(운영 미반영): snapshot-v2의 저장 JSON은 신뢰하지 않는 입력으로 다룬다. 재료/단계 배열 또는 검사 대상 필수 필드·선택 metadata·조리법의 형태가 잘못됐으면 `{ success:false, data:null, error:{ code:"INTERNAL_ERROR", message, fields:[] } }` / 500을 반환한다. 과거 일부 잘못된 값이 변환되거나 미처리 예외가 되던 동작과 구분한다. 선택 수량 증명(`quantity_input`)과 단계별 사용 재료(`ingredients_used`)는 이 형태 검사의 대상이 아니며 기존 parser의 soft fallback을 유지한다. 정상 legacy snapshot의 생략 가능한 metadata, nullish 배열의 빈 배열 처리, `scalable ?? true`, 기존 배열 순서·저장된 제품명/버전은 유지한다. 원 snapshot을 수정하거나 현재 레시피로 대체하지 않는다. owner403·종료409·guest401과 기존 session-meals 선조회도 유지한다.
+2026-10-20 후속 구현(운영 eb7df156d·DB238 반영): snapshot-v2의 저장 JSON은 신뢰하지 않는 입력으로 다룬다. 재료/단계 배열 또는 검사 대상 필수 필드·선택 metadata·조리법의 형태가 잘못됐으면 `{ success:false, data:null, error:{ code:"INTERNAL_ERROR", message, fields:[] } }` / 500을 반환한다. 과거 일부 잘못된 값이 변환되거나 미처리 예외가 되던 동작과 구분한다. 선택 수량 증명(`quantity_input`)과 단계별 사용 재료(`ingredients_used`)는 이 형태 검사의 대상이 아니며 기존 parser의 soft fallback을 유지한다. 정상 legacy snapshot의 생략 가능한 metadata, nullish 배열의 빈 배열 처리, `scalable ?? true`, 기존 배열 순서·저장된 제품명/버전은 유지한다. 원 snapshot을 수정하거나 현재 레시피로 대체하지 않는다. owner403·종료409·guest401과 기존 session-meals 선조회도 유지한다.
 
 **응답 (200)**
 
