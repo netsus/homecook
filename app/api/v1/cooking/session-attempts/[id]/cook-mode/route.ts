@@ -14,7 +14,6 @@ import {
   callFuturePropagationRpc,
   isUuid,
   projectSnapshotV2CookModeData,
-  type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   createSnapshotV2SessionInternalClient,
@@ -51,7 +50,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
   }
   const result = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     "read_snapshot_v2_cook_mode",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
