@@ -884,10 +884,12 @@ describe("13 pantry core backend", () => {
   });
 
   it("DELETE /pantry removes only the current user's pantry rows and is idempotent", async () => {
+    const ingredientId = "550e8400-e29b-41d4-a716-446655440001";
+    const alreadyGoneId = "550e8400-e29b-41d4-a716-446655440002";
     const pantryItemsTable = createTable({
       deleteResults: [
         {
-          data: [{ ingredient_id: "ing-onion" }],
+          data: [{ id: "pantry-row", ingredient_id: ingredientId }],
           error: null,
         },
       ],
@@ -907,7 +909,7 @@ describe("13 pantry core backend", () => {
     const response = await DELETE(new Request("http://localhost:3000/api/v1/pantry", {
       method: "DELETE",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ingredient_ids: ["ing-onion", "already-gone"] }),
+      body: JSON.stringify({ ingredient_ids: [ingredientId, alreadyGoneId] }),
     }));
     const body = await response.json();
 
@@ -921,7 +923,7 @@ describe("13 pantry core backend", () => {
     });
     const deleteQuery = pantryItemsTable.delete.mock.results[0]?.value;
     expect(deleteQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(deleteQuery.in).toHaveBeenCalledWith("ingredient_id", ["ing-onion", "already-gone"]);
+    expect(deleteQuery.in).toHaveBeenCalledWith("ingredient_id", [ingredientId, alreadyGoneId]);
   });
 
   it("DELETE /pantry returns 422 for empty ingredient_ids", async () => {
@@ -946,7 +948,7 @@ describe("13 pantry core backend", () => {
       data: null,
       error: {
         code: "VALIDATION_ERROR",
-        fields: [{ field: "ingredient_ids", reason: "required_non_empty" }],
+        fields: [{ field: "ingredient_ids", reason: "invalid_or_empty_ids" }],
       },
     });
   });
