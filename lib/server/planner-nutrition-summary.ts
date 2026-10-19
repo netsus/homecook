@@ -1,7 +1,5 @@
-import {
-  scaleNutritionForServings,
-  type RecipeNutritionCalculation,
-} from "@/lib/nutrition/recipe-nutrition-calculator";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { scaleNutritionForServings } from "@/lib/nutrition/recipe-nutrition-calculator";
 import {
   mapRecipeNutritionSnapshot,
   type RecipeNutritionSnapshotRow,
@@ -39,11 +37,7 @@ export interface PlannerNutritionEntryProjection {
   sources: Array<PlannerNutritionSource | Record<string, unknown>>;
 }
 
-interface QueryError {
-  message: string;
-}
-
-interface RecipeMealRow {
+type RecipeMealRow = {
   id: string;
   recipe_id: string;
   plan_date: string;
@@ -51,51 +45,44 @@ interface RecipeMealRow {
   planned_servings: number;
   recipe_content_snapshot_id: string | null;
   recipe_nutrition_snapshot_id: string | null;
-  recipe_content_snapshots:
-    | {
-      base_servings: number;
-      ingredients_json: unknown;
-      recipe_nutrition_snapshot_id: string | null;
-    }
-    | Array<{
-      base_servings: number;
-      ingredients_json: unknown;
-      recipe_nutrition_snapshot_id: string | null;
-    }>
-    | null;
-}
-
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface MealRangeQuery {
-  eq(column: string, value: string): MealRangeQuery;
-  gte(column: string, value: string): MealRangeQuery;
-  lte(column: string, value: string): MealRangeQuery;
-  order(column: string, options: { ascending: boolean }): MealRangeQuery;
-  then: ArrayQueryResult<RecipeMealRow>["then"];
-}
-
-interface SnapshotBatchQuery {
-  in(column: string, values: string[]): SnapshotBatchQuery;
-  then: ArrayQueryResult<RecipeNutritionSnapshotRow>["then"];
-}
-
-export interface PlannerNutritionDbClient {
-  from(table: "meals"): { select(columns: string): MealRangeQuery };
-  from(table: "recipe_nutrition_snapshots"): { select(columns: string): SnapshotBatchQuery };
-  rpc(
-    name: "list_product_planner_entries",
-    args: {
-      p_user_id: string;
-      p_start_date: string;
-      p_end_date: string;
-      p_column_id: null;
-    },
-  ): PromiseLike<{ data: unknown; error: QueryError | null }>;
-}
+  recipe_content_snapshots: ContentSnapshotRow | ContentSnapshotRow[] | null;
+};
+type ContentSnapshotRow = {
+  base_servings: number;
+  ingredients_json: unknown;
+  recipe_nutrition_snapshot_id: string | null;
+};
+// JSON remains untrusted; only the existing mapper establishes nutrient semantics.
+export type PlannerNutritionDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      meals: {
+        Row: Omit<RecipeMealRow, "recipe_content_snapshots"> & { user_id: string };
+        Insert: never; Update: never;
+        Relationships: [{
+          foreignKeyName: "meals_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"];
+        }];
+      };
+      recipe_content_snapshots: {
+        Row: ContentSnapshotRow & { id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_nutrition_snapshots: {
+        Row: RecipeNutritionSnapshotRow;
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>;
+    Functions: {
+      list_product_planner_entries: {
+        Args: { p_user_id: string; p_start_date: string; p_end_date: string; p_column_id: null };
+        Returns: unknown;
+      };
+    };
+  };
+}>, "from" | "rpc">;
 
 export class PlannerNutritionReadError extends Error {
   constructor() {
@@ -366,24 +353,7 @@ function projectRecipeMeal(
 
   try {
     const mapped = mapRecipeNutritionSnapshot(row);
-    const calculation: RecipeNutritionCalculation = {
-      basis: { amount: row.base_servings, unit: "serving" },
-      base_servings: row.base_servings,
-      values: row.nutrient_status_json,
-      scalable_values: row.scalable_values_json,
-      fixed_values: row.fixed_values_json,
-      calculation_status: row.calculation_status,
-      calculation_quality: row.calculation_quality,
-      reflected_ingredient_count: row.reflected_ingredient_count,
-      target_ingredient_count: row.target_ingredient_count,
-      missing_reasons: [],
-      warnings: row.warnings_json,
-      sources: row.sources_json,
-      input_hash: "0".repeat(64),
-      calculation_version: "snapshot-projection-v1",
-      rounding_policy_version: "display-v1",
-    };
-    const scaled = scaleNutritionForServings(calculation, meal.planned_servings);
+    const scaled = scaleNutritionForServings(mapped, meal.planned_servings);
     return {
       storage_key: storageKey,
       plan_date: meal.plan_date,
@@ -495,7 +465,7 @@ export async function readPlannerRecipeNutritionEntries(
         : meal.recipe_content_snapshots;
       return contentSnapshot?.base_servings ?? null;
     })(),
-    ingredients: (() => {
+    ingredients: ((): unknown[] => {
       const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
         ? meal.recipe_content_snapshots[0] ?? null
         : meal.recipe_content_snapshots;

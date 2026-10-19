@@ -841,8 +841,10 @@ export function calculateRecipeNutrition(
   };
 }
 
-export function scaleNutritionForServings(
-  calculation: RecipeNutritionCalculation,
+export function scaleNutritionForServings<T extends Pick<RecipeNutritionCalculation,
+  "base_servings" | "values" | "scalable_values" | "fixed_values"
+>>(
+  calculation: T,
   selectedServings: number,
 ) {
   if (!Number.isFinite(selectedServings) || selectedServings <= 0) {

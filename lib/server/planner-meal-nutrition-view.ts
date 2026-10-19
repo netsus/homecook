@@ -19,10 +19,6 @@ function validDateKey(value: string) {
   return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
 
-function plannerNutritionReadClient(value: unknown): Pick<PlannerNutritionDbClient, "from"> {
-  return value as Pick<PlannerNutritionDbClient, "from">;
-}
-
 function weightIngredient(
   value: unknown,
   index: number,
@@ -137,7 +133,7 @@ export async function loadPlannerMealNutritionForServer(
     // E2E/UI authentication hints never authorize private server reads.
     if (error || !data.user) return {};
     return await readPlannerMealNutrition(
-      plannerNutritionReadClient(dbClient),
+      dbClient,
       data.user.id,
       range,
       createRecipeMealWeightReadInternalClient() ?? undefined,

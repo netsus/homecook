@@ -278,7 +278,11 @@ describe.runIf(enabled)("personal semantic reason identity on an owned offline D
       insert into public.meals(id,user_id,recipe_id,column_id,plan_date,planned_servings) values('${randomUUID()}','${owner}','${id}','${column}','${date}',2);
       select public.set_account_generation_internal_writer_marker('79000000-0000-4000-8000-000000000001',false);commit;`);
     const { readPlannerRecipeNutritionEntries } = await import("@/lib/server/planner-nutrition-summary");
-    const entries = await readPlannerRecipeNutritionEntries({ from: (table: string) => new NativeQuery(table, "authenticated") }, owner, { startDate: date, endDate: date });
+    // This historical offline SQL transport implements only the exercised query subset.
+    // Real SDK structural assignment and JSON decoding are checked in planner-nutrition-sdk-contract.test.ts.
+    const db = { from: (table: string) => new NativeQuery(table, "authenticated") } as unknown as
+      Pick<import("@/lib/server/planner-nutrition-summary").PlannerNutritionDbClient, "from">;
+    const entries = await readPlannerRecipeNutritionEntries(db, owner, { startDate: date, endDate: date });
     expect(entries).toHaveLength(1);
     expect(entries[0].entry.warnings).toEqual(["DENSITY_REQUIRED"]);
     expect(entries[0].entry.values.energy_kcal.status).toBe("partial");

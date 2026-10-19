@@ -191,7 +191,19 @@ export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalc
     calculation.calculation_version === RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION);
 }
 
-function validateRecipeNutritionSnapshotContents(calculation: RecipeNutritionCalculation, quantityWarningsAllowed: boolean) {
+type UncheckedSnapshotContents = Omit<RecipeNutritionCalculation,
+  "values" | "scalable_values" | "fixed_values" | "sources"
+> & {
+  values: Record<string, unknown>;
+  scalable_values: Record<string, unknown>;
+  fixed_values: Record<string, unknown>;
+  sources: unknown[];
+};
+
+function validateRecipeNutritionSnapshotContents(
+  calculation: UncheckedSnapshotContents,
+  quantityWarningsAllowed: boolean,
+): asserts calculation is RecipeNutritionCalculation {
   if (!Number.isFinite(calculation.base_servings) || calculation.base_servings <= 0) {
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_BASE_SERVINGS");
   }
@@ -230,8 +242,8 @@ function validateRecipeNutritionSnapshotContents(calculation: RecipeNutritionCal
   const missingReasons = calculation.missing_reasons;
   const hasEstimatedWarning = warnings.some((warning) => ESTIMATED_WARNINGS.has(warning)
     || (quantityWarningsAllowed && warning === "UNIT_MEASUREMENT_ESTIMATE_USED"));
-  const hasAiSource = calculation.sources.some((source) => source?.provider === "HOMECOOK_AI_ESTIMATE");
-  const hasOtherSource = calculation.sources.some((source) => source?.provider !== "HOMECOOK_AI_ESTIMATE");
+  const hasAiSource = calculation.sources.some((source) => isRecord(source) && source.provider === "HOMECOOK_AI_ESTIMATE");
+  const hasOtherSource = calculation.sources.some((source) => !isRecord(source) || source.provider !== "HOMECOOK_AI_ESTIMATE");
   if (warnings.some((warning) => !ALLOWED_WARNINGS.has(warning)
       && !(quantityWarningsAllowed && QUANTITY_WARNINGS.has(warning))) ||
     new Set(warnings).size !== warnings.length ||
@@ -248,43 +260,45 @@ function validateRecipeNutritionSnapshotContents(calculation: RecipeNutritionCal
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_STATUS");
   }
 
+  let coreComplete = true;
+  let anyAvailable = false;
   for (const [code, value] of Object.entries(calculation.values)) {
     if (!validateNutrientValue(value)) {
       throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_NUTRIENT_STATUS");
     }
+    if (CORE_NUTRIENT_CODES.some((core) => core === code) && value.status !== "complete") coreComplete = false;
+    if (value.status !== "unavailable") anyAvailable = true;
 
-    const scalable = calculation.scalable_values[code as keyof typeof calculation.scalable_values];
-    const fixed = calculation.fixed_values[code as keyof typeof calculation.fixed_values];
+    const scalable = calculation.scalable_values[code];
+    const fixed = calculation.fixed_values[code];
     if (value.status === "unavailable") {
       if (scalable !== undefined || fixed !== undefined) {
         throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_VECTOR");
       }
       continue;
     }
-    if (!Number.isFinite(scalable) || scalable! < 0 || !Number.isFinite(fixed) || fixed! < 0) {
+    // Number.isFinite already rejects non-numbers; spell that fact for raw JSON narrowing.
+    if (typeof scalable !== "number" || !Number.isFinite(scalable) || scalable < 0
+      || typeof fixed !== "number" || !Number.isFinite(fixed) || fixed < 0) {
       throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_VECTOR");
     }
     const expected = value.status === "complete" ? value.amount! : value.known_amount!;
-    if (Math.abs(scalable! + fixed! - expected) > VECTOR_EPSILON) {
+    if (Math.abs(scalable + fixed - expected) > VECTOR_EPSILON) {
       throw new RecipeNutritionSnapshotError("SNAPSHOT_VECTOR_SUM_MISMATCH");
     }
   }
 
-  const coreComplete = CORE_NUTRIENT_CODES.every(
-    (code) => calculation.values[code]?.status === "complete",
-  );
-  const anyAvailable = Object.values(calculation.values).some(
-    (value) => value.status !== "unavailable",
-  );
   const expectedStatus = coreComplete ? "complete" : anyAvailable ? "partial" : "unavailable";
   if (calculation.calculation_status !== expectedStatus) {
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_STATUS");
   }
 
-  calculation.sources.forEach(validateSource);
-  const canonicalSources = [...new Map(
-    calculation.sources.map((source) => [tupleKey(source), source]),
-  ).values()].sort(compareSources);
+  const sourcesByTuple = new Map<string, RecipeNutritionSourceAttribution>();
+  for (const source of calculation.sources) {
+    validateSource(source);
+    sourcesByTuple.set(tupleKey(source), source);
+  }
+  const canonicalSources = [...sourcesByTuple.values()].sort(compareSources);
   if (JSON.stringify(canonicalSources) !== JSON.stringify(calculation.sources)) {
     throw new RecipeNutritionSnapshotError("NON_CANONICAL_SNAPSHOT_SOURCES");
   }
@@ -361,22 +375,24 @@ export async function writeRecipeNutritionSnapshot(
   return result.data;
 }
 
-export interface RecipeNutritionSnapshotRow {
+export type RecipeNutritionSnapshotRow = {
   id: string;
   base_servings: number;
-  scalable_values_json: RecipeNutritionCalculation["scalable_values"];
-  fixed_values_json: RecipeNutritionCalculation["fixed_values"];
-  nutrient_status_json: RecipeNutritionCalculation["values"];
+  scalable_values_json: unknown;
+  fixed_values_json: unknown;
+  nutrient_status_json: unknown;
   calculation_status: RecipeNutritionCalculation["calculation_status"];
   calculation_quality: RecipeNutritionCalculation["calculation_quality"];
   reflected_ingredient_count: number;
   target_ingredient_count: number;
-  warnings_json: string[];
-  sources_json: RecipeNutritionSourceAttribution[];
+  warnings_json: unknown;
+  sources_json: unknown;
   calculated_at: string;
-}
+};
 
-export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): RecipeNutrition {
+export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): RecipeNutrition & Pick<RecipeNutritionCalculation,
+  "base_servings" | "values" | "scalable_values" | "fixed_values"
+> {
   if (typeof row.id !== "string" || row.id.trim().length === 0 ||
     !Number.isFinite(row.base_servings) || row.base_servings <= 0 ||
     !isRecord(row.scalable_values_json) || !isRecord(row.fixed_values_json) ||
@@ -394,7 +410,7 @@ export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): Rec
     typeof row.calculated_at !== "string" || row.calculated_at.trim().length === 0) {
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_PROJECTION");
   }
-  const projectedCalculation: RecipeNutritionCalculation = {
+  const projectedCalculation: UncheckedSnapshotContents = {
     basis: { amount: row.base_servings, unit: "serving" },
     base_servings: row.base_servings,
     values: row.nutrient_status_json,
@@ -422,16 +438,16 @@ export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): Rec
   const calculation = {
     basis: { amount: row.base_servings, unit: "serving" as const },
     base_servings: row.base_servings,
-    values: row.nutrient_status_json,
-    scalable_values: row.scalable_values_json,
-    fixed_values: row.fixed_values_json,
+    values: projectedCalculation.values,
+    scalable_values: projectedCalculation.scalable_values,
+    fixed_values: projectedCalculation.fixed_values,
     calculation_status: row.calculation_status,
     calculation_quality: row.calculation_quality,
     availability_reason: null,
     reflected_ingredient_count: row.reflected_ingredient_count,
     target_ingredient_count: row.target_ingredient_count,
-    warnings: row.warnings_json,
-    sources: row.sources_json,
+    warnings: projectedCalculation.warnings,
+    sources: projectedCalculation.sources,
     snapshot_id: row.id,
     calculated_at: row.calculated_at,
   };
