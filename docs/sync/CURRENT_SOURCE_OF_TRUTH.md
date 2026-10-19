@@ -2,7 +2,7 @@
 
 ## 2026-10-19 — 요리 경험9개 개선 운영238·최종 Chrome 확인
 
-PR1807/1808과 별도 create-only review로 공식 `pnpm deploy:dev`를 실행해 운영 웹 `48c4ce03abaed534775095988a95a57525d5dd72`·build `prelaunch-48c4ce03abae-gsyzsl`·DB238을 반영했다. 원235 receipt/승인·gen50·고정 키/만료·policy ON·Round2/lead/C05 OFF를 보존했다. 전체DB·roles transaction backup과 행/권한/OID 보존,worker 실제 인증/health/readiness,웹 선택1466 PASS/133필터 SKIP·타입/빌드·독립 리뷰를 확인했다. Chrome에서 미수정1/7kg 저장/새로고침/완료와75% fallback469g,1440 남색 화면,375 완료창·상세/끼니 표,18개 북의8개×3목차/키보드/본문 일치를 확인했다. 최근 두 오일 행은 소유자 CAS로 정확 식용유 선택만 변경하고 현재10g/미확인량/원문/과거 기록을 보존했다. 두 영양 발행은partial이며 전체 음식 정확도나 모든 최근 재료 보완 완료가 아니다. 제품/조리 상태가 불명인 원천은 부모가 확인 자료를 모을 대상으로 남긴다. [9개 QA·실제SHA/receipt·검증·남은 자료](../engineering/cooking-experience-operating-checks-20261019.md)를 현재 상태로 따른다. 아래 과거 미반영/잠금 문구는 당시 기록이다.
+PR1807/1808과 별도 create-only review로 DB238·웹48c4를 반영하고,목차 선택 연속성 PR1809를 공식 `pnpm deploy:dev`의 웹 전용 후속으로 반영했다. 현재 웹 `d09ab4bcdd519e2921165ff33779821096172373`·build `prelaunch-d09ab4bcdd51-h6rAwJ`·DB238이다. 원235 receipt/승인·gen50·고정 키/만료·policy ON·Round2/lead/C05 OFF를 보존했다. 전체DB·roles transaction backup과 행/권한/OID 보존,worker 실제 인증/health/readiness,웹 선택1466 PASS/133필터 SKIP·타입/빌드·독립 리뷰를 확인했다. Chrome에서 미수정1/7kg 저장/새로고침/완료와75% fallback469g,1440 남색 화면,375 완료창·상세/끼니 표,18개 북의8개×3목차/키보드/본문 일치와 모바일13→데스크톱13→데스크톱17→모바일17·URL복원을 확인했다. 목차 관련61 PASS/타입/lint·Anti Slop 신규0과 최종 공식 선택1466 PASS/133필터 SKIP·빌드도 통과했다. 최근 두 오일 행은 소유자 CAS로 정확 식용유 선택만 변경하고 현재10g/미확인량/원문/과거 기록을 보존했다. 두 영양 발행은partial이며 전체 음식 정확도나 모든 최근 재료 보완 완료가 아니다. 제품/조리 상태가 불명인 원천은 부모가 확인 자료를 모을 대상으로 남긴다. [9개 QA·실제SHA/receipt·검증·남은 자료](../engineering/cooking-experience-operating-checks-20261019.md)를 현재 상태로 따른다. 아래 과거 미반영/잠금 문구는 당시 기록이다.
 
 ## 2026-10-19 — 요리 분수 JSON echo 저장 후속 (격리 검증, 미배포)
 

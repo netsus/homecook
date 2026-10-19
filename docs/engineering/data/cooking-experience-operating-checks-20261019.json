@@ -1,9 +1,9 @@
 {
   "schema": "homecook.cooking-experience.operating-checks.v1",
-  "observedAt": "2026-10-19T13:30:10.629874+00:00",
+  "observedAt": "2026-10-19T13:51:44.530739+00:00",
   "web": {
-    "ref": "48c4ce03abaed534775095988a95a57525d5dd72",
-    "buildId": "prelaunch-48c4ce03abae-gsyzsl",
+    "ref": "d09ab4bcdd519e2921165ff33779821096172373",
+    "buildId": "prelaunch-d09ab4bcdd51-h6rAwJ",
     "loaded": true
   },
   "database": {
@@ -57,7 +57,16 @@
       375,
       1440
     ],
-    "viewportReset": true
+    "viewportReset": true,
+    "readerContinuityRelatedPassed": 61,
+    "readerContinuityChromeRoundTrip": [
+      13,
+      13,
+      17,
+      17
+    ],
+    "readerContinuityUrlRestore": 17,
+    "readerContinuityIndependentP1P2": 0
   },
   "evidenceSha256": {
     "oilBefore": "c659f586047ab6bcd460262e5757664dbb5f3fe4d4678c9287625f2b6f784177",
@@ -66,7 +75,10 @@
     "finalQaBatches": "031b5c489c417f55809a440ca227a3172e58dea5b7cc8bc2743a8246aab43158",
     "untouchedProof": "e537d7adfca4db1139d2a1290e971b8f295ddb642eb989d24e0a6cff47b44ece",
     "dbCommand": "803ccb8d6a8aa8d81bbc2fff6a80ead9c2c76f6b4e718e129470850f8f689235",
-    "webCommand": "09ef5fa3d20c8eda313e11d35452271aeeb8044c693076b78cd69e8ed8da77b8"
+    "webCommand": "fad2ffc0de1557175045730c01e45836f2c17401fe9820de957e9ae37d6660a6",
+    "previousWebCommand": "09ef5fa3d20c8eda313e11d35452271aeeb8044c693076b78cd69e8ed8da77b8",
+    "webStatus": "a118138af19e4b72890490efee61b140065a70a8abb20f4e0cf483700a56be84",
+    "readerVerificationResults": "3ae99dbeab5c3e5cb8dd2d411632424a785e2583a66c10f23ca9d539fe8af33e"
   },
   "dataRepair": {
     "savedRows": 2,
@@ -80,8 +92,12 @@
   },
   "remaining": [
     "Unidentified product/preparation states listed in operating document",
-    "Source-only changes with same immutable content identity may remain pending",
-    "Live resize across mobile/desktop retains existing separate selection-state limitation"
+    "Source-only changes with same immutable content identity may remain pending"
   ],
-  "healthInformationExternalTransmissions": 0
+  "healthInformationExternalTransmissions": 0,
+  "previousWeb": {
+    "ref": "48c4ce03abaed534775095988a95a57525d5dd72",
+    "buildId": "prelaunch-48c4ce03abae-gsyzsl",
+    "loaded": true
+  }
 }

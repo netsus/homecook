@@ -2,14 +2,24 @@
 
 ## 현재 운영
 
-- 웹 `48c4ce03abaed534775095988a95a57525d5dd72`, build `prelaunch-48c4ce03abae-gsyzsl`, 공식 `pnpm deploy:dev` exit0. 제품 PR [1807](https://github.com/netsus/homecook/pull/1807) merge `d9b884e31ae4b62eeb17405cf3aa3671e4df577b`, 별도 PIN PR [1808](https://github.com/netsus/homecook/pull/1808) merge `43b1a9e840ea4a6353be090c36ea94ad823a78c2`다. 제품 target과 운영 도구 SHA4090은 구분한다.
+- 현재 웹 `d09ab4bcdd519e2921165ff33779821096172373`, build `prelaunch-d09ab4bcdd51-h6rAwJ`. [목차 후속 PR1809](https://github.com/netsus/homecook/pull/1809) head d09ab4·merge `8db84a0d90b9f930782fd651baaadb66e668c413`을 웹 전용으로 반영했다. DB/worker/환경 변경0이다. 앞선 웹 `48c4ce03abaed534775095988a95a57525d5dd72`, build `prelaunch-48c4ce03abae-gsyzsl`의 공식 `pnpm deploy:dev` exit0. 제품 PR [1807](https://github.com/netsus/homecook/pull/1807) merge `d9b884e31ae4b62eeb17405cf3aa3671e4df577b`, 별도 PIN PR [1808](https://github.com/netsus/homecook/pull/1808) merge `43b1a9e840ea4a6353be090c36ea94ad823a78c2`다. 제품 target과 운영 도구 SHA4090은 구분한다.
 - DB238 committed, plan SHA `a8795f5e5177cc77aa106ffb7b83a892260e0cfeddff3d5aabd6d1afac1a7692`, 새 receipt SHA `86157669cc8c463e345a767b26ba838137153cb54c1e08cab62a283deba528af`. 원235 receipt `8ebf54657f7d47c97c0cfdb575ff81bcf0ae5dbea1e3dcb555efdd2360bc78b6`와 원 reader floor는 그대로 보존한다.
 - 공식 status: loaded=true, databaseReady=true, readerPending=false, recoveryPending=false, normalDeploymentAllowed=true. DB rollback은 제공하지 않는다.
 - worker gen50·PID54910·policy ON·고정 만료 `2026-10-22T14:27:30Z`. 실제 health/인증200/빈 claim 거부/readiness를 확인했고 queued0/processing0/permit0/sharedHolders0/unclassified0이다. DB 단계의 같은 plist 중지·복구만 수행했다. 웹 단계는 worker를 바꾸지 않았다. Round2/lead/C05 OFF·구키 fallback 금지·기존 키와 A/B 기록을 유지한다.
 
+## 목차 선택 연속성 후속
+
+PR1809는 모바일의 별도 선택 state/effect를 제거하고 기존 상위 선택 상태를 공유하는3파일 변경이다. 관련4개 suite61 PASS,타입 exit0,lint exit0(기존 showToast 경고1),Anti Slop 신규0,독립 코드/전체 로그 리뷰 P1/P2 0이다. 공식 웹 plan은48c4→d09ab4의 component/test/화면 문서만 확인했으며 DB/API/환경 변경0이다. 공식 웹 선택1466 PASS/133필터 SKIP·빌드(컴파일100초/94페이지)·별도 포트 smoke·운영 GET·최종 status를 통과했다.
+
+최종 운영 Chrome375px에서 URL의 선택값 없이1쪽부터 시작해 키보드Enter로13쪽을 선택했다.1440px 전환 후 본문13쪽·aria-current=page·목차2/3,다음 목차로17쪽·3/3,375px 복귀 후17쪽을 유지했다. 모바일 이전→16쪽/다음→17쪽,선택한 return URL 재진입→17쪽·데스크톱 목차3/3도 확인했다. 데스크톱 하단 중복 페이지 이동 group0,모바일 이전/다음 유지,가로 넘침0이다. 임시 viewport는reset했다. 책/목록 보기 방식 자체를 화면 크기 간 유지하도록 바꾼 것은 아니다.
+
+웹 후속 command SHA `fad2ffc0de1557175045730c01e45836f2c17401fe9820de957e9ae37d6660a6`,status SHA `a118138af19e4b72890490efee61b140065a70a8abb20f4e0cf483700a56be84`다. 이후 실제 worker PID54910/running/healthy·queued0/processing0·permit0/sharedHolders0/unclassified0을 재확인했다. DB238 plan/receipt·원235 권위·gen50 키/정책/만료·Round2/lead/C05 OFF는 그대로다.
+
 ## 9개 실제 QA 범위
 
-| 요구 | 최종 운영 웹에서 확인한 범위 | 한계·남은 범위 |
+#1–8은 각 행에 명시한196/48c4 운영 QA의 누적 기록이고,#9는 현재d09ab4 후속 QA까지 포함한다. d09ab4는 목차 선택만 바꾸었으며 앞선 완료 저장·영양 데이터 QA를 모두 다시 실행했다고 주장하지 않는다.
+
+| 요구 | 운영 웹에서 실제 확인한 범위 | 한계·남은 범위 |
 | --- | --- | --- |
 | 1 완성 무게 | 기존 QA에서 추정600g/직접 입력90g/미확인null 저장을 확인했다. 최종48c4에서 기존 mix 추정642.857…g(화면643g)과 625g×75%=468.75g(화면469g) fallback을 별도 완료 저장. 둘 다 ‘실측 아님’, 개인 인증0 | 실제 음식 정확도를 검증한 수치가 아니다. 직접 입력/미확인은 웹196에서, 해당 SQL·컴포넌트 회귀는 최종 소스에서 확인 |
 | 2 남색 배경 | 최종1440px 요리 화면 전체 남색, body rgb(17,25,35), 문서 폭1440=viewport1440, 양쪽 흰 여백0 | HTML 기본 배경색과 화면을 덮는 body/요리 영역의 배경을 혼동하지 않는다 |
@@ -19,7 +29,7 @@
 | 6 원입력 제거 | 최종 상세 모바일에서 라벨0,1/3L·1/7kg 양 정보 유지, 데스크톱 공통 상세 회귀 통과 | 원문·출처·저장 근거 자체는 보존. 편집기의 단위 전환/복구 안내는 상세의 중복 라벨과 구분 |
 | 7 영양표 | 최종 상세에서 총선택2인분/기본1인분 표·확인된 일부 표시. QA 끼니 상세의 계획2인분/1인분 표·미확인 ‘정보 준비 중’·375px 넘침0. 숫자/단위·행/열 header 유지 | 법정 라벨이라고 주장하지 않음. 과거 끼니의 고정 영양이 미확인이면 새 레시피 값으로 소급 덮어쓰지 않음 |
 | 8 최근 영양 누락 | 현재 catalog 선택과 내용별 영양 발행236/237 운영 적용. 두 소유자 저장의 실제 HTTP/RPC 및 새 nutrition/content pin을 확인. 만둣국은1/11,바비큐는4/8 재료 반영 partial | 제품·조리 상태 확인이 필요한 자료는 아래 표에 남김. 전체 재료 영양 완성이나 모든 최근 레시피 backfill 완료가 아니다. 새 meal·canonical standalone 완료의 pin 계약은 격리 실제 SQL로 확인했으며 최종 Chrome에서 실제 음식 완료 기록을 추가하지 않음 |
-| 9 목차 | 최종18개 북: 데스크톱8개×3페이지,URL13쪽→목차2/3·본문13쪽,다음목차→17쪽,키보드Enter13쪽 일치. 하단 중복 목차 group0. 모바일 목차18개·키보드3/13쪽·이전/다음 유지 | 모바일/데스크톱 간 실시간 크기 변경 때 현재 선택의 연속성은 기존 제한. 각 화면 선택·목차 페이지·본문과 URL로 재진입한 선택은 확인 |
+| 9 목차 | 18개 북의 데스크톱8개×3페이지,URL13쪽→목차2/3·본문13쪽,다음목차→17쪽,키보드Enter13쪽 일치. 하단 중복 목차 group0. 모바일 목차18개·키보드3/13쪽·이전/다음 유지 | PR1809 후속에서 모바일13→데스크톱13(2/3)→데스크톱17→모바일17·URL17 복원까지 확인. 위 후속 기록을 따른다 |
 
 UI 검증은 사용자 Chrome의 명시 QA 레시피3종·최근 저장 레시피2종과18개 북으로 수행했다. 첨부 Library4개의 실제 픽셀을 본 것으로 세지 않는다. 과거 확보한 OCR과 실제 Chrome 관측을 혼동하지 않는다.
 

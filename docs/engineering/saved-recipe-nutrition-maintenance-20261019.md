@@ -1,5 +1,7 @@
 # 현재 영양 발행·분수 저장의 별도 운영 권위
 
+현재 목차 후속 웹d09ab4·DB238이다. 아래48c4에서 확인한 데이터/완료 저장 근거는 그대로 유효하며 [최종 운영 기록](cooking-experience-operating-checks-20261019.md)을 따른다.
+
 ## 실제 반영
 
 PR1807/1808을 머지하고 공식 경로로 웹48c4·DB238을 반영했다. 새 review SHA `f1dd80889e76799ba8997314747c4e2475c4dd9052501b7bfb4c27ff2dacd381`,receipt SHA `86157669cc8c463e345a767b26ba838137153cb54c1e08cab62a283deba528af`다. 실제 행·OID·권한 보존과 검토한 guard 언어 SQL→PLpgSQL 한정 예외/백업 및 동일gen50 복구·최종 Chrome/두 오일 최소 CAS를 확인했다. [현재 상태와 정확한 검증 한계](cooking-experience-operating-checks-20261019.md)를 우선한다. 아래 격리 검증은 운영 실행과 별도로 보존한다.

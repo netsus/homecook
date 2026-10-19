@@ -1,5 +1,7 @@
 # 요리 실행분 수정의 분수 JSON 정밀도
 
+현재 목차 후속 웹d09ab4·DB238이다. 아래48c4에서 확인한 데이터/완료 저장 근거는 그대로 유효하며 [최종 운영 기록](cooking-experience-operating-checks-20261019.md)을 따른다.
+
 최종 운영 웹48c4·DB238에서 미수정1/7kg/우유만500g 저장·새로고침·완료가 통과했다. 원 snapshot과 저장 proof의 normalized 숫자 텍스트 `142.85714285714285714000`까지 동일하다. [실제 운영·증거](cooking-experience-operating-checks-20261019.md)를 우선하며 아래 격리 후보 기록은 당시 상태로 보존한다.
 
 ## 실제 발견과 범위
