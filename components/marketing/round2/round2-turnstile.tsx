@@ -5,10 +5,8 @@ import type { Round2Topic } from "@/lib/marketing-round2";
 
 export const ROUND2_TURNSTILE_SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 const UNAVAILABLE = "보안 확인을 준비하지 못했어요. 다시 시도해 주세요.";
-type BaseProvider = NonNullable<Window["turnstile"]>;
-type RenderOptions = Omit<Parameters<BaseProvider["render"]>[1], "size"> & { size: "compact"; "response-field": false };
-type Provider = Omit<BaseProvider, "render"> & { render: (container: HTMLElement, options: RenderOptions) => string | number };
-const currentProvider = () => window.turnstile as unknown as Provider | undefined;
+type Provider = NonNullable<Window["turnstile"]>;
+const currentProvider = () => window.turnstile;
 let pendingScript: Promise<Provider> | undefined;
 
 function loadProvider(): Promise<Provider> {

@@ -53,7 +53,7 @@ describe("marketing turnstile widget", () => {
         callback: (token: string) => void;
         "error-callback": () => void;
         "expired-callback": () => void;
-        size: "flexible";
+        size: "normal" | "flexible" | "compact";
         sitekey: string;
       }
       | undefined;
