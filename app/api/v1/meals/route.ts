@@ -39,7 +39,6 @@ import { readVerifiedAccountGenerationSession } from
 import {
   buildSessionAuthorityRpcArgs,
   callFuturePropagationRpc,
-  type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import {
@@ -733,7 +732,7 @@ async function postMeals(request: Request) {
   }
 
   const createResult = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     idempotencyKey === null ? "write_future_meal_with_snapshot_authority" : "create_future_meal_idempotent",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),

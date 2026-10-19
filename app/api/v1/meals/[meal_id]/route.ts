@@ -16,7 +16,6 @@ import { readVerifiedAccountGenerationSession } from
 import {
   buildSessionAuthorityRpcArgs,
   callFuturePropagationRpc,
-  type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
   createFutureMealWriteInternalClient,
@@ -266,7 +265,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const updateResult = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     "write_future_meal_with_snapshot_authority",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
@@ -348,7 +347,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const deleteResult = await callFuturePropagationRpc(
-    serviceClient as unknown as FuturePropagationRpcClient,
+    serviceClient,
     "write_future_meal_with_snapshot_authority",
     {
       ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
