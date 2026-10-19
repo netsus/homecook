@@ -410,8 +410,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  const dbClient = routeClient as unknown as
-    RecipeSaveDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
+  const dbClient = userDbClient;
 
   const recipeBooksResult = await dbClient
     .from("recipe_books")

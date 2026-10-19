@@ -108,7 +108,8 @@ export async function GET(_request: Request, context: RouteContext) {
   if (execution?.revision && execution.prediction && wantsCookedWeightEvidence(_request) && cookedWeightEvidenceEnabled()) metadata.weight_prediction = executionWeightSummary(execution);
   if (execution && cookedWeightEvidenceEnabled() && result.data && typeof result.data === "object" && "weight_evidence_enabled" in result.data
     && result.data.weight_evidence_enabled === true) metadata.weight_evidence_enabled = true;
-  return data
-    ? ok({ ...data, ...metadata, ...(execution ? { execution_revision: execution.revision } : {}) })
-    : fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
+  if (!data) return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
+  const responseData: typeof data & typeof metadata & Pick<SnapshotV2CookModeData, "execution_revision"> = { ...data, ...metadata };
+  if (execution) responseData.execution_revision = execution.revision;
+  return ok(responseData);
 }

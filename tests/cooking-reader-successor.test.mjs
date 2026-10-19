@@ -6,10 +6,11 @@ const cli=readFileSync('scripts/deploy-prelaunch-web.mjs','utf8');
 const start=cli.indexOf('function currentProtectedPhase('),end=cli.indexOf('\nfunction ',start+1);
 assert(start>0&&end>start);
 const fn=cli.slice(start,end);
-function observe({live,ancestor=false,loadError=null}){
+function observe({live,ancestor=false,loadError=null,saved=false}){
  const review={from:'old-web',to:'cooking-candidate',legacyReader:{buildId:'old-build',plistSha256:'old-plist'}};
  let loaded=0;
- const context={repository:'/owned',readCookingExperienceAttempt:()=>({review,record:{status:'committed'}}),
+ const phase=(_attempt,readerCompatible,legacyReaderCurrent)=>({readerCompatible,legacyReaderCurrent});
+ const context={repository:'/owned',readSavedRecipeNutritionAttempt:()=>saved?({review,record:{status:'committed'}}):null,savedRecipeNutritionPhaseStatus:phase,readCookingExperienceAttempt:()=>{if(saved)throw new Error('238 cannot fall back to235');return {review,record:{status:'committed'}};},
   loadCurrentDatabaseMaintenance:()=>{loaded++;if(loadError)throw loadError;},
   spawnSync:(binary,args,options)=>{assert.equal(binary,'git');assert.deepEqual(Array.from(args),['-C','/owned','merge-base','--is-ancestor','cooking-candidate',live.ref]);assert.equal(options.stdio,'ignore');return {status:ancestor?0:1};},
   approvedSourceAncestor:()=>{throw new Error('Historical v74 authority must not be retargeted');},
@@ -29,6 +30,13 @@ test('candidate descendant is compatible; unrelated or changed legacy bytes cann
 });
 test('unresolved or foreign committed235 proof still fails before source compatibility',()=>{
  assert.throws(()=>observe({live:{ref:'old-web'},loadError:new Error('foreign235')}),/foreign235/u);
+});
+
+test('committed238 selects its current reader boundary before historical235',()=>{
+ const {result,loaded}=observe({live:{ref:'old-web',buildId:'old-build',bytes:'old-plist'},saved:true});
+ assert.equal(loaded,1);assert.equal(result.readerCompatible,false);assert.equal(result.legacyReaderCurrent,true);
+ assert.equal(observe({live:{ref:'new-web'},ancestor:true,saved:true}).result.readerCompatible,true);
+ assert.throws(()=>observe({live:{ref:'old-web'},loadError:new Error('foreign238'),saved:true}),/foreign238/u);
 });
 
 const ancestryStart=cli.indexOf('function approvedSourceAncestor('),ancestryEnd=cli.indexOf('\nfunction v85Authority()',ancestryStart);

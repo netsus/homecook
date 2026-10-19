@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { SAVED_RECIPE_NUTRITION_FEATURE,SAVED_RECIPE_NUTRITION_MIGRATIONS } from "./lib/saved-recipe-nutrition-maintenance.mjs";
+import {readSavedRecipeNutritionAttempt,savedRecipeNutritionPhaseStatus,loadCookingExperienceMaintenance} from "./lib/prelaunch-web-deploy.mjs";
 import { COOKING_EXPERIENCE_FEATURE, COOKING_EXPERIENCE_MIGRATIONS } from "./lib/cooking-experience-maintenance.mjs";
 import {createCookingMaintenanceLocal} from "./lib/cooking-maintenance-local.mjs";
 import {readCookingExperienceAttempt,cookingExperiencePhaseStatus,loadRecipeRequestRoleMaintenance,assertCookingWriterStatePreserved} from "./lib/prelaunch-web-deploy.mjs";
@@ -241,13 +243,13 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
     git(["ls-tree", sha, "--", "eslint.config.mjs"]).length
       ? hash(execFileSync("git", ["-C", repository, "show", `${sha}:eslint.config.mjs`],
         { maxBuffer: 65536, stdio: ["ignore", "pipe", "pipe"] })) : null) : null;
-  const recipeSaveHandoff = !protectedCandidate && (COOKING_EXPERIENCE_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`)) || files.includes(`supabase/migrations/${RECIPE_REQUEST_ROLE_MIGRATION.filename}`) || RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`))
+  const recipeSaveHandoff = !protectedCandidate && (SAVED_RECIPE_NUTRITION_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`)) || COOKING_EXPERIENCE_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`)) || files.includes(`supabase/migrations/${RECIPE_REQUEST_ROLE_MIGRATION.filename}`) || RECIPE_SAVE_RECOVERY_MIGRATIONS.some(row=>files.includes(`supabase/migrations/${row.filename}`))
     || files.some(file=>Object.hasOwn(RECIPE_SAVE_RECOVERY_RUNTIME_POSTIMAGES,file)))
     ? nutritionSourceHandoff(live,{target,files}) : null;
   if (recipeSaveHandoff) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
-      reviewedIntegratedFiles: protectedCandidate?.review.feature === COOKING_EXPERIENCE_FEATURE ? new Set(Object.keys(protectedCandidate.review.files)) : recipeSaveHandoff?.maintenance.review.feature === COOKING_EXPERIENCE_FEATURE ? new Set(Object.keys(recipeSaveHandoff.maintenance.review.files)) : integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport ?? v85Support,
+      reviewedIntegratedFiles: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(protectedCandidate?.review.feature) ? new Set(Object.keys(protectedCandidate.review.files)) : [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(recipeSaveHandoff?.maintenance.review.feature) ? new Set(Object.keys(recipeSaveHandoff.maintenance.review.files)) : integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport ?? v85Support,
       // validateProtectedCandidate above already checked the complete exact byte pairs.
       reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
       reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff), eslintConfigDigests });
@@ -291,6 +293,15 @@ function quantityPublicReadDigests(live, selection, closedContext) {
 }
 
 function nutritionSourceHandoff(live, selection) {
+  const savedNutritionSql=SAVED_RECIPE_NUTRITION_MIGRATIONS.some(row=>selection.files.includes(`supabase/migrations/${row.filename}`));
+  if(savedNutritionSql){
+    const maintenance=loadCurrentDatabaseMaintenance(repository);
+    if(maintenance?.review.feature!==SAVED_RECIPE_NUTRITION_FEATURE)throw new DeploymentError("Saved nutrition source requires separate committed238 authority");
+    const digests=Object.fromEntries(selection.files.map(file=>[file,[live.ref,selection.target].map(sha=>git(["ls-tree",sha,"--",file]).length
+      ?hash(execFileSync("git",["-C",repository,"show",`${sha}:${file}`],{maxBuffer:64*1024*1024,stdio:["ignore","pipe","pipe"]})):null)]));
+    return {maintenance,from:live.ref,to:selection.target,live:{ref:live.ref,buildId:live.buildId,plistSha256:hash(live.bytes)},files:selection.files,digests,
+      reviewedSourceAncestor:spawnSync("git",["-C",repository,"merge-base","--is-ancestor",maintenance.review.to,selection.target],{stdio:"ignore"}).status===0};
+  }
   const cookingSql = COOKING_EXPERIENCE_MIGRATIONS.some(row=>selection.files.includes(`supabase/migrations/${row.filename}`));
   if (cookingSql) {
     const maintenance=loadCurrentDatabaseMaintenance(repository);
@@ -458,6 +469,13 @@ function recordedProtectedPhase(review, live) {
     readerCompatible: spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", review.to, live.ref]).status === 0 });
 }
 function currentProtectedPhase(live = current()) {
+  const saved=readSavedRecipeNutritionAttempt(repository);
+  if(saved){
+    if(saved.record.status==="committed")loadCurrentDatabaseMaintenance(repository);
+    return savedRecipeNutritionPhaseStatus(saved,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",saved.review.to,live.ref],{stdio:"ignore"}).status===0,
+      live.ref===saved.review.from&&live.buildId===saved.review.legacyReader.buildId&&hash(live.bytes)===saved.review.legacyReader.plistSha256);
+  }
+
   const cooking=readCookingExperienceAttempt(repository);
   if (cooking) {
     if (cooking.record.status === "committed") loadCurrentDatabaseMaintenance(repository);
@@ -774,7 +792,7 @@ async function verifyProtectedBaseline(review, plan, options) {
   loadProtectedDatabaseReceipt(review);
   if (options.reviewedProtectedRollout && (options.dbConfig !== review.database.configPath
     || hash(readClosedR2PrivateBytes(options.dbConfig, repository, 65536)) !== review.database.configSha256)) throw new DeploymentError("보호 reader의 승인된 config bytes가 다릅니다.");
-  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: currentReview.feature===COOKING_EXPERIENCE_FEATURE });
+  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(currentReview.feature) });
   const observed = await createProtectedPrelaunchAdapter(base, currentReview.feature, currentReview, databaseMaintenance).observe(undefined, "protected-baseline-readback");
   const fingerprintPolicy = JSON.parse((await base.query(`SELECT jsonb_build_object('currentFingerprintKeyVersion',fingerprint_key_version,
     'previousFingerprintKeyVersion',CASE WHEN previous_fingerprint_valid_until>=clock_timestamp() THEN previous_fingerprint_key_version ELSE NULL END,
@@ -830,14 +848,23 @@ async function verifyProtectedBaseline(review, plan, options) {
 async function runProtectedDatabasePhase(options, action, review) {
   const { databaseGuardPath: protectedDatabaseGuardPath, operationRoot: protectedOperationRoot } = protectedRolloutPaths(root, review);
   const live = current(), context = requireClosedR2Mode(options, live);
+  const savedNutrition=review.feature===SAVED_RECIPE_NUTRITION_FEATURE;
   const cooking = review.feature === COOKING_EXPERIENCE_FEATURE;
-  const maintenance = cooking || [NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature);
+  const nativeMaintenance=cooking||savedNutrition;
+  const maintenance = nativeMaintenance || [NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature);
   const reconcile = ["reconcile", "worker-reconcile"].includes(options.protectedPhase);
   let operationId, operationDirectory, previousNotAppliedSha256;
   const verifyReader = async () => {
     if (!maintenance) return;
     const actual = current();
     await smoke(3100, actual.cwd, actual.buildId);
+    if(savedNutrition){
+      if(actual.ref!==review.legacyReader.ref||actual.buildId!==review.legacyReader.buildId||hash(actual.bytes)!==review.legacyReader.plistSha256)throw new DeploymentError("Saved nutrition exact legacy reader changed");
+      const previous=loadCookingExperienceMaintenance(repository);
+      if(!previous||!isDeepStrictEqual(nutritionValidatorMaintenanceBinding(previous),review.predecessorMaintenance)
+        ||!isDeepStrictEqual(previous.review.database.after,review.database.before)||previous.review.database.targetSha256!==review.database.targetSha256)throw new DeploymentError("Saved nutrition committed235 predecessor differs");
+      return;
+    }
     if (cooking) {
       if (actual.ref!==review.legacyReader.ref || actual.buildId!==review.legacyReader.buildId || hash(actual.bytes)!==review.legacyReader.plistSha256) throw new DeploymentError("Cooking exact legacy reader changed");
       const previous=loadRecipeRequestRoleMaintenance(repository);
@@ -887,13 +914,13 @@ async function runProtectedDatabasePhase(options, action, review) {
   const engine = await createProtectedPrelaunchDatabase({ repositoryRoot: repository, configPath: options.dbConfig, operationDirectory, operationId,
     guardPath: protectedDatabaseGuardPath, review, reviewSha256: protectedRolloutPins(review).rollout.sha256,
     readMigrations: async () => protectedMigrationsAt(review), previousNotAppliedSha256, workerCheckpoint,
-    assertBoundary: async () => { if(cooking) { if(!assertAdmissionFence)throw new DeploymentError("Cooking worker-pause admission absent");assertAdmissionFence(); } lease.verify(); verifyProtectedBoundary(review, live);
+    assertBoundary: async () => { if(nativeMaintenance) { if(!assertAdmissionFence)throw new DeploymentError("Cooking worker-pause admission absent");assertAdmissionFence(); } lease.verify(); verifyProtectedBoundary(review, live);
       if (maintenance) await verifyReader();
       if (workerCheckpoint) verifyQuantityV4WorkerBoundary(review, "before"); }, checkCancelled: () => cancellation.check() });
   const lease = await acquireClosedR2ControlLease(loadClosedR2Review(repository), repository);
   let receipt;
   try {
-    if (cooking) {
+    if (nativeMaintenance) {
       const controller=await createCookingMaintenanceLocal({configPath:options.dbConfig,backupDirectory:operationDirectory});
       receipt=await controller.run(async admission=>{assertAdmissionFence=admission.assertAdmissionFence;return reconcile?engine.reconcile():engine.apply();});
     } else receipt = reconcile ? await engine.reconcile() : await engine.apply();
@@ -1019,7 +1046,7 @@ async function completeProtectedReaderRecovery(options, review) {
     bytes: readFileSync(plistPath) }, live);
   if (hash(live.bytes) !== state.targetPlistHash) throw new DeploymentError("보호 reader 복구 plist가 다릅니다.");
   await verifyProtectedBaseline(review, state.databaseVerification, options);
-  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: review.feature===COOKING_EXPERIENCE_FEATURE });
+  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature) });
   const observed = await createProtectedPrelaunchAdapter(base, review.feature, review).observe(undefined, "protected-reader-recovery");
   const personalSuccessor = review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? loadCookedWeightAttestationSuccessor(repository) : null;
   const personalWorker = personalSuccessor ? loadCookedWeightAttestationWorkerContinuation(personalSuccessor, repository) : null;
@@ -1057,7 +1084,7 @@ function validateClosedR2Candidate(review, live, selection, patch, options, clos
 function requireClosedR2Mode(options, live = current(), rollback = false) {
   const maintenanceAttempt = readCookingExperienceAttempt(repository) ?? readRecipeRequestRoleAttempt(repository) ?? readRecipeSaveRecoveryAttempt(repository) ?? readNutritionValidatorAttempt(repository);
   if (maintenanceAttempt && !["committed", "not_applied"].includes(maintenanceAttempt.record.status)
-    && !([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE,COOKING_EXPERIENCE_FEATURE].includes(options.protectedFeature) && options.protectedPhase === "reconcile")) {
+    && !([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE,COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(options.protectedFeature) && options.protectedPhase === "reconcile")) {
     throw new DeploymentError("Nutrition229 outcome unresolved; historical228 cannot authorize another deployment or writer");
   }
   const protectedPhase = currentProtectedPhase(live);
@@ -1497,7 +1524,7 @@ process.exit(result.status ?? 1);`;
         closedLease = await acquireClosedR2ControlLease(closedReview, repository);
         closedLease.verify();
         if (protectedReader) {
-          const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: rollout.feature===COOKING_EXPERIENCE_FEATURE });
+          const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(rollout.feature) });
           if (hash(JSON.stringify(await base.inspect())) !== rollout.database.targetSha256) {
             throw new DeploymentError("reader 잠금 대상이 승인된 운영 DB와 다릅니다.");
           }
@@ -1791,6 +1818,7 @@ async function main() {
   if (action === "help" || action === "--help") {
     say('plan-v85-unstarted-closeout | close-v85-unstarted: 2026-10-18 exact06a→15 미전환 실패 건만 검증·보존·종결합니다. 웹 재시작·DB 쓰기·자격 변경은 없습니다. 인수는 받지 않습니다.');
     say("--reviewed-protected-rollout --protected-phase database|database-retry|reader|reconcile|writer-on|writer-off|writer-on-reconcile|writer-off-reconcile|writer-on-retry|writer-off-retry: 정확한 보호 DB/reader 승인과 별도 ON/OFF 승인 경로. 코드에 고정된 승인 자료와 정확히 일치해야 실행할 수 있습니다.");
+    say("레시피 영양·분수 저장 exact235→238: saved-nutrition-database|saved-nutrition-database-retry|saved-nutrition-reconcile. 별도 PIN·원235 receipt·동일 gen50 중지/복구와 정확한 새 source만 허용합니다.");
     say("요리 실행 exact232→235: cooking-database|cooking-database-retry|cooking-reconcile만 지원하며 고정 PIN과 동일 gen50 worker 중지/복구 controller를 필수 사용합니다. 웹 target은 별도 review.to이며 운영 도구 ref와 구분합니다.");
     say("레시피 요청 역할 metadata-only exact231→232: 기존 nutrition-* phase, 별도 fixed PIN/ref와 current231 terminal이 필요하며 웹 runtime은 교체하지 않습니다.");
     say("레시피 수정 저장·재시도 exact229→231: 같은 nutrition-* phase와 별도 코드 고정 ref/review가 필요합니다. 미결속 PIN에서는 거절하며 두 SQL commit 뒤에만 exact full-source를 반영합니다.");
@@ -1810,6 +1838,7 @@ async function main() {
   if (options.reviewedProtectedRollout) {
     protectedReview = loadProtectedRolloutReview(repository, { feature: options.protectedFeature, ref: options.ref, phase: options.protectedPhase }); // Deny before live/env/private-state access. No CLI or env pin override.
     options.protectedFeature = protectedReview.feature;
+    if(options.protectedPhase.startsWith("saved-nutrition-"))options.protectedPhase=options.protectedPhase.slice("saved-nutrition-".length);
     if (options.protectedPhase.startsWith("nutrition-")) options.protectedPhase = options.protectedPhase.slice("nutrition-".length);
     if (options.protectedPhase.startsWith("cooking-")) options.protectedPhase = options.protectedPhase.slice("cooking-".length);
     if (options.protectedPhase.startsWith("attestation-")) options.protectedPhase = options.protectedPhase.slice("attestation-".length);

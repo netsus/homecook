@@ -448,6 +448,7 @@ export async function GET(request: Request, context: RouteContext) {
       : await readPublicRecipeProductLabels(routeClient, id, ingredientRows));
     let steps = normalizeRecipeSteps(stepsResult.data);
 
+    let catalogSelectionPresent = false;
     if (
       recipeResult.data.visibility === "public"
       && recipeResult.data.source_type === "youtube"
@@ -470,11 +471,12 @@ export async function GET(request: Request, context: RouteContext) {
         return fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요.", 500);
       }
 
+      catalogSelectionPresent = projection.catalogSelectionPresent === true;
       ingredients = projection.ingredients;
       steps = projection.steps;
     }
     let canonicalNutrition: RecipeDetail["nutrition"] | null = null;
-    if (!nutritionSnapshotResult.error && !nutritionSnapshotResult.data
+    if ((catalogSelectionPresent || (!nutritionSnapshotResult.error && !nutritionSnapshotResult.data))
       && recipeResult.data.visibility === "public" && recipeResult.data.source_type === "youtube"
       && hasYoutubeSavedCanonicalBridgeMarker(sourceResult.data?.extraction_meta_json)) {
       try {

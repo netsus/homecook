@@ -143,6 +143,8 @@ type ModalMode =
 
 interface TempIngredient extends ManualRecipeIngredientInput {
   tempId: string;
+  catalog_ingredient_id?: string | null;
+  catalog_name?: string;
   draft_ingredient_id?: string;
   confidence: number | null;
   resolution_status?: YoutubeExtractedIngredient["resolution_status"];
@@ -228,6 +230,16 @@ function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
   };
 }
 
+// A catalog choice in a saved document changes identity, never the entered quantity/source.
+function selectSavedCatalogIngredient(ingredient: TempIngredient, ingredientId: string | null, catalogName: string): TempIngredient {
+  if (!ingredientId) return ingredient;
+  if (ingredient.savedQuantity?.changed) return { ...ingredient, savedQuantity: { ...ingredient.savedQuantity,
+    error: "수량 변경을 먼저 저장한 뒤 식품을 연결해 주세요." } };
+  return { ...ingredient, catalog_ingredient_id: ingredientId, catalog_name: catalogName, ingredient_id: ingredientId,
+    resolution_status: "resolved", confidence: 1, candidates: [],
+    savedQuantity: ingredient.savedQuantity ? { ...ingredient.savedQuantity, enabled: false } : undefined };
+}
+
 function applyIngredientQuantityPatch(
   ingredient: TempIngredient,
   patch: IngredientQuantityPatch,
@@ -291,6 +303,7 @@ function applyIngredientQuantityPatch(
   if ("standard_name" in patch && !("amount" in patch) && !("unit" in patch) && !("ingredient_type" in patch)) {
     return {
       ...next,
+      catalog_ingredient_id: null, catalog_name: undefined, ingredient_id: "", resolution_status: "unresolved", candidates: [],
       display_text: formatIngredientDisplayText(next),
     };
   }
@@ -1201,6 +1214,7 @@ function ReviewIngredientRow({
         </div>
       ) : null}
 
+      {ingredient.catalog_ingredient_id && ingredient.catalog_name ? <p className="mt-2 text-[12px] text-[var(--text-2)]">연결 식품: {ingredient.catalog_name} · 입력한 양은 유지해요.</p> : null}
       {needsIngredientResolution ? (
         <div className="mt-2 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] p-3">
           {ingredient.raw_text ? (
@@ -2676,6 +2690,7 @@ function ActiveYoutubeImportScreen({
         quantity_review_required: ingredient.quantity_mode === "unknown",
         quantity_user_confirmed: ingredient.quantity_mode !== "unknown",
       };
+      if ("catalog_ingredient_id" in ingredient) { mapped.catalog_ingredient_id = ingredient.catalog_ingredient_id; mapped.catalog_name = ingredientLink?.catalog_name; }
       if ("quantity_policy" in saved || "quantity_contexts" in saved || "quantity_input" in ingredient || "quantity_context_fingerprint" in ingredient) {
         mapped.savedQuantity = { text: savedQuantityText(ingredient.amount, ingredient.unit, quantityInput), input: quantityInput,
           context, storedFingerprint: ingredient.quantity_context_fingerprint ?? null,
@@ -3234,11 +3249,13 @@ function ActiveYoutubeImportScreen({
     if (replacingIngredientId) {
       const replacement = newIngredients[0];
       if (!replacement) return;
+      const catalogId = replacement.ingredient_id;
+      if (savedDraftId && !catalogId) return;
 
       setIngredients((prev) =>
         prev.map((ingredient) =>
           ingredient.tempId === replacingIngredientId
-            ? normalizeIngredient({
+            ? savedDraftId ? selectSavedCatalogIngredient(ingredient, catalogId, replacement.standard_name) : normalizeIngredient({
                 ...replacement,
                 confidence: 1,
                 resolution_status: "resolved",
@@ -3264,17 +3281,18 @@ function ActiveYoutubeImportScreen({
 
     setIngredients((prev) => [
       ...prev,
-      ...newIngredients.map((ingredient, index) =>
-        normalizeIngredient({
+      ...newIngredients.map((ingredient, index) => {
+        const added = normalizeIngredient({
           ...ingredient,
           confidence: 1,
           resolution_status: "resolved",
           sort_order: prev.length + index + 1,
           tempId: `temp-ing-${Date.now()}-${index}`,
-        }),
-      ),
+        });
+        return savedDraftId ? selectSavedCatalogIngredient(added, ingredient.ingredient_id, ingredient.standard_name) : added;
+      }),
     ]);
-  }, [replacingIngredientId]);
+  }, [replacingIngredientId, savedDraftId]);
 
   const handleUpdateIngredient = useCallback(
     (tempId: string, patch: IngredientQuantityPatch) => {
@@ -3321,10 +3339,11 @@ function ActiveYoutubeImportScreen({
 
   const handleResolveIngredientCandidate = useCallback(
     (tempId: string, candidate: YoutubeIngredientCandidate) => {
+      setHasUnsavedChanges(true);
       setIngredients((prev) =>
         prev.map((ingredient) =>
           ingredient.tempId === tempId
-            ? normalizeIngredient({
+            ? savedDraftId ? selectSavedCatalogIngredient(ingredient, candidate.ingredient_id, candidate.standard_name) : normalizeIngredient({
                 ...ingredient,
                 ingredient_id: candidate.ingredient_id,
                 standard_name: candidate.standard_name,
@@ -3335,7 +3354,7 @@ function ActiveYoutubeImportScreen({
         ),
       );
     },
-    [],
+    [savedDraftId],
   );
 
   const handleReplaceIngredient = useCallback((tempId: string) => {
@@ -3361,10 +3380,11 @@ function ActiveYoutubeImportScreen({
 
   const handleIngredientRegistered = useCallback(
     (tempId: string, ingredientId: string, standardName: string) => {
+      setHasUnsavedChanges(true);
       setIngredients((prev) =>
         prev.map((ingredient) =>
           ingredient.tempId === tempId
-            ? {
+            ? savedDraftId ? selectSavedCatalogIngredient(ingredient, ingredientId, standardName) : {
                 ...ingredient,
                 ingredient_id: ingredientId,
                 standard_name: standardName,
@@ -3378,7 +3398,7 @@ function ActiveYoutubeImportScreen({
       setRegisteringIngredientId(null);
       setModalMode("none");
     },
-    [],
+    [savedDraftId],
   );
 
   const handleBulkComplete = useCallback(
@@ -3389,11 +3409,12 @@ function ActiveYoutubeImportScreen({
         standardName: string;
       }>,
     ) => {
+      setHasUnsavedChanges(true);
       for (const result of results) {
         setIngredients((prev) =>
           prev.map((ingredient) =>
             ingredient.tempId === result.tempId
-              ? {
+              ? savedDraftId ? selectSavedCatalogIngredient(ingredient, result.ingredientId, result.standardName) : {
                   ...ingredient,
                   ingredient_id: result.ingredientId,
                   standard_name: result.standardName,
@@ -3407,7 +3428,7 @@ function ActiveYoutubeImportScreen({
       }
       setModalMode("none");
     },
-    [],
+    [savedDraftId],
   );
 
   const handleAddStep = useCallback((step: Omit<TempStep, "tempId" | "step_number">) => {
@@ -3535,6 +3556,7 @@ function ActiveYoutubeImportScreen({
         display_text: ing.display_text,
         component_label: ing.component_label ?? null,
         };
+        if ("catalog_ingredient_id" in ing) row.catalog_ingredient_id = ing.catalog_ingredient_id;
         if (ing.savedQuantity?.changed) row.quantity_input = ing.savedQuantity.input && ing.savedQuantity.context
           ? { schema_version: QUANTITY_INPUT_VERSION, raw_value: ing.savedQuantity.input.raw_value,
             raw_unit: ing.savedQuantity.input.raw_unit, expected_context_fingerprint: ing.savedQuantity.context.fingerprint }
@@ -3604,7 +3626,8 @@ function ActiveYoutubeImportScreen({
     }
     applySavedResult(saved);
     saveAttemptRef.current = null;
-    showActionConfirmation("변경사항을 저장했어요.");
+    showActionConfirmation(saved.nutrition_publication && saved.nutrition_publication.status !== "ready"
+      ? "변경사항은 저장됐어요. 영양 계산은 준비되지 않아 다시 확인이 필요해요." : "변경사항을 저장했어요.");
     router.replace(`/recipes/youtube/saved/${result.data.draft_id}`);
   }, [
     draftTags,

@@ -1,0 +1,175 @@
+{
+  "schema": "homecook.saved-recipe-nutrition-maintenance.postgres.v1",
+  "runId": "dc721348dc3b93852c69bfee735f08ea",
+  "status": "PASS",
+  "network": "none",
+  "productionConnections": 0,
+  "applicationDataRestored": false,
+  "migrations": [],
+  "tests": [],
+  "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+  "ownedContainerId": "5f8a978a1195791aa924806bd5f333cd5e56b92a8be488d976bfa43f6768dc46",
+  "observationContext": {
+    "sha256": "569b5da16f96c5f00a564cbe52925d6c1f73878b90ea026999c5d480c249a846",
+    "searchPath": "\"\\$user\", public, extensions",
+    "timeZone": "UTC",
+    "mode": "explicit per-query context; original role/schema unchanged"
+  },
+  "roleModel": {
+    "source": "current20261019 read-only catalog",
+    "roleCount": 36,
+    "memberships": 23,
+    "passwordsCopied": false,
+    "operatingDataCopied": false
+  },
+  "restoredSchemaSqlMatches": {
+    "sourceSqlSha256": "7fc8ecc0f7c8d54cd6d8d0d4ea585907cb98e8c5473232e96760f0f7d3f0588a",
+    "restoredSqlSha256": "5639ec543514cc04ff20ddc30d52f4f975fedae8653cc6445a61159fdf5ed93d",
+    "rawExactMatch": false,
+    "canonicalSha256": "ca50f2b954d4f1e08f7ded1e498f88b158bd97b0eec65a7a518279135163ba7f",
+    "commentsExcluded": true,
+    "normalizations": "dump headers/restrict tokens; five reviewed varchar-array checks; policy role set order; consecutive GRANT order within ACL blocks; REVOKE/context order preserved",
+    "tableData": false
+  },
+  "beforeSeed": {
+    "rows": 0,
+    "tables": 153
+  },
+  "databaseContext": {
+    "ctype": "en_US.UTF-8",
+    "collate": "en_US.UTF-8",
+    "provider": "i",
+    "timeZone": "UTC",
+    "icuLocale": "en-US",
+    "searchPath": "\"\\$user\", public, extensions"
+  },
+  "roleAttributesAndMembershipsMatch": true,
+  "nonsecretSettingsMatch": true,
+  "native": {
+    "sourceSha256": {
+      "scripts/lib/saved-recipe-nutrition-native-regression.mjs": "ae05f41f8364123ca32e23690ed85e12b2a38258ceea02346c51c6e1441f7ce3",
+      "scripts/lib/saved-recipe-nutrition-maintenance.mjs": "319506c51d235a8eb2844dd6f9a95a75833e4547d1bd8b44e4f5479824ae5655",
+      "scripts/lib/saved-recipe-nutrition-catalog.mjs": "b31ae87d926363fb6aa1e902e73b5ee239cd433555a0bc84a85a286961792c82",
+      "scripts/lib/prelaunch-database.mjs": "b6635bf3e3815e8a40a9f0b86511039272a00d9ed51f73d3d6c2fc5ce39166f1"
+    },
+    "directory": "/private/tmp/hc-saved-nutrition-native-ApMNRq",
+    "syntheticRowsOnly": true,
+    "productionConnections": 0,
+    "productionPinPublished": false,
+    "cases": [
+      {
+        "scenario": "commit",
+        "status": "committed",
+        "dispatches": 3,
+        "redispatchedDuringReconcile": 0,
+        "backupCommands": 4,
+        "backupTicks": 72,
+        "fullArchiveDecoded": true,
+        "allRowsAndControlsPreserved": true,
+        "scopeOidsUnchanged": true,
+        "actualConnectionTermination": false
+      },
+      {
+        "scenario": "error-after236",
+        "status": "not_applied",
+        "dispatches": 1,
+        "redispatchedDuringReconcile": 0,
+        "backupCommands": 4,
+        "backupTicks": 68,
+        "fullArchiveDecoded": true,
+        "allRowsAndControlsPreserved": true,
+        "scopeOidsUnchanged": true,
+        "actualConnectionTermination": false
+      },
+      {
+        "scenario": "error-after237",
+        "status": "not_applied",
+        "dispatches": 2,
+        "redispatchedDuringReconcile": 0,
+        "backupCommands": 4,
+        "backupTicks": 70,
+        "fullArchiveDecoded": true,
+        "allRowsAndControlsPreserved": true,
+        "scopeOidsUnchanged": true,
+        "actualConnectionTermination": false
+      },
+      {
+        "scenario": "error-after238",
+        "status": "not_applied",
+        "dispatches": 3,
+        "redispatchedDuringReconcile": 0,
+        "backupCommands": 4,
+        "backupTicks": 68,
+        "fullArchiveDecoded": true,
+        "allRowsAndControlsPreserved": true,
+        "scopeOidsUnchanged": true,
+        "actualConnectionTermination": false
+      },
+      {
+        "scenario": "commit-ack-unknown",
+        "status": "committed",
+        "dispatches": 3,
+        "redispatchedDuringReconcile": 0,
+        "backupCommands": 4,
+        "backupTicks": 67,
+        "fullArchiveDecoded": true,
+        "allRowsAndControlsPreserved": true,
+        "scopeOidsUnchanged": true,
+        "actualConnectionTermination": true
+      },
+      {
+        "scenario": "fence-lost-during-backup",
+        "status": "not_applied",
+        "dispatches": 0,
+        "redispatchedDuringReconcile": 0,
+        "backupCommands": 4,
+        "backupTicks": 69,
+        "fullArchiveDecoded": true,
+        "allRowsAndControlsPreserved": true,
+        "scopeOidsUnchanged": true,
+        "actualConnectionTermination": false
+      },
+      {
+        "scenario": "commit-ack-oid-drift",
+        "status": "unknown-rejected",
+        "dispatches": 3,
+        "redispatchedDuringReconcile": 0,
+        "rawCatalogAndPortableImagesStillMatch": true,
+        "functionOidChanged": true,
+        "originalIntentPreserved": true,
+        "backupCommands": 4,
+        "backupTicks": 70,
+        "fullArchiveDecoded": true
+      }
+    ],
+    "negativeChecks": [
+      "migration order",
+      "unrelated SQL",
+      "foreign source",
+      "writer permission",
+      "helper config",
+      "helper public grant",
+      "worker generation",
+      "existing metadata",
+      "unchangedCatalogSha256 mutation",
+      "executionRowsSha256 mutation",
+      "ledgerPreservedRowsSha256 mutation",
+      "normalDataSha256 mutation",
+      "controlsSha256 mutation",
+      "existing function OID mutation",
+      "scope OID mutation",
+      "native remainder table metadata",
+      "native remainder scope function",
+      "native remainder role metadata",
+      "native remainder other overload",
+      "actual identical-definition function drop/recreate after COMMIT ACK loss rejected by original OID intent"
+    ],
+    "postimagesPath": "/tmp/homecook-saved-nutrition-isolated-postimages.json",
+    "postimagesSha256": "2dec72426761441a7693450fbe69d7f198687ffd0f9b2def1693403de732d495",
+    "status": "PASS"
+  },
+  "cleanupCompleted": true,
+  "operatingApplied": false,
+  "actualWorkerServiceTestedByNativeHarness": false,
+  "realFoodAccuracyClaims": 0
+}

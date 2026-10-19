@@ -1,4 +1,4 @@
-import { calculateRecipeNutrition, RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION, type RecipeNutritionIngredientInput } from "@/lib/nutrition/recipe-nutrition-calculator";
+import { calculateRecipeNutrition, RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION, type RecipeNutritionCalculatorInput, type RecipeNutritionIngredientInput } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { savedQuantitySnapshot } from "@/lib/youtube-saved-quantity-input";
 import { parseQuantityInput } from "@/lib/quantity-input";
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
@@ -7,7 +7,7 @@ import type { RecipeIngredient, RecipeNutrition } from "@/types/recipe";
 
 // A frozen count/spoon estimate cannot become a verified gram input merely
 // because the display row contains grams. Recover only exact mass/volume units.
-function hasExactFrozenQuantity(row: RecipeIngredient): boolean {
+export function hasExactFrozenQuantity(row: RecipeIngredient): boolean {
   if (!row.quantity_input) return true;
   const snapshot = savedQuantitySnapshot(row.quantity_input, row.amount, row.unit);
   if (!snapshot || snapshot.quality !== "direct" || snapshot.reason !== null || !snapshot.normalized || snapshot.batch_basis !== null) return false;
@@ -43,9 +43,10 @@ export async function calculatePublicYoutubeRecipeNutrition({ client, recipeId, 
   }));
   const ids = [...new Set(rows.flatMap(row => row.ingredient_id ? [row.ingredient_id] : []))];
   const predecessors = await loadRecipeNutritionPredecessors(client, ids);
-  const calculation = calculateRecipeNutrition({ recipe_id: recipeId, recipe_version: `revision:${revision}`,
-    base_servings: baseServings, ingredients: hydrateRecipeNutritionIngredients(rows, predecessors),
-    ...(explicitQuantity ? { calculation_version: RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION } : {}) });
+  const calculationInput: RecipeNutritionCalculatorInput = { recipe_id: recipeId, recipe_version: `revision:${revision}`,
+    base_servings: baseServings, ingredients: hydrateRecipeNutritionIngredients(rows, predecessors) };
+  if (explicitQuantity) calculationInput.calculation_version = RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION;
+  const calculation = calculateRecipeNutrition(calculationInput);
   return { basis: calculation.basis, base_servings: calculation.base_servings,
     values: calculation.values, scalable_values: calculation.scalable_values, fixed_values: calculation.fixed_values,
     calculation_status: calculation.calculation_status, calculation_quality: calculation.calculation_quality,

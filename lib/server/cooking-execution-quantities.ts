@@ -1,4 +1,4 @@
-import { calculateRecipeNutrition, RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION, scaleNutritionForServings, type RecipeNutritionIngredientInput } from "@/lib/nutrition/recipe-nutrition-calculator";
+import { calculateRecipeNutrition, RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION, scaleNutritionForServings, type RecipeNutritionCalculatorInput, type RecipeNutritionIngredientInput } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { hydrateRecipeNutritionIngredients, loadRecipeNutritionPredecessors } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
 import { snapshotIngredients } from "@/lib/server/cooked-batch-weight-estimate";
 import { hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
@@ -54,9 +54,10 @@ export async function calculateExecutionQuantities(input: {
   hydrated = (await hydrateRecipeProductNutrition(input.client, rows, hydrated, input.ownerId)).ingredients;
   const explicit = input.originalRows.some(row => record(row) && row.quantity_input !== undefined);
   if (explicit) hydrated = (await hydrateRecipeQuantityNutrition(input.client, rows, hydrated, input.ownerId)).ingredients;
-  const calculation = calculateRecipeNutrition({ recipe_id: input.recipeId, recipe_version: `execution:${input.snapshotId}`,
-    base_servings: input.baseServings, ingredients: hydrated,
-    ...(explicit ? { calculation_version: RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION } : {}) });
+  const calculationInput: RecipeNutritionCalculatorInput = { recipe_id: input.recipeId, recipe_version: `execution:${input.snapshotId}`,
+    base_servings: input.baseServings, ingredients: hydrated };
+  if (explicit) calculationInput.calculation_version = RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION;
+  const calculation = calculateRecipeNutrition(calculationInput);
   const scaled = scaleNutritionForServings(calculation, input.cookingServings);
   // Preserve unchanged frozen v4 proof. Edited rows have no stale raw quantity metadata.
   const weightRows = hydrated.map((row, index) => Object.hasOwn(input.rows[index], "quantity_input")

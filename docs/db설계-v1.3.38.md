@@ -3630,3 +3630,18 @@ private immutable digest helper1개와 service-only SECURITY DEFINER RPC `read_r
 `20261017220000_cooking_execution_quantities.sql`은 private.cooking_execution_quantities에 session/owner/원래 content pin/revision/재료JSON/영양근거/무게예측을 보관한다. RLS와 direct grant 거절, owner authority·recipe advisory/session lock·CAS revision·기존 멱등 원장을 사용한다. 변경은 수량 필드로 제한하고 원본 source identity와 행 순서/개수는 유지한다. 수정행은 현재 요리량으로 fixed 처리한다. 원본 recipe/content/nutrition snapshot과 session pointer의 불변 보호는 완화하지 않는다.
 
 완료는 같은 session lock 안에서 기대 판본을 확인해 저장 계산을 참조하고, 원래 완료 함수에 좁은 우회 방지 hook을 더한다. batch nutrition resolver는 private 실행 총량을 사용하되 batch/content pin/owner 일치를 확인한다. 원래 recipe pin과 계획 상태 전이 검증은 그대로다. 새 RPC3종은 snapshot-v2-session scope의 정확한 POST 경로와 service_role execute만 허용한다. 웹+스키마 동시 반영 후보이며 운영 적용0이다.
+
+## 2026-10-19 — 저장 YouTube 명시 catalog 선택 forward236 (로컬 후보·미적용)
+
+`20261019120000_youtube_saved_catalog_selection.sql`은 기존5함수의 본문만 같은 OID로 교체한다. private editable validator, ingredient link projection, owner result projection, canonical sync trigger와 public detail projection이다. table/RLS/owner/ACL/security/search_path/worker 정책·권한을 추가하거나 완화하지 않는다. 원233/234/235와 과거 migration은 수정하지 않는다.
+
+명시선택은 editable JSON과 기존 content hash/receipt에 포함하고 immutable source JSON은 바꾸지 않는다. 수량 입력은 기존 검증과 replay를 유지하며, 식품의존 변환을 새 식품으로 재해석하지 않는다. 명시선택이 old/new 행에 있고 canonical content hash에 참여하는 title/steps/재료/기본 인분이 바뀌면, 기존 canonical owner 확인 뒤 nutrition writer marker를 한시 사용해 해당 recipe의 `is_current`만 false로 전환하고 marker를 원복한다. 과거 영양 payload와 meal/cooking pin은 그대로다. 실패하면 같은 transaction의 변경 전체를 롤백한다.
+
+새 끼니는 현재 catalog/수량의 새 content pin을 만들되 새 영양 발행 전까지 nutrition pin은 null이다. 기존 `recipe_ingredients` 전용 발행 service/input guard를 saved canonical에 바로 적용하지 않는다. [구현·격리 검사·남은 범위](engineering/saved-recipe-catalog-selection-20261019.md)를 따른다. 운영 적용 authority와 배포는 별도 검토 대상이며 이 로컬 후보의 통과로 승인하지 않는다.
+
+
+### 저장 YouTube 현재 영양 발행 forward237 (같은 로컬 후보·미적용)
+
+`20261019130000_youtube_saved_nutrition_publication.sql`은 기존 public `build_recipe_nutrition_input_guard(uuid)`, `write_recipe_nutrition_snapshot(uuid,jsonb,timestamptz,jsonb)`, `start_snapshot_v2_cooking_session(uuid,timestamptz,text,integer,timestamptz,uuid,text,uuid[],jsonb,uuid,bigint,numeric,timestamptz)`의3함수만 교체한다. guard의 언어만 SQL→PLpgSQL로 바꾸며 OID/owner/ACL/config/security/volatility는 보존한다. private pre-product piece guard와 worker/shared 의존성은 그대로다. 별도 신규 운영 authority가 필요한 후보이며 기존235 승계 승인으로 적용하지 않는다.
+
+owner DTO의 현재 content hash와 기존 receipt revision/updated_at, 실제 profile/conversion/piece/source guard를 결속한다. 원 recipe advisory/row 잠금 뒤 canonical ingredient 집합을 기존 ingredient lock에 포함하며, 기존 authenticated owner wrapper를 통해서만 발행한다. 영양 snapshot과 matching immutable content pin을 같은 TX에 확보한다. canonical 독립 시작은 현재 content hash/current nutrition ID를 모두 확인해 A→B→A 복귀에도 중간B pin을 선택하지 않는다. physical branch/소유권/CAS/receipt/상태 검사는 유지한다. 과거 pin/timestamp/영양 payload는 수정하지 않는다. 발행 실패 중 matching pin이 없으면 fail-closed이며 별도 자동 ensure를 추가하지 않았다.
