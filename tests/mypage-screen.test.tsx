@@ -2307,6 +2307,74 @@ describe("MypageScreen", () => {
     expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
   });
 
+  it("restores shopping detail from a direct URL outside the first history page", async () => {
+    window.history.replaceState({}, "", "/mypage?tab=shopping&shoppingListId=older-list");
+    mockFetchShoppingHistory.mockResolvedValue({ ...MOCK_SHOPPING_HISTORY, items: [] });
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByTestId("shopping-detail-embedded")).toBeTruthy();
+    await waitFor(() => expect(mockFetchShoppingListDetail).toHaveBeenCalledWith("older-list"));
+    expect(mockFetchShoppingHistory).not.toHaveBeenCalled();
+  });
+
+  it("restores the selected shopping detail after a fresh mount", async () => {
+    const first = render(<MypageScreen initialAuthenticated />);
+    const user = userEvent.setup();
+    await openShoppingSurface(user);
+    await user.click(await screen.findByTestId("shopping-card-list-1"));
+    expect(await screen.findByTestId("shopping-detail-embedded")).toBeTruthy();
+    first.unmount();
+    mockFetchShoppingListDetail.mockClear();
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByTestId("shopping-detail-embedded")).toBeTruthy();
+    await waitFor(() => expect(mockFetchShoppingListDetail).toHaveBeenCalledWith("list-1"));
+  });
+
+  it("restores a desktop shopping URL on a mobile viewport and closes to mobile history", async () => {
+    installMatchMedia(true);
+    window.history.replaceState({}, "", "/mypage?tab=shopping&shoppingListId=list-1&keep=1");
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByTestId("shopping-detail-mobile")).toBeTruthy();
+    await screen.findByText("완료된 장보기 기록은 수정할 수 없어요");
+    expect(mockFetchShoppingHistory).not.toHaveBeenCalled();
+    await userEvent.setup().click(screen.getByRole("button", { name: "뒤로 가기" }));
+
+    expect(await screen.findByTestId("shopping-tab")).toBeTruthy();
+    const historyCard = await screen.findByTestId("shopping-card-list-1");
+    expect(historyCard.textContent).toContain("4/30~5/6");
+    expect(historyCard.getAttribute("href")).toContain("/shopping/lists/list-1");
+    expect(new URLSearchParams(window.location.search).has("shoppingListId")).toBe(false);
+    expect(new URLSearchParams(window.location.search).get("keep")).toBe("1");
+  });
+
+  it("does not read the shopping URL into server-rendered initial state", () => {
+    window.history.replaceState({}, "", "/mypage?tab=shopping&shoppingListId=list-1");
+    expect(renderToString(<MypageScreen initialAuthenticated />)).not.toContain("shopping-detail-embedded");
+    expect(mockFetchShoppingListDetail).not.toHaveBeenCalled();
+  });
+
+  it.each(["mount", "popstate"])("treats an empty shopping ID as the history overview on %s", async (entry) => {
+    if (entry === "mount") {
+      window.history.replaceState({}, "", "/mypage?tab=shopping&shoppingListId=");
+    }
+    render(<MypageScreen initialAuthenticated />);
+    await screen.findByText("집밥러");
+    if (entry === "popstate") {
+      act(() => {
+        window.history.pushState({}, "", "/mypage?tab=shopping&shoppingListId=");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+    }
+
+    expect(await screen.findByTestId("shopping-history-calendar")).toBeTruthy();
+    expect(mockFetchShoppingHistory).toHaveBeenCalledTimes(1);
+    expect(mockFetchShoppingListDetail).not.toHaveBeenCalled();
+  });
+
   it("opens shopping history detail inline below the mypage tabs", async () => {
     render(<MypageScreen initialAuthenticated />);
 
@@ -2353,6 +2421,102 @@ describe("MypageScreen", () => {
     expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull();
     expect(await screen.findByTestId("shopping-tab")).toBeTruthy();
     expect(screen.getByTestId("shopping-card-list-2")).toBeTruthy();
+  });
+
+  it("restores shopping selection on forward navigation and clears it on other popstate tabs", async () => {
+    render(<MypageScreen initialAuthenticated />);
+    const user = userEvent.setup();
+    await openShoppingSurface(user);
+    await user.click(await screen.findByTestId("shopping-card-list-1"));
+    expect(await screen.findByTestId("shopping-detail-embedded")).toBeTruthy();
+
+    window.history.back();
+    await waitFor(() => expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull());
+    window.history.forward();
+    expect(await screen.findByTestId("shopping-detail-embedded")).toBeTruthy();
+
+    act(() => {
+      window.history.replaceState({}, "", "/mypage?tab=leftovers&shoppingListId=list-1");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(await screen.findByText("남은 김치찌개")).toBeTruthy();
+    expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull();
+  });
+
+  it.each(["목록으로", "장보기 기록", "남은 요리"])(
+    "clears shopping URL selection on explicit %s while preserving return context and history state",
+    async (action) => {
+      window.history.replaceState(
+        { __NA: true, preserved: "next-state" },
+        "",
+        "/mypage?tab=shopping&shoppingListId=list-1&returnTo=%2Fplanner&restore=shopping-history-tab&returnSurface=mypage.shopping-history&keep=1#section",
+      );
+      render(<MypageScreen initialAuthenticated />);
+      expect(await screen.findByTestId("shopping-detail-embedded")).toBeTruthy();
+      await screen.findByText("완료된 장보기 기록은 수정할 수 없어요");
+      const user = userEvent.setup();
+
+      if (action === "목록으로") {
+        await user.click(screen.getAllByRole("button", { name: action })[0]);
+      } else {
+        await user.click(screen.getByRole("tab", { name: action }));
+      }
+
+      expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull();
+      const params = new URLSearchParams(window.location.search);
+      expect(params.has("shoppingListId")).toBe(false);
+      expect(params.get("tab")).toBe(action === "남은 요리" ? "leftovers" : "shopping");
+      expect(params.get("returnTo")).toBe("/planner");
+      expect(params.get("restore")).toBe("shopping-history-tab");
+      expect(params.get("returnSurface")).toBe("mypage.shopping-history");
+      expect(params.get("keep")).toBe("1");
+      expect(window.location.hash).toBe("#section");
+      expect(window.history.state).toEqual({ __NA: true, preserved: "next-state" });
+      if (action !== "남은 요리") {
+        expect(await screen.findByTestId("shopping-history-calendar")).toBeTruthy();
+        expect(mockFetchShoppingHistory).toHaveBeenCalledTimes(1);
+      }
+
+      cleanup();
+      render(<MypageScreen initialAuthenticated />);
+      await screen.findByText("집밥러");
+      expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull();
+    },
+  );
+
+  it("preserves query, hash, and Next history state when opening a shopping detail", async () => {
+    window.history.replaceState({ __NA: true }, "", "/mypage?returnTo=%2Fplanner&keep=1#section");
+    render(<MypageScreen initialAuthenticated />);
+    const user = userEvent.setup();
+    await openShoppingSurface(user);
+    const pushState = vi.spyOn(window.history, "pushState");
+    await user.click(await screen.findByTestId("shopping-card-list-1"));
+    expect(await screen.findByTestId("shopping-detail-embedded")).toBeTruthy();
+    expect(pushState).toHaveBeenCalledTimes(1);
+    expect(window.history.state).toEqual({ __NA: true });
+    expect(new URLSearchParams(window.location.search).get("returnTo")).toBe("/planner");
+    expect(new URLSearchParams(window.location.search).get("keep")).toBe("1");
+    expect(window.location.hash).toBe("#section");
+    pushState.mockRestore();
+  });
+
+  it.each([404, 500])("keeps the existing detail error UI for a direct shopping URL (%s)", async (status) => {
+    window.history.replaceState({}, "", "/mypage?tab=shopping&shoppingListId=missing-list");
+    mockFetchShoppingListDetail.mockRejectedValue(Object.assign(new Error("Unavailable"), { status }));
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByRole("heading", { name: "장보기 리스트를 불러올 수 없어요" })).toBeTruthy();
+    expect(mockFetchShoppingListDetail).toHaveBeenCalledWith("missing-list");
+    expect(mockFetchShoppingHistory).not.toHaveBeenCalled();
+  });
+
+  it("keeps the existing unauthorized detail redirect for a direct shopping URL", async () => {
+    window.history.replaceState({}, "", "/mypage?tab=shopping&shoppingListId=list-1");
+    mockFetchShoppingListDetail.mockRejectedValue(Object.assign(new Error("Unauthorized"), { status: 401 }));
+    render(<MypageScreen initialAuthenticated />);
+
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith("/login?next=/shopping/lists/list-1"));
+    expect(mockFetchShoppingHistory).not.toHaveBeenCalled();
   });
 
   it("keeps completed shopping history detail inside mypage with list return actions", async () => {
