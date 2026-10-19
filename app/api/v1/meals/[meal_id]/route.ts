@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import {
@@ -9,7 +10,6 @@ import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { readVerifiedAccountGenerationSession } from
   "@/lib/server/account-generation/session-authority";
@@ -30,53 +30,18 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  code?: string;
-  message: string;
-}
-
-interface MealRow {
-  id: string;
-  user_id: string;
-  planned_servings: number;
-  status: string;
-}
-
-interface MealDeleteRow {
-  id: string;
-}
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface MealsSelectQuery {
-  eq(column: string, value: string): MealsSelectQuery;
-  maybeSingle(): MaybeSingleResult<MealRow>;
-}
-
-interface MealsUpdateQuery {
-  eq(column: string, value: string): MealsUpdateQuery;
-  select(columns: string): MealsUpdateQuery;
-  maybeSingle(): MaybeSingleResult<MealRow>;
-}
-
-interface MealsDeleteQuery {
-  eq(column: string, value: string): MealsDeleteQuery;
-  select(columns: string): MealsDeleteQuery;
-  maybeSingle(): MaybeSingleResult<MealDeleteRow>;
-}
-
-interface MealsTable {
-  select(columns: string): MealsSelectQuery;
-  update(values: { planned_servings: number }): MealsUpdateQuery;
-  delete(): MealsDeleteQuery;
-}
-
-interface MealsDbClient {
-  from(table: "meals"): MealsTable;
-}
+// Mutations use the existing scoped RPC writer; this client only reads ownership/state.
+export type MealsDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      meals: {
+        Row: { id: string; user_id: string; planned_servings: number; status: MealStatus };
+        Insert: never; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -231,11 +196,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const { routeClient, user } = authentication;
 
-  const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
+  const dbClient: MealsDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -313,11 +278,11 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   const { routeClient, user } = authentication;
 
-  const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
+  const dbClient: MealsDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(routeClient, user);
+    await ensureUserBootstrapState(routeClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",

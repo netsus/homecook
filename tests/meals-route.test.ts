@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
@@ -399,7 +400,7 @@ describe("GET /api/v1/meals", () => {
     expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
   });
 
-  it("adds positive revision only to Recipe Meal items and leaves product entries unchanged", async () => {
+  it.each([false, true])("adds revision only to Recipe Meal items; malformed product fixture=%s", async malformed => {
     const columnQuery = createMaybeSingleQuery([{
       data: { id: "column-1", user_id: "user-1", name: "점심" },
       error: null,
@@ -420,7 +421,7 @@ describe("GET /api/v1/meals", () => {
       data: [{ id: "recipe-1", title: "김치찌개", thumbnail_url: null }],
       error: null,
     }]);
-    const productEntry = {
+    const legacyMalformedProductEntry = {
       id: "product-entry-1",
       entry_type: "product",
       product_id: "product-1",
@@ -432,6 +433,15 @@ describe("GET /api/v1/meals", () => {
       column_id: "column-1",
       legacy_read_only: true,
     };
+    const validProductEntry = {
+      entry_type: "product", id: "product-entry-1", product_id: "product-1", product_name: "우유",
+      product_brand: null, plan_date: "2026-03-01", column_id: "column-1",
+      quantity: { amount: 1, unit: "serving" }, workflow_status: null,
+      product_nutrition_version_id: "version-1", basis_relations: [],
+      nutrition: { basis: { amount: 1, unit: "serving" }, values: {},
+        calculation_status: "unavailable", calculation_quality: null, warnings: [], sources: [] },
+    } satisfies ProductPlannerEntryData;
+    const productEntry = malformed ? legacyMalformedProductEntry : validProductEntry;
     const rpc = vi.fn(async () => ({ data: [productEntry], error: null }));
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
@@ -450,9 +460,14 @@ describe("GET /api/v1/meals", () => {
     ));
     const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body.data.items[0].revision).toBe(7);
-    expect(body.data.product_entries[0]).not.toHaveProperty("revision");
+    expect(response.status).toBe(malformed ? 500 : 200);
+    if (malformed) {
+      expect(body).toMatchObject({ success: false, data: null, error: { code: "INTERNAL_ERROR", fields: [] } });
+    } else {
+      expect(body.data.items[0].revision).toBe(7);
+      expect(body.data.product_entries[0]).not.toHaveProperty("revision");
+      expect(body.data.product_entries[0]).toMatchObject({ id: validProductEntry.id, quantity: validProductEntry.quantity });
+    }
     expect(mealsQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
   });
 
