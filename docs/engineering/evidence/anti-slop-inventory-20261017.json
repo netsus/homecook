@@ -12,17 +12,17 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "f02e0bb8976a928ee7104bd2e55e3dad71f9142c",
-    "total": 146,
-    "newFindings": 0,
-    "verificationState": "2026-10-19 resumption: fresh verify:anti-slop PASS/146/new0 at master f02e0bb89. All29 original contract IDs remain. Upstream PR1789 removed generic save fallback; PR1807 reused userDbClient and removed the old extra assertion. Historical190 PASS/10 FAIL counts are not fresh runs at this commit. Local detail candidate below is unmerged and excluded from this master observation."
-  },
-  "candidateObservation": {
-    "baseCommit": "f02e0bb8976a928ee7104bd2e55e3dad71f9142c",
-    "branch": "codex/detail-row-contract-20261019",
+    "baseCommit": "64112be4bec14e29f88449214140250685210f15",
     "total": 145,
     "newFindings": 0,
-    "contractCandidatesAfterAdoption": 28,
+    "verificationState": "PR1811 head572063abd with verified Anti145/new0 merged as64112be4. Contract28 remain in master; the saved fallback/alias change was separate upstream work. Detail remains undeployed: official app-only plan64112be4 failed the legacy runtime-source/feature gate under current DB238. Historical190 PASS/10 FAIL are not fresh runs here. Local cook-mode candidate below is excluded from this master observation."
+  },
+  "candidateObservation": {
+    "baseCommit": "64112be4bec14e29f88449214140250685210f15",
+    "branch": "codex/cook-mode-row-contract-20261019",
+    "total": 144,
+    "newFindings": 0,
+    "contractCandidatesAfterAdoption": 27,
     "status": "local verified, unmerged, undeployed; original contract state stays pending until adoption"
   },
   "findings": [
@@ -1237,6 +1237,12 @@
       "snippet": "routeClient as unknown as StandaloneCookModeDbClient",
       "state": "needs-contract-refactor",
       "holdReason": "Generated product/ingredient/step projection has GenericStringError, missing step methods and array/object relation mismatch. Confirm exact query/schema contract before declaring row types.",
+      "pendingLocalResolution": {
+        "branch": "codex/cook-mode-row-contract-20261019",
+        "reason": "Use native consumed-table/FK select contracts and the existing ingredient/step consumer views. Preserve public/auth projections, product-only/null joins, legacy method fallback and canonical projection reassignment. No new assertion/any/wrapper or runtime permission change.",
+        "verification": "Before: existing9+newSDK7 PASS. After: new8 native projection/type/product/fallback/error tests plus existing9, total17 PASS; whole typecheck/lint/verify:anti-slop144/new0/diff PASS. Independent17/nonincremental typecheck/diff APPROVE. Accepted SQL NOT NULL precision comment for cooking_method_id; compiler rechecked after narrowing.",
+        "status": "local verified, unmerged and undeployed; not deducted from master contract28"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
@@ -1253,13 +1259,14 @@
       "line": 442,
       "column": 28,
       "snippet": "(ingredientsResult.data ?? []) as unknown as NonNullable< Parameters<typeof normalizeRecipeIngredients>[0] >",
-      "state": "needs-contract-refactor",
-      "holdReason": "Ingredients result has no runtime normalized-row guard and inferred product/ingredient rows do not guarantee required normalized fields. Needs real projection/validation contract, not assertion relocation.",
-      "pendingLocalResolution": {
+      "state": "resolved",
+      "holdReason": null,
+      "resolution": {
+        "pullRequest": "https://github.com/netsus/homecook/pull/1811",
         "branch": "codex/detail-row-contract-20261019",
         "reason": "Native consumed table/FK and four literal select projections structurally satisfy the existing normalizer; remove this result assertion without a wrapper/new assertion/any or runtime permissions change.",
         "verification": "Local candidate: new8 native SDK/type/product-null-join tests PASS plus existing detail23 PASS (67 filtered); quantity13 and canonical nutrition7 PASS separately, unique51 tests. Whole typecheck/lint/verify:anti-slop145/new0/diff PASS. Independent8/typecheck nonincremental/diff APPROVE. Initial union-select TS2590 and test-only type-variable lint warnings failed and were corrected, not suppressed.",
-        "status": "unmerged and undeployed; do not subtract from master contract29 yet"
+        "status": "merged as64112be4; undeployed because official app-only plan failed the runtime-source gate under current DB238. Original approval/PIN/guard unchanged."
       },
       "review": {
         "source": "independent read-only compiler/source investigation",
