@@ -12,10 +12,10 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "ee6b41f95a364e12264a0a6d5d7d25d4e4d4ba50",
+    "baseCommit": "9542c435537f58f70734183e59084634a6ae2fdf",
     "total": 114,
     "newFindings": 0,
-    "verificationState": "Local growth boundary candidate only: direct SDK assignment2 and impossible catch removal. Before/after5suite40 PASS, whole nonincremental type/lint/verify114/new0/diff PASS. Independent product review passed; final metadata review pending. Original163 frozen identity unchanged:49resolved114remaining. Actual operating e5face/buildprelaunch-e5face22af6f-tQHGcl/DB238 remains116. Parent exacte5face authenticated shopping QA passed and released occupancy. Candidate authenticated QA and legacy completion untested. SQL/env/auth-setting/worker/policy/PIN unchanged. Separate49 original unknown, permission3/held444/historical10 failures retained."
+    "verificationState": "PR1831 head84ff8aac5 independently product/metadata APPROVED, normal merge9542c435537f58f70734183e59084634a6ae2fdf tree-identical. Merged1/operating1 with original ID2 resolutions. Before/after/exact merge5suite40 PASS, whole nonincremental type/lint/verify114/new0/diff PASS. Original163 frozen identity unchanged:49resolved114remaining. Actual official app-only deployment exit0 operating9542c435/buildprelaunch-9542c435537f-ZlS15L/DB238 ready. Selected web1466 PASS/133 explicit filtered SKIP/build PASS(100s/static94/existing warnings3); manifest200/progress+gamification protectedGET401, original readerFloor/plan/closedR2 and no pending recovery preserved. Parent exacte5face authenticated shopping QA passed and released occupancy; new version authenticated QA and legacy completion untested. SQL/env/auth-setting/worker/policy/PIN unchanged, no fresh fullDB backup/full data fingerprint claim. Separate49 original unknown, permission3/held444/historical10 failures retained."
   },
   "residualRolloutObservation": {
     "historical": true,
@@ -1443,9 +1443,9 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local candidate; not merged or operating",
+        "status": "PR1831 merged9542c435537f58f70734183e59084634a6ae2fdf; operatingprelaunch-9542c435537f-ZlS15L/DB238 ready",
         "reason": "Direct existing SDK contract assignment; gamification type-only assignment catch removed. Real initialization/auth/bootstrap errors unchanged. Only these query consumers scope-re-reviewed under continuation request.",
-        "verification": "Before/after5suite40 PASS; whole nonincremental type/lint/verify114 new0/diff PASS. Independent final review pending.",
+        "verification": "Before/after5suite40 PASS; whole nonincremental type/lint/verify114 new0/diff PASS. Independent product and metadata final reviews APPROVE.",
         "reference": "docs/engineering/anti-slop-growth-boundary-20261020.md"
       }
     },
@@ -1534,9 +1534,9 @@
       "state": "resolved",
       "holdReason": "보안·인증·세션·rate-limit 관련 승계 범위: 현재 작업에서 변경하지 않음.",
       "adoptedResolution": {
-        "status": "local candidate; not merged or operating",
+        "status": "PR1831 merged9542c435537f58f70734183e59084634a6ae2fdf; operatingprelaunch-9542c435537f-ZlS15L/DB238 ready",
         "reason": "Direct existing SDK contract assignment; gamification type-only assignment catch removed. Real initialization/auth/bootstrap errors unchanged. Only these query consumers scope-re-reviewed under continuation request.",
-        "verification": "Before/after5suite40 PASS; whole nonincremental type/lint/verify114 new0/diff PASS. Independent final review pending.",
+        "verification": "Before/after5suite40 PASS; whole nonincremental type/lint/verify114 new0/diff PASS. Independent product and metadata final reviews APPROVE.",
         "reference": "docs/engineering/anti-slop-growth-boundary-20261020.md"
       }
     },

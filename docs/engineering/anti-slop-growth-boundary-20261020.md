@@ -11,7 +11,7 @@
 
 ## 검증
 
-수정 전 기존5 suite40 PASS, 수정 후 동일40 PASS/0 SKIP다. 기존 테스트가 비로그인401·client/auth/bootstrap 실패500·동일 SDK 객체 전달·성공 응답·활동 세션 불일치409·알림/튜토리얼/아카이브 조건을 확인한다. SDK wire 계약 테스트는 가짜 fetch만 사용하고 운영 요청은 없다. 전체 비증분 `tsc --noEmit --incremental false`, 변경2파일 ESLint `--max-warnings 0`, `verify:anti-slop` fixture/tool type/baseline 신규 거부·diff-check가 통과했다. 독립 최종 검토 전에는 머지 가능으로 간주하지 않는다.
+수정 전 기존5 suite40 PASS, 수정 후와 정확 merge에서 동일40 PASS/0 SKIP다. 기존 테스트가 비로그인401·client/auth/bootstrap 실패500·동일 SDK 객체 전달·성공 응답·활동 세션 불일치409·알림/튜토리얼/아카이브 조건을 확인한다. SDK wire 계약 테스트는 가짜 fetch만 사용하고 운영 요청은 없다. 정확 merge의 전체 비증분 `tsc --noEmit --incremental false`, 변경2파일 ESLint `--max-warnings 0`, `verify:anti-slop` fixture/tool type/baseline 신규 거부·diff-check가 통과했다. 독립 제품 검토와 metadata 검토는 정확 head `84ff8aac56bb23e62729dd8e8062f772ef77bccd`를 APPROVE했다. 진도 route의 타입 제거 실행 JS는 기존 ee6와 byte동일(SHA256 `9542afc1c3c6c57f99e04589881c6448dd5ee99f662a202318967182d08f1d52`)이고 helper는 위 불가능 catch만 제거했다.
 
 Anti **116→114 /baseline207/신규0**: 연쇄52·배열37·조건부25·누산0. 원163 ID는49해결/114잔여다. 원29계약29완료와 별도인 후속2건이며 원275 전체/별도49 완료가 아니다. 기존 TS2589 실험은 과거 공유 타입 변경 당시 기록으로 보존한다. 이번 직접 대입의 현재 전체 타입 통과가 과거 실패를 없애거나 모든 SDK 경계의 안전을 증명하지 않는다.
 
@@ -27,4 +27,8 @@ Anti **116→114 /baseline207/신규0**: 연쇄52·배열37·조건부25·누산
 
 부모가 e5face/build `prelaunch-e5face22af6f-tQHGcl`의 인증 장보기 선택→새로고침 동일 상세/URL, 뒤로 목록→앞으로 동일 상세, 완료 read-only/수량 유지·관측 콘솔오류0을 확인했고 점유를 해제했다. 데이터 변경·신규 식사 생성0, legacy 실제 완료는 미실행이다. 이는 이 후보의 신규 인증 QA가 아니다.
 
-현재 이 두 소스 정리는 로컬 후보이며 운영은 e5face·DB238/Anti116이다. 독립 검토·최종 코드 검사·draft PR 이후 기존 승인 범위의 일반 머지와 공식 앱-only DB238 plan/deploy를 순차 진행한다. 실제 배포 후 ref/build/status를 확인하기 전에는 운영 반영으로 세지 않는다.
+[PR1831](https://github.com/netsus/homecook/pull/1831)은 draft로 시작해 위 검사·독립 검토·외부 GitGuardian SUCCESS 후 일반 merge `9542c435537f58f70734183e59084634a6ae2fdf`로 반영했다. 검토 head와 merge의 트리 차분0이며 CI/Actions 설정을 바꾸지 않았다. 이 묶음은 **머지1/운영1, 원본 ID2건 해결**이다.
+
+공식 앱-only plan/deploy exit0, 실제 ref `9542c435537f58f70734183e59084634a6ae2fdf` / build `prelaunch-9542c435537f-ZlS15L`·loaded=true·DB238 ready다. 선택웹1466 PASS/133 명시적 이름필터 SKIP, build PASS(100초 컴파일/정적94/기존 경고3)다. 원 databasePlanSha `a8795f5e5177cc77aa106ffb7b83a892260e0cfeddff3d5aabd6d1afac1a7692`·readerFloor `48c4ce03abaed534775095988a95a57525d5dd72`·closedR2=true·readerPending=false·recoveryPending=false·normalDeploymentAllowed=true를 유지한다. rollbackAvailable=false·integratedDatabaseGuardPresent=false도 그대로다. 새 manifest200, 변경한 progress/gamification GET2곳의 표준401(success:false/data:null/UNAUTHORIZED/fields[])을 확인했다. 비공개 로그는 `deploy-1792437793612.log`다.
+
+새 SQL·환경·자격·인증 설정·권한·worker·정책/PIN 변경0이다. 새 전체DB 백업이나 전체 데이터 지문 검증을 수행했다고 주장하지 않는다. 부모의 이전e5face 인증 QA와 이번 새 버전의 미실행 인증 QA를 구분하며 legacy 실제 완료 미실행을 유지한다. 문서만의 후속 PR은 앱을 다시 배포하지 않는다.

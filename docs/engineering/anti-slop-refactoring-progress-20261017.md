@@ -2,7 +2,7 @@
 
 이 문서는 중복 작업을 막기 위한 구현·검증 이력이다. 제품/API/DB 계약이나 배포 승인이 아니다. `AGENTS.md`가 작업 범위와 검사 강도를 결정한다.
 
-- **진도·활동 경계 로컬 후보114:** 동일 SDK 직접 타입 대입2건과 타입 단언만 감싸던 catch를 정리했다. 전후5suite40 PASS·전체 비증분 타입/lint/verify/diff·독립 제품 검토 통과, 최종 문서 검토 전이다. 원163 ID49해결/114잔여, 운영은 e5face/116·DB238과 구분한다. 고정4필드 오류 문자열 체인3건은 코드 변경 없이 명시적 유지 후보 근거만 추가했다(범위보류97에 포함). [검증·운영 QA 인계·기존 보류](anti-slop-growth-boundary-20261020.md)를 따른다.
+- **진도·활동 경계 운영 반영114:** 동일 SDK 직접 타입 대입2건과 타입 단언만 감싸던 catch를 정리했다. 전후5suite40 PASS·전체 비증분 타입/lint/verify/diff·제품·metadata 독립 APPROVE 뒤 PR1831을 일반 merge9542c435537f58f70734183e59084634a6ae2fdf로 반영했다. 원163 ID49해결/114잔여, 머지1/운영1, 실제9542c435/build `prelaunch-9542c435537f-ZlS15L`·loaded=true·DB238 ready다. 공식 앱-only plan/deploy exit0·선택웹1466 PASS/133 이름필터 SKIP·빌드 PASS(100초/정적94/기존경고3)·manifest200·변경GET2곳 wrapped401·원readerFloor/plan·복구대기없음을 확인했다. 새 인증QA/legacy 실제완료는 미실행이고 SQL/설정/PIN 변경은 없다. 고정4필드 오류 문자열 체인3건은 코드 변경 없이 명시적 유지 후보 근거만 추가했다(범위보류97에 포함). [검증·운영 QA 인계·기존 보류](anti-slop-growth-boundary-20261020.md)를 따른다.
 
 ## 현재 기준과 기록 방법
 
@@ -34,7 +34,7 @@
 
 - [진단 스냅샷·항목별 상태](evidence/anti-slop-inventory-20261017.json)는 master063f8a226의163개 occurrence를 고정했다. ID는 `file::rule::snippetSha256#occurrence`이며 hash는 기존 checker의 공백 정규화 source-span SHA256과 같다. line/occurrence는 이 checkpoint 기준이지 이동하는 현재 위치가 아니다.
 - 163개 ID의 유일성·snippet hash·baseline207의 허용 count와 일치를 기계 검증했다. 원 요청275 전체의 초기 ID를 복구했다고 주장하지 않는다.
-- 최신 checkpoint 대조 분류는 범위 보류99, 명시 보류3, 기존TS2589 기술 보류0, 계약 보강 필요0, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결47다(총163/잔여116). 이전6개 이후 PR1828 좋아요1을 추가했으며, 원163개 ID·file/rule/snippet/hash/occurrence/line/column은 그대로다. PR1819 공유/PR1825 미사용 선언 정리/PR1829 상세 복원과 선행 PR1807의 save 추가 단언은 이번1개 감소와 중복 합산하지 않는다. 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
+- 이전116 checkpoint 대조 분류는 범위 보류99, 명시 보류3, 기존TS2589 기술 보류0, 계약 보강 필요0, 병행 조율1, 고정 참고 보존8, 개선 근거 없음 유지5, 해결47다(총163/잔여116). 이전6개 이후 PR1828 좋아요1을 추가했으며, 원163개 ID·file/rule/snippet/hash/occurrence/line/column은 그대로다. PR1819 공유/PR1825 미사용 선언 정리/PR1829 상세 복원과 선행 PR1807의 save 추가 단언은 이번1개 감소와 중복 합산하지 않는다. 미검토0은 전체 해결이나 실행 불가 판정이 아니다.
 - 앞으로 각 해결 항목에 기존 ID·파일·해결 근거·관련 검사·PR을 남긴다. 보류는 실제 scope/기술 근거를 남기며 원본 finding을 삭제하지 않는다. 작은 배치를 순차 진행하고 각 완료 결과를 부모 세션에 전달한다.
 
 ## 완료 이력: 복구한 초기 checkpoint

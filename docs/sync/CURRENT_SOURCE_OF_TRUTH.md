@@ -1,8 +1,8 @@
 # Current Source of Truth
 
-## 2026-10-20 — Anti Slop114 진도·활동 경계 후보
+## 2026-10-20 — Anti Slop114 진도·활동 경계 운영 반영
 
-기준 master `ee6b41f95`에서 진도 GET/활동 helper의 동일 SDK 직접 대입2건과 타입 대입만 감싸던 불가능 catch를 정리했다. 수정 전·후5suite40 PASS·전체 비증분 타입·변경 lint·verify114/baseline207/신규0·diff 통과, 원163 ID49해결/114잔여다. 현재 로컬 후보이며 운영은 아래 e5face/Anti116·DB238이다. 부모가 정확e5face의 인증 장보기 복원 QA PASS·데이터 변경0과 점유 해제를 인계했다. 이번 후보의 인증 QA·legacy 실제 완료는 미실행이다. 독립 최종 검토·draft PR·일반 머지·공식 앱-only 배포 전에는 반영으로 세지 않는다. [범위·유지 후보3·검증·보류](../engineering/anti-slop-growth-boundary-20261020.md)를 따른다. 기존 권한3/444/별도49 미발견은 유지한다.
+PR1831 head `84ff8aac56bb23e62729dd8e8062f772ef77bccd`/merge `9542c435537f58f70734183e59084634a6ae2fdf`에서 진도 GET/활동 helper의 동일 SDK 직접 대입2건과 타입 대입만 감싸던 불가능 catch를 정리했다. 수정 전·후5suite40 PASS·전체 비증분 타입·변경 lint·verify114/baseline207/신규0·diff 통과, 원163 ID49해결/114잔여다. 머지1/운영1이며 공식 앱-only plan/deploy exit0·실제9542c435/build `prelaunch-9542c435537f-ZlS15L`·loaded=true·DB238 ready다. 선택웹1466 PASS/133 이름필터 SKIP·빌드 PASS(100초/정적94/기존경고3)·새 manifest200·progress/gamification GET2곳 wrapped401을 확인했다. 원readerFloor/databasePlanSha·closedR2·복구대기없음을 유지하며 SQL/환경/키/인증설정/worker/정책/PIN 변경0이다. 부모가 정확e5face의 인증 장보기 복원 QA PASS·데이터 변경0과 점유 해제를 인계했다. 이번 후보의 인증 QA·legacy 실제 완료는 미실행이다. 최종 코드·metadata 독립 APPROVE 뒤 draft 해제·일반 merge했고 문서 후속으로 앱을 재배포하지 않는다. [범위·유지 후보3·검증·보류](../engineering/anti-slop-growth-boundary-20261020.md)를 따른다. 기존 권한3/444/별도49 미발견은 유지한다.
 
 ## 2026-10-20 — Anti Slop116·좋아요와 장보기 상세 복원 소스
 
