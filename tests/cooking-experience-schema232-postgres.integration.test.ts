@@ -120,6 +120,22 @@ describe.skipIf(!enabled)("cooking execution on hash-pinned schema228 plus exact
   const stale=service(complete(batch,id(222),0),false);expect(stale.status).not.toBe(0);expect(stale.stderr).toContain("CONFLICT");
   const legacy=service(`select public.complete_snapshot_v2_cooking_session(${args},'${batch}','${id(322)}','{}','estimate_from_ingredients',450,clock_timestamp());`,false);expect(legacy.status).not.toBe(0);expect(legacy.stderr).toContain("CONFLICT");expect(state(batch)).toBe(before);
  });
+ it("keeps web15 original completion payloads compatible before any execution edit",()=>{
+  // The operating web15 route selects these existing RPCs and has no execution
+  // revision parameter. This verifies its DB boundary, not a browser success.
+  const legacyPrediction=predictSnapshotWeight({snapshotId:pin,baseServings:2,cookingServings:4,ingredients:original.map((row,index)=>({...row,id:String(index),preparation_state:null}))});
+  expect(legacyPrediction.prediction.status).toBe("unavailable");
+  const estimated=session(60);
+  expect(data(service(`select public.complete_snapshot_v2_cooking_session(${args},'${estimated}','${id(840)}','{}','estimate_from_ingredients',450,clock_timestamp());`))).toMatchObject({success:true});
+  expect(data(sql(`select jsonb_build_object('grams',finished_weight_g,'status',weight_status)from public.leftover_dishes where id='${estimated}';`))).toEqual({grams:450,status:"known"});
+  const unknown=session(61);
+  expect(data(service(`select public.complete_snapshot_v2_cooking_session_with_weight_evidence(${args},'${unknown}','${id(841)}','{}','weigh_later',null,null,${literal(legacyPrediction)},true,clock_timestamp());`))).toMatchObject({success:true});
+  expect(data(sql(`select jsonb_build_object('grams',finished_weight_g,'status',weight_status)from public.leftover_dishes where id='${unknown}';`))).toEqual({grams:null,status:"missing"});
+  const measured=session(62);
+  expect(data(service(`select public.complete_snapshot_v2_cooking_session_with_weight_evidence(${args},'${measured}','${id(842)}','{}','set_finished_weight',200,'reported_measured',${literal(legacyPrediction)},true,clock_timestamp());`))).toMatchObject({success:true});
+  expect(data(sql(`select private.project_cooked_weight_evidence('${measured}','${owner}');`))).toMatchObject({source:"reported_measured"});
+  expect(data(sql(`select measured_g from private.cooked_batch_weight_evidence where batch_id='${measured}' and event_kind='reported_measurement';`))).toBe(200);
+ });
  it("preserves edited nutrition and estimate through the original evidence-OFF fallback",()=>{
   const batch=session(23);service(save(batch,id(123)));sql("update private.cooked_batch_weight_evidence_control set enabled=false;");
   try{service(complete(batch,id(223),1,null,false));expect(data(sql(`select jsonb_build_object('grams',finished_weight_g)from public.leftover_dishes where id='${batch}';`))).toEqual({grams:142.5});expect(data(sql(`select private.resolve_cooked_batch_nutrition('${batch}','${owner}');`))).toMatchObject({values:{energy_kcal:{amount:190}}});}

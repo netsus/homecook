@@ -284,3 +284,56 @@ core의 수정 전masterd55f20562와 현재14464a83c를 독립 checkout에서 �
 표지 origin 공백만 추가 최소 수정해 PR1793(`4446d01fc`)으로 병합했다. same-origin GET은 매 요청 현재 책 소유권/registry/path/state와 파일한도를 확인하며 reader 상대경로도 유지한다. 관련57 PASS·독립57 PASS·type/lint/build0. 실제auth/Storage/Chrome·운영반영0이다. Anti Slop는 기준master와같은 기존5개로exit1/신규표지0/baseline변경0이다.
 
 초기133개 최신분할은 최소수정3·runtime재머지불필요75·실험8·정책/owner보류23·추가조사24이며 미착수0이다. ACK동일3개만 새server확장보류로 옮겼고 기존실험8/정책20은 활성화0이다. 필요한변경전체/운영완료는false다. core는수정전d55f20562·중간14464a83c·최종4446d01fc 모두67 PASS/2동일기대FAIL이며 마지막실패본문도정확동일하다. 현재잠금에서독립실행가능한조사범위는끝났고 표의source/worker/catalog/운영조건을따라재개한다.
+
+## 2026-10-19 — 실행분 reader의 합성 PostgREST 회귀 (로컬 후보)
+
+부모 지정 master `f9b7499a71d106ee29cd89910b8c86b6e21eae28`에서 원233/234를 그대로 적용하고 실제 PostgREST POST RPC를 호출했다. `read_cooking_execution_quantities`가 STABLE이라 요청 트랜잭션이 read-only가 되고, 변경하지 않은 세션 권위 함수의 `SELECT FOR SHARE`가 `405/25006`으로 실패한다. 직접 SQL의 read-write 호출만 확인했던 기존25개 회귀와 다른 경계다.
+
+최소 후속 migration `20261019090000_cooking_execution_reader_transaction.sql`은 정확한7인자 함수에 `ALTER FUNCTION … VOLATILE`만 적용한다. 원233/234·권위 함수·잠금·scope alias·권한을 재작성하지 않는다. 기존 schema232에서 원233→234→이번 후속 순서로 적용하는 후보이며, 과거 승인/postimage를 이번 변경으로 덮어쓰지 않는다.
+
+검증 명령은 `node scripts/run-cooking-execution-reader-http.mjs`다. 기존 hash 고정 schema-only228 archive+원229–232에서153테이블/0행과 기존109함수 inventory 차이0을 확인한 뒤 원233/234를 적용한다. 운영 역할 dump는 없어 합성 NOLOGIN 역할·테스트 계정·무작위 일시 JWT를 사용했다. PostgreSQL17과 PostgREST14.12는 로컬 digest 고정 이미지, network-none 공유 namespace/호스트 포트0/mount0이고 외부 요청·운영 데이터·운영 연결0이다.
+
+수정 전405/25006 재현 후 수정 뒤16개 검사 PASS: 소유자 revision0/1 HTTP200, 실행분190g/원본300g 분리, 재조회 무변경, 타인·stale·철회·탈퇴 중·잘못된 키버전 거절, anon/authenticated 실행 거절, SQL scope의 정확POST 허용과 잘못된scope/GET 거절, 명시read-only의 잠금 거절 유지, 후속ALTER 재적용 멱등성이다. 수정 전후 모든 public/private 함수의 `pg_proc` 속성 전체를 비교해 대상의 volatility만s→v이고 raw본문/OID/owner/ACL/config/security와 다른함수는 같다. private 실행분 테이블ACL/RLS도 전후 동일하다. revision1 영양/무게 payload는 reader 투영용 합성 marker이며 영양 계산이나 저장 RPC의 추가 검증으로 세지 않는다. 생성한 컨테이너 둘과 일시 JWT 파일의 정리도 확인한다.
+
+변경 스크립트의 Node syntax/ESLint와 독립 읽기 리뷰를 수행했다. Anti Slop 전체 명령은 기존 제품5개 baseline 초과 때문에 실패하며 이번 SQL/검증 스크립트가 그 자동 검사 대상 제품 경로를 바꾸지는 않는다. baseline은 유지한다. 제품 타입/UI 변경이 없어 전체typecheck/build/Chrome는 이번 경계 검사에서 재실행하지 않았다.
+
+운영 동등성·현재 운영 역할/ACL·실제 인증/웹→RPC 전체 흐름은 미완료다. 앞선 합성 HTTP에는 pre-request를 연결하지 않았으며 scope dispatcher는 별도 SQL 경계로만 확인했다. 당시 조회한 옛 함수명의 부재를 현재 pre-request 부재로 해석하지 않는다. `run-cooking-experience-schema232-postgres.mjs`와 기존 postimage는 원233/234 역사 검증으로 보존했고, 후속 파일까지 자동 수용하도록 보호 목록을 완화하지 않았다. 실제 배포 사전 검증에서는 후속을 명시한 실행 순서와 현재 운영232 전체 동등성을 별도로 확인해야 한다. 이 합성 회귀 실행의 운영 접근/쓰기·배포와 원격 push/PR/머지는0이다. 이후 허용된 운영 구조 관찰은 다음 절에 구분한다.
+
+## 2026-10-19 — 현재 운영 구조 사전 관찰과 추출 차단
+
+부모가 후속으로 허용한 기존 읽기 경로에서 DB232 승인 review의 정확 SHA·config bytes를 확인하고 `createRecordingDockerAdapter.inspect/query`로 현재 full-local 대상을 관찰했다. PostgreSQL17.6/원장232·역할36개·비밀번호 없는 역할 속성/멤버십·허용한 role setting만 읽었고 transaction_read_only=on 및 전후 보호 catalog 지문 동일을 확인했다. 개인 행 조회·데이터 내보내기·운영 쓰기·자격 발급/만료 변경·gen50 실행·R2/lead/C05 변경0이다.
+
+현재 authenticator의 pre-request는 `public.verify_full_local_postgrest_request_authority`다. 앞선 테스트가 확인했던 `public.verify_hybrid_request_authority_pre_request`는 현재 이름이 아니므로, 그 이름의 부재를 실제 pre-request 부재로 해석하지 않는다. 합성 postgres는 SUPERUSER였으나 현재 postgres는 NOSUPERUSER다. 앞선16PASS는 여전히 기술적 HTTP 잠금 경계만 증명하며 현재 역할·ACL 동등성으로 승격하지 않는다.
+
+기존 readiness의 메타데이터상 백업은2026-10-14T21:22:11Z, 복원 확인은21:29:35Z이며 관찰 시 약107시간 전이다. archive/off-Mac 사본의 존재만 확인했고 HMAC/복원 검증을 새로 수행하지 않았다.24시간 신선도와 현재 데이터 복구 가능성이 증명되지 않아 운영 mutation 준비는false다. 새 백업·서비스 정지·전체 복원은 이번 범위에서 실행하지 않았다.
+
+exact 검증 대상에 기존 `pg_dump --schema-only` 경로와 read-only PGOPTIONS를 사용해 새0700 fixture 입력을 만들려던 명령은 자동 승인 검토가 실행 전에 거절했다. 이유는 “현재 작업은 운영DB에 연결하지 않는 범위이며 read-only 추출도 제한 위반”이었다. 해당 명령은 실행0/재시도0/불확실 결과0이고 다른 추출 경로로 우회하지 않았다. 따라서 현재 구조 전체 복제·역할/ACL/pre-request 동등성·실제233→234→235 PostgREST 검증은 차단 상태다. [정확한 관찰·차이·백업 한계·차단](data/cooking-deployment-preflight-20261019.json).
+
+로컬 최소 수정/회귀/보고서는 현재 master 기반 커밋으로 보존한다. 실제 DB 반영 전에 새233/234/235의 exact source·적용 전 원장/구조·승인 후 postimage·현재 백업/복구 증거와 부모 직렬화가 필요하다. 기존 빠른 DB 분류기/보호 allowlist를 이번 SQL을 수용하도록 완화하지 않는다. 원격 push/PR/머지·운영 DB 쓰기·웹/worker 배포·전체 웹 운영QA 통과 주장은 없다.
+
+## 2026-10-19 — 추가 승인 후 현재 구조 fixture 검증과 백업 보존 충돌
+
+사용자의 추가 묶음 승인 전달 뒤 거절됐던 같은 read-only schema-only 추출을 한 번 재시도해 성공했다. 새 archive SHA는 `8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b`이며 과거228 fixture와 다르다. 검증된 DB232 target에서 비밀번호/토큰/개인 행 없이 schema-only 자료와 역할 속성·멤버십·허용 설정을 확보했고, 추출 전후 구조 지문과 역할 속성은 같았다. 실제 PostgREST image digest `84478545…`와 비밀 없는 두 env 설정(public/storage schema, anon role)을 확인했으며 pre-request는 authenticator의 현재 role setting을 따른다. 원격 master는 `f9b7499a…`로 기존 후보 `f703f6438`의 부모와 같았다.
+
+새 `scripts/run-cooking-current-schema-http.mjs`는 실제 역할36개·멤버십23개·관련 role setting을 비밀번호 없이 복원하고 전체 속성/멤버십과 설정의 일치를 검사한다. 현재 postgres의 NOSUPERUSER도 유지한다.153테이블/0행과 기존109함수 inventory 차이0 뒤 원233→234→후속235를 적용한다. PostgREST는 현재와 같은 image/DB role/public·storage schema/pre-request 설정을 사용하되, 무작위 합성 JWT와 테스트 계정·합성 자료만 사용하고 network-none/port0/mount0을 유지한다.
+
+원본 dump와 격리 복원 후 재출력한 schema SQL은 raw bytes가 같지 않다. PostgreSQL이5개 지정 CHECK의 varchar배열→text배열 캐스트를 원소별 캐스트로 출력하고 RLS역할 및 ACL의독립GRANT 순서가 달라진다. 새 비교기는 정확한 dump 객체블록에서 그5개 고정배열·역할집합순서·연속GRANT순서만 정규화한다. REVOKE/문맥변경 순서와 함수 본문/문자열은 보존하며, 함수 안의 가짜 객체header가 블록을 자르거나 지원하지 않는 함수dump이면 거절한다. 현재 고정자료의469함수는 모두 지원하는 dollar본문이다. 원문2개 SHA와 canonical SHA·정규화 범위를 보고한다. 권한/정책/미등록제약/함수변경을 감지하는 Node8개 회귀가 있다. 이는 새 fixture 비교이며 과거 migration/fence/승인/postimage를 재작성하거나 대체하지 않는다.
+
+현재 pre-request를 실제 통과하는 HTTP17개는 수정 전405/25006 재현과 수정 후 revision0/1 조회, missing/wrong scope 및 권위/역할 거절, 본문·권한·RLS 보존을 확인한다. `--sql-regression`은 별도 disposable DB에서 기존25개 SQL 회귀를 원233/234/235와 함께 실행하며 SQL/시험파일SHA를 고정한다. 이 검사도 실제 운영 사용자·운영 JWT·웹 전체 흐름·실제 음식 정답·전체 운영QA를 증명하지 않는다.
+
+**운영 백업 단계에서 새 보존 충돌을 발견해 실행을 보류했다.** 기존 `full-local-platform-backup.mjs`의 consistent cut은 gateway/auth/PostgREST/Storage(+Realtime) 컨테이너를 멈춘다. 고정v85와 현재가 같은 worker 소스는 claim RPC의 연결 오류/비정상 응답을 `runOnce → poll loop → runner` 밖으로 전파해 exit1이 될 수 있다. 백업 finally는 API 컨테이너만 재시작하며 별도 gen50 worker의 동일 PID/실행 상태를 복구하지 않는다. 실제 백업이나 worker 종료를 실행·관측한 것은 아니다. 일반 백업 승인만으로 gen50 재시작·재등록·자격 변경이 허용됐다고 해석하지 않고, 운영 담당자에게 기존 절차와 보존 조건을 함께 만족할 중단/복구 조율을 요청한다.
+
+백업 통과 뒤 push/PR/머지·DB·웹을 진행하라는 순서를 유지한다. 현재 최신 백업 생성·복원 검증·원격 쓰기·DB233/234/235 적용·웹 배포·운영 브라우저 QA는 미실행이다. gen50/자격/만료/고정A·B/활성화 기록·R2/lead/C05와 기존 사용자 데이터의 변경은0이다. [현재 fixture 검증과 백업 보류 근거](data/cooking-current-schema-preflight-20261019.json)를 따른다.
+
+## 2026-10-19 — 백업/복구 실행 전 계획만 구체화
+
+운영 담당자가 확인한 동일 gen50 plist의 일시 bootout/bootstrap 경로와 최신 무작업 관찰을 반영해 [최소 백업·DB·웹 순서](cooking-backup-deploy-sequence-20261019.md)를 작성했다. 기존 exported snapshot 백업은 API/worker 중단 없는 DB-only 경로이며 전체 플랫폼의 Storage/off-Mac/암호화/clean restore/readiness를 대체하지 않는다. 현재 full backup의 API finally와 worker/enqueue fence 실패 복구 연결, 요리233/234/235의 exact review, 정상 새 웹 handoff가 미완료이므로 실행 준비 완료라고 하지 않는다. policy/updated_at·자격·세대·A/B/역사 증거는 유지한다.
+
+선택 회귀4파일107 PASS이며 별도 첫 실행의 request-role 유지보수 suite는 기존 파생 fixture import 누락으로 collection 실패했다. 이번 단계는 문서와 로컬 mock/fixture 검증뿐이며 서비스 중지·백업/복원·원격 쓰기·DB/웹 반영은0이다. 실제 실행은 부모 직렬화와 문서에 적은 좁은 연결/실패 경로 검증 뒤에 진행한다.
+
+
+### 2026-10-19 운영 반영 준비 후속
+
+최신 플랫폼 백업·승인된 별도 매체 사본·실제 격리 복원·키 복구·readiness를 완료했다. 현재232 구조에서 SQL26, native 보호 엔진5시나리오와20카탈로그 부정 검사, 기존174회귀·typecheck 및 독립 리뷰를 통과했다. 원233/234/235를 단일 transaction으로 반영하고 gen50/새키/정책ON/만료/원A·B를 보존하는 별도 요리 연결을 준비했다. 세부 순서·지문·실패 보호는 [운영 순서 기록](cooking-backup-deploy-sequence-20261019.md)에 있다. 이 기록 시점 실제 DB235·새 웹 배포·운영 Chrome 검증은 아직 미완료다.
+
+최근 두 오일 후보의 cache ID는 실재 catalog가 아닌 가상 UUID였음을 현재 행으로 확인했다. 기존 editable 계약에 catalog identity 선택이 없어 운영 UPDATE는 하지 않았고, 원문/현재량/과거 pin 보존 조건의 다음 별도 묶음으로 분리했다. [현재 연결 제약](recent-nutrition-source-review-20261017.md)을 따른다.

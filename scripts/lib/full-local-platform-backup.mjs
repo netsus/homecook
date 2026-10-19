@@ -243,6 +243,7 @@ export function assertExternalBackupPath({ output, repositoryRoot }) {
 }
 
 export function createFailSafeConsistentCutController({
+  assertRestartSafe = () => {},
   startWriter,
   stopWriter,
   writers,
@@ -251,6 +252,7 @@ export function createFailSafeConsistentCutController({
     !Array.isArray(writers)
     || writers.some((writer) => typeof writer !== "string" || !writer)
     || new Set(writers).size !== writers.length
+    || typeof assertRestartSafe !== "function"
     || typeof startWriter !== "function"
     || typeof stopWriter !== "function"
   ) {
@@ -271,7 +273,17 @@ export function createFailSafeConsistentCutController({
       const failures = [];
       for (const writer of [...stopped].reverse()) {
         try {
+          assertRestartSafe();
           startWriter(writer);
+          try {
+            assertRestartSafe();
+          } catch (error) {
+            // A delayed start must not undo containment performed concurrently.
+            try { stopWriter(writer); } catch (stopError) {
+              throw new AggregateError([error, stopError], "Writer restarted after fence loss; stop uncertain");
+            }
+            throw error;
+          }
           stopped.delete(writer);
         } catch (error) {
           failures.push(error);

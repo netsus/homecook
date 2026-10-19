@@ -1,0 +1,35 @@
+{
+  "schema": "homecook.cooking-backup-current-evidence.v1",
+  "status": "backup-verified-database-and-web-pending",
+  "backup": {
+    "sourceRef": "ec3762e10",
+    "operationId": "cooking-experience-backup-20261019-5OioFg",
+    "archiveSha256": "10f8d72f108c3506cf77a1bfa890660bf2c70190b8cfc7f3f17205f870912974",
+    "localAuthentication": "PASS",
+    "offMacCopy": "PASS after exact destination/payload user approval",
+    "isolatedDatabaseStorageRestore": "PASS",
+    "keyRecovery": "PASS",
+    "readinessSha256": "61bd09a218dfc78a0f80d9454e66a1e3ddb30fa2d021063e3ebd538a135b8e79",
+    "readinessRecord": "PASS"
+  },
+  "operating": {
+    "webRef": "15b1a36f9b4c4c293cd8f92c6f2824b13ba7eaf9",
+    "webBuild": "prelaunch-15b1a36f9b4c-DVzl4n",
+    "ledgerCount": 232,
+    "workerGeneration": 50,
+    "workerPid": 22753,
+    "policyEnabled": true,
+    "expiry": "2026-10-22T14:27:30Z",
+    "queued": 0,
+    "processing": 0,
+    "permitHeld": false,
+    "originalJobs": 43,
+    "protectedFingerprintsUnchanged": true,
+    "actualAuthenticationAndReadiness": "PASS"
+  },
+  "separation": {
+    "db233to235Applied": false,
+    "newWebDeployed": false,
+    "actualNewCookingBrowserFlowVerified": false
+  }
+}

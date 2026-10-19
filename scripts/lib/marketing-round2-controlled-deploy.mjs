@@ -293,10 +293,10 @@ export async function backupRecordingSnapshot({run,container,directory,snapshot,
   const remaining=()=>{const ms=timeout-(Date.now()-began);requireValue(ms>0,"Backup budget exceeded");return ms;};
   for(const [file,args] of [[dump,["pg_dump","-h","/var/run/postgresql","-p","5432","-U","supabase_admin","-d","postgres","-Fc",`--snapshot=${snapshot}`]],[roles,["pg_dumpall","-h","/var/run/postgresql","-p","5432","-U","supabase_admin","--roles-only","--no-role-passwords"]]]){
     const fd=openSync(file,"wx",0o600);
-    try{run(["exec",container,...args],{timeout:remaining(),stdio:["ignore",fd,"pipe"]});fsyncSync(fd);}finally{closeSync(fd);}
+    try{await run(["exec",container,...args],{timeout:remaining(),stdio:["ignore",fd,"pipe"]});fsyncSync(fd);}finally{closeSync(fd);}
   }
   for(const args of [["pg_restore","--list"],["pg_restore","--file=/dev/null"]]){
-    const fd=openSync(dump,"r");try{run(["exec","-i",container,...args],{timeout:remaining(),stdio:[fd,"ignore","pipe"]});}finally{closeSync(fd);}
+    const fd=openSync(dump,"r");try{await run(["exec","-i",container,...args],{timeout:remaining(),stdio:[fd,"ignore","pipe"]});}finally{closeSync(fd);}
   }
   const bytes=await fs.readFile(dump);requireValue(bytes.length>0,"Empty backup");remaining();
   const metadata={path:dump,sha256:hash(bytes),bytes:bytes.length,rolesSha256:hash(await fs.readFile(roles)),snapshot,target,completedAt:new Date().toISOString(),fullArchiveDecoded:true};
@@ -304,7 +304,7 @@ export async function backupRecordingSnapshot({run,container,directory,snapshot,
 }
 
 /** No fallback target, no remote Docker context, no generic migration engine. */
-export async function createRecordingDockerAdapter({configPath,backupDirectory}) {
+export async function createRecordingDockerAdapter({configPath,backupDirectory,responsiveBackup=false}) {
   await privatePath(configPath); await privatePath(backupDirectory,true);
   const config=parseFullLocalProductionConfig(await fs.readFile(configPath,"utf8"));
   requireValue(config.FULL_LOCAL_COMPOSE_PROJECT_NAME==="homecook-full-local-isolated" && config.FULL_LOCAL_POSTGRES_VOLUME_NAME==="homecook-full-local-postgres","Wrong configured production target");
@@ -315,6 +315,17 @@ export async function createRecordingDockerAdapter({configPath,backupDirectory})
     const result=spawnSync("docker",args,{env,encoding:"utf8",timeout:5000,maxBuffer:4*1024*1024,...options});
     requireValue(result.status===0,"Local database command failed; output withheld"); return result.stdout?.trim();
   };
+  // Cooking keeps its admission-fence monitor responsive through the existing
+  // full dump/roles/decode sequence. No command, target, timeout or output path
+  // comes from this option; other features retain the original synchronous run.
+  const runBackup = responsiveBackup ? (args, options) => new Promise((resolve, reject) => {
+    const child = spawn("docker", args, { env, ...options });
+    // Diagnostics can contain database content. Only a fixed failure leaves here.
+    child.stderr?.resume();
+    child.once("error", () => reject(new Error("Local database backup command failed; output withheld")));
+    child.once("close", code => code === 0 ? resolve(undefined)
+      : reject(new Error("Local database backup command failed; output withheld")));
+  }) : run;
   let selected;
   const query=sql=>run(["exec","-i",selected.postgresContainerId,"psql","-h","/var/run/postgresql","-p","5432","-U","postgres","-d","postgres","-XAtq","-v","ON_ERROR_STOP=1"],{input:`BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; ${sql}\nCOMMIT;`});
   return {
@@ -338,7 +349,7 @@ export async function createRecordingDockerAdapter({configPath,backupDirectory})
       const postgresContext=JSON.parse(query("SELECT jsonb_build_object('searchPath',current_setting('search_path'),'timeZone',current_setting('TimeZone'));"));
       return {...openProtectedMigrationSession(selected.postgresContainerId,env,applicationName),postgresContext};
     },
-    backup:options=>backupRecordingSnapshot({...options,run,container:selected.postgresContainerId,directory:backupDirectory}),
+    backup:options=>backupRecordingSnapshot({...options,run:runBackup,container:selected.postgresContainerId,directory:backupDirectory}),
     async reloadSchema(operationId){
       requireValue(UUID.test(operationId),"Invalid reload operation");
       const session=openRecordingSession(selected.postgresContainerId,env,`r2-reload-${operationId}`);

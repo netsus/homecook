@@ -1,0 +1,84 @@
+{
+  "schema": "homecook.cooking-deployment-preflight.v1",
+  "status": "BLOCKED",
+  "sourceBase": "f9b7499a71d106ee29cd89910b8c86b6e21eae28",
+  "observation": {
+    "startedAt": "2026-10-19T08:21:46.733Z",
+    "finishedAt": "2026-10-19T08:21:48.131Z",
+    "path": "existing createRecordingDockerAdapter.inspect/query",
+    "approvedReviewSha256": "2532d389a187907d649fc5a9cffae4cb8a8c9e38fdad80c1a74d010a41be6f0e",
+    "readOnlyTransactionVerified": true,
+    "postgresVersion": "17.6",
+    "ledgerCount": 232,
+    "schemaCatalogSha256Before": "440554c06775d1c9408f9bd8f16704aa7694489c5e08c4168432a4d245d23424",
+    "schemaCatalogSha256After": "440554c06775d1c9408f9bd8f16704aa7694489c5e08c4168432a4d245d23424",
+    "roleCount": 36,
+    "rolesAttributesArtifactSha256": "6f47849596f278e2c2efd60ef58c23cf97f48b31d0d470c5a8443b082840a0b0",
+    "membershipsArtifactSha256Included": true,
+    "applicationRowsQueried": 0,
+    "applicationDataExported": 0,
+    "passwordsOrTokensQueriedOrExported": 0,
+    "operatingWrites": 0,
+    "roleConfiguredPreRequest": "public.verify_full_local_postgrest_request_authority",
+    "runtimeContainerOverridesChecked": false
+  },
+  "knownSyntheticDifferences": [
+    {
+      "role": "postgres",
+      "syntheticSuperuser": true,
+      "currentSuperuser": false
+    },
+    "Synthetic HTTP used a separate authenticator and no production pre-request entrypoint.",
+    "Previous public.verify_hybrid_request_authority_pre_request name was not current; current role configuration names public.verify_full_local_postgrest_request_authority."
+  ],
+  "backupReadiness": {
+    "pathConfigured": true,
+    "exists": true,
+    "authenticated": false,
+    "restoreExecuted": false,
+    "sha256": "23daa9613e81d1953ad1c84e391806d5a793d6a9ffedfc50d462e1d5be28ef13",
+    "backupCreatedAt": "2026-10-14T21:22:11.452Z",
+    "restoreVerifiedAt": "2026-10-14T21:29:35.130Z",
+    "backupAgeHours": 106.99347305555555,
+    "archiveExists": true,
+    "offMacCopyExists": true,
+    "note": "Metadata observation only; existing authenticated readiness verifier still required before mutation.",
+    "freshnessLimitHours": 24,
+    "metadataExceedsFreshnessLimit": true,
+    "mutationReadinessProven": false
+  },
+  "blockedAction": {
+    "action": "schema-only pg_dump from exact verified operating PostgreSQL into a new private isolated fixture input",
+    "target": "current full-local PostgreSQL17.6 / DB232",
+    "outcome": "DENIED_BEFORE_EXECUTION",
+    "reason": "Automatic approval review stated the task must not connect to operating DB, including read-only schema extraction.",
+    "automaticApprovalReviewRejected": true,
+    "executed": false,
+    "retryCount": 0,
+    "uncertainOutcome": false,
+    "alternativeExtractionAttempted": false
+  },
+  "pending": [
+    "Current complete schema/role/ACL/pre-request fixture equivalence and actual PostgREST path with233→234→235.",
+    "Fresh authenticated platform/DB backup and recovery evidence; observed readiness metadata is older than24hours.",
+    "Exact protected rollout review/ledger preimage and235 postimage; generic fast DB path is not authorization for the cooking SQL bundle.",
+    "Final deployment candidate SHA/backup boundary/serial deployment handoff to parent; no deployment yet.",
+    "Web end-to-end operating QA and Chrome user flow."
+  ],
+  "applicationOrder": [
+    "20261017210000_cooked_weight_mass_fallback.sql",
+    "20261017220000_cooking_execution_quantities.sql",
+    "20261019090000_cooking_execution_reader_transaction.sql"
+  ],
+  "safety": {
+    "historicalMigrationsRewritten": false,
+    "protectionRemoved": false,
+    "newCredentialIssued": false,
+    "credentialsOrExpiryChanged": false,
+    "gen50ExecutionChanged": false,
+    "round2OrLeadOrC05Enabled": false,
+    "remotePushPrMerge": false,
+    "operatingDbWriteOrDeploy": false
+  },
+  "localOnlyValidation": "Existing synthetic-role HTTP regression16PASS, syntax/ESLint0, independent read-only review0newP1P2. This is not operating-equivalence or web-QA proof."
+}

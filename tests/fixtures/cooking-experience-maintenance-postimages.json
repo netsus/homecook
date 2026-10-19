@@ -1,0 +1,282 @@
+{
+  "schema": "homecook.cooking-current232-to235-postimages.v1",
+  "status": "isolated-candidate-not-operating-approval",
+  "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+  "before": {
+    "catalogSha256": "83f3d5924305383b1fbc36fc1af0eefb0416f754e88b793cc98a62a0c80bc03e",
+    "immutableSha256": "63814a711dcbe8bfa642b9c4bed904a7d300e2992b246f565be3590b4e68becc",
+    "stableImmutableSha256": "683e7c6b110fbbeecff0039461dc59908adbf6c31d4bd0810c840a9a49102326",
+    "normalProjectionSha256": "042ebf3f976b20cc696da8da05b7eef61bc5c1da81cbe046fc5c67c63e2550ed",
+    "cookingFunctions": [
+      {
+        "signature": "private.record_cooked_weight_evidence(uuid,uuid,bigint,bigint,text,timestamp with time zone)",
+        "sourceMd5": "3cd68570668545224cf20cd1734abfb0",
+        "metadataSha256": "bee8dd82b3047830934127cda7a33e3a5631d13d8627d19e9878d747f2aa390c",
+        "definitionSha256": "14526c9edb65f7639e2ffc69eac3e670bef12b491f86f384fc8060339d350d48"
+      },
+      {
+        "signature": "private.resolve_cooked_batch_nutrition(uuid,uuid)",
+        "sourceMd5": "c3558905fc2c9e500da5bd7d94a7f096",
+        "metadataSha256": "8aa09d93819a3111f365dc0c2b9665d515d7b5aa7479ba9564075479ffccd50d",
+        "definitionSha256": "208d10828909193b521208f7080538148e320c5db2b922c316ce5fd3de396a57"
+      },
+      {
+        "signature": "private.verify_full_local_internal_scope()",
+        "sourceMd5": "e6eb35af2e77538b72d655b16f408967",
+        "metadataSha256": "afc4602a60961386148a8a4e11a04d35b43b97fa66fa673db6564abced8993ac",
+        "definitionSha256": "3b5f09838ffee6b4a2844bc3eebe86cd6eb75601b8ab7fc4703feb8ddeae1320"
+      },
+      {
+        "signature": "public.complete_snapshot_v2_cooking_session(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,uuid[],text,numeric,timestamp with time zone)",
+        "sourceMd5": "ae76f0df6d9000108b65828b46344f57",
+        "metadataSha256": "a70db3c064c62ed2e4aba4cae0d5b2c909ef3167ea81bd485e2c0fce37eb1e19",
+        "definitionSha256": "bc805104221c9fe46f94b53d8d997b6e2297812b4901c8978c579602e1a3e017"
+      }
+    ],
+    "scopeLink": {
+      "aliasOid": null,
+      "outerOid": "16978"
+    },
+    "executionTable": null,
+    "workerReadiness": {
+      "ready": true,
+      "release_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "policy_version": 3,
+      "schema_identity": "youtube-extraction-worker-schema-v2",
+      "catalog_fingerprint": "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05",
+      "credential_expires_at": "2099-01-01T00:00:00+00:00",
+      "policy_snapshot_digest": "d6a9c515e106134f109f65c025209bc59a1ea113bb63841803be56eea1c72889",
+      "allowed_snapshot_digest": "d6a9c515e106134f109f65c025209bc59a1ea113bb63841803be56eea1c72889",
+      "fingerprint_key_version": "1",
+      "previous_fingerprint_key_version": null,
+      "previous_fingerprint_valid_until": null
+    }
+  },
+  "after": {
+    "catalogSha256": "cb12ad34861f6a9cccbd143fbd2ddde41b3409368af81ccbcba17ab7c4a1b022",
+    "immutableSha256": "2532030399fca8d10267d662683508bbab25e92445bf74685274ad954361d3fb",
+    "stableImmutableSha256": "683e7c6b110fbbeecff0039461dc59908adbf6c31d4bd0810c840a9a49102326",
+    "normalProjectionSha256": "042ebf3f976b20cc696da8da05b7eef61bc5c1da81cbe046fc5c67c63e2550ed",
+    "cookingFunctions": [
+      {
+        "signature": "private.assert_execution_completion_revision(uuid,uuid)",
+        "sourceMd5": "7d6681a922a1ebf9ccd22537779015cf",
+        "metadataSha256": "0da15f3f9c01500ea776adc3ec8062c5d49276b39658c915c906934fbc5d9ecf",
+        "definitionSha256": "f6c420b18a1595c6743c54e643408b2aa7e69d1167bb2040b8762f171662ac88"
+      },
+      {
+        "signature": "private.record_cooked_weight_evidence(uuid,uuid,bigint,bigint,text,timestamp with time zone)",
+        "sourceMd5": "0b3943d77ae8685d3f89d20f929fe813",
+        "metadataSha256": "bee8dd82b3047830934127cda7a33e3a5631d13d8627d19e9878d747f2aa390c",
+        "definitionSha256": "ed1026e6818a1addc8f13fc1e9dcbd3b38ef96d3c007ab24f0c0b9448f493723"
+      },
+      {
+        "signature": "private.resolve_cooked_batch_nutrition(uuid,uuid)",
+        "sourceMd5": "b7f989cdaf6538c97aa1602133964e69",
+        "metadataSha256": "8aa09d93819a3111f365dc0c2b9665d515d7b5aa7479ba9564075479ffccd50d",
+        "definitionSha256": "cfaa2e2c6d415f0ab9447b3fa8f1ceb60ecc6da53c7c3ae737d7bc9bee67fce4"
+      },
+      {
+        "signature": "private.resolve_execution_batch_nutrition(uuid,uuid)",
+        "sourceMd5": "31a2200bf4a35d11d24bd8eac9f302c5",
+        "metadataSha256": "8aa09d93819a3111f365dc0c2b9665d515d7b5aa7479ba9564075479ffccd50d",
+        "definitionSha256": "d726baba1b5d09a2826b34283062dceaa23821fff4a1bab87d2927c93edd2efa"
+      },
+      {
+        "signature": "private.verify_full_local_internal_scope()",
+        "sourceMd5": "c14ae3538a84fd5bd260fe29e907351a",
+        "metadataSha256": "afc4602a60961386148a8a4e11a04d35b43b97fa66fa673db6564abced8993ac",
+        "definitionSha256": "b75f0f2f993a4760cb4d794628790fb31ad43ed1949435ea9837c0afb0731fb7"
+      },
+      {
+        "signature": "private.verify_scope_pre_cooking_execution_20261017()",
+        "sourceMd5": "e6eb35af2e77538b72d655b16f408967",
+        "metadataSha256": "afc4602a60961386148a8a4e11a04d35b43b97fa66fa673db6564abced8993ac",
+        "definitionSha256": "39e7bb73a14b110a61ca8997b7265b198f21b881cd0000dbb5b1d1749dd062f9"
+      },
+      {
+        "signature": "public.complete_cooking_execution(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,uuid[],text,numeric,text,jsonb,boolean,bigint,timestamp with time zone)",
+        "sourceMd5": "2b54c0222ab213f804e359e6db0d3607",
+        "metadataSha256": "2a3a81fc0946642c88a1590370d3592bf3c266013fecaf2d40e218a0fad13329",
+        "definitionSha256": "5bbe9ab4288a791cc8ae44391b4324b5d25c5c31bcb15646dde2ae608f74132d"
+      },
+      {
+        "signature": "public.complete_snapshot_v2_cooking_session(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,uuid[],text,numeric,timestamp with time zone)",
+        "sourceMd5": "bbdff6b6d33e34a636945a63704ed1d6",
+        "metadataSha256": "a70db3c064c62ed2e4aba4cae0d5b2c909ef3167ea81bd485e2c0fce37eb1e19",
+        "definitionSha256": "1f33e33be9ce3302ea94c0ae6e41c2c2246647c29ce8a89c9cadf97660b4f9c1"
+      },
+      {
+        "signature": "public.read_cooking_execution_quantities(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,timestamp with time zone)",
+        "sourceMd5": "e0a2dd8a4ac140fde4d45dcea68556ab",
+        "metadataSha256": "4bd0b07b63e3f7bcedf7ead2ac905d10a5e5fe95958279b336eec22b7f9d3dfc",
+        "definitionSha256": "28b8fb0a21923ed18db78e14495be6a04de01639ea539e81f0ccb0fab73504e8"
+      },
+      {
+        "signature": "public.save_cooking_execution_quantities(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,bigint,uuid,jsonb,jsonb,jsonb,jsonb,timestamp with time zone)",
+        "sourceMd5": "3bfa37846fbc467d90dd254b2932166c",
+        "metadataSha256": "67d5e2299a6bd67ffdf81dee5a5896b2564e145c46f29a4febda7c920dceb473",
+        "definitionSha256": "21b7284fe1bc94516e8e321d497fab9dbd4c856048a3faa26bc5fa71eaa3a89b"
+      }
+    ],
+    "scopeLink": {
+      "aliasOid": "16978",
+      "outerOid": "21445"
+    },
+    "executionTable": {
+      "acl": [
+        [
+          "postgres",
+          "DELETE",
+          false
+        ],
+        [
+          "postgres",
+          "INSERT",
+          false
+        ],
+        [
+          "postgres",
+          "MAINTAIN",
+          false
+        ],
+        [
+          "postgres",
+          "REFERENCES",
+          false
+        ],
+        [
+          "postgres",
+          "SELECT",
+          false
+        ],
+        [
+          "postgres",
+          "TRIGGER",
+          false
+        ],
+        [
+          "postgres",
+          "TRUNCATE",
+          false
+        ],
+        [
+          "postgres",
+          "UPDATE",
+          false
+        ]
+      ],
+      "rls": true,
+      "owner": "postgres",
+      "forced": false,
+      "columns": [
+        [
+          "session_id",
+          "uuid",
+          true,
+          null
+        ],
+        [
+          "owner_uuid",
+          "uuid",
+          true,
+          null
+        ],
+        [
+          "recipe_content_snapshot_id",
+          "uuid",
+          true,
+          null
+        ],
+        [
+          "revision",
+          "bigint",
+          true,
+          null
+        ],
+        [
+          "rows_json",
+          "jsonb",
+          true,
+          null
+        ],
+        [
+          "nutrition_snapshot_json",
+          "jsonb",
+          true,
+          null
+        ],
+        [
+          "weight_prediction_json",
+          "jsonb",
+          true,
+          null
+        ],
+        [
+          "updated_at",
+          "timestamp with time zone",
+          true,
+          null
+        ]
+      ],
+      "policies": 0,
+      "constraints": [
+        [
+          "cooking_execution_quantities_owner_uuid_fkey",
+          "FOREIGN KEY (owner_uuid) REFERENCES users(id) ON DELETE CASCADE",
+          true,
+          false,
+          false
+        ],
+        [
+          "cooking_execution_quantities_pkey",
+          "PRIMARY KEY (session_id)",
+          true,
+          false,
+          false
+        ],
+        [
+          "cooking_execution_quantities_recipe_content_snapshot_id_fkey",
+          "FOREIGN KEY (recipe_content_snapshot_id) REFERENCES recipe_content_snapshots(id) ON DELETE RESTRICT",
+          true,
+          false,
+          false
+        ],
+        [
+          "cooking_execution_quantities_revision_check",
+          "CHECK ((revision > 0))",
+          true,
+          false,
+          false
+        ],
+        [
+          "cooking_execution_quantities_rows_json_check",
+          "CHECK ((jsonb_typeof(rows_json) = 'array'::text))",
+          true,
+          false,
+          false
+        ],
+        [
+          "cooking_execution_quantities_session_id_fkey",
+          "FOREIGN KEY (session_id) REFERENCES cooking_sessions(id) ON DELETE CASCADE",
+          true,
+          false,
+          false
+        ]
+      ]
+    },
+    "workerReadiness": {
+      "ready": true,
+      "release_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "policy_version": 3,
+      "schema_identity": "youtube-extraction-worker-schema-v2",
+      "catalog_fingerprint": "de001df9981d361130136e2dff184665ec5280e82a857aa4e0e6cd593848af05",
+      "credential_expires_at": "2099-01-01T00:00:00+00:00",
+      "policy_snapshot_digest": "d6a9c515e106134f109f65c025209bc59a1ea113bb63841803be56eea1c72889",
+      "allowed_snapshot_digest": "d6a9c515e106134f109f65c025209bc59a1ea113bb63841803be56eea1c72889",
+      "fingerprint_key_version": "1",
+      "previous_fingerprint_key_version": null,
+      "previous_fingerprint_valid_until": null
+    }
+  }
+}

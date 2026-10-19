@@ -1,0 +1,242 @@
+{
+  "schema": "homecook.cooking-database235-local-evidence.v1",
+  "status": "isolated-verified-operating-pending",
+  "nativeRunId": "de8070e0ba6065e363a107546a096fba",
+  "nativeReportSha256": "b00f5731d4c2b301b61af15bdccaddbf810ed75497351908572ca5995ef033f3",
+  "network": "none",
+  "productionConnections": 0,
+  "applicationDataRestored": false,
+  "canonicalNativeMatchesFixture": true,
+  "canonicalBefore": {
+    "catalog": "e49d03ca5e78debf5e49fb192486aa0163558734855dafdba62635e251ef7421",
+    "immutable": "a10b9c123b74cb02f29d91364ebf6d1f48763641d9a9ad9bf70ddd12dfc4cc0b",
+    "stable": "e45076b6115ed4542f1508a4942d2f538a911cfc42743a08cff027b3967da3bf"
+  },
+  "canonicalAfter": {
+    "catalog": "219b1672011bdbaee9f975d8a36bfd4e60b919fc21c50c817f350650a8e865b4",
+    "immutable": "6ca30ca503975103894c71546856077d1f9d0754bb87adf290500c572a1dce77",
+    "stable": "e45076b6115ed4542f1508a4942d2f538a911cfc42743a08cff027b3967da3bf"
+  },
+  "nativeRawBefore": {
+    "catalog": "440554c06775d1c9408f9bd8f16704aa7694489c5e08c4168432a4d245d23424",
+    "immutable": "6b3873ab52cb8836b59b452a0b3104c0a91844521261424bc3e4d9fdaad421fa",
+    "stableImmutable": "61b7c4b449ea47420f0d0a9d0d8315e643a900c5250f7cb019916f638ebfbe8f"
+  },
+  "nativeRawUnchangedRemainder": {
+    "querySha256": "5a151ee64a93a2c94bf7ca6155b3b81afc8b21a1cc0d35e79ce0ad41292e69a1",
+    "sha256": "7bfcf789e77f7af13569b2042e7a41e194b1374095fa222f818f5ce6a9d473b5"
+  },
+  "helperSha256": "e22430b18e6719638162169dcbc389f0c190f32ef5d17358a36095159110c74e",
+  "mutationChecks": [
+    {
+      "name": "allowlisted table NULL/default ACL equivalence",
+      "equal": true,
+      "rollbackRestored": true
+    },
+    {
+      "name": "allowlisted schema NULL/default ACL equivalence",
+      "equal": true,
+      "rollbackRestored": true
+    },
+    {
+      "name": "allowlisted NULL/empty ACL remain different",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "nonallowlisted NULL/default ACL remain different",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "ACL grantor preserved",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "ACL grant option preserved",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "ACL entry deletion detected",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "known table physical attnum-only gap is canonical",
+      "equal": true,
+      "rollbackRestored": true
+    },
+    {
+      "name": "known table visible order preserved",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "known table visible name preserved",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "known table visible type preserved",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder preserves unrelated function body",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder preserves ACL item order",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder preserves physical attnum",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder preserves role attributes",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder preserves schema ACL representation",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder excludes exact signature but keeps overload",
+      "equal": true,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder rejects same-name different signature",
+      "equal": false,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder excludes exact new table only",
+      "equal": true,
+      "rollbackRestored": true
+    },
+    {
+      "name": "remainder includes same-name other schema table",
+      "equal": false,
+      "rollbackRestored": true
+    }
+  ],
+  "cases": [
+    {
+      "scenario": "commit",
+      "status": "committed",
+      "originalDispatches": 3,
+      "redispatchedDuringReconcile": 0,
+      "realSnapshot": "00000022-00000006-1",
+      "asyncBackupCommands": 4,
+      "backupMonitorTimerTicks": 70,
+      "fullArchiveDecoded": true,
+      "backupSha256": "988c5421cb7436484f938e7f7240e8a82d5ff05047f078d6bbcd9c927e465432",
+      "rolesSha256": "172974ada4c5b06e1b6248ec7f5c16a7a2362ca20cb8285c45a61672f324e2eb",
+      "schemaReloads": 1,
+      "allExistingRowsAndControlsPreserved": true,
+      "unchangedCatalogSha256": "73db33d52abb4406aa157146672f0bd1548384a5dd29e0e4f8f6e2af0bdd0543",
+      "rawRemainderUnchanged": true,
+      "originalScopeOidPreserved": true,
+      "actualConnectionTermination": false,
+      "guardReceiptBytesMatch": true
+    },
+    {
+      "scenario": "error-after233",
+      "status": "not_applied",
+      "originalDispatches": 1,
+      "redispatchedDuringReconcile": 0,
+      "realSnapshot": "00000050-0000000B-1",
+      "asyncBackupCommands": 4,
+      "backupMonitorTimerTicks": 69,
+      "fullArchiveDecoded": true,
+      "backupSha256": "f27af749acf9ac2ffc3e91e0c0d286f8132b71eff219071eaea22e3c9fdecc76",
+      "rolesSha256": "72c493f2b3b3d77640435f764bfba62665c516fa77b8345e7f46fad4745fc0ec",
+      "schemaReloads": 0,
+      "allExistingRowsAndControlsPreserved": true,
+      "unchangedCatalogSha256": "73db33d52abb4406aa157146672f0bd1548384a5dd29e0e4f8f6e2af0bdd0543",
+      "rawRemainderUnchanged": true,
+      "originalScopeOidPreserved": null,
+      "actualConnectionTermination": false,
+      "guardReceiptBytesMatch": true
+    },
+    {
+      "scenario": "error-after234",
+      "status": "not_applied",
+      "originalDispatches": 2,
+      "redispatchedDuringReconcile": 0,
+      "realSnapshot": "00000014-0000000F-1",
+      "asyncBackupCommands": 4,
+      "backupMonitorTimerTicks": 66,
+      "fullArchiveDecoded": true,
+      "backupSha256": "0cfff9f32ead240bf26678340234d54d11d3f0eadee962d3773a4aceae8c818c",
+      "rolesSha256": "897c75c79fdfb0bedefebede3dd35e4f7e5d9462388302ba23b19d9ccfc81b6b",
+      "schemaReloads": 0,
+      "allExistingRowsAndControlsPreserved": true,
+      "unchangedCatalogSha256": "73db33d52abb4406aa157146672f0bd1548384a5dd29e0e4f8f6e2af0bdd0543",
+      "rawRemainderUnchanged": true,
+      "originalScopeOidPreserved": null,
+      "actualConnectionTermination": false,
+      "guardReceiptBytesMatch": true
+    },
+    {
+      "scenario": "error-after235",
+      "status": "not_applied",
+      "originalDispatches": 3,
+      "redispatchedDuringReconcile": 0,
+      "realSnapshot": "0000003C-00000012-1",
+      "asyncBackupCommands": 4,
+      "backupMonitorTimerTicks": 68,
+      "fullArchiveDecoded": true,
+      "backupSha256": "90f6d9cce0861bf64a11f3d4d4b835622769d7c0ada58c60d4fe6ed2540f7964",
+      "rolesSha256": "79c337b887e0abb39a3d608ce3c9ff00cb1a80f7758140e2410c0b93bc855303",
+      "schemaReloads": 0,
+      "allExistingRowsAndControlsPreserved": true,
+      "unchangedCatalogSha256": "73db33d52abb4406aa157146672f0bd1548384a5dd29e0e4f8f6e2af0bdd0543",
+      "rawRemainderUnchanged": true,
+      "originalScopeOidPreserved": null,
+      "actualConnectionTermination": false,
+      "guardReceiptBytesMatch": true
+    },
+    {
+      "scenario": "commit-ack-unknown",
+      "status": "committed",
+      "originalDispatches": 3,
+      "redispatchedDuringReconcile": 0,
+      "realSnapshot": "00000000-00000018-1",
+      "asyncBackupCommands": 4,
+      "backupMonitorTimerTicks": 67,
+      "fullArchiveDecoded": true,
+      "backupSha256": "698f4b28e7a7b04533e8e013776207aa33913282137c8e5be557a4befbaecb00",
+      "rolesSha256": "89561f4fd991254d1d3cf5a23ef0ae8f2e1df4715abaee83eb2f2d64b03aa33b",
+      "schemaReloads": 1,
+      "allExistingRowsAndControlsPreserved": true,
+      "unchangedCatalogSha256": "73db33d52abb4406aa157146672f0bd1548384a5dd29e0e4f8f6e2af0bdd0543",
+      "rawRemainderUnchanged": true,
+      "originalScopeOidPreserved": true,
+      "actualConnectionTermination": true,
+      "guardReceiptBytesMatch": true
+    }
+  ],
+  "cleanupCompleted": true,
+  "sqlRegression": {
+    "runId": "ecef7c3ec80f5d718219bafaf1bb3886",
+    "tests": 26,
+    "status": "PASS",
+    "suiteSha256": "2a1d51a328205296c87aceecc0e443815dae23f8228a451b0dcd29d48102c0d2",
+    "cleanupCompleted": true
+  },
+  "existingRegressionTests": 174,
+  "typecheck": 0,
+  "independentReviewRemainingP1P2": 0,
+  "operatingDatabaseApplied": false,
+  "operatingWebApplied": false
+}

@@ -1,0 +1,261 @@
+{
+  "schema": "homecook.cooking-current-schema-preflight.v1",
+  "status": "OPERATING_BACKUP_HELD",
+  "baseCandidateSha": "f703f643836796f45a0f89c381dc2538e08639e6",
+  "latestMasterCompared": "f9b7499a71d106ee29cd89910b8c86b6e21eae28",
+  "sourceCapture": {
+    "directory": "/private/tmp/hc-cooking-current232-2vr7HH",
+    "startedAt": "2026-10-19T08:34:18.002Z",
+    "finishedAt": "2026-10-19T08:34:20.017Z",
+    "schemaDump": {
+      "sha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+      "bytes": 2825922,
+      "tableData": false,
+      "commentsExcluded": true,
+      "readOnly": true
+    },
+    "postgrestNonsecretSettings": {
+      "image": "postgrest/postgrest@sha256:844785450d6b046ee97f1c67ea37e3ff6b4ed7ee3570b1b91c03f66f032c4805",
+      "imageId": "sha256:16302c7c0445f430f7b959fbd80e4147dcacbbdf5676207250d45a38d0d2a7c1",
+      "nonsecretEnv": [
+        "PGRST_DB_SCHEMAS=public,storage",
+        "PGRST_DB_ANON_ROLE=anon"
+      ]
+    },
+    "catalogBefore": "440554c06775d1c9408f9bd8f16704aa7694489c5e08c4168432a4d245d23424",
+    "catalogAfter": "440554c06775d1c9408f9bd8f16704aa7694489c5e08c4168432a4d245d23424",
+    "schemaCatalogStable": true,
+    "roleAttributesStable": true,
+    "applicationDataExported": 0,
+    "passwordOrTokenExported": 0,
+    "priorSchemaOnlyDenialResolved": true,
+    "sameActionRetryCountAfterNewApproval": 1,
+    "sameActionRetryResult": "PASS"
+  },
+  "currentHttp": {
+    "schema": "homecook.cooking-current-schema-http.v1",
+    "runId": "be226b0f80ef986de94a8d8f7a1b1997",
+    "status": "PASS",
+    "network": "none",
+    "productionConnections": 0,
+    "applicationDataRestored": false,
+    "migrations": [
+      {
+        "filename": "20261017210000_cooked_weight_mass_fallback.sql",
+        "sha256": "9709397e9031ca28a1ae6dbb934502ef9092ca7bc0d6ba96d568121672ac7f2e"
+      },
+      {
+        "filename": "20261017220000_cooking_execution_quantities.sql",
+        "sha256": "34b2947952f4eedb55234ddf330ca0029c080d7c8d887542e8880a56106cbaa6"
+      }
+    ],
+    "tests": [
+      "owner baseline reader HTTP200",
+      "actual pre-request rejects missing or wrong internal scope over HTTP",
+      "authenticated cannot execute reader",
+      "anon cannot execute reader",
+      "foreign owner denied",
+      "stale session denied",
+      "repeat owner read identical",
+      "reads do not mutate session or create execution rows",
+      "private direct-read ACL unchanged",
+      "revision1 projects saved execution rows and frozen payloads without changing original rows",
+      "revision1 repeated reads preserve execution and session rows",
+      "revoked binding denied",
+      "deleting account denied",
+      "wrong binding key version denied",
+      "unchanged scope dispatcher accepts exact POST path and rejects wrong scope or GET (SQL boundary)",
+      "explicit read-only transaction still forbids authority row locking",
+      "forward ALTER reapply is idempotent and private table ACL/RLS unchanged"
+    ],
+    "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+    "ownedContainerId": "f941de4b32ad751ae57fd24d284a0ed3f4a652080ead00a31bc160b162f3e15b",
+    "roleModel": {
+      "source": "current20261019 read-only catalog",
+      "roleCount": 36,
+      "memberships": 23,
+      "passwordsCopied": false,
+      "operatingDataCopied": false
+    },
+    "restoredSchemaSqlMatches": {
+      "sourceSqlSha256": "9dfbdf9ae7ea79c6ade3cdcf33195bd5a68264887f3351e84a7748996e074cc3",
+      "restoredSqlSha256": "571d9bcd5ccbcd9b9fd8a47fcfb38aa1d908ffdcd5ee3dfb5613dd222df145b3",
+      "rawExactMatch": false,
+      "canonicalSha256": "ca50f2b954d4f1e08f7ded1e498f88b158bd97b0eec65a7a518279135163ba7f",
+      "commentsExcluded": true,
+      "normalizations": "dump headers/restrict tokens; five reviewed varchar-array checks; policy role set order; consecutive GRANT order within ACL blocks; REVOKE/context order preserved",
+      "tableData": false
+    },
+    "beforeSeed": {
+      "rows": 0,
+      "tables": 153
+    },
+    "roleAttributesAndMembershipsMatch": true,
+    "nonsecretSettingsMatch": true,
+    "pre232SourceInventory": {
+      "acl": 0,
+      "body": 0,
+      "owner": 0,
+      "missing": 0,
+      "security": 0,
+      "volatility": 0,
+      "search_path": 0,
+      "required_functions": 109
+    },
+    "fix": {
+      "path": "supabase/migrations/20261019090000_cooking_execution_reader_transaction.sql",
+      "sha256": "a24a54518783f89018645a7f9b827f97510f64e38a1ff68c2c2cd045cc213d32"
+    },
+    "sqlSuiteSha256": "220c027ae0534486fe407a41848b2c3049139f81606e8e6c53f437b71a977a13",
+    "fixture": {
+      "path": "tests/cooking-experience-schema232-postgres.integration.test.ts",
+      "sha256": "220c027ae0534486fe407a41848b2c3049139f81606e8e6c53f437b71a977a13",
+      "seededSqlCalls": 3,
+      "realApplicationRows": 0
+    },
+    "httpIsolation": {
+      "image": "postgrest/postgrest@sha256:844785450d6b046ee97f1c67ea37e3ff6b4ed7ee3570b1b91c03f66f032c4805",
+      "postgresNetwork": "none",
+      "postgrestNetwork": "owned-PG-network-namespace",
+      "mounts": 0,
+      "publishedPorts": 0,
+      "externalRequests": 0,
+      "syntheticJwtOnly": true,
+      "preRequest": "public.verify_full_local_postgrest_request_authority via exact authenticator role setting",
+      "scope": "snapshot-v2-session",
+      "operatingEquivalence": "schema/role/settings fixture only; no operating user/JWT/web equivalence"
+    },
+    "before": {
+      "status": 405,
+      "body": {
+        "code": "25006",
+        "details": null,
+        "hint": null,
+        "message": "cannot execute SELECT FOR SHARE in a read-only transaction"
+      }
+    },
+    "functionDelta": {
+      "changed": 1,
+      "onlyAttribute": "volatility",
+      "before": "s",
+      "after": "v",
+      "bodyOwnerAclOidConfigSecurityAndOtherFunctionsUnchanged": true
+    },
+    "cleanupCompleted": true
+  },
+  "currentSql": {
+    "schema": "homecook.cooking-current-schema-http.v1",
+    "runId": "54f8a94cd578a368309fcb2383f9a213",
+    "status": "PASS",
+    "network": "none",
+    "productionConnections": 0,
+    "applicationDataRestored": false,
+    "migrations": [
+      {
+        "filename": "20261017210000_cooked_weight_mass_fallback.sql",
+        "sha256": "9709397e9031ca28a1ae6dbb934502ef9092ca7bc0d6ba96d568121672ac7f2e"
+      },
+      {
+        "filename": "20261017220000_cooking_execution_quantities.sql",
+        "sha256": "34b2947952f4eedb55234ddf330ca0029c080d7c8d887542e8880a56106cbaa6"
+      }
+    ],
+    "tests": [
+      "existing25 SQL regression PASS on current schema232+original233234+reader forward"
+    ],
+    "archiveSha256": "8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b",
+    "ownedContainerId": "940069a3aea3b86ff4dc0f96e789d9139f9f722915520e339a28b49ad465278b",
+    "roleModel": {
+      "source": "current20261019 read-only catalog",
+      "roleCount": 36,
+      "memberships": 23,
+      "passwordsCopied": false,
+      "operatingDataCopied": false
+    },
+    "restoredSchemaSqlMatches": {
+      "sourceSqlSha256": "52d0094e12f731276d80301051bbfd6498c8997e3d32965304db8cacc92748fa",
+      "restoredSqlSha256": "17d5fa8d709079b06ff87c2297abe5c6457ccea03c344b99f2add9b3708af105",
+      "rawExactMatch": false,
+      "canonicalSha256": "ca50f2b954d4f1e08f7ded1e498f88b158bd97b0eec65a7a518279135163ba7f",
+      "commentsExcluded": true,
+      "normalizations": "dump headers/restrict tokens; five reviewed varchar-array checks; policy role set order; consecutive GRANT order within ACL blocks; REVOKE/context order preserved",
+      "tableData": false
+    },
+    "beforeSeed": {
+      "rows": 0,
+      "tables": 153
+    },
+    "roleAttributesAndMembershipsMatch": true,
+    "nonsecretSettingsMatch": true,
+    "pre232SourceInventory": {
+      "acl": 0,
+      "body": 0,
+      "owner": 0,
+      "missing": 0,
+      "security": 0,
+      "volatility": 0,
+      "search_path": 0,
+      "required_functions": 109
+    },
+    "fix": {
+      "path": "supabase/migrations/20261019090000_cooking_execution_reader_transaction.sql",
+      "sha256": "a24a54518783f89018645a7f9b827f97510f64e38a1ff68c2c2cd045cc213d32"
+    },
+    "sqlSuiteSha256": "220c027ae0534486fe407a41848b2c3049139f81606e8e6c53f437b71a977a13",
+    "cleanupCompleted": true
+  },
+  "verification": {
+    "httpAssertionsPassed": 17,
+    "sqlTestsPassed": 25,
+    "comparatorTestsPassed": 8,
+    "nodeSyntax": "PASS",
+    "changedEslint": "PASS",
+    "independentReview": "source-read-only; reviewer did not rerun DB tests",
+    "operatingUserJwtOrWebQa": false
+  },
+  "backupRisk": {
+    "status": "NOT_EXECUTED_PENDING_OPERATOR_COORDINATION",
+    "existingProcedure": "full-local-platform-backup.mjs backup",
+    "apiWriterStopLocation": "scripts/full-local-platform-backup.mjs:178-214",
+    "affectedServices": [
+      "api-gateway",
+      "auth",
+      "postgrest",
+      "storage",
+      "realtime if present"
+    ],
+    "workerFailurePath": [
+      "scripts/lib/youtube-extraction-worker-runtime.mjs:584 fetch failure not caught",
+      "scripts/lib/youtube-extraction-worker-runtime.mjs:274 error result throws",
+      "scripts/lib/youtube-extraction-worker-runtime.mjs:652 claim",
+      "scripts/lib/youtube-extraction-worker-runtime.mjs:953-954 poll loop without catch",
+      "scripts/youtube-extraction-worker-runner.mjs:267-269 exits with failure"
+    ],
+    "sourceMatchesFixedV85Worker": true,
+    "fixedV85Sha": "1be5eeea5dd946d8a54edf6c5fd0c3c28d1815fa",
+    "backupFinallyRestoresApiContainersOnly": true,
+    "actualBackupOrWorkerStopAttempted": false,
+    "requires": "Operating owner must coordinate an existing approved consistent cut plus preservation/recovery of the same gen50 worker and fixed A/B authority before backup. Do not infer key reissue or worker re-registration authorization."
+  },
+  "downstream": {
+    "latestBackupVerified": false,
+    "remotePushPrMerge": "NOT_STARTED; requested order requires backup first",
+    "db233234235Apply": "NOT_STARTED",
+    "webDeploy": "NOT_STARTED",
+    "operatingBrowserQa": "NOT_STARTED"
+  },
+  "preserved": {
+    "operatingDataWrites": 0,
+    "operatingServiceStops": 0,
+    "newCredentialOrRegistration": 0,
+    "gen50ExecutionChanged": false,
+    "credentialsExpiryFixedABActivationChanged": false,
+    "round2LeadC05Enabled": false,
+    "historicalMigrationsOrFencesRewritten": false
+  },
+  "validationFilesSha256": {
+    "scripts/run-cooking-current-schema-http.mjs": "6b0b38159a06c3166ae904f39e3c835df01810ec55fe47ac9b78541bd9238191",
+    "scripts/lib/cooking-schema-restore-comparison.mjs": "d8b8c9356ab40b870d0f12219b2bf689160b797b9f79e6a0bdb18e209624dac5",
+    "tests/cooking-schema-restore-comparison.test.mjs": "76dce1f0ed94272a34b098c26317eebf1ca37b7e5f9bc3ef6b28c0b8775b12f0"
+  }
+}
