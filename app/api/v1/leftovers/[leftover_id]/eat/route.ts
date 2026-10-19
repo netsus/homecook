@@ -24,9 +24,6 @@ interface RouteContext {
   }>;
 }
 
-type LeftoverMutationAuthedDbClient =
-  UserBootstrapDbClient;
-
 export async function POST(request: Request, context: RouteContext) {
   const { leftover_id: leftoverId } = await context.params;
 
@@ -54,8 +51,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (!authorized.ok) return authorized.response;
   const { routeClient, user } = authorized;
 
-  const dbClient = routeClient as unknown as
-    LeftoverMutationAuthedDbClient;
+  const dbClient: UserBootstrapDbClient = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);

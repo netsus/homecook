@@ -4,7 +4,7 @@
 
 ## 현재 기준과 기록 방법
 
-- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 독립요리·영양memory·bootstrap-only3의 별도 로컬 후보를 함께 채택하면140/계약23이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
+- 최신 master: `64112be4bec14e29f88449214140250685210f15`(PR1811 merge), 검증 head572063abd의 진단 **145**, baseline **207**, 신규 **0**. 계약28(독립요리1+영양memory1+bootstrap26)이 남는다. 상세는 머지됐으나 DB238 앱 successor 가드에 막혀 미배포다. 독립요리·영양memory·bootstrap-only3·leftovers2의 별도 로컬 후보를 함께 채택하면138/계약21이며 모두 미머지·미배포다. 과거146/147과 현재 단계를 구분한다.
 - 후속6제품PR(#1773–#1778)은157→147을 확인했다. 아래147 checkpoint는 제품 변경 없이 실제 merge·통합검사·미반영 실험을 정리한다. 원 요청 전체 완료나 잔여29의 전체 불가 판정이 아니다.
 - 원 요청의 **275건**과 별도 **49건**은 같은 목록이 아니다. 49건 원본은 미확인이므로 현재 진단과 합산하지 않는다.
 - `275→233` 초기 구간과 `191→185` 중간 구간은 이번 승계에서 PR별 귀속을 복구하지 못했다. 차이를 특정 PR 성과로 채우지 않는다.
@@ -320,6 +320,13 @@ PR 링크는 당시 검사와 상세 diff의 근거다. 이 구간은 first-pare
 - 실패한 native/legacy union 초안은 overload TS2349가 발생해 전부 폐기했다. 선택 결과의 list/single 단계를 잘못 선언한 TS2322도 실제 select→maybeSingle 단계로 수정했다. 기존 실패를 감추거나 suppress하지 않았다. 원래 보존된 bootstrap 실험 작업트리의 미추적 fixture는 수정하지 않고 현재 작업트리에 별도 복사·확장했다.
 - factory의 기존 SDK generic any까지 해결했다는 뜻은 아니다. 이번 증거는 실제 선택 필드/nullable/cardinality와 소비 계약·요청 wire이며 실제 DB/RLS·운영 검증은 아니다. auth/factory/플래너/meal 제품 코드와 SQL·배포 도구·환경·운영 데이터는 변경하지 않았다.
 - 앞선 로컬 커밋 `a30be1a6a`·`ad298ab0b`와 이번3건을 채택하면 bootstrap23이 남는다. master 계약28 상태는 아직 차감하지 않고 원장에 pendingLocalResolution5건으로 보존한다. push/PR/머지/배포는 실행하지 않았다.
+
+## Bootstrap 후속: leftovers 목록·eat2건 로컬 완료
+
+- 첫3건은 `0c9320a80`으로 보존했다. 다음 목록/eat의 연쇄 단언2건을 제거했다. 목록의 손코딩 fluent interface를 소비6표의 native SDK 행과 실제 `meals.column_id`/`cooking_session_meals.meal_id` many-to-one FK로 맞췄다. 같은 request client를 bootstrap과 reader에 직접 구조대입하며 eat의 단발 타입 별칭을 삭제했다. 큰 공통 추상화·새 단언·wrapper·억제0이다.
+- 기존44 PASS 후 최종3 suite52 PASS(SDK8+backend33+bootstrap11), 전체 typecheck·변경 lint(max-warnings0)·Anti138/baseline207/신규0·diff PASS다. 독립 리뷰는 SDK/backend41+parser30=71 PASS와 전체 nonincremental typecheck/diff를 확인해 APPROVE했다. 서로 겹친 성공 수는 합산하지 않는다.
+- SDK 신규 회귀는 정확 선택문·owner/in 필터·정렬·eaten 만료 조건·snapshot 우선·source 우선/origin fallback·null 관계·guest401/누락snapshot500/조회오류500을 고정했다. 최초 타입 fixture의 nullable FK 기대값은 SDK의 실제 NOT NULL FK 객체 추론과 달라 실패해 실제 추론으로 정정했다. nullable runtime/array-shaped 호환 방어는 기존대로이며 타입·검사를 약화하지 않았다.
+- 응답·auth/bootstrap·eat 권위/RPC/보상 순서와 SQL/권한/운영 환경 불변. 로컬 채택 후 잔여21과 master 잔여28을 구분한다. 도구 승계/배포는 승인 대기, push/PR/머지/DB 쓰기는0이다.
 
 ## 보류·기술적 경계
 
