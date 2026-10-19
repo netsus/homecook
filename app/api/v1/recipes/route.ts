@@ -105,16 +105,6 @@ interface QueryError {
   message: string;
 }
 
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
 interface IdLookupRow {
   id: string;
   label?: string | null;
@@ -182,32 +172,7 @@ interface ManualRecipeCreateRpcData extends Partial<ManualRecipeRow> {
   visibility?: string;
 }
 
-interface IdLookupQuery {
-  in(column: string, values: string[]): IdLookupQuery;
-  then: ArrayQueryResult<IdLookupRow>["then"];
-}
-
-interface IdLookupTable {
-  select(columns: string): IdLookupQuery;
-}
-
-interface ManualRecipeInsertQuery {
-  select(columns: string): ManualRecipeInsertQuery;
-  maybeSingle(): MaybeSingleResult<ManualRecipeRow>;
-}
-
-interface RecipesInsertTable {
-  insert(values: {
-    title: string;
-    base_servings: number;
-    source_type: "manual";
-    created_by: string;
-    thumbnail_url: string | null;
-    tags: string[];
-  }): ManualRecipeInsertQuery;
-}
-
-interface RecipeIngredientInsertRow {
+type RecipeIngredientInsertRow = {
   recipe_id: string;
   ingredient_id: string | null;
   amount: number | null;
@@ -216,16 +181,9 @@ interface RecipeIngredientInsertRow {
   display_text: string | null;
   scalable: boolean;
   sort_order: number;
-}
+};
 
-interface RecipeIngredientsInsertTable {
-  insert(values: RecipeIngredientInsertRow[]): PromiseLike<{
-    data: null;
-    error: QueryError | null;
-  }>;
-}
-
-interface RecipeStepInsertRow {
+type RecipeStepInsertRow = {
   recipe_id: string;
   step_number: number;
   instruction: string;
@@ -234,16 +192,40 @@ interface RecipeStepInsertRow {
   heat_level: string | null;
   duration_seconds: number | null;
   duration_text: string | null;
-}
+};
 
-interface RecipeStepsInsertTable {
-  insert(values: RecipeStepInsertRow[]): PromiseLike<{
-    data: null;
-    error: QueryError | null;
-  }>;
-}
-
-interface ManualRecipeDbClient {
+// Native consumed DML/read phases. Actual recipe rows retain the full source
+// enum and nullable owner; the manual insert response is checked before use.
+export type ManualRecipeDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      ingredients: {
+        Row: { id: string }; Insert: never; Update: never; Relationships: [];
+      };
+      cooking_methods: {
+        Row: { id: string; label: string }; Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; title: string; source_type: "system" | "youtube" | "manual";
+          created_by: string | null; base_servings: number };
+        Insert: { title: string; base_servings: number; source_type: "manual";
+          created_by: string; thumbnail_url: string | null; tags: string[] };
+        Update: never; Relationships: [];
+      };
+      recipe_ingredients: {
+        Row: RecipeIngredientInsertRow & { id: string };
+        Insert: RecipeIngredientInsertRow; Update: never; Relationships: [];
+      };
+      recipe_steps: {
+        Row: Omit<RecipeStepInsertRow, "ingredients_used"> & { id: string; ingredients_used: unknown };
+        Insert: RecipeStepInsertRow; Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from"> & {
+  // Preserve the legacy no-RPC direct-DML branch and its existing RPC result
+  // validation; native from() does not assert that RPC is present at runtime.
   rpc?: (
     functionName:
       | "create_manual_recipe"
@@ -253,12 +235,7 @@ interface ManualRecipeDbClient {
     data: ManualRecipeCreateRpcData | null;
     error: QueryError | null;
   }>;
-  from(table: "ingredients"): IdLookupTable;
-  from(table: "cooking_methods"): IdLookupTable;
-  from(table: "recipes"): RecipesInsertTable;
-  from(table: "recipe_ingredients"): RecipeIngredientsInsertTable;
-  from(table: "recipe_steps"): RecipeStepsInsertTable;
-}
+};
 
 interface ValidationField {
   field: string;
@@ -1195,6 +1172,13 @@ function toManualRecipeCreateData(row: ManualRecipeRow): ManualRecipeCreateData 
   };
 }
 
+function hasManualRecipeIdentity(row: {
+  source_type: "system" | "youtube" | "manual";
+  created_by: string | null;
+}): row is { source_type: "manual"; created_by: string } {
+  return row.source_type === "manual" && typeof row.created_by === "string";
+}
+
 async function finishManualRecipePublication(
   dbClient: RecipeNutritionServiceClient,
   rpcClient: NonNullable<ReturnType<typeof createRecipeFuturePropagationInternalClient>>,
@@ -1871,14 +1855,10 @@ async function findMissingIds(
   dbClient: ManualRecipeDbClient,
   table: "ingredients" | "cooking_methods",
   ids: string[],
-  selectColumns = "id",
 ) {
-  const tableClient = table === "ingredients"
-    ? dbClient.from("ingredients")
-    : dbClient.from("cooking_methods");
-  const result = await tableClient
-    .select(selectColumns)
-    .in("id", ids);
+  const result: { data: IdLookupRow[] | null; error: QueryError | null } = table === "ingredients"
+    ? await dbClient.from("ingredients").select("id").in("id", ids)
+    : await dbClient.from("cooking_methods").select("id, label").in("id", ids);
 
   if (result.error || !result.data) {
     return {
@@ -1955,8 +1935,9 @@ async function postRecipe(request: Request) {
 
   const isDerivedCreate = isRecord(body)
     && DERIVED_CREATE_MODE_KEYS.some((key) => key in body);
-  const dbClient = routeClient as unknown as
-    ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+  const dbClient: ManualRecipeDbClient = routeClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const growthClient: UserGrowthActivityDbClient = routeClient;
 
   if (isDerivedCreate) {
     const { fields, parsed } = parseDerivedRecipeCreateBody(body);
@@ -1975,8 +1956,8 @@ async function postRecipe(request: Request) {
     }
 
     try {
-      await ensurePublicUserRow(dbClient, user);
-      await ensureUserBootstrapState(dbClient, user.id);
+      await ensurePublicUserRow(bootstrapClient, user);
+      await ensureUserBootstrapState(bootstrapClient, user.id);
     } catch (bootstrapError) {
       return fail(
         "INTERNAL_ERROR",
@@ -2046,7 +2027,7 @@ async function postRecipe(request: Request) {
     }
 
     try {
-      await recordUserGrowthActivityEvent(dbClient, {
+      await recordUserGrowthActivityEvent(growthClient, {
         userId: user.id,
         activityType: "recipe_registered",
         category: "recipe",
@@ -2088,7 +2069,7 @@ async function postRecipe(request: Request) {
         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
       })
     : null;
-  const capability = await readAccountGenerationCapability(dbClient);
+  const capability = await readAccountGenerationCapability(routeClient);
   if (!capability.ok) {
     return fail("INTERNAL_ERROR", "계정 상태를 확인하지 못했어요.", 500);
   }
@@ -2147,8 +2128,8 @@ async function postRecipe(request: Request) {
   }
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -2182,7 +2163,7 @@ async function postRecipe(request: Request) {
   }
 
   const cookingMethodIds = [...new Set(parsed.steps.map((step) => step.cooking_method_id))];
-  const cookingMethodLookup = await findMissingIds(dbClient, "cooking_methods", cookingMethodIds, "id, label");
+  const cookingMethodLookup = await findMissingIds(dbClient, "cooking_methods", cookingMethodIds);
   if (cookingMethodLookup.error) {
     const authorityError = createHybridAuthorityRouteError(cookingMethodLookup.error);
     if (authorityError) {
@@ -2258,7 +2239,7 @@ async function postRecipe(request: Request) {
       return manualRecipePreparationFailure(error);
     }
     try {
-      await recordUserGrowthActivityEvent(dbClient, {
+      await recordUserGrowthActivityEvent(growthClient, {
         userId: user.id, activityType: "recipe_registered", category: "recipe",
         sourceKey: `recipe_registered:${row.id}`, sourceTable: "recipes", sourceId: row.id,
         sourceMeta: { source_type: "manual" },
@@ -2307,7 +2288,7 @@ async function postRecipe(request: Request) {
     );
 
     try {
-      await recordUserGrowthActivityEvent(dbClient, {
+      await recordUserGrowthActivityEvent(growthClient, {
         userId: user.id,
         activityType: "recipe_registered",
         category: "recipe",
@@ -2348,6 +2329,10 @@ async function postRecipe(request: Request) {
     return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
   }
 
+  if (!hasManualRecipeIdentity(recipeResult.data)) {
+    return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
+  }
+
   const ingredientInsertResult = await dbClient
     .from("recipe_ingredients")
     .insert(buildIngredientInsertRows(recipeResult.data.id, parsed.ingredients));
@@ -2378,7 +2363,7 @@ async function postRecipe(request: Request) {
   );
 
   try {
-    await recordUserGrowthActivityEvent(dbClient, {
+    await recordUserGrowthActivityEvent(growthClient, {
       userId: user.id,
       activityType: "recipe_registered",
       category: "recipe",

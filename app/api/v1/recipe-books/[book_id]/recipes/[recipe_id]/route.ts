@@ -120,6 +120,28 @@ export type RecipeBookReaderDbClient = Pick<SupabaseClient<{
   };
 }>, "from">;
 
+// DELETE mutations only. Bootstrap and secondary growth projection retain
+// their own capability contracts while this client preserves request-client RLS.
+export type RecipeBookRecipeRemoveDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_book_items: {
+        Row: { id: string; book_id: string; recipe_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_likes: {
+        Row: { id: string; user_id: string; recipe_id: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; like_count: number; save_count: number };
+        Insert: never; Update: { like_count?: number; save_count?: number }; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
+
 interface RouteContext {
   params: Promise<{
     book_id: string;
@@ -137,17 +159,6 @@ interface RecipeBookRow {
   book_type: RecipeBookType;
 }
 
-interface IdRow {
-  id: string;
-  added_at?: string | null;
-}
-
-interface RecipeCountRow {
-  id: string;
-  like_count?: number;
-  save_count?: number;
-}
-
 interface RecipeReaderRow {
   id: string;
   title: string;
@@ -162,69 +173,6 @@ interface RecipeReaderRow {
     | Array<{ extraction_meta_json?: unknown }>
     | null;
 }
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-interface RecipeBookItemsSelectQuery {
-  eq(column: string, value: string): RecipeBookItemsSelectQuery;
-  maybeSingle(): MaybeSingleResult<IdRow>;
-  then: ArrayResult<IdRow>["then"];
-}
-
-interface RecipeBookItemsDeleteQuery {
-  eq(column: string, value: string): RecipeBookItemsDeleteQuery;
-  select(columns: string): RecipeBookItemsDeleteQuery;
-  maybeSingle(): MaybeSingleResult<IdRow>;
-}
-
-interface RecipeLikesSelectQuery {
-  eq(column: string, value: string): RecipeLikesSelectQuery;
-  maybeSingle(): MaybeSingleResult<IdRow>;
-  then: ArrayResult<IdRow>["then"];
-}
-
-interface RecipeLikesDeleteQuery {
-  eq(column: string, value: string): RecipeLikesDeleteQuery;
-  select(columns: string): RecipeLikesDeleteQuery;
-  maybeSingle(): MaybeSingleResult<IdRow>;
-}
-
-interface RecipesUpdateQuery {
-  eq(column: string, value: string): RecipesUpdateQuery;
-  select(columns: string): RecipesUpdateQuery;
-  maybeSingle(): MaybeSingleResult<RecipeCountRow>;
-}
-
-interface RecipeBookItemsTable {
-  select(columns: string): RecipeBookItemsSelectQuery;
-  delete(): RecipeBookItemsDeleteQuery;
-}
-
-interface RecipeLikesTable {
-  select(columns: string): RecipeLikesSelectQuery;
-  delete(): RecipeLikesDeleteQuery;
-}
-
-interface RecipesTable {
-  update(values: { like_count?: number; save_count?: number }): RecipesUpdateQuery;
-}
-
-interface RecipeBookRecipeRemoveDbClient {
-  from(table: "recipe_book_items"): RecipeBookItemsTable;
-  from(table: "recipe_likes"): RecipeLikesTable;
-  from(table: "recipes"): RecipesTable;
-}
-
-type RecipeBookRecipeRemoveAuthedDbClient =
-  RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -661,11 +609,13 @@ async function updateRecipeCount({
 
 async function removeLikedRecipe({
   dbClient,
+  growthClient,
   bookId,
   recipeId,
   userId,
 }: {
-  dbClient: RecipeBookRecipeRemoveAuthedDbClient;
+  dbClient: RecipeBookRecipeRemoveDbClient;
+  growthClient: UserGrowthActivityDbClient;
   bookId: string;
   recipeId: string;
   userId: string;
@@ -715,7 +665,7 @@ async function removeLikedRecipe({
   }
 
   await recordRecipebookRecipeRemoved({
-    dbClient,
+    dbClient: growthClient,
     userId,
     bookId,
     recipeId,
@@ -728,11 +678,13 @@ async function removeLikedRecipe({
 
 async function removeSavedOrCustomRecipe({
   dbClient,
+  growthClient,
   bookId,
   recipeId,
   userId,
 }: {
-  dbClient: RecipeBookRecipeRemoveAuthedDbClient;
+  dbClient: RecipeBookRecipeRemoveDbClient;
+  growthClient: UserGrowthActivityDbClient;
   bookId: string;
   recipeId: string;
   userId: string;
@@ -782,7 +734,7 @@ async function removeSavedOrCustomRecipe({
   }
 
   await recordRecipebookRecipeRemoved({
-    dbClient,
+    dbClient: growthClient,
     userId,
     bookId,
     recipeId,
@@ -801,7 +753,7 @@ async function recordRecipebookRecipeRemoved({
   sourceTable,
   sourceId,
 }: {
-  dbClient: RecipeBookRecipeRemoveAuthedDbClient;
+  dbClient: UserGrowthActivityDbClient;
   userId: string;
   bookId: string;
   recipeId: string;
@@ -845,13 +797,14 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    RecipeBookRecipeRemoveAuthedDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: RecipeBookRecipeRemoveDbClient = routeClient;
+  const growthClient: UserGrowthActivityDbClient = routeClient;
   const recipeReaderClient: RecipeBookReaderDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -883,6 +836,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   if (bookResult.data.book_type === "liked") {
     return removeLikedRecipe({
       dbClient,
+      growthClient,
       bookId,
       recipeId,
       userId: user.id,
@@ -891,6 +845,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   return removeSavedOrCustomRecipe({
     dbClient,
+    growthClient,
     bookId,
     recipeId,
     userId: user.id,

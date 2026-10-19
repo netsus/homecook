@@ -4,6 +4,10 @@
 
 팬트리의 실제 nullable ingredient/product 정체성과 고정 product/version 복합 FK를 유지한다. ingredient inner-join 조회·INSERT 응답에서는 `ingredient_id` 문자열, product 조회·INSERT 응답에서는 product/version 두 문자열만 분기별로 확인하며 잘못된 projection은 기존 `500 INTERNAL_ERROR` wrapper로 닫는다. 정상 product-only의 null ingredient, optional join의 기존 빈 이름 fallback, legacy taxonomy fallback, 본인 private 제품·중복 생략·응답 후 growth·소유자 범위 DELETE/반환 개수는 유지한다. 새 입력/인증 정책이나 SQL 변경은 없다. 기존 DELETE 테스트의 비UUID fixture와 예전 reason 기대를 현행 UUID/`invalid_or_empty_ids` 계약으로만 복구했으며, 변경 전 18 PASS/2 FAIL 기록을 숨기지 않는다.
 
+## 2026-10-20 — 수동 POST native 행 경계 후보 (로컬, 미반영)
+
+`POST /recipes`의 기존 RPC 없는 직접 INSERT 호환 경로에서 반환행의 `source_type`이 `manual`이고 `created_by`가 문자열인지 확인한다. 잘못된 종류·null 소유자 반환행은 재료·단계 후속 쓰기 전에 기존 `{ success, data, error }`의 `500 INTERNAL_ERROR`로 닫는다. 정상 행 응답·조회/쓰기 순서·RPC 우선 및 오류 후 직접 DML 미전환·수동 공개 준비·파생 레시피 권한 계약은 유지한다. 새 요청 필드나 요청 거절·인증 정책 변경은 없다. 실제 SQL의 source enum·nullable 소유자와 JSON `unknown`을 유지하는 로컬 타입 정리 후보이며 운영 반영 전이다.
+
 ## 2026-10-10 — 소량 열량 표시와 승인 추정 중량 (구현·운영 미반영)
 
 API의 실제 수치·null·부분 상태·합계는 그대로 유지하고 UI만 최종0<열량<5를5kcal미만으로 표시한다. 부분값은확인된열량임을밝힌다. 승인추정중량3개는기존공식100g영양을소비하며마늘/포괄명대표연결은임의변경하지않는다. [기준·검증·보완계획](engineering/nutrition-completion-followup-20261010.md).

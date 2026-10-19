@@ -172,8 +172,8 @@ export async function POST(request: Request, context: RouteContext) {
     ]);
   }
 
-  const dbClient = routeClient as unknown as
-    ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
+  const dbClient: ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient
+    = routeClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
