@@ -1,5 +1,6 @@
 import { readRecipeProductLabels } from "@/lib/server/recipe-product-labels";
 import { NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fail, ok } from "@/lib/api/response";
 import {
@@ -29,184 +30,109 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  message: string;
+// SQL JSON columns remain unknown until the consumed snapshot shape is checked.
+type SnapshotIngredient = Omit<CookingIngredientRow, "ingredients" | "scalable" | "id"> & { scalable?: boolean | null };
+type SnapshotMethod = { code?: string | null; label?: string | null; color_key?: string | null; category_code?: string | null };
+type SnapshotStep = {
+  step_number: number; instruction: string; component_label?: string | null;
+  ingredients_used?: unknown; heat_level?: string | null; duration_seconds?: number | null;
+  duration_text?: string | null; cooking_methods?: SnapshotMethod[] | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function nullableText(value: unknown) {
+  return value === undefined || value === null || typeof value === "string";
+}
+function isSnapshotIngredient(value: unknown): value is SnapshotIngredient {
+  if (!isRecord(value)) return false;
+  return (value.ingredient_id === null || typeof value.ingredient_id === "string")
+    && (value.amount === null || typeof value.amount === "number")
+    && (value.unit === null || typeof value.unit === "string")
+    && (value.display_text === null || typeof value.display_text === "string")
+    && (value.ingredient_type === "QUANT" || value.ingredient_type === "TO_TASTE")
+    && (value.scalable === undefined || value.scalable === null || typeof value.scalable === "boolean")
+    && (value.sort_order === undefined || value.sort_order === null || typeof value.sort_order === "number")
+    && (value.row_key === undefined || typeof value.row_key === "string")
+    && (value.source_kind === undefined || value.source_kind === null || value.source_kind === "ingredient" || value.source_kind === "food_product")
+    && [value.component_label, value.food_product_id, value.food_product_nutrition_version_id,
+      value.food_product_name, value.food_product_brand].every(nullableText);
+}
+function isSnapshotMethod(value: unknown): value is SnapshotMethod {
+  return isRecord(value) && [value.code, value.label, value.color_key, value.category_code].every(nullableText);
+}
+function isSnapshotStep(value: unknown): value is SnapshotStep {
+  return isRecord(value) && typeof value.step_number === "number" && typeof value.instruction === "string"
+    && [value.component_label, value.heat_level, value.duration_text].every(nullableText)
+    && (value.duration_seconds === undefined || value.duration_seconds === null || typeof value.duration_seconds === "number")
+    && (value.cooking_methods === undefined || value.cooking_methods === null
+      || Array.isArray(value.cooking_methods) && value.cooking_methods.every(isSnapshotMethod));
 }
 
-interface SessionRow {
-  id: string;
-  user_id: string;
-  status: CookingSessionStatus;
-  contract_version?: string | null;
-  session_kind?: string | null;
-  recipe_id?: string | null;
-  recipe_content_snapshot_id?: string | null;
-  cooking_servings?: number | null;
-  recipe_content_snapshots?:
-    | {
-      id: string;
-      recipe_id: string;
-      title: string;
-      base_servings: number;
-      ingredients_json: Array<{
-        ingredient_id: string | null;
-        row_key?: string;
-        source_kind?: "ingredient" | "food_product";
-        quantity_input?: unknown;
-        amount: number | null;
-        unit: string | null;
-        display_text: string | null;
-        component_label?: string | null;
-        ingredient_type: "QUANT" | "TO_TASTE";
-        scalable?: boolean;
-        sort_order?: number;
-        food_product_id?: string | null;
-        food_product_nutrition_version_id?: string | null;
-        food_product_name?: string | null;
-        food_product_brand?: string | null;
-      }> | null;
-      steps_json: Array<{
-        step_number: number;
-        instruction: string;
-        component_label?: string | null;
-        ingredients_used?: unknown;
-        heat_level?: string | null;
-        duration_seconds?: number | null;
-        duration_text?: string | null;
-        cooking_methods?: Array<{
-          code?: string | null;
-          label?: string | null;
-          color_key?: string | null;
-          category_code?: string | null;
-        }> | null;
-      }> | null;
-    }
-    | Array<{
-      id: string;
-      recipe_id: string;
-      title: string;
-      base_servings: number;
-      ingredients_json: Array<{
-        ingredient_id: string | null;
-        row_key?: string;
-        source_kind?: "ingredient" | "food_product";
-        quantity_input?: unknown;
-        amount: number | null;
-        unit: string | null;
-        display_text: string | null;
-        component_label?: string | null;
-        ingredient_type: "QUANT" | "TO_TASTE";
-        scalable?: boolean;
-        sort_order?: number;
-        food_product_id?: string | null;
-        food_product_nutrition_version_id?: string | null;
-        food_product_name?: string | null;
-        food_product_brand?: string | null;
-      }> | null;
-      steps_json: Array<{
-        step_number: number;
-        instruction: string;
-        component_label?: string | null;
-        ingredients_used?: unknown;
-        heat_level?: string | null;
-        duration_seconds?: number | null;
-        duration_text?: string | null;
-        cooking_methods?: Array<{
-          code?: string | null;
-          label?: string | null;
-          color_key?: string | null;
-          category_code?: string | null;
-        }> | null;
-      }> | null;
-    }>
-    | null;
-}
-
-interface SessionMealRow {
-  meal_id: string;
-  recipe_id: string;
-  cooking_servings: number;
-}
-
-interface RecipeRow {
-  id: string;
-  title: string;
-  base_servings: number;
-}
-
-type ArrayResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
-interface SessionSelectQuery {
-  eq(column: string, value: string): SessionSelectQuery;
-  maybeSingle(): MaybeSingleResult<SessionRow>;
-}
-
-interface SessionMealsSelectQuery {
-  eq(column: string, value: string): SessionMealsSelectQuery;
-  then: ArrayResult<SessionMealRow>["then"];
-}
-
-interface RecipeSelectQuery {
-  eq(column: string, value: string): RecipeSelectQuery;
-  maybeSingle(): MaybeSingleResult<RecipeRow>;
-}
-
-interface IngredientsSelectQuery {
-  eq(column: string, value: string): IngredientsSelectQuery;
-  order(column: string, options: QueryOrderOption): IngredientsSelectQuery;
-  then: ArrayResult<CookingIngredientRow>["then"];
-}
-
-interface StepsSelectQuery {
-  eq(column: string, value: string): StepsSelectQuery;
-  order(column: string, options: QueryOrderOption): StepsSelectQuery;
-  then: ArrayResult<CookingStepRow>["then"];
-}
-
-interface CookingSessionsTable {
-  select(columns: string): SessionSelectQuery;
-}
-
-interface CookingSessionMealsTable {
-  select(columns: string): SessionMealsSelectQuery;
-}
-
-interface RecipesTable {
-  select(columns: string): RecipeSelectQuery;
-}
-
-interface RecipeIngredientsTable {
-  select(columns: string): IngredientsSelectQuery;
-}
-
-interface RecipeStepsTable {
-  select(columns: string): StepsSelectQuery;
-}
-
-interface CookModeDbClient {
-  from(table: "cooking_sessions"): CookingSessionsTable;
-  from(table: "cooking_session_meals"): CookingSessionMealsTable;
-  from(table: "recipes"): RecipesTable;
-  from(table: "recipe_ingredients"): RecipeIngredientsTable;
-  from(table: "recipe_steps"): RecipeStepsTable;
-  from(table: "ingredients"): {
-    select(columns: string): {
-      in(column: string, values: string[]): ArrayResult<{ id: string; standard_name: string }>;
+// Consumed native tables/FKs only; not a replacement schema or permission grant.
+export type CookModeDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      cooking_sessions: {
+        Row: { id: string; user_id: string; status: CookingSessionStatus;
+          contract_version: "legacy_v1" | "snapshot_v2"; session_kind: "planner" | "standalone" | null;
+          recipe_id: string | null; recipe_content_snapshot_id: string | null; cooking_servings: number | null };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "cooking_sessions_recipe_content_snapshot_id_fkey";
+          columns: ["recipe_content_snapshot_id"]; isOneToOne: false;
+          referencedRelation: "recipe_content_snapshots"; referencedColumns: ["id"]; }];
+      };
+      recipe_content_snapshots: {
+        Row: { id: string; recipe_id: string; title: string; base_servings: number;
+          ingredients_json: unknown; steps_json: unknown };
+        Insert: never; Update: never; Relationships: [];
+      };
+      cooking_session_meals: {
+        Row: { session_id: string; meal_id: string; recipe_id: string; cooking_servings: number };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipes: {
+        Row: { id: string; title: string; base_servings: number };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_ingredients: {
+        Row: { recipe_id: string; ingredient_id: string | null; quantity_input: unknown;
+          amount: number | null; unit: string | null; display_text: string | null; component_label: string | null;
+          ingredient_type: "QUANT" | "TO_TASTE"; scalable: boolean; sort_order: number;
+          food_product_id: string | null; food_product_nutrition_version_id: string | null };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_ingredients_ingredient_id_fkey";
+          columns: ["ingredient_id"]; isOneToOne: false; referencedRelation: "ingredients"; referencedColumns: ["id"]; }];
+      };
+      ingredients: {
+        Row: { id: string; standard_name: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_steps: {
+        Row: { id: string; recipe_id: string; step_number: number; instruction: string; component_label: string | null;
+          ingredients_used: unknown; heat_level: string | null; duration_seconds: number | null;
+          duration_text: string | null; cooking_method_id: string };
+        Insert: never; Update: never;
+        Relationships: [{ foreignKeyName: "recipe_steps_cooking_method_id_fkey";
+          columns: ["cooking_method_id"]; isOneToOne: false; referencedRelation: "cooking_methods"; referencedColumns: ["id"]; }];
+      };
+      cooking_methods: {
+        Row: { id: string; code: string; label: string; color_key: string; category_code: string | null };
+        Insert: never; Update: never; Relationships: [];
+      };
+      recipe_step_cooking_methods: {
+        Row: { step_id: string; method_id: string; position: number };
+        Insert: never; Update: never;
+        Relationships: [
+          { foreignKeyName: "recipe_step_cooking_methods_step_id_fkey"; columns: ["step_id"]; isOneToOne: false; referencedRelation: "recipe_steps"; referencedColumns: ["id"]; },
+          { foreignKeyName: "recipe_step_cooking_methods_method_id_fkey"; columns: ["method_id"]; isOneToOne: false; referencedRelation: "cooking_methods"; referencedColumns: ["id"]; },
+        ];
+      };
     };
+    Views: Record<never, never>; Functions: Record<never, never>;
   };
-}
+}>, "from">;
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
@@ -227,12 +153,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    CookModeDbClient & UserBootstrapDbClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
+  const dbClient: CookModeDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
@@ -288,8 +214,16 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 
   if (session.contract_version === "snapshot_v2" && sessionContentSnapshot) {
+    const snapshotIngredients = sessionContentSnapshot.ingredients_json ?? [];
+    const snapshotSteps = sessionContentSnapshot.steps_json ?? [];
+    // Valid legacy snapshots may omit optional metadata. Malformed JSON must
+    // fail with the API wrapper, not escape as an unhandled map/flatMap error.
+    if (!Array.isArray(snapshotIngredients) || !snapshotIngredients.every(isSnapshotIngredient)
+      || !Array.isArray(snapshotSteps) || !snapshotSteps.every(isSnapshotStep)) {
+      return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
+    }
     const ingredientIds = [
-      ...new Set((sessionContentSnapshot.ingredients_json ?? []).flatMap((ingredient) => ingredient.ingredient_id ? [ingredient.ingredient_id] : [])),
+      ...new Set(snapshotIngredients.flatMap((ingredient) => ingredient.ingredient_id ? [ingredient.ingredient_id] : [])),
     ];
     const ingredientNameMap = new Map<string, string>();
 
@@ -314,7 +248,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         id: session.recipe_id ?? sessionMeal.recipe_id,
         title: sessionContentSnapshot.title,
         cooking_servings: session.cooking_servings ?? sessionMeal.cooking_servings,
-        ingredients: (sessionContentSnapshot.ingredients_json ?? []).map((row) =>
+        ingredients: snapshotIngredients.map((row) =>
           toCookingModeIngredient({
             row: {
               ingredient_id: row.ingredient_id,
@@ -338,7 +272,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
             cookingServings: session.cooking_servings ?? sessionMeal.cooking_servings,
           }),
         ),
-        steps: (sessionContentSnapshot.steps_json ?? []).map((row) =>
+        steps: snapshotSteps.map((row) =>
           toCookingModeStep({
             step_number: row.step_number,
             instruction: row.instruction,
@@ -380,7 +314,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
   }
 
-  let stepsResult = await dbClient
+  let stepsResult: { data: CookingStepRow[] | null; error: unknown } = await dbClient
     .from("recipe_steps")
     .select(COOK_MODE_STEP_SELECT_WITH_METHODS)
     .eq("recipe_id", sessionMeal.recipe_id)
