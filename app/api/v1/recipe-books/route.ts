@@ -32,14 +32,6 @@ import type {
   RecipeBookType,
 } from "@/types/recipe";
 
-interface QueryError {
-  message: string;
-}
-
-interface QueryOrderOption {
-  ascending: boolean;
-}
-
 interface RecipeBookRow {
   id: string;
   name: string;
@@ -52,27 +44,6 @@ interface RecipeBookRow {
 interface RecipeBookSortOrderRow {
   sort_order: number;
 }
-
-interface RecipeBookCreateRow {
-  id: string;
-  name: string;
-  book_type: "custom";
-  sort_order: number;
-  cover_color_key?: RecipeBookCoverColorKey | null;
-  cover_image_url?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-type ArrayQueryResult<T> = PromiseLike<{
-  data: T[] | null;
-  error: QueryError | null;
-}>;
-
-type MaybeSingleQueryResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
 
 // List and head-count projections only. POST's creation/reward contract stays separate.
 export type RecipeBookListReadDbClient = Pick<SupabaseClient<{
@@ -106,33 +77,23 @@ export type RecipeBookListReadDbClient = Pick<SupabaseClient<{
   };
 }>, "from">;
 
-interface RecipeBookSortOrderSelectQuery {
-  eq(column: string, value: string): RecipeBookSortOrderSelectQuery;
-  order(column: string, options: QueryOrderOption): RecipeBookSortOrderSelectQuery;
-  limit(value: number): RecipeBookSortOrderSelectQuery;
-  then: ArrayQueryResult<RecipeBookSortOrderRow>["then"];
-}
-
-interface RecipeBooksInsertQuery {
-  select(columns: string): RecipeBooksInsertQuery;
-  maybeSingle(): MaybeSingleQueryResult<RecipeBookCreateRow>;
-}
-
-interface RecipeBooksTable {
-  select(columns: "sort_order"): RecipeBookSortOrderSelectQuery;
-  insert(values: {
-    user_id: string;
-    name: string;
-    book_type: "custom";
-    cover_color_key: RecipeBookCoverColorKey;
-    cover_image_url: string | null;
-    sort_order: number;
-  }): RecipeBooksInsertQuery;
-}
-
-interface RecipeBookDbClient {
-  from(table: "recipe_books"): RecipeBooksTable;
-}
+// POST consumes one table; actual builders infer each read/insert projection.
+export type RecipeBookCreateDbClient = Pick<SupabaseClient<{
+  public: {
+    Tables: {
+      recipe_books: {
+        Row: { id: string; user_id: string; name: string; book_type: RecipeBookType;
+          sort_order: number; cover_color_key: RecipeBookCoverColorKey | null;
+          cover_image_url: string | null; created_at: string; updated_at: string };
+        Insert: { user_id: string; name: string; book_type: "custom";
+          cover_color_key: RecipeBookCoverColorKey; cover_image_url: string | null;
+          sort_order: number };
+        Update: never; Relationships: [];
+      };
+    };
+    Views: Record<never, never>; Functions: Record<never, never>;
+  };
+}>, "from">;
 
 function normalizeBookName(name: unknown) {
   return typeof name === "string" ? name.trim() : "";
@@ -342,12 +303,12 @@ async function createAuthedRecipeBookDbClient(fallbackMessage: string) {
     };
   }
 
-  const dbClient = routeClient as unknown as
-    RecipeBookDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
+  const dbClient: RecipeBookCreateDbClient & UserProgressDbClient & UserGrowthActivityDbClient = routeClient;
+  const bootstrapClient: UserBootstrapDbClient = routeClient;
 
   try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return {
       response: fail(
@@ -546,7 +507,7 @@ export async function POST(request: Request) {
 
   const latestSortQuery = auth.dbClient
     .from("recipe_books")
-    .select("sort_order") as RecipeBookSortOrderSelectQuery;
+    .select("sort_order");
   const latestSortResult = await latestSortQuery
     .eq("user_id", auth.user.id)
     .order("sort_order", { ascending: false })
