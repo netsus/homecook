@@ -1,5 +1,7 @@
 # 로컬 후속: Gamification native 소비 계약
 
+검사 수치와 실패 기록은 공유 코드 커밋 `e2d42502e` 직전 working tree의 관측이다. 당시 미커밋 상태를 현재 상태로 해석하지 않는다. 이후 부모 승인으로 코드가 로컬 커밋에 보존됐으며, 아래 배포·원격 작업 미실행은 이 구현 담당자의 실행 범위를 뜻한다.
+
 기준 `origin/master d7d865ac2fa86ad5ebc445ad8266ad78080a87dc`. 전용 worktree `anti-slop-gamification-native-20261020`에 선행 Progress 두 커밋 `e823fbc34`·`9887d303c`만 cherry-pick했다(로컬 `1e4ca7fc5`·`679d7dc6c`). 공유 선행 구현은 최종 검사 인계 뒤 부모의 별도 로컬 커밋 승인을 받았다. 이 작업자는 push·PR·머지·배포를 실행하지 않았다. 기존 실패 실험과 메인/P5 작업 파일은 수정하지 않았다.
 
 ## 이번 공유 변경의 범위
