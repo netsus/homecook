@@ -146,7 +146,7 @@ function mapAccountGenerationRpcError(error: AccountGenerationRpcError | null) {
 }
 
 export async function executeAccountGenerationDelete(input: {
-  dbClient: AccountGenerationRpcClient;
+  dbClient: AccountGenerationRpcClient & OperationalEventsDbClient;
   idempotencyKey: string;
   request: Request;
   sessionAuthority: AccountGenerationSessionAuthority;
@@ -174,7 +174,7 @@ export async function executeAccountGenerationDelete(input: {
 
   if (result.error || !isCleanupPendingResult(result.data)) {
     await recordOperationalEvent(
-      input.dbClient as unknown as OperationalEventsDbClient,
+      input.dbClient,
       {
         event_type: "account_generation_delete_failure",
         severity: "critical",
@@ -233,7 +233,7 @@ export async function executeAccountGenerationDeleteReplay(input: {
 
 export async function executeAccountQuarantineResolution(input: {
   action: QuarantineResolutionAction;
-  dbClient: AccountGenerationRpcClient;
+  dbClient: AccountGenerationRpcClient & OperationalEventsDbClient;
   idempotencyKey: string;
   nickname: string | null;
   request: Request;
@@ -282,7 +282,7 @@ export async function executeAccountQuarantineResolution(input: {
     : isCleanupPendingResult(result.data);
   if (result.error || !isExpectedResult) {
     await recordOperationalEvent(
-      input.dbClient as unknown as OperationalEventsDbClient,
+      input.dbClient,
       {
         event_type: "account_quarantine_resolution_failure",
         severity: "critical",

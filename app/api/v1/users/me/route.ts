@@ -8,7 +8,7 @@ import {
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
 } from "@/lib/server/user-bootstrap";
-import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
+import { recordOperationalEvent } from "@/lib/server/admin-events";
 import {
   createAccountLifecycleInternalRpcClient,
   createRouteHandlerClient,
@@ -361,7 +361,7 @@ export async function DELETE(request: Request) {
     const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
     if (!verifiedSession.ok) {
       return failClosedGenerationDelete({
-        dbClient: serviceRoleClient as unknown as OperationalEventsDbClient,
+        dbClient: serviceRoleClient,
         request,
         userId: user.id,
       });
@@ -384,7 +384,7 @@ export async function DELETE(request: Request) {
   );
 
   if (deleteResult.error || !deleteResult.data?.deleted) {
-    await recordOperationalEvent(serviceRoleClient as unknown as OperationalEventsDbClient | null, {
+    await recordOperationalEvent(serviceRoleClient, {
       event_type: "account_delete_failure",
       severity: "error",
       source: "account",
@@ -399,7 +399,7 @@ export async function DELETE(request: Request) {
     return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
   }
 
-  await recordOperationalEvent(serviceRoleClient as unknown as OperationalEventsDbClient | null, {
+  await recordOperationalEvent(serviceRoleClient, {
     event_type: "account_delete_success",
     severity: "info",
     source: "account",
