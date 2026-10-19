@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-19 — 등록50 이후 worker 생명주기 검사 오류 복구 완료
+
+gen50 등록 뒤 이전workerPID49750을 요구한 검사 오류를 단계별 보호로 수정하고, 실제 사용자 Terminal 확인 뒤 동일50 resume를 완료했다. 원4승인·캡슐·8455/d69·DB232·고정만료를 보존했으며 재발급·재등록 없이07:45:54 UTC 활성화됐다. 공식reconcile은activated/재발급·재등록불가·역사작업보존이며 실제인증200/빈claim거부·health/readiness ready·43jobs지문/기존V2 33개일치·R2 OFF·로컬/공개로그인200을 확인했다. [원인·보호·소스결속·회귀·운영검증](../engineering/v85-registered50-resume-repair-20261019.md)을 따른다. 원격push/PR/merge는 별도 승인 차단으로 미실행이다.
+
 ## 2026-10-19 — v85 일반 데이터의 정확한 별도 승계 준비
 
 사용자가 원인 미확정 일반 데이터 변경의 불확실성을 받아들이고 정확한 현황 보존 방식의 준비를 승인했다. 전일41개 table/count/hash와 현재가 같고, 전체 보호 추가 차이0/auth10 차이0·웹15/DB232/43jobs/worker49/새8/OFF·원3승인이 유지됐다. 원 d397/d69를 보존하는 별도 네 번째 create-only 승인과41개 지문 결속을 준비하며, 이후 drift·부분 게시·OS 거부는 중단한다. 원인을 정상이라고 보증하거나 필드를 제외하지 않는다. [고정 지문·도구·확인·실제 발급 경계](../engineering/youtube-v85-normal-data-successor-20261019.md)를 따른다. 네 번째 실제 승인/발급/등록/worker 전환은 아직 실행하지 않았다.

@@ -133,12 +133,17 @@ def time_budget(seconds):
         _deadline = previous
 
 
-def services():
+def service_pids():
     found = {}
     for line in command(['/bin/launchctl', 'list']).decode().splitlines():
         fields = line.split()
         if len(fields) == 3 and fields[2] in ('com.homecook.production', 'com.homecook.youtube-extraction-worker'):
             found[fields[2]] = int(fields[0]) if fields[0].isdigit() else None
+    return found
+
+
+def services():
+    found = service_pids()
     require(found.get('com.homecook.youtube-extraction-worker') == WORKER_PID, 'WORKER_CHANGED')
     return found.get('com.homecook.production')
 
@@ -154,7 +159,15 @@ def process_identity(pid, cwd):
 
 
 def census(cwd):
-    parent = services()
+    return web_process_census(cwd, services())
+
+
+def web_census(cwd):
+    """Web-only proof; callers must separately enforce their worker lifecycle phase."""
+    return web_process_census(cwd, service_pids().get('com.homecook.production'))
+
+
+def web_process_census(cwd, parent):
     require(parent is not None, 'WEB_NOT_RUNNING')
     top = process_identity(parent, cwd)
     require(top['ppid'] == 1, 'LAUNCHER_PARENT')

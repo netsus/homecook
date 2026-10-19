@@ -15,6 +15,8 @@ import { V85 as V,V85_OPERATION_DIRECTORY as OP,v85Paths,v85MetadataPatch,v85Has
   assertV85ExecutionPlan,readV85ExecutionApproval,v85ContinuationDataDeltas,assertV85ActivatedRuntime,
   V85_AUTH_SUCCESSOR,V85_AUTH_TABLES,assertV85AuthSuccessorTool,V85_DATA_SUCCESSOR,assertV85DataSuccessorTool,v85DataPredecessor } from './lib/youtube-v85-cutover.mjs';
 import { readV85NormalTables,assertV85AcceptedNormalTables } from './lib/youtube-v85-normal-data-evidence.mjs';
+import { assertV85WorkerLifecycle,registeredV85WorkerPhase } from './lib/v85-worker-lifecycle.mjs';
+import { registeredResumeRoot,registeredResumeInvocation,verifyRegisteredResumeSource } from './lib/v85-registered-resume-source.mjs';
 import { assertRound2EightKeyFence,preserveRound2RotationState } from './lib/round2-eight-key-rotation-fence.mjs';
 import { readV85Approval,registerV85Approval } from './lib/youtube-v85-approval.mjs';
 import { V74_ACTIVATION_SHA256,V74_OPERATION_DIRECTORY,v74Paths,assertV74WorkerSuccessor,assertV74LoadedService } from './lib/prelaunch-youtube-v74-cutover.mjs';
@@ -68,6 +70,8 @@ export async function confirmV85ReviewedOperation(action,bytes,boundary,display,
   if(review.dataSuccessor)display({toolRef:review.dataSuccessor.toolRef,priorCapsuleSha256:review.dataSuccessor.priorPlanSha256,
     normalDataSha256:review.before.normalDataSha256,protectedTables:41,
     warning:'Unknown normal-data change: changed table/columns/actor remain unproven. This exact state and all 41 table count/hash entries are preserved under a separate fourth approval. Original three approvals remain unchanged; later drift still aborts. No restore, field exclusion, expiry or permission expansion.'});
+  if(registeredResumeInvocation())display({...verifyRegisteredResumeSource(review),
+    warning:'Recovery of the existing registered generation50 only. No issuance, manager issuance, registration, generation51, generation49 rollback, expiry extension, or approval replacement.'});
   await requireV85UserExecution(action,boundary,confirm);
   return sha(bytes);
 }
@@ -173,6 +177,7 @@ function authToolDigests(){
     command('git',['-C',ROOT,'ls-tree',ref,'--',path])?sha(commandBytes('git',['-C',ROOT,'show',`${ref}:${path}`])):null)]));
 }
 function assertAuthTool(plan){
+  if(registeredResumeInvocation()){verifyRegisteredResumeSource(plan);return;}
   if(plan.dataSuccessor)return assertDataTool(plan);
   assertV85AuthSuccessorTool({plan,toolRef:command('git',['-C',ROOT,'rev-parse','HEAD']),digests:authToolDigests(),
     clean:command('git',['-C',ROOT,'status','--porcelain'])==='',
@@ -252,7 +257,7 @@ function webReady(plan) {
     check(sha(bytes)==='f39ce0690e6ab6630355aff021092ac4213d7447c6199cc8e01e026f2d523cba'
       &&sha(readFileSync(join(HOME,'.homecook/prelaunch-web/state.json')))==='3bb03e719eee11fb9331d6289ff95b773f3648a10d764d5751853de2bbe324af',
       'exact already transitioned web15 state/plist');
-    const code=`import importlib.util,json,sys\nfrom pathlib import Path\ns=importlib.util.spec_from_file_location('r2apply',sys.argv[1]);a=importlib.util.module_from_spec(s);s.loader.exec_module(a)\ncwd=Path(sys.argv[2]);rows=a.census(cwd);f=json.loads(a.stage.private_file(Path.home()/'.homecook/prelaunch-web/round2-eight-key-rotation-fence.json'))\nfor row in rows:a.require(a.process_fingerprints(row,cwd)==f['approved_fingerprints'],'STARTUP_EIGHT')\na.require(a.census(cwd)==rows,'PROCESS_CHANGED')\na.require(rows==[{'pid':39019,'ppid':1,'start':'Sun Oct 18 11:06:56 2026'},{'pid':39025,'ppid':39019,'start':'Sun Oct 18 11:06:57 2026'}],'WEB_RUNTIME_CHANGED')\nprint('WEB15_ACTUAL_STARTUP_EIGHT_OK')`;
+    const code=`import importlib.util,json,sys\nfrom pathlib import Path\ns=importlib.util.spec_from_file_location('r2apply',sys.argv[1]);a=importlib.util.module_from_spec(s);s.loader.exec_module(a)\ncwd=Path(sys.argv[2]);rows=a.web_census(cwd);f=json.loads(a.stage.private_file(Path.home()/'.homecook/prelaunch-web/round2-eight-key-rotation-fence.json'))\nfor row in rows:a.require(a.process_fingerprints(row,cwd)==f['approved_fingerprints'],'STARTUP_EIGHT')\na.require(a.web_census(cwd)==rows,'PROCESS_CHANGED')\na.require(rows==[{'pid':39019,'ppid':1,'start':'Sun Oct 18 11:06:56 2026'},{'pid':39025,'ppid':39019,'start':'Sun Oct 18 11:06:57 2026'}],'WEB_RUNTIME_CHANGED')\nprint('WEB15_ACTUAL_STARTUP_EIGHT_OK')`;
     check(command('/usr/bin/python3',['-B','-c',code,join(ROOT,'scripts/round2-eight-key-user-apply.py'),plist.WorkingDirectory])==='WEB15_ACTUAL_STARTUP_EIGHT_OK','actual web15 startup8');
   }
   return {releaseSha:plan.webRef,plistSha256:sha(bytes),stateSha256:sha(readFileSync(join(HOME,'.homecook/prelaunch-web/state.json'))),buildId:state.buildId};
@@ -292,9 +297,36 @@ export async function resumeV85Cutover(a) {
     if(!state.enabled){budgetCheck();await a.activate(state.metadata,health);}budgetCheck();return await a.finish();
   }catch(error){await a.containFailure(error);throw error;}finally{await a.removeManager();}
 }
+export async function resumeRegisteredV85Cutover(a) {
+  budgetCheck();const state=await a.registeredResumePreflight();
+  if(state.activated)return a.verifyActivated();
+  try {
+    check(state.reconciliation.state==='registered','registered50-only recovery');
+    budgetCheck();await a.install(state.metadata);budgetCheck();const health=await a.verify(state.metadata);
+    if(!state.enabled){budgetCheck();await a.activate(state.metadata,health);}
+    budgetCheck();return await a.finish();
+  }catch(error){await a.containFailure(error);throw error;}finally{await a.removeManager();}
+}
 async function adapters(c,authority) {
   const {plan,planSha256}=authority;let registrationSha256,verificationSha256,managerTokenSha256,health;
   const managerPath=join(P.secrets,'manager-v85-gen50.jwt'),metadata=()=>json(P.credential),before=plan.before;
+  const registeredOnly=registeredResumeInvocation();
+  const allowIssueOrRegister=()=>check(!registeredOnly,'registered recovery forbids quiesce/issuance/registration');
+  let plannedInstall;
+  const expectedInstall=async()=>{
+    if(!plannedInstall){
+      const preflight=await candidate(),old=readClosedR2PrivateBytes(join(OP,'generation-49.plist'),ROOT);
+      check(sha(old)===plan.beforeService.plistSha256&&sha(readClosedR2PrivateBytes(P.config,ROOT))===plan.beforeService.configSha256,
+        'original49 launcher and preserved worker configuration');
+      const raw=buildYoutubeExtractionWorkerInstallPlan({configPath:P.config,manifestPath:P.manifest,credentialPath:P.credential,appDescriptorPath:P.descriptor,currentPolicyPath:P.policy,expectedSchemaPath:P.schema,secretRoot:P.secrets,homeDir:HOME,nodeBin:NODE,rootDir:P.artifact,userId:process.getuid(),dryRun:true,i031Preflight:{ready:true,codexCliVersion:preflight.codexCliVersion,chatGptLogin:true,toolsReady:true}});
+      const preview=preserveYoutubeResolutionLauncherEnvironment(parsePlist(old),raw.plist_preview);
+      plannedInstall={preview,target:sha(preview)};
+    }
+    return plannedInstall;
+  };
+  const phaseGuard=async(phase,o,m)=>assertV85WorkerLifecycle({phase,plan,observed:o,metadata:m,service:status(),
+    plistSha256:sha(readFileSync(PLIST)),targetPlistSha256:phase.startsWith('predecessor-')?undefined:(await expectedInstall()).target});
+  const registeredPhaseGuard=async(o,m)=>phaseGuard(registeredV85WorkerPhase(o,status()),o,m);
   const readClaims=()=>claims(readClosedR2PrivateBytes(P.token,ROOT).toString('utf8').trim());
   const exactLineage=()=>{check(isDeepStrictEqual(plan.origin.authority,c.origin)&&plan.origin.v74ActivationSha256===V74_ACTIVATION_SHA256
     &&isDeepStrictEqual(plan.origin.fingerprintAuthority,c.legacy.fingerprintRecovery.pointer)&&plan.origin.fingerprintReceiptSha256===c.legacy.fingerprintRecovery.authority.receiptSha256,'unchanged original authorities');};
@@ -307,7 +339,9 @@ async function adapters(c,authority) {
     if(repair&&!existsSync(join(OP,'issued.json')))publish('issued.json',{planSha256,tokenSha256:sha(readFileSync(P.token)),metadataSha256:sha(readFileSync(P.credential)),recoveredExistingSignedToken:true});
     const receipt=json(join(OP,'issued.json'));check(receipt.planSha256===planSha256&&receipt.tokenSha256===sha(readFileSync(P.token))&&receipt.metadataSha256===sha(readFileSync(P.credential)),'durable exact issued50');return m;};
   const getIntent=()=>{const i=existsSync(join(OP,'registration-intent.json'))?json(join(OP,'registration-intent.json')):{planSha256,metadataSha256:sha(readFileSync(P.credential)),beforeSha256:sha(readFileSync(join(OP,'quiesced.json'))),before:json(join(OP,'quiesced.json'))};check(i.planSha256===planSha256&&i.metadataSha256===sha(readFileSync(P.credential))&&i.beforeSha256===sha(readFileSync(join(OP,'quiesced.json'))),'immutable registration intent');return i;};
-  const reconcile=async({repair=false}={})=>{
+  const reconcile=async({repair=false,recoverRegistration=false}={})=>{
+    check(!registeredOnly||!repair,'registered recovery never reconstructs credential files');
+    check(!recoverRegistration||registeredOnly,'registration receipt recovery only in registered source');
     exactLineage();
     if(existsSync(join(OP,'activation.json'))){
       const proofBytes=readClosedR2PrivateBytes(join(OP,'activation.json'),ROOT,524288);check(readV85Approval('activation-sha256')===sha(proofBytes),'independent activated seal');
@@ -322,7 +356,8 @@ async function adapters(c,authority) {
       return {result:{state:'unissued',mayIssue:false,mayRegister:false,next:'resume-preissuance'},observation:o};}
     const m=assertIssued({repair}),intent=getIntent(),o=await readSnapshot(c),result=classifyV85Registration({plan,intent,metadata:m,observed:o});
     if(result.state==='registered') {
-      if(repair&&!existsSync(join(OP,'registration.json')))publish('registration.json',{planSha256,intent,observation:o,recoveredAfterUncertainCommit:true,web:webReady(plan)});
+      if(registeredOnly)await registeredPhaseGuard(o,m);
+      if((repair||recoverRegistration)&&!existsSync(join(OP,'registration.json')))publish('registration.json',{planSha256,intent,observation:o,recoveredAfterUncertainCommit:true,web:webReady(plan)});
       if(existsSync(join(OP,'registration.json'))){const reg=json(join(OP,'registration.json'));check(reg.planSha256===planSha256&&isDeepStrictEqual(reg.intent,intent)
         &&reg.observation.worker.credentialRowSha256===o.worker.credentialRowSha256&&reg.observation.worker.policyStableSha256===o.worker.policyStableSha256,'exact recovered registration');
       registrationSha256=sha(readFileSync(join(OP,'registration.json')));}
@@ -333,12 +368,12 @@ async function adapters(c,authority) {
     check(b.targetSha256===before.targetSha256&&b.fullArchiveDecoded===true&&dirname(b.path)===OP&&stat.isFile()&&!stat.isSymbolicLink()&&stat.uid===process.getuid()
       &&(stat.mode&0o777)===0o600&&stat.size===b.bytes&&sha(readFileSync(b.path))===b.sha256,'exact owned decoded backup');};
   const a={
-    preflight:async()=>{exactLineage();await candidate();verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);const o=await observation(c);assertBefore(c,o);preserved(before,o);
+    preflight:async()=>{exactLineage();await candidate();verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);const o=await observation(c);assertBefore(c,o);preserved(before,o);await phaseGuard('predecessor-running',o);
       check(o.worker.credentialRowSha256===before.worker.credentialRowSha256&&o.worker.policyRowSha256===before.worker.policyRowSha256,'approved exact preimage');},
     assertWebReady:async()=>{webReady(plan);for(const p of ['/','/login','/privacy'])check((await fetch(`http://127.0.0.1:3100${p}`)).ok,'web health');},
     assertUnissued:async()=>{for(const p of [P.token,P.credential,managerPath,join(OP,'issue-intent.json'),join(OP,'quiesced.json')])check(!existsSync(p),'partial attempt; reconcile/resume, never issue again');},
     quiesce:async()=>{
-      const o=await observation(c);assertBefore(c,o);preserved(before,o);const old=readFileSync(PLIST);check(sha(old)===plan.beforeService.plistSha256,'old launcher exact');
+      allowIssueOrRegister();const o=await observation(c);assertBefore(c,o);preserved(before,o);await phaseGuard('predecessor-running',o);const old=readFileSync(PLIST);check(sha(old)===plan.beforeService.plistSha256,'old launcher exact');
       privateExact(join(OP,'generation-49.plist'),old);
       if(!existsSync(join(OP,'backup.json'))){const dump=join(OP,`before-gen50-${randomUUID()}.dump`),fd=openSync(dump,'wx',0o600);let r;
       try{r=spawnSync('docker',['exec',c.target.postgresContainerId,'pg_dump','-U','postgres','-d','postgres','-Fc'],{timeout:v85RemainingTimeout(120000),stdio:['ignore',fd,'pipe']});fsyncSync(fd);}finally{closeSync(fd);}
@@ -348,16 +383,17 @@ async function adapters(c,authority) {
       verifyBackup();const off=await transaction(c,async tx=>{const b=await tx.observe();assertBefore(c,b);preserved(before,b);check(b.worker.credentialRowSha256===before.worker.credentialRowSha256&&b.worker.policyRowSha256===before.worker.policyRowSha256,'locked approved preimage');
         await tx.query("UPDATE private.youtube_extraction_current_policy SET enabled=false,updated_at=clock_timestamp() WHERE policy_key='primary' AND enabled=true;");const post=await tx.observe();preserved(b,post);check(!post.policy.enabled&&zero(post.worker),'OFF/drained');return post;});
       publish('quiesced.json',off);check(sha(readFileSync(PLIST))===plan.beforeService.plistSha256,'old launcher before stop');command('/bin/launchctl',['bootout',SERVICE]);
-      for(let i=0;i<40&&status().loaded;i++)await delay(250);check(!status().loaded,'old worker stopped');
+      for(let i=0;i<40&&status().loaded;i++)await delay(250);check(!status().loaded,'old worker stopped');await phaseGuard('predecessor-stopped',off);
     },
     issueWorker:async()=>{
+      allowIssueOrRegister();
       const now=new Date(),ttlSeconds=Date.parse(V.expiresAt)/1000-Math.floor(now.getTime()/1000);check(ttlSeconds>0&&ttlSeconds<=7*86400,'bounded remaining lifetime');
       publish('issue-intent.json',{planSha256,generation:50,releaseSha:V.releaseSha,expiresAt:V.expiresAt,at:now.toISOString()});
       const worker=issueYoutubeExtractionWorkerCredential({jwtKeys:json(join(HOME,'.homecook/secrets/full-local-supabase/jwt_keys')),generation:50,releaseSha:V.releaseSha,schemaIdentity:V.schemaIdentity,allowedSnapshotDigest:V.snapshotDigest,now,ttlSeconds});
       privateCreate(P.token,worker.token+'\n');const m=buildYoutubeExtractionWorkerCredentialState({tokenFile:P.token,generation:50,jtiHash:worker.jtiHash,expiresAt:worker.metadata.expires_at,releaseSha:V.releaseSha,schemaIdentity:V.schemaIdentity,allowedSnapshotDigest:V.snapshotDigest,secretRoot:P.secrets});
       assertV85WorkerCredential({claims:claims(worker.token),metadata:m,now});privateCreate(P.credential,JSON.stringify(m,null,2)+'\n');publish('issued.json',{planSha256,tokenSha256:sha(readFileSync(P.token)),metadataSha256:sha(readFileSync(P.credential))});return m;
     },
-    issueManager:async()=>{let m;
+    issueManager:async()=>{allowIssueOrRegister();let m;
       if(existsSync(managerPath)){const bytes=readClosedR2PrivateBytes(managerPath,ROOT),hash=sha(bytes),receipt=json(join(OP,`manager-owned-${hash}.json`));
         check(receipt.planSha256===planSha256&&receipt.tokenSha256===hash,'foreign manager file');const token=bytes.toString('utf8').trim(),c=claims(token);
         check(Date.parse(receipt.expiresAt)===c.exp*1000,'owned manager expiry');
@@ -369,34 +405,45 @@ async function adapters(c,authority) {
       const client=createRestrictedPostgrestRpcClient({dataApiUrl:env.HOMECOOK_YOUTUBE_WORKER_DATA_API_URL,apiKey:readClosedR2PrivateBytes(env.HOMECOOK_YOUTUBE_WORKER_DATA_API_KEY_FILE,ROOT).toString('utf8').trim(),token:m.token});
       check((await client.rpc('check_youtube_extraction_worker_pre_request')).error===null,'manager authenticated');return m;},
     register:async(m,manager)=>{
+      allowIssueOrRegister();
       assertIssued();let intent;
       if(existsSync(join(OP,'registration-intent.json'))){const recovery=await reconcile();check(recovery.result.state==='not-applied','same50 CAS allowed only after exact not-applied');intent=getIntent();}
       else{const off=json(join(OP,'quiesced.json'));intent={planSha256,metadataSha256:sha(readFileSync(P.credential)),beforeSha256:sha(readFileSync(join(OP,'quiesced.json'))),before:off};publish('registration-intent.json',intent);}
       const registered=await transaction(c,async tx=>{
-        const b=await tx.observe();check(classifyV85Registration({plan,intent,metadata:m,observed:b}).state==='not-applied','locked exact49 OFF CAS');check(!status().loaded,'old worker remains stopped');
+        const b=await tx.observe();check(classifyV85Registration({plan,intent,metadata:m,observed:b}).state==='not-applied','locked exact49 OFF CAS');await phaseGuard('predecessor-stopped',b);
         await tx.query(buildV85RegistrationSql({claims:readClaims(),metadata:m,managerClaims:manager.claims}));const post=await tx.observe();assertV85After(plan,post,m,false);return post;
-      });registrationSha256=publish('registration.json',{planSha256,intent,observation:registered,web:webReady(plan)});
+      });await phaseGuard('registered-stopped',registered,m);registrationSha256=publish('registration.json',{planSha256,intent,observation:registered,web:webReady(plan)});
     },
     install:async()=>{
       const recovery=await reconcile();check(recovery.result.state==='registered','exact registered50');
-      const preflight=await candidate(),raw=buildYoutubeExtractionWorkerInstallPlan({configPath:P.config,manifestPath:P.manifest,credentialPath:P.credential,appDescriptorPath:P.descriptor,currentPolicyPath:P.policy,expectedSchemaPath:P.schema,secretRoot:P.secrets,homeDir:HOME,nodeBin:NODE,rootDir:P.artifact,userId:process.getuid(),dryRun:true,i031Preflight:{ready:true,codexCliVersion:preflight.codexCliVersion,chatGptLogin:true,toolsReady:true}});
-      const preview=preserveYoutubeResolutionLauncherEnvironment(parsePlist(readFileSync(join(OP,'generation-49.plist'))),raw.plist_preview),target=sha(preview),current=sha(readFileSync(PLIST)),running=status();
+      await registeredPhaseGuard(recovery.observation,recovery.metadata);
+      const {preview,target}=await expectedInstall(),current=sha(readFileSync(PLIST)),running=status();
       check(current===plan.beforeService.plistSha256||current===target,'foreign launcher');check(!running.loaded||current===target,'foreign loaded predecessor');
       if(current===target&&running.loaded&&running.state==='running'){await stable();return;}
       if(running.loaded)command('/bin/launchctl',['bootout',SERVICE]);if(current!==target){privateCreate(PLIST+'.v85.tmp',preview);renameSync(PLIST+'.v85.tmp',PLIST);}
-      command('/bin/launchctl',['bootstrap',`gui/${process.getuid()}`,PLIST]);await stable();
+      command('/bin/launchctl',['bootstrap',`gui/${process.getuid()}`,PLIST]);await stable();await phaseGuard('installed-off',await observation(c),assertIssued());
     },
-    verify:async m=>{verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);health=await verifyInstalled(m);const o=await observation(c);assertV85After(plan,o,m,o.policy.enabled);check(!o.policy.enabled||existsSync(join(OP,'verification.json')),'ON requires prior durable verification');
+    verify:async m=>{verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);health=await verifyInstalled(m);const o=await observation(c);await phaseGuard(o.policy.enabled?'activated':'installed-off',o,m);check(!o.policy.enabled||existsSync(join(OP,'verification.json')),'ON requires prior durable verification');
       verificationSha256=publish(existsSync(join(OP,'verification.json'))?`verification-repair-${randomUUID()}.json`:'verification.json',{planSha256,registrationSha256,observation:o,health,web:webReady(plan),service:{plistSha256:sha(readFileSync(PLIST))}});return health;},
     activate:async(m,h)=>{verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);check(verificationSha256,'durable fresh verification');await transaction(c,async tx=>{const b=await tx.observe();assertV85After(plan,b,m,false);check(status().pid===h.pid,'same verified PID');
       await tx.query("UPDATE private.youtube_extraction_current_policy SET enabled=true,updated_at=clock_timestamp() WHERE policy_key='primary' AND enabled=false;");const post=await tx.observe();assertV85After(plan,post,m,true);});},
     finish:async()=>{
-      const after=await observation(c),m=assertIssued();assertV85After(plan,after,m,true);const currentHealth=await verifyInstalled(m);
+      const after=await observation(c),m=assertIssued();await phaseGuard('activated',after,m);const currentHealth=await verifyInstalled(m);
       const proof={schema:'homecook.youtube-v85-activation.v1',planSha256,before,after,metadata:m,web:webReady(plan),registrationSha256,verificationSha256,health:currentHealth,service:{plistSha256:sha(readFileSync(PLIST))},at:new Date().toISOString()};
       assertV85Successor({authority:{plan,planSha256,proof},worker:c.predecessor,policy:(c.legacy.fingerprintRecovery.compensation??c.legacy.fingerprintRecovery.receipt).after.policy,origin:c.origin,recovery:c.legacy.fingerprintRecovery});
       const hash=publish('activation.json',proof);registerV85Approval(hash,'activation-sha256');return {activated:true,generation:50,releaseSha:V.releaseSha,webRef:plan.webRef,activationSha256:hash,modelCalls:0};
     },
-    resumePreflight:async()=>{exactLineage();await candidate();webReady(plan);verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);
+    registeredResumePreflight:async()=>{
+      check(registeredOnly,'exact registered recovery source required');exactLineage();await candidate();verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);
+      const r=await reconcile();
+      if(r.result.state==='activated')return {activated:true};
+      check(r.result.state==='registered'&&r.result.mayIssue===false&&r.result.mayRegister===false,'existing registered50 only; no issuance or CAS');
+      check(!r.observation.policy.enabled||existsSync(join(OP,'verification.json')),'ON requires durable prior verification');
+      verifyBackup();await registeredPhaseGuard(r.observation,r.metadata);webReady(plan);
+      const recovered=await reconcile({recoverRegistration:true});
+      return {enabled:recovered.observation.policy.enabled,metadata:recovered.metadata,reconciliation:recovered.result};
+    },
+    resumePreflight:async()=>{check(!registeredOnly,'registered repair uses its narrow orchestration');exactLineage();await candidate();webReady(plan);verifyClosedR2Control(loadClosedR2Review(ROOT),ROOT);
       if(existsSync(join(OP,'activation.json'))){await reconcile();return {activated:true};}
       if(!existsSync(join(OP,'issue-intent.json'))){check(!existsSync(P.token)&&!existsSync(P.credential),'partial issuance; never issue again');
         let o=await observation(c);preserved(before,o);check(isDeepStrictEqual(o.credential,before.credential)&&o.worker.credentialGeneration===49&&o.worker.policyStableSha256===before.worker.policyStableSha256&&zero(o.worker),'unissued original49');
@@ -411,7 +458,7 @@ async function adapters(c,authority) {
       check(!r.observation.policy.enabled||existsSync(join(OP,'verification.json')),'ON without durable verification');return {activated:existsSync(join(OP,'activation.json')),enabled:r.observation.policy.enabled,metadata:r.metadata,reconciliation:r.result};},
     verifyActivated:async()=>{const proof=json(join(OP,'activation.json'));assertV85Successor({authority:{plan,planSha256,proof},worker:c.predecessor,policy:(c.legacy.fingerprintRecovery.compensation??c.legacy.fingerprintRecovery.receipt).after.policy,origin:c.origin,recovery:c.legacy.fingerprintRecovery});
       const o=await observation(c);assertV85ActivatedRuntime(plan,proof,o,assertIssued());for(const k of ['credentialRowSha256','policyRowSha256','policyStableSha256'])check(o.worker[k]===proof.after.worker[k],'activated rows exact');
-      check(sha(readFileSync(PLIST))===proof.service.plistSha256&&readV85Approval('activation-sha256')===sha(readClosedR2PrivateBytes(join(OP,'activation.json'),ROOT,524288)),'activated launcher/seal');await verifyInstalled(metadata());return {activated:true,readOnly:true,generation:50,modelCalls:0};},
+      check(sha(readFileSync(PLIST))===proof.service.plistSha256&&readV85Approval('activation-sha256')===sha(readClosedR2PrivateBytes(join(OP,'activation.json'),ROOT,524288)),'activated launcher/seal');await phaseGuard('activated',proof.after,metadata());webReady(plan);await verifyInstalled(metadata());return {activated:true,readOnly:true,generation:50,modelCalls:0};},
     containFailure:async error=>{
       // No new issuance/registration here. Give owned-identity containment a separate minute.
       operationDeadline=performance.now()+60000;
@@ -426,6 +473,7 @@ async function adapters(c,authority) {
   };return a;
 }
 async function main() {
+  check(!registeredResumeRoot()||registeredResumeInvocation(),'registered repair executor permits only resume/reconcile');
   const [action,arg1,arg2]=process.argv.slice(2);check(process.argv.length===(['prepare','prepare-continuation','prepare-auth-successor','prepare-data-successor','check-data-successor','approve-plan'].includes(action)?5:3),'exact arguments only');check(['prepare','prepare-continuation','prepare-auth-successor','prepare-data-successor','check-data-successor','approve-plan','stage','preflight','apply','reconcile','resume'].includes(action),'usage: prepare|prepare-continuation|prepare-auth-successor|prepare-data-successor REF OUTPUT_DIR | check-data-successor PLAN SHA | approve-plan PLAN SHA | stage | preflight | apply | reconcile | resume');
   let userReviewedSha256=null;
   if(['approve-plan','apply','resume'].includes(action)){
@@ -561,7 +609,7 @@ async function main() {
     }
     const c=await context(),a=await adapters(c,authority);
     if(action==='preflight'){await a.preflight();output({ready:true,credentialIssued:false});return;}
-    output(action==='resume'?await resumeV85Cutover(a):await runV85Cutover(a));
+    output(action==='resume'?(registeredResumeInvocation()?await resumeRegisteredV85Cutover(a):await resumeV85Cutover(a)):await runV85Cutover(a));
   }finally{await lock.release();}
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{console.error(error.message?.startsWith('v85:')?error.message:'v85 cutover stopped; private evidence/readback required; no automatic retry');process.exitCode=1;});

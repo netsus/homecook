@@ -1,0 +1,44 @@
+{
+  "schema": "homecook.v85-registered-resume-source.v1",
+  "baseRef": "8455d9f8a04fa8700487385b119c5abcec495ed7",
+  "executorRef": "0d64dc2bdccd5bc6b7d813e240346cfd6aa22b6b",
+  "executorTree": "f5f0fd9fef0bf22c79a33eafd0fc30a259578504",
+  "files": {
+    "docs/engineering/v85-registered50-resume-repair-20261019.md": [
+      null,
+      "72bc9088da2605d48fa9e541402e6a5229b253f107f890ac778f9d2f11c0e580"
+    ],
+    "docs/sync/CURRENT_SOURCE_OF_TRUTH.md": [
+      "0f036c9cf7d7407cfd930c35f68cf2e4e3a1a162e526fbea543ab83b98ce81c5",
+      "47ecc0cfdf7da8009bea794108c0d5e2f3a09e8afc7af26d4a30d67a9ea4812d"
+    ],
+    "scripts/lib/v85-registered-resume-source.mjs": [
+      null,
+      "04c27cdb5d9f6ad0a38a8aeee2057dd017470d67f543a02d9a971c6b6359460e"
+    ],
+    "scripts/lib/v85-worker-lifecycle.mjs": [
+      null,
+      "9970e3ffbacdc2f10705662ad49133fc59211a0875eb965f7da95ae9d65b3593"
+    ],
+    "scripts/round2-eight-key-user-apply.py": [
+      "471fe2087eaa574b424f717a5df953ad34ac38f294cb13b205876c1eeda4c943",
+      "1881c19e2ca16e6d58a225bc46614d229c1046a88110d3662a3d097d38c362db"
+    ],
+    "scripts/youtube-v85-controlled-cutover.mjs": [
+      "f50f977dd3ffb994a8e0245983ab91dd01cd3e42f7b2177d2ea0f067b014096c",
+      "0ea8d0d415f16c94c193e9cca345a57f990a620290d228bc0d15f49641f7f4b3"
+    ],
+    "tests/v85-registered-resume-lifecycle.test.ts": [
+      null,
+      "6bad943a1cf31596ffb38574c6e6665da03e3d86cf414399b8e96c23cd50edc9"
+    ],
+    "tests/v85-web-only-census.test.py": [
+      null,
+      "cb7f735cb3fc58b0f32e15f12d4270a4415fccf9df931849ceb46f404253ebb7"
+    ],
+    "tests/youtube-v85-readonly-adapter.test.ts": [
+      "9d031d70cfef6eebaa40aedd19d8273e7f8ed11384f792a8038fc5e18892325a",
+      "9b64316390a1af7a5095a47107a21bffb7d35c30b6b6b1f98f6cad1a449acdb0"
+    ]
+  }
+}
