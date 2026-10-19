@@ -12,10 +12,24 @@
     "This document does not modify checker baseline, scope, rules or runtime permissions."
   ],
   "currentObservation": {
-    "baseCommit": "cd91be21ac12d1a04a15467d057b6b682cc6d75a",
-    "total": 126,
+    "baseCommit": "eb7df156d24b361a0e91b17345522cd1b15f05b1",
+    "total": 125,
     "newFindings": 0,
-    "verificationState": "PR1812 head484e89df9 merged ascd91be21a; appf204073a2 deployed asprelaunch-f204073a2dbd-A2tFiO on unchangedDB238. Contract9 remain. Web1466 PASS/133 filtered SKIP, source regression253 PASS, type/build/lint and independent reviews PASS. Fresh pre/post deployment nine data/catalog/control digests match after the separately approved five-row handoff. No SQL/env/auth/worker/policy changes. Historical broad failures and held444fe1f6f remain explicit."
+    "verificationState": "PR1814 headf73b11c6f merged and app-deployed aseb7df156d, buildprelaunch-eb7df156d24b-EeWHdq. Anti125/new0 and contract8 remain. Snapshot candidate45 PASS, whole nonincremental typecheck, changed lint and independent review APPROVE. Official app-only plan and deploy exit0; web1466 PASS/133 name-filter SKIP, build PASS with4 existing warnings. Actual ref/build/DB238 ready/recoveryPendingfalse, buildmanifest200 and anonymous cookmode401 verified. No authenticated mutation QA. Earlier PR1812/appf204073a2 evidence remains historical, including five-row preservation and public GET counter diagnosis. No SQL/env/auth/worker/policy/PIN changes. Historical broad failures and held444fe1f6f remain explicit."
+  },
+  "snapshotFollowupObservation": {
+    "baseCommit": "cfcb2bd61c31984c2f1f9efae003c51e1d105f42",
+    "candidateCommit": "f73b11c6f1d900142b52eb003b683c7e2640ebda",
+    "mergeCommit": "eb7df156d24b361a0e91b17345522cd1b15f05b1",
+    "pullRequest": "https://github.com/netsus/homecook/pull/1814",
+    "deployedRef": "eb7df156d24b361a0e91b17345522cd1b15f05b1",
+    "buildId": "prelaunch-eb7df156d24b-EeWHdq",
+    "databaseLedgerCount": 238,
+    "recoveryPending": false,
+    "total": 125,
+    "contractCandidatesAfterAdoption": 8,
+    "remaining": "P5-adjacent saved/UI/planner4 await owner handoff; progress/growth4 remain TS2589. Unmerged common-contract trial is preserved separately and not adopted.",
+    "qaLimit": "No supported existing authenticated browser tool is exposed in this session. No token/session extraction or replacement login; parent cooking QA session must run authenticated save/completion serially after final deployment confirmation."
   },
   "candidateObservation": {
     "baseCommit": "64112be4bec14e29f88449214140250685210f15",
@@ -1907,8 +1921,17 @@
       "line": 230,
       "column": 20,
       "snippet": "routeClient as unknown as CookModeDbClient & UserBootstrapDbClient",
-      "state": "needs-contract-refactor",
+      "state": "resolved",
       "holdReason": "Single-assertion direct replacement triggers TS2589 against existing handwritten/generated query contracts. Direct deletion is not safe; precise query phases, row/capability contracts need separate work. This does not mean all refactoring is impossible.",
+      "adoptedResolution": {
+        "branch": "codex/anti-slop-cook-snapshot-20261020",
+        "previousState": "needs-contract-refactor",
+        "reason": "Native9-table/FK selected-row inference and direct bootstrap/reader assignments replace handwritten fluent interfaces. Snapshot JSON stays unknown until consumed shape validation. Valid legacy/default/product-null/order and optional quantity/ingredients_used soft fallback remain; malformed checked fields now receive wrapped500, as documented in official API9-3.",
+        "verification": "Before24 PASS; final SDK21 plus existing24 gives45 PASS. Whole nonincremental typecheck, ESLint max-warnings0, Anti125/new0, diff and independent source/test review APPROVE. No DB/RLS/auth/policy changes or live authenticated mutation QA.",
+        "status": "merged PR1814; app-deployed eb7df156d/buildprelaunch-eb7df156d24b-EeWHdq; DB238 ready, no recovery pending. Authenticated save/completion QA not performed.",
+        "pullRequest": "https://github.com/netsus/homecook/pull/1814",
+        "mergeCommit": "eb7df156d24b361a0e91b17345522cd1b15f05b1"
+      },
       "review": {
         "source": "independent read-only compiler/source investigation",
         "checkpointCommit": "063f8a2267b4559f8c7e2450006ce536ea60dec9",
