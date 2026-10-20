@@ -7,6 +7,8 @@ import { GuestCookModeScreen } from "@/components/cooking/guest-cook-mode-screen
 import type { CookingStandaloneCookModeData } from "@/types/cooking";
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), back: vi.fn() }));
+// Browser checks cover responsive CSS; these tests exercise view behavior.
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
 vi.mock("@/lib/api/cooking", () => ({ fetchStandaloneCookMode: mocks.read }));
 vi.mock("@/components/shared/use-app-return", () => ({ useAppReturn: () => ({ goBack: mocks.back, href: "/recipe/public-recipe" }) }));
 const source: CookingStandaloneCookModeData = { recipe: {

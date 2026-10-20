@@ -5,6 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { RecipeCookingEntry } from "@/components/cooking/recipe-cooking-entry";
 const mocks = vi.hoisted(() => ({ guide: vi.fn(), read: vi.fn(), start: vi.fn(), router: { replace: vi.fn() } }));
+// Browser checks cover responsive CSS; these tests exercise view behavior.
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
 vi.mock("next/navigation", () => ({ useRouter: () => mocks.router }));
 vi.mock("@/components/shared/use-app-return", () => ({ useAppReturn: () => ({ href: "/recipebooks/book-1" }) }));
 vi.mock("@/components/shared/use-mobile-fullscreen-page", () => ({ useMobileFullscreenPage: vi.fn() }));
