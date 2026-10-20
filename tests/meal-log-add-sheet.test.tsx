@@ -19,6 +19,33 @@ async function openBreakfast(user: ReturnType<typeof userEvent.setup>) {
 describe("MEAL_LOG add sheet", () => {
   afterEach(cleanup);
 
+  it("allows a known estimated batch but requires an explicit consumed amount before saving", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderMealLogShell({
+      includeCookedBatch: true, batchRemainingWeight: 500,
+      batchWeightSource: "estimated", quantityV4: true,
+    });
+    const saves = () => fetchMock.mock.calls.filter(([url, init]) => String(url).includes("/meal-log/entries") && init?.method === "POST");
+    await openBreakfast(user);
+    await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
+    const amount = screen.getByRole<HTMLInputElement>("textbox", { name: "먹은 양" });
+    const save = screen.getByRole<HTMLButtonElement>("button", { name: "기록 저장" });
+    expect(amount.value).toBe("");
+    expect(save.disabled).toBe(true);
+    expect(screen.getByText("약 환산값이에요. 실제 무게에 따라 달라질 수 있어요.")).toBeTruthy();
+    await user.click(save);
+    expect(saves()).toHaveLength(0);
+    await user.type(amount, "125");
+    await user.click(save);
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    expect(JSON.parse(String(saves()[0][1]?.body))).toMatchObject({
+      source: { type: "cooked_batch", id: "40000000-0000-4000-8000-000000000001" },
+      quantity: { amount: 125, unit: "g" },
+      quantity_input: { schema_version: "quantity-v4", raw_value: "125", raw_unit: "g" },
+    });
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith("/weight") && init?.method === "PATCH")).toBe(false);
+  });
+
   it("keeps the chosen date and meal through food selection and saves without target selectors", async () => {
     const user = userEvent.setup();
     const { fetchMock } = renderMealLogShell({ includeCookedBatch: true });
