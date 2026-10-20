@@ -1,5 +1,10 @@
 # DB 설계 v1.3.38
 
+## 2026-10-20 전체무게 거친 추정 — 미배포 후보
+
+완료 `set_finished_weight`의 명시적 weight_input_source에 `manual_estimate`를 추가한다. `reported_measured`와 분리하고 attestation은 실측만 허용한다. 자동 완료는 `weigh_later/null`, 서버 recipe-mass-proxy-v1 계산을 사용한다. 새 private evidence는 정책/원본 identity/각 dose·범위·전체합을 검증하며 기존75%·owner·receipt·gate를 보존한다. 후보 migration20261020210000은 기존 두 함수 본문만 변경하며 테이블·컬럼·키·권한·소유자를 바꾸지 않는다. 운영 DB238에는 미적용이고 앱과 함께 별도 승인·릴리스해야 한다. 계산값은 조리손실 미보정 재료량 proxy이며 영양 환산/정확도 보증에 전용하지 않는다. [상세 계약·검증·한계](engineering/whole-cooked-weight-estimate-20261020.md)를 따른다.
+
+
 ## 2026-10-10 — 사용자 승인 추정 중량3건 (구현·운영 미반영)
 
 기존source/evidence/piece구조에출처1·근거3·중량3행을추가하는오프라인SQL을준비했다. HOMECOOK_USER_STANDARD에AI추정중량임을명시하며공식영양프로필/과거기록/레시피수량을보존한다. 후추0.067g의저장정밀도와원문3알약0.2g을함께기록한다. 새table/column과임의0값추가는없다. [승인범위·검증](engineering/nutrition-completion-followup-20261010.md).

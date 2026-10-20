@@ -1,0 +1,31 @@
+-- Synthetic fixture only, derived from the repository schema232 integration seed.
+insert into private.recipe_product_only_write_control(singleton,enabled)values(true,true);insert into private.cooked_batch_weight_evidence_control(singleton,enabled)values(true,true);insert into private.quantity_input_v4_policy(singleton,enabled)values(true,true);insert into private.cooked_weight_user_attestation_control(singleton,enabled)values(true,false);
+set session_replication_role=replica;
+      insert into private.full_local_auth_control(singleton,authority,local_issuer,cutover_epoch,hmac_key_version,flows_open,local_activated_at)
+      values(true,'local','https://auth.mumeok.kr/auth/v1',2,1,true,'2026-08-08T00:00:00Z');
+      insert into private.ingredient_ai_nutrition_settings(singleton,enabled) values(true,false);
+      insert into public.account_generation_cutover_attempts(id,state,capability_revision,result_json) values('b5000000-0000-4000-8000-000000000001','promoted',2,'{}');
+      insert into public.account_generation_capability_state(singleton,state,revision,current_cutover_attempt_id,activated_at) values(true,'generation_active',2,'b5000000-0000-4000-8000-000000000001','2026-08-08T00:00:00Z');
+      set session_replication_role=origin;
+      select public.set_account_generation_internal_writer_marker('b5000000-0000-4000-8000-000000000001',true);
+      insert into auth.users(id,created_at,email) values('b1000000-0000-4000-8000-000000000001','2026-08-08T00:00:00Z','weight-owner@example.invalid'),('b1000000-0000-4000-8000-000000000002','2026-08-08T00:00:00Z','weight-other@example.invalid');
+      insert into public.users(id,nickname,social_provider,social_id) values('b1000000-0000-4000-8000-000000000001','weight-a','google','weight-a'),('b1000000-0000-4000-8000-000000000002','weight-b','google','weight-b') on conflict(id) do nothing;
+      insert into public.user_account_generation_watermarks(owner_uuid,last_account_generation) values('b1000000-0000-4000-8000-000000000001',1),('b1000000-0000-4000-8000-000000000002',1);
+      insert into public.user_account_lifecycles(owner_uuid,account_generation,auth_identity_created_at_snapshot,origin,status,activated_at)
+      values('b1000000-0000-4000-8000-000000000001',1,'2026-08-08T00:00:00Z','runtime','active',now()),('b1000000-0000-4000-8000-000000000002',1,'2026-08-08T00:00:00Z','runtime','active',now());
+      insert into public.user_session_generation_bindings(session_key_hash,hmac_key_version,owner_uuid,expected_account_generation,auth_identity_created_at_snapshot,binding_state,auth_authority,local_issuer,local_verified_at,auth_cutover_epoch,session_issued_at,binding_expires_at)
+      values('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',1,'b1000000-0000-4000-8000-000000000001',1,'2026-08-08T00:00:00Z','active','local','https://auth.mumeok.kr/auth/v1','2026-08-08T01:00:00Z',2,'2026-08-08T01:00:00Z','2099-01-01'),
+        ('ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',1,'b1000000-0000-4000-8000-000000000002',1,'2026-08-08T00:00:00Z','active','local','https://auth.mumeok.kr/auth/v1','2026-08-08T01:00:00Z',2,'2026-08-08T01:00:00Z','2099-01-01');
+      insert into public.ingredients(id,standard_name,category,default_unit) values('b8000000-0000-4000-8000-000000000001','fixture food','채소','g');
+      insert into public.recipes(id,title,base_servings,created_by,source_type,visibility,revision,updated_at) values('b2000000-0000-4000-8000-000000000001','fixture dish',2,'b1000000-0000-4000-8000-000000000001','manual','private',1,now());
+      insert into public.recipe_nutrition_snapshots(id,recipe_id,base_servings,input_hash,calculation_version,scalable_values_json,fixed_values_json,nutrient_status_json,
+        calculation_status,calculation_quality,reflected_ingredient_count,target_ingredient_count,missing_reasons,warnings_json,sources_json,is_current,calculated_at)
+      values('b9000000-0000-4000-8000-000000000001','b2000000-0000-4000-8000-000000000001',2,repeat('e',64),'fixture-pinned-v1','{"energy_kcal":1000,"carbohydrate_g":100,"protein_g":50,"fat_g":20,"sodium_mg":1000}',
+        '{"energy_kcal":0,"carbohydrate_g":0,"protein_g":0,"fat_g":0,"sodium_mg":0}',
+        '{"energy_kcal":{"amount":1000,"known_amount":null,"status":"complete","display_mode":"total"},"carbohydrate_g":{"amount":100,"known_amount":null,"status":"complete","display_mode":"total"},"protein_g":{"amount":50,"known_amount":null,"status":"complete","display_mode":"total"},"fat_g":{"amount":20,"known_amount":null,"status":"complete","display_mode":"total"},"sodium_mg":{"amount":1000,"known_amount":null,"status":"complete","display_mode":"total"}}',
+        'complete','direct',1,1,'{}','[]','[]',true,now());
+      insert into public.recipe_content_snapshots(id,owner_user_id,recipe_id,title,base_servings,ingredients_json,steps_json,content_hash,schema_version,recipe_nutrition_snapshot_id)
+      values('b3000000-0000-4000-8000-000000000001','b1000000-0000-4000-8000-000000000001','b2000000-0000-4000-8000-000000000001','fixture dish',2,'[{"ingredient_id":"b8000000-0000-4000-8000-000000000001","amount":300,"unit":"g","scalable":true,"ingredient_type":"QUANT","food_product_id":null}]','[]',repeat('e',64),1,'b9000000-0000-4000-8000-000000000001');
+      insert into public.meal_plan_columns(id,user_id,name,sort_order) values('b6000000-0000-4000-8000-000000000001','b1000000-0000-4000-8000-000000000001','fixture meal',0);
+      select public.set_account_generation_internal_writer_marker('b5000000-0000-4000-8000-000000000001',false);
+insert into public.nutrition_sources(provider_code,dataset_name,source_kind,source_version,fetched_at,freshness_checked_at,freshness_status,source_url,license_name,manifest_sha256,review_status,decision_reason,reviewed_by,reviewed_at,is_active)values('FIXTURE','Synthetic cooking test','nutrition_dataset','fixture-v1',now(),now(),'current','https://example.invalid/food','Synthetic',repeat('a',64),'approved','synthetic test only','b1000000-0000-4000-8000-000000000001',now(),true);

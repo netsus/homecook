@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 사용자 피드백 — 요리·레시피북 앱 후보
+
+저장 상세의 독립 요리 진입, 재료 수량 클릭 인라인 편집, 데스크톱 상단 완료·취소/모바일 하단 유지, 완료 뒤 복귀, 레시피북 전용 페이지·목차 이동·URL 복원을 적용한다. 원본/과거기록/식사 상태/권한·운영 DB는 보존한다. 유효한 서버의 완성 전체무게 추정값을 자동 추정 필드에 채우고 기존 g 식사기록에 사용한다. 명시적 실측 입력은 별도 빈 필드로 전환해 그 값을 우선하며 자동값을 실측으로 승격하지 않는다. 인분/비율 독립 기록은 범위에서 제외한다. 새 recipe-mass-proxy-v1 로컬 후보는 화면의 카레 수량으로3119.7g을 계산한다. 조리손실 미보정이며 소량 양념·스푼 가정의 입력 범위3059.55–3153.5g은 완성무게 신뢰구간이 아니다. 직접 수정한 추정은 manual_estimate, 실측은 reported_measured로 분리한다. 새 검증 함수 SQL 후보는 격리 검사만 했으며 운영 DB238에는 적용하지 않았다. 임의0g이나 부분합을 전체로 채우지 않는다. [전체무게 자동 채움·계산 조사](../engineering/whole-cooked-weight-estimate-20261020.md)를 따른다. 앱 후보이며 운영 미반영이다. [원인·검증·남은 범위](../engineering/cooking-recipebook-feedback-20261020.md)를 따른다.
+
 ## 2026-10-20 — Anti Slop84 운영·잔여84 종료 기록 완료
 
 PR1839 merge16cf3155를공식DB238앱-only로한번배포했다. 실제buildprelaunch-16cf3155c7b5-qy0qD5·ready·Anti84/new0, source345PASS/전체type/lint/독립승인·배포웹1477PASS133이름필터SKIP·compile98/static94/기존경고3다. 고정READ ONLY9지문전후동일·원plan/readerFloor/PIN/R2보호유지·SQL/설정변경0. 실제확인은manifest200·비로그인users/me/planner/nutritionGET3wrapped401이며새인증QA미실행이다. 원16379해결84잔여, 배열/조건부62개별가치감사와전체84개이유/재개조건을끝냈다. 보호된후보/설계/명시보류는해제하지않았다. [운영증거·잔여종료장부·검증한계](../engineering/anti-slop-nutrition-residual-closeout-20261020.md)가최신이며아래source84/운영87은과거다.

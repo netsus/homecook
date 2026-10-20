@@ -141,6 +141,8 @@ export function renderMealLogShell({
   batchRemainingWeight = 80,
   batchStatus = "available",
   batchWeightStatus = "known",
+  batchWeightSource,
+  quantityV4 = false,
   batchPages,
   deferBatchLoad = false,
   deferredBatchCursors = [],
@@ -161,6 +163,8 @@ export function renderMealLogShell({
   batchRemainingWeight?: number;
   batchStatus?: "available" | "depleted";
   batchWeightStatus?: "known" | "missing" | "unrecoverable";
+  batchWeightSource?: "estimated" | "measured";
+  quantityV4?: boolean;
   batchPages?: MealLogBatchPageFixture[];
   deferBatchLoad?: boolean;
   deferredBatchCursors?: Array<string | null>;
@@ -439,6 +443,7 @@ export function renderMealLogShell({
                       finished_weight_g: weightStatus === "known" ? 500 : null,
                       remaining_weight_g: weightStatus === "known" ? remainingWeight : null,
                       weight_status: weightStatus,
+                      weight_source: batchWeightSource,
                       batch_status: currentBatchStatus,
                       depleted_reason: currentBatchStatus === "depleted" ? "consumed" : null,
                       revision: 1,
@@ -515,7 +520,8 @@ export function renderMealLogShell({
                 }
               : { items: [], next_cursor: null, has_next: false };
     if (data instanceof Response) return data;
-    return new Response(JSON.stringify({ success: true, data, error: null }), {
+    const responseData = quantityV4 && isDayRead ? { ...data, quantity_policy: "quantity-v4" } : data;
+    return new Response(JSON.stringify({ success: true, data: responseData, error: null }), {
       headers: { "content-type": "application/json" },
       status: 200,
     });

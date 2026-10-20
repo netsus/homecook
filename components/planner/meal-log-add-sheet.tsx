@@ -61,6 +61,7 @@ export interface MealLogSourceSelection {
   ingredientOptions?: IngredientQuantityOptions;
   quantityUnavailableReason?: string;
   batchBasis?: { revision: number; cooking_servings: number; finished_weight_g: number; remaining_weight_g: number; weight_source: string | null };
+  batchWeightEvidenceSource?: string;
   supportsQuantityV4?: boolean;
 }
 
@@ -411,6 +412,7 @@ export function MealLogAddSheet({
               name: batch.recipe_title,
               unit: current.unit,
               supportsQuantityV4: batch.weight_status === "known" && batch.batch_status === "available",
+              batchWeightEvidenceSource: batch.weight_evidence?.source,
             };
             if (batch.cooking_servings && batch.finished_weight_g && batch.revision && batch.remaining_weight_g !== null) restored.batchBasis = {
               revision: batch.revision, cooking_servings: batch.cooking_servings, finished_weight_g: batch.finished_weight_g,
@@ -929,6 +931,7 @@ export function MealLogAddSheet({
                               type: "cooked_batch",
                               unit: "g",
                               supportsQuantityV4: selectable,
+                              batchWeightEvidenceSource: batch.weight_evidence?.source,
                               unitOptions: quantityV4Enabled && batch.cooking_servings && batch.finished_weight_g && batch.revision ? ["g", "인분"] : ["g"],
                             };
                             if (batch.cooking_servings && batch.finished_weight_g && batch.revision && batch.remaining_weight_g !== null) selected.batchBasis = {
@@ -1043,7 +1046,7 @@ export function MealLogAddSheet({
             {selection.quantityUnavailableReason ? <p className="mt-2 text-sm text-[var(--text-2)]" role="status">{selection.quantityUnavailableReason}</p> : null}
             {selection.ingredientOptions?.recommendation_reason ? <p className="mt-2 text-sm text-[var(--text-2)]">현재 크기·상태의 생활단위 근거를 확인하지 못했어요. g으로 입력해 주세요.</p> : null}
             {selection.ingredientOptions?.choices.find(choice => choice.unit === selection.unit)?.quality === "unavailable" ? <p className="mt-2 text-sm text-[var(--text-2)]">이 단위로 입력한 양은 보존해요. 영양을 계산할 환산 근거는 아직 없어요.</p> : null}
-            {selection.ingredientOptions?.choices.find(choice => choice.unit === selection.unit)?.quality === "estimated" || selection.batchBasis?.weight_source === "estimated" ? <p className="mt-2 text-sm text-[var(--text-2)]">약 환산값이에요. 실제 무게에 따라 달라질 수 있어요.</p> : null}
+            {selection.ingredientOptions?.choices.find(choice => choice.unit === selection.unit)?.quality === "estimated" || ["estimated", "conditional_estimate", "manual_estimate", "historical_estimate"].includes(selection.batchWeightEvidenceSource ?? selection.batchBasis?.weight_source ?? "") ? <p className="mt-2 text-sm text-[var(--text-2)]">약 환산값이에요. 실제 무게에 따라 달라질 수 있어요.</p> : null}
             {selection.unit === "인분" && selection.batchBasis ? <p className="mt-2 text-sm text-[var(--text-2)]">조리 당시 {selection.batchBasis.cooking_servings}인분 · 전체 {formatQuantityAmount(selection.batchBasis.finished_weight_g)}g 기준이에요.</p> : null}
             {previewLoading ? <div aria-label="영양 미리보기 불러오는 중" className="mt-5 space-y-3" role="status"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4" /></div> : null}
             {preview ? <section aria-label="입력한 양의 영양 미리보기" className="my-5 space-y-3"><div className="flex items-center justify-between text-sm"><span>{amount === null ? "-" : formatQuantityAmount(amount)}{quantityUnitLabel(selection.unit)} 기준</span><span className="text-xl">{formatMealLogEnergy(preview)}</span></div><MealLogMacroBar nutrition={preview} thin /><dl className="flex justify-between gap-3 text-sm">{MEAL_LOG_MACROS.map(macro => <div key={macro.key} className="flex gap-1"><dt aria-label={macro.label}>{macro.short}</dt><dd>{formatMealLogNumber(preview[macro.key])}{preview[macro.key] !== null ? "g" : ""}</dd></div>)}</dl></section> : null}

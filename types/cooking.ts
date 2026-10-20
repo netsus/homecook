@@ -148,7 +148,7 @@ export type SnapshotV2CompleteBody =
       consumed_pantry_item_ids: string[];
       weight_action: "set_finished_weight";
       finished_weight_g: number;
-      weight_input_source?: "reported_measured";
+      weight_input_source?: "reported_measured" | "manual_estimate";
       weight_attestation?: WeightAttestationInput;
     }
   | {

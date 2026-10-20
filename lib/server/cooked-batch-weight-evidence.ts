@@ -1,10 +1,11 @@
+import { withRecipeMassProxy } from "@/lib/server/cooked-weight-mass-proxy";
 import { withIngredientMassFallback } from "@/lib/server/cooked-weight-mass-fallback";
 import { snapshotIngredients, type CookingWeightSessionClient, type CookingWeightSnapshotIngredient } from "@/lib/server/cooked-batch-weight-estimate";
 import { hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import { predictSnapshotWeight } from "@/lib/server/cooked-weight-snapshot-prediction";
 import { hydrateRecipeNutritionIngredients, loadRecipeNutritionPredecessors } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
 import type { RecipeNutritionIngredientInput } from "@/lib/nutrition/recipe-nutrition-calculator";
-import type { CookedWeightSummary, CookingModeStep } from "@/types/cooking";
+import type { CookedWeightSummary, CookingModeStep, CookingModeIngredient } from "@/types/cooking";
 import type { SnapshotWeightPrediction } from "@/lib/server/cooked-weight-snapshot-prediction";
 import { callCookedBatchRpc, type CookedBatchRpcClient } from "@/lib/server/cooked-batches";
 import { projectSnapshotV2CookModeData } from "@/lib/server/recipe-content-snapshot-future-propagation";
@@ -18,11 +19,12 @@ function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-export async function readSnapshotWeightPrediction({ client, weightClient, ownerId, sessionId, cookingSteps, methodClient, authorityArgs }: {
+export async function readSnapshotWeightPrediction({ client, weightClient, ownerId, sessionId, cookingSteps, cookingIngredients, methodClient, authorityArgs }: {
   client: CookingWeightSessionClient & RecipeProductNutritionClient;
   weightClient: { from(table: string): unknown } | null;
   ownerId: string; sessionId: string;
   cookingSteps?: readonly CookingModeStep[];
+  cookingIngredients?: readonly CookingModeIngredient[];
   methodClient?: CookedBatchRpcClient;
   authorityArgs?: Record<string, unknown>;
 }): Promise<SnapshotWeightPrediction | null> {
@@ -47,11 +49,12 @@ export async function readSnapshotWeightPrediction({ client, weightClient, owner
   if (session.status === "completed") return predictSnapshotWeight({ snapshotId: snapshot.id, baseServings: snapshot.base_servings,
     cookingServings: session.cooking_servings, ingredients }); // Receipt replay never depends on today's conversion availability.
   let steps = cookingSteps ?? [];
-  if (cookingSteps === undefined && methodClient && authorityArgs) {
+  let labels = cookingIngredients ?? [];
+  if ((cookingSteps === undefined || cookingIngredients === undefined) && methodClient && authorityArgs) {
     const mode = await callCookedBatchRpc(methodClient, "read_snapshot_v2_cook_mode", { ...authorityArgs, p_session_id: sessionId });
     if (mode.ok) {
       const data = projectSnapshotV2CookModeData(mode.data);
-      if (data?.session_id === sessionId && data.recipe.id === session.recipe_id && data.recipe.cooking_servings === session.cooking_servings) steps = data.recipe.steps;
+      if (data?.session_id === sessionId && data.recipe.id === session.recipe_id && data.recipe.cooking_servings === session.cooking_servings) { steps = data.recipe.steps; labels = data.recipe.ingredients; }
     }
     // Missing structured method context remains unknown; base completion still verifies authority.
   }
@@ -75,9 +78,11 @@ export async function readSnapshotWeightPrediction({ client, weightClient, owner
     weighted.push(weightRow);
   }
   if (weighted.length !== ingredients.length) return null;
-  return withIngredientMassFallback(predictSnapshotWeight({ snapshotId: snapshot.id, baseServings: snapshot.base_servings,
+  const prediction = predictSnapshotWeight({ snapshotId: snapshot.id, baseServings: snapshot.base_servings,
     cookingServings: session.cooking_servings, ingredients: weighted,
-    snapshotSteps: Array.isArray(snapshot.steps_json) ? snapshot.steps_json : [], cookingSteps: steps }));
+    snapshotSteps: Array.isArray(snapshot.steps_json) ? snapshot.steps_json : [], cookingSteps: steps });
+  return withIngredientMassFallback(withRecipeMassProxy(prediction, snapshot.ingredients_json, labels,
+    Array.isArray(snapshot.steps_json) ? snapshot.steps_json : [], steps));
 }
 
 export function summarizeWeightPrediction(evidence: SnapshotWeightPrediction): CookedWeightSummary {

@@ -4,8 +4,9 @@ import { snapshotIngredients } from "@/lib/server/cooked-batch-weight-estimate";
 import { hydrateRecipeProductNutrition, type RecipeProductNutritionClient } from "@/lib/server/recipe-product-nutrition";
 import { hydrateRecipeQuantityNutrition } from "@/lib/server/recipe-quantity-input";
 import { predictSnapshotWeight } from "@/lib/server/cooked-weight-snapshot-prediction";
+import { withRecipeMassProxy } from "@/lib/server/cooked-weight-mass-proxy";
 import { withIngredientMassFallback } from "@/lib/server/cooked-weight-mass-fallback";
-import type { CookingModeStep } from "@/types/cooking";
+import type { CookingModeIngredient, CookingModeStep } from "@/types/cooking";
 import { isCookedWeightSummary } from "@/lib/cooking/cooked-weight-summary";
 import type { CookedWeightSummary } from "@/types/cooking";
 
@@ -44,7 +45,7 @@ export function applyExecutionQuantityChanges(rows: readonly unknown[], changes:
 export async function calculateExecutionQuantities(input: {
   client: { from(table: string): unknown } & RecipeProductNutritionClient; ownerId: string;
   recipeId: string; snapshotId: string; baseServings: number; cookingServings: number;
-  rows: Record<string, unknown>[]; originalRows: readonly unknown[]; steps: readonly unknown[]; cookingSteps: readonly CookingModeStep[];
+  rows: Record<string, unknown>[]; originalRows: readonly unknown[]; steps: readonly unknown[]; cookingSteps: readonly CookingModeStep[]; cookingIngredients?: readonly CookingModeIngredient[];
 }) {
   const rows = snapshotIngredients(input.rows);
   if (!rows) throw new Error("INVALID_EXECUTION_QUANTITY");
@@ -65,14 +66,15 @@ export async function calculateExecutionQuantities(input: {
   const predicted = predictSnapshotWeight({ snapshotId: input.snapshotId,
     baseServings: input.baseServings, cookingServings: input.cookingServings, ingredients: weightRows,
     snapshotSteps: input.steps, cookingSteps: input.cookingSteps });
-  const evidence = withIngredientMassFallback({ ...predicted, prediction: { ...predicted.prediction,
+  const changed = { ...predicted, prediction: { ...predicted.prediction,
     input: predicted.prediction.input ? { ...predicted.prediction.input, rows: predicted.prediction.input.rows.map((row, index) => {
       const original = input.originalRows[index];
       return record(original) && (original.amount !== input.rows[index].amount || original.unit !== input.rows[index].unit
         || original.scalable !== input.rows[index].scalable || original.ingredient_type !== input.rows[index].ingredient_type)
         ? { ...row, quantityOrigin: "reported_actual" as const } : row;
     }) } : null,
-  } });
+  } };
+  const evidence = withIngredientMassFallback(withRecipeMassProxy(changed, input.rows, input.cookingIngredients ?? [], input.steps, input.cookingSteps));
   const nutrition = { recipe_content_snapshot_id: input.snapshotId, recipe_nutrition_snapshot_id: null,
     basis: { amount: input.cookingServings, unit: "serving" }, base_servings: input.baseServings,
     values: scaled.values, calculation_status: calculation.calculation_status, calculation_quality: calculation.calculation_quality,

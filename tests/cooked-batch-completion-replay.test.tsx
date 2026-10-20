@@ -101,8 +101,8 @@ describe("cooked batch completion replay", () => {
     expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "요리 완료" })).toBeNull();
     expect(screen.getByRole("link", { name: "식사 기록하기" }).getAttribute("href")).toBe("/planner?segment=log");
-    expect(screen.getAllByRole("link")).toHaveLength(1);
-    expect(screen.queryByRole("link", { name: "돌아가기" })).toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "돌아가기" })).toBeTruthy();
   });
   it("retains pantry deduction and the retry key without showing a completion popup", async () => {
     const user = userEvent.setup();

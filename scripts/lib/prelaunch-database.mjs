@@ -1,3 +1,4 @@
+import { MASS_PROXY_FEATURE, MASS_PROXY_REVIEW_PIN, MASS_PROXY_FUNCTIONS_SQL, assertMassProxyReview, assertMassProxyOperatingPin, planMassProxyMigration, unchangedMassProxyCatalogSql, assertMassProxyObservation, assertMassProxyTransition } from "./cooked-weight-mass-proxy-maintenance.mjs";
 import { SAVED_RECIPE_NUTRITION_FEATURE, SAVED_RECIPE_NUTRITION_REVIEW_PIN, SAVED_RECIPE_NUTRITION_MIGRATIONS,
  SAVED_RECIPE_NUTRITION_FUNCTIONS_SQL, assertSavedRecipeNutritionReview, assertSavedRecipeNutritionObservation, assertSavedRecipeNutritionTransition, assertSavedRecipeNutritionCommittedIdentity } from "./saved-recipe-nutrition-maintenance.mjs";
 import { unchangedSavedRecipeNutritionCatalogSql, SAVED_RECIPE_NUTRITION_CATALOG_SOURCE_URL } from "./saved-recipe-nutrition-catalog.mjs";
@@ -210,6 +211,7 @@ export const RECIPE_SAVE_FUNCTIONS_SQL = `SELECT coalesce(jsonb_agg(jsonb_build_
  FROM unnest(ARRAY[${RECIPE_SAVE_FUNCTION_SIGNATURES.map(literal).join(",")}]) s(signature) JOIN pg_proc p ON p.oid=to_regprocedure(s.signature);`;
 
 export function createProtectedPrelaunchAdapter(base, feature = "recipe-product-source", review = /** @type {Record<string, any> | undefined} */ (undefined), databaseMaintenance = /** @type {ReturnType<typeof loadNutritionValidatorMaintenance> | undefined} */ (undefined)) {
+  if (feature === MASS_PROXY_FEATURE) return createMassProxyAdapter(base, review);
   if (feature === SAVED_RECIPE_NUTRITION_FEATURE) return createSavedRecipeNutritionAdapter(base, review);
   if (feature === COOKING_EXPERIENCE_FEATURE) return createCookingExperienceAdapter(base, review);
   if (!["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(feature)) throw new Error("Unknown protected adapter feature");
@@ -421,6 +423,48 @@ export function createSavedRecipeNutritionAdapter(base, review) {
 }
 
 /** @param {{ repositoryRoot: string, operationDirectory: string, guardPath: string, operationId: string, previousNotAppliedSha256?: string }} options */
+export function createMassProxyAdapter(base, review) {
+  assertMassProxyReview(review);
+  if (review.database.normalProjectionSha256 !== digest(RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL)) throw new Error("Mass proxy239 fixed normal-data projection differs");
+  if (review.database.functionQuerySha256 !== digest(MASS_PROXY_FUNCTIONS_SQL) || review.database.unchangedQuerySha256 !== digest(unchangedMassProxyCatalogSql(PROTECTED_CATALOG_SQL))) throw new Error("Mass proxy239 fixed query bytes differ");
+  return { ...base, async observe(sessionQuery, applicationName) {
+    const target = await base.inspect();
+    const query = sessionQuery ?? (sql => base.query(sql));
+    const normalDataSha256 = (await query(RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL)).trim();
+    const protectedRows = [];
+    for (const table of PROTECTED_DATA_TABLES) {
+      const present = (await query(`SELECT to_regclass(${literal(table)}) IS NOT NULL;`)).trim() === "t";
+      protectedRows.push([table,present ? (await query(`SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text,'UTF8')),'hex') FROM ${table} t;`)).trim() : "absent"]);
+    }
+    const ledgerPreservedRowsSha256 = (await query(`SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY filename),'[]'::jsonb)::text,'UTF8')),'hex') FROM homecook_deploy.migrations t WHERE filename<=${literal("20261019140000_cooking_quantity_json_echo.sql")};`)).trim();
+    const exists = (await query("SELECT to_regclass('private.cooking_execution_quantities') IS NOT NULL;")).trim() === "t";
+    if (!exists) throw new Error("Mass proxy239 requires the committed235 execution table");
+    const executionRowsSha256=(await query("SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text,'UTF8')),'hex') FROM private.cooking_execution_quantities t;")).trim();
+    const executionTable = exists ? JSON.parse((await query(COOKING_EXECUTION_TABLE_SQL)).trim()) : null;
+    const result = { target, ledger:JSON.parse((await query(PROTECTED_LEDGER_SQL)).trim()),
+      catalogSha256:(await query(PROTECTED_CATALOG_SQL)).trim(),immutableSha256:(await query(PROTECTED_IMMUTABLE_CATALOG_SQL)).trim(),
+      stableImmutableSha256:(await query(COOKED_WEIGHT_STABLE_IMMUTABLE_SQL)).trim(),
+      unchangedCatalogSha256:(await query(unchangedMassProxyCatalogSql(PROTECTED_CATALOG_SQL))).trim(),
+      normalDataSha256,normalProjectionSha256:digest(RECIPE_REQUEST_ROLE_NORMAL_DATA_SQL),
+      executionRowsSha256,ledgerPreservedRowsSha256,
+      preservedRowsSha256:digest(JSON.stringify([protectedRows,normalDataSha256,ledgerPreservedRowsSha256,executionRowsSha256])),
+      attestationRowsSha256:(await query("SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text,'UTF8')),'hex') FROM private.cooked_weight_user_attestations t;")).trim(),
+      controlsSha256:(await query(NUTRITION_VALIDATOR_CONTROLS_SQL)).trim(),
+      productWriterEnabled:(await query(PROTECTED_WRITER_SQL)).trim() === "true",
+      cookedWeightWriterEnabled:(await query(COOKED_WEIGHT_WRITER_SQL)).trim() === "true",
+      quantityWriterEnabled:(await query(QUANTITY_V4_WRITER_SQL)).trim() === "true",
+      functions:JSON.parse((await query(MASS_PROXY_FUNCTIONS_SQL)).trim()),scopeLink:JSON.parse((await query(COOKING_SCOPE_LINK_SQL)).trim()),
+      executionTableSha256:executionTable === null ? null : digest(JSON.stringify(executionTable)),
+      executionRowsEmpty:!exists || (await query("SELECT NOT EXISTS(SELECT 1 FROM private.cooking_execution_quantities);")).trim() === "t",
+      ledgerAuthority:(await query("SELECT pg_get_userbyid(c.relowner)='supabase_admin' AND has_table_privilege('postgres',c.oid,'SELECT') AND NOT has_table_privilege('postgres',c.oid,'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') FROM pg_class c WHERE c.oid='homecook_deploy.migrations'::regclass;")).trim() === "t",
+      active:(await query(`SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=${literal(applicationName)}${sessionQuery ? " AND pid<>pg_backend_pid()" : ""});`)).trim() === "t",
+      worker:JSON.parse((await query(QUANTITY_V4_WORKER_STATE_SQL)).trim()) };
+    return result;
+  } };
+}
+
+/** @param {{ repositoryRoot: string, operationDirectory: string, guardPath: string, operationId: string, previousNotAppliedSha256?: string }} options */
+
 export function createProtectedPrelaunchJournal({ repositoryRoot, operationDirectory, guardPath, operationId, previousNotAppliedSha256 = undefined }) {
   const attemptPath = path.join(operationDirectory, "attempt.json");
   const read = () => {
@@ -471,6 +515,7 @@ export function createProtectedPrelaunchJournal({ repositoryRoot, operationDirec
 }
 
 export async function openProtectedPrelaunchTarget({ repositoryRoot, configPath, backupDirectory, review }) {
+  if (review.feature === MASS_PROXY_FEATURE) { assertMassProxyOperatingPin(); assertMassProxyReview(review); }
   if ([QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature)) assertQuantityV4ProtectionPrepared(review);
   if (review.feature === SAVED_RECIPE_NUTRITION_FEATURE) {
     assertSavedRecipeNutritionReview(review);
@@ -492,7 +537,7 @@ export async function openProtectedPrelaunchTarget({ repositoryRoot, configPath,
     || digest(readClosedR2PrivateBytes(review.platformInventory.path, repositoryRoot, 524288)) !== review.platformInventory.sha256) {
     throw new Error("Protected platform backup/current inventory bindings differ");
   }
-  const base = await createRecordingDockerAdapter({ configPath, backupDirectory, responsiveBackup: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature), responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature) });
+  const base = await createRecordingDockerAdapter({ configPath, backupDirectory, responsiveBackup: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(review.feature), responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(review.feature) });
   const target = await base.inspect();
   if (digest(JSON.stringify(target)) !== review.database.targetSha256) throw new Error("Protected database identity differs from approved config target");
   const { loadFullLocalBackupReadiness } = await import("../full-local-production-runtime.mjs");
@@ -899,6 +944,7 @@ function assertProtectedSqlOperatorBoundary(sql) {
 }
 
 export function planProtectedPrelaunchMigrations(review, migrations) {
+  if (review.feature === MASS_PROXY_FEATURE) return planMassProxyMigration(review, migrations);
   const before = review?.database?.before;
   const after = review?.database?.after;
   const specs = review?.database?.migrations;
@@ -953,6 +999,8 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
 /** @param {{productOffReceipt?: unknown, reviewSha256?: string, workerCheckpoint?: any, ddlOnly?: boolean, safeQuantityOff?: boolean, activeWorkerContinuation?: ReturnType<typeof import("./prelaunch-web-deploy.mjs").loadQuantityV4ActiveWorkerContinuation>}} [independent] */
 export function assertProtectedPrelaunchObservation(review, observation, phase, independent = {}) {
   const { productOffReceipt = null, reviewSha256, workerCheckpoint, ddlOnly = false, safeQuantityOff = false, activeWorkerContinuation } = independent;
+  if (review?.feature===MASS_PROXY_FEATURE) return assertMassProxyObservation(review, observation, phase);
+  if (independent.databaseMaintenance?.review.feature===MASS_PROXY_FEATURE && phase==="after") return assertMassProxyObservation(independent.databaseMaintenance.review, observation, phase);
   if (review?.feature===SAVED_RECIPE_NUTRITION_FEATURE) {
     assertSavedRecipeNutritionObservation(review,observation,phase);
     if(phase==="after"&&independent.databaseMaintenance?.review.feature===SAVED_RECIPE_NUTRITION_FEATURE)assertSavedRecipeNutritionCommittedIdentity({functionOids:independent.databaseMaintenance.record.savedRecipeNutritionFunctionOids,scopeLink:independent.databaseMaintenance.record.savedRecipeNutritionScopeLink},observation);
@@ -1122,8 +1170,9 @@ export function classifyProtectedPrelaunchOutcome(review, observation, independe
 
 // Existing controlled-adapter/session/backup boundaries are supplied explicitly for isolated fixtures.
 // This is not an arbitrary SQL/path/catalog runner: expected images and source bytes precede all I/O.
-const cookingFeature=feature=>[COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE].includes(feature);
+const cookingFeature=feature=>[COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(feature);
 export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, operationId, readMigrations, adapter, journal, assertBoundary, checkCancelled = () => {}, workerCheckpoint = /** @type {Record<string, unknown> | undefined} */ (undefined) }) {
+  const massProxy=review?.feature===MASS_PROXY_FEATURE;
   const savedNutrition=review?.feature===SAVED_RECIPE_NUTRITION_FEATURE;
   const nativeMaintenance=cookingFeature(review?.feature);
   const cooking = review?.feature === COOKING_EXPERIENCE_FEATURE;
@@ -1132,11 +1181,12 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
   const maintenance = nativeMaintenance || requestRole || recipeSave || review?.feature === NUTRITION_VALIDATOR_FEATURE;
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(operationId ?? "")
     || !SHA.test(reviewSha256) || review?.schema !== "homecook.prelaunch-protected-rollout-review.v1"
-    || !["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE, SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature) || review.approved?.database !== true || review.approved.writerOn !== false
-    || (savedNutrition ? reviewSha256!==SAVED_RECIPE_NUTRITION_REVIEW_PIN.sha256||!SHA.test(SAVED_RECIPE_NUTRITION_REVIEW_PIN.sha256??"") : cooking ? reviewSha256 !== COOKING_EXPERIENCE_REVIEW_PIN.sha256 || !SHA.test(COOKING_EXPERIENCE_REVIEW_PIN.sha256 ?? "") : maintenance ? review.readerPrecedesDatabase !== true || reviewSha256 !== (requestRole ? RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN : recipeSave ? RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN : NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN).sha256
+    || !["recipe-product-source", COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE, SAVED_RECIPE_NUTRITION_FEATURE, MASS_PROXY_FEATURE].includes(review.feature) || review.approved?.database !== true || review.approved.writerOn !== false
+    || (massProxy ? reviewSha256!==MASS_PROXY_REVIEW_PIN.sha256||!SHA.test(MASS_PROXY_REVIEW_PIN.sha256??"") : savedNutrition ? reviewSha256!==SAVED_RECIPE_NUTRITION_REVIEW_PIN.sha256||!SHA.test(SAVED_RECIPE_NUTRITION_REVIEW_PIN.sha256??"") : cooking ? reviewSha256 !== COOKING_EXPERIENCE_REVIEW_PIN.sha256 || !SHA.test(COOKING_EXPERIENCE_REVIEW_PIN.sha256 ?? "") : maintenance ? review.readerPrecedesDatabase !== true || reviewSha256 !== (requestRole ? RECIPE_REQUEST_ROLE_ROLLOUT_REVIEW_PIN : recipeSave ? RECIPE_SAVE_RECOVERY_ROLLOUT_REVIEW_PIN : NUTRITION_VALIDATOR_ROLLOUT_REVIEW_PIN).sha256
       : review.allNewShapesOff !== true || review.legacyReaderCompatible !== true) || !SHA.test(review.isolatedEvidenceSha256)) {
     throw new Error("Protected database exact approval/OFF/legacy compatibility evidence required");
   }
+  if (massProxy) { assertMassProxyOperatingPin(); assertMassProxyReview(review); }
   if (savedNutrition) assertSavedRecipeNutritionReview(review);
   if (cooking) assertCookingExperienceReview(review);
   // Neither the caller nor later observations may replace the reviewed expectations.
@@ -1147,7 +1197,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
   if (quantity && review.quantityStage === "worker") assertQuantityV4WorkerCheckpoint(review, workerCheckpoint, "before");
   const independent = { workerCheckpoint, ddlOnly: quantity || attestation || maintenance };
   const check = (observation, phase) => assertProtectedPrelaunchObservation(review, observation, phase, independent);
-  const applicationName = `${savedNutrition?"protected-saved-nutrition":cooking ? "protected-cooking" : attestation ? "protected-attestation" : quantity ? `protected-c04-${review.quantityStage}` : review.feature === COOKED_WEIGHT_FEATURE ? "protected-c01" : "protected-c03"}-${operationId}`;
+  const applicationName = `${massProxy?"protected-mass-proxy":savedNutrition?"protected-saved-nutrition":cooking ? "protected-cooking" : attestation ? "protected-attestation" : quantity ? `protected-c04-${review.quantityStage}` : review.feature === COOKED_WEIGHT_FEATURE ? "protected-c01" : "protected-c03"}-${operationId}`;
   async function prepare() {
     const plan = planProtectedPrelaunchMigrations(review, await readMigrations());
     await assertBoundary();
@@ -1172,6 +1222,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
       quantityWriterEnabled: true, predecessorQuantity: review.predecessorQuantity, normalDataSha256, attestationRowsEmpty: true, rowsPreservedInTransaction: true });
     if (recipeSave) Object.assign(result,{receiptColumnInitiallyNull:true,predecessorNutrition:review.predecessorNutrition});
     if (requestRole) Object.assign(result,{requestRoleCorrected:true,predecessorRecipeSave:review.predecessorRecipeSave});
+    if (massProxy) Object.assign(result,{catalogSha256:cookingObservation.catalogSha256,immutableSha256:cookingObservation.immutableSha256,stableImmutableSha256:cookingObservation.stableImmutableSha256,unchangedCatalogSha256:review.database.unchangedCatalogSha256,normalProjectionSha256:review.database.normalProjectionSha256,executionTableSha256:review.database.executionTableSha256,legacyReaderCompatible:true,readerFloor:review.to,normalDataSha256,attestationRowsSha256,controlsSha256,controlsPreservedInTransaction:true,scopeAliasOidPreservedInTransaction,featureMetadataPreservedInTransaction:true,executionRowsSha256:cookingObservation.executionRowsSha256,ledgerPreservedRowsSha256:cookingObservation.ledgerPreservedRowsSha256,functionOids:cookingObservation.functionOids,scopeLink:cookingObservation.scopeLink,nativePostCatalog:Object.fromEntries(["catalogSha256","immutableSha256","stableImmutableSha256"].map(key=>[key,cookingObservation[key]]))});
     if (savedNutrition) Object.assign(result,{catalogMode:review.database.catalogMode,catalogSha256:cookingObservation.catalogSha256,immutableSha256:cookingObservation.immutableSha256,stableImmutableSha256:cookingObservation.stableImmutableSha256,canonicalCatalog:review.database.canonicalCatalog.after,unchangedCatalogSha256:review.database.unchangedCatalogSha256,catalogComparison:review.database.catalogComparison,legacyReaderCompatible:true,readerFloor:review.to,normalDataSha256,attestationRowsSha256,controlsSha256,controlsPreservedInTransaction:true,scopeAliasOidPreservedInTransaction,featureMetadataPreservedInTransaction:true,executionRowsSha256:cookingObservation.executionRowsSha256,ledgerPreservedRowsSha256:cookingObservation.ledgerPreservedRowsSha256,savedRecipeNutritionFunctionOids:cookingObservation.functionOids,savedRecipeNutritionScopeLink:cookingObservation.scopeLink,savedRecipeNutritionPostCatalog:Object.fromEntries(["catalogSha256","immutableSha256","stableImmutableSha256"].map(key=>[key,cookingObservation[key]]))});
     if (cooking) Object.assign(result, { catalogMode:review.database.catalogMode, catalogSha256:cookingObservation.catalogSha256,immutableSha256:cookingObservation.immutableSha256,stableImmutableSha256:cookingObservation.stableImmutableSha256,canonicalCatalog:review.database.canonicalCatalog.after, unchangedCatalogSha256:review.database.unchangedCatalogSha256, catalogComparison:review.database.catalogComparison, legacyReaderCompatible:true, readerFloor:review.to, normalDataSha256, attestationRowsSha256, controlsSha256, controlsPreservedInTransaction:true, scopeAliasOidPreservedInTransaction });
     if (maintenance && !nativeMaintenance) Object.assign(result, { writerEnabled: true, readerReady: true, sourceReaderRef: review.sourceReaderRef,
@@ -1205,6 +1256,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
       let scopeAliasOidPreservedInTransaction = false;
       let cookingPostCatalog;
       let savedNutritionTransactionRows;
+      let massProxyTransactionRows;
       let commitDispatched = false;
       let guardCreated = false;
       try {
@@ -1214,7 +1266,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         const { searchPath, timeZone } = session.postgresContext ?? {};
         if (typeof searchPath !== "string" || typeof timeZone !== "string") throw new Error("Protected migration postgres context unavailable");
         await session.query(`BEGIN ISOLATION LEVEL SERIALIZABLE; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='180s'; SET LOCAL idle_in_transaction_session_timeout='180s'; SET LOCAL standard_conforming_strings=on; SELECT pg_advisory_xact_lock(104230921,77101); LOCK TABLE homecook_deploy.migrations IN SHARE ROW EXCLUSIVE MODE; SET LOCAL ROLE postgres; SELECT set_config('search_path',${literal(searchPath)},true),set_config('TimeZone',${literal(timeZone)},true);`);
-        if ([COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE, SAVED_RECIPE_NUTRITION_FEATURE].includes(review.feature)) await session.query("SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE;");
+        if ([COOKED_WEIGHT_FEATURE, QUANTITY_V4_FEATURE, COOKED_WEIGHT_ATTESTATION_FEATURE, NUTRITION_VALIDATOR_FEATURE, RECIPE_SAVE_RECOVERY_FEATURE, RECIPE_REQUEST_ROLE_FEATURE, COOKING_EXPERIENCE_FEATURE, SAVED_RECIPE_NUTRITION_FEATURE, MASS_PROXY_FEATURE].includes(review.feature)) await session.query("SELECT singleton FROM private.recipe_product_only_write_control WHERE singleton FOR SHARE;");
         if (quantity || attestation || maintenance) {
           await session.query("SELECT singleton FROM private.cooked_batch_weight_evidence_control WHERE singleton FOR SHARE;");
           if (attestation || maintenance || review.quantityStage === "worker") {
@@ -1255,6 +1307,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
           await session.query(`SET LOCAL ROLE supabase_admin; INSERT INTO homecook_deploy.migrations(filename,sha256) VALUES (${literal(row.filename)},${literal(row.sha256)}); SET LOCAL ROLE postgres;`);
         }
         const post = check(await adapter.observe(query, applicationName), "after");
+        if (massProxy) { assertMassProxyTransition(review,locked,post);scopeAliasOidPreservedInTransaction=true;massProxyTransactionRows={executionRowsSha256:locked.executionRowsSha256,ledgerPreservedRowsSha256:locked.ledgerPreservedRowsSha256,functionOids:post.functions.map(row=>[row.signature,row.oid]),scopeLink:locked.scopeLink};cookingPostCatalog=Object.fromEntries(["catalogSha256","immutableSha256","stableImmutableSha256"].map(key=>[key,post[key]])); }
         if (savedNutrition) { assertSavedRecipeNutritionTransition(locked,post);scopeAliasOidPreservedInTransaction=true;savedNutritionTransactionRows={executionRowsSha256:locked.executionRowsSha256,ledgerPreservedRowsSha256:locked.ledgerPreservedRowsSha256,functionOids:post.savedRecipeNutritionFunctions.map(row=>[row.signature,row.oid]),scopeLink:locked.scopeLink};cookingPostCatalog=Object.fromEntries(["catalogSha256","immutableSha256","stableImmutableSha256"].map(key=>[key,post[key]])); }
         if (cooking) { assertCookingExperienceTransition(locked,post); scopeAliasOidPreservedInTransaction = true; cookingPostCatalog=Object.fromEntries(["catalogSha256","immutableSha256","stableImmutableSha256"].map(key=>[key,post[key]])); }
         if (post.preservedRowsSha256 !== preservedRowsSha256 || ((quantity || attestation || maintenance) && post.normalDataSha256 !== normalDataSha256)
@@ -1263,7 +1316,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         await assertBoundary();
         checkCancelled();
         await journal.write({ ...binding(), status: "commit_dispatch_guard", target: observation.target, backup, preservedRowsSha256, ...(quantity || attestation || maintenance ? { normalDataSha256, rowsPreservedInTransaction } : {}),
-          ...(nativeMaintenance ? { scopeAliasOidPreservedInTransaction, cookingPostCatalog, ...(savedNutrition?{savedNutritionTransactionRows}: {}) } : {}),
+          ...(nativeMaintenance ? { scopeAliasOidPreservedInTransaction, cookingPostCatalog, ...(savedNutrition?{savedNutritionTransactionRows}: {}),...(massProxy?{massProxyTransactionRows}: {}) } : {}),
           ...(maintenance ? { attestationRowsSha256, controlsSha256, controlsPreservedInTransaction: rowsPreservedInTransaction } : {}) });
         commitDispatched = true;
         await session.query("COMMIT;");
@@ -1273,7 +1326,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         const finalObservation=check(await adapter.observe(undefined, applicationName), "after");
         if(savedNutrition)assertSavedRecipeNutritionCommittedIdentity(savedNutritionTransactionRows,finalObservation);
         if(nativeMaintenance && !Object.entries(cookingPostCatalog).every(([key,value])=>finalObservation[key]===value))throw new Error("Cooking committed native catalog drifted from transaction intent");
-        const result = receipt(backup, preservedRowsSha256, normalDataSha256, attestationRowsSha256, controlsSha256, scopeAliasOidPreservedInTransaction, savedNutrition?{...finalObservation,...savedNutritionTransactionRows}:finalObservation);
+        const result = receipt(backup, preservedRowsSha256, normalDataSha256, attestationRowsSha256, controlsSha256, scopeAliasOidPreservedInTransaction, massProxy?{...finalObservation,...massProxyTransactionRows}:savedNutrition?{...finalObservation,...savedNutritionTransactionRows}:finalObservation);
         await journal.write(result);
         return result;
       } catch (error) {
@@ -1285,7 +1338,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         const status = rolledBack ? "rolled_back_before_commit" : "unknown";
         await journal.write({ ...binding(), status, target: observation.target, commitDispatched, backup: backup ?? null, preservedRowsSha256: preservedRowsSha256 ?? null,
           ...(quantity || attestation || maintenance ? { normalDataSha256: normalDataSha256 ?? null, rowsPreservedInTransaction } : {}),
-          ...(nativeMaintenance ? { scopeAliasOidPreservedInTransaction, cookingPostCatalog, ...(savedNutrition?{savedNutritionTransactionRows}: {}) } : {}),
+          ...(nativeMaintenance ? { scopeAliasOidPreservedInTransaction, cookingPostCatalog, ...(savedNutrition?{savedNutritionTransactionRows}: {}),...(massProxy?{massProxyTransactionRows}: {}) } : {}),
           ...(maintenance ? { attestationRowsSha256: attestationRowsSha256 ?? null, controlsSha256: controlsSha256 ?? null, controlsPreservedInTransaction: rowsPreservedInTransaction } : {}) });
         throw Object.assign(error instanceof Error ? error : new Error("Protected database outcome requires inspection"), {
           databaseState: { changed: !rolledBack, outcome: status, backup, automaticRetryAllowed: false },
@@ -1300,6 +1353,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         || digest(JSON.stringify(attempt.target)) !== review.database.targetSha256) throw new Error("Protected reconcile attempt binding differs");
       planProtectedPrelaunchMigrations(review, await readMigrations());
       await assertBoundary();
+      if (massProxy && (attempt.feature!==MASS_PROXY_FEATURE||!same(attempt.predecessorMaintenance,review.predecessorMaintenance)||attempt.readerFloor!==review.to))throw new Error("Mass proxy reconcile original239 intent differs");
       if (savedNutrition && (attempt.feature!==SAVED_RECIPE_NUTRITION_FEATURE||!same(attempt.predecessorMaintenance,review.predecessorMaintenance)||attempt.readerFloor!==review.to))throw new Error("Saved nutrition reconcile original238 intent differs");
       if (cooking && (attempt.feature !== COOKING_EXPERIENCE_FEATURE || !same(attempt.predecessorMaintenance,review.predecessorMaintenance) || attempt.readerFloor !== review.to)) throw new Error("Cooking reconcile original235 intent differs");
       if (maintenance && !nativeMaintenance && (attempt.feature !== review.feature || attempt.sourceReaderRef !== review.sourceReaderRef
@@ -1332,6 +1386,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         throw new Error("Protected committed reconcile lacks the verified commit intent/row preservation binding");
       }
       if ((quantity || attestation || maintenance) && outcome === "committed" && (!SHA.test(attempt.normalDataSha256) || attempt.rowsPreservedInTransaction !== true)) throw new Error("C04 committed reconcile lacks original normal-data transaction evidence");
+      if (massProxy && outcome==="committed" && (!attempt.massProxyTransactionRows || !["executionRowsSha256","ledgerPreservedRowsSha256"].every(key=>SHA.test(attempt.massProxyTransactionRows[key]??"")) || !isDeepStrictEqual(attempt.massProxyTransactionRows.functionOids,review.database.functionOids) || !isDeepStrictEqual(attempt.massProxyTransactionRows.scopeLink,review.database.scopeLink)))throw new Error("Mass proxy committed reconcile lacks original238 row/OID intent");
       if (savedNutrition && outcome==="committed" && (!attempt.savedNutritionTransactionRows || !["executionRowsSha256","ledgerPreservedRowsSha256"].every(key=>SHA.test(attempt.savedNutritionTransactionRows[key]??""))))throw new Error("Saved nutrition committed reconcile lacks original235 row intent");
       if(savedNutrition&&outcome==="committed")assertSavedRecipeNutritionCommittedIdentity(attempt.savedNutritionTransactionRows,observed);
       if (nativeMaintenance && outcome === "committed" && (attempt.scopeAliasOidPreservedInTransaction !== true || !attempt.cookingPostCatalog || !["catalogSha256","immutableSha256","stableImmutableSha256"].every(key=>SHA.test(attempt.cookingPostCatalog[key]??"") && observed[key]===attempt.cookingPostCatalog[key]))) throw new Error("Cooking committed reconcile lacks original alias OID transaction evidence");
@@ -1343,7 +1398,7 @@ export function createProtectedPrelaunchDatabaseEngine({ review, reviewSha256, o
         const reloaded=check(await adapter.observe(undefined, applicationName), "after");
         if(savedNutrition)assertSavedRecipeNutritionCommittedIdentity(attempt.savedNutritionTransactionRows,reloaded);
       }
-      const result = outcome === "committed" ? receipt(attempt.backup, attempt.preservedRowsSha256, attempt.normalDataSha256, attempt.attestationRowsSha256, attempt.controlsSha256, attempt.scopeAliasOidPreservedInTransaction, savedNutrition?{...observed,...attempt.savedNutritionTransactionRows}:observed) : { ...binding(), status: "not_applied", targetSha256: review.database.targetSha256,
+      const result = outcome === "committed" ? receipt(attempt.backup, attempt.preservedRowsSha256, attempt.normalDataSha256, attempt.attestationRowsSha256, attempt.controlsSha256, attempt.scopeAliasOidPreservedInTransaction, massProxy?{...observed,...attempt.massProxyTransactionRows}:savedNutrition?{...observed,...attempt.savedNutritionTransactionRows}:observed) : { ...binding(), status: "not_applied", targetSha256: review.database.targetSha256,
         backup: attempt.backup ?? null, automaticRetryAllowed: false };
       await journal.write(result);
       return result;

@@ -144,7 +144,7 @@ export function RecipeBookDetailScreen({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isMobileViewport = useIsMobileViewport();
-  const appReturn = useAppReturn({ fallback: "/mypage" });
+  const appReturn = useAppReturn({ fallback: "/mypage?tab=recipebooks" });
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -177,6 +177,8 @@ export function RecipeBookDetailScreen({
     () => searchParams.get("readerRecipe"),
   );
   const pendingRestoreRecipeId = useRef(searchParams.get("readerRecipe"));
+  const pendingScrollRecipeId = useRef<string | null>(null);
+  const [scrollRequest, setScrollRequest] = useState(0);
   const restoreRequestedCursors = useRef(new Set<string>());
   const [saveTarget, setSaveTarget] = useState<RecipeBookRecipeItem | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -202,6 +204,41 @@ export function RecipeBookDetailScreen({
   const requestedReaderRecipeIdsRef = useRef<Set<string>>(new Set());
   const lastBookNamePropRef = useRef(bookName);
   const canManageBook = bookType === "custom";
+  const selectRecipe = useCallback((recipeId: string) => {
+    pendingScrollRecipeId.current = recipeId;
+    setScrollRequest(value => value + 1);
+    setActiveDesktopRecipeId(recipeId);
+    if (!embedded) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("readerRecipe", recipeId);
+      url.hash = `recipebook-recipe-${recipeId}`;
+      window.history.replaceState(window.history.state, "", url);
+    }
+  }, [embedded]);
+
+  const changeReaderMode = useCallback((mode: "book" | "list") => {
+    setDesktopReaderMode(mode);
+    if (!embedded) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("readerMode", mode);
+      window.history.replaceState(window.history.state, "", url);
+    }
+  }, [embedded]);
+
+  useEffect(() => {
+    const recipeId = pendingScrollRecipeId.current;
+    if (!recipeId) return;
+    const frame = requestAnimationFrame(() => {
+      const target = document.getElementById(`recipebook-recipe-${recipeId}`);
+      if (target) {
+        target.setAttribute("tabindex", "-1");
+        target.focus({ preventScroll: true });
+        target.scrollIntoView?.({ block: "start" });
+        pendingScrollRecipeId.current = null;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeDesktopRecipeId, desktopReaderMode, items, scrollRequest]);
   const knownSavedBookIds = useMemo(() => {
     if (bookType === "saved" || bookType === "custom") {
       return [bookId];
@@ -1062,6 +1099,7 @@ export function RecipeBookDetailScreen({
       <div className="web-recipebook-detail-screen">
         <div className="web-recipebook-detail-head" data-testid="recipebook-detail-header">
           <div>
+            <Link aria-label="뒤로 가기" className="mb-3 inline-flex min-h-11 items-center rounded-lg border px-4" href={appReturn.href}>← 레시피북으로</Link>
             <h1>레시피북 리더</h1>
             <p>{currentBookName} · 왼쪽 목차와 오른쪽 책 페이지로 레시피를 읽어요.</p>
           </div>
@@ -1080,7 +1118,7 @@ export function RecipeBookDetailScreen({
             bookType={bookType}
             hasNext={hasNext}
             items={items}
-            onSelectRecipe={setActiveDesktopRecipeId}
+            onSelectRecipe={selectRecipe}
             onLoadMore={() => void loadMore()}
             isLoadingMore={isLoadingMore}
             recipeCount={recipeCount}
@@ -1299,7 +1337,8 @@ export function RecipeBookDetailScreen({
       <>
         <MobileRecipeBookDetailView
           activeRecipeId={activeDesktopRecipeId}
-          onSelectRecipe={setActiveDesktopRecipeId}
+          onSelectRecipe={selectRecipe}
+          onReaderModeChange={changeReaderMode}
           backHref={appReturn.href}
           bookMenuOpen={bookMenuOpen}
           bookName={currentBookName}
@@ -1366,7 +1405,7 @@ export function RecipeBookDetailScreen({
       items={items}
       readerDetailsById={readerDetailsById}
       mode={desktopReaderMode}
-      onModeChange={setDesktopReaderMode}
+      onModeChange={changeReaderMode}
       onPlannerAdd={(item) => void openPlannerAddSheet(item)}
       onRemove={handleRemoveRequest}
       onSave={(item) => void openSaveModal(item)}
@@ -1468,10 +1507,10 @@ function DesktopRecipeBookRail({
               <li key={item.recipe_id}>
                 <button
                   aria-current={
-                    item.recipe_id === activeRecipeId ? "page" : undefined
+                    item.recipe_id === (activeRecipeId ?? items[0]?.recipe_id) ? "page" : undefined
                   }
                   className={
-                    item.recipe_id === activeRecipeId
+                    item.recipe_id === (activeRecipeId ?? items[0]?.recipe_id)
                       ? "web-recipebook-toc-button web-recipebook-toc-button-active"
                       : "web-recipebook-toc-button"
                   }
@@ -1954,6 +1993,7 @@ function RecipeRemoveConfirmDialog({
 function MobileRecipeBookDetailView({
   activeRecipeId,
   onSelectRecipe,
+  onReaderModeChange,
   backHref,
   buildRecipeCookHref,
   buildRecipeHref,
@@ -1987,6 +2027,7 @@ function MobileRecipeBookDetailView({
 }: {
   activeRecipeId: string | null;
   onSelectRecipe: (recipeId: string) => void;
+  onReaderModeChange: (mode: "book" | "list") => void;
   backHref: string;
   buildRecipeCookHref: (
     item: RecipeBookRecipeItem,
@@ -2036,10 +2077,11 @@ function MobileRecipeBookDetailView({
 
   const handleModeChange = useCallback((mode: "book" | "list") => {
     setReaderMode(mode);
+    onReaderModeChange(mode);
     if (mode === "list") {
       setIsTocOpen(false);
     }
-  }, []);
+  }, [onReaderModeChange]);
 
   const handleSelectRecipeFromToc = useCallback(
     (recipeId: string) => {

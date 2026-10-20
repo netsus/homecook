@@ -123,7 +123,7 @@ export function parseSnapshotV2CompleteRequest(value: unknown) {
   const ids = Array.isArray(value.consumed_pantry_item_ids)
     ? value.consumed_pantry_item_ids
     : null;
-  if (value.weight_input_source !== undefined && (value.weight_input_source !== "reported_measured" || value.weight_action !== "set_finished_weight")) {
+  if (value.weight_input_source !== undefined && ((value.weight_input_source !== "reported_measured" && value.weight_input_source !== "manual_estimate") || value.weight_action !== "set_finished_weight")) {
     fields.push({ field: "weight_input_source", reason: "invalid_enum" });
   }
   if (!ids || ids.some((id) => !isUuid(id)) || new Set(ids).size !== ids.length) {
@@ -142,10 +142,10 @@ export function parseSnapshotV2CompleteRequest(value: unknown) {
   }
   if (fields.length > 0 || !ids) return invalid(fields);
   const parsed: { consumedPantryItemIds: string[]; weightAction: "set_finished_weight" | "weigh_later";
-    finishedWeightG: number | null; weightInputSource: "reported_measured" | null; weightAttestation?: WeightAttestationInput; executionRevision?: number } = {
+    finishedWeightG: number | null; weightInputSource: "reported_measured" | "manual_estimate" | null; weightAttestation?: WeightAttestationInput; executionRevision?: number } = {
     consumedPantryItemIds: [...ids] as string[], weightAction: value.weight_action as "set_finished_weight" | "weigh_later",
     finishedWeightG: value.finished_weight_g as number | null,
-    weightInputSource: value.weight_input_source === "reported_measured" ? "reported_measured" : null,
+    weightInputSource: value.weight_input_source === "reported_measured" || value.weight_input_source === "manual_estimate" ? value.weight_input_source : null,
   };
   if (typeof value.execution_revision === "number") parsed.executionRevision = value.execution_revision;
   if (isWeightAttestationInput(value.weight_attestation)) parsed.weightAttestation = value.weight_attestation;

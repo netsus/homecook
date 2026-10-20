@@ -10,6 +10,7 @@ const INCLUDED_RELATIONS = new Set([
   "private.recipe_product_only_write_control",
   "private.cooked_batch_weight_evidence_control",
   "private.cooked_batch_weight_evidence",
+  "private.cooking_execution_quantities",
   "private.cooked_weight_user_attestations",
   "private.cooked_weight_user_attestation_control",
   "private.quantity_input_v4_policy",

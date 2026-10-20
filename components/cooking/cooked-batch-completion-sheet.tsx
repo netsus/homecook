@@ -50,15 +50,29 @@ export function CookedBatchCompletionSheet({
   sessionId,
 }: CookedBatchCompletionSheetProps) {
   const [selectedIds, setSelectedIds] = useState(() => new Set(initialSelection));
-  const [finishedWeight, setFinishedWeight] = useState("");
+  const [measuredWeight, setMeasuredWeight] = useState("");
+  const [weightMode, setWeightMode] = useState<"auto" | "manual" | "measured">("auto");
+  const predictedGrams = weightEvidenceEnabled && weightPrediction?.source === "conditional_estimate"
+    && typeof weightPrediction.predicted_g === "number" && Number.isFinite(weightPrediction.predicted_g)
+    && weightPrediction.predicted_g > 0 ? weightPrediction.predicted_g : null;
+  const roughEstimate = weightPrediction?.model_version === "recipe-mass-proxy-v1";
+  const displayedPrediction = predictedGrams !== null && roughEstimate ? Number(predictedGrams.toPrecision(2)) : predictedGrams;
+  const predictedWeightLabel = displayedPrediction !== null && roughEstimate && displayedPrediction >= 1000
+    ? `${displayedPrediction / 1000}kg` : `${Math.round(displayedPrediction ?? 0).toLocaleString("ko-KR")}g`;
+  const usingPrediction = predictedGrams !== null && weightMode === "auto";
+  const finishedWeight = usingPrediction ? String(displayedPrediction) : measuredWeight;
   const [weightError, setWeightError] = useState<string | null>(null);
   const [attested, setAttested] = useState(false);
-  const attestation = useWeightAttestationContext("session", sessionId, weightEvidenceEnabled);
+  const attestation = useWeightAttestationContext("session", sessionId, weightEvidenceEnabled && !usingPrediction && weightMode !== "manual");
   useEffect(() => { setAttested(false); }, [attestation.context]);
   const weightRef = useRef<HTMLInputElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (weightMode !== "auto") weightRef.current?.focus();
+  }, [weightMode]);
 
   const { setReturnFocusTarget } = useDialogBoundary({
     closeOnEscape: !submitting,
@@ -116,7 +130,7 @@ export function CookedBatchCompletionSheet({
 
   const handleSubmit = () => {
     if (submitting) return;
-    const provided = weightEvidenceEnabled && finishedWeight.trim() !== "";
+    const provided = weightEvidenceEnabled && !usingPrediction && measuredWeight.trim() !== "";
     const grams = Number(finishedWeight);
     if (provided && (!Number.isFinite(grams) || grams <= 0)) {
       setWeightError("0보다 큰 전체무게를 입력하거나 빈칸으로 건너뛰어 주세요.");
@@ -126,8 +140,8 @@ export function CookedBatchCompletionSheet({
     setWeightError(null);
     if (provided) {
       const body: SnapshotV2CompleteBody = { consumed_pantry_item_ids: validIds.filter((id) => selectedIds.has(id)),
-        weight_action: "set_finished_weight", finished_weight_g: grams, weight_input_source: "reported_measured" };
-      if (attested && attestation.context?.can_attest && attestation.isCurrentContext(attestation.context)) {
+        weight_action: "set_finished_weight", finished_weight_g: grams, weight_input_source: weightMode === "manual" ? "manual_estimate" : "reported_measured" };
+      if (weightMode !== "manual" && attested && attestation.context?.can_attest && attestation.isCurrentContext(attestation.context)) {
         body.weight_attestation = weightAttestationInput(attestation.context);
       }
       onSubmit(body);
@@ -189,22 +203,29 @@ export function CookedBatchCompletionSheet({
           <h3 className="text-base font-bold" id="cooked-batch-weight-heading">완성 음식 전체무게</h3>
           <p className="text-sm leading-5 text-[var(--text-2)]">
             {weightPrediction?.source === "conditional_estimate" && weightPrediction.predicted_g !== null
-              ? `${weightPrediction.model_version === "ingredient-mass-75-v1" ? "재료량 75% 추정 무게" : "조건별 예상 무게"}는 약 ${Math.round(weightPrediction.predicted_g).toLocaleString("ko-KR")}g이에요. 실측값이 아니에요.`
+              ? `${weightPrediction.model_version === "recipe-mass-proxy-v1" ? "재료량 기준 거친 추정 무게" : weightPrediction.model_version === "ingredient-mass-75-v1" ? "재료량 75% 추정 무게" : "조건별 예상 무게"}는 약 ${predictedWeightLabel}이에요. 실측값이 아니에요.`
               : cookedWeightUnavailableReasonText(weightPrediction?.reason_codes)}
           </p>
           {weightPrediction?.assumption_codes?.length ? <p className="text-sm leading-5 text-[var(--text-2)]">{cookedWeightAssumptionText(weightPrediction?.assumption_codes)}</p> : null}
-          <label className="block text-sm font-bold" htmlFor="cooked-batch-reported-weight">저울로 잰 전체무게 (선택, g)</label>
+          <label className="block text-sm font-bold" htmlFor="cooked-batch-reported-weight">{usingPrediction ? "완성 음식 전체무게 (자동 추정, g)" : weightMode === "manual" ? "직접 수정한 추정 전체무게 (g)" : "저울로 잰 전체무게 (선택, g)"}</label>
           <input aria-describedby="cooked-batch-weight-help cooked-batch-weight-validation" aria-invalid={Boolean(weightError) || serverError?.fields.some(field => field.field === "finished_weight_g") || undefined}
             className="h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base"
-            disabled={submitting} id="cooked-batch-reported-weight" inputMode="decimal" min="0" onChange={event => { setFinishedWeight(event.target.value); setWeightError(null); if (!event.target.value.trim() || Number(event.target.value) <= 0) setAttested(false); }}
-            ref={weightRef} step="any" type="number" value={finishedWeight} />
-          <p className="text-sm leading-5 text-[var(--text-2)]" id="cooked-batch-weight-help">용기를 뺀 음식 전체무게예요. 빈칸으로 두어도 저장돼요.</p>
+            disabled={submitting} id="cooked-batch-reported-weight" inputMode="decimal" min="0" onChange={event => { if (usingPrediction) return; if (weightMode === "auto") setWeightMode("measured"); setMeasuredWeight(event.target.value); setWeightError(null); if (!event.target.value.trim() || Number(event.target.value) <= 0) setAttested(false); }}
+            readOnly={usingPrediction} ref={weightRef} step="any" type="number" value={finishedWeight} />
+          {predictedGrams !== null ? <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-sm font-medium" disabled={submitting} onClick={() => {
+            setWeightMode(usingPrediction ? "measured" : "auto"); setMeasuredWeight(""); setAttested(false); setWeightError(null);
+          }} type="button">{usingPrediction ? "실측값 입력" : "자동 추정값 사용"}</button> : null}
+          {predictedGrams !== null && weightMode !== "manual" ? <button className="ml-2 min-h-11 rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-sm font-medium" disabled={submitting} onClick={() => { setWeightMode("manual"); setMeasuredWeight(String(displayedPrediction)); setAttested(false); setWeightError(null); }} type="button">추정값 수정</button> : null}
+          <p className="text-sm leading-5 text-[var(--text-2)]" id="cooked-batch-weight-help">용기를 뺀 음식 전체무게예요. 입력한 실측값을 우선 사용해요. {weightMode === "manual" ? "수정한 값도 추정으로 저장돼요. 자동 계산 근거는 별도로 보존돼요. 먹은 양은 식사기록에서 따로 입력해요." : usingPrediction
+            ? "자동으로 채운 추정무게로 완료하고 식사기록에 사용할 수 있어요. 먹은 양은 식사기록에서 따로 입력해요."
+            : predictedGrams !== null ? "실측값을 비우면 자동 추정무게를 사용해요. 먹은 양은 식사기록에서 따로 입력해요."
+            : "빈칸으로도 요리 완료는 저장돼요. 추정 근거가 부족하면 g 기준 식사기록 전에 재료량이나 전체무게를 확인해 주세요."}</p>
           <p className="text-sm text-[var(--danger-strong)]" id="cooked-batch-weight-validation" role={weightError ? "alert" : undefined}>{weightError}</p>
           <details className="text-sm leading-5 text-[var(--text-2)]">
             <summary className="min-h-11 cursor-pointer py-3">무게 재는 방법</summary>
             <p>먹거나 버리기 전 전체를 재고, 먹을 국물은 포함해 주세요. 남은 양이나 한 접시 무게는 입력하지 않아요.</p>
           </details>
-          {sessionId ? <div className="space-y-2">
+          {sessionId && !usingPrediction && weightMode !== "manual" ? <div className="space-y-2">
             {attestation.loading ? <p className="text-sm text-[var(--text-2)]" role="status">개인 확인 정보를 불러오는 중…</p> : null}
             {attestation.context?.can_attest ? <label className="flex items-start gap-3 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-3 text-sm leading-5">
               <input aria-label={WEIGHT_ATTESTATION_TEXT} checked={attested} className="mt-0.5 h-5 w-5 shrink-0" disabled={submitting || !finishedWeight.trim() || !Number.isFinite(Number(finishedWeight)) || Number(finishedWeight) <= 0}

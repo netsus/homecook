@@ -1,5 +1,4 @@
 "use client";
-import { ExecutionQuantitySheet } from "@/components/cooking/execution-quantity-sheet";
 
 import { useMobileFullscreenPage } from "@/components/shared/use-mobile-fullscreen-page";
 
@@ -18,8 +17,6 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   useMobileFullscreenPage(true, sessionId);
   const [data, setData] = useState<SnapshotV2CookModeData | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "unauthorized">(initialAuthenticated ? "loading" : "unauthorized");
-  const [editing, setEditing] = useState(false);
-  const editButtonRef = useRef<HTMLButtonElement | null>(null);
   const editAttemptRef = useRef<{key:string;payload:string}|null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [completionOpen, setCompletionOpen] = useState(false);
@@ -163,8 +160,16 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   return (
     <>
       <SnapshotV2CookModeView
-        onEditIngredients={data.execution_revision !== undefined ? () => setEditing(true) : undefined}
-        editButtonRef={editButtonRef}
+        onSaveIngredients={data.execution_revision !== undefined ? async changes => {
+          const body = { expected_revision: data.execution_revision ?? 0, changes };
+          const payload = JSON.stringify(body);
+          const attempt = editAttemptRef.current?.payload === payload ? editAttemptRef.current : { key: crypto.randomUUID(), payload };
+          editAttemptRef.current = attempt;
+          await saveCookingExecutionQuantities(sessionId, body, attempt.key);
+          const fresh = await fetchSnapshotV2CookMode(sessionId);
+          setData(fresh);
+          editAttemptRef.current = null;
+        } : undefined}
         cancelling={cancelling}
         completionButtonRef={completionButtonRef}
         data={data}
@@ -173,15 +178,6 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
         preparingCompletion={completionPreparing}
         returnHref={appReturn.href}
       />
-      {editing ? <ExecutionQuantitySheet ingredients={data.recipe.ingredients} returnFocusRef={editButtonRef} onClose={() => setEditing(false)} onSave={async changes => {
-        const body = {expected_revision:data.execution_revision ?? 0, changes};
-        const payload=JSON.stringify(body);
-        const attempt=editAttemptRef.current?.payload===payload?editAttemptRef.current:{key:crypto.randomUUID(),payload};
-        editAttemptRef.current=attempt;
-        await saveCookingExecutionQuantities(sessionId,body,attempt.key);
-        const fresh=await fetchSnapshotV2CookMode(sessionId);
-        setData(fresh);editAttemptRef.current=null;
-      }} /> : null}
       {preparationError ? <AppFeedbackToast message={preparationError} position="bottom" tone="error" /> : null}
       {completionOpen ? (
         <CookedBatchCompletionSheet

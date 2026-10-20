@@ -1,5 +1,10 @@
 # API\_설계\_v1.2.43
 
+## 2026-10-20 전체무게 거친 추정 — 미배포 후보
+
+완료 `set_finished_weight`의 명시적 weight_input_source에 `manual_estimate`를 추가한다. `reported_measured`와 분리하고 attestation은 실측만 허용한다. 자동 완료는 `weigh_later/null`, 서버 recipe-mass-proxy-v1 계산을 사용한다. 새 private evidence는 정책/원본 identity/각 dose·범위·전체합을 검증하며 기존75%·owner·receipt·gate를 보존한다. 후보 migration20261020210000은 기존 두 함수 본문만 변경하며 테이블·컬럼·키·권한·소유자를 바꾸지 않는다. 운영 DB238에는 미적용이고 앱과 함께 별도 승인·릴리스해야 한다. 계산값은 조리손실 미보정 재료량 proxy이며 영양 환산/정확도 보증에 전용하지 않는다. [상세 계약·검증·한계](engineering/whole-cooked-weight-estimate-20261020.md)를 따른다.
+
+
 ## 2026-10-20 — pantry native 조회·쓰기 경계 후보 (로컬, 미반영)
 
 팬트리의 실제 nullable ingredient/product 정체성과 고정 product/version 복합 FK를 유지한다. ingredient inner-join 조회·INSERT 응답에서는 `ingredient_id` 문자열, product 조회·INSERT 응답에서는 product/version 두 문자열만 분기별로 확인하며 잘못된 projection은 기존 `500 INTERNAL_ERROR` wrapper로 닫는다. 정상 product-only의 null ingredient, optional join의 기존 빈 이름 fallback, legacy taxonomy fallback, 본인 private 제품·중복 생략·응답 후 growth·소유자 범위 DELETE/반환 개수는 유지한다. 새 입력/인증 정책이나 SQL 변경은 없다. 기존 DELETE 테스트의 비UUID fixture와 예전 reason 기대를 현행 UUID/`invalid_or_empty_ids` 계약으로만 복구했으며, 변경 전 18 PASS/2 FAIL 기록을 숨기지 않는다.
