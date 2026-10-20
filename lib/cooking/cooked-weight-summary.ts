@@ -7,10 +7,11 @@ function isWeightSource(value: unknown): value is CookedWeightSummary["source"] 
 }
 
 export function cookedWeightSourceLabel(source: CookedWeightSummary["source"], modelVersion?: string | null): string {
+  if (source === "conditional_estimate" && modelVersion === "recipe-mass-proxy-v1") return "재료량 기준 거친 추정";
   if (source === "conditional_estimate" && modelVersion === "ingredient-mass-75-v1") return "재료량 75% 추정";
   return {
     conditional_estimate: "조건별 추정", unavailable: "근거 부족", historical_estimate: "이전 방식의 추정",
-    reported_measured: "사용자가 보고한 실측", manual_estimate: "직접 입력 · 실측 여부 미확인", legacy_unknown: "이전 기록 · 출처 미확인",
+    reported_measured: "사용자가 보고한 실측", manual_estimate: "직접 입력한 추정", legacy_unknown: "이전 기록 · 출처 미확인",
   }[source];
 }
 
@@ -24,6 +25,7 @@ export const COOKED_MIX_ASSUMPTION_TEXT = "가열 없는 섞기 단계와 적힌
 export const COOKED_MASS_FALLBACK_ASSUMPTION_TEXT = "재료 무게 합계의 75%로 계산한 대략적인 추정이에요. 실측값이 아니며, 조리 중 더한 물·기름이나 버린 양은 반영하지 못해요.";
 
 export function cookedWeightAssumptionText(codes: readonly string[] = []): string | null {
+  if (codes.includes("raw_ingredient_mass_proxy")) return "재료량 합계로 채운 거친 추정이에요. 소량 양념·비표준 숟가락에는 가정이 포함될 수 있어요. 증발·조리손실을 보정하지 않아 실제 완성무게는 더 작을 수 있어요. 값이 다르면 추정값을 수정하거나 실측값을 입력해 주세요.";
   if (codes.includes("ingredient_mass_seventy_five_percent")) return COOKED_MASS_FALLBACK_ASSUMPTION_TEXT;
   return codes.includes("all_declared_inputs_retained") ? COOKED_MIX_ASSUMPTION_TEXT : null;
 }

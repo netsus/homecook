@@ -96,7 +96,7 @@ export async function GET(_request: Request, context: RouteContext) {
         } }),
       };
       const prediction = await readSnapshotWeightPrediction({ client: sessionClient,
-        weightClient: createRecipeMealWeightReadInternalClient(), ownerId: user.id, sessionId, cookingSteps: data.recipe.steps });
+        weightClient: createRecipeMealWeightReadInternalClient(), ownerId: user.id, sessionId, cookingSteps: data.recipe.steps, cookingIngredients: data.recipe.ingredients });
       if (prediction) metadata.weight_prediction = summarizeWeightPrediction(prediction);
     } catch (error) {
       const failure = createHybridAuthorityRouteError(error);

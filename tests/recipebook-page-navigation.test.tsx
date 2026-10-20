@@ -45,6 +45,9 @@ it("pages desktop contents with the selection, preserves keyboard access and omi
   expect(within(nav).getByRole("button", {name: /01.*요리 1.*01쪽/}).getAttribute("aria-current")).toBe("page");
   const user = userEvent.setup(); await user.click(within(nav).getByRole("button", {name: "다음 목차"}));
   expect(within(nav).getByRole("button", {name: /09.*요리 9.*09쪽/}).getAttribute("aria-current")).toBe("page");
+  // Selection intentionally moves focus on the next animation frame. Finish
+  // that user-visible navigation before moving focus back to the pager.
+  await waitFor(() => expect(document.activeElement?.id).toBe("recipebook-recipe-recipe-8"));
   const next = within(nav).getByRole("button", {name:"다음 목차"}); next.focus(); await user.keyboard("{Enter}");
   expect(within(nav).getAllByRole("listitem")).toHaveLength(1);
   expect(within(nav).getByRole("button", {name: /17.*요리 17.*17쪽/}).getAttribute("aria-current")).toBe("page");

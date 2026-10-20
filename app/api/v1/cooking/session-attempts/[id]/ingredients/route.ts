@@ -23,7 +23,7 @@ export async function PATCH(request: Request, context: { params: Promise<{id:str
     rows=applyExecutionQuantityChanges(state.rows,parsed.changes);
     calculation=await calculateExecutionQuantities({client:{from:table=>nutritionClient.from(table),rpc:(name,args)=>authorized.routeClient.rpc(name,args)},
       ownerId:authorized.user.id,recipeId:mode.recipe.id,snapshotId:state.snapshot_id,baseServings:state.base_servings,cookingServings:state.cooking_servings,
-      rows,originalRows:state.original_rows,steps:state.steps,cookingSteps:mode.recipe.steps});
+      rows,originalRows:state.original_rows,steps:state.steps,cookingSteps:mode.recipe.steps,cookingIngredients:mode.recipe.ingredients});
   } catch(error) {
     return createHybridAuthorityRouteError(error) ?? (error instanceof Error && error.message === "INVALID_EXECUTION_QUANTITY"
       ? fail("VALIDATION_ERROR","재료의 양을 확인해 주세요.",422) : fail("INTERNAL_ERROR","영양 계산 근거를 불러오지 못했어요. 입력은 유지돼요.",503));

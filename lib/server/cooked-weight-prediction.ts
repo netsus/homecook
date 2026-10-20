@@ -105,7 +105,7 @@ interface PredictionReason {
 }
 
 export interface CookedWeightPrediction {
-  readonly modelVersion: typeof COOKED_WEIGHT_PREDICTION_VERSION | "ingredient-mass-75-v1";
+  readonly modelVersion: typeof COOKED_WEIGHT_PREDICTION_VERSION | "ingredient-mass-75-v1" | "recipe-mass-proxy-v1";
   readonly status: "estimated" | "unavailable";
   readonly totalGrams: number | null;
   /** Test-supplied coefficients remain explicitly outside a service candidate. */
@@ -115,6 +115,7 @@ export interface CookedWeightPrediction {
   readonly appliedRules: readonly CookedWeightYieldRule[];
   readonly reasons: readonly PredictionReason[];
   readonly assumptions: readonly string[];
+  readonly massProxy?: import("@/lib/server/cooked-weight-mass-proxy").MassProxyEvidence;
 }
 
 interface ValidatedRow { readonly row: CookedWeightRow; readonly grams: number }

@@ -82,9 +82,9 @@ describe("DB-disabled evidence and compatible personal writes", () => {
     expect(spies.rpc.mock.calls[1][1]).not.toHaveProperty("p_weight_input_source");
     expect(spies.rpc.mock.calls[1][1]).not.toHaveProperty("p_write_enabled");
   });
-  it.each([null, "evidence-v1"])("rejects a stale explicit measurement and its unchanged retry instead of downgrading it: %s", async capability => {
+  it.each([[null,"reported_measured"],["evidence-v1","reported_measured"],["evidence-v1","manual_estimate"]])("rejects a stale explicit measurement and its unchanged retry instead of downgrading it: %s", async (capability, source) => {
     spies.rpc.mockResolvedValue(disabled);
-    const explicit = { consumed_pantry_item_ids: [], weight_action: "set_finished_weight", finished_weight_g: 300, weight_input_source: "reported_measured" };
+    const explicit = { consumed_pantry_item_ids: [], weight_action: "set_finished_weight", finished_weight_g: 300, weight_input_source: source };
     for (let attempt = 0; attempt < 2; attempt++) {
       const response = await complete(request("POST", "cooking/session-attempts/fixture/complete", capability, explicit), context);
       expect(response.status).toBe(409); expect((await response.json()).error.code).toBe("COOKED_WEIGHT_EVIDENCE_DISABLED");

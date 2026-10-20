@@ -299,8 +299,8 @@ function isExactSnapshotV2CompleteData(
     || !Number.isSafeInteger(batch.cooking_servings)
     || Number(batch.cooking_servings) <= 0
     || !hasRequestedInitialWeight
-    || (request.body.weight_action === "set_finished_weight" && request.body.weight_input_source === "reported_measured"
-      && batch.weight_evidence?.source !== "reported_measured")
+    || (request.body.weight_action === "set_finished_weight" && request.body.weight_input_source !== undefined
+      && batch.weight_evidence?.source !== request.body.weight_input_source)
     || batch.batch_status !== "available"
     || batch.depleted_reason !== null
     || !Number.isSafeInteger(batch.revision)
