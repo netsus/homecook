@@ -7,7 +7,7 @@ import {execFileSync,spawnSync}from 'node:child_process';
 import {isDeepStrictEqual}from 'node:util';
 import * as saved from '../scripts/lib/saved-recipe-nutrition-maintenance.mjs';
 import * as cooking from '../scripts/lib/cooking-experience-maintenance.mjs';
-import * as realWeb from '../scripts/lib/prelaunch-web-deploy.mjs';
+import {unboundMassProxyModules}from './fixtures/mass-proxy-unbound-modules.mjs';
 import {review,observation,hash,sha,source,target}from './fixtures/cooked-weight-mass-proxy-maintenance-fixture.mjs';
 const root=mkdtempSync('/tmp/hc-mass-proxy-cli-'),helper=join(root,'helper.mjs'),webPath=join(root,'web.mjs');
 after(()=>rmSync(root,{recursive:true,force:true}));
@@ -45,7 +45,13 @@ for(const [name,mutate]of [
 ])test(`real CLI refuses ${name}`,()=>{const f=harness();mutate(f);assert.throws(f.runPlan);});
 test('normal closed-R2 continuation still rejects DB write/baseline shortcuts',()=>{for(const change of [{dbCompatible:true},{alreadyAppliedDb:false},{dbBaseline:'/foreign'},{skipAutomatedTests:true}]){const f=harness();Object.assign(f.options,change);assert.throws(()=>web.assertClosedR2ContinuationOptions(f.options));}});
 test('real CLI deploy prebuild keeps239 handoff strictly read-only',async()=>{const f=harness(),result=await f.prebuild();assert.equal(result.readOnlyDatabase,true);assert.equal(result.selection.target,source.to);});
-test('actual CLI new phase and loader reject an unbound PIN before target access',()=>{assert.throws(()=>realWeb.loadProtectedRolloutReview(process.cwd(),{phase:'mass-proxy-database',ref:source.to}),/PIN is unbound/);const r=spawnSync(process.execPath,['scripts/deploy-prelaunch-web.mjs','plan','--reviewed-ref',source.to,'--reviewed-protected-rollout','--protected-phase','mass-proxy-database','--db-config','/does-not-exist','--test-script','test:feedback-batch:web'],{encoding:'utf8',env:Object.fromEntries(Object.entries(process.env).filter(([k])=>!k.startsWith('HOMECOOK_')))});assert.equal(r.status,1);assert.match(r.stderr,/배포 도구 실패/);assert.doesNotMatch(r.stderr,/ENOENT/);});
+test('actual CLI new phase and loader reject an unbound PIN before target access',async()=>{
+ const unbound=await unboundMassProxyModules();try{
+ assert.throws(()=>unbound.web.loadProtectedRolloutReview(process.cwd(),{phase:'mass-proxy-database',ref:source.to}),/PIN is unbound/);
+ const r=spawnSync(process.execPath,[unbound.cli,'plan','--reviewed-ref',source.to,'--reviewed-protected-rollout','--protected-phase','mass-proxy-database','--db-config','/does-not-exist','--test-script','test:feedback-batch:web'],{encoding:'utf8',env:Object.fromEntries(Object.entries(process.env).filter(([k])=>!k.startsWith('HOMECOOK_')))});
+ assert.equal(r.status,1);assert.match(r.stderr,/배포 도구 실패/);assert.doesNotMatch(r.stderr,/ENOENT/);
+ }finally{unbound.cleanup();}
+});
 
 // Registry bodies are real; private review/files and predecessor observations are synthetic.
 test('actual current-maintenance registry retains unknown/foreign239 guard instead of falling back238',()=>{

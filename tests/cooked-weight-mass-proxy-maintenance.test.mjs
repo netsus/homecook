@@ -3,14 +3,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import * as candidate from "../scripts/lib/cooked-weight-mass-proxy-maintenance.mjs";
-import { PROTECTED_CATALOG_SQL, openProtectedPrelaunchTarget } from "../scripts/lib/prelaunch-database.mjs";
+import { PROTECTED_CATALOG_SQL } from "../scripts/lib/prelaunch-database.mjs";
+import {unboundMassProxyModules}from "./fixtures/mass-proxy-unbound-modules.mjs";
 
 import {hash,sha,source,review,observation,target}from "./fixtures/cooked-weight-mass-proxy-maintenance-fixture.mjs";
 
 test("new PIN rejects the wired operating target before config or target I/O", async () => {
-  assert.deepEqual(candidate.MASS_PROXY_REVIEW_PIN, { path: null, sha256: null });
-  assert.throws(() => candidate.assertMassProxyOperatingPin(), /PIN is unbound.*no config\/target I\/O/);
-  await assert.rejects(openProtectedPrelaunchTarget({repositoryRoot:process.cwd(),configPath:"/does-not-exist",backupDirectory:"/does-not-exist",review:review()}),/PIN is unbound/);
+  const unbound=await unboundMassProxyModules();
+  try {
+    assert.deepEqual(unbound.feature.MASS_PROXY_REVIEW_PIN, { path: null, sha256: null });
+    assert.throws(() => unbound.feature.assertMassProxyOperatingPin(), /PIN is unbound.*no config\/target I\/O/);
+    await assert.rejects(unbound.database.openProtectedPrelaunchTarget({repositoryRoot:process.cwd(),configPath:"/does-not-exist",backupDirectory:"/does-not-exist",review:review()}),/PIN is unbound/);
+  } finally { unbound.cleanup(); }
 });
 test("fixed manifest matches all exact Git blob pairs and exact original238 SQL bytes", () => {
   assert.equal(Object.keys(source.files).length, 55); assert.equal(source.before.length, 238);
