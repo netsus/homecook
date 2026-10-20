@@ -37,3 +37,11 @@ Chrome의 저장·영양 API는 합성 fixture였다. 운영 HTTP 로그인→�
 - 기존 백업 분류에 정확히 위 표1개만 포함하도록 보완했다. 원 코드에서 같은 실패를 재현한 뒤 수량/revision/소유자/추정값·행 누락 변조 거부와 유사 미분류 표 거부를 포함한 관련4파일122 PASS를 확인했다. 운영155개 표 이름만 읽은 분류 사전검사도 PASS, 개인 행 읽기0/변경0이다. 이는 기존 개인 실행분 보존에 필요한 호환성 보완이며 private 전체 허용·세션 제외·권한·DB 변경은 없다. 새 백업 재시도는 별도 create-only operation으로 수행한다.
 
 원본 저장소 미커밋 작업과 provider/R2/YouTube 보류 작업은 보존한다. `.artifacts/feedback-ui`는 비공개 검증 로그·합성 fixture 결과를 보관하며 키/원본 개인 데이터는 전달물에 넣지 않는다.
+
+### 새 플랫폼 백업 결과
+
+두 번째 operation `cooked-weight-backup-20261020-GEwaV4`에서 백업과 동일 설정 복구가 성공했다(09:38:41.596–09:39:58.670 UTC 전체 operation; 정확한 API 중단 길이로 해석하지 않음). worker16382→22909, 실제 인증/readiness·queue0/processing0/permit없음·보호 지문 동일을 확인했다. archive SHA와 별도 매체 사본 SHA는 모두 `98cca02aae206d7c92bdb0866256d1075941e7874abd86080d8754f44f6051d5`다.
+
+기존 `verify-backup`, 인증된 off-Mac 사본, 새 격리 DB·Storage 전체 clean restore와 기존 escrow 키 복구가 PASS했다. source backup 생성은 `2026-10-20T09:39:46.517Z`, 미분류0이다. 격리 복원 증거는 `production_readiness_issued:false`이며 별도 기존 `record-readiness` 결과로만 운영 readiness를 판정한다. 운영 복원/키 교체는0이다.
+
+PIN-null 거부 검사는 실제 운영 PIN 상태와 무관한 코드 복사 fixture로 격리했고 도구 회귀123개를 다시 통과했다. 독립 리뷰도 해당2개를 직접 재실행해 통과했다. 소유 native 테스트 컨테이너 제거를 확인했다.
