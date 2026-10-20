@@ -1490,7 +1490,7 @@ export function RecipeDetailScreen({
       return;
     }
     if (!isAuthenticated) {
-      openAuthGate({ recipeId, type: "cook", cookingServings: selectedServings, recipeRevision: recipe.revision });
+      router.push(cookModeHref);
       return;
     }
     if (typeof recipe.revision !== "number" || !Number.isSafeInteger(recipe.revision) || recipe.revision < 1) {
@@ -1520,7 +1520,9 @@ export function RecipeDetailScreen({
       if (!isCurrent()) return;
       if ((isCookingApiError(error) || isApiFetchError(error)) && (error.status === 401
         || (error.status === 409 && (error.code === "ACCOUNT_SESSION_STALE" || error.code === "ACCOUNT_GENERATION_STALE")))) {
-        openAuthGate({ recipeId, type: "cook", cookingServings: selectedServings, recipeRevision: recipe.revision });
+        const guide = new URL(cookModeHref, window.location.origin);
+        guide.searchParams.set("guest", "1");
+        router.push(`${guide.pathname}${guide.search}`);
         return;
       }
       setFeedback({ message: isCookingApiError(error) ? error.message : "요리를 시작하지 못했어요. 다시 시도해 주세요.", tone: "error" });

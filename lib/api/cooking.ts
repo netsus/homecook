@@ -529,9 +529,11 @@ export async function cancelCookingSession(
 export async function fetchStandaloneCookMode(
   recipeId: string,
   servings: number,
+  options?: Pick<RequestInit, "credentials">,
 ): Promise<CookingStandaloneCookModeData> {
   return requestCooking<CookingStandaloneCookModeData>(
     `/api/v1/recipes/${recipeId}/cook-mode?servings=${servings}`,
+    options,
   );
 }
 
