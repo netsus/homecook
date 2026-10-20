@@ -45,7 +45,6 @@ import {
   PlannerAddSheet,
   type PlannerAddSheetState,
 } from "@/components/recipe/planner-add-sheet";
-import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-screen";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
@@ -319,8 +318,6 @@ export function MypageScreen({
   const [savedRecipesState, setSavedRecipesState] =
     useState<SavedRecipesState>("idle");
   const [savedRecipesBookId, setSavedRecipesBookId] = useState<string | null>(null);
-  const [selectedRecipeBook, setSelectedRecipeBook] =
-    useState<RecipeBookSummary | null>(null);
 
   // Shopping history
   const [shoppingItems, setShoppingItems] = useState<ShoppingListHistoryItem[]>([]);
@@ -478,9 +475,6 @@ export function MypageScreen({
   }, []);
 
   const switchDesktopTab = useCallback((tab: MypageTab) => {
-    if (tab !== "recipebooks") {
-      setSelectedRecipeBook(null);
-    }
 
     if (tab === "shopping" && activeTab === "shopping" && selectedShoppingListId) {
       setSelectedShoppingListId(null);
@@ -508,7 +502,6 @@ export function MypageScreen({
 
     mobileReturnToRef.current = null;
     setActiveTab("saved");
-    setSelectedRecipeBook(null);
     setSelectedShoppingListId(null);
     setMobileSurface("home");
     router.replace("/mypage");
@@ -1049,13 +1042,8 @@ export function MypageScreen({
     }
     setIsRenaming(true);
     try {
-      const updatedBook = await renameRecipeBook(renamingBookId, trimmed);
+      await renameRecipeBook(renamingBookId, trimmed);
       await loadRecipeBooks();
-      setSelectedRecipeBook((currentBook) =>
-        currentBook?.id === updatedBook.id
-          ? { ...currentBook, ...updatedBook }
-          : currentBook,
-      );
       setRenamingBookId(null);
       setRenameValue("");
       showToast("이름을 변경했어요", "success");
@@ -1072,9 +1060,6 @@ export function MypageScreen({
     try {
       await deleteRecipeBook(deleteTarget.id);
       await loadRecipeBooks();
-      if (selectedRecipeBook?.id === deleteTarget.id) {
-        setSelectedRecipeBook(null);
-      }
       setDeleteTarget(null);
       showToast("삭제했어요", "success");
     } catch {
@@ -1082,7 +1067,7 @@ export function MypageScreen({
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteTarget, loadRecipeBooks, selectedRecipeBook?.id, showToast]);
+  }, [deleteTarget, loadRecipeBooks, showToast]);
 
   const applyUpdatedBook = useCallback((updatedBook: RecipeBookSummary) => {
     setBooks((currentBooks) =>
@@ -1095,11 +1080,6 @@ export function MypageScreen({
             }
           : book,
       ),
-    );
-    setSelectedRecipeBook((currentBook) =>
-      currentBook?.id === updatedBook.id
-        ? { ...currentBook, ...updatedBook }
-        : currentBook,
     );
     setBookCoverImages((currentImages) => {
       const nextImages = { ...currentImages };
@@ -2153,8 +2133,11 @@ export function MypageScreen({
               onCreateNameChange={setCreateName}
               bookCoverImages={bookCoverImages}
               bookCoverUpdatedAt={bookCoverUpdatedAt}
-              selectedBook={selectedRecipeBook}
-              onOpenBookDetail={(book) => setSelectedRecipeBook(book)}
+              onOpenBookDetail={(book) => {
+                const cover = getRecipeBookCoverViewModel(book, { loadedImageSrc: bookCoverImages[book.id] });
+                const params = new URLSearchParams({ type: book.book_type, name: book.name, coverColor: cover.tone, coverImage: cover.imageSrc });
+                router.push(buildReturnHref(`/mypage/recipe-books/${book.id}?${params}`, { restore: "recipebook-tab", returnSurface: "mypage.recipebooks", returnTo: "/mypage?tab=recipebooks" }));
+              }}
               onMenuOpen={handleBookMenuOpen}
               onRenameStart={(book) => {
                 setRenamingBookId(book.id);
@@ -3433,7 +3416,6 @@ interface RecipeBookTabContentProps {
   isCreating: boolean;
   bookCoverImages: Record<string, string | null>;
   bookCoverUpdatedAt: Record<string, string | null>;
-  selectedBook: RecipeBookSummary | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
@@ -3469,7 +3451,6 @@ function RecipeBookTabContent({
   isCreating,
   bookCoverImages,
   bookCoverUpdatedAt,
-  selectedBook,
   menuRef,
   renameInputRef,
   createInputRef,
@@ -3489,22 +3470,6 @@ function RecipeBookTabContent({
   onCreateNameChange,
   onCreateBook,
 }: RecipeBookTabContentProps) {
-  const inlineDetailRef = useRef<HTMLElement | null>(null);
-  const selectedBookId = selectedBook?.id ?? null;
-  const selectedBookCover = selectedBook
-    ? getRecipeBookCoverViewModel(selectedBook, {
-        loadedImageSrc: bookCoverImages[selectedBook.id],
-      })
-    : null;
-
-  useEffect(() => {
-    if (!selectedBookId) return;
-
-    inlineDetailRef.current?.scrollIntoView?.({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, [selectedBookId]);
 
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
@@ -3616,24 +3581,6 @@ function RecipeBookTabContent({
           onCancel={onCloseDeleteDialog}
           onConfirm={onConfirmDelete}
         />
-      ) : null}
-      {selectedBook ? (
-        <section
-          aria-label={`${selectedBook.name} 레시피북 상세`}
-          className="web-recipebooks-inline-detail"
-          data-testid="recipebook-inline-detail"
-          ref={inlineDetailRef}
-        >
-          <RecipeBookDetailScreen
-            bookId={selectedBook.id}
-            bookName={selectedBook.name}
-            bookType={selectedBook.book_type}
-            bookCoverColorKey={selectedBookCover?.tone ?? null}
-            bookCoverImageSrc={selectedBookCover?.imageSrc ?? null}
-            embedded
-            initialAuthenticated={true}
-          />
-        </section>
       ) : null}
     </div>
   );

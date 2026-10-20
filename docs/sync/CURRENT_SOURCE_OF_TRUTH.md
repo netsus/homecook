@@ -1,5 +1,9 @@
 # Current Source of Truth
 
+## 2026-10-20 사용자 피드백 — 요리·레시피북 앱 후보
+
+저장 상세의 독립 요리 진입, 재료 수량 클릭 인라인 편집, 데스크톱 상단 완료·취소/모바일 하단 유지, 완료 뒤 복귀, 레시피북 전용 페이지·목차 이동·URL 복원을 적용한다. 원본/과거기록/식사 상태/권한·DB는 보존한다. 무게 미입력은 근거가 갖춰진 전체 추정값만 사용하고 실제 입력을 우선한다. 적당량·환산 불가가 있으면 부분합을 전체로 쓰지 않으며, 무게 없는 인분 기록은 현재 DB238에서 지원하지 않아 별도 정책 범위로 남긴다. 앱 후보이며 운영 미반영이다. [원인·검증·남은 범위](../engineering/cooking-recipebook-feedback-20261020.md)를 따른다.
+
 ## 2026-10-20 — Anti Slop84 소스 검증·잔여84 종료 분류
 
 영양JSON1의실SDK/unknown소비경계·중복계산삭제와검색q중복조건2만수정했다. snapshot/legacy42기존행동잠금·최종15suite345PASS/전체type/lint/verify84new0·독립승인이다. 원16379해결/84잔여, 배열/조건부62는고정ID별가치감사후q2만채택했고전체잔여84에이유/재검토조건을남겼다. source549fec481은아직미배포이며실제62c20d4bd/buildktOrhp·DB238·Anti87과구분한다. provider/R2·YouTubedirty·권한3/static3/444/1745·새인증QA미실행은보존한다. [검증·기존실패·ID별종료조건](../engineering/anti-slop-nutrition-residual-closeout-20261020.md)을따른다.

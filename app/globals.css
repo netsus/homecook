@@ -17756,9 +17756,27 @@ body:has([data-cook-theme="dark"]) {
 }
 
 @media (min-width: 1024px) {
+  .web-recipebook-detail-rail {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+    max-height: calc(100dvh - 104px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .web-recipebook-toc ol {
     max-height: min(48dvh, 480px);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
+}
+
+.web-recipebook-detail-screen [id^="recipebook-recipe-"] {
+  scroll-margin-top: 110px;
+}
+
+.web-recipebook-toc-button:focus-visible {
+  outline: 2px solid var(--web-brand-accessible);
+  outline-offset: 2px;
 }

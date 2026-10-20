@@ -716,6 +716,28 @@ describe("YouTube result-first UI", () => {
     expect(await screen.findByRole("heading", { name: "엄마표 된장찌개" })).toBeTruthy();
   });
 
+  it("starts cooking from saved detail without planning and preserves the complete reader return URL", async () => {
+    const draftId = MULTI_SAVED_ID;
+    const recipeId = "77777777-7777-4777-8777-777777777777";
+    vi.mocked(savedRecipeApi.fetchYoutubeSavedRecipe).mockResolvedValueOnce({ success: true, data: { ...buildMultiChildSavedResult(), recipe_id: recipeId }, error: null });
+    const previousHref = window.location.href;
+    const detailPath = `/recipes/youtube/saved/${draftId}`;
+    const readerHref = "/mypage/recipe-books/book-1?readerMode=list&readerRecipe=recipe-17#recipebook-recipe-recipe-17";
+    const detailHref = `${detailPath}?returnTo=${encodeURIComponent(readerHref)}&returnSurface=mypage.recipebooks&restore=recipebook-tab`;
+    window.history.replaceState(null, "", detailHref);
+    const view = render(<YoutubeImportScreen columnId="" entryContext="standalone" initialSavedDraftId={draftId} planDate="" slotName="" />);
+    try {
+      const action = await screen.findByTestId("youtube-saved-planner-action");
+      await userEvent.click(within(action).getByRole("button", { name: "요리하기" }));
+      const href = new URL(routerPush.mock.calls.at(-1)?.[0], "http://localhost");
+      expect(href.pathname).toBe(`/cooking/recipes/${recipeId}/cook-mode`);
+      expect(href.searchParams.get("servings")).toBe("1");
+      expect(href.searchParams.get("returnTo")).toBe(detailHref);
+      expect(mealApi.createMeal).not.toHaveBeenCalled();
+      expect(plannerApi.fetchPlanner).not.toHaveBeenCalled();
+    } finally { view.unmount(); window.history.replaceState(null, "", previousHref); }
+  });
+
   it("adds an already saved YouTube recipe to the planner with its canonical recipe id", async () => {
     const draftId = "11111111-1111-4111-8111-111111111111";
     const recipeId = "77777777-7777-4777-8777-777777777777";

@@ -1409,7 +1409,7 @@ describe("MypageScreen", () => {
     ).toContain("custom-new.jpg");
   });
 
-  it("uses the selected desktop recipebook card cover in the inline reader", async () => {
+  it("opens the dedicated reader with the selected desktop book cover", async () => {
     const booksWithCovers = MOCK_BOOKS.books.map((book) =>
       book.id === "book-saved"
         ? {
@@ -1432,14 +1432,13 @@ describe("MypageScreen", () => {
 
     await user.click(savedCard);
 
-    const inlineDetail = await screen.findByTestId("recipebook-inline-detail");
-    const readerCover = within(inlineDetail).getByTestId("recipebook-detail-cover");
-    const readerCoverImage = within(inlineDetail).getByTestId(
-      "recipebook-detail-cover-image",
-    );
-
-    expect(readerCover.className).toContain("web-recipebook-detail-cover-sand");
-    expect(readerCoverImage.getAttribute("style")).toContain("system-saved.jpg");
+    expect(mockRouterPush).toHaveBeenCalledOnce();
+    const href = new URL(mockRouterPush.mock.calls[0][0], "http://localhost");
+    expect(href.pathname).toBe("/mypage/recipe-books/book-saved");
+    expect(href.searchParams.get("coverColor")).toBe("sand");
+    expect(href.searchParams.get("coverImage")).toBe("https://example.com/system-saved.jpg");
+    expect(href.searchParams.get("returnTo")).toBe("/mypage?tab=recipebooks");
+    expect(screen.queryByTestId("recipebook-inline-detail")).toBeNull();
   });
 
   it("displays system and custom books with correct recipe counts", async () => {
@@ -1774,11 +1773,6 @@ describe("MypageScreen", () => {
     await openRecipebookSurface();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "주말 파티 상세 보기" }));
-    const inlineDetail = await screen.findByTestId("recipebook-inline-detail");
-    expect(
-      within(inlineDetail).getByRole("heading", { name: "주말 파티" }),
-    ).toBeTruthy();
 
     await user.click(
       within(screen.getByTestId("custom-book-book-custom")).getByLabelText(
@@ -1802,9 +1796,7 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("app-feedback-toast").className).toContain(
       "growth-toast-card-xp",
     );
-    expect(
-      within(inlineDetail).getByRole("heading", { name: "저녁 모임" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "저녁 모임 상세 보기" })).toBeTruthy();
   });
 
   it("shows delete confirmation dialog and deletes a custom book", async () => {
@@ -2217,50 +2209,16 @@ describe("MypageScreen", () => {
     expect(avatar.textContent).toBe("집");
   });
 
-  it("opens system book cards as inline recipebook detail under the tab", async () => {
+  it("opens system book cards on a dedicated reader page", async () => {
     render(<MypageScreen initialAuthenticated />);
-
     const user = await openRecipebookSurface();
-
-    const myAddedCard = screen.getByTestId("system-book-my_added");
-    expect(myAddedCard.tagName.toLowerCase()).toBe("button");
-
-    await user.click(myAddedCard);
-
-    expect(mockRouterPush).not.toHaveBeenCalled();
-    const inlineDetail = await screen.findByTestId("recipebook-inline-detail");
-    expect(
-      within(inlineDetail).getByRole("heading", { name: "레시피북 리더" }),
-    ).toBeTruthy();
-    expect(
-      within(inlineDetail).getByRole("heading", { name: "내가 추가한 레시피" }),
-    ).toBeTruthy();
-    const inlineRecipe = await within(inlineDetail).findByTestId(
-      "recipe-item-recipe-saved-1",
-    );
-    expect(
-      within(inlineRecipe).getByRole("heading", { name: "저장된 된장찌개" }),
-    ).toBeTruthy();
-    expect(mockFetchRecipeBookRecipes).toHaveBeenCalledWith("book-my", {
-      limit: 20,
-    });
-    expect(
-      mockFetchRecipeBookRecipes.mock.calls.some(
-        ([bookId, options]) => {
-          if (
-            bookId !== "book-my" ||
-            typeof options !== "object" ||
-            options === null ||
-            !("limit" in options)
-          ) {
-            return false;
-          }
-
-          return (options as { limit?: number }).limit === 12;
-        },
-      ),
-    ).toBe(false);
-    expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
+    await user.click(screen.getByTestId("system-book-my_added"));
+    expect(mockRouterPush).toHaveBeenCalledOnce();
+    const href = new URL(mockRouterPush.mock.calls[0][0], "http://localhost");
+    expect(href.pathname).toBe("/mypage/recipe-books/book-my");
+    expect(href.searchParams.get("type")).toBe("my_added");
+    expect(href.searchParams.get("name")).toBe("내가 추가한 레시피");
+    expect(screen.queryByTestId("recipebook-inline-detail")).toBeNull();
   });
 
   it("can render directly into the recipebook return surface", async () => {

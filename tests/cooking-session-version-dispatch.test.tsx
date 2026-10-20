@@ -89,7 +89,7 @@ describe("cooking session version dispatch", () => {
     expect(screen.queryByRole("button", { name: "요리 완료" })).toBeNull();
     expect(screen.queryByRole("button", { name: "취소" })).toBeNull();
     expect(screen.getByRole("link", { name: "식사 기록하기" }).getAttribute("href")).toBe("/planner?segment=log");
-    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getAllByRole("link")).toHaveLength(2);
   });
 
   it("offers the originating meal after cancellation without creating a food record", async () => {

@@ -24,12 +24,14 @@ interface CookModeWholeBoardProps {
   recipe: CookingModeRecipe;
   density: "mobile" | "desktop";
   className?: string;
+  renderIngredientAmount?: (ingredient: CookingModeIngredient, index: number) => React.ReactNode;
 }
 
 export function CookModeWholeBoard({
   recipe,
   density,
   className,
+  renderIngredientAmount,
 }: CookModeWholeBoardProps) {
   return (
     <div
@@ -41,7 +43,7 @@ export function CookModeWholeBoard({
         className="cook-whole-panel cook-whole-ingredient-panel"
       >
         <h2>전체 재료</h2>
-        <IngredientList ingredients={recipe.ingredients} />
+        <IngredientList ingredients={recipe.ingredients} renderIngredientAmount={renderIngredientAmount} />
       </section>
 
       <section
@@ -60,8 +62,10 @@ export function CookModeWholeBoard({
 
 function IngredientList({
   ingredients,
+  renderIngredientAmount,
 }: {
   ingredients: CookingModeIngredient[];
+  renderIngredientAmount?: CookModeWholeBoardProps["renderIngredientAmount"];
 }) {
   if (ingredients.length === 0) {
     return (
@@ -98,9 +102,9 @@ function IngredientList({
                 <span className="cook-whole-ingredient-name">
                   {ingredient.standard_name}
                 </span>
-                <strong className="cook-whole-ingredient-amount">
+                {renderIngredientAmount ? renderIngredientAmount(ingredient, index) : <strong className="cook-whole-ingredient-amount">
                   {amountLabel || "-"}
-                </strong>
+                </strong>}
               </div>
             </li>
           </React.Fragment>

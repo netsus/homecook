@@ -5,6 +5,7 @@ import { DecimalInput } from "@/components/shared/decimal-input";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-badge";
@@ -3883,6 +3884,17 @@ function ActiveYoutubeImportScreen({
     className?: string;
   }> = isEmbedded ? "div" : WebCard;
 
+  const startSavedCooking = () => {
+    if (!savedRecipeId || !savedDraftId || hasUnsavedChanges || isRegistering) return;
+    const path = `/recipes/youtube/saved/${savedDraftId}`;
+    const detailHref = window.location.pathname === path
+      ? `${path}${window.location.search}${window.location.hash}`
+      : buildReturnHref(path, { returnSurface: "recipe.detail", returnTo: appReturn.href });
+    router.push(buildReturnHref(`/cooking/recipes/${savedRecipeId}/cook-mode?servings=${baseServings}`, {
+      returnSurface: "recipe.detail", returnTo: detailHref,
+    }));
+  };
+
   const desktopImportCard = (
     <DesktopImportFrame
       className={["web-yt-card", isEmbedded && "web-yt-card-embedded"]
@@ -4136,6 +4148,7 @@ function ActiveYoutubeImportScreen({
           {savedRecipeId && !hasUnsavedChanges ? (
             <div data-testid="youtube-saved-planner-action">
               <div className="web-yt-actions">
+                <WebButton disabled={isRegistering} onClick={startSavedCooking}>요리하기</WebButton>
                 <WebButton
                   disabled={isRegistering || isOpeningRecipeBook}
                   onClick={() => void openMyAddedRecipeBook()}
@@ -4499,6 +4512,7 @@ function ActiveYoutubeImportScreen({
         )}
         {currentStep === "review" && savedRecipeId && !hasUnsavedChanges ? (
           <div className="space-y-2 px-4 pb-4" data-testid="youtube-saved-planner-action">
+            <Button disabled={isRegistering} fullWidth onClick={startSavedCooking}>요리하기</Button>
             <Button
               disabled={isRegistering || isOpeningRecipeBook}
               fullWidth

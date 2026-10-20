@@ -1,3 +1,4 @@
+import { executionQuantityText } from "@/lib/cooking/execution-quantity-presentation";
 import type { CookingModeIngredient, CookingModeStep } from "@/types/cooking";
 import {
   normalizeRecipeSectionLabel,
@@ -13,6 +14,11 @@ export function formatIngredientAmountOnly(
 ): string {
   if (ingredient.ingredient_type === "TO_TASTE") {
     return "적당량";
+  }
+
+  if (!ingredient.quantity_input && ingredient.ingredient_type === "QUANT" && !ingredient.scalable
+    && ingredient.amount !== null && ingredient.unit) {
+    return `${executionQuantityText(ingredient)}${ingredient.unit}`;
   }
 
   if (!ingredient.quantity_input && ingredient.ingredient_type === "QUANT" && ingredient.food_product_id && ingredient.food_product_nutrition_version_id

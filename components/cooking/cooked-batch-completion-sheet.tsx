@@ -198,7 +198,9 @@ export function CookedBatchCompletionSheet({
             className="h-12 w-full rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-base"
             disabled={submitting} id="cooked-batch-reported-weight" inputMode="decimal" min="0" onChange={event => { setFinishedWeight(event.target.value); setWeightError(null); if (!event.target.value.trim() || Number(event.target.value) <= 0) setAttested(false); }}
             ref={weightRef} step="any" type="number" value={finishedWeight} />
-          <p className="text-sm leading-5 text-[var(--text-2)]" id="cooked-batch-weight-help">용기를 뺀 음식 전체무게예요. 빈칸으로 두어도 저장돼요.</p>
+          <p className="text-sm leading-5 text-[var(--text-2)]" id="cooked-batch-weight-help">용기를 뺀 음식 전체무게예요. 입력한 실측값을 우선 사용해요. {weightPrediction?.source === "conditional_estimate" && weightPrediction.predicted_g !== null
+            ? "빈칸으로 두면 위 추정무게로 저장하고, 식사기록에서 먹은 양을 따로 입력해요."
+            : "빈칸으로도 요리 완료는 저장돼요. 추정 근거가 부족하면 g 기준 식사기록 전에 재료량이나 전체무게를 확인해 주세요."}</p>
           <p className="text-sm text-[var(--danger-strong)]" id="cooked-batch-weight-validation" role={weightError ? "alert" : undefined}>{weightError}</p>
           <details className="text-sm leading-5 text-[var(--text-2)]">
             <summary className="min-h-11 cursor-pointer py-3">무게 재는 방법</summary>

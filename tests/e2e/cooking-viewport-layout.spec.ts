@@ -28,7 +28,7 @@ test("all legacy cooking entry routes keep their notification bell hidden", asyn
   }
 });
 
-test("snapshot cooking uses one content scroller and keeps the last step above its actions", async ({ page }, testInfo) => {
+test("snapshot cooking keeps desktop actions above content and mobile actions below content", async ({ page }, testInfo) => {
   await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", route => route.fulfill({ json: { success: true, error: null, data: {
     session_id: "layout-active", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", recipe: recipe(20), pantry_candidates: [],
   } } }));
@@ -44,7 +44,13 @@ test("snapshot cooking uses one content scroller and keeps the last step above i
     expect(await main.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
     const last = await main.locator(".cook-whole-step").last().boundingBox();
     const footer = await page.getByRole("button", { name: "요리 완료", exact: true }).boundingBox();
-    expect(last!.y + last!.height).toBeLessThanOrEqual(footer!.y);
+    if (testInfo.project.name === "desktop-chrome") {
+      const content = await main.boundingBox();
+      expect(footer!.y + footer!.height).toBeLessThanOrEqual(content!.y);
+      expect(last!.y + last!.height).toBeLessThanOrEqual(content!.y + content!.height);
+    } else {
+      expect(last!.y + last!.height).toBeLessThanOrEqual(footer!.y);
+    }
     await page.screenshot({ path: testInfo.outputPath(`snapshot-active-${height}.png`) });
   }
 });
@@ -54,7 +60,7 @@ test("completed snapshots drop action-bar padding while keeping all content reac
     session_id: "layout-complete", contract_version: "snapshot_v2", mode: "planner", status: "completed", recipe: recipe(), pantry_candidates: [],
   } } }));
   await page.goto("/cooking/session-attempts/layout-complete/cook-mode");
-  await expect(page.getByText("완료된 요리 기록이에요. 읽기 전용으로 볼 수 있어요.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "식사 기록하기", exact: true })).toBeVisible();
   const main = page.getByRole("main", { name: "요리 내용" });
   expect(await main.evaluate(el => getComputedStyle(el).paddingBottom)).toBe("16px");
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
