@@ -48,6 +48,30 @@ object-a\trecipe-images\tuser-a/a.jpg
 `;
 
 describe("full-local platform restore boundary", () => {
+  it("preserves DB234 personal execution quantities and detects changed or missing rows", () => {
+    const execution = `COPY private.cooking_execution_quantities (session_id, owner_uuid, recipe_content_snapshot_id, revision, rows_json, nutrition_snapshot_json, weight_prediction_json, updated_at) FROM stdin;
+fixture-session\tfixture-owner\tfixture-snapshot\t7\t[{"amount":0.5,"unit":"큰술"}]\t{"total_kcal":310}\t{"pointEstimateG":3119.7}\t2026-10-20 00:00:00+00
+\\.
+`;
+    const source = buildSanitizedPlatformData(platformData + execution);
+    expect(source.sql).toContain(execution);
+    expect(source.manifest.relations).toContainEqual(expect.objectContaining({ relation: "private.cooking_execution_quantities", action: "include", row_count: 1 }));
+    expect(verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: platformData + execution,
+      sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+      sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+      sourceRelationClassificationDigest: source.manifest.relation_classification_digest,
+    }).restored_data_semantic_sha256).toBe(source.manifest.data_semantic_sha256);
+    for (const changed of [execution.replace("fixture-owner", "other-owner"), execution.replace("\t7\t", "\t8\t"), execution.replace("0.5", "1.5"), execution.replace("3119.7", "2800"), ""]) {
+      expect(() => verifyRestoredPlatformDataSnapshot({
+        restoredDataSql: platformData + changed,
+        sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+        sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+        sourceRelationClassificationDigest: source.manifest.relation_classification_digest,
+      })).toThrow();
+    }
+    expect(() => buildSanitizedPlatformData(platformData + execution.replace("private.cooking_execution_quantities", "private.cooking_execution_quantities_unknown"))).toThrow("Unclassified");
+  });
   it.each(["f", "t"])("preserves the exact personal-attestation write control value %s", enabled => {
     const control = `COPY private.cooked_weight_user_attestation_control (singleton, enabled) FROM stdin;\nt\t${enabled}\n\\.\n`;
     const source = buildSanitizedPlatformData(platformData + control);

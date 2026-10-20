@@ -1,8 +1,9 @@
-// Inert DB239 contract candidate. Not registered in the CLI or database engine.
-// A separate create-only operating review must precede binding this new PIN.
+// Exact DB239 successor. A separate create-only operating review must precede
+// binding this new PIN; historical DB238 and closed-R2 authority is unchanged.
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { isAbsolute } from "node:path";
+import { readFileSync, realpathSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { SAVED_RECIPE_NUTRITION_REVIEW_PIN, SAVED_RECIPE_NUTRITION_FUNCTIONS_SQL } from "./saved-recipe-nutrition-maintenance.mjs";
 import { SAVED_RECIPE_NUTRITION_FUNCTION_SIGNATURES } from "./saved-recipe-nutrition-catalog.mjs";
@@ -28,6 +29,31 @@ check(hash(sourceBytes) === "31e7f35ceeb892559fe261d96a83ada5b6f6916304ab9b909f3
 const source = JSON.parse(sourceBytes);
 export const massProxySourceManifest = () => structuredClone(source);
 const after = [...source.before, { filename: MASS_PROXY_MIGRATION.filename, sha256: MASS_PROXY_MIGRATION.rawSha256 }];
+const operatorFiles = ["scripts/deploy-prelaunch-web.mjs", "scripts/lib/prelaunch-web-deploy.mjs", "scripts/lib/prelaunch-database.mjs", "scripts/lib/cooked-weight-mass-proxy-maintenance.mjs", "scripts/lib/cooked-weight-mass-proxy-source.json"];
+export function canonicalMassProxyOperatorText(text) {
+  const declaration=/^export const MASS_PROXY_REVIEW_PIN = Object\.freeze\((\{[^\n]*\})\);$/gmu;
+  const matches=[...text.matchAll(declaration)];
+  check(matches.length===1,"operator PIN declaration differs");
+  const literal=matches[0][1];
+  if(literal!=="{ path: null, sha256: null }") {
+    let value;try{value=JSON.parse(literal);}catch{check(false,"operator PIN must use a static JSON literal");}
+    check(pointer(value),"operator PIN must contain only static path/SHA strings");
+  }
+  return text.replace(declaration,"export const MASS_PROXY_REVIEW_PIN = Object.freeze({ path: null, sha256: null });");
+}
+export function massProxyOperatorImages(repositoryRoot) {
+  return Object.fromEntries(operatorFiles.map(file => {
+    let bytes = readFileSync(join(repositoryRoot, file));
+    if (file.endsWith("/cooked-weight-mass-proxy-maintenance.mjs")) {
+      bytes = Buffer.from(canonicalMassProxyOperatorText(bytes.toString("utf8")));
+    }
+    return [file, hash(bytes)];
+  }));
+}
+export function assertMassProxyOperatorSource(review, repositoryRoot) {
+  check(realpathSync(repositoryRoot)===realpathSync(fileURLToPath(new URL("../../",import.meta.url))),"executed operator root differs from selected repository");
+  check(isDeepStrictEqual(massProxyOperatorImages(repositoryRoot), review.operator.files), "reviewed operator bytes differ");
+}
 
 // Preserve the established portable metadata query, including grantor/defaults,
 // while selecting exactly the two functions whose bodies this SQL replaces.
@@ -62,10 +88,13 @@ const preserved = ["unchangedCatalogSha256", "normalDataSha256", "preservedRowsS
 export function assertMassProxyReview(review) {
   check(review?.schema === "homecook.prelaunch-protected-rollout-review.v1" && review.feature === MASS_PROXY_FEATURE
     && review.from === source.from && review.to === source.to && isDeepStrictEqual(review.files, source.files), "fixed complete app source pair required");
+  check(/^[a-f0-9]{40}$/u.test(review.operator?.ref ?? "") && isDeepStrictEqual(Object.keys(review.operator?.files ?? {}).sort(), [...operatorFiles].sort())
+    && Object.values(review.operator.files).every(value => SHA.test(value ?? "")), "exact separate operator source required");
   check(isDeepStrictEqual(review.approved, { database: true, reader: false, writerOn: false }) && review.databasePrecedesReader === true
     && review.readerPrecedesDatabase === false && review.legacyReaderCompatible === true && review.preserveExistingWriterControls === true, "DB-first compatibility with unchanged writer controls required");
   for (const key of ["isolatedEvidence", "legacyReaderEvidence", "platformInventory", "backupReadiness", "postimages"]) check(pointer(review[key]), `${key} evidence pointer required`);
-  check(review.isolatedEvidenceSha256 === review.isolatedEvidence.sha256 && ["closedArtifactSha256", "closedReviewSha256", "historicalProofsSha256", "controlSha256"].every(key => SHA.test(review[key] ?? "")), "existing closed-R2 authority binding required");
+  check(review.isolatedEvidenceSha256 === review.isolatedEvidence.sha256 && ["closedArtifactSha256", "closedReviewSha256", "historicalProofsSha256", "controlSha256", "legacyMarkerDatabasePlanSha256"].every(key => SHA.test(review[key] ?? ""))
+    && Number.isSafeInteger(review.consentGeneration) && review.consentGeneration>0, "existing closed-R2 authority binding required");
   check(review.legacyReader?.ref === source.from && typeof review.legacyReader.buildId === "string" && review.legacyReader.buildId.length > 0
     && SHA.test(review.legacyReader.plistSha256 ?? ""), "current reader/build/plist binding required");
   const db = review.database, predecessor = review.predecessorMaintenance;
@@ -181,4 +210,32 @@ export function massProxyTerminalStatus(review, record, reviewSha256) {
 export function assertMassProxyOperatingPin() {
   check(pointer(MASS_PROXY_REVIEW_PIN), "new operating review PIN is unbound; no config/target I/O permitted");
   return MASS_PROXY_REVIEW_PIN;
+}
+export function massProxyBinding(maintenance) {
+  assertMassProxyOperatingPin();
+  assertMassProxyDatabaseReceipt(maintenance.review, maintenance.record, MASS_PROXY_REVIEW_PIN.sha256);
+  check(pointer(maintenance.pointer) && pointer(maintenance.guardPointer) && maintenance.pointer.sha256 === maintenance.guardPointer.sha256, "terminal/guard bytes differ");
+  return { schema: "homecook.cooked-weight-mass-proxy-maintenance.v1", reviewSha256: MASS_PROXY_REVIEW_PIN.sha256,
+    receipt: maintenance.pointer, ledgerCount: 239, targetSha256: maintenance.review.database.targetSha256,
+    databasePlanSha256: maintenance.record.databasePlanSha256, sourceReaderRef: maintenance.review.from,
+    readerFloor: maintenance.review.to, predecessorMaintenance: maintenance.review.predecessorMaintenance };
+}
+export function assertMassProxySourceHandoff({ maintenance, from, to, live, files, digests, reviewedSourceAncestor }) {
+  massProxyBinding(maintenance);
+  const review = maintenance.review;
+  check(from === review.from && to === review.to && live?.ref === from && live.buildId === review.legacyReader.buildId
+    && live.plistSha256 === review.legacyReader.plistSha256 && reviewedSourceAncestor === true
+    && isDeepStrictEqual([...files].sort(), Object.keys(review.files).sort()) && isDeepStrictEqual(digests, review.files), "exact committed239 app handoff required");
+  return true;
+}
+export function massProxyPhaseStatus(attempt, readerCompatible = false, legacyReaderCurrent = false) {
+  const { review, record } = attempt;
+  assertMassProxyReview(review);
+  const committed = record.status === "committed", unapplied = record.status === "not_applied";
+  if (committed) assertMassProxyDatabaseReceipt(review, record, MASS_PROXY_REVIEW_PIN.sha256);
+  return { feature: MASS_PROXY_FEATURE, phase: record.status, appliedLedgerCount: committed ? 239 : unapplied ? 238 : null,
+    databasePlanSha256: committed ? record.databasePlanSha256 : unapplied ? hash(JSON.stringify({ source: review.database.before, applied: review.database.before })) : null,
+    databaseReady: committed, readerPending: committed && !readerCompatible,
+    normalDeploymentAllowed: (committed || unapplied) && (readerCompatible || legacyReaderCurrent && review.legacyReaderCompatible),
+    recoveryPending: !committed && !unapplied, rollbackAvailable: false, backwardCompatible: false, readerFloor: committed ? review.to : null };
 }

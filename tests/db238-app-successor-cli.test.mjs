@@ -8,6 +8,7 @@ import * as web from "../scripts/lib/prelaunch-web-deploy.mjs";
 import * as saved from "../scripts/lib/saved-recipe-nutrition-maintenance.mjs";
 import * as cooking from "../scripts/lib/cooking-experience-maintenance.mjs";
 import * as successor from "../scripts/lib/prelaunch-db-app-successor.mjs";
+import * as massProxy from "../scripts/lib/cooked-weight-mass-proxy-maintenance.mjs";
 import { hash, ref, route, operator, operatorPair, successorInput, successorWithPin } from "./fixtures/db238-app-successor-fixture.mjs";
 const unboundSuccessor = await successorWithPin({ path: null, sha256: null });
 
@@ -40,7 +41,7 @@ function harness(input = successorInput(), { unbound = false, fileMode = "100644
   let verified = 0, approvalReads = 0;
   const unexpected = () => { throw Error("UNEXPECTED_EXTERNAL_IO"); };
   const context = {
-    ...web, ...saved, ...cooking,
+    ...web, ...saved, ...cooking, ...massProxy,
     repository: "/synthetic-db238/repository", root: "/synthetic-db238/root", join,
     assertClean: () => {}, prelaunchChangedFiles: () => input.files,
     fingerprintSourceHandoff: () => null, v85SourceHandoff: () => null,
