@@ -16,7 +16,7 @@
 
 화면의 실제 카레 수량을 새 recipe-mass-proxy-v1에 넣어3119.7g을 산출했다. 양념·스푼 가정의 입력 범위3059.55–3153.5g과 조리손실 미보정을 구분한다. 자동 입력, manual_estimate 편집, 빈 필드에서 시작하는 reported_measured 우선, 원예측 보존을 구현했다. 기존 g 식사기록을 사용하고 먹은 양은 자동 확정하지 않는다. 소량 가정은 영양값으로 전용하지 않는다.
 
-[정책·출처·실제 결과·남은 검증](whole-cooked-weight-estimate-20261020.md)이 최신이다. 새 private 검증/완료 함수 SQL 후보는 소유한 networkless PG에서20/20 통과했고 운영 DB238에는 적용하지 않았다. 실제 카레 frozen ID/proof의 운영 세션 결합과 전체 DB238/실제 인증/g ledger 통합은 미확인이다. 아래 초기 검증과750/900 합성값은 이전 UI 계약 검사 이력이다.
+[정책·출처·실제 결과·남은 검증](whole-cooked-weight-estimate-20261020.md)이 최신이다. 새 private 검증/완료 함수 SQL 후보는 최소 networkless PG25/25와 원DB238 함수·권한을 복원한 합성 native 통합10/10을 통과했다. 운영 DB238에는 적용하지 않았다. 실제 카레 frozen ID/proof의 운영 세션 결합과 실제 HTTP 인증부터 DB까지 한 연결은 미확인이다. 아래 초기 검증과750/900 합성값은 이전 UI 계약 검사 이력이다.
 
 ## 검증 근거
 
@@ -38,7 +38,7 @@
 
 ## 배포 경계
 
-공식 `pnpm deploy:dev`의 앱 전용 경로를 검토했다. 기존 DB238·provider/R2·worker 승계 보호는 유지하며, 자동 보호를 해제하거나 과거 한정 승인 SHA를 재사용하지 않는다. 이번에는 운영 전환하지 않는다. 로컬 후보는 검토 가능한 상태이며, 새 무게 모델은 후보 SQL과 앱을 함께 릴리스해야 한다. DB238 운영 적용과 전체 인증/원장 통합이 미확인인 상태에서 배포 완료로 표시하지 않는다.
+2026-10-20 08:25 UTC 통합·백업 확인 후 GitHub/DB/웹 전환 승인을 받았다. 공식 read-only plan은 DB239 쓰기를 기존 닫힌 R2 승계 가드로 거부했다. 현재 DB238 앱 successor는 SQL0만 허용하므로 새239용 exact profile이 필요하다. 기존 DB238·provider/R2·worker 승계 보호와 과거 PIN은 보존했다. [실제 통합 결과와 구체적인 차단 범위](cooked-weight-db239-release-readiness-20261020.md)를 따르며, 현재 push/PR/머지·DB/배포는 하지 않았다.
 
 ## 추가 식사기록 브라우저 회귀 — 승인 대기 중 격리 검증
 
@@ -58,8 +58,8 @@
 
 최소 자동 회귀를 추가해 quantity-v4의 추정 batch는 선택되지만 섭취량을 자동 채우지 않고 명시한 125g만 저장하도록 보호했다. 기존 test harness에 선택적인 중량 출처/수량 정책 입력만 추가했다. 새 집중 실행은 5개 파일 64/64 통과·실패 0·건너뜀 0이며, 변경 테스트/fixture ESLint 종료 0, 서버 종료 후 `pnpm typecheck` 종료 0, `git diff --check` 통과다. 기존 19개 파일 389건 결과와 중복이 있으므로 합산하지 않는다. 제품 코드·DB 변경은 없고 프로덕션 빌드는 이번 검증 추가만으로 다시 실행하지 않았다.
 
-근거는 `.artifacts/feedback-ui/meal-recording-requests.jsonl`, `meal-recording-state.json`, `meal-browser-observations.json`, `meal-browser-verification.json`, `meal-regression.json`, `meal-*.png`에 보관했다. `verify-meal-recording.mjs`는 브라우저 요청·상태·관찰값의 상호 일치를 검사한다. `meal-recording-proxy.mjs`가 이 격리 서버이며 실제 앱 서버가 별도로 필요하다. push·PR·머지·배포와 무게 독립 식사기록 확대는 계속 사용자 승인/답변 대기다.
+근거는 `.artifacts/feedback-ui/meal-recording-requests.jsonl`, `meal-recording-state.json`, `meal-browser-observations.json`, `meal-browser-verification.json`, `meal-regression.json`, `meal-*.png`에 보관했다. `verify-meal-recording.mjs`는 브라우저 요청·상태·관찰값의 상호 일치를 검사한다. `meal-recording-proxy.mjs`가 이 격리 서버이며 실제 앱 서버가 별도로 필요하다. 당시 승인 대기 상태였으며 최신08:25 승인과 도구 가드 상태는 위 배포 경계를 따른다. 무게 독립 식사 원장은 추가하지 않았다.
 
 ## 최종 로컬 후보 검증
 
-새 거친 카레 모델은 내부3119.7g을 보존하고 UI는 약3.1kg/3100g으로 표시한다. 최신 회귀14파일233/233·격리 SQL20/20(각각실패0/skip0), Chrome1440/375의 자동/수정추정/실측과 별도g식사저장·새로고침을 확인했다. 새 입력범위는 완성무게 신뢰구간이 아니다. 원예측과 수동추정/실측 이력 분리 및 후보 SQL의 제한·출처·운영 적용 승인 범위는 전체무게 문서를 따른다. 초기389건의 기존 YouTube 실패는 별도보존한다. 새 production source lint/typecheck/build/anti-slop 종료값은 최신 mass-proxy receipt에 남긴다. push·PR·머지·운영 SQL·배포는 하지 않았다.
+새 거친 카레 모델은 내부3119.7g을 보존하고 UI는 약3.1kg/3100g으로 표시한다. 최신 회귀14파일233/233·최소 격리 SQL25/25·native DB238 통합10/10(각각실패0/skip0), Chrome1440/375의 자동/수정추정/실측과 별도g식사저장·새로고침을 확인했다. 새 입력범위는 완성무게 신뢰구간이 아니다. 원예측과 수동추정/실측 이력 분리 및 후보 SQL의 제한·출처·운영 적용 승인 범위는 전체무게 문서를 따른다. 초기389건의 기존 YouTube 실패와 fresh migration 재생 실패는 별도보존한다. 새 production source lint/typecheck/build/anti-slop 종료값은 최신 mass-proxy receipt에 남긴다. push·PR·머지·운영 SQL·배포는 하지 않았다.

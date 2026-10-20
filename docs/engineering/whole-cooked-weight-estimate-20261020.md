@@ -44,11 +44,25 @@
 ## 실제 검증과 한계
 
 - 새 계산기·UI·route·수량·기존 모델 집중 회귀14파일233/233, 실패0·skip0. 레시피북/인라인24개도 포함한다. 목차 키보드 검사의 RAF 포커스 완료를 기다리는 타이밍을 바로잡아 재검사했다. 초기389실행의 기존 YouTube쪽파 조회1실패는 기준 컴포넌트에서도 재현됐으며 전체 suite 통과로 바꾸지 않는다.
-- 새 후보 SQL은 소유한 PostgreSQL17-alpine, network=none, port/영구볼륨 없는 일회성 DB에서20/20 통과했다. 자동/수정 추정/실측 분리, estimate 보존, 위조 수치·범위·hash·identity·proof·행 수, owner/gate 거부, decimal tie와3/80스푼, frozen1500mL↔1.5L·동일양 재저장을 포함한다. 초기 문법 오류는 수정·재실행했다. **authority와 기존 completion은 명시적 fixture stub**이므로 전체 DB238 마이그레이션/실제 인증/실제 meal g SQL 통합 통과를 뜻하지 않는다.
+- 새 후보 SQL은 소유한 PostgreSQL17-alpine, network=none, port/영구볼륨 없는 일회성 DB에서25/25 통과했다. 자동/수정 추정/실측 분리, estimate 보존, 위조 수치·범위·hash·identity·proof·행 수, owner/gate 거부, decimal tie와3/80스푼, frozen1500mL↔1.5L·동일양 재저장, 원함수 복원·이전 reader/receipt 호환을 포함한다. 초기 문법 오류는 수정·재실행했다. 이 최소 fixture의 authority와 기존 completion은 명시적 stub이며, 아래 native 검증과 구분한다.
 - 실제 Chrome1440×900/375×812: 약3.1kg/3100g 표시와 내부3119.7 보존을 재확인했다. 그 전 원정밀도 표시 상태에서 자동3119.7→125g, manual2800→180g, measured2700→200g을 완료·식사기록·새로고침으로 확인했다. 수량은 사용자 입력 전 blank·저장 disabled이고, manual에도 추정 안내가 나온다. 자동 estimate3119.7은 수정/실측 뒤에도 별도 history에 남았다. API POST6개/오류0, console warn/error0. 이 브라우저 API·영양값·잔량은 합성 메모리 fixture이며 실제 DB 저장·카레 영양 정확도 검증이 아니다.
 - 독립 리뷰의 배수 활용형, 소량 기름 판정, 소수 곱셈, frozen 단위 전환/재저장 지적을 수정했다. 최신 소스 재검토에서 남은 중대 결함 없음. 리뷰어는 저장된233 이전78/78·SQL20/20을 확인했으며 브라우저/SQL을 직접 재실행하지 않았다.
 - 변경 lint/anti-slop/typecheck/build의 최신 종료값은 `.artifacts/feedback-ui/mass-proxy-*-receipt.json`과 로그를 따른다. 테스트와 빌드는 서로 대체하지 않는다.
 
 마지막 캡처는 viewport 변경 후 DOM 크기와 렌더링 완료를 확인해 `curry-viewport/`에 다시 저장했다(375×812/1440×900, scrollWidth 각각375/1440). 초기 즉시 캡처의 이전 레이아웃 이미지는 최종 증거로 사용하지 않는다. 최종 build/typecheck/lint/verify:anti-slop 종료0·신규0을 확인했고 기존 빌드 경고3개는 보존한다.
 
-증거는 `.artifacts/feedback-ui/curry-model-prediction.json`, `mass-proxy-final-tests.json`, `mass-proxy-sql.json`, `curry-whole-weight/`에 있다. 운영 적용·실제 frozen 카레 source 결합 확인·전체 DB238 실행은 아직 하지 않았다. push/PR/머지/운영 SQL/배포는 별도 승인 범위로 남긴다.
+증거는 `.artifacts/feedback-ui/curry-model-prediction.json`, `mass-proxy-final-tests.json`, `mass-proxy-compat-sql.json`, `curry-whole-weight/`와 아래 native 결과에 있다. 운영 적용과 실제 frozen 카레 source 결합 확인은 아직 하지 않았다.
+
+## 승인 후 DB238 native 통합 검증과 배포 차단
+
+2026-10-20 08:25 UTC 사용자가 통합 검증·백업 확인 후 GitHub 반영/머지→함수2개 DB 변경→웹 배포→운영 확인 진행을 승인했다. 이 승인을 기존 보호 도구의 PIN 변경이나 다른 기능의 권한 전용으로 해석하지 않는다.
+
+전체 migration 처음부터 재생은213개 뒤 `20261009200000_youtube_ingredient_resolution.sql`의 기존 catalog hash fence에서 실패했다(실제 `67e4a441…`, 요구 `81362d75…`). 기존 문서에 기록된 문제와 같고, 역사 SQL·hash fence·YouTube 코드는 바꾸지 않았다. 이 실행은 **실패**로 보존한다.
+
+대신 저장소에 문서화된 native schema-only 복원 경로를 사용했다. 승인된 schema232 archive SHA `8b5fb24afc4f6635ff1640d33d73ffb3883af49b0554dad6f81735a6a7a6587b`와 고정 Supabase PostgreSQL image에 원233–238 SQL을 그대로 적용했다. 초기153개 표의 행0, role36/membership23·설정 일치, 함수443개를 확인했다. archive에는 TABLE DATA/SEQUENCE SET/BLOB DATA가 없으며 운영 연결0·network none·port0·mount0다. raw dump 차이는 기존 검토된 deparse 정규화로만 비교했다. 이것은 처음부터 migration 재생 성공을 대신 주장하지 않는다.
+
+실제 기존 auth/완료/preview/meal/adjust 함수는 stub으로 교체하지 않고 합성 owner/session/snapshot/영양만 주입했다. native 검사10/10은 자동3119.7g→125g 기록/잔량2994.7g, manual2800→180g, reported2700→200g, 이전 receipt 재시도·변경 거부, owner/anon/폐기 binding 거부, 실제 gate OFF·옛 client, 후속 잔량수정 시 기존 meal 근거 고정, 원2함수 복원 후 옛 reader/새 이력 보존과 구client 완료를 확인한다. 강제 DDL 실패가443함수 전체와 기존 batch/meal/evidence/receipt를 되돌리고, 정상 적용에서는 정확2개 본문만 바뀌며 OID/owner/ACL/config가 보존됨을 비교했다. 운영 HTTP 로그인·브라우저부터 DB까지 한 연결·실제 카레 영양 정확도 검증은 아니다.
+
+독립 리뷰에서 native 테스트 import 시 외부 context 파일을 무조건 읽는 문제가 나왔다. 활성화된 beforeAll로 옮기고 context SHA를 고정했다. 비활성 검사에 존재하지 않는 context 경로를 주입해 수집 성공/10 skip을 확인했으며 이를10 pass로 세지 않는다. 증거는 `native-db238-setup.json`, `native-db238-tests.json`, `native-disabled-collection.json`, `full-schema-replay-report.json`이다.
+
+정식 read-only deploy plan은 `--db-compatible`를 `닫힌 R2 유지 배포: 닫힘 승계는 기존 reviewed-ref와 읽기 전용 DB 검증만 허용합니다.`로 차단했다. 이는 **배포 도구 가드의 거부이며 자동 승인 심사 거절이 아니다.** DB238 프로필은235→238의 고정3 SQL/PIN만 허용하고 앱 successor는 SQL0 전용이다. 재시도·우회·과거 PIN 재지정은 하지 않았다. 별도239 feature 검토서/고정 SHA,238 predecessor receipt,239 SQL raw/payload·함수2개 전후상/나머지 catalog·행·권한·제어 보존, 기존 backup/fence/단일 transaction/reconcile 연결이 선행돼야 한다. 상세 범위는 [DB239 배포 준비서](cooked-weight-db239-release-readiness-20261020.md)를 따른다. 이 시점 신규 운영 백업·서비스 중지·GitHub 쓰기·DB 적용·웹 배포는0이다.
