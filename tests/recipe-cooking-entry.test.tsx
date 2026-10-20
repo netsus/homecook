@@ -4,14 +4,17 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { RecipeCookingEntry } from "@/components/cooking/recipe-cooking-entry";
-const mocks = vi.hoisted(() => ({ read: vi.fn(), start: vi.fn(), router: { replace: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ guide: vi.fn(), read: vi.fn(), start: vi.fn(), router: { replace: vi.fn() } }));
+// Browser checks cover responsive CSS; these tests exercise view behavior.
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
 vi.mock("next/navigation", () => ({ useRouter: () => mocks.router }));
 vi.mock("@/components/shared/use-app-return", () => ({ useAppReturn: () => ({ href: "/recipebooks/book-1" }) }));
 vi.mock("@/components/shared/use-mobile-fullscreen-page", () => ({ useMobileFullscreenPage: vi.fn() }));
 vi.mock("@/lib/api/fetch-json", () => ({ fetchJson: mocks.read, isApiFetchError: (e: object) => "status" in e }));
-vi.mock("@/lib/api/cooking", () => ({ createSnapshotV2CookingSession: mocks.start, isCookingApiError: (e: object) => "status" in e }));
+vi.mock("@/lib/api/cooking", () => ({ fetchStandaloneCookMode: mocks.guide, createSnapshotV2CookingSession: mocks.start, isCookingApiError: (e: object) => "status" in e }));
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.guide.mockResolvedValue({ recipe: { id: "recipe-1", title: "공개 요리", cooking_servings: 2, ingredients: [], steps: [] } });
   mocks.read.mockResolvedValue({ id: "recipe-1", revision: 7 });
   mocks.start.mockReset().mockResolvedValue({ session_id: "session-1", contract_version: "snapshot_v2" });
 });
@@ -33,8 +36,20 @@ it("retries an uncertain creation using the same body and key", async () => {
   expect(mocks.read).toHaveBeenCalledTimes(1);
   expect(mocks.start.mock.calls[1]).toEqual(mocks.start.mock.calls[0]);
 });
-it("does not create a cooking session before login", () => {
+it("opens the public guest guide without creating a cooking session", async () => {
   render(<RecipeCookingEntry initialAuthenticated={false} recipeId="recipe-1" servings={2} />);
-  expect(screen.getByRole("link", { name: "로그인" }).getAttribute("href")).toContain("next=");
+  expect(await screen.findByRole("heading", { name: "공개 요리" })).toBeTruthy();
+  expect(mocks.guide).toHaveBeenCalledWith("recipe-1", 2, { credentials: "omit" });
   expect(mocks.start).not.toHaveBeenCalled();
+  expect(mocks.read).not.toHaveBeenCalled();
+  expect(screen.queryByRole("link", { name: "로그인" })).toBeNull();
+});
+
+it.each([401, "ACCOUNT_SESSION_STALE", "ACCOUNT_GENERATION_STALE"])("uses the public guide after definite rejection %s without retrying a write", async kind => {
+  mocks.start.mockRejectedValue({ status: typeof kind === "number" ? kind : 409, code: typeof kind === "number" ? "UNAUTHORIZED" : kind });
+  render(<RecipeCookingEntry initialAuthenticated recipeId="recipe-1" servings={2} />);
+  expect(await screen.findByRole("heading", { name: "공개 요리" })).toBeTruthy();
+  expect(mocks.start).toHaveBeenCalledTimes(1);
+  expect(mocks.guide).toHaveBeenCalledWith("recipe-1", 2, { credentials: "omit" });
+  expect(mocks.router.replace).not.toHaveBeenCalled();
 });

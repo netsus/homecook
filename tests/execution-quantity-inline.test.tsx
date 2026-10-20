@@ -4,6 +4,8 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { ExecutionQuantityInline, executionQuantityText } from '@/components/cooking/execution-quantity-inline';
+// Responsive styles are verified in Chrome; this suite checks edit behavior.
+vi.mock("@/components/cooking/cook-mode-layout.module.css", () => ({ default: {} }));
 import { SnapshotV2CookModeView } from '@/components/cooking/snapshot-v2-cook-mode-view';
 import type { CookingModeIngredient, SnapshotV2CookModeData } from '@/types/cooking';
 import { toCookingModeIngredient } from '@/lib/server/cooking';
