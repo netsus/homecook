@@ -9,7 +9,7 @@ import { SAVED_RECIPE_NUTRITION_REVIEW_PIN, SAVED_RECIPE_NUTRITION_FUNCTIONS_SQL
 import { SAVED_RECIPE_NUTRITION_FUNCTION_SIGNATURES } from "./saved-recipe-nutrition-catalog.mjs";
 
 export const MASS_PROXY_FEATURE = "cooked-weight-mass-proxy";
-export const MASS_PROXY_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const MASS_PROXY_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/.homecook/operations/cooked-weight-deploy-20261020-ugixvO/approved-cooked-weight-mass-proxy-review.json","sha256":"64d1db27ff24ae14318afd090650590a98b8824231914e90c3d79d03fe369162"});
 export const MASS_PROXY_MIGRATION = Object.freeze({
   filename: "20261020210000_cooked_weight_mass_proxy.sql",
   rawSha256: "ea827e50ba5fefb4cbf992fb7ad7b32d8e123679576e3eb7e1a119ba3c203e9d",

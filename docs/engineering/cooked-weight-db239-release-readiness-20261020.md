@@ -45,3 +45,9 @@ Chrome의 저장·영양 API는 합성 fixture였다. 운영 HTTP 로그인→�
 기존 `verify-backup`, 인증된 off-Mac 사본, 새 격리 DB·Storage 전체 clean restore와 기존 escrow 키 복구가 PASS했다. source backup 생성은 `2026-10-20T09:39:46.517Z`, 미분류0이다. 격리 복원 증거는 `production_readiness_issued:false`이며 별도 기존 `record-readiness` 결과로만 운영 readiness를 판정한다. 운영 복원/키 교체는0이다.
 
 PIN-null 거부 검사는 실제 운영 PIN 상태와 무관한 코드 복사 fixture로 격리했고 도구 회귀123개를 다시 통과했다. 독립 리뷰도 해당2개를 직접 재실행해 통과했다. 소유 native 테스트 컨테이너 제거를 확인했다.
+
+### 고정 검토서 결속
+
+새 `record-readiness` PASS를 확인한 뒤 create-only 검토서 `cooked-weight-deploy-20261020-ugixvO/approved-cooked-weight-mass-proxy-review.json`을 준비하고 새 PIN만 결속했다. SHA256은 `64d1db27ff24ae14318afd090650590a98b8824231914e90c3d79d03fe369162`, operatorRef는 `a7c8333db67caffdef6fad9199be538110d10a91`이며 앱 대상9645b954와 분리한다. 실제 두 함수 preimage는 native fixture와 일치했고 현재 OID143051/143053, 원238 ledger/receipt·백업 readiness·R2/worker·증거 포인터를 검증했다. 과거 PIN은 수정하지 않았다. inventory JSON의 `personalRowsIncluded:false`는 그 메타데이터 파일에 개인 행 원문을 넣지 않았다는 뜻이며 백업 제외를 뜻하지 않는다.
+
+최초 PIN 결속 스크립트는 내부 정규화 문자열까지 중복 계산해 쓰기 전 실패했다. 당시 plan도 unbound 가드에서 종료돼 운영 접근/변경0이었다. 선언문 한 줄에만 일치하도록 수정 후 실제 loader/source/evidence 검증을 통과했다. 최종 결속 상태에서 도구 회귀123 PASS/skip0·해당 helper lint0을 다시 확인했다. 운영 DDL·웹 전환은 공식 plan과 머지 뒤 별도로 실행한다.
