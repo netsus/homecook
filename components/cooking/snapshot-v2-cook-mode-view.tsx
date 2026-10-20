@@ -13,7 +13,10 @@ interface SnapshotV2CookModeViewProps {
   cancelling?: boolean;
   preparingCompletion?: boolean;
   completionButtonRef?: React.RefObject<HTMLButtonElement | null>;
-  data: SnapshotV2CookModeData;
+  data: SnapshotV2CookModeData | Pick<SnapshotV2CookModeData, "status" | "mode" | "recipe">;
+  notice?: React.ReactNode;
+  completionActions?: React.ReactNode;
+  quantityDescription?: string;
   onCancel: () => void;
   onSaveIngredients?: (changes: ExecutionQuantityChange[]) => Promise<void>;
   onComplete?: () => void;
@@ -25,6 +28,9 @@ export function SnapshotV2CookModeView({
   preparingCompletion = false,
   completionButtonRef,
   data,
+  notice,
+  completionActions,
+  quantityDescription,
   onCancel,
   onSaveIngredients,
   onComplete,
@@ -71,9 +77,10 @@ export function SnapshotV2CookModeView({
         className="px-4 pb-4"
         style={terminal ? { paddingBottom: "calc(16px + env(safe-area-inset-bottom))" } : undefined}
       >
+      {notice}
       {terminal ? (
         <nav aria-label="요리 후 다음 행동" className="grid gap-2.5">
-          {data.status === "completed" ? (
+          {data.status === "completed" ? completionActions ?? (
             <Link
               className="flex min-h-14 items-center justify-center rounded-[16px] bg-[var(--brand-primary)] px-4 text-center font-bold text-[var(--text-inverse)]"
               href="/planner?segment=log"
@@ -92,7 +99,7 @@ export function SnapshotV2CookModeView({
 
         <CookModeWholeBoard className={terminal ? "mt-4" : undefined} density="mobile" recipe={data.recipe}
           renderIngredientAmount={!terminal && onSaveIngredients ? (ingredient, index) => editingRow === index
-            ? <ExecutionQuantityInline ingredient={ingredient} index={index} onClose={closeEditor} onSave={onSaveIngredients} />
+            ? <ExecutionQuantityInline ingredient={ingredient} index={index} onClose={closeEditor} onSave={onSaveIngredients} description={quantityDescription} />
             : <button aria-label={`${ingredient.standard_name} 수량 수정`} ref={lastEditedRow.current === index ? editTrigger : undefined} className="cook-whole-ingredient-amount min-h-11 rounded-lg px-2 underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2" disabled={busy} type="button" onClick={event => { editTrigger.current = event.currentTarget; lastEditedRow.current = index; setEditingRow(index); }}>
               {(ingredient.quantity_input || ingredient.ingredient_type === "TO_TASTE") ? formatIngredientAmountOnly(ingredient) : ingredient.amount === null ? "양 미확인" : `${executionQuantityText(ingredient)}${ingredient.unit ?? ""}`}
             </button> : undefined} />

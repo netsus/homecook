@@ -3,7 +3,7 @@ import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-aut
 
 interface StandaloneCookModePageProps {
   params: Promise<{ recipe_id: string }>;
-  searchParams: Promise<{ servings?: string }>;
+  searchParams: Promise<{ servings?: string; guest?: string }>;
 }
 
 export default async function StandaloneCookModePage({
@@ -14,5 +14,6 @@ export default async function StandaloneCookModePage({
   const resolvedSearchParams = await searchParams;
   const servings = Math.max(1, Number(resolvedSearchParams.servings) || 1);
 
-  return <RecipeCookingEntry initialAuthenticated={await getInitialAuthenticatedFromServer()} recipeId={recipe_id} servings={servings} />;
+  const authenticated = resolvedSearchParams.guest !== "1" && await getInitialAuthenticatedFromServer();
+  return <RecipeCookingEntry initialAuthenticated={authenticated} recipeId={recipe_id} servings={servings} />;
 }

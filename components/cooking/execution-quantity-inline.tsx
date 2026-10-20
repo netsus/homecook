@@ -9,11 +9,12 @@ export type ExecutionQuantityChange = { row_index: number; amount: number | null
 export { executionQuantityText } from "@/lib/cooking/execution-quantity-presentation";
 import { executionQuantityText } from "@/lib/cooking/execution-quantity-presentation";
 
-export function ExecutionQuantityInline({ ingredient, index, onClose, onSave }: {
+export function ExecutionQuantityInline({ ingredient, index, onClose, onSave, description = "이번 요리의 영양과 예상무게에 반영해요." }: {
   ingredient: CookingModeIngredient;
   index: number;
   onClose: () => void;
   onSave: (changes: ExecutionQuantityChange[]) => Promise<void>;
+  description?: string;
 }) {
   const [amount, setAmount] = useState(() => executionQuantityText(ingredient));
   const [unit, setUnit] = useState(ingredient.unit ?? "g");
@@ -68,7 +69,7 @@ export function ExecutionQuantityInline({ ingredient, index, onClose, onSave }: 
         <select aria-label={`${name} 단위`} className="min-h-11 max-w-24 rounded-lg border border-current bg-[#17232f] p-2 text-white" disabled={unknown} value={unit} onChange={event => changeUnit(event.target.value)}>{units.map(value => <option key={value}>{value}</option>)}</select>
       </div>
       <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={unknown} onChange={event => setUnknown(event.target.checked)} />양 미확인</label>
-      <p>이번 요리의 영양과 예상무게에 반영해요.</p>
+      <p>{description}</p>
       {error ? <p id={`quantity-error-${index}`} role="alert">{error}</p> : null}
       <div className="flex gap-2"><button className="min-h-11 flex-1 rounded-lg bg-[var(--brand-primary)] px-3 text-white" type="submit">{saving ? "저장 중…" : "저장"}</button><button className="min-h-11 rounded-lg border border-current px-3" type="button" onClick={onClose}>취소</button></div>
     </fieldset>
