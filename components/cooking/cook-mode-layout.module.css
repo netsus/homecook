@@ -14,14 +14,71 @@
 
 .snapshotHeader { order: 0; }
 .snapshotScreen > main { order: 2; }
-.snapshotScreen :global(.cook-whole-ingredient:has(form)) {
-  display: grid;
-  width: 100%;
-  grid-template-columns: minmax(0, 1fr);
-  border-radius: 14px;
+.quantityEditor {
+  position: relative;
+  display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
 }
-.snapshotScreen :global(.cook-whole-ingredients) > li:has(form) {
-  width: 100%;
+.quantityInput {
+  min-width: 0;
+  max-width: min(12ch, 28vw);
+  min-height: 44px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  padding: 4px;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+}
+.quantityEditor[aria-busy="true"] { opacity: 0.65; }
+.quantityError {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  right: 0;
+  width: 240px;
+  max-width: calc(100vw - 48px);
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: #17232f;
+  padding: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+}
+.postCookActions {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+.postCookActions > a {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--surface-alpha-24);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.postCookActions > .postCookPrimary {
+  border-color: transparent;
+  background: var(--brand-primary);
+  color: var(--text-inverse);
 }
 .snapshotActions {
   display: flex;

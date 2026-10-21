@@ -3254,33 +3254,20 @@ function MypageListLoadingBody({ kind }: { kind: "recipebook" | "shopping" }) {
   }
 
   return (
-    <section className="mobile-recipebooks-diary-screen px-4 pb-8 pt-4">
-      <div
-        className="mobile-recipebooks-diary-hero rounded-[28px] p-4"
-        data-testid="recipebook-mobile-loading-hero"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-6 w-36" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-          </div>
-          <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
-        </div>
+    <section className="mobile-recipebooks-diary-screen recipebook-compact-shelf px-4 pb-8 pt-4">
+      <div className="mb-3 flex justify-end" data-testid="recipebook-mobile-loading-hero">
+        <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mobile-recipebooks-book-grid mobile-recipebooks-book-grid-wide mt-3 grid">
         {Array.from({ length: 4 }, (_, index) => (
           <div
             className="mobile-recipebook-book-card mobile-recipebook-book-card-sand relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0"
             data-testid={`recipebook-mobile-loading-book-${index + 1}`}
             key={index}
           >
-            <span className="block px-4 pb-3 pl-7 pt-5">
-              <Skeleton className="aspect-[1.05] w-full rounded-[14px]" />
+            <span className="mobile-recipebook-cover-frame block">
+              <Skeleton className="h-[104px] w-full rounded-lg" />
             </span>
             <div className="mobile-recipebook-book-copy grid gap-2 px-3 pb-10 pt-3">
               <Skeleton className="h-4 w-24" />
@@ -3472,15 +3459,11 @@ function RecipeBookTabContent({
 }: RecipeBookTabContentProps) {
 
   return (
-    <div className="web-recipebooks-screen" data-testid="recipebook-tab">
+    <div className="web-recipebooks-screen recipebook-compact-shelf" data-testid="recipebook-tab">
       <div
         className="web-recipebooks-header"
         data-testid="web-recipebooks-header"
       >
-        <div>
-          <h2>레시피북</h2>
-          <p>내가 만든 북과 시스템 북을 책장처럼 관리해요.</p>
-        </div>
         <div className="web-recipebooks-header-actions">
           <WebButton aria-label="새 레시피북 만들기" onClick={onShowCreateInput}>
             + 새 레시피북
@@ -3522,16 +3505,7 @@ function RecipeBookTabContent({
         </div>
       </div>
 
-      <div className="web-recipebooks-section-head">
-        <h3>커스텀</h3>
-      </div>
-
-      {customBooks.length === 0 ? (
-        <p className="web-recipebooks-empty">
-          아직 만든 레시피북이 없어요
-        </p>
-      ) : (
-        <div className="web-recipebooks-grid">
+      <div className="web-recipebooks-grid" aria-label="레시피북 목록">
           {customBooks.map((book) => (
             <CustomBookCard
               book={book}
@@ -3555,13 +3529,6 @@ function RecipeBookTabContent({
               renameValue={renameValue}
             />
           ))}
-        </div>
-      )}
-
-      <div className="web-recipebooks-section-head web-recipebooks-section-head-spaced">
-        <h3>시스템</h3>
-      </div>
-      <div className="web-recipebooks-grid">
         {systemBooks.map((book) => (
           <SystemBookCard
             book={book}
