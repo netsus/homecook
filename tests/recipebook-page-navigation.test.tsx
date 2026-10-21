@@ -7,6 +7,7 @@ import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detai
 import RecipeBookDetailPage from "@/app/mypage/recipe-books/[book_id]/page";
 const mocks = vi.hoisted(() => ({ authenticated: true, mobile: true, read: vi.fn(), detail: vi.fn(), router: { push: vi.fn(), replace: vi.fn() }, query: new URLSearchParams() }));
 vi.mock("@/lib/auth/server-initial-auth", () => ({ getInitialAuthenticatedFromServer: async () => mocks.authenticated }));
+vi.mock("@/components/recipebook/recipebook-density.css", () => ({}));
 vi.mock("@/lib/supabase/env", () => ({ hasSupabasePublicEnv: () => false }));
 vi.mock("next/navigation", () => ({ useRouter: () => mocks.router, useSearchParams: () => mocks.query, usePathname: () => "/mypage/recipe-books/book" }));
 vi.mock("@/components/shared/use-mobile-viewport", () => ({ useIsMobileViewport: () => mocks.mobile }));

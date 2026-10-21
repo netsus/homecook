@@ -1,3 +1,4 @@
+import "@/components/recipebook/recipebook-density.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";

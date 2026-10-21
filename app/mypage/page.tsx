@@ -1,3 +1,4 @@
+import "@/components/recipebook/recipebook-density.css";
 import { redirect } from "next/navigation";
 
 import { AccountQuarantineScreen } from

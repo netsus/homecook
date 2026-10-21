@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
 }));
 
+vi.mock("@/components/recipebook/recipebook-density.css", () => ({}));
+
 vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
 }));
