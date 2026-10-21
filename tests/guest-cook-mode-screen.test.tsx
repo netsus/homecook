@@ -25,24 +25,18 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it("edits fractions and compatible units inline in memory, then completes without account writes", async () => {
+it("edits only numbers inline in memory with the original unit, then completes without account writes", async () => {
   render(<GuestCookModeScreen recipeId="public-recipe" servings={2} />);
   await userEvent.click(await screen.findByRole("button", { name: "쌀 수량 수정" }));
   expect(screen.queryByRole("dialog")).toBeNull();
   await userEvent.clear(screen.getByRole("textbox", { name: "쌀 양" }));
-  await userEvent.type(screen.getByRole("textbox", { name: "쌀 양" }), "1/3");
-  await userEvent.selectOptions(screen.getByRole("combobox", { name: "쌀 단위" }), "kg");
-  expect(Number((screen.getByRole("textbox", { name: "쌀 양" }) as HTMLInputElement).value)).toBeCloseTo(1 / 3000, 10);
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
-  await userEvent.click(await screen.findByRole("button", { name: "쌀 수량 수정" }));
-  await userEvent.clear(screen.getByRole("textbox", { name: "쌀 양" }));
-  await userEvent.type(screen.getByRole("textbox", { name: "쌀 양" }), "1/2");
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
-  expect((await screen.findByRole("button", { name: "쌀 수량 수정" })).textContent).toBe("1/2kg");
-  expect(screen.getByRole("button", { name: "소금 수량 수정" }).textContent).toBe("적당량");
+  await userEvent.type(screen.getByRole("textbox", { name: "쌀 양" }), "1/3{Enter}");
+  expect((await screen.findByRole("button", { name: "쌀 수량 수정" })).textContent).toBe("1/3g");
+  expect(screen.queryByRole("button", { name: "소금 수량 수정" })).toBeNull();
+  expect(screen.getByText("적당량")).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "요리 완료" }));
   expect(screen.getByRole("status").textContent).toContain("계정에 저장되지 않았어요");
-  expect(screen.getByRole("link", { name: "로그인하고 기록 시작하기" }).getAttribute("href")).toBe("/login?next=%2Frecipe%2Fpublic-recipe");
+  expect(screen.getByRole("link", { name: "로그인 후 식사 기록" }).getAttribute("href")).toBe("/login?next=%2Frecipe%2Fpublic-recipe");
   expect(screen.getByRole("link", { name: "돌아가기" }).getAttribute("href")).toBe("/recipe/public-recipe");
   expect(screen.queryByRole("link", { name: "식사 기록하기" })).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
@@ -54,8 +48,7 @@ it("resets local edits on remount and cancels through the return context without
   const view = render(<GuestCookModeScreen recipeId="public-recipe" servings={2} />);
   await userEvent.click(await screen.findByRole("button", { name: "쌀 수량 수정" }));
   await userEvent.clear(screen.getByRole("textbox", { name: "쌀 양" }));
-  await userEvent.type(screen.getByRole("textbox", { name: "쌀 양" }), "200");
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.type(screen.getByRole("textbox", { name: "쌀 양" }), "200{Enter}");
   expect((await screen.findByRole("button", { name: "쌀 수량 수정" })).textContent).toBe("200g");
   view.unmount();
   render(<GuestCookModeScreen recipeId="public-recipe" servings={2} />);

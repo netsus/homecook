@@ -1264,31 +1264,18 @@ describe("MypageScreen", () => {
     expect(recipebookSurface.className).toContain(
       "mobile-recipebooks-diary-screen-fit",
     );
-    expect(within(recipebookSurface).getByAltText("집밥러 프로필")).toBeTruthy();
-    expect(within(recipebookSurface).getByRole("heading", { name: "나의 레시피북" })).toBeTruthy();
-    expect(within(recipebookSurface).getByText("책 4권 · 저장 5개")).toBeTruthy();
-    const customSection = within(recipebookSurface).getByTestId(
-      "mobile-custom-books-section",
-    );
-    const systemSection = within(recipebookSurface).getByTestId(
-      "mobile-system-books-section",
-    );
-    expect(within(customSection).getByRole("heading", { name: "커스텀" })).toBeTruthy();
-    expect(within(systemSection).getByRole("heading", { name: "시스템" })).toBeTruthy();
-    expect(within(customSection).getByTestId("custom-book-book-custom")).toBeTruthy();
-    expect(within(systemSection).getByTestId("system-book-saved")).toBeTruthy();
-    expect(
-      within(customSection).getByTestId("mobile-custom-books-grid").className,
-    ).toContain("mobile-recipebooks-book-grid-wide");
-    const customBookCard = within(customSection).getByTestId("custom-book-book-custom");
+    expect(within(recipebookSurface).queryByRole("heading", { name: "나의 레시피북" })).toBeNull();
+    expect(within(recipebookSurface).queryByRole("heading", { name: "커스텀" })).toBeNull();
+    expect(within(recipebookSurface).queryByRole("heading", { name: "시스템" })).toBeNull();
+    const books = within(recipebookSurface).getByRole("list", {name:"레시피북 목록"});
+    expect(within(books).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(books).getByTestId("system-book-saved")).toBeTruthy();
+    const customBookCard = within(books).getByTestId("custom-book-book-custom");
     expect(customBookCard.className).toContain("mobile-recipebook-book-card-web-ratio");
     expect(within(customBookCard).getByLabelText("레시피 2개")).toBeTruthy();
     const customCover = within(customBookCard).getByTestId("mobile-book-cover-book-custom");
     expect(customCover.className).toContain("mobile-recipebook-cover-thumb-image");
     expect(customCover.closest(".mobile-recipebook-cover-thumb")).toBeTruthy();
-    expect(
-      within(systemSection).getByTestId("mobile-system-books-grid").className,
-    ).toContain("mobile-recipebooks-book-grid-wide");
     expect(within(recipebookSurface).queryByText("책장")).toBeNull();
     expect(within(recipebookSurface).queryByText("최근")).toBeNull();
     expect(within(recipebookSurface).queryByText("목록")).toBeNull();
@@ -1719,7 +1706,7 @@ describe("MypageScreen", () => {
     expect(screen.queryByRole("heading", { name: "마이페이지" })).toBeNull();
   });
 
-  it("shows empty state message when no custom books exist", async () => {
+  it("keeps the combined shelf when no custom books exist", async () => {
     mockFetchRecipeBooks.mockResolvedValue({
       books: MOCK_BOOKS.books.filter((b) => b.book_type !== "custom"),
     });
@@ -1727,7 +1714,8 @@ describe("MypageScreen", () => {
     render(<MypageScreen initialAuthenticated />);
 
     await openRecipebookSurface();
-    expect(screen.getByText("아직 만든 레시피북이 없어요")).toBeTruthy();
+    expect(screen.queryByText("아직 만든 레시피북이 없어요")).toBeNull();
+    expect(screen.getByTestId("system-book-saved")).toBeTruthy();
   });
 
   it("system books do not show a context menu button", async () => {
@@ -2248,7 +2236,7 @@ describe("MypageScreen", () => {
 
     expect(screen.getByTestId("system-book-saved")).toBeTruthy();
     expect(screen.queryByText("저장된 된장찌개")).toBeNull();
-    expect(screen.getByRole("heading", { name: "레시피북" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "레시피북" })).toBeNull();
   });
 
   it("can render directly into the shopping return surface", async () => {
