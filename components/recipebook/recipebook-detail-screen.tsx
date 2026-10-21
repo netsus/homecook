@@ -48,7 +48,6 @@ import {
 } from "@/lib/api/recipe-save";
 import { getSurfaceChromeRule } from "@/lib/navigation/app-nav";
 import { buildReturnHref } from "@/lib/navigation/return-context";
-import { getRecipeBookCoverViewModel } from "@/lib/recipebook-cover";
 import { formatScaledIngredient } from "@/lib/recipe";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -100,7 +99,7 @@ function buildRecipeBookDetailHref({
   if (readerRecipeId) params.set("readerRecipe", readerRecipeId);
   if (readerMode) params.set("readerMode", readerMode);
 
-  return `/mypage/recipe-books/${bookId}?${params.toString()}${readerRecipeId ? `#recipebook-recipe-${encodeURIComponent(readerRecipeId)}` : ""}`;
+  return `/mypage/recipe-books/${bookId}?${params.toString()}`;
 }
 
 function normalizeServings(servings?: number | null) {
@@ -136,8 +135,6 @@ export function RecipeBookDetailScreen({
   bookId,
   bookName,
   bookType,
-  bookCoverColorKey,
-  bookCoverImageSrc,
   embedded = false,
   initialAuthenticated = false,
 }: RecipeBookDetailScreenProps) {
@@ -178,6 +175,10 @@ export function RecipeBookDetailScreen({
   );
   const pendingRestoreRecipeId = useRef(searchParams.get("readerRecipe"));
   const pendingScrollRecipeId = useRef<string | null>(null);
+  const readerMainRef = useRef<HTMLElement>(null);
+  const restoreScrollTop = useRef<number | null>(null);
+  const readerEntryId = useRef<string | null>(null);
+  const readerScrollPositions = useRef(new Map<string, number>());
   const [scrollRequest, setScrollRequest] = useState(0);
   const restoreRequestedCursors = useRef(new Set<string>());
   const [saveTarget, setSaveTarget] = useState<RecipeBookRecipeItem | null>(null);
@@ -204,41 +205,75 @@ export function RecipeBookDetailScreen({
   const requestedReaderRecipeIdsRef = useRef<Set<string>>(new Set());
   const lastBookNamePropRef = useRef(bookName);
   const canManageBook = bookType === "custom";
+  const updateReaderUrl = useCallback((mode: "book" | "list", recipeId: string | null) => {
+    if (embedded) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("readerMode", mode);
+    if (recipeId) url.searchParams.set("readerRecipe", recipeId);
+    url.hash = "";
+    if (url.href === window.location.href) return;
+    window.history.replaceState({ ...window.history.state, recipebookScrollTop: readerMainRef.current?.scrollTop ?? 0 }, "");
+    const entryId = crypto.randomUUID();
+    window.history.pushState({ ...window.history.state, recipebookEntryId: entryId, recipebookScrollTop: 0 }, "", url);
+    readerEntryId.current = entryId;
+  }, [embedded]);
+
   const selectRecipe = useCallback((recipeId: string) => {
     pendingScrollRecipeId.current = recipeId;
+    restoreScrollTop.current = 0;
     setScrollRequest(value => value + 1);
     setActiveDesktopRecipeId(recipeId);
-    if (!embedded) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("readerRecipe", recipeId);
-      url.hash = `recipebook-recipe-${recipeId}`;
-      window.history.replaceState(window.history.state, "", url);
-    }
-  }, [embedded]);
+    setDesktopReaderMode("book");
+    updateReaderUrl("book", recipeId);
+  }, [updateReaderUrl]);
 
   const changeReaderMode = useCallback((mode: "book" | "list") => {
     setDesktopReaderMode(mode);
-    if (!embedded) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("readerMode", mode);
-      window.history.replaceState(window.history.state, "", url);
-    }
+    updateReaderUrl(mode, activeDesktopRecipeId);
+  }, [activeDesktopRecipeId, updateReaderUrl]);
+
+  useEffect(() => {
+    if (embedded) return;
+    const entryId = window.history.state?.recipebookEntryId ?? crypto.randomUUID();
+    readerEntryId.current = entryId;
+    window.history.replaceState({ ...window.history.state, recipebookEntryId: entryId }, "");
+    const restore = (event: PopStateEvent) => {
+      const params = new URLSearchParams(window.location.search);
+      const recipeId = params.get("readerRecipe");
+      readerEntryId.current = typeof event.state?.recipebookEntryId === "string" ? event.state.recipebookEntryId : null;
+      setDesktopReaderMode(params.get("readerMode") === "list" ? "list" : "book");
+      setActiveDesktopRecipeId(recipeId);
+      pendingRestoreRecipeId.current = recipeId;
+      pendingScrollRecipeId.current = recipeId;
+      restoreScrollTop.current = (readerEntryId.current ? readerScrollPositions.current.get(readerEntryId.current) : undefined)
+        ?? (typeof event.state?.recipebookScrollTop === "number" ? event.state.recipebookScrollTop : 0);
+      setScrollRequest(value => value + 1);
+    };
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
   }, [embedded]);
 
   useEffect(() => {
-    const recipeId = pendingScrollRecipeId.current;
+    const recipeId = pendingScrollRecipeId.current ?? (restoreScrollTop.current !== null ? items[0]?.recipe_id : null);
     if (!recipeId) return;
     const frame = requestAnimationFrame(() => {
       const target = document.getElementById(`recipebook-recipe-${recipeId}`);
-      if (target) {
-        target.setAttribute("tabindex", "-1");
-        target.focus({ preventScroll: true });
+      if (!target) return;
+      target.setAttribute("tabindex", "-1");
+      target.focus({ preventScroll: true });
+      if (readerMainRef.current) {
+        const main = readerMainRef.current;
+        main.scrollTop = restoreScrollTop.current ?? (desktopReaderMode === "list"
+          ? main.scrollTop + target.getBoundingClientRect().top - main.getBoundingClientRect().top
+          : 0);
+      } else if (isMobileViewport) {
         target.scrollIntoView?.({ block: "start" });
-        pendingScrollRecipeId.current = null;
       }
+      pendingScrollRecipeId.current = null;
+      restoreScrollTop.current = null;
     });
     return () => cancelAnimationFrame(frame);
-  }, [activeDesktopRecipeId, desktopReaderMode, items, scrollRequest]);
+  }, [activeDesktopRecipeId, desktopReaderMode, isMobileViewport, items, scrollRequest]);
   const knownSavedBookIds = useMemo(() => {
     if (bookType === "saved" || bookType === "custom") {
       return [bookId];
@@ -660,7 +695,8 @@ export function RecipeBookDetailScreen({
     if (!recipeId || viewState !== "ready") return;
     if (items.some((item) => item.recipe_id === recipeId)) {
       pendingRestoreRecipeId.current = null;
-      requestAnimationFrame(() => document.getElementById(`recipebook-recipe-${recipeId}`)?.scrollIntoView?.({ block: "start" }));
+      pendingScrollRecipeId.current = recipeId;
+      setScrollRequest(value => value + 1);
     } else if (!hasNext) {
       pendingRestoreRecipeId.current = null;
     } else if (cursor && !isLoadingMore && !restoreRequestedCursors.current.has(cursor)) {
@@ -1096,26 +1132,20 @@ export function RecipeBookDetailScreen({
     recipeCount: number | null = items.length,
   ) => {
     const frame = (
-      <div className="web-recipebook-detail-screen">
+      <div className="web-recipebook-detail-screen recipebook-reader-screen">
         <div className="web-recipebook-detail-head" data-testid="recipebook-detail-header">
           <div>
-            <Link aria-label="뒤로 가기" className="mb-3 inline-flex min-h-11 items-center rounded-lg border px-4" href={appReturn.href}>← 레시피북으로</Link>
-            <h1>레시피북 리더</h1>
-            <p>{currentBookName} · 왼쪽 목차와 오른쪽 책 페이지로 레시피를 읽어요.</p>
+            <h1 className="sr-only">{currentBookName} 레시피북 리더</h1>
           </div>
-          {renderDesktopBookActions()}
         </div>
         <div
           className="web-recipebook-detail-layout web-recipebook-open-book"
           data-testid="recipebook-open-book"
         >
           <DesktopRecipeBookRail
+            actions={renderDesktopBookActions()}
             activeRecipeId={activeDesktopRecipeId}
-            bookCoverColorKey={bookCoverColorKey}
-            bookCoverImageSrc={bookCoverImageSrc}
-            bookId={bookId}
             bookName={currentBookName}
-            bookType={bookType}
             hasNext={hasNext}
             items={items}
             onSelectRecipe={selectRecipe}
@@ -1123,7 +1153,9 @@ export function RecipeBookDetailScreen({
             isLoadingMore={isLoadingMore}
             recipeCount={recipeCount}
           />
-          <section className="web-recipebook-detail-main" aria-label="레시피 목록">
+          <section ref={readerMainRef} className="web-recipebook-detail-main" aria-label="레시피 목록" onScroll={event => {
+            if (readerEntryId.current) readerScrollPositions.current.set(readerEntryId.current, event.currentTarget.scrollTop);
+          }}>
             {children}
           </section>
         </div>
@@ -1161,7 +1193,7 @@ export function RecipeBookDetailScreen({
     }
 
     return (
-      <WebShell className="web-recipebook-detail-shell" wide>
+      <WebShell className="web-recipebook-detail-shell recipebook-reader-shell" footer={false} wide>
         <WebTopNav activeId={RECIPEBOOK_DETAIL_CHROME.primaryNavId} />
         {frame}
       </WebShell>
@@ -1338,6 +1370,7 @@ export function RecipeBookDetailScreen({
         <MobileRecipeBookDetailView
           activeRecipeId={activeDesktopRecipeId}
           onSelectRecipe={selectRecipe}
+          readerMode={desktopReaderMode}
           onReaderModeChange={changeReaderMode}
           backHref={appReturn.href}
           bookMenuOpen={bookMenuOpen}
@@ -1398,7 +1431,6 @@ export function RecipeBookDetailScreen({
     <DesktopRecipeBookReader
       activeIndex={activeDesktopIndex}
       activeItem={activeDesktopItem}
-      bookName={currentBookName}
       buildRecipeCookHref={buildRecipeCookHref}
       buildRecipeHref={buildRecipeDetailReturnHref}
       canRemove={canRemove}
@@ -1426,12 +1458,9 @@ export function RecipeBookDetailScreen({
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function DesktopRecipeBookRail({
+  actions,
   activeRecipeId,
-  bookCoverColorKey,
-  bookCoverImageSrc,
-  bookId,
   bookName,
-  bookType,
   hasNext,
   items,
   onSelectRecipe,
@@ -1439,12 +1468,9 @@ function DesktopRecipeBookRail({
   isLoadingMore,
   recipeCount,
 }: {
+  actions?: React.ReactNode;
   activeRecipeId: string | null;
-  bookCoverColorKey?: RecipeBookCoverColorKey | null;
-  bookCoverImageSrc?: string | null;
-  bookId: string;
   bookName: string;
-  bookType: RecipeBookType;
   hasNext: boolean;
   items: RecipeBookRecipeItem[];
   onSelectRecipe: (recipeId: string) => void;
@@ -1452,32 +1478,17 @@ function DesktopRecipeBookRail({
   isLoadingMore: boolean;
   recipeCount: number | null;
 }) {
-  const pageSize = 8;
-  const activeIndex = Math.max(0, items.findIndex(item => item.recipe_id === activeRecipeId));
-  const page = Math.floor(activeIndex / pageSize);
-  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
-  const pageStart = page * pageSize;
-  const coverItem = items[0];
-  const loadedImageSrc =
-    bookCoverImageSrc === undefined
-      ? coverItem
-        ? getRecipeBookItemImage(coverItem)
-        : null
-      : bookCoverImageSrc;
-  const coverViewModel = getRecipeBookCoverViewModel(
-    {
-      id: bookId,
-      name: bookName,
-      book_type: bookType,
-      recipe_count: recipeCount ?? items.length,
-      sort_order: 0,
-      cover_color_key: bookCoverColorKey ?? null,
-      cover_image_url:
-        bookCoverImageSrc === undefined ? null : bookCoverImageSrc,
-    },
-    { loadedImageSrc },
-  );
-  const safeCoverImageSrc = coverViewModel.imageSrc.replace(/"/g, "%22");
+
+  const listRef = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    const selected = list?.querySelector('[aria-current="page"]');
+    if (!list || !selected) return;
+    const bounds = list.getBoundingClientRect(), item = selected.getBoundingClientRect();
+    // Reveal only within the TOC; scrollIntoView would also move outer panels.
+    if (item.bottom > bounds.bottom) list.scrollTop += item.bottom - bounds.bottom;
+    else if (item.top < bounds.top) list.scrollTop += item.top - bounds.top;
+  }, [activeRecipeId, items]);
 
   return (
     <aside
@@ -1485,24 +1496,20 @@ function DesktopRecipeBookRail({
       data-testid="recipebook-detail-toc"
     >
       <div
-        className={`web-recipebook-detail-cover web-recipebook-detail-cover-${coverViewModel.tone}`}
+        className="web-recipebook-detail-cover"
         data-testid="recipebook-detail-cover"
       >
-        <span
-          className="web-recipebook-detail-cover-image"
-          aria-hidden="true"
-          data-testid="recipebook-detail-cover-image"
-          style={{ backgroundImage: `url("${safeCoverImageSrc}")` }}
-        />
-        <strong>{bookName}</strong>
-        <span>{recipeCount === null ? "불러오는 중" : `${recipeCount}개 레시피`}</span>
+        <div>
+          <strong>{bookName}</strong>
+          <span>{recipeCount === null ? "불러오는 중" : `${recipeCount}개 레시피`}</span>
+        </div>
+        {actions}
       </div>
       <nav className="web-recipebook-toc" aria-label={`${bookName} 목차`}>
         <h2>목차</h2>
         {items.length > 0 ? (
-          <ol>
-            {items.slice(pageStart, pageStart + pageSize).map((item, offset) => {
-              const index = pageStart + offset;
+          <ol ref={listRef}>
+            {items.map((item, index) => {
               return (
               <li key={item.recipe_id}>
                 <button
@@ -1527,11 +1534,6 @@ function DesktopRecipeBookRail({
         ) : (
           <p>레시피가 담기면 목차가 표시돼요.</p>
         )}
-        <div aria-label="목차 페이지" className="mt-3 flex items-center justify-between gap-2">
-          <button className="min-h-11 rounded-lg border px-3 disabled:opacity-40" disabled={page === 0} onClick={() => onSelectRecipe(items[(page - 1) * pageSize]!.recipe_id)} type="button">이전 목차</button>
-          <span aria-live="polite" className="text-sm tabular-nums">{page + 1} / {pageCount}</span>
-          <button className="min-h-11 rounded-lg border px-3 disabled:opacity-40" disabled={page + 1 >= pageCount} onClick={() => onSelectRecipe(items[(page + 1) * pageSize]!.recipe_id)} type="button">다음 목차</button>
-        </div>
         {hasNext ? <button className="mt-2 min-h-11 w-full rounded-lg border px-3 text-sm" disabled={isLoadingMore} onClick={onLoadMore} type="button">{isLoadingMore ? "불러오는 중…" : "목차 더 불러오기"}</button> : null}
       </nav>
     </aside>
@@ -1994,6 +1996,7 @@ function MobileRecipeBookDetailView({
   activeRecipeId,
   onSelectRecipe,
   onReaderModeChange,
+  readerMode,
   backHref,
   buildRecipeCookHref,
   buildRecipeHref,
@@ -2027,6 +2030,7 @@ function MobileRecipeBookDetailView({
 }: {
   activeRecipeId: string | null;
   onSelectRecipe: (recipeId: string) => void;
+  readerMode: "book" | "list";
   onReaderModeChange: (mode: "book" | "list") => void;
   backHref: string;
   buildRecipeCookHref: (
@@ -2062,8 +2066,6 @@ function MobileRecipeBookDetailView({
   scrollSentinelRef: React.RefObject<HTMLDivElement | null>;
   toast: { message: string; tone: "success" | "error" } | null;
 }) {
-  const searchParams = useSearchParams();
-  const [readerMode, setReaderMode] = useState<"book" | "list">(() => searchParams.get("readerMode") === "list" ? "list" : "book");
   const [isTocOpen, setIsTocOpen] = useState(false);
   const activeIndex = Math.max(
     0,
@@ -2076,7 +2078,6 @@ function MobileRecipeBookDetailView({
   const visibleItems = readerMode === "list" ? items : activeItem ? [activeItem] : [];
 
   const handleModeChange = useCallback((mode: "book" | "list") => {
-    setReaderMode(mode);
     onReaderModeChange(mode);
     if (mode === "list") {
       setIsTocOpen(false);
@@ -2913,7 +2914,6 @@ function RecipeItemCard({
 function DesktopRecipeBookReader({
   activeIndex,
   activeItem,
-  bookName,
   buildRecipeHref,
   buildRecipeCookHref,
   canRemove,
@@ -2930,7 +2930,6 @@ function DesktopRecipeBookReader({
 }: {
   activeIndex: number;
   activeItem: RecipeBookRecipeItem;
-  bookName: string;
   buildRecipeCookHref: (
     item: RecipeBookRecipeItem,
     readerDetailState?: ReaderDetailState,
@@ -2948,6 +2947,11 @@ function DesktopRecipeBookReader({
   removeLabel: string;
   removingId: string | null;
 }) {
+  const [expandedSections, setExpandedSections] = useState<Record<string, { ingredients?: boolean; steps?: boolean }>>({});
+  const expansion = expandedSections[activeItem.recipe_id];
+  const changeExpansion = (section: "ingredients" | "steps", expanded: boolean) => {
+    setExpandedSections(current => ({ ...current, [activeItem.recipe_id]: { ...current[activeItem.recipe_id], [section]: expanded } }));
+  };
   const activeReaderDetailState = readerDetailsById[activeItem.recipe_id];
   const activeRecipeCookHref = buildRecipeCookHref(
     activeItem,
@@ -2958,7 +2962,6 @@ function DesktopRecipeBookReader({
     <div className="web-recipebook-reader">
       <header className="web-recipebook-reader-header">
         <div>
-          <h2>{bookName}</h2>
           <p>
             {items.length}개 레시피 · {activeItem.title} ·{" "}
             {String(activeIndex + 1).padStart(2, "0")}쪽
@@ -2995,6 +2998,10 @@ function DesktopRecipeBookReader({
           <div className="web-recipebook-reader-open-book">
             <section className="web-recipebook-reader-page-right">
               <DesktopRecipeBookRecipePage
+                expandedIngredients={expansion?.ingredients ?? false}
+                expandedSteps={expansion?.steps ?? false}
+                onExpandedIngredientsChange={expanded => changeExpansion("ingredients", expanded)}
+                onExpandedStepsChange={expanded => changeExpansion("steps", expanded)}
                 canRemove={canRemove}
                 item={activeItem}
                 onRemove={() => onRemove(activeItem.recipe_id)}
@@ -3065,6 +3072,10 @@ function DesktopRecipeBookReader({
 }
 
 function DesktopRecipeBookRecipePage({
+  expandedIngredients,
+  expandedSteps,
+  onExpandedIngredientsChange,
+  onExpandedStepsChange,
   canRemove,
   item,
   onRemove,
@@ -3088,6 +3099,10 @@ function DesktopRecipeBookRecipePage({
   | "removeLabel"
   | "removing"
 > & {
+  expandedIngredients: boolean;
+  expandedSteps: boolean;
+  onExpandedIngredientsChange: (expanded: boolean) => void;
+  onExpandedStepsChange: (expanded: boolean) => void;
   readerDetailState?: ReaderDetailState;
   recipeDetailHref: string;
 }) {
@@ -3147,11 +3162,11 @@ function DesktopRecipeBookRecipePage({
         <div className="web-recipebook-recipe-columns">
           <section className="web-recipebook-note-section">
             <h3>재료</h3>
-            <ReaderIngredientsContent key={item.recipe_id} detailState={readerDetailState} />
+            <ReaderIngredientsContent detailState={readerDetailState} expanded={expandedIngredients} onExpandedChange={onExpandedIngredientsChange} />
           </section>
           <section className="web-recipebook-note-section">
             <h3>만들기</h3>
-            <ReaderStepsContent key={item.recipe_id} detailState={readerDetailState} />
+            <ReaderStepsContent detailState={readerDetailState} expanded={expandedSteps} onExpandedChange={onExpandedStepsChange} />
           </section>
         </div>
         <div className="web-recipebook-reader-card-actions">
@@ -3181,11 +3196,17 @@ function DesktopRecipeBookRecipePage({
 function ReaderIngredientsContent({
   detailState,
   mobile = false,
+  expanded,
+  onExpandedChange,
 }: {
   detailState?: ReaderDetailState;
   mobile?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
+  const [localShowAll, setLocalShowAll] = useState(false);
+  const showAll = expanded ?? localShowAll;
+  const setShowAll = onExpandedChange ?? setLocalShowAll;
   if (!detailState || detailState.status === "loading") {
     return <ReaderSectionSkeleton mobile={mobile} />;
   }
@@ -3242,11 +3263,17 @@ function ReaderIngredientsContent({
 function ReaderStepsContent({
   detailState,
   mobile = false,
+  expanded,
+  onExpandedChange,
 }: {
   detailState?: ReaderDetailState;
   mobile?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
+  const [localShowAll, setLocalShowAll] = useState(false);
+  const showAll = expanded ?? localShowAll;
+  const setShowAll = onExpandedChange ?? setLocalShowAll;
   if (!detailState || detailState.status === "loading") {
     return <ReaderSectionSkeleton mobile={mobile} />;
   }

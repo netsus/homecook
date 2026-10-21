@@ -48,9 +48,8 @@ export function GuestCookModeScreen({ recipeId, servings }: { recipeId: string; 
   if (!recipe) return <MobileCookModeLoadingBoard description="" title="요리 가이드 준비" loadingTestId="guest-cook-mode-loading" screenTestId="guest-cook-mode" />;
   return <SnapshotV2CookModeView
     data={{ recipe, mode: "standalone", status: completed ? "completed" : "in_progress" }}
-    notice={<p className="mb-4 text-sm">게스트 요리 · 재료량은 이 화면에만 적용되며 새로고침하면 초기화돼요. 식사 기록과 팬트리 저장은 로그인 후 이용할 수 있어요.</p>}
-    quantityDescription="이 화면의 재료량만 바꿔요. 레시피와 요리 기록에는 저장되지 않아요."
-    completionActions={<div className="space-y-3 text-center"><p role="status">요리 가이드를 마쳤어요. 이 요리는 계정에 저장되지 않았어요.</p><Link className="flex min-h-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] px-4 font-bold text-[var(--text-inverse)]" href={`/login?next=${encodeURIComponent(appReturn.href)}`}>로그인하고 기록 시작하기</Link></div>}
+    notice={<><p className="mb-4 text-sm">게스트 요리 · 재료량은 이 화면에만 적용되며 새로고침하면 초기화돼요. 식사 기록과 팬트리 저장은 로그인 후 이용할 수 있어요.</p>{completed ? <p className="mb-3 text-sm" role="status">요리 가이드를 마쳤어요. 이 요리는 계정에 저장되지 않았어요.</p> : null}</>}
+    completionAction={{ href: `/login?next=${encodeURIComponent(appReturn.href)}`, label: "로그인 후 식사 기록" }}
     onCancel={appReturn.goBack}
     onComplete={() => setCompleted(true)}
     onSaveIngredients={saveIngredients}

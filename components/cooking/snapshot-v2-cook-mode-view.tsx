@@ -15,8 +15,7 @@ interface SnapshotV2CookModeViewProps {
   completionButtonRef?: React.RefObject<HTMLButtonElement | null>;
   data: SnapshotV2CookModeData | Pick<SnapshotV2CookModeData, "status" | "mode" | "recipe">;
   notice?: React.ReactNode;
-  completionActions?: React.ReactNode;
-  quantityDescription?: string;
+  completionAction?: { href: string; label: string };
   onCancel: () => void;
   onSaveIngredients?: (changes: ExecutionQuantityChange[]) => Promise<void>;
   onComplete?: () => void;
@@ -29,8 +28,7 @@ export function SnapshotV2CookModeView({
   completionButtonRef,
   data,
   notice,
-  completionActions,
-  quantityDescription,
+  completionAction,
   onCancel,
   onSaveIngredients,
   onComplete,
@@ -42,9 +40,9 @@ export function SnapshotV2CookModeView({
   const editTrigger = useRef<HTMLButtonElement | null>(null);
   const lastEditedRow = useRef<number | null>(null);
   const busy = cancelling || preparingCompletion || editingRow !== null;
-  const closeEditor = () => {
+  const closeEditor = (reason?: "blur") => {
     setEditingRow(null);
-    requestAnimationFrame(() => editTrigger.current?.focus());
+    if (reason !== "blur") requestAnimationFrame(() => editTrigger.current?.focus());
   };
   const actions = !terminal ? <div className={styles.snapshotActions}>
     <button className="cook-mobile-whole-cancel-button min-h-14 flex-1 rounded-[16px] border-0 px-4 font-bold" disabled={busy} onClick={onCancel} type="button">{cancelling ? "취소 중…" : "취소"}</button>
@@ -79,18 +77,17 @@ export function SnapshotV2CookModeView({
       >
       {notice}
       {terminal ? (
-        <nav aria-label="요리 후 다음 행동" className="grid gap-2.5">
-          {data.status === "completed" ? completionActions ?? (
+        <nav aria-label="요리 후 다음 행동" className={styles.postCookActions}>
+          {data.status === "completed" ? (
             <Link
-              className="flex min-h-14 items-center justify-center rounded-[16px] bg-[var(--brand-primary)] px-4 text-center font-bold text-[var(--text-inverse)]"
-              href="/planner?segment=log"
+              className={styles.postCookPrimary}
+              href={completionAction?.href ?? "/planner?segment=log"}
               prefetch={false}
             >
-              식사 기록하기
+              {completionAction?.label ?? "식사 기록하기"}
             </Link>
           ) : null}
             <Link
-              className="flex min-h-12 items-center justify-center rounded-[16px] border border-[var(--surface-alpha-24)] px-4 text-center font-bold"
               href={returnHref ?? fallbackHref}
               prefetch={false}
             >돌아가기</Link>
@@ -98,10 +95,12 @@ export function SnapshotV2CookModeView({
       ) : null}
 
         <CookModeWholeBoard className={terminal ? "mt-4" : undefined} density="mobile" recipe={data.recipe}
-          renderIngredientAmount={!terminal && onSaveIngredients ? (ingredient, index) => editingRow === index
-            ? <ExecutionQuantityInline ingredient={ingredient} index={index} onClose={closeEditor} onSave={onSaveIngredients} description={quantityDescription} />
+          renderIngredientAmount={!terminal && onSaveIngredients ? (ingredient, index) => ingredient.amount === null || ingredient.ingredient_type === "TO_TASTE"
+            ? <span className="cook-whole-ingredient-amount">{ingredient.ingredient_type === "TO_TASTE" ? "적당량" : "양 미확인"}</span>
+            : editingRow === index
+            ? <ExecutionQuantityInline ingredient={ingredient} index={index} onClose={closeEditor} onSave={onSaveIngredients} />
             : <button aria-label={`${ingredient.standard_name} 수량 수정`} ref={lastEditedRow.current === index ? editTrigger : undefined} className="cook-whole-ingredient-amount min-h-11 rounded-lg px-2 underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2" disabled={busy} type="button" onClick={event => { editTrigger.current = event.currentTarget; lastEditedRow.current = index; setEditingRow(index); }}>
-              {(ingredient.quantity_input || ingredient.ingredient_type === "TO_TASTE") ? formatIngredientAmountOnly(ingredient) : ingredient.amount === null ? "양 미확인" : `${executionQuantityText(ingredient)}${ingredient.unit ?? ""}`}
+              {ingredient.quantity_input ? formatIngredientAmountOnly(ingredient) : `${executionQuantityText(ingredient)}${ingredient.unit ?? ""}`}
             </button> : undefined} />
       </main>
     </div>

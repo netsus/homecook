@@ -777,11 +777,9 @@ function MobileRecipebookSurface({
   isRenaming,
   menuOpenBookId,
   menuRef,
-  profile,
   renameInputRef,
   renameValue,
   renamingBookId,
-  savedRecipeCount,
   showCreateInput,
   systemBooks,
   onCancelCreate,
@@ -834,48 +832,12 @@ function MobileRecipebookSurface({
   onRequestDelete: (book: RecipeBookSummary) => void;
   onShowCreateInput: () => void;
 }) {
-  const allBooks = [...customBooks, ...systemBooks];
-  const nickname = profile?.nickname ?? "사용자";
-  const fallbackInitial = nickname.charAt(0) || "?";
-
   return (
     <main
-      className="mobile-recipebooks-diary-screen mobile-recipebooks-diary-screen-fit px-4 pb-8 pt-4"
+      className="mobile-recipebooks-diary-screen mobile-recipebooks-diary-screen-fit px-4 pb-8 pt-4 recipebook-compact-shelf"
       data-testid="recipebook-tab"
     >
-      <section className="mobile-recipebooks-diary-hero rounded-[28px] p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            {profile?.profile_image_url ? (
-              <Image
-                alt={`${nickname} 프로필`}
-                className="h-12 w-12 shrink-0 rounded-full object-cover"
-                height={48}
-                src={profile.profile_image_url}
-                unoptimized
-                width={48}
-              />
-            ) : (
-              <div
-                aria-label={`${nickname} 프로필`}
-                className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] text-[18px] font-black text-[var(--text-inverse)]"
-                role="img"
-              >
-                {fallbackInitial}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="mobile-recipebooks-diary-eyebrow text-[11px] font-black">
-                Recipe books
-              </p>
-              <h2 className="mt-1 text-[24px] font-black leading-[1.08] text-[var(--foreground)]">
-                나의 레시피북
-              </h2>
-              <p className="mt-1 text-[12px] font-extrabold leading-[1.35] text-[var(--text-3)]">
-                책 {allBooks.length}권 · 저장 {savedRecipeCount}개
-              </p>
-            </div>
-          </div>
+      <section className="mb-3 flex justify-end">
           <button
             aria-label="새 레시피북 만들기"
             className="mobile-recipebooks-diary-add-button grid h-11 w-11 shrink-0 place-items-center rounded-full text-[22px] font-black leading-none"
@@ -884,7 +846,6 @@ function MobileRecipebookSurface({
           >
             +
           </button>
-        </div>
       </section>
 
       {showCreateInput ? (
@@ -921,24 +882,7 @@ function MobileRecipebookSurface({
         </div>
       ) : null}
 
-      {customBooks.length > 0 ? (
-        <section
-          className="mt-4"
-          data-testid="mobile-custom-books-section"
-        >
-          <div className="mobile-recipebooks-section-head flex items-end justify-between px-1">
-            <h3 className="text-[16px] font-black leading-none text-[var(--foreground)]">
-              커스텀
-            </h3>
-            <span className="text-[11px] font-extrabold text-[var(--text-3)]">
-              {customBooks.length}권
-            </span>
-          </div>
-          <div
-            className="mobile-recipebooks-book-grid mobile-recipebooks-book-grid-wide mt-3 grid"
-            data-testid="mobile-custom-books-grid"
-            role="list"
-          >
+      <div className="mobile-recipebooks-book-grid mobile-recipebooks-book-grid-wide mt-3 grid" aria-label="레시피북 목록" role="list">
             {customBooks.map((book) => (
             <MobileCustomBookCard
               book={book}
@@ -962,27 +906,6 @@ function MobileRecipebookSurface({
               renameValue={renameValue}
             />
             ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section
-        className="mt-5"
-        data-testid="mobile-system-books-section"
-      >
-        <div className="mobile-recipebooks-section-head flex items-end justify-between px-1">
-          <h3 className="text-[16px] font-black leading-none text-[var(--foreground)]">
-            시스템
-          </h3>
-          <span className="text-[11px] font-extrabold text-[var(--text-3)]">
-            {systemBooks.length}권
-          </span>
-        </div>
-        <div
-          className="mobile-recipebooks-book-grid mobile-recipebooks-book-grid-wide mt-3 grid"
-          data-testid="mobile-system-books-grid"
-          role="list"
-        >
           {systemBooks.map((book) => (
             <MobileSystemBookCard
               book={book}
@@ -992,7 +915,6 @@ function MobileRecipebookSurface({
             />
           ))}
         </div>
-      </section>
 
       {deleteTarget ? (
         <MobileDeleteConfirmDialog
