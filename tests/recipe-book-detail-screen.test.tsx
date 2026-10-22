@@ -345,11 +345,11 @@ describe("RecipeBookDetailScreen", () => {
     const skeleton = screen.getByTestId("recipebook-detail-skeleton");
     expect(skeleton.closest(".web-recipebook-detail-shell")).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "레시피북 리더" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "저장한 레시피 레시피북 리더" })).toBeTruthy();
     expect(screen.getByText("불러오는 중")).toBeTruthy();
   });
 
-  it("keeps the first recipe thumbnail as the direct detail cover when no book cover is passed", async () => {
+  it("keeps the desktop rail compact without a duplicate cover image", async () => {
     render(
       <RecipeBookDetailScreen
         bookId="book-1"
@@ -361,12 +361,11 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    expect(
-      screen.getByTestId("recipebook-detail-cover-image").getAttribute("style"),
-    ).toContain("img1.jpg");
+    expect(screen.queryByTestId("recipebook-detail-cover-image")).toBeNull();
+    expect(within(screen.getByTestId("recipebook-detail-cover")).getByText("저장한 레시피")).toBeTruthy();
   });
 
-  it("uses the passed book cover over the first recipe thumbnail", async () => {
+  it("omits the duplicate rail image even when the book has a cover", async () => {
     render(
       <RecipeBookDetailScreen
         bookId="book-1"
@@ -380,12 +379,8 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    expect(screen.getByTestId("recipebook-detail-cover").className).toContain(
-      "web-recipebook-detail-cover-sand",
-    );
-    expect(
-      screen.getByTestId("recipebook-detail-cover-image").getAttribute("style"),
-    ).toContain("card-cover.jpg");
+    expect(screen.queryByTestId("recipebook-detail-cover-image")).toBeNull();
+    expect(within(screen.getByTestId("recipebook-detail-cover")).getByText("저장한 레시피")).toBeTruthy();
   });
 
   it("uses the mobile loading shell and preserves mypage tab return context", () => {
@@ -453,7 +448,7 @@ describe("RecipeBookDetailScreen", () => {
     ).toBeNull();
     expect(mockFetchRecipeBookRecipeDetail).toHaveBeenCalledWith("book-1", "recipe-1");
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "저장한 레시피 레시피북 리더" })).toBeTruthy();
 
     const user = userEvent.setup();
     const toc = screen.getByTestId("recipebook-detail-toc");
@@ -689,7 +684,7 @@ describe("RecipeBookDetailScreen", () => {
     });
 
     expect(await screen.findByText("레시피북 이름을 변경했어요")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "주말 모임" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "주말 모임 레시피북 리더" })).toBeTruthy();
   });
 
   it.each(["이름 변경", "삭제"])("restores the book menu trigger after cancelling %s with Escape", async (action) => {
@@ -818,7 +813,7 @@ describe("RecipeBookDetailScreen", () => {
     expect(returnUrl.searchParams.get("type")).toBe("my_added");
     expect(returnUrl.searchParams.get("readerRecipe")).toBe("recipe-2");
     expect(returnUrl.searchParams.get("readerMode")).toBe("book");
-    expect(returnUrl.hash).toBe("#recipebook-recipe-recipe-2");
+    expect(returnUrl.hash).toBe("");
   });
 
   it.each([true, false])("reopens bridged YouTube recipes in their editable saved route on mobile=%s", async (mobile) => {
@@ -913,9 +908,7 @@ describe("RecipeBookDetailScreen", () => {
       await screen.findByText("아직 이 레시피북에 레시피가 없어요"),
     ).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(
-      screen.getByText("저장한 레시피 · 왼쪽 목차와 오른쪽 책 페이지로 레시피를 읽어요."),
-    ).toBeTruthy();
+    expect(within(screen.getByTestId("recipebook-detail-cover")).getByText("저장한 레시피")).toBeTruthy();
     expect(
       screen
         .getByText("아직 이 레시피북에 레시피가 없어요")
@@ -940,11 +933,7 @@ describe("RecipeBookDetailScreen", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "새 레시피북 옵션 메뉴" }));
     expect(screen.getByRole("menuitem", { name: "이름 변경" })).toBeTruthy();
-    expect(
-      screen
-        .getByText("새 레시피북 · 왼쪽 목차와 오른쪽 책 페이지로 레시피를 읽어요.")
-        .closest(".web-recipebook-detail-shell"),
-    ).toBeTruthy();
+    expect(within(screen.getByTestId("recipebook-detail-cover")).getByText("새 레시피북")).toBeTruthy();
   });
 
   // ─── Error ──────────────────────────────────────────────────────────────────
@@ -1355,7 +1344,7 @@ describe("RecipeBookDetailScreen", () => {
     ).toBeTruthy();
   });
 
-  it("scrolls and marks the selected list recipe on every click and retains the reader URL", async () => {
+  it("switches a list TOC selection to book view without moving the outer scroll", async () => {
     const previousHref = window.location.href;
     window.history.replaceState(null, "", "/mypage/recipe-books/book-1?type=saved");
     const view = render(<RecipeBookDetailScreen bookId="book-1" bookName="저장한 레시피" bookType="saved" initialAuthenticated />);
@@ -1368,13 +1357,11 @@ describe("RecipeBookDetailScreen", () => {
       const toc = screen.getByRole("navigation", { name: "저장한 레시피 목차" });
       const item = within(toc).getByRole("button", { name: /김치볶음밥/ });
       await user.click(item);
-      await waitFor(() => expect(scroll).toHaveBeenCalledOnce());
-      expect(item.getAttribute("aria-current")).toBe("page");
+      await waitFor(() => expect(new URL(window.location.href).searchParams.get("readerMode")).toBe("book"));
+      expect(scroll).not.toHaveBeenCalled();
+      expect(within(toc).getByRole("button", { name: /김치볶음밥/ }).getAttribute("aria-current")).toBe("page");
       expect(new URL(window.location.href).searchParams.get("readerRecipe")).toBe("recipe-2");
-      expect(new URL(window.location.href).searchParams.get("readerMode")).toBe("list");
-      expect(window.location.hash).toBe("#recipebook-recipe-recipe-2");
-      await user.click(item);
-      await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
+      expect(window.location.hash).toBe("");
     } finally { view.unmount(); window.history.replaceState(null, "", previousHref); }
   });
 
@@ -1394,14 +1381,14 @@ describe("RecipeBookDetailScreen", () => {
 
     const header = screen.getByTestId("recipebook-detail-header");
     expect(header).toBeTruthy();
-    expect(within(header).getByRole("heading", { name: "레시피북 리더" })).toBeTruthy();
+    expect(within(header).getByRole("heading", { name: "저장한 레시피 레시피북 리더" })).toBeTruthy();
     expect(within(header).getByText(/저장한 레시피/)).toBeTruthy();
     const globalNav = screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" });
     expect(globalNav).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "내 프로필" }).getAttribute("aria-current"),
     ).toBe("page");
-    expect(screen.getByRole("link", { name: "뒤로 가기" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "뒤로 가기" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 
@@ -1425,7 +1412,7 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    expect(screen.getByRole("link", { name: "뒤로 가기" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "뒤로 가기" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 
@@ -1449,7 +1436,7 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    expect(screen.getByRole("link", { name: "뒤로 가기" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "뒤로 가기" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 });
