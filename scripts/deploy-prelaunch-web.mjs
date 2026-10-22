@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { MASS_PROXY_FEATURE, MASS_PROXY_MIGRATION, massProxyPhaseStatus } from "./lib/cooked-weight-mass-proxy-maintenance.mjs";
+import { MASS_PROXY_FEATURE, MASS_PROXY_MIGRATION, massProxyBinding, massProxyPhaseStatus } from "./lib/cooked-weight-mass-proxy-maintenance.mjs";
+import { FROZEN_QUANTITY_FEATURE, FROZEN_QUANTITY_REVIEW_PIN, FROZEN_QUANTITY_MIGRATION, frozenQuantityPhaseStatus } from "./lib/saved-frozen-quantity-maintenance.mjs";
+import { readFrozenQuantityAttempt, loadFrozenQuantityMaintenance, readFrozenQuantityPredecessorAttempt, loadFrozenQuantityPredecessor } from "./lib/prelaunch-web-deploy.mjs";
 import { readMassProxyAttempt, loadMassProxyMaintenance, loadSavedRecipeNutritionMaintenance } from "./lib/prelaunch-web-deploy.mjs";
 import { SAVED_RECIPE_NUTRITION_FEATURE,SAVED_RECIPE_NUTRITION_MIGRATIONS } from "./lib/saved-recipe-nutrition-maintenance.mjs";
 import { readDbAppSuccessorReview, assertDbAppSuccessor } from "./lib/prelaunch-db-app-successor.mjs";
@@ -253,7 +255,7 @@ function plan(ref, live, option = "--ref", verifyScript, skipAutomatedTests = fa
   if (recipeSaveHandoff && !appSuccessorSupport) assertNutritionValidatorSourceHandoff(recipeSaveHandoff);
   const scope = classifyPrelaunchScope(files, manifest(live.ref), manifest(target),
     { reviewedYoutubeTrialSupport: Boolean(youtubeTrialReview), reviewedYoutubeResolutionSupport: Boolean(youtubeResolutionReview),
-      reviewedIntegratedFiles: appSuccessorSupport ?? ([COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(protectedCandidate?.review.feature) ? new Set(Object.keys(protectedCandidate.review.files)) : [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(recipeSaveHandoff?.maintenance?.review.feature) ? new Set(Object.keys(recipeSaveHandoff.maintenance.review.files)) : integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport ?? v85Support),
+      reviewedIntegratedFiles: appSuccessorSupport ?? ([COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE,FROZEN_QUANTITY_FEATURE].includes(protectedCandidate?.review.feature) ? new Set(Object.keys(protectedCandidate.review.files)) : [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE,FROZEN_QUANTITY_FEATURE].includes(recipeSaveHandoff?.maintenance?.review.feature) ? new Set(Object.keys(recipeSaveHandoff.maintenance.review.files)) : integratedReview?.reviewedFiles ?? v74Support ?? fingerprintSupport ?? v85Support),
       // validateProtectedCandidate above already checked the complete exact byte pairs.
       reviewedQuantityWorkerSupport: protectedCandidate?.review.feature === QUANTITY_V4_FEATURE,
       reviewedProtectedInventorySupport: Boolean(protectedCandidate), reviewedRecipeSaveSupport: [RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(protectedCandidate?.review.feature) || Boolean(recipeSaveHandoff && !appSuccessorSupport), eslintConfigDigests });
@@ -297,6 +299,12 @@ function quantityPublicReadDigests(live, selection, closedContext) {
 }
 
 function nutritionSourceHandoff(live, selection, options = null, forScope = false) {
+  if(selection.files.includes(`supabase/migrations/${FROZEN_QUANTITY_MIGRATION.filename}`)){
+    const maintenance=loadCurrentDatabaseMaintenance(repository);
+    if(maintenance?.review.feature!==FROZEN_QUANTITY_FEATURE)throw new DeploymentError("Frozen quantity source requires separate committed240 authority");
+    const digests=Object.fromEntries(selection.files.map(file=>[file,[live.ref,selection.target].map(sha=>git(["ls-tree",sha,"--",file]).length?hash(execFileSync("git",["-C",repository,"show",`${sha}:${file}`],{maxBuffer:64*1024*1024,stdio:["ignore","pipe","pipe"]})):null)]));
+    return {maintenance,from:live.ref,to:selection.target,live:{ref:live.ref,buildId:live.buildId,plistSha256:hash(live.bytes)},files:selection.files,digests,reviewedSourceAncestor:spawnSync("git",["-C",repository,"merge-base","--is-ancestor",maintenance.review.to,selection.target],{stdio:"ignore"}).status===0};
+  }
   if(selection.files.includes(`supabase/migrations/${MASS_PROXY_MIGRATION.filename}`)){
     const maintenance=loadCurrentDatabaseMaintenance(repository);
     if(maintenance?.review.feature!==MASS_PROXY_FEATURE)throw new DeploymentError("Mass proxy source requires separate committed239 authority");
@@ -495,6 +503,17 @@ function recordedProtectedPhase(review, live) {
     readerCompatible: spawnSync("git", ["-C", repository, "merge-base", "--is-ancestor", review.to, live.ref]).status === 0 });
 }
 function currentProtectedPhase(live = current()) {
+  const frozen=readFrozenQuantityAttempt(repository);
+  if(frozen){
+    if(frozen.record.status==="committed")loadCurrentDatabaseMaintenance(repository);
+    return frozenQuantityPhaseStatus(frozen,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",frozen.review.to,live.ref],{stdio:"ignore"}).status===0,
+      live.ref===frozen.review.from&&live.buildId===frozen.review.legacyReader.buildId&&hash(live.bytes)===frozen.review.legacyReader.plistSha256);
+  }
+  if(FROZEN_QUANTITY_REVIEW_PIN.path!==null){
+    const mass=readFrozenQuantityPredecessorAttempt(repository);
+    return massProxyPhaseStatus(mass,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",mass.review.to,live.ref],{stdio:"ignore"}).status===0,
+      live.ref===mass.review.from&&live.buildId===mass.review.legacyReader.buildId&&hash(live.bytes)===mass.review.legacyReader.plistSha256);
+  }
   const mass=readMassProxyAttempt(repository);
   if(mass){
     if(mass.record.status==="committed")loadCurrentDatabaseMaintenance(repository);
@@ -729,6 +748,11 @@ function validateProtectedCandidate(review, live, selection, context) {
   verifyProtectedBoundary(review, live);
 }
 function loadProtectedDatabaseReceipt(review) {
+  if (review.feature === FROZEN_QUANTITY_FEATURE) {
+    const maintenance=loadFrozenQuantityMaintenance(repository);
+    if(!maintenance||!isDeepStrictEqual(maintenance.review,review))throw new DeploymentError("Frozen quantity committed240 receipt required");
+    return maintenance;
+  }
   if (review.feature === MASS_PROXY_FEATURE) {
     const maintenance=loadMassProxyMaintenance(repository);
     if(!maintenance||!isDeepStrictEqual(maintenance.review,review))throw new DeploymentError("Mass proxy committed239 receipt required");
@@ -829,7 +853,7 @@ async function verifyProtectedBaseline(review, plan, options) {
   loadProtectedDatabaseReceipt(review);
   if (options.reviewedProtectedRollout && (options.dbConfig !== review.database.configPath
     || hash(readClosedR2PrivateBytes(options.dbConfig, repository, 65536)) !== review.database.configSha256)) throw new DeploymentError("보호 reader의 승인된 config bytes가 다릅니다.");
-  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(currentReview.feature) });
+  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE,FROZEN_QUANTITY_FEATURE].includes(currentReview.feature) });
   const observed = await createProtectedPrelaunchAdapter(base, currentReview.feature, currentReview, databaseMaintenance).observe(undefined, "protected-baseline-readback");
   const fingerprintPolicy = JSON.parse((await base.query(`SELECT jsonb_build_object('currentFingerprintKeyVersion',fingerprint_key_version,
     'previousFingerprintKeyVersion',CASE WHEN previous_fingerprint_valid_until>=clock_timestamp() THEN previous_fingerprint_key_version ELSE NULL END,
@@ -885,10 +909,11 @@ async function verifyProtectedBaseline(review, plan, options) {
 async function runProtectedDatabasePhase(options, action, review) {
   const { databaseGuardPath: protectedDatabaseGuardPath, operationRoot: protectedOperationRoot } = protectedRolloutPaths(root, review);
   const live = current(), context = requireClosedR2Mode(options, live);
+  const frozenQuantity=review.feature===FROZEN_QUANTITY_FEATURE;
   const massProxy=review.feature===MASS_PROXY_FEATURE;
   const savedNutrition=review.feature===SAVED_RECIPE_NUTRITION_FEATURE;
   const cooking = review.feature === COOKING_EXPERIENCE_FEATURE;
-  const nativeMaintenance=cooking||savedNutrition||massProxy;
+  const nativeMaintenance=cooking||savedNutrition||massProxy||frozenQuantity;
   const maintenance = nativeMaintenance || [NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE].includes(review.feature);
   const reconcile = ["reconcile", "worker-reconcile"].includes(options.protectedPhase);
   let operationId, operationDirectory, previousNotAppliedSha256;
@@ -896,6 +921,12 @@ async function runProtectedDatabasePhase(options, action, review) {
     if (!maintenance) return;
     const actual = current();
     await smoke(3100, actual.cwd, actual.buildId);
+    if(frozenQuantity){
+      if(actual.ref!==review.legacyReader.ref||actual.buildId!==review.legacyReader.buildId||hash(actual.bytes)!==review.legacyReader.plistSha256)throw new DeploymentError("Frozen quantity exact legacy reader changed");
+      const previous=loadFrozenQuantityPredecessor(repository);
+      if(!previous||!isDeepStrictEqual(massProxyBinding(previous),review.predecessorMaintenance)||!isDeepStrictEqual(previous.review.database.after,review.database.before)||previous.review.database.targetSha256!==review.database.targetSha256)throw new DeploymentError("Frozen quantity committed239 predecessor differs");
+      return;
+    }
     if(massProxy){
       if(actual.ref!==review.legacyReader.ref||actual.buildId!==review.legacyReader.buildId||hash(actual.bytes)!==review.legacyReader.plistSha256)throw new DeploymentError("Mass proxy exact legacy reader changed");
       const previous=loadSavedRecipeNutritionMaintenance(repository);
@@ -1090,7 +1121,7 @@ async function completeProtectedReaderRecovery(options, review) {
     bytes: readFileSync(plistPath) }, live);
   if (hash(live.bytes) !== state.targetPlistHash) throw new DeploymentError("보호 reader 복구 plist가 다릅니다.");
   await verifyProtectedBaseline(review, state.databaseVerification, options);
-  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(review.feature) });
+  const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE,FROZEN_QUANTITY_FEATURE].includes(review.feature) });
   const observed = await createProtectedPrelaunchAdapter(base, review.feature, review).observe(undefined, "protected-reader-recovery");
   const personalSuccessor = review.feature === COOKED_WEIGHT_ATTESTATION_FEATURE ? loadCookedWeightAttestationSuccessor(repository) : null;
   const personalWorker = personalSuccessor ? loadCookedWeightAttestationWorkerContinuation(personalSuccessor, repository) : null;
@@ -1126,9 +1157,9 @@ function validateClosedR2Candidate(review, live, selection, patch, options, clos
     envPatchSha256: hash(readClosedR2PrivateBytes(options.envFile, repository)) });
 }
 function requireClosedR2Mode(options, live = current(), rollback = false) {
-  const maintenanceAttempt = readMassProxyAttempt(repository) ?? readSavedRecipeNutritionAttempt(repository) ?? readCookingExperienceAttempt(repository) ?? readRecipeRequestRoleAttempt(repository) ?? readRecipeSaveRecoveryAttempt(repository) ?? readNutritionValidatorAttempt(repository);
+  const maintenanceAttempt = readFrozenQuantityAttempt(repository) ?? (FROZEN_QUANTITY_REVIEW_PIN.path!==null?readFrozenQuantityPredecessorAttempt(repository):readMassProxyAttempt(repository)) ?? readSavedRecipeNutritionAttempt(repository) ?? readCookingExperienceAttempt(repository) ?? readRecipeRequestRoleAttempt(repository) ?? readRecipeSaveRecoveryAttempt(repository) ?? readNutritionValidatorAttempt(repository);
   if (maintenanceAttempt && !["committed", "not_applied"].includes(maintenanceAttempt.record.status)
-    && !([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE,COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(options.protectedFeature) && options.protectedPhase === "reconcile")) {
+    && !([NUTRITION_VALIDATOR_FEATURE,RECIPE_SAVE_RECOVERY_FEATURE,RECIPE_REQUEST_ROLE_FEATURE,COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE,FROZEN_QUANTITY_FEATURE].includes(options.protectedFeature) && options.protectedPhase === "reconcile")) {
     throw new DeploymentError("Nutrition229 outcome unresolved; historical228 cannot authorize another deployment or writer");
   }
   const protectedPhase = currentProtectedPhase(live);
@@ -1568,7 +1599,7 @@ process.exit(result.status ?? 1);`;
         closedLease = await acquireClosedR2ControlLease(closedReview, repository);
         closedLease.verify();
         if (protectedReader) {
-          const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE].includes(rollout.feature) });
+          const base = await createRecordingDockerAdapter({ configPath: options.dbConfig, backupDirectory: root, responsiveReads: [COOKING_EXPERIENCE_FEATURE,SAVED_RECIPE_NUTRITION_FEATURE,MASS_PROXY_FEATURE,FROZEN_QUANTITY_FEATURE].includes(rollout.feature) });
           if (hash(JSON.stringify(await base.inspect())) !== rollout.database.targetSha256) {
             throw new DeploymentError("reader 잠금 대상이 승인된 운영 DB와 다릅니다.");
           }
@@ -1863,6 +1894,7 @@ async function main() {
     say('plan-v85-unstarted-closeout | close-v85-unstarted: 2026-10-18 exact06a→15 미전환 실패 건만 검증·보존·종결합니다. 웹 재시작·DB 쓰기·자격 변경은 없습니다. 인수는 받지 않습니다.');
     say("--reviewed-protected-rollout --protected-phase database|database-retry|reader|reconcile|writer-on|writer-off|writer-on-reconcile|writer-off-reconcile|writer-on-retry|writer-off-retry: 정확한 보호 DB/reader 승인과 별도 ON/OFF 승인 경로. 코드에 고정된 승인 자료와 정확히 일치해야 실행할 수 있습니다.");
     say("전체무게 exact238→239: mass-proxy-database|mass-proxy-database-retry|mass-proxy-reconcile. 별도 PIN·원238 receipt·동일 worker pause·기존 R2 경계를 유지합니다.");
+    say("저장 영양 근거 exact239→240: frozen-quantity-database|frozen-quantity-database-retry|frozen-quantity-reconcile. 별도 PIN·원239 receipt·기존 writer/R2 경계를 유지합니다.");
     say("레시피 영양·분수 저장 exact235→238: saved-nutrition-database|saved-nutrition-database-retry|saved-nutrition-reconcile. 별도 PIN·원235 receipt·동일 gen50 중지/복구와 정확한 새 source만 허용합니다.");
     say("요리 실행 exact232→235: cooking-database|cooking-database-retry|cooking-reconcile만 지원하며 고정 PIN과 동일 gen50 worker 중지/복구 controller를 필수 사용합니다. 웹 target은 별도 review.to이며 운영 도구 ref와 구분합니다.");
     say("레시피 요청 역할 metadata-only exact231→232: 기존 nutrition-* phase, 별도 fixed PIN/ref와 current231 terminal이 필요하며 웹 runtime은 교체하지 않습니다.");
@@ -1883,6 +1915,7 @@ async function main() {
   if (options.reviewedProtectedRollout) {
     protectedReview = loadProtectedRolloutReview(repository, { feature: options.protectedFeature, ref: options.ref, phase: options.protectedPhase }); // Deny before live/env/private-state access. No CLI or env pin override.
     options.protectedFeature = protectedReview.feature;
+    if(options.protectedPhase.startsWith("frozen-quantity-"))options.protectedPhase=options.protectedPhase.slice("frozen-quantity-".length);
     if(options.protectedPhase.startsWith("mass-proxy-"))options.protectedPhase=options.protectedPhase.slice("mass-proxy-".length);
     if(options.protectedPhase.startsWith("saved-nutrition-"))options.protectedPhase=options.protectedPhase.slice("saved-nutrition-".length);
     if (options.protectedPhase.startsWith("nutrition-")) options.protectedPhase = options.protectedPhase.slice("nutrition-".length);

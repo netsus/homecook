@@ -1,0 +1,1101 @@
+{
+  "schema": "homecook.saved-frozen-quantity-source.v1",
+  "from": "4258dc41467cda3ba1668c38b1624e51f2056103",
+  "to": "57e81839aeab5ae8cf92ad7f940386f3f17bf213",
+  "files": {
+    "app/api/v1/recipes/[id]/route.ts": [
+      "cb909fb03a56035c2ad552a37fdfb979d02eb2a0ab4704155f8fa1210cdeefda",
+      "ecc760f996f8fd341b566a4094f1ce7a220cf5a497fa4310f6f7d71744919094"
+    ],
+    "components/recipe/youtube-import-screen.tsx": [
+      "64296007402c7256618c7bc61444fe38ae15eb905bb05e2c3bb7320c2c3b02a5",
+      "7949f1c197e77dd5cf56909b865d3d172d87e36e498d641731eda35ff18c4472"
+    ],
+    "docs/api문서-v1.2.43.md": [
+      "845ef0ce53cb8194c6483d8497130eeef347fa92dc3c87245fd1108e7c1d062f",
+      "4aab7b15693166a3b64b4cc8d2dd9d43ec875d4cecce03bded4d2bf09e6102cd"
+    ],
+    "docs/engineering/cooked-weight-db239-profile-candidate-20261020.md": [
+      null,
+      "ec2fdad84379534e8d485d203dc95255648034b1df036719f74d056ec74aca86"
+    ],
+    "docs/engineering/cooked-weight-db239-release-readiness-20261020.md": [
+      "c56d679bacba383d0be28562d03e3467ca75386d5f6f2b4bd14b2a22ed5517ea",
+      "971be02a2266a9954d0c6b93d235a37cc43695dc687580ceb0187ef817eb5ba8"
+    ],
+    "docs/engineering/nutrition-reliability-plan-20261022.md": [
+      null,
+      "3fe76c910f7c393d6c6fc7f5583cab13d52255ea3a5cdbc69e108dee588a6d54"
+    ],
+    "docs/sync/CURRENT_SOURCE_OF_TRUTH.md": [
+      "b4a48e0838a2111472348fe4df09bf227d2af9f664656e434d45ca76c3a36abd",
+      "afe23e7a4e0e54292ed24e60d035ae506f9f112317da9d34926e7f3accc92c67"
+    ],
+    "lib/server/recipe-nutrition-snapshot.ts": [
+      "7414467af33bdb105327a939f6b7e34dddff76f45686559cbc2bc6082be56a01",
+      "d26292cbbb9bd7c9003b6b8371adf4c589a038bbd9db0b98b72d4df38e82f5fd"
+    ],
+    "lib/server/youtube-public-recipe-nutrition.ts": [
+      "f9cf1db84d5367fd87ccad2d79b25bfb0732d7b317c13de6909289a7962e479f",
+      "722056fae4f49d05f52e460e165953742daf7a33f6a456209e93bc74d1ec6dcc"
+    ],
+    "lib/server/youtube-saved-recipe-nutrition.ts": [
+      "d61f858480a295ca9a8909cf2d50261a645a95ae285954ee1537bdf87ef453ce",
+      "daf64114a722d6e8152a5f2c5428e9e50a67e3aacc455f76f23387b01df0b7de"
+    ],
+    "lib/server/youtube-saved-recipes.ts": [
+      "67cf510b121ed746a62a9a6292a6553878bde6900662bfc8908fedbf59ed0e67",
+      "51822f1377b394bb82ce894f1c0167b9dc1b38c491a8923bdb290ab2e31b8e6e"
+    ],
+    "lib/supabase/server.ts": [
+      "88adecc15e8a2a435eb085670c189fb36845a51216bc819b5496422e1d94b2c7",
+      "c373181ee4babeac2d100653fda1d62323aea2d146f1d69fba80d2b3d2156e17"
+    ],
+    "scripts/deploy-prelaunch-web.mjs": [
+      "b6ac9dadf088334b0cde9d4bfb9c6c0e598647d8b7f8b8bf0075ff21881dc473",
+      "92006c502aeac98362be3d1e2a04fb40cb282bfe1713d6acf1975952fb5dab62"
+    ],
+    "scripts/lib/cooked-weight-mass-proxy-maintenance.mjs": [
+      null,
+      "a6e6cd28f146ad51a2d645682468179fec62e93e2547b9738d358045f476abb8"
+    ],
+    "scripts/lib/cooked-weight-mass-proxy-source.json": [
+      null,
+      "31e7f35ceeb892559fe261d96a83ada5b6f6916304ab9b909f3b94f1130ec283"
+    ],
+    "scripts/lib/full-local-restore-cutover.mjs": [
+      "0f6a68fca9a4a6225099d8b7a5593cb188fbf2883d4142660fff1fc38254f3dd",
+      "2fd070e2c722f70c95ec61790f5f8b508fa33c0ac6116833feeda222bda39737"
+    ],
+    "scripts/lib/prelaunch-database.mjs": [
+      "b6635bf3e3815e8a40a9f0b86511039272a00d9ed51f73d3d6c2fc5ce39166f1",
+      "d35e103d99d2042f824b2e06ea3c4bcd4975580834a4b974b7a332abf787262c"
+    ],
+    "scripts/lib/prelaunch-web-deploy.mjs": [
+      "35d564f4be614fd531191da3d9972699ce6cab4aeadf5015bfc55381c8e9ee44",
+      "ce433fca3fb22227f1b5420b5c80b5332852d870c9cab03c6492824452613f65"
+    ],
+    "scripts/run-saved-recipe-catalog-postgres.mjs": [
+      "80d68136ab48806b95f4bf1fa1e92f05966326b1ab5a024bd06eeda13f88f604",
+      "76d8a3aca63ccb824c71c87eb33c317fda41b6fc49531d9313ca0b2a88bbfeb3"
+    ],
+    "supabase/migrations/20261022120000_youtube_saved_nutrition_frozen_quantity.sql": [
+      null,
+      "7e57ea065e0b688d9c9329a040249b58eb9c0bb177c9cae39b9b1bcc31c526f3"
+    ],
+    "tests/cooked-weight-mass-proxy-cli.test.mjs": [
+      null,
+      "3da03a9b8f98939a85af4c741d13fab57d78c55e8d183933e857501902a101b1"
+    ],
+    "tests/cooked-weight-mass-proxy-engine.test.mjs": [
+      null,
+      "e7573725c08f8784a46daa40a4d12640dc22a90179e1e5073d187abebedf8f1d"
+    ],
+    "tests/cooked-weight-mass-proxy-maintenance.test.mjs": [
+      null,
+      "e167b41bb7738bb4d682245fc65929872c33dc3bea3e3b723a22542733900ffe"
+    ],
+    "tests/cooked-weight-mass-proxy-native-engine.test.mjs": [
+      null,
+      "53743c4a2fc7d158f6e27f69482bbf834d99aada73e9490dfb48aaf32159a369"
+    ],
+    "tests/db238-app-successor-cli.test.mjs": [
+      "c6af86f4a33d73aec346eaec7374ccade171795a9948589c65fa93ca5159b28f",
+      "fdfc9ab11c3ef750debff819e956867854cf35b125d79522875a0b4239e85f50"
+    ],
+    "tests/fixtures/cooked-weight-mass-proxy-maintenance-fixture.mjs": [
+      null,
+      "7346c08b1e15c6aeedcce6e270086c4d60ce57ea11ae614ff6739d8a78d401aa"
+    ],
+    "tests/fixtures/mass-proxy-unbound-modules.mjs": [
+      null,
+      "c949f127323827143cada707f0cf08fd119ec3cdffae2dcbf183c0c899d6219f"
+    ],
+    "tests/full-local-restore-cutover.test.ts": [
+      "47108b2d325604ca9ebb8c1ac073b3a7ba906c7da0d520ddc72a564178a2c65a",
+      "f5e4faefc945bca4015578e3685c668469df01ab513f62426f141fe2a305ec7b"
+    ],
+    "tests/supabase-server.test.ts": [
+      "db7d0a41bc8bf309483169dd7d069e3054adb99b7ae9cb9b0feaf6525c340593",
+      "65afaa9e772aa502695c581dd62fd43dd553b667d5a6c062cbc2ac7297b4c64f"
+    ],
+    "tests/youtube-public-nutrition-route.test.ts": [
+      "f0f88e7bf2f791a629833da11121c990b61beeeef99683cf8efd570bbf7b0aee",
+      "dd04c33c50289694850c0f06baff6ed71eaff0d20622905dd0556ac10ad945f7"
+    ],
+    "tests/youtube-public-recipe-nutrition.test.ts": [
+      "c1362bbaab053b856a1d5c9ee39a2c5b4ddc95445b7de47763d5252906eacee4",
+      "b3452a909c3892bf8a1b6ca3ec909cf523ea72f9a7b9363d6acba941419c0fcf"
+    ],
+    "tests/youtube-saved-publication-postgres.integration.test.ts": [
+      "e3b7793564096ad1e4fa33ca2107e77fd9bd72c9dafad32b84a2d6be2e3d8dcb",
+      "1110b084b08e14e59f6443139991f56d57cf842e491ae170ffef628c2d288a36"
+    ],
+    "tests/youtube-saved-quantity.ui.test.tsx": [
+      "bdb6675149b0ce312f1b42da47dfc5bb2692379cf127971322b6d566fa5293d0",
+      "e653a9fed370d2cddf6aaead6dd6967ab168cc2c9fa8cf68b1eb4b96d2f788c0"
+    ],
+    "types/youtube-saved-recipe.ts": [
+      "8e5aa85a4278ad9e340a834e9cf3adb272fd8175550bcd2f9c3e894760b14b2f",
+      "c707c5e7708fa15ae2c405fa46b2cb7e1f68b44ce62af161dbf235146e259179"
+    ]
+  },
+  "before": [
+    {
+      "filename": "20260301000000_core_schema_bootstrap.sql",
+      "sha256": "c11c439de09edae6e11c1b862a26bde80f128dd2e48fc391048adeed9e273ed4"
+    },
+    {
+      "filename": "20260326233638_slice03_recipe_like_count_trigger.sql",
+      "sha256": "ef3fdc1102d60f36d68256f3af36ef5d4a17b0fc36ec361b8a5fc6b2283a21ed"
+    },
+    {
+      "filename": "20260425000000_08b_add_pantry_items_table.sql",
+      "sha256": "05bbc13034edad77b7c42df5ed3b706818d663b6273f5e371a56314bcb57c8a9"
+    },
+    {
+      "filename": "20260426090000_09_shopping_tables.sql",
+      "sha256": "4ad9343ce6a98468f304043bfc3b96d09dd2eb48d19581e607aa199cc355f555"
+    },
+    {
+      "filename": "20260428143000_13_pantry_core_bundles.sql",
+      "sha256": "88219e3fe51f697e9e4cf5956105c8cf5b9df66d043f5806cd1b4e0735f1c9db"
+    },
+    {
+      "filename": "20260429050000_14_cook_session_tables.sql",
+      "sha256": "cbd47f2d5d29231555d51d25edd23029a098d37eb10c7c4b319bf9424ed855fa"
+    },
+    {
+      "filename": "20260429080000_15a_cook_planner_complete.sql",
+      "sha256": "f3aa22fd0c378e5f96e94cbc36f2aa48b60ef515a9ace11bb2187f5b7ef25785"
+    },
+    {
+      "filename": "20260429103000_15b_cook_standalone_complete.sql",
+      "sha256": "9009a6f1b53a7802cba5418b23e4d3663c2e5f9bfee694006635f5bb2bc1acb7"
+    },
+    {
+      "filename": "20260512093000_leftover_card_metadata.sql",
+      "sha256": "b1ae03551a0cf92bef3994150e7cb0c6ec2969cf45858a1b2f39be7861a89e9d"
+    },
+    {
+      "filename": "20260521103000_20_youtube_real_import.sql",
+      "sha256": "de1cc654e72d217850eac760f5dc0f2d0c5aef0704acaf6feb9fcdeca3f303a5"
+    },
+    {
+      "filename": "20260522070000_21_ingredient_dictionary_synonyms.sql",
+      "sha256": "380857ced5eec815fbc599b10890cb315a8801f10e51b2ca25e73a0c5da58812"
+    },
+    {
+      "filename": "20260522073000_21_youtube_pork_galbi_ingredient_seed.sql",
+      "sha256": "59ec9b2384bd56effe2c9b9a52ba40a57f2ebb13287f82b5968f0bf7f9d81e01"
+    },
+    {
+      "filename": "20260522102000_22_youtube_ingredient_registration_rpc.sql",
+      "sha256": "fe577364747525bb02551b33176b33d79038107de36feb343cb8d485249c2739"
+    },
+    {
+      "filename": "20260524154000_account_delete_private_data.sql",
+      "sha256": "b781f710cc0676a9fed17f405592c3c26de8a5aa18dafbe72f671da5e16261fa"
+    },
+    {
+      "filename": "20260525170000_26_youtube_dictionary_seed_uplift.sql",
+      "sha256": "95e41090e8273843b247ec091d90ad03747323c431e38853c5a43e7f7fb37f66"
+    },
+    {
+      "filename": "20260526182000_27_youtube_live_smoke_dictionary_seed.sql",
+      "sha256": "5adaef65ce0418789616055889774f3f61d0e6794d5a04e22de6e1813fe766be"
+    },
+    {
+      "filename": "20260526203000_27_youtube_live_goal_dictionary_seed.sql",
+      "sha256": "4b106a72f955699352de31d471689807431a51514f41e8dc4917ab45f1821414"
+    },
+    {
+      "filename": "20260526204500_27_youtube_live_goal_egg_synonym.sql",
+      "sha256": "e041594e840b637e6ef4b5cdeb4feec03bcac9c0e74b6f7736ac59de4f85e2a8"
+    },
+    {
+      "filename": "20260526205500_27_youtube_live_goal_multi_recipe_seed.sql",
+      "sha256": "6fc384491740664da418502d2dbdd011472ee177f7f32aab2fc41caac16bb814"
+    },
+    {
+      "filename": "20260527030000_admin_foundation.sql",
+      "sha256": "7011e3d2e20f0394a7b26233bb1eb00f5b2fe6dfe1be730d2e92f4fdf505887c"
+    },
+    {
+      "filename": "20260528042000_29_recipio_youtube_parity_dictionary_seed.sql",
+      "sha256": "11f92a8f89bfd294a192107d8d87df7218c2ee6671a4061bced581aeee018138"
+    },
+    {
+      "filename": "20260528073500_28_youtube_section_label_persistence.sql",
+      "sha256": "9c676f0211132bdfb1f4c13341c8f351aa84e476fa1e930f2da256009cf5d949"
+    },
+    {
+      "filename": "20260529043000_29_author_comment_app_route_dictionary_seed.sql",
+      "sha256": "4afe9e5b72afa4c5dbfdfbe502e495c0de05915ca4407b72102cac706f239f20"
+    },
+    {
+      "filename": "20260530001000_28_external_ingredient_seed_promotion.sql",
+      "sha256": "07900ce235398ab9ea5fcf32e521e0356bef0a7ea0e249a9d0f8b24a941dc826"
+    },
+    {
+      "filename": "20260530020000_29_youtube_register_blocker_dictionary_seed.sql",
+      "sha256": "48cb08a4da5d9ef71e917e4c07900dc7b2f3146605fb5a18e8a09cf4afab4727"
+    },
+    {
+      "filename": "20260530090000_30_youtube_multi_recipe_candidates.sql",
+      "sha256": "6519297f13930c84316c135b24b26eb1735755c8da3d74049cc58b349e3f55ab"
+    },
+    {
+      "filename": "20260530103000_31_recipe_media_tags.sql",
+      "sha256": "0663f8671bd6f7d75970d135b9f6244ef5ec088d7e2d08cfdf6732df8d2c9bdb"
+    },
+    {
+      "filename": "20260530120000_youtube_transcript_cache_and_events.sql",
+      "sha256": "9e8ad2d211e4a6afae95b515d7d83ea97ea706eaa4a295d7d0488fd362c7327b"
+    },
+    {
+      "filename": "20260531123000_recipe_view_count_increment_rpc.sql",
+      "sha256": "6eebb16e1804e723c5aecc36733c7bc8365597c487b387209fdbe17dcaa3fb8f"
+    },
+    {
+      "filename": "20260601090000_youtube_llm_extraction_cache_and_events.sql",
+      "sha256": "2a50641ebba45b7c419e1e7ff926ea72a2cee2c0163f9f4edc85329225bfedb8"
+    },
+    {
+      "filename": "20260602103000_32_youtube_visual_extraction_cache_and_events.sql",
+      "sha256": "5ca6c8ba826c26e590b8933368cb7d7d17d384b7bd98ee1eda70194c5808e4ab"
+    },
+    {
+      "filename": "20260604090000_recipe_tag_length_cleanup.sql",
+      "sha256": "c9756f1f3bd47a276fd94a804f395ac7737c121313b94fd5ad81310157146095"
+    },
+    {
+      "filename": "20260608090000_expand_ingredient_fruit_category.sql",
+      "sha256": "12fd646c88be50b605c7dbaa60ae44b7287df5a46d590d2d3be6de6e2a8d1ba3"
+    },
+    {
+      "filename": "20260609090000_youtube_kelp_chili_paste_dictionary_seed.sql",
+      "sha256": "ae86ec3659fbb89d2c62171f44a77df88f7a737eae5e22c995ab3a9fa5902244"
+    },
+    {
+      "filename": "20260609110000_taxonomy_v2_additive.sql",
+      "sha256": "d85696bc57f5f09562a0588ccdc8962d08076238f720ab1c4cd278633fe3819d"
+    },
+    {
+      "filename": "20260610120000_33a_user_progress_foundation.sql",
+      "sha256": "3ec3b68442f40dd67a6695d50852e96d1cb0fb7431c33d43338c02e8cc436d1c"
+    },
+    {
+      "filename": "20260610170000_recipe_book_cover_metadata.sql",
+      "sha256": "9e8048ea604965cf1fa8b81940ec813bdbb23d39b253193c152bf4deeb41dd59"
+    },
+    {
+      "filename": "20260610183000_33c_user_gamification.sql",
+      "sha256": "d807f7adafa90c290ebf450b11248c47a09911290c4e09a13d75b79d9f244fa2"
+    },
+    {
+      "filename": "20260611152000_34b_growth_backend_model.sql",
+      "sha256": "73e22cee69382cd79c185fe8ac762c23b99c3fd2dea4a55c8a29e740d1012969"
+    },
+    {
+      "filename": "20260613220000_35b_growth_achievement_awards.sql",
+      "sha256": "9555c6a8c943fd179dfca94375f1b9eb972978a4f08496e6748b46090eb0f5c5"
+    },
+    {
+      "filename": "20260615090000_35c_leftover_eaten_progress_event.sql",
+      "sha256": "52eff16060c67739d63e6f743ebaa3e49a9633c6e3de4e0e66d8e749f236946d"
+    },
+    {
+      "filename": "20260615143000_35c_remove_quest_completed_notifications.sql",
+      "sha256": "a32bafe5ca515d0f6bd0ddb73d7b90b7be7ae0b29ee16a03e1f870b7003a0cce"
+    },
+    {
+      "filename": "20260616143000_launch_readiness_atomic_rpcs.sql",
+      "sha256": "f4a2bbc2a58fe28955e1fdcdf43317b15cec4a63cbf9bb39df63b40875b0b614"
+    },
+    {
+      "filename": "20260617090000_36b_recipe_tags_model.sql",
+      "sha256": "d3e9eff971545b00d73d10bb124646b6b9354ef9a18e60a7cef337b3398668a8"
+    },
+    {
+      "filename": "20260617110000_36c_recipe_tags_search_themes.sql",
+      "sha256": "9e4eb9a9c7324e50fd1c33eafbe9aa9ccc905e4cdce68b047abadbe25575cc52"
+    },
+    {
+      "filename": "20260617123000_36d_recipe_tags_rules_backfill.sql",
+      "sha256": "72eee0853fea6f7f2dee6a682ea51aee870d21b192fb317d46474d7b9e702450"
+    },
+    {
+      "filename": "20260620065500_shopping_already_have_pantry_reflection.sql",
+      "sha256": "eca838d52cc8b50703d8157f3191d14832b4d6c3ad732e89190a8dcb5362b594"
+    },
+    {
+      "filename": "20260620073000_19_korean_home_pantry_bundles.sql",
+      "sha256": "9d06fa111dba0fd0a016042a10987ec81ef45540e84d207da52198e607db1cfb"
+    },
+    {
+      "filename": "20260620110500_leftover_stale_review_sync.sql",
+      "sha256": "025974a8d5538cc2444c358f8508d73708e61175a683bd29acce730d9a2c4ea7"
+    },
+    {
+      "filename": "20260625090000_28_external_ingredient_full_seed.sql",
+      "sha256": "62746630489f000b7ec476300cef383fffe14ca9f1a203a137876dcc1abc33dd"
+    },
+    {
+      "filename": "20260625102000_28_external_ingredient_bundle_promotion.sql",
+      "sha256": "f0f06baf31f59482ef6aad60faa533e1256a6ed0ab1bac3cd02aafbeb8fb348b"
+    },
+    {
+      "filename": "20260625190000_28_expand_pantry_bundle_seed.sql",
+      "sha256": "eaf86a7e7e6a3f43d9d3704a9bc6f2a3002b28bda393dffe1adb0d150e391107"
+    },
+    {
+      "filename": "20260625201000_28_external_ingredient_synonym_followup.sql",
+      "sha256": "b980b621ea4bc7ffaab6a6551ab277e41528d79d3421901a394d1564072c2d34"
+    },
+    {
+      "filename": "20260626102000_unify_olive_oil_ingredient.sql",
+      "sha256": "4fcc1a387be47ecc9b32dd9aeb14dfeb6d5fb58ad9b6956161e6ac64bf1da4bc"
+    },
+    {
+      "filename": "20260626103000_foodsafety_pilot_ingredient_followup.sql",
+      "sha256": "5084b34db19f3d7a4966596a9a5d4cbdd9fc97208375006c222769d917dc5047"
+    },
+    {
+      "filename": "20260626104000_seed_foodsafety_pilot_recipes.sql",
+      "sha256": "eeb160e8401cba4bf46c6551dcedbea393c295d43380a4b03ab09bfb8d84f6d8"
+    },
+    {
+      "filename": "20260626121000_fix_foodsafety_pilot_step_methods.sql",
+      "sha256": "a72f90900950fe08c882e7acef14bcf9289d26643d30fba424635bc980e64506"
+    },
+    {
+      "filename": "20260626143000_foodsafety_pilot_quality_corrections.sql",
+      "sha256": "b47521aa2558f03191db4ec799d2a21672b0ca96b2e06d0149d19b7aca585865"
+    },
+    {
+      "filename": "20260627103000_recipe_step_multi_methods_and_pilot30_edits.sql",
+      "sha256": "1474d884f32992a1ed5a4d5ed931d36e689adbadd0b33f7eff62b4cbdb357e8e"
+    },
+    {
+      "filename": "20260629120000_normalize_foodsafety_image_urls.sql",
+      "sha256": "cbcab68f4ad10423b173fc95f15e44062babedab3268e9932c9761f0c0def8e1"
+    },
+    {
+      "filename": "20260702034500_ingredient_dictionary_user_corrections.sql",
+      "sha256": "4af1099802d8daf27952ce30fdc519b614866e95a4739ba5308ead1e99c876ff"
+    },
+    {
+      "filename": "20260702142000_normalize_duplicate_ingredient_names.sql",
+      "sha256": "3618e5bfc2cd4d7bed4a7a23b19c65b7c92e1f0a14a731e3416573cf00856299"
+    },
+    {
+      "filename": "20260704165000_delete_uncovered_ingredient_batch_targets.sql",
+      "sha256": "508edeb9044b209b842b9a597d38cfac0b515d66701f0cd9c4ab24b79a3f2f72"
+    },
+    {
+      "filename": "20260704183000_ingredient_dictionary_user_followup.sql",
+      "sha256": "6e97cf775f68350b2f28bc54f5a4ba0e392bc2cc30b20c28bafc4d3177d15d4b"
+    },
+    {
+      "filename": "20260714143000_ingredient_nutrition_conversion_model.sql",
+      "sha256": "c98cc7407563dffc9b7b02484aa685cce777443a4d07271a2b3a4558015929fb"
+    },
+    {
+      "filename": "20260716090000_add_recipe_nutrition_snapshots.sql",
+      "sha256": "3b7396a65369da25b070d7636de1796be31eae8705438a0b3a4f25294d46d439"
+    },
+    {
+      "filename": "20260716120000_prepared_food_catalog.sql",
+      "sha256": "2b7c8ae258016be3f865d1303478639aa1240574daeca08583041b66cc7e9810"
+    },
+    {
+      "filename": "20260716150000_prepared_food_planner_entries.sql",
+      "sha256": "28a75f483e89088baac89e2b5c05cd1c3ffac95ef9a117d1f4cf7a76bac160e3"
+    },
+    {
+      "filename": "20260717093000_public_prepared_food_catalog_import.sql",
+      "sha256": "f06645278dc2426100e03e2f0188513d0e1e624f3e6248e227310051054e1dc6"
+    },
+    {
+      "filename": "20260717170000_ingredient_nutrition_multi_source_import.sql",
+      "sha256": "84349ded45b12620647babe0d391e3fbb5386c30ba3b88e54e879b467ad00200"
+    },
+    {
+      "filename": "20260718081000_ingredient_nutrition_shared_source_links.sql",
+      "sha256": "b892ddc0592ffaeead93beb28974fe2f05e987e7c347ee23f648fdea5c8b6fa9"
+    },
+    {
+      "filename": "20260718090000_community_prepared_food_catalog.sql",
+      "sha256": "5ce8b4fefb5ce02a5f4b8169e39b2710228ace9e6602a91c1b40690a3748d7ac"
+    },
+    {
+      "filename": "20260718123000_community_prepared_food_catalog_list_perf.sql",
+      "sha256": "615db2750e76f650d8587b5404018ac9f22f214b584698fed0cbd5b771e59c48"
+    },
+    {
+      "filename": "20260718133000_community_prepared_food_catalog_anonymized_editable_fix.sql",
+      "sha256": "e64c01975514e0b55cc6e393a008c21f85d48c24ab69548686dc41fd2c1be0e6"
+    },
+    {
+      "filename": "20260721184500_normalize_korean_recipe_nutrition_units.sql",
+      "sha256": "a60f890c1ec79d062a03bfb9ef546f4bc75aba655555bd8ad9a5b50e6d613ef5"
+    },
+    {
+      "filename": "20260721190000_normalize_compact_spoon_units.sql",
+      "sha256": "b7338736a88315e5b1cd4c2d7988c6cfe6279869a164e021e4cec1341dbb7077"
+    },
+    {
+      "filename": "20260721213000_use_exact_measurement_bidirectionally.sql",
+      "sha256": "00fdf35e4d7d74a8333ece70a92cf2fe1cf03b45bebe3042f9bf1fdae0e883c5"
+    },
+    {
+      "filename": "20260722090000_apply_reviewed_ingredient_nutrition.sql",
+      "sha256": "ddf4c8421c675f704b389907f9efbf5a07bf21ebcabaf0f7085fa5432664da53"
+    },
+    {
+      "filename": "20260723090000_security_definer_mutation_authorization_hotfix.sql",
+      "sha256": "11ce0978dc11e64b1efcb4e8f2c371761e18aa31199463c1e04177d391eb2a38"
+    },
+    {
+      "filename": "20260723140000_account_session_generation_foundation.sql",
+      "sha256": "560e060ef7cdac8f414d37cc2cce96c2d3aacf910666abddf3b06069dca39447"
+    },
+    {
+      "filename": "20260723170000_recipe_visibility_read_hardening.sql",
+      "sha256": "cc45136b35428b4290656e32f487f168c6ca9ed0b1547327f3210bae3d79084c"
+    },
+    {
+      "filename": "20260723180000_recipe_visibility_guard_public_schema_usage.sql",
+      "sha256": "5ecef192e89ca35537039f04e070bd01bcd24165e5659584a796b3f23441f29b"
+    },
+    {
+      "filename": "20260723190000_recipe_visibility_direct_mutation_privilege_hardening.sql",
+      "sha256": "67191cc818f0c4068ced267e4d030391b678fe7ffbb5fe1eb8be0d02814b1839"
+    },
+    {
+      "filename": "20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
+      "sha256": "949d4b48d22090569a16d702bc1b431c6ca8d2fb5a97b772dcd247366c4153e3"
+    },
+    {
+      "filename": "20260724110000_recipe_managed_image_registry_foundation.sql",
+      "sha256": "d2e76c1454b4d3601ee97dbb15b5f1576a8d66db40f805753f8d681dc5bad0f0"
+    },
+    {
+      "filename": "20260724120000_recipe_image_cleanup_outbox.sql",
+      "sha256": "90bd8c362c08bc3f8b30cacac1d6239125250c0bce5f8c9716ac645d025a787f"
+    },
+    {
+      "filename": "20260724130000_recipe_image_upload_reservation.sql",
+      "sha256": "ad3cfef0dc0a5476c95501af6dadb431cd71e775c907c1ab6eb09d165ea1360a"
+    },
+    {
+      "filename": "20260724140000_recipe_image_private_storage_boundary.sql",
+      "sha256": "9d4420eeb2d8a8c0772c88bd9b81d0c8cf3e70c0fcb606da267cad4bc1dea361"
+    },
+    {
+      "filename": "20260724150000_recipe_image_upload_compensation.sql",
+      "sha256": "a9c5b7b1574638a64ceb8cca160d234eb42ccccc617f11dde190531f4b4e2ad3"
+    },
+    {
+      "filename": "20260724160000_recipe_image_cancel_cas.sql",
+      "sha256": "5d1da50f94453b6291b9504c99fd5ac36f35a66f9a57a84efb278961d6e5cf5f"
+    },
+    {
+      "filename": "20260724170000_recipe_image_cancel_lifecycle_errors.sql",
+      "sha256": "320b8c0b09e9cbee71967bb38fd6af0e59b70a63fb076918279539ef536d6e89"
+    },
+    {
+      "filename": "20260724180000_recipe_image_attach_cas.sql",
+      "sha256": "de5153831f1a6419010609372331dfefc4bf675a803b58ac48db25240aaba8cb"
+    },
+    {
+      "filename": "20260724190000_recipe_manual_create_image_attach.sql",
+      "sha256": "5efe070df95c59ec58431e2a0d01248295389d34a1dc31be5e13ca6f49d3fe6f"
+    },
+    {
+      "filename": "20260724200000_recipe_image_stale_scanner_cas.sql",
+      "sha256": "06d798f174589a8cac6af6adbc799837c5ef481bb310ee1c742e9fcbbe29f6cd"
+    },
+    {
+      "filename": "20260724210000_recipe_image_terminal_tombstone_scan.sql",
+      "sha256": "18303c5752536320d7025705b719ac122bf6376b28a58edfa4cd63f6afd28d5c"
+    },
+    {
+      "filename": "20260724220000_recipe_image_quarantine_recheck_authority.sql",
+      "sha256": "f27277278b1b68c81709f163f4ef28ffbbae785d0e286222aed487272e2cd9a9"
+    },
+    {
+      "filename": "20260724230000_recipe_image_normal_drain_authority.sql",
+      "sha256": "5bf3693ef80fcb790b353b031cbecb7e27bb3c00f5386ed895462b258aaa45ca"
+    },
+    {
+      "filename": "20260724240000_recipe_image_expected_owner_signal_authority.sql",
+      "sha256": "9e32af48b7770f7b8af33d7202722071183aa4c203e519ddd65391d837a4908a"
+    },
+    {
+      "filename": "20260724250000_recipe_image_auth_deletion_readiness_authority.sql",
+      "sha256": "5cf531d996d1aec2c14de47f9ef766f414bf6826716485e06720f3638e4d7710"
+    },
+    {
+      "filename": "20260724260000_recipe_image_auth_deletion_claim_authority.sql",
+      "sha256": "557927c4a02b23165da171e6266bfa27b038b9d8215b775b943f6f96a1d88b37"
+    },
+    {
+      "filename": "20260724270000_recipe_image_auth_deletion_finalize_authority.sql",
+      "sha256": "76d433d031c469f86a8187f1db0ffc81c5d65c18e6548defdde5cfaa38eedc68"
+    },
+    {
+      "filename": "20260724280000_recipe_image_auth_deletion_candidate_authority.sql",
+      "sha256": "db6f2d76c3a07a4262c56505239453f6dbdf8b98b2e5dbae850314a0bf7d1468"
+    },
+    {
+      "filename": "20260724290000_recipe_image_lifecycle_completion_authority.sql",
+      "sha256": "96de7b47edbfc8bd810a85082a1cc792c390d835c0c2d2e2861314c5f956ae9c"
+    },
+    {
+      "filename": "20260724300000_recipe_image_lifecycle_completion_candidate_authority.sql",
+      "sha256": "6e53f68cf9455f0319c68fbc3b83d895098bc1143845bb75c92ce83907071b3a"
+    },
+    {
+      "filename": "20260724310000_recipe_image_compact_retention_authority.sql",
+      "sha256": "0b769d53e1d3ed4b9989ac93154223cf05e54a3236232525992a46e36143d5da"
+    },
+    {
+      "filename": "20260725120000_prepared_food_search_relevance_foundation.sql",
+      "sha256": "14d9fcbe1378dd17aabf2f635e42f09b264f12509d5d19795cf16e6673947062"
+    },
+    {
+      "filename": "20260725130000_prepared_food_search_relevance_indexes.sql",
+      "sha256": "aa8bd3f0f7113ed4f9900b464418e08ce32a8bedb0ddfae79c111f6a59848669"
+    },
+    {
+      "filename": "20260725140000_prepared_food_search_ranked_rpc.sql",
+      "sha256": "aaaf30c9890f8d2fd283c3441a59030ce02a579a51235b0f4a77374b31bf1e00"
+    },
+    {
+      "filename": "20260725145000_prepared_food_search_hosted_compatibility.sql",
+      "sha256": "f4b48f8a95b1d7a60a4e829f78da88d7dafe8702986fcab3bc892e827cc3a599"
+    },
+    {
+      "filename": "20260725150000_community_food_visibility_lifecycle_guard.sql",
+      "sha256": "ce5a9c4b3f7d41f042d1e1191b5814a20ada91e88d047782088d8f58ac8426cd"
+    },
+    {
+      "filename": "20260725160000_recipe_image_legacy_report_only.sql",
+      "sha256": "de36ce4c406f4cb260e836808b14f24ce04892a1289350772e4bf85331cec8f9"
+    },
+    {
+      "filename": "20260725170000_recipe_image_read_projection_authority.sql",
+      "sha256": "91be7fe844571ac4558959f6666b5d2ac14057b0d914558074a20b993bded637"
+    },
+    {
+      "filename": "20260725180000_recipe_book_image_read_projection_authority.sql",
+      "sha256": "874504c2fe637e7e3bb3edfe5d012b4596ec35e1f8a8957930d81cb1cfdf432a"
+    },
+    {
+      "filename": "20260725190000_recipe_image_legacy_visibility_migration_authority.sql",
+      "sha256": "1a8a8ec4bc4d7765a40b16093c5143bbd761b2c85f84b8d6e7112e4cadf48898"
+    },
+    {
+      "filename": "20260728130000_recipe_image_legacy_visibility_prepare_replay.sql",
+      "sha256": "d68011b384c49b787fbc2dcc70f1353c0b79c51a927e91b33218241676c234b4"
+    },
+    {
+      "filename": "20260729170500_recipe_snapshot_authority_foundation.sql",
+      "sha256": "87d3cd994c669f4a0f181810ed782eb2ec49e42c9fe565ac13959379acd330ce"
+    },
+    {
+      "filename": "20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+      "sha256": "8290dc7e803ae59bb84c9b823c55c8d81168e335c14cee8f78281b303be9d2c8"
+    },
+    {
+      "filename": "20260730120000_recipe_image_read_owner_generation_authority.sql",
+      "sha256": "a9fe1eff305dd295cd5ea8df75704b2cc43ab34d83533540eb2b2dab13d3a3f9"
+    },
+    {
+      "filename": "20260730140000_hybrid_internal_operations_facades.sql",
+      "sha256": "8a99ba3dcadc60a08a6bdf014af8482f868f3b2ece8cb69318a96f0d3804e6ff"
+    },
+    {
+      "filename": "20260730150000_account_delete_hybrid_session_authority.sql",
+      "sha256": "5a58f73a1fb910d4f3fd75438d21b8feed3d2e7416c1dd5f26f448f2bad881e7"
+    },
+    {
+      "filename": "20260730210000_product_ingredient_link_foundation.sql",
+      "sha256": "dc382f8dd6f2252f5d5d72fb88074c4acd792e3dd88df212a59b499b6b925453"
+    },
+    {
+      "filename": "20260731110000_product_ingredient_link_contract_runtime.sql",
+      "sha256": "8d4ea607e95356645ac8076e8b3f8a46a26e0ed34528d67c48f201041ad2d67d"
+    },
+    {
+      "filename": "20260731111000_product_ingredient_link_account_cleanup.sql",
+      "sha256": "837594b4c0342c38868d57b616d9b29f800bd19d2f35cdf65203a6e1bac414cb"
+    },
+    {
+      "filename": "20260801120000_full_local_auth_db_foundation.sql",
+      "sha256": "590169e93997349f1d9b92a5c3a460859838fcfac45ab7213463178595627571"
+    },
+    {
+      "filename": "20260801150000_full_local_account_bootstrap.sql",
+      "sha256": "f017e7f3060c30321f55b328b9c5157fc6e072f5bbd042b19efe6c620b0703dc"
+    },
+    {
+      "filename": "20260801151000_full_local_request_authority.sql",
+      "sha256": "53e3300c374b1acfa86402b8bc3591815e69aa0087776d3e1b2c6d19085f3899"
+    },
+    {
+      "filename": "20260802120000_recipe_snapshot_consumer_read_authority.sql",
+      "sha256": "f87c79ab51d27fffa15828ccfb02b989aa7cdaa0cd8c8c2fdfce7c295c1f4f2c"
+    },
+    {
+      "filename": "20260802130000_personal_recipe_customization_write_core.sql",
+      "sha256": "d95b604b9c20a70180daa9879de239ec94ef14733ab163d290ae1b7b447b0321"
+    },
+    {
+      "filename": "20260802210000_recipe_content_snapshot_future_propagation.sql",
+      "sha256": "1aafcd50e547c0f7f225e8c75515aeb46713fe4feb2e72cbac1942e09d4d6642"
+    },
+    {
+      "filename": "20260803090000_full_local_session_issue_time_precision.sql",
+      "sha256": "91612369ea8af6c67c937c69533dd11fe4130be389ac7e251fc3a70dd200fb5d"
+    },
+    {
+      "filename": "20260803091000_full_local_optional_nbf_authority.sql",
+      "sha256": "db9a0e5b948dca6567bc54a75ef4e8a2ca137846f73d84d1db813af5c8ddb6f7"
+    },
+    {
+      "filename": "20260803092000_recipe_future_internal_scope.sql",
+      "sha256": "2f4864d80eabb0d58a1ea5738df96a538c53f511538a4e5fdf6db6e12c7eee1e"
+    },
+    {
+      "filename": "20260803093000_full_local_read_only_request_authority.sql",
+      "sha256": "88652986e76585d8684c998115336d4240f970131b634e1628eaa3948792d10b"
+    },
+    {
+      "filename": "20260803100000_recipe_future_scoped_internal_rpc_clients.sql",
+      "sha256": "088dee9ad32a14bfac82326399bfbcbb15bde783b4fff8d825f21649a7d1aff7"
+    },
+    {
+      "filename": "20260803101000_recipe_content_snapshot_future_propagation.sql",
+      "sha256": "480e91758d4abe7e7c02d127e0064aaa1e0ebefdc9d9217e3d88a668abc46bcc"
+    },
+    {
+      "filename": "20260804100000_recipe_snapshot_entrypoint_projection.sql",
+      "sha256": "73208bcd4715cd496e8b4e9fafecce56c62f725c771bbc3ded82f45892ec1fec"
+    },
+    {
+      "filename": "20260809100000_full_local_session_refresh_authority.sql",
+      "sha256": "a53f35508e864342723dc8cfe63714d94518d6da7dde3d415625019b03937794"
+    },
+    {
+      "filename": "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+      "sha256": "69db459b5f206c6174d0349cd24a4e0f91bc7bbe04e7f721cf0a7077fff45a8f"
+    },
+    {
+      "filename": "20260809120000_cooked_batch_weight_ledger.sql",
+      "sha256": "58e29ed0a97cba09546cfc5084a723f4c0c2cc0646c1d263cce1c7f87ca07206"
+    },
+    {
+      "filename": "20260810120000_meal_log_core.sql",
+      "sha256": "e457f21ff5ce7e12b8218ef6bcec81b8322cab8a823bce83ef4e83d0835b3a40"
+    },
+    {
+      "filename": "20260811120000_full_local_session_observability.sql",
+      "sha256": "05a810000da5cf347fde2c28178dc9e1593757f99273d4d1f3ec4df6a67cf6a6"
+    },
+    {
+      "filename": "20260812143000_full_local_session_superseded_token_window.sql",
+      "sha256": "7dc029868a6172f32b460321e29fdc225af00facddfdcb0e933e5454bb23ea1f"
+    },
+    {
+      "filename": "20260812160000_youtube_async_extraction_notification.sql",
+      "sha256": "49f9243d91b240b76e39fd711aef9e1d8b699d5e76e668ae2b51e92abbf87343"
+    },
+    {
+      "filename": "20260815120000_legacy_product_compat_atomic_completion.sql",
+      "sha256": "feb03a88c40615a69e3faa24f8b0fd00d2295fd5ee8994e60ce9af1316ead4b9"
+    },
+    {
+      "filename": "20260820120000_full_local_session_bounded_token_overlap.sql",
+      "sha256": "9caf08944a72a2c4677df913349778b909e1eeae564b2681c4d84de64c674dac"
+    },
+    {
+      "filename": "20260821170000_full_local_public_pre_request_entrypoint.sql",
+      "sha256": "f7c3dc61fb3f9e429cee649401b898f79b7f5860e5d81c1dc94df2e4e21e843d"
+    },
+    {
+      "filename": "20260821180000_full_local_missing_scope_fail_closed.sql",
+      "sha256": "3d114ecfb886bbf4f93d8408e3f7d1cc80c3255d825f036b3a1e6a21d4b43907"
+    },
+    {
+      "filename": "20260822170000_personal_recipe_customization_write_core_derived_create.sql",
+      "sha256": "bb7c37cb90588d4278d7afced287a75e59af256027872bb1cfda2ffca02975c0"
+    },
+    {
+      "filename": "20260822173000_recipe_snapshot_public_fork_context.sql",
+      "sha256": "b0fb01c6bab87091a709ce071729d40f0be15702e7f85bcee0d7bd91d0593ac6"
+    },
+    {
+      "filename": "20260824173000_full_local_account_cutover_authority_restore.sql",
+      "sha256": "07fc08ccd1ce07178c03282d75e14b43f936cf8fe080a7af2a66cf7ac6f6968f"
+    },
+    {
+      "filename": "20260824190000_full_local_core_owner_read_rls.sql",
+      "sha256": "be3c4c6732beeb12b933fb551a48582883305274f4f140dc00039e7136d57ed2"
+    },
+    {
+      "filename": "20260825120000_youtube_extraction_catalog_after_internal_scope.sql",
+      "sha256": "6c990cdad065f5e6d03fedaf2c6874ff8881b20b98626c7d4f4b9ed9fa984eaf"
+    },
+    {
+      "filename": "20260825130000_youtube_extraction_shared_dependency_contract.sql",
+      "sha256": "4e78eaddbed49d9e653a95fecfdfa2ec907984e2c1cd861daa669338c4e85856"
+    },
+    {
+      "filename": "20260826010000_youtube_extraction_admin_daily_quota_exception.sql",
+      "sha256": "dd715ce881c8506c50ba9ddf1e6f7d78f52fcb5b39a56b9fb43ce1f4a6758ab7"
+    },
+    {
+      "filename": "20260826020000_youtube_extraction_admin_acl_normalization.sql",
+      "sha256": "fdbdb0c59029d3de8d8b9ae3b3850ec071ac3154ce03e5d0248fa23afb12cb67"
+    },
+    {
+      "filename": "20260827010000_youtube_extraction_truthful_progress.sql",
+      "sha256": "e43cf29e57618d8a5378ff5cc8a7011717311f3b5f4b0ae72f337c042544c3aa"
+    },
+    {
+      "filename": "20260831100000_marketing_validation_sessions.sql",
+      "sha256": "df84a59e298af660ecf1114018c111f615205deac4565bede735820c1f4ace78"
+    },
+    {
+      "filename": "20260831110000_marketing_validation_retention_operations.sql",
+      "sha256": "c29d71093627b0ca459136acdff0c55469e447db825c09ef81b5cada1f35ec40"
+    },
+    {
+      "filename": "20260831120000_marketing_validation_export_scope.sql",
+      "sha256": "7e0d59a96866aa7d4f93e6d3df9ab4cd5e90d1945a4b1e447c0fce2dded3b772"
+    },
+    {
+      "filename": "20260903010000_marketing_validation_sessions_v2.sql",
+      "sha256": "333b8bf7ebcdb5717b75a85e533d4b97d661ecd077ff6cd3f681a1181a9f5d3e"
+    },
+    {
+      "filename": "20260911100000_marketing_round2.sql",
+      "sha256": "1a783932ef81041414828e336b1f8c9a75666db44180583add72a4f326324ff8"
+    },
+    {
+      "filename": "20260911110000_marketing_round2_linear_homeflow.sql",
+      "sha256": "8487ec85f9f55230d4eb9ec995781efbc22bec6aee4155cf6e1af79b95cdfe0b"
+    },
+    {
+      "filename": "20260911120000_marketing_round2_linear_recording.sql",
+      "sha256": "d0c1a9918e624dd24f97cd355283bbf9cdd12440386846f6f3dce4a0cb8fdcf9"
+    },
+    {
+      "filename": "20260911130000_marketing_round2_scope_compat.sql",
+      "sha256": "202a663a6ef2ee5fa3e6b61ec4334aeb244b6c30f659ebc51b9968da5d6e8d3d"
+    },
+    {
+      "filename": "20260914230000_recipe_nutrition_v2_piece_and_zero_sources.sql",
+      "sha256": "17101f9d6f7eb39f6eb9e7522beb12a6ff522d0193a970896caf71076acdefab"
+    },
+    {
+      "filename": "20260915050000_public_current_recipe_nutrition_read.sql",
+      "sha256": "c1783481e2860b8bfe5c817be102492ff2394fae659e7d2c70cb37c6abb4c801"
+    },
+    {
+      "filename": "20260915090000_recipe_save_rpc.sql",
+      "sha256": "9b7528b5b6e0edc681e0e630e800dfda89cafeb03c39834a025a0e52011b66ca"
+    },
+    {
+      "filename": "20260915120000_shopping_unavailable_snapshot_ingredients.sql",
+      "sha256": "bb257fd5fa963c33a92ce81721bb9eb601658a56164dcc8d568087a0229cb55c"
+    },
+    {
+      "filename": "20260915130000_youtube_astra_sol_pipeline.sql",
+      "sha256": "08ee4198a0ffaa1fd86e3a7d9b2b715759accc8201b560527cae6860613b2eeb"
+    },
+    {
+      "filename": "20260915190000_legacy_leftover_meal_log.sql",
+      "sha256": "cce52c71c727271e4e5460b05b2c6090ff5d7d699a083c61f0cba1c56ead2cfe"
+    },
+    {
+      "filename": "20260915203000_youtube_thumbnail_and_nutrition_writer.sql",
+      "sha256": "45c662b8f3f6a7bab62ca80d1d04cb10bc0ef587a03f5616d6321b3617e51d6a"
+    },
+    {
+      "filename": "20260915213000_legacy_meal_log_estimated_nutrition.sql",
+      "sha256": "132480ca90e40a79da941f47538d70ba44ca066e8822fad9766bfa8327c19fe1"
+    },
+    {
+      "filename": "20260919000000_prelaunch_recipe_meal_log_repairs.sql",
+      "sha256": "d0d0c8024ba53a9f6667614df38ab8e38d53d84c5f58997ba4dd22cf0b44ab50"
+    },
+    {
+      "filename": "20260919001000_ingredient_search_normalization.sql",
+      "sha256": "4874649dae509a398109b73002fd76d9ccc11f2372f0b413bf0bec6df45fcf66"
+    },
+    {
+      "filename": "20260919002000_manual_recipe_create_recovery.sql",
+      "sha256": "3c4c7ba3b3d63ba1ed85bf15dfbecf0636e6be99dddd26b99693d2849723a212"
+    },
+    {
+      "filename": "20260919100000_ingredient_representative_links.sql",
+      "sha256": "9689e8f6d66c97eec8861c589be6e61ef5d411acbaeeae7a5ea52c9ea3181f70"
+    },
+    {
+      "filename": "20260922000000_youtube_catalog_after_ingredient_search.sql",
+      "sha256": "6fdf618b6cb1a3d3782ae479d4e74ff73eb2c9233b744f714ed6718e6d8e6d1e"
+    },
+    {
+      "filename": "20260922010000_youtube_fractional_quantity.sql",
+      "sha256": "88efe3d37ee82cfd9053a2202a1a246fc17d3a6324fe44dfa6c3b0796bb7e384"
+    },
+    {
+      "filename": "20260922020000_recipe_product_selection.sql",
+      "sha256": "5d80ac1c5b5a2aad3d2402128704249b70eea0e105f2f9af4f71b5cb021062e5"
+    },
+    {
+      "filename": "20260922021000_recipe_product_nutrition.sql",
+      "sha256": "aaf6f7108606cfac33ee5822633279e0d9574bb680e41a9b282576841e47b07a"
+    },
+    {
+      "filename": "20260922023000_meal_log_catalog_identity.sql",
+      "sha256": "22ef1174d92d28bd2ab9a212fea84c849e099615da436a7b4207a6497a7ed4e9"
+    },
+    {
+      "filename": "20260922024000_recipe_product_cook_mode_display.sql",
+      "sha256": "8733f1cc622819cb96c2f934c4f9882825db631b12e12bf80fd4360024b80ade"
+    },
+    {
+      "filename": "20260922030000_recipe_snapshot_activation_repairs.sql",
+      "sha256": "3d1413ac15ee61d2e974e9c0783eb81c9af5a488f3ac0b149dd980b59e29758c"
+    },
+    {
+      "filename": "20260922040000_food_catalog_search_candidates.sql",
+      "sha256": "4c58974b87e5ad574c7b038ab4a479b57933a8c35ec36a49da601db5cd18c9c0"
+    },
+    {
+      "filename": "20260926100000_full_local_account_quarantine_resolution.sql",
+      "sha256": "08de74cffef75639eb34db64fd36d968af6ec86560c2d8b96109a402691a7dee"
+    },
+    {
+      "filename": "20260927010000_recipe_view_count_local_scope.sql",
+      "sha256": "1d2b0f8e3db459d276fd102f1017e34c76a9d3030eb050e14223a5a5ec0bb623"
+    },
+    {
+      "filename": "20260927120000_recipe_future_save_repairs.sql",
+      "sha256": "81c05b03674f190aaccf205081e0b5c6eadb6d2cc1a0824cc4235acb9a4186d6"
+    },
+    {
+      "filename": "20260927120100_recipe_fork_image_preservation.sql",
+      "sha256": "429718e7e8ec431f3948080629cd7b1ece8a22425c87ce33127c172b63224b9c"
+    },
+    {
+      "filename": "20260927120200_personal_recipe_unit_choices.sql",
+      "sha256": "66045e84836178ad17e8b20081f3affea1e2bbf9ad1052e7f14a8063337b43a7"
+    },
+    {
+      "filename": "20260927120300_shopping_deleted_private_recipe_pin.sql",
+      "sha256": "3c68f8654bd8a4d1616f4b3fd5d029dd4458c8ffc8fabc921f21fbcc9a2f7ad0"
+    },
+    {
+      "filename": "20260927120400_manual_public_recipe_runtime.sql",
+      "sha256": "94e757b74115f96fc1985df6236e9621e79a39990ea0717a4bdb4cdb8b04cda3"
+    },
+    {
+      "filename": "20260927120500_manual_recipe_publication.sql",
+      "sha256": "70c4a3ed2c992eb1ad7d37049e1c3e5f28a4140fda760e5df59b4e0937ba7b9f"
+    },
+    {
+      "filename": "20260927120501_manual_recipe_publication_scope.sql",
+      "sha256": "4fc9dab9e777263014bd78da2ce1028797bfd8de406c867fb73745c331f5f9e5"
+    },
+    {
+      "filename": "20260927120600_manual_public_owner_edit_context.sql",
+      "sha256": "d9059961cc434e4a2a32181af4883e26ab760ce3531f6427474c3c7232dc71d2"
+    },
+    {
+      "filename": "20260927120650_cooking_session_resume.sql",
+      "sha256": "dfe6ad45dc9c31af3c8fce7fcc93828027a421831dd430591c7c77ed16ca8ac0"
+    },
+    {
+      "filename": "20260927120651_cooking_deleted_owner_plan_pin.sql",
+      "sha256": "799b1b69ac9200a9b533f6c4066786e7f605983efc32311b83d578950666a6bc"
+    },
+    {
+      "filename": "20260927120700_cooked_batch_estimated_weight.sql",
+      "sha256": "1f194c48a27c94aa67f215378c02a125afd63e2435d87481118c7a97c2c040d1"
+    },
+    {
+      "filename": "20260928010000_meal_log_recent_available_batches.sql",
+      "sha256": "86e47ac80fde60445f806eafdb627db525a2314e19260daec60bf6ba00ce859d"
+    },
+    {
+      "filename": "20260928020000_action_notifications.sql",
+      "sha256": "b9a4196ceb117fd342143e6ecb945412f7c6e5094342cf1ce76da3f3e260bd0f"
+    },
+    {
+      "filename": "20261006120000_meal_log_nutrition_preview.sql",
+      "sha256": "09883ec504d5852d3fdbaf56ed0327ee584062d722050f2215def57dd6667a83"
+    },
+    {
+      "filename": "20261006130000_future_meal_create_idempotency.sql",
+      "sha256": "a5a2e250c8685d0e4537921a2783ba04a1e0b1bdacacc6bd433acf80f02dfcb2"
+    },
+    {
+      "filename": "20261007143000_ingredient_catalog_organization.sql",
+      "sha256": "112342c3434080a8699f4de8f259f9d32664b62f9bfdb2d11e090cd465235fe8"
+    },
+    {
+      "filename": "20261007160000_ingredient_catalog_definitions.sql",
+      "sha256": "f8f6854ba03a33fba275816e0b97b20df8f183bb40e1f56e0506b4e786217f51"
+    },
+    {
+      "filename": "20261007210000_ingredient_source_name_capacity.sql",
+      "sha256": "51cbfdd8f47d1e3e61f5a0e058cbeab583e8bf495c4899b1e13127a07b6f4b94"
+    },
+    {
+      "filename": "20261008090000_ingredient_ai_nutrition.sql",
+      "sha256": "b3966590e9a2df3127467149bcd00316575697a103974f2fa0d1a9685cc9f735"
+    },
+    {
+      "filename": "20261008091000_ai_nutrition_snapshot_evidence.sql",
+      "sha256": "4816852ec7bce4e15b1560b9755d070596312d6fcf3f9da01670a9b4fc156e2e"
+    },
+    {
+      "filename": "20261008092000_ai_nutrition_recipe_refresh.sql",
+      "sha256": "f1a1c8ca40a42f8128d4cf10e734431db36793feda72e05f4517ff71158de3aa"
+    },
+    {
+      "filename": "20261008180000_youtube_saved_recipe_results.sql",
+      "sha256": "d338ce2db5139085d301e7e0f1ba55c8836c498d0a7a9cf18035d7add19509e2"
+    },
+    {
+      "filename": "20261009001000_youtube_trial_quantity_bridge.sql",
+      "sha256": "9606515640551a0b934b5502269383bf5ce0954872343affaf81434f23205de2"
+    },
+    {
+      "filename": "20261009002000_youtube_trial_catalog_attestation.sql",
+      "sha256": "cf789077ff27cfbabb51a27687f5882ee19bdafc7fc74c3a653870714f68703f"
+    },
+    {
+      "filename": "20261009003000_youtube_saved_recipe_result_owner_correction.sql",
+      "sha256": "74e742036b6a85de983132988dbbfa1373b9e75921c71ed8847b68d997fcb9dc"
+    },
+    {
+      "filename": "20261009090000_ingredient_canonical_search.sql",
+      "sha256": "608e491cbe54cb255ce52efbd518fd1aec379b08f7d9dff3f3cf6a6d2a5112b5"
+    },
+    {
+      "filename": "20261009130000_ingredient_piece_unit_evidence.sql",
+      "sha256": "cf17e3c267baa14e557063d4b9d1a05ddd31029e0614528ca013fa53281f6904"
+    },
+    {
+      "filename": "20261009200000_youtube_ingredient_resolution.sql",
+      "sha256": "2c074b50ef2ab18c542aaa6528919489ce1199dd1db7d31a24f724a3902a8f03"
+    },
+    {
+      "filename": "20261010010000_youtube_saved_ingredient_links.sql",
+      "sha256": "c0b15f16e3e036e646e48b34340f5c304a96267c8b0821229346d84ba274f55c"
+    },
+    {
+      "filename": "20261010120000_ingredient_exclusion_recovery_selection.sql",
+      "sha256": "e26c7e5faf6a1fea8563682682237f61a9c508e1a8ffdc89570d9bb2f05dc425"
+    },
+    {
+      "filename": "20261011140000_retire_unused_ingredients.sql",
+      "sha256": "d69b6301add5acdcd6e604784c962ef3ec920f923f18958c5e70b31289bff69c"
+    },
+    {
+      "filename": "20261011200000_household_spoon_measurement.sql",
+      "sha256": "d7321839db6999e79dea1d7a58655131aab139c56a58acbf02b3d497ef02e093"
+    },
+    {
+      "filename": "20261012120000_youtube_saved_recipe_canonical_bridge.sql",
+      "sha256": "e51b6a0559940204716859b5b0be1a746705c1ca464b3c343558fcd64e0d4993"
+    },
+    {
+      "filename": "20261013190000_recipe_product_only_identity.sql",
+      "sha256": "0a1f518ab49a1171d825b87eaeea6210e59b4cf0e08022b40a3dea05fb1e7f75"
+    },
+    {
+      "filename": "20261013233000_cooked_batch_weight_evidence.sql",
+      "sha256": "60b9f4008768fc0846eb0b3a104fac3ef0650975535371adf876b95dcb711aa0"
+    },
+    {
+      "filename": "20261014010000_ingredient_quantity_policy_v4.sql",
+      "sha256": "c66ee907de4130b2fe3b86bcdbe48b15021f228485e52fbe1aca5acfee5e7bfd"
+    },
+    {
+      "filename": "20261014200000_quantity_input_v4_consumers.sql",
+      "sha256": "9ec96a2a7bbf7192801b1f6dd43304ed8ba78ab73f934eac4c2c300e3ca85573"
+    },
+    {
+      "filename": "20261014210000_product_quantity_input_v4.sql",
+      "sha256": "e33a2110afd4a71a6042ce6d4d416f2bf189e107f4528e5b5ae2e440e180ad88"
+    },
+    {
+      "filename": "20261014213000_product_quantity_edit_capability.sql",
+      "sha256": "acb0ec83aeabc91320a61b406c2a23dda258033592defbb09bd7f1bb8667399b"
+    },
+    {
+      "filename": "20261014220000_recipe_quantity_input_v4.sql",
+      "sha256": "9b15696aa8f33cb6a9c707d1355a90efb07bd929df3943519e58b1d6d6cc2367"
+    },
+    {
+      "filename": "20261014223000_youtube_quantity_input_bridge.sql",
+      "sha256": "f586b27f2f5da5063a7eaa70278c7f00edab762aa27248b91a224411f436c750"
+    },
+    {
+      "filename": "20261014224500_cooked_weight_user_attestation.sql",
+      "sha256": "d334ebe8824db1d4e94f865bc0bbd692c46cdde2f6c2077e4cac9d9f8db8d146"
+    },
+    {
+      "filename": "20261014225000_recipe_nutrition_quantity_v4_warning_contract.sql",
+      "sha256": "a03d44504bc0c318bbcc399c9ef563d2cdcd7adc79ebdb0314846b981fd89bdd"
+    },
+    {
+      "filename": "20261014225200_recipe_snapshot_reason_identity.sql",
+      "sha256": "b6050c12e60594267908b89ff02cff0c0344a52ccb79dc9a88d21e3c57e8fe66"
+    },
+    {
+      "filename": "20261014225300_recipe_future_patch_http_replay.sql",
+      "sha256": "aed773e0d27e6b6dd4af8e65fb933d73c89927faef1d1d36804eec8476fed9c7"
+    },
+    {
+      "filename": "20261015100000_recipe_future_request_role.sql",
+      "sha256": "2322ccf737382e9738aa2c3d5cb50531c769c1a7902e2f621c8d378f9ce1505e"
+    },
+    {
+      "filename": "20261017210000_cooked_weight_mass_fallback.sql",
+      "sha256": "9709397e9031ca28a1ae6dbb934502ef9092ca7bc0d6ba96d568121672ac7f2e"
+    },
+    {
+      "filename": "20261017220000_cooking_execution_quantities.sql",
+      "sha256": "34b2947952f4eedb55234ddf330ca0029c080d7c8d887542e8880a56106cbaa6"
+    },
+    {
+      "filename": "20261019090000_cooking_execution_reader_transaction.sql",
+      "sha256": "a24a54518783f89018645a7f9b827f97510f64e38a1ff68c2c2cd045cc213d32"
+    },
+    {
+      "filename": "20261019120000_youtube_saved_catalog_selection.sql",
+      "sha256": "b7df06e51c2cb9ea95eb03154cf4b80e0268c949c4d104be4f72d464d2e88ac6"
+    },
+    {
+      "filename": "20261019130000_youtube_saved_nutrition_publication.sql",
+      "sha256": "fc9f65b1d592ae60062fbc7a3eaa40da8b8fa6a3d17d6b9f676e053e6ad7e60e"
+    },
+    {
+      "filename": "20261019140000_cooking_quantity_json_echo.sql",
+      "sha256": "d75f523bae2b443ad5bc17e1ab39ddc68976c2a8b8edb9e60de7722e4f313f29"
+    },
+    {
+      "filename": "20261020210000_cooked_weight_mass_proxy.sql",
+      "sha256": "ea827e50ba5fefb4cbf992fb7ad7b32d8e123679576e3eb7e1a119ba3c203e9d"
+    }
+  ]
+}
