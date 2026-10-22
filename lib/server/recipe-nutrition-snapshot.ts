@@ -188,7 +188,8 @@ function validateNutrientValue(value: unknown): value is RecipeNutritionValue {
 
 export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalculation) {
   validateRecipeNutritionSnapshotContents(calculation,
-    calculation.calculation_version === RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION);
+    calculation.calculation_version === RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION
+      || calculation.calculation_version === "recipe-nutrition-v4-frozen-v1");
 }
 
 type UncheckedSnapshotContents = Omit<RecipeNutritionCalculation,

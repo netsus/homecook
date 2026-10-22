@@ -57,11 +57,19 @@ function evidenceClient(trace:string[]){
      from public.ingredient_nutrition_profiles l join public.nutrition_profiles p on p.id=l.nutrition_profile_id
      join public.nutrition_source_items i on i.id=p.source_item_id join public.nutrition_sources s on s.id=i.source_id;`),error:null})};return q;},rpc:(name:string,args:Record<string,unknown>)=>{const result=rpc(name,args);trace.push("rpc:"+name+":"+JSON.stringify(result.error));return Promise.resolve(result);}};
 }
-function publisher(receipt:unknown,options:{beforeWrite?:(args:Record<string,unknown>)=>void;who?:string}={}){
+function publisher(receipt:unknown,options:{beforeWrite?:(args:Record<string,unknown>)=>void;who?:string;legacy?:boolean}={}){
  let writeArgs:Record<string,unknown>|null=null;let resultError:unknown=null;const trace:string[]=[];
- const run=publishSavedYoutubeRecipeNutrition({receipt,authority:{...authority,ownerUuid:options.who??owner},internalClient:evidenceClient(trace),ownerClient:{
+ const currentClient=evidenceClient(trace);
+ const internalClient=options.legacy?{...currentClient,rpc:async(name:string,args:Record<string,unknown>)=>{
+   const result=await currentClient.rpc(name,args);
+   if(name!=="read_youtube_saved_recipe_results"||!result.data||typeof result.data!=="object")return result;
+   const envelope=structuredClone(result.data) as {data?:{quantity_policy?:string|null}};
+   if(envelope.data)envelope.data.quantity_policy=null;
+   return {...result,data:envelope};
+ }}:currentClient;
+ const run=publishSavedYoutubeRecipeNutrition({receipt,authority:{...authority,ownerUuid:options.who??owner},internalClient,ownerClient:{
    readRecipe:async recipeId=>{trace.push("recipe-read");return {data:data(`select to_jsonb(r) from public.recipes r where id='${recipeId}';`),error:null};},
-   writeSnapshot:async args=>{writeArgs=args;options.beforeWrite?.(args);const result=rpc("write_owned_youtube_recipe_nutrition_snapshot",{...args,p_user_id:options.who??owner},"authenticated",options.who??owner,true);resultError=result.error;return result;},
+   writeSnapshot:async args=>{writeArgs=args;options.beforeWrite?.(args);const result=rpc("write_owned_youtube_recipe_nutrition_snapshot",{...args,p_user_id:options.who??owner},"authenticated",options.who??owner,!options.legacy);resultError=result.error;return result;},
  }});
  return {run,trace,get args(){return writeArgs;},get error(){return resultError;}};
 }
@@ -217,10 +225,24 @@ describe.skipIf(!enabled)("canonical saved nutrition publication on exact 232+23
     expect(legacyGuard.recipe_ingredients[0].amount).toBeNull();
     const guard=data(`begin;set local request.headers='{"x-homecook-frozen-quantity-guard":"v1"}';select public.build_recipe_nutrition_input_guard('${receipt.recipe_id}');commit;`);
     expect(guard.recipe_ingredients[0]).toMatchObject({amount:2,unit:"계량큰술"});
+    if(unit==="계량큰술"){
+      const old=publisher(receipt,{legacy:true});
+      expect(await old.run,JSON.stringify(old.error)).toMatchObject({status:"ready"});
+      expect(old.args?.p_input_guard).toEqual(legacyGuard);
+      expect(currentNutrition(receipt.recipe_id)[0]).toMatchObject({calculation_version:"recipe-nutrition-v4",calculation_status:"unavailable"});
+    }
     const publication=publisher(receipt),published=await publication.run;
+    expect(published,JSON.stringify({error:publication.error,trace:publication.trace})).toMatchObject({status:"ready"});
     expect(publication.args?.p_input_guard).toEqual(guard);
     expect(published,JSON.stringify({error:publication.error,trace:publication.trace})).toMatchObject({status:"ready",calculation_status:"partial"});
     const current=currentNutrition(receipt.recipe_id)[0];expect(current.nutrient_status_json.energy_kcal.amount).toBe(72);
+    if(unit==="계량큰술"){
+      expect(current.calculation_version).toBe("recipe-nutrition-v4-frozen-v1");
+      const prior=currentNutrition(receipt.recipe_id)[0];
+      const lateOld=publisher(receipt,{legacy:true});
+      expect(await lateOld.run,JSON.stringify(lateOld.error)).toMatchObject({status:"ready"});
+      expect(currentNutrition(receipt.recipe_id)[0]).toEqual(prior);
+    }
     const pin=mealPin(meal(receipt));expect(pin.recipe_nutrition_snapshot_id).toBe(current.id);
     const session=start(receipt);expect(complete(session).success).toBe(true);
     expect(data(`select private.resolve_cooked_batch_nutrition('${session}','${owner}');`)).toMatchObject({values:{energy_kcal:{amount:72}}});

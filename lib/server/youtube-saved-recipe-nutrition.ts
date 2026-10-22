@@ -57,6 +57,7 @@ export async function publishSavedYoutubeRecipeNutrition(input: {
     const projection = projected.error ? null : parseYoutubeSavedPublicRecipeProjection(projected.data);
     if (!projection || projection.ingredients.length !== rowIds.length) return { status: "pending" };
     const explicit = projection.ingredients.some(row => Boolean(row.quantity_input));
+    let frozenReplayUsed = false;
     let rows = projection.ingredients.map((row, index) => ({ id: rowIds[index], ingredient_id: row.ingredient_id,
       amount: hasExactFrozenQuantity(row) && (!explicit || ["g", "kg", "ml", "mL", "l", "L"].includes(row.unit ?? "")) ? row.amount : null,
       unit: row.unit, ingredient_type: row.ingredient_type, scalable: row.scalable, sort_order: index }));
@@ -76,6 +77,7 @@ export async function publishSavedYoutubeRecipeNutrition(input: {
           && savedRow.quantity_context_fingerprint === serverContext.fingerprint;
         const reviewed = currentFrozenContext && frozen.quantity_input && !hasExactFrozenQuantity(frozen)
           ? reviewedFrozenQuantity(frozen, currentQuantity.ingredients[index]) : null;
+        if (reviewed) frozenReplayUsed = true;
         return reviewed ? { ...row, ...reviewed } : row;
       });
       const selected: RecipeNutritionIngredientInput[] = hydrateRecipeNutritionIngredients(rows, predecessors);
@@ -96,6 +98,10 @@ export async function publishSavedYoutubeRecipeNutrition(input: {
       base_servings: recipe.base_servings, ingredients: hydrated };
     if (explicit) calculationInput.calculation_version = RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION;
     const calculation = calculateRecipeNutrition(calculationInput);
+    // A legacy v4 snapshot for this same content may already exist while the
+    // DB-first rollout is in progress. Keep it immutable and give the newly
+    // replayed frozen evidence a distinct, server-guarded snapshot identity.
+    if (frozenReplayUsed) calculation.calculation_version = "recipe-nutrition-v4-frozen-v1";
     calculation.input_hash = receipt.canonical_content_hash;
     await writeRecipeNutritionSnapshot({ rpc: async (_name, args) => {
       // Keep the existing authenticated owner wrapper. No service-role writer

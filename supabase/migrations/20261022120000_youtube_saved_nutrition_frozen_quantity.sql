@@ -85,4 +85,85 @@ begin
 end;
 $migration$;
 
+-- Preserve v5's row-token rules. The frozen saved-recipe identity uses the
+-- existing v4 quantity warning and UUID reason contract only.
+do $migration$
+declare
+  v_definition text := pg_get_functiondef('public.validate_recipe_nutrition_snapshot_payload(jsonb)'::regprocedure);
+  v_old text := $old$p_snapshot ->> 'calculation_version' is distinct from 'recipe-nutrition-v4' and p_snapshot ->> 'calculation_version' is distinct from 'recipe-nutrition-v5'$old$;
+  v_new text := $new$p_snapshot ->> 'calculation_version' is distinct from 'recipe-nutrition-v4' and p_snapshot ->> 'calculation_version' is distinct from 'recipe-nutrition-v5' and p_snapshot ->> 'calculation_version' is distinct from 'recipe-nutrition-v4-frozen-v1'$new$;
+begin
+  if (select md5(prosrc) from pg_proc
+      where oid = 'public.validate_recipe_nutrition_snapshot_payload(jsonb)'::regprocedure)
+      is distinct from '48ee60720c9cb1517b969c60285a7563' then
+    raise exception 'SAVED_FROZEN_VALIDATOR_PREIMAGE_DRIFT' using errcode = '55000';
+  end if;
+  if (length(v_definition) - length(replace(v_definition, v_old, ''))) / length(v_old) <> 2 then
+    raise exception 'SAVED_FROZEN_VALIDATOR_BODY_DRIFT' using errcode = '55000';
+  end if;
+  execute replace(v_definition, v_old, v_new);
+end;
+$migration$;
+
+-- Keep the previous v4 snapshot immutable while the new app may publish the
+-- same saved content using frozen-v1 after a verified quantity replay. The
+-- authenticated writer still checks the complete current server guard.
+do $migration$
+declare
+  v_definition text := pg_get_functiondef('public.write_recipe_nutrition_snapshot(uuid,jsonb,timestamp with time zone,jsonb)'::regprocedure);
+  v_old text;
+  v_new text;
+begin
+  if (select md5(prosrc) from pg_proc
+      where oid = 'public.write_recipe_nutrition_snapshot(uuid,jsonb,timestamp with time zone,jsonb)'::regprocedure)
+      is distinct from 'e30e2612ac67e955aee0a33b8f760225' then
+    raise exception 'SAVED_FROZEN_WRITER_PREIMAGE_DRIFT' using errcode = '55000';
+  end if;
+  v_old := $old$or (case when v_actual_input_guard->>'quantity_policy_version'='quantity-v4' then 'recipe-nutrition-v4' else 'recipe-nutrition-v3' end)
+       is distinct from p_snapshot->>'calculation_version'$old$;
+  v_new := $new$or (case when v_actual_input_guard->>'quantity_policy_version'='quantity-v4' then
+       case when coalesce((nullif(current_setting('request.headers',true),'')::jsonb->>'x-homecook-frozen-quantity-guard')='v1',false)
+         and p_snapshot->>'calculation_version'='recipe-nutrition-v4-frozen-v1'
+         and v_actual_input_guard ? 'canonical_saved_recipe'
+         then 'recipe-nutrition-v4-frozen-v1' else 'recipe-nutrition-v4' end
+       else 'recipe-nutrition-v3' end)
+       is distinct from p_snapshot->>'calculation_version'$new$;
+  if length(v_definition) - length(replace(v_definition, v_old, '')) <> length(v_old) then
+    raise exception 'SAVED_FROZEN_WRITER_BODY_DRIFT' using errcode = '55000';
+  end if;
+  v_definition := replace(v_definition, v_old, v_new);
+  v_old := $old$if p_snapshot->>'calculation_version' in ('recipe-nutrition-v4','recipe-nutrition-v5') then$old$;
+  v_new := $new$if p_snapshot->>'calculation_version' in ('recipe-nutrition-v4','recipe-nutrition-v5','recipe-nutrition-v4-frozen-v1') then$new$;
+  if length(v_definition) - length(replace(v_definition, v_old, '')) <> length(v_old) then
+    raise exception 'SAVED_FROZEN_WRITER_QUANTITY_DRIFT' using errcode = '55000';
+  end if;
+  v_definition := replace(v_definition, v_old, v_new);
+  v_old := $old$  v_snapshot_hex := md5(
+    p_recipe_id::text || chr(31) || (p_snapshot ->> 'input_hash') || chr(31) ||
+    (p_snapshot ->> 'calculation_version')
+  );$old$;
+  v_new := $new$  -- A legacy reader may finish publishing after the new reader has already
+  -- produced frozen-v1 for this exact immutable saved content. Keep it current.
+  if v_actual_input_guard ? 'canonical_saved_recipe'
+    and p_snapshot->>'calculation_version'='recipe-nutrition-v4'
+    and not coalesce((nullif(current_setting('request.headers',true),'')::jsonb->>'x-homecook-frozen-quantity-guard')='v1',false) then
+    select id into v_snapshot_id from public.recipe_nutrition_snapshots
+      where recipe_id=p_recipe_id and input_hash=p_snapshot->>'input_hash'
+        and calculation_version='recipe-nutrition-v4-frozen-v1' and is_current
+      for share;
+    if v_snapshot_id is not null then
+      return jsonb_build_object('snapshot_id',v_snapshot_id,'created',false,'is_current',true);
+    end if;
+  end if;
+  v_snapshot_hex := md5(
+    p_recipe_id::text || chr(31) || (p_snapshot ->> 'input_hash') || chr(31) ||
+    (p_snapshot ->> 'calculation_version')
+  );$new$;
+  if length(v_definition) - length(replace(v_definition, v_old, '')) <> length(v_old) then
+    raise exception 'SAVED_FROZEN_WRITER_IDENTITY_DRIFT' using errcode = '55000';
+  end if;
+  execute replace(v_definition, v_old, v_new);
+end;
+$migration$;
+
 commit;
