@@ -329,16 +329,17 @@ function attachLocalDataAuthority<TAuthClient extends object>(
     },
     anonymousPublicReadScope,
   });
+  const globalOptions: { fetch: typeof authorityFetch; headers?: Record<string, string> } = { fetch: authorityFetch };
+  if (savedFrozenQuantityGuard) {
+    globalOptions.headers = { "x-homecook-frozen-quantity-guard": "v1" };
+  }
   const dataClient = createClient(dataEnv.url, dataEnv.anonKey, {
     auth: {
       autoRefreshToken: false,
       detectSessionInUrl: false,
       persistSession: false,
     },
-    global: {
-      fetch: authorityFetch,
-      ...(savedFrozenQuantityGuard ? { headers: { "x-homecook-frozen-quantity-guard": "v1" } } : {}),
-    },
+    global: globalOptions,
   });
   const dataMembers = new Set<PropertyKey>([
     "from",
