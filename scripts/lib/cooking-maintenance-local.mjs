@@ -9,7 +9,10 @@ import { readPinnedLocalDockerTarget } from './local-supabase-isolated-runtime.m
 import { openDedicatedAdminSession } from '../youtube-resolution-controlled-db.mjs';
 import { assertV74LoadedService } from './prelaunch-youtube-v74-cutover.mjs';
 import { parseLaunchctlPrintStatus } from './youtube-extraction-worker-ops.mjs';
-import { V85, v85Paths } from './youtube-v85-cutover.mjs';
+import { V85 } from './youtube-v85-cutover.mjs';
+import { readClosedR2PrivateBytes, loadCurrentDatabaseMaintenance } from './prelaunch-web-deploy.mjs';
+import { readGen51Authority, gen51ActiveProof, assertGen51CurrentDatabase, GEN51_CURRENT_DATABASE_SQL, GEN51 } from './worker-gen51-renewal-authority.mjs';
+import { fileURLToPath } from 'node:url';
 import { withCookingWorkerPaused, startCookingFenceMonitor, waitForCookingWorkerUnloaded } from './cooking-maintenance-cut.mjs';
 import { cookingFenceHeldSql, cookingEnqueueStateSql, runCookingPlatformBackup } from './cooking-platform-backup-thread.mjs';
 import { readWorkerEnvironment } from './youtube-extraction-worker-runtime.mjs';
@@ -46,7 +49,11 @@ export async function createCookingMaintenanceLocal({ configPath, backupDirector
   const originalPlistHash = hash(readFileSync(plistPath));
   const originalPlist = parsePlist(plistPath);
   check(originalPlist.RunAtLoad === true, 'Existing worker must RunAtLoad');
-  const proof = JSON.parse(readFileSync(activationPath));
+  const repository = fileURLToPath(new URL('../../', import.meta.url));
+  const renewal = readGen51Authority(file => readClosedR2PrivateBytes(file, repository, 524288));
+  const maintenance = loadCurrentDatabaseMaintenance(repository);
+  check(maintenance?.review.feature === 'saved-frozen-quantity', 'Exact DB240 maintenance required');
+  const proof = gen51ActiveProof(renewal);
   check(hash(readFileSync(activationPath)) === activationHash && proof.service.plistSha256 === originalPlistHash,
     'Activated worker seal or existing launcher differs');
   const webPlist = join(HOME_DIRECTORY, 'Library/LaunchAgents/com.homecook.production.plist');
@@ -77,9 +84,13 @@ export async function createCookingMaintenanceLocal({ configPath, backupDirector
     const state = assertV74LoadedService({ stdout: result.stdout, plist: originalPlist, plistPath, serviceTarget: service, requireRunning: false });
     if (allowTransition && state.loaded && state.state !== 'running') return { stopped: false, running: false, pid: state.pid ?? null };
     check(state.loaded && state.state === 'running' && state.pid > 0, 'Worker loaded but not running');
-    return { stopped: false, running: true, pid: state.pid };
+    const identity = command('/bin/ps', ['-p', String(state.pid), '-o', 'uid=', '-o', 'lstart=']).split(/\s+/u);
+    check(Number(identity.shift()) === process.getuid(), 'Actual worker owner differs');
+    const cwd = command('/usr/sbin/lsof', ['-a', '-p', String(state.pid), '-d', 'cwd', '-Fn']).split('\n').find(line => line.startsWith('n'))?.slice(1);
+    check(cwd === renewal.paths.artifact, 'Actual worker cwd differs');
+    return { stopped: false, running: true, pid: state.pid, started: identity.join(' ') };
   }
-  const p = v85Paths();
+  const p = renewal.paths;
   async function health() {
     const args = ['--config', p.config, '--manifest', p.manifest, '--credential', p.credential, '--secret-root', p.secrets,
       '--app-descriptor', p.descriptor, '--policy', p.policy, '--expected-schema', p.schema];
@@ -145,8 +156,9 @@ export async function createCookingMaintenanceLocal({ configPath, backupDirector
       'policyHash',(SELECT encode(sha256(convert_to(to_jsonb(t)::text,'UTF8')),'hex') FROM private.youtube_extraction_current_policy t WHERE policy_key='primary'),
       'credentialHash',(SELECT encode(sha256(convert_to(to_jsonb(t)::text,'UTF8')),'hex') FROM private.youtube_extraction_worker_credentials t WHERE credential_name='primary'),
       'jobsHash',(SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(t) ORDER BY id),'[]'::jsonb)::text,'UTF8')),'hex') FROM public.youtube_extraction_jobs t));`));
-    check(state.generation === 50 && state.release === V85.releaseSha && Date.parse(state.expiry) === Date.parse(V85.expiresAt)
-      && Date.parse(state.expiry) > Date.now() && state.enabled === true, 'gen50/policy/expiry differs');
+    assertGen51CurrentDatabase(renewal, JSON.parse(read(GEN51_CURRENT_DATABASE_SQL)), maintenance.pointer);
+    check(state.generation === 51 && state.release === V85.releaseSha && Date.parse(state.expiry) === Date.parse(GEN51.expiresAt)
+      && Date.parse(state.expiry) > Date.now() + 1800000 && state.enabled === true, 'gen51/policy/expiry differs');
     return { ...status, healthy: status.running && includeHealth ? await health() : false, fenceHeld: fenceHeld(),
       queued: state.queued, processing: state.processing, permitHeld: state.permitHeld,
       sharedHolders: enqueue.sharedHolders, blockedEnqueues: enqueue.blockedEnqueues, unclassifiedEnqueues: enqueue.unclassifiedEnqueues,
@@ -186,6 +198,17 @@ export async function createCookingMaintenanceLocal({ configPath, backupDirector
   };
   let sequence = 0;
   return { target, observe: () => observe(), fence,
+    async plan() {
+      const before = await observe();
+      check(before.running && before.healthy && before.queued === 0 && before.processing === 0 && before.permitHeld === false
+        && before.sharedHolders === 0 && before.blockedEnqueues === 0 && before.unclassifiedEnqueues === 0,
+      'Backup readiness requires healthy drained worker and enqueue boundary');
+      const after = await observe();
+      check(JSON.stringify(before) === JSON.stringify(after), 'Read-only backup plan observed a changing baseline');
+      return { purpose: 'backup', readOnly: true, generation: 51, expiresAt: GEN51.expiresAt,
+        ready: true, pid: after.pid, queued: after.queued, processing: after.processing,
+        mutations: false, fenceAcquired: false, workerStopped: false, backupExecuted: false };
+    },
     async backup(output) {
       fence.assertHeldSync();
       return runCookingPlatformBackup({ configPath, configHash, backupDirectory, target,
