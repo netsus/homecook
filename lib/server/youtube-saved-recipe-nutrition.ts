@@ -1,6 +1,6 @@
-import { calculateRecipeNutrition, RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION, type RecipeNutritionCalculatorInput } from "@/lib/nutrition/recipe-nutrition-calculator";
+import { calculateRecipeNutrition, RECIPE_NUTRITION_EXPLICIT_UNIT_VERSION, type RecipeNutritionCalculatorInput, type RecipeNutritionIngredientInput } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { buildRecipeNutritionInputGuard, hydrateRecipeNutritionIngredients, loadRecipeNutritionPredecessors } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
-import { hasExactFrozenQuantity } from "@/lib/server/youtube-public-recipe-nutrition";
+import { hasExactFrozenQuantity, reviewedFrozenQuantity } from "@/lib/server/youtube-public-recipe-nutrition";
 import { parseYoutubeSavedPublicRecipeProjection } from "@/lib/server/youtube-saved-public-recipe";
 import { hydrateRecipeQuantityNutrition } from "@/lib/server/recipe-quantity-input";
 import { writeRecipeNutritionSnapshot } from "@/lib/server/recipe-nutrition-snapshot";
@@ -45,7 +45,8 @@ export async function publishSavedYoutubeRecipeNutrition(input: {
       || current.updated_at !== receipt.updated_at) return { status: "stale" };
     if (!record(current.content) || !Array.isArray(current.content.ingredients)
       || current.content.ingredients.some(row => !record(row) || typeof row.row_id !== "string" || !uuid.test(row.row_id))) return { status: "pending" };
-    const rowIds = current.content.ingredients.map(row => String(row.row_id));
+    const savedIngredients = current.content.ingredients;
+    const rowIds = savedIngredients.map(row => String(row.row_id));
     const recipeRead = await input.ownerClient.readRecipe(receipt.recipe_id);
     const recipe = recipeRead.data;
     if (recipeRead.error || !record(recipe) || recipe.id !== receipt.recipe_id || recipe.created_by !== input.authority.ownerUuid
@@ -56,15 +57,37 @@ export async function publishSavedYoutubeRecipeNutrition(input: {
     const projection = projected.error ? null : parseYoutubeSavedPublicRecipeProjection(projected.data);
     if (!projection || projection.ingredients.length !== rowIds.length) return { status: "pending" };
     const explicit = projection.ingredients.some(row => Boolean(row.quantity_input));
-    const rows = projection.ingredients.map((row, index) => ({ id: rowIds[index], ingredient_id: row.ingredient_id,
+    let rows = projection.ingredients.map((row, index) => ({ id: rowIds[index], ingredient_id: row.ingredient_id,
       amount: hasExactFrozenQuantity(row) && (!explicit || ["g", "kg", "ml", "mL", "l", "L"].includes(row.unit ?? "")) ? row.amount : null,
       unit: row.unit, ingredient_type: row.ingredient_type, scalable: row.scalable, sort_order: index }));
     const predecessors = await loadRecipeNutritionPredecessors(input.internalClient, [...new Set(rows.map(row => row.ingredient_id))]);
     let hydrated = hydrateRecipeNutritionIngredients(rows, predecessors);
-    const guard = buildRecipeNutritionInputGuard(rows, predecessors);
+    let quantity: Awaited<ReturnType<typeof hydrateRecipeQuantityNutrition>> | null = null;
     if (explicit) {
-      const quantity = await hydrateRecipeQuantityNutrition(input.internalClient, rows.map(row => ({ id: row.id, ingredient_id: row.ingredient_id })), hydrated, input.authority.ownerUuid);
-      hydrated = quantity.ingredients;
+      const currentQuantity = await hydrateRecipeQuantityNutrition(input.internalClient, rows.map(row => ({ id: row.id, ingredient_id: row.ingredient_id })), hydrated, input.authority.ownerUuid);
+      quantity = currentQuantity;
+      rows = rows.map((row, index) => {
+        const frozen = projection.ingredients[index];
+        const savedRow = savedIngredients[index];
+        const serverContext = record(current.quantity_contexts) ? current.quantity_contexts[rowIds[index]] : null;
+        const currentFrozenContext = current.quantity_policy === "quantity-v4"
+          && record(savedRow) && record(serverContext)
+          && typeof savedRow.quantity_context_fingerprint === "string"
+          && savedRow.quantity_context_fingerprint === serverContext.fingerprint;
+        const reviewed = currentFrozenContext && frozen.quantity_input && !hasExactFrozenQuantity(frozen)
+          ? reviewedFrozenQuantity(frozen, currentQuantity.ingredients[index]) : null;
+        return reviewed ? { ...row, ...reviewed } : row;
+      });
+      const selected: RecipeNutritionIngredientInput[] = hydrateRecipeNutritionIngredients(rows, predecessors);
+      hydrated = selected.map((ingredient, index) => ({
+        ...ingredient, preparation_state: currentQuantity.ingredients[index].preparation_state,
+        size_code: currentQuantity.ingredients[index].size_code,
+        unit_context: currentQuantity.ingredients[index].unit_context,
+        conversion_assignment: null, piece_weight: null,
+      }));
+    }
+    const guard = buildRecipeNutritionInputGuard(rows, predecessors);
+    if (quantity) {
       guard.recipe_ingredients = guard.recipe_ingredients.map(row => ({ ...row, recipe_quantity_context_sha256: quantity.hashes.get(row.id) }));
       Object.assign(guard, { quantity_policy_version: "quantity-v4", quantity_recipe_revision: receipt.revision });
     }
@@ -84,7 +107,7 @@ export async function publishSavedYoutubeRecipeNutrition(input: {
         && typeof value.created === "boolean" && value.is_current === true
         ? { snapshot_id: value.snapshot_id, created: value.created, is_current: value.is_current } : null };
     } }, receipt.recipe_id, calculation, { expectedRecipeVersion: receipt.updated_at, inputGuard: guard });
-    return { status: "ready" };
+    return { status: "ready", calculation_status: calculation.calculation_status };
   } catch (error) {
     return { status: error instanceof StaleSavedNutrition ? "stale" : "pending" };
   }

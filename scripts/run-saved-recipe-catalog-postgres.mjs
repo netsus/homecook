@@ -137,6 +137,20 @@ try {
     }
     assert.deepEqual(workerReadiness(),readinessBefore);
     report.publicationFunctionDelta={changed:3,onlyPublicFunctions:true,guardLanguage:"sql-to-plpgsql",oidOwnerAclConfigSecurityVolatilityUnchanged:true,privateFunctionsUnchanged:true,workerReadinessUnchanged:true};
+    const frozenFile="supabase/migrations/20261022120000_youtube_saved_nutrition_frozen_quantity.sql",frozenBytes=readFileSync(frozenFile);
+    const frozenBefore=JSON.parse(sql(catalogSql));
+    sql(frozenBytes.toString());report.migrations.push({filename:frozenFile,sha256:hash(frozenBytes)});
+    const frozenAfter=JSON.parse(sql(catalogSql));
+    assert.equal(frozenAfter.length,frozenBefore.length,"Frozen migration changed function inventory");
+    const frozenChanged=frozenAfter.filter(row=>row.body!==frozenBefore.find(old=>old.oid===row.oid)?.body);
+    assert.deepEqual(frozenChanged.map(row=>row.name),["build_recipe_nutrition_input_guard"]);
+    for(const row of frozenAfter){const old=frozenBefore.find(item=>item.oid===row.oid);assert(old);
+      if(row.name!=="build_recipe_nutrition_input_guard")assert.deepEqual(row,old);
+      else assert.deepEqual({...row,body:old.body,definition:old.definition,
+        catalog_attributes:Object.fromEntries(Object.entries(row.catalog_attributes).map(([key,value])=>[key,key==="prosrc"?old.catalog_attributes.prosrc:value]))},old);
+    }
+    assert.deepEqual(workerReadiness(),readinessBefore);
+    report.frozenQuantityFunctionDelta={changed:1,onlyPublicGuard:true,oidOwnerAclConfigSecurityVolatilityUnchanged:true,workerReadinessUnchanged:true};
   }
   // Same synthetic account/session seed as the existing 235 fixture. Execute
   // only its three beforeAll SQL calls; no production rows or model requests.
