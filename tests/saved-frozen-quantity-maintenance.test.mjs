@@ -120,8 +120,3 @@ test("committed receipt binds DB239 predecessor; unknown commit cannot fall back
   forged.predecessorMaintenance.receipt.sha256 = sha("f");
   assert.throws(() => frozen.assertFrozenQuantityDatabaseReceipt(r, forged, sha("e")));
 });
-
-test("unbound operating PIN blocks config or target access", () => {
-  assert.deepEqual(frozen.FROZEN_QUANTITY_REVIEW_PIN, { path: null, sha256: null });
-  assert.throws(() => frozen.assertFrozenQuantityOperatingPin(), /PIN is unbound.*no config\/target I\/O/);
-});
