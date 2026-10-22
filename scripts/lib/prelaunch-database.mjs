@@ -4,7 +4,7 @@ import { SAVED_RECIPE_NUTRITION_FEATURE, SAVED_RECIPE_NUTRITION_REVIEW_PIN, SAVE
  SAVED_RECIPE_NUTRITION_FUNCTIONS_SQL, assertSavedRecipeNutritionReview, assertSavedRecipeNutritionObservation, assertSavedRecipeNutritionTransition, assertSavedRecipeNutritionCommittedIdentity } from "./saved-recipe-nutrition-maintenance.mjs";
 import { unchangedSavedRecipeNutritionCatalogSql, SAVED_RECIPE_NUTRITION_CATALOG_SOURCE_URL } from "./saved-recipe-nutrition-catalog.mjs";
 import { canonicalCookingCatalogSql, unchangedCookingCatalogSql, COOKING_CATALOG_SOURCE_URL } from "./cooking-catalog-comparison.mjs";
-import { assertV85Successor } from "./youtube-v85-cutover.mjs";
+import { currentV85Successor } from "./worker-gen51-renewal-authority.mjs";
 import { COOKING_EXPERIENCE_FEATURE, COOKING_EXPERIENCE_REVIEW_PIN, COOKING_EXPERIENCE_MIGRATIONS,
   COOKING_FUNCTIONS_SQL, COOKING_EXECUTION_TABLE_SQL, COOKING_SCOPE_LINK_SQL,
   assertCookingExperienceReview, assertCookingExperienceObservation, assertCookingExperienceTransition } from "./cooking-experience-maintenance.mjs";
@@ -1043,8 +1043,8 @@ export function planProtectedPrelaunchMigrations(review, migrations) {
 /** @param {{productOffReceipt?: unknown, reviewSha256?: string, workerCheckpoint?: any, ddlOnly?: boolean, safeQuantityOff?: boolean, activeWorkerContinuation?: ReturnType<typeof import("./prelaunch-web-deploy.mjs").loadQuantityV4ActiveWorkerContinuation>}} [independent] */
 export function assertProtectedPrelaunchObservation(review, observation, phase, independent = {}) {
   const { productOffReceipt = null, reviewSha256, workerCheckpoint, ddlOnly = false, safeQuantityOff = false, activeWorkerContinuation } = independent;
-  if (review?.feature===FROZEN_QUANTITY_FEATURE) return assertFrozenQuantityObservation(review, observation, phase);
-  if (independent.databaseMaintenance?.review.feature===FROZEN_QUANTITY_FEATURE && phase==="after") return assertFrozenQuantityObservation(independent.databaseMaintenance.review, observation, phase);
+  if (review?.feature===FROZEN_QUANTITY_FEATURE) return assertFrozenQuantityObservation(review, observation, phase, independent.approvedWorkerSuccessor?.v85?.renewal);
+  if (independent.databaseMaintenance?.review.feature===FROZEN_QUANTITY_FEATURE && phase==="after") return assertFrozenQuantityObservation(independent.databaseMaintenance.review, observation, phase, independent.approvedWorkerSuccessor?.v85?.renewal);
   if (review?.feature===MASS_PROXY_FEATURE) return assertMassProxyObservation(review, observation, phase);
   if (independent.databaseMaintenance?.review.feature===MASS_PROXY_FEATURE && phase==="after") return assertMassProxyObservation(independent.databaseMaintenance.review, observation, phase);
   if (review?.feature===SAVED_RECIPE_NUTRITION_FEATURE) {
@@ -1141,7 +1141,7 @@ function assertAttestationWorker(review, worker, safeOff = false, workerControlT
   const originalWorker = approvedSuccessor ? assertV74WorkerSuccessor({ ...approvedSuccessor, baseline: review.database.workerBaseline, approvedPolicy }) : null;
   const fingerprintWorker = originalWorker ? fingerprintWorkerSuccessor(originalWorker, approvedSuccessor.fingerprintRecovery,
     approvedSuccessor.origin, V74_ACTIVATION_SHA256) : null;
-  const successorWorker = approvedSuccessor?.v85?.proof ? assertV85Successor({authority:approvedSuccessor.v85,worker:fingerprintWorker,
+  const successorWorker = approvedSuccessor?.v85?.proof ? currentV85Successor({authority:approvedSuccessor.v85,worker:fingerprintWorker,
     policy:(approvedSuccessor.fingerprintRecovery.compensation??approvedSuccessor.fingerprintRecovery.receipt).after.policy,
     origin:approvedSuccessor.origin,recovery:approvedSuccessor.fingerprintRecovery}) : fingerprintWorker;
   for (const key of ["credentialGeneration", "credentialRowSha256", "policyRowSha256", "policyStableSha256", "schemaIdentity", "snapshotDigest", "workerPolicyEnabled", "workerReleaseSha"]) {

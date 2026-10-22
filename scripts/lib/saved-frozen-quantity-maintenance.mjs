@@ -1,5 +1,7 @@
 // Exact DB240 successor. A separate create-only operating review must precede
 // binding this new PIN; historical DB239 and closed-R2 authority is unchanged.
+import { currentGen51Baseline } from "./worker-gen51-renewal-authority.mjs";
+import { assertGen51CompatOperator } from "./worker-gen51-compat-source.mjs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
@@ -53,7 +55,8 @@ export function frozenQuantityOperatorImages(repositoryRoot) {
 }
 export function assertFrozenQuantityOperatorSource(review, repositoryRoot) {
   check(realpathSync(repositoryRoot)===realpathSync(fileURLToPath(new URL("../../",import.meta.url))),"executed operator root differs from selected repository");
-  check(isDeepStrictEqual(frozenQuantityOperatorImages(repositoryRoot), review.operator.files), "reviewed operator bytes differ");
+  if (!isDeepStrictEqual(frozenQuantityOperatorImages(repositoryRoot), review.operator.files))
+    assertGen51CompatOperator(review, repositoryRoot, canonicalFrozenQuantityOperatorText);
 }
 
 // A DB240 successor may read its committed DB239 predecessor without executing
@@ -157,7 +160,7 @@ export function planFrozenQuantityMigration(review, migrations) {
   return { before: structuredClone(source.before), after: structuredClone(after), pending: [{ filename: row.filename, sha256: row.sha256, payload, actor: "postgres" }], mutationPerformed: false };
 }
 
-export function assertFrozenQuantityObservation(review, observation, phase) {
+export function assertFrozenQuantityObservation(review, observation, phase, renewal = null) {
   assertFrozenQuantityReview(review);
   check(["before", "after"].includes(phase), "known observation phase required");
   const db = review.database;
@@ -172,7 +175,9 @@ export function assertFrozenQuantityObservation(review, observation, phase) {
     && isDeepStrictEqual(observation.scopeLink, db.scopeLink), "function image/OID or scope identity differs");
   check(["productWriterEnabled", "cookedWeightWriterEnabled", "quantityWriterEnabled"].every(key => observation[key] === true), "existing writer state differs");
   const worker = observation.worker;
-  check(worker && Object.entries(db.workerBaseline).every(([key, value]) => isDeepStrictEqual(worker[key], value)) && worker.credentialActive === true
+  check(!renewal || phase === "after", "renewal cannot rewrite historical before evidence");
+  const baseline = renewal ? currentGen51Baseline(renewal, db.workerBaseline) : db.workerBaseline;
+  check(worker && Object.entries(baseline).every(([key, value]) => isDeepStrictEqual(worker[key], value)) && worker.credentialActive === true
     && worker.queued === 0 && worker.processing === 0 && worker.permitHeld === false && worker.activeEnqueueSessions === 0, "worker authority or drained state differs");
   return observation;
 }

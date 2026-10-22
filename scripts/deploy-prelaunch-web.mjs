@@ -14,7 +14,8 @@ import { createV85WebRecoveryObserver } from './lib/prelaunch-v85-web-recovery-o
 import { loadRecoveredReadiness } from './lib/prelaunch-v85-recovered-readiness.mjs';
 import { createRound2EightKeyRestartFence, guardRound2EightKeyRestart, preserveRound2RotationState } from './lib/round2-eight-key-rotation-fence.mjs';
 import { readV85Approval } from './lib/youtube-v85-approval.mjs';
-import { readV85Authority, assertV85Source, assertV85MetadataHandoff, v85Paths } from "./lib/youtube-v85-cutover.mjs";
+import { readCurrentV85Authority, gen51ActiveProof, assertGen51CurrentDatabase, GEN51_CURRENT_DATABASE_SQL } from "./lib/worker-gen51-renewal-authority.mjs";
+import { assertV85Source, assertV85MetadataHandoff } from "./lib/youtube-v85-cutover.mjs";
 import { ROTATION_BRIDGE, assertRotationBridgeToolBinding, confirmRotationBridgeTool } from './lib/round2-closed-marker-rotation-bridge.mjs';
 import { verifyV85AuthSuccessorWebBoundary } from './youtube-v85-controlled-cutover.mjs';
 import { runUnstartedWebCloseout, assertNoUnstartedCloseoutPending } from './lib/v85-unstarted-web-closeout.mjs';
@@ -194,7 +195,7 @@ function approvedSourceAncestor(ancestor,descendant) {
   return spawnSync("git",["-C",repository,"merge-base","--is-ancestor",ancestor,V74_WEB_PREDECESSOR],{stdio:"ignore"}).status===0
     &&spawnSync("git",["-C",repository,"merge-base","--is-ancestor",V74_RELEASE,descendant],{stdio:"ignore"}).status===0;
 }
-function v85Authority() {return readV85Authority(file=>readClosedR2PrivateBytes(file,repository,524288));}
+function v85Authority() {return readCurrentV85Authority(file=>readClosedR2PrivateBytes(file,repository,524288));}
 function v85SourceHandoff(from,to,files) {
   const authority=v85Authority();if(!authority||from!=='06a3369f5c5e1c3ca49045f370f0ce12f049c805'||to!==authority.plan.webRef)return null;
   const digests=Object.fromEntries([...files].sort().map(file=>[file,[from,to].map(ref=>git(['ls-tree',ref,'--',file]).length
@@ -866,7 +867,10 @@ async function verifyProtectedBaseline(review, plan, options) {
   const quantityOffReceipt = successor ? loadCookedWeightAttestationQuantityOff(repository, successor) : null;
   const v74Successor = workerContinuation && V74_ACTIVATION_SHA256 ? loadV74WorkerSuccessor(successor, databaseMaintenance, workerContinuation) : null;
   if (v74Successor) {
-    await verifyV74ActiveWorker(v74Successor.v85?.proof??v74Successor.proof,v74Successor.v85?.proof?v85Paths():v74Paths());
+    if (v74Successor.v85?.renewal) {
+      assertGen51CurrentDatabase(v74Successor.v85.renewal, JSON.parse((await base.query(GEN51_CURRENT_DATABASE_SQL)).trim()), databaseMaintenance.pointer);
+      await verifyV74ActiveWorker(gen51ActiveProof(v74Successor.v85.renewal), v74Successor.v85.renewal.paths);
+    } else await verifyV74ActiveWorker(v74Successor.proof, v74Paths());
   } else if (workerContinuation) {
     await verifyQuantityV4ActiveWorkerService(workerContinuation.historical.authority.database.review, workerContinuation.historical);
     observed.worker = JSON.parse((await base.query(QUANTITY_V4_WORKER_STATE_SQL)).trim());
