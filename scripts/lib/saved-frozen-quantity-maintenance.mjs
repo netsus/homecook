@@ -9,7 +9,7 @@ import { isDeepStrictEqual } from "node:util";
 import { MASS_PROXY_REVIEW_PIN, MASS_PROXY_FUNCTIONS, MASS_PROXY_FUNCTIONS_SQL, canonicalMassProxyOperatorText } from "./cooked-weight-mass-proxy-maintenance.mjs";
 
 export const FROZEN_QUANTITY_FEATURE = "saved-frozen-quantity";
-export const FROZEN_QUANTITY_REVIEW_PIN = Object.freeze({ path: null, sha256: null });
+export const FROZEN_QUANTITY_REVIEW_PIN = Object.freeze({"path":"/Users/cwj/Documents/Codex/2026-10-20/task/db240-review-private-LdQoql/approved-saved-frozen-quantity-review-v4.json","sha256":"7ab0512b512ce3ef897e62af09e90d1972bf0c111fbb0c9432bab5347ee434bd"});
 export const FROZEN_QUANTITY_MIGRATION = Object.freeze({
   filename: "20261022120000_youtube_saved_nutrition_frozen_quantity.sql",
   rawSha256: "7e57ea065e0b688d9c9329a040249b58eb9c0bb177c9cae39b9b1bcc31c526f3",
