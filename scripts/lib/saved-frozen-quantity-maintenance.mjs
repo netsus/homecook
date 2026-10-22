@@ -26,7 +26,7 @@ const SHA = /^[a-f0-9]{64}$/u;
 const keys = value => Object.keys(value ?? {}).sort().join();
 const pointer = value => keys(value) === "path,sha256" && isAbsolute(value.path ?? "") && SHA.test(value.sha256 ?? "");
 const sourceBytes = readFileSync(new URL("./saved-frozen-quantity-source.json", import.meta.url));
-check(hash(sourceBytes) === "86c5d7e517aceb72d52ef0c4a950e5ab0e1c35823c3a09a33bf249b157e2f17b", "fixed source manifest bytes differ");
+check(hash(sourceBytes) === "707de935ba0066bc3de590d14f6f5eb9a7dc3ac46d9ac9df6a1afd48315bd111", "fixed source manifest bytes differ");
 const source = JSON.parse(sourceBytes);
 export const frozenQuantitySourceManifest = () => structuredClone(source);
 const after = [...source.before, { filename: FROZEN_QUANTITY_MIGRATION.filename, sha256: FROZEN_QUANTITY_MIGRATION.rawSha256 }];
