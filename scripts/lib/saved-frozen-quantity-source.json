@@ -1,7 +1,7 @@
 {
   "schema": "homecook.saved-frozen-quantity-source.v1",
   "from": "4258dc41467cda3ba1668c38b1624e51f2056103",
-  "to": "57e81839aeab5ae8cf92ad7f940386f3f17bf213",
+  "to": "6021037eb4ffa5f1fe477d13949cd1100a44c2cd",
   "files": {
     "app/api/v1/recipes/[id]/route.ts": [
       "cb909fb03a56035c2ad552a37fdfb979d02eb2a0ab4704155f8fa1210cdeefda",
@@ -49,7 +49,7 @@
     ],
     "lib/supabase/server.ts": [
       "88adecc15e8a2a435eb085670c189fb36845a51216bc819b5496422e1d94b2c7",
-      "c373181ee4babeac2d100653fda1d62323aea2d146f1d69fba80d2b3d2156e17"
+      "75d25796ef3023441d1cf84e4d9a843a0ed40fa07b4f8f3a5dcba7e23710f51e"
     ],
     "scripts/deploy-prelaunch-web.mjs": [
       "b6ac9dadf088334b0cde9d4bfb9c6c0e598647d8b7f8b8bf0075ff21881dc473",

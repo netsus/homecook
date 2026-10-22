@@ -510,6 +510,7 @@ function currentProtectedPhase(live = current()) {
       live.ref===frozen.review.from&&live.buildId===frozen.review.legacyReader.buildId&&hash(live.bytes)===frozen.review.legacyReader.plistSha256);
   }
   if(FROZEN_QUANTITY_REVIEW_PIN.path!==null){
+    loadFrozenQuantityPredecessor(repository);
     const mass=readFrozenQuantityPredecessorAttempt(repository);
     return massProxyPhaseStatus(mass,spawnSync("git",["-C",repository,"merge-base","--is-ancestor",mass.review.to,live.ref],{stdio:"ignore"}).status===0,
       live.ref===mass.review.from&&live.buildId===mass.review.legacyReader.buildId&&hash(live.bytes)===mass.review.legacyReader.plistSha256);
