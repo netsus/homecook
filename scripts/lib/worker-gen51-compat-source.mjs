@@ -5,7 +5,7 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual as same } from 'node:util';
-export const COMPAT_SOURCE_PIN = Object.freeze({"ref":null,"files":null});
+export const COMPAT_SOURCE_PIN = Object.freeze({"ref":"6f1d269cf608b8860917a226584148829fbe1bbe","files":{"scripts/deploy-prelaunch-web.mjs":"cb44f6dd1c3b5c78e50a91b294338b60cec155e83180b913a9b42359f6e27dc3","scripts/lib/prelaunch-web-deploy.mjs":"0c6126b8fc8024b0261f14bebc9d23dd22d02070ed1cd89cd7a94cb17f292c94","scripts/lib/prelaunch-database.mjs":"a881f5ad76df85511abb08de6ecaa65e957b6d3ea6dad7bf27f59fc3203d13fc","scripts/lib/saved-frozen-quantity-maintenance.mjs":"6002667be1079ec241df744decb07b60288ac6131d682c5824b977fa8cb7b86d","scripts/lib/saved-frozen-quantity-source.json":"707de935ba0066bc3de590d14f6f5eb9a7dc3ac46d9ac9df6a1afd48315bd111","scripts/lib/cooking-maintenance-local.mjs":"4b6c591b79969e60e7c2941019842c43da89abd571d560ddcf991555526106f8","scripts/lib/worker-gen51-renewal-authority.mjs":"d3dc8da9740032e36ece9bf5a5b823cfcab516fc0c8277bf9237b2cedfb49fe3","scripts/lib/worker-gen51-compat-source.mjs":"9f41f4e10b667c4503cc77eb61aa23ce0ce19c75e2a5ecd48ef29eb088991224","scripts/plan-worker-gen51-compatibility.mjs":"74ae41c29584ec6ce9784b5bff3f37c0671448ed702d3dd6454f95f1b25c8ddb"}});
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const check = (ok, message) => { if (!ok) throw Error(`gen51 operator: ${message}`); };
 const bindingFile = 'scripts/lib/worker-gen51-compat-source.mjs';
