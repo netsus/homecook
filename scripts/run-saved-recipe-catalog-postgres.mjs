@@ -10,8 +10,11 @@ import ts from "typescript";
 import { buildRecipeProductSourceFunctionInventorySql, assertRecipeProductSourceFunctionInventoryResult } from "./lib/full-local-security-inventory.mjs";
 import { DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_OPTIONS } from "./lib/youtube-extraction-worker-artifact.mjs";
 import { readPinnedLocalDockerTarget } from "./lib/local-supabase-isolated-runtime.mjs";
+import { MASS_PROXY_FUNCTIONS, MASS_PROXY_FUNCTIONS_SQL } from "./lib/cooked-weight-mass-proxy-maintenance.mjs";
 
 const image = "public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a";
+const frozenFunctionSignatures=["public.build_recipe_nutrition_input_guard(uuid)","public.validate_recipe_nutrition_snapshot_payload(jsonb)","public.write_recipe_nutrition_snapshot(uuid,jsonb,timestamp with time zone,jsonb)"];
+const frozenFunctionQuery=MASS_PROXY_FUNCTIONS_SQL.replace(MASS_PROXY_FUNCTIONS.map(signature=>`'${signature}'`).join(","),frozenFunctionSignatures.map(signature=>`'${signature}'`).join(","));
 const hash = value => createHash("sha256").update(value).digest("hex");
 const tag = randomBytes(16).toString("hex");
 const env = Object.fromEntries(["PATH", "LANG", "LC_ALL", "TMPDIR"].filter(key => process.env[key]).map(key => [key, process.env[key]]));
@@ -137,6 +140,23 @@ try {
     }
     assert.deepEqual(workerReadiness(),readinessBefore);
     report.publicationFunctionDelta={changed:3,onlyPublicFunctions:true,guardLanguage:"sql-to-plpgsql",oidOwnerAclConfigSecurityVolatilityUnchanged:true,privateFunctionsUnchanged:true,workerReadinessUnchanged:true};
+    const frozenFile="supabase/migrations/20261022120000_youtube_saved_nutrition_frozen_quantity.sql",frozenBytes=readFileSync(frozenFile);
+    const frozenBefore=JSON.parse(sql(catalogSql));
+    const frozenBeforeImages=JSON.parse(sql(frozenFunctionQuery));
+    sql(frozenBytes.toString());report.migrations.push({filename:frozenFile,sha256:hash(frozenBytes)});
+    const frozenAfter=JSON.parse(sql(catalogSql));
+    const frozenAfterImages=JSON.parse(sql(frozenFunctionQuery));
+    assert.equal(frozenAfter.length,frozenBefore.length,"Frozen migration changed function inventory");
+    const frozenChanged=frozenAfter.filter(row=>row.body!==frozenBefore.find(old=>old.oid===row.oid)?.body);
+    assert.deepEqual(frozenChanged.map(row=>row.name).sort(),["build_recipe_nutrition_input_guard","validate_recipe_nutrition_snapshot_payload","write_recipe_nutrition_snapshot"]);
+    for(const row of frozenAfter){const old=frozenBefore.find(item=>item.oid===row.oid);assert(old);
+      if(!["build_recipe_nutrition_input_guard","validate_recipe_nutrition_snapshot_payload","write_recipe_nutrition_snapshot"].includes(row.name))assert.deepEqual(row,old);
+      else assert.deepEqual({...row,body:old.body,definition:old.definition,
+        catalog_attributes:Object.fromEntries(Object.entries(row.catalog_attributes).map(([key,value])=>[key,key==="prosrc"?old.catalog_attributes.prosrc:value]))},old);
+    }
+    assert.deepEqual(workerReadiness(),readinessBefore);
+    report.frozenQuantityFunctionDelta={changed:3,onlyPublicGuardValidatorAndSnapshotWriter:true,oidOwnerAclConfigSecurityVolatilityUnchanged:true,workerReadinessUnchanged:true};
+    report.frozenQuantityFunctionImages={before:frozenBeforeImages,after:frozenAfterImages};
   }
   // Same synthetic account/session seed as the existing 235 fixture. Execute
   // only its three beforeAll SQL calls; no production rows or model requests.
@@ -159,7 +179,7 @@ try {
   writeFileSync(publicationMode?"/tmp/homecook-saved-publication-vitest.log":"/tmp/homecook-saved-catalog-vitest.log",result.stdout+result.stderr);
   assert.equal(result.status,0,"SQL tests failed; see the matching saved catalog/publication Vitest log");
   report.suite={path:suitePath,sha256:suiteSha256,stdout:result.stdout};
-  report.functionDelta={changed:5,otherFunctionsUnchanged:true,oidOwnerAclAndConfigurationUnchanged:true,workerReadinessUnchanged:true};
+  report.functionDelta={changed:7,otherFunctionsUnchanged:true,oidOwnerAclAndConfigurationUnchanged:true,workerReadinessUnchanged:true};
   report.status="PASS";
 }catch(error){report.status="FAIL";report.error=error.message;process.exitCode=1;
 }finally{

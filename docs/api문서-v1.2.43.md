@@ -5906,8 +5906,8 @@ PATCH `/cooking/session-attempts/{id}/ingredients`는 Idempotency-Key와 `{expec
 
 기존 owner/session, expected_revision CAS, Idempotency-Key와 durable replay를 유지한다. 식품에 의존한 frozen 수량은 다른 식품 선택에 재사용하지 않고 `QUANTITY_INPUT_REQUIRED`를 반환한다. 미확인량은 catalog가 연결돼도 null과 partial/unavailable을 유지한다. 수량을 먼저 수정한 경우 그 변경을 저장한 후 식품을 연결한다.
 
-owner DTO의 `ingredient_links`는 명시 선택에 `catalog_name`을 덧붙인다. 내부 공개 detail projection은 선택 또는 해제 key의 존재를 `catalog_selection_present` boolean으로만 전달하며 owner/source 원문을 공개하지 않는다. 이 boolean이 true인 공개 canonical 상세는 오래된 영양snapshot 대신 현재 재료를 읽기 계산하고, 계산 실패는 일시 불가이며 옛값을 대신 표시하지 않는다. 기존 선택 없는 snapshot 우선 정책은 유지한다.
+owner DTO의 `ingredient_links`는 명시 선택에 `catalog_name`을 덧붙인다. 내부 공개 detail projection은 선택 또는 해제 key의 존재를 `catalog_selection_present` boolean으로만 전달하며 owner/source 원문을 공개하지 않는다. 이 boolean이 true이거나 frozen 비직접 수량이 있는 공개 canonical 상세는 오래된 영양snapshot 대신 현재 승인 근거를 읽기 계산하고, 계산 실패는 일시 불가이며 옛값을 대신 표시하지 않는다. 두 조건이 없는 기존 snapshot 우선 정책은 유지한다.
 
-owner DTO에 read-only `canonical_content_hash`를 추가한다. 명시 선택/해제 저장 성공 후 원 receipt의 revision/updated_at/hash가 현재와 같을 때만 기존 authenticated owner writer로 현재 영양을 발행한다. 저장 성공 data는 보존하고 `nutrition_publication: {status: "ready"|"pending"|"stale"}`를 부가한다. 이 상태는 durable receipt를 바꾸지 않는 현재 시도 결과다. 경쟁 편집/근거 drift/발행 장애는 저장 성공과 별개로 알리며 최신 revision을 대신 발행하거나 오래된 영양을 재노출하지 않는다.
+owner DTO에 read-only `canonical_content_hash`를 추가한다. 명시 선택/해제 저장 성공 후 원 receipt의 revision/updated_at/hash가 현재와 같을 때만 기존 authenticated owner writer로 현재 영양을 발행한다. 저장 성공 data는 보존하고 `nutrition_publication: {status: "ready"|"pending"|"stale", calculation_status?: "complete"|"partial"|"unavailable"}`를 부가한다. `calculation_status`는 발행에 성공한 `ready` 응답에만 있으며, 발행 성공과 영양값의 완전성을 구분한다. 이 상태는 durable receipt를 바꾸지 않는 현재 시도 결과다. 경쟁 편집/근거 drift/발행 장애는 저장 성공과 별개로 알리며 최신 revision을 대신 발행하거나 오래된 영양을 재노출하지 않는다.
 
 237 후보는 새 영양과 content pin을 같은 TX로 확보한다. canonical 독립 요리 시작은 현재 content hash/current nutrition에 맞는 pin을 고른다. 발행이 실패해 일치 pin이 없으면 오래된 pin을 사용하지 않고 기존 RESOURCE_NOT_FOUND 경계로 거절한다. 새 meal의 영양이 아직 없으면 unavailable이다. 미확인량은 발행 성공 후에도 unavailable/partial이다. [격리 검증과 남은 운영·화면 범위](engineering/saved-recipe-catalog-selection-20261019.md)를 따른다.

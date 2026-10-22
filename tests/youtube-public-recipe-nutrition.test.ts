@@ -35,6 +35,20 @@ describe("authorized public canonical recipe nutrition",()=>{
    const unknown=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[{...row,quantity_input:{...quantity,...patch}} as RecipeIngredient]});expect(unknown.values.energy_kcal.amount).toBeNull();expect(unknown.values.energy_kcal.known_amount).toBeNull();
   }
  });
+ it("rederives a frozen measuring-spoon quantity only from approved density evidence",async()=>{
+  const quantity={schema_version:"quantity-v4",raw_value:"2",raw_unit:"계량큰술",numerator:"2",denominator:"1",normalized:{amount:36,unit:"g"},display_quantity:{amount:2,unit:"계량큰술"},quality:"estimated",reason:null,evidence_ids:["density"],source_versions:["v1"],batch_basis:null};
+  const context={ingredient_id:"ingredient-a",preparation_state:"raw-edible",size_code:null,unit_context:{edible_portion_basis:"edible",densities:[{kind:"density",id:"density",ingredient_id:"ingredient-a",preparation_state:"raw-edible",edible_portion_basis:"edible",quality:"average",grams_per_ml:1.2,review_status:"approved",is_active:true,source}],pieces:[]}};
+  const client={from:vi.fn(),rpc:vi.fn().mockResolvedValue({data:[{id:"row-a",recipe_quantity_predecessor:{guard_hash:"a".repeat(64),context}}],error:null})};
+  const ingredient={...row,amount:2,unit:"계량큰술",quantity_input:quantity} as RecipeIngredient;
+  const result=await calculatePublicYoutubeRecipeNutrition({...input,client,ingredients:[ingredient]});
+  expect(result.values.energy_kcal).toMatchObject({amount:72,status:"complete"});
+  expect(result.calculation_quality).toBe("estimated");
+  expect(client.rpc).toHaveBeenCalledWith("read_recipe_product_nutrition_predecessors",expect.objectContaining({p_owner_uuid:null}));
+  const switched=await calculatePublicYoutubeRecipeNutrition({...input,client,ingredients:[{...ingredient,amount:36,unit:"g",quantity_input:{...quantity,display_quantity:{amount:36,unit:"g"}}} as RecipeIngredient]});
+  expect(switched.values.energy_kcal).toMatchObject({amount:72,status:"complete"});
+  const forged=await calculatePublicYoutubeRecipeNutrition({...input,client,ingredients:[{...ingredient,quantity_input:{...quantity,normalized:{amount:72,unit:"g"}}} as RecipeIngredient]});
+  expect(forged.values.energy_kcal).toMatchObject({amount:null,status:"unavailable"});
+ });
  it("never uses legacy spoon conversion just because another row has a v4 pin",async()=>{
   const quantity={schema_version:"quantity-v4",raw_value:"1",raw_unit:"g",numerator:"1",denominator:"1",normalized:{amount:1,unit:"g"},display_quantity:{amount:1,unit:"g"},quality:"direct",reason:null,evidence_ids:[],source_versions:[],batch_basis:null};
   const result=await calculatePublicYoutubeRecipeNutrition({...input,ingredients:[{...row,amount:1,quantity_input:quantity} as RecipeIngredient,{...row,id:"spoon",amount:2,unit:"큰술"}]});

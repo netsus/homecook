@@ -65,7 +65,7 @@ export interface YoutubeSavedRecipeResult {
   /** Present after the additive canonical-recipe bridge migration. */
   recipe_id?: string;
   canonical_content_hash?: string;
-  nutrition_publication?: { status: "ready" | "pending" | "stale" };
+  nutrition_publication?: { status: "ready" | "pending" | "stale"; calculation_status?: "complete" | "partial" | "unavailable" };
   revision: number;
   created_at: string;
   updated_at: string;

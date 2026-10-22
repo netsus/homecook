@@ -1,4 +1,4 @@
-import { calculatePublicYoutubeRecipeNutrition } from "@/lib/server/youtube-public-recipe-nutrition";
+import { calculatePublicYoutubeRecipeNutrition, hasExactFrozenQuantity } from "@/lib/server/youtube-public-recipe-nutrition";
 import { readRecipeQuantityMode, RecipeQuantityModeError } from "@/lib/server/recipe-snapshot-entrypoint";
 import { quantityInputWriteEnabled } from "@/lib/server/quantity-input";
 import { quantityInputContractRequested } from "@/lib/server/quantity-input";
@@ -494,6 +494,7 @@ export async function GET(request: Request, context: RouteContext) {
     let steps = normalizeRecipeSteps(stepsResult.data);
 
     let catalogSelectionPresent = false;
+    let canonicalQuantityReader: ReturnType<typeof createRecipeFuturePropagationInternalClient> = null;
     if (
       recipeResult.data.visibility === "public"
       && recipeResult.data.source_type === "youtube"
@@ -503,6 +504,7 @@ export async function GET(request: Request, context: RouteContext) {
       if (!internalClient) {
         return fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요.", 500);
       }
+      canonicalQuantityReader = internalClient;
 
       const projectionResult = await internalClient.rpc(
         "read_public_youtube_saved_recipe_detail",
@@ -521,12 +523,15 @@ export async function GET(request: Request, context: RouteContext) {
       steps = projection.steps;
     }
     let canonicalNutrition: RecipeDetail["nutrition"] | null = null;
-    if ((catalogSelectionPresent || (!nutritionSnapshotResult.error && !nutritionSnapshotResult.data))
+    if ((catalogSelectionPresent || ingredients.some(row => row.quantity_input && !hasExactFrozenQuantity(row))
+      || (!nutritionSnapshotResult.error && !nutritionSnapshotResult.data))
       && recipeResult.data.visibility === "public" && recipeResult.data.source_type === "youtube"
       && hasYoutubeSavedCanonicalBridgeMarker(sourceResult.data?.extraction_meta_json)) {
       try {
         const evidenceClient = createRecipeMealWeightReadInternalClient();
-        if (evidenceClient) canonicalNutrition = await calculatePublicYoutubeRecipeNutrition({ client: evidenceClient,
+        if (evidenceClient) canonicalNutrition = await calculatePublicYoutubeRecipeNutrition({ client: {
+          ...evidenceClient, rpc: canonicalQuantityReader?.rpc,
+        },
           recipeId: id, revision: Number(revision), baseServings: recipeResult.data.base_servings, ingredients });
         else canonicalNutrition = buildTemporarilyUnavailableRecipeNutrition();
       } catch (error) {

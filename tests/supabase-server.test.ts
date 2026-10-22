@@ -76,6 +76,18 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 describe("supabase server helpers", () => {
+  it("sends the frozen nutrition guard version only from the dedicated owner writer client", async () => {
+    getSupabaseEnv.mockReturnValue({ url: "http://127.0.0.1:54321", anonKey: "anon-key", authority: "local" });
+    getServiceRoleKey.mockReturnValue("local-service-secret");
+    createServerClient.mockReturnValue({ auth: { getSession: vi.fn() } });
+    createClient.mockReturnValue({ rpc: vi.fn(), from: vi.fn(), storage: {} });
+    const server = await import("@/lib/supabase/server");
+
+    await server.createRouteHandlerClient();
+    expect(createClient.mock.calls.at(-1)?.[2]?.global?.headers).toBeUndefined();
+    await server.createRouteHandlerClient({ savedFrozenQuantityGuard: true });
+    expect(createClient.mock.calls.at(-1)?.[2]?.global?.headers).toEqual({ "x-homecook-frozen-quantity-guard": "v1" });
+  });
   it("exposes only the r2 command executor over the scoped SDK RPC", async () => {
     getSupabaseEnv.mockReturnValue({ url: "http://127.0.0.1:54321", anonKey: "fixture" });
     getServiceRoleKey.mockReturnValue("fixture-service-role");

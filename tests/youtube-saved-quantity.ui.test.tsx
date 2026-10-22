@@ -61,6 +61,16 @@ describe("saved YouTube raw quantity UI", () => {
     await waitFor(() => expect(useActionConfirmationStore.getState().message).toBe("변경사항은 저장됐어요. 영양 계산은 준비되지 않아 다시 확인이 필요해요."));
     expect(navigation.replace).toHaveBeenCalledWith(`/recipes/youtube/saved/${draftId}`);
   });
+  it.each([
+    ["partial", "변경사항을 저장했어요. 영양은 확인된 일부만 계산됐어요."],
+    ["unavailable", "변경사항을 저장했어요. 영양 정보는 아직 확인되지 않았어요."],
+  ] as const)("distinguishes ready publication from %s nutrition", async (calculationStatus, message) => {
+    const saved = fixture(); saved.content.ingredients[0].catalog_ingredient_id = null;
+    saved.nutrition_publication = { status: "ready", calculation_status: calculationStatus };
+    vi.mocked(updateYoutubeSavedRecipe).mockResolvedValue(ok({ ...saved, revision: 2 }));
+    const user = userEvent.setup(); await open(); await title(user); await save(user);
+    await waitFor(() => expect(useActionConfirmationStore.getState().message).toBe(message));
+  });
 
   it.each([true, false])("saves a metadata-only catalog choice, preserving source and entered quantity (known=%s)", async known => {
     const original = fixture();

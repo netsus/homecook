@@ -3627,8 +3627,14 @@ function ActiveYoutubeImportScreen({
     }
     applySavedResult(saved);
     saveAttemptRef.current = null;
-    showActionConfirmation(saved.nutrition_publication && saved.nutrition_publication.status !== "ready"
-      ? "변경사항은 저장됐어요. 영양 계산은 준비되지 않아 다시 확인이 필요해요." : "변경사항을 저장했어요.");
+    const publication = saved.nutrition_publication;
+    showActionConfirmation(publication && publication.status !== "ready"
+      ? "변경사항은 저장됐어요. 영양 계산은 준비되지 않아 다시 확인이 필요해요."
+      : publication?.calculation_status === "partial"
+        ? "변경사항을 저장했어요. 영양은 확인된 일부만 계산됐어요."
+        : publication?.calculation_status === "unavailable"
+          ? "변경사항을 저장했어요. 영양 정보는 아직 확인되지 않았어요."
+          : "변경사항을 저장했어요.");
     router.replace(`/recipes/youtube/saved/${result.data.draft_id}`);
   }, [
     draftTags,

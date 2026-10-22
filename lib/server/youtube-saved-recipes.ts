@@ -413,7 +413,8 @@ export async function handleUpdateYoutubeSavedRecipe(request: Request, draftId: 
         return { data: read.data, error: read.error };
       },
       writeSnapshot: async args => {
-        const write = await access.routeClient.rpc("write_owned_youtube_recipe_nutrition_snapshot", { ...args, p_user_id: access.authority.ownerUuid });
+        const nutritionWriter = await createRouteHandlerClient({ savedFrozenQuantityGuard: true });
+        const write = await nutritionWriter.rpc("write_owned_youtube_recipe_nutrition_snapshot", { ...args, p_user_id: access.authority.ownerUuid });
         return { data: write.data, error: write.error };
       },
     } });
