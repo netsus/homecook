@@ -36,10 +36,11 @@ const authority={ownerUuid:owner,authIdentityCreatedAt:epoch,sessionKeyHash:"e".
 const sourceItem="c8000000-0000-4000-8000-000000000002",profile="c8000000-0000-4000-8000-000000000003",link="c8000000-0000-4000-8000-000000000004",nextLink="c8000000-0000-4000-8000-000000000014";
 const direct={schema_version:"quantity-v4",raw_value:"10",raw_unit:"g",numerator:"10",denominator:"1",normalized:{amount:10,unit:"g"},display_quantity:{amount:10,unit:"g"},quality:"direct",reason:null,evidence_ids:[],source_versions:[],batch_basis:null} satisfies QuantityInputSnapshot;
 function rolePrefix(role="service_role",who=owner){return `set local request.jwt.claim.role='${role}';set local request.jwt.claim.sub='${who}';set local request.jwt.claims='{"role":"${role}","sub":"${who}"}';set local role ${role};`;}
-function rpc(name:string,args:Record<string,unknown>,role="service_role",who=owner){
+function rpc(name:string,args:Record<string,unknown>,role="service_role",who=owner,frozenGuard=false){
  const values=Object.entries(args).map(([key,value])=>{expect(key).toMatch(/^p_[a-z_]+$/u);return `${key}=>${value===null?"null":typeof value==="number"?value:typeof value==="object"?literal(value):`'${String(value).replaceAll("'","''")}'`}`;}).join(",");
  expect(name).toMatch(/^[a-z_]+$/u);
- const r=sql(`begin;${rolePrefix(role,who)}set local request.headers='{"x-homecook-internal-scope":"recipe-future-propagation"}';set local request.method='POST';set local request.path='/rpc/${name}';select public.${name}(${values});commit;`,false);
+ const headers={"x-homecook-internal-scope":"recipe-future-propagation",...(frozenGuard?{"x-homecook-frozen-quantity-guard":"v1"}:{})};
+ const r=sql(`begin;${rolePrefix(role,who)}select set_config('request.headers',${literal(headers)}::text,true);set local request.method='POST';set local request.path='/rpc/${name}';select public.${name}(${values});commit;`,false);
  return r.status===0?{data:JSON.parse(r.stdout.trim().split("\n").at(-1)!),error:null}:{data:null,error:{message:r.stderr}};
 }
 function evidenceClient(trace:string[]){
@@ -60,7 +61,7 @@ function publisher(receipt:unknown,options:{beforeWrite?:(args:Record<string,unk
  let writeArgs:Record<string,unknown>|null=null;let resultError:unknown=null;const trace:string[]=[];
  const run=publishSavedYoutubeRecipeNutrition({receipt,authority:{...authority,ownerUuid:options.who??owner},internalClient:evidenceClient(trace),ownerClient:{
    readRecipe:async recipeId=>{trace.push("recipe-read");return {data:data(`select to_jsonb(r) from public.recipes r where id='${recipeId}';`),error:null};},
-   writeSnapshot:async args=>{writeArgs=args;options.beforeWrite?.(args);const result=rpc("write_owned_youtube_recipe_nutrition_snapshot",{...args,p_user_id:options.who??owner},"authenticated",options.who??owner);resultError=result.error;return result;},
+   writeSnapshot:async args=>{writeArgs=args;options.beforeWrite?.(args);const result=rpc("write_owned_youtube_recipe_nutrition_snapshot",{...args,p_user_id:options.who??owner},"authenticated",options.who??owner,true);resultError=result.error;return result;},
  }});
  return {run,trace,get args(){return writeArgs;},get error(){return resultError;}};
 }
@@ -212,7 +213,9 @@ describe.skipIf(!enabled)("canonical saved nutrition publication on exact 232+23
     expect(evidence.snapshot).toMatchObject({normalized:{amount:36,unit:"g"},quality:"estimated",evidence_ids:[density]});
     const input=selected();input.ingredients[0]={...input.ingredients[0],amount,unit,quantity_input:evidence.snapshot,quantity_context_fingerprint:evidence.context_fingerprint};frozenInput=input;
     const saved=seed(input),receipt=write(saved,input).data;lastReceipt=receipt;
-    const guard=data(`select public.build_recipe_nutrition_input_guard('${receipt.recipe_id}');`);
+    const legacyGuard=data(`select public.build_recipe_nutrition_input_guard('${receipt.recipe_id}');`);
+    expect(legacyGuard.recipe_ingredients[0].amount).toBeNull();
+    const guard=data(`begin;set local request.headers='{"x-homecook-frozen-quantity-guard":"v1"}';select public.build_recipe_nutrition_input_guard('${receipt.recipe_id}');commit;`);
     expect(guard.recipe_ingredients[0]).toMatchObject({amount:2,unit:"계량큰술"});
     const publication=publisher(receipt),published=await publication.run;
     expect(publication.args?.p_input_guard).toEqual(guard);

@@ -18,7 +18,8 @@ begin
 
   v_old := $old$ v_item jsonb;v_index bigint;v_explicit boolean;v_safe boolean;v_raw jsonb;v_factor numeric;v_to numeric;v_normal numeric;$old$;
   v_new := $new$ v_item jsonb;v_index bigint;v_explicit boolean;v_safe boolean;v_raw jsonb;v_factor numeric;v_to numeric;v_normal numeric;
- v_replayed jsonb;v_context jsonb;v_raw_safe boolean;$new$;
+ v_replayed jsonb;v_context jsonb;v_raw_safe boolean;
+ v_frozen_contract boolean:=coalesce((nullif(current_setting('request.headers',true),'')::jsonb->>'x-homecook-frozen-quantity-guard')='v1',false);$new$;
   if length(v_definition) - length(replace(v_definition, v_old, '')) <> length(v_old) then
     raise exception 'SAVED_FROZEN_QUANTITY_DECLARATION_DRIFT' using errcode = '55000';
   end if;
@@ -29,7 +30,7 @@ begin
    v_item:=v_item||jsonb_build_object('id',v_saved.editable_content_json#>array['ingredients',(v_index-1)::text,'row_id'],
      'amount',case when coalesce(v_safe,false) then to_jsonb((v_item->>'amount')::double precision) else 'null'::jsonb end);$old$;
   v_new := $new$   v_raw_safe:=false;
-   if v_explicit and not coalesce(v_safe,false) and v_item ? 'quantity_input'
+   if v_frozen_contract and v_explicit and not coalesce(v_safe,false) and v_item ? 'quantity_input'
      and jsonb_typeof(v_item->'amount')='number'
      and jsonb_typeof(v_item->'quantity_context_fingerprint')='string'
      and v_item#>>'{quantity_input,quality}' in ('direct','estimated')
@@ -68,10 +69,15 @@ begin
    end if;
    -- The content hash still commits to the exact frozen original/display
    -- values; Number transport in the app uses the same binary-float view.
-   v_item:=v_item||jsonb_build_object('id',v_saved.editable_content_json#>array['ingredients',(v_index-1)::text,'row_id'],
-     'amount',case when v_raw_safe then to_jsonb((v_raw->>'amount')::double precision)
-       when coalesce(v_safe,false) then to_jsonb((v_item->>'amount')::double precision) else 'null'::jsonb end,
-     'unit',case when v_raw_safe then v_raw->'raw_unit' else v_item->'unit' end);$new$;
+   if v_raw_safe then
+     v_item:=v_item||jsonb_build_object('id',v_saved.editable_content_json#>array['ingredients',(v_index-1)::text,'row_id'],
+       'amount',to_jsonb((v_raw->>'amount')::double precision),'unit',v_raw->'raw_unit');
+   else
+     -- Exact DB239 guard for every existing caller. The new app alone opts in
+     -- to the replayed frozen input; no writer is disabled during DB-first rollout.
+     v_item:=v_item||jsonb_build_object('id',v_saved.editable_content_json#>array['ingredients',(v_index-1)::text,'row_id'],
+       'amount',case when coalesce(v_safe,false) then to_jsonb((v_item->>'amount')::double precision) else 'null'::jsonb end);
+   end if;$new$;
   if length(v_definition) - length(replace(v_definition, v_old, '')) <> length(v_old) then
     raise exception 'SAVED_FROZEN_QUANTITY_BODY_DRIFT' using errcode = '55000';
   end if;
